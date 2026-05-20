@@ -1,0 +1,186 @@
+/* index.css — общие стили для игры */
+html,
+body,
+#root {
+  background: #1a1a2e;
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  color: #eee;
+  padding-bottom: 40px;
+}
+
+/* Анимации боя */
+.fighter-card.attacking {
+  animation: attack-anim 0.6s ease-in-out;
+}
+
+@keyframes attack-anim {
+  0% {
+    transform: rotate(0deg) translateX(0);
+  }
+
+  30% {
+    transform: rotate(10deg) translateX(30px);
+  }
+
+  100% {
+    transform: rotate(0deg) translateX(0);
+  }
+}
+
+.fighter-card.dodging {
+  animation: dodge-anim 0.5s ease-out;
+}
+
+@keyframes dodge-anim {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  30% {
+    opacity: 0.7;
+    transform: translateX(-20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fighter-card.blocking {
+  box-shadow: 0 0 15px 5px #3498db, 0 0 0 4px #2980b9;
+  transition: box-shadow 0.3s;
+}
+
+.fighter-card.stunned {
+  animation: stun-pulse 0.5s infinite alternate;
+  border-color: #f1c40f !important;
+}
+
+@keyframes stun-pulse {
+  from {
+    box-shadow: 0 0 10px #f1c40f;
+  }
+
+  to {
+    box-shadow: 0 0 20px #f1c40f;
+  }
+}
+
+.damage-float {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #e74c3c;
+  text-shadow: 0 0 5px black;
+  animation: float-up 1s ease-out forwards;
+  pointer-events: none;
+  z-index: 999;
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -40px);
+  }
+}
+
+.effect-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  pointer-events: none;
+  color: #f1c40f;
+  text-shadow: 0 0 10px black;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.effect-overlay.show {
+  opacity: 1;
+  animation: effect-fade 1.2s ease-out forwards;
+}
+
+@keyframes effect-fade {
+  0% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* Мигающая кнопка истории */
+@keyframes blinker {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.blink {
+  animation: blinker 1s linear infinite;
+}
+
+/* Скрываем полосу прокрутки для горизонтальных вкладок */
+.hide-scrollbar {
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  /* улучшение для iOS */
+  touch-action: pan-x;
+  /* предотвращает вертикальный скролл при свайпе */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari */
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+/* Адаптивная ширина панели онлайн */
+.online-panel {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .online-panel {
+    width: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .right-sidebar {
+    width: 100% !important;
+    align-self: center;
+  }
+}
+
+.action-card:hover .action-card-bg {
+  transform: scale(1.05);
+}
