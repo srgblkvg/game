@@ -6,7 +6,6 @@ import { fetchCharacter, enterArena, equipItem } from '../api';
 import LeftSidebar from '../components/LeftSidebar';
 import MainBar from '../components/MainBar';
 import RightSidebar from '../components/RightSidebar';
-import { calculateStats } from '../utils/stats';
 import { getCompatibleSlots } from '../utils/itemUtils';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -51,8 +50,7 @@ export default function HomePage() {
     try {
       const effectiveItemId = itemId || (selectedInventoryItemId && highlightedSlots.includes(slotId) ? selectedInventoryItemId : undefined);
       const data = await equipItem(slotId, effectiveItemId);
-      const stats = calculateStats({ ...character!, equipment: data.equipment });
-      setCharacter({ ...character!, inventory: data.inventory, equipment: data.equipment, currentHp: Math.min(character!.currentHp, stats.hp) });
+      setCharacter({ ...character!, inventory: data.inventory, equipment: data.equipment, currentHp: data.currentHp ?? Math.max(1, character!.currentHp) });
       setSelectedInventoryItemId(null);
     } catch (err: any) { alert(err.message); }
   };

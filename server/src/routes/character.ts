@@ -111,7 +111,29 @@ router.get('/character/me', (req: any, res) => {
     }
 
     const now = Math.floor(Date.now() / 1000);
+    const maxHp = stats.hp;
     let currentHp = user.currentHp;
+
+    // Регенерация HP: 1 HP каждые 10 секунд вне боя
+    const HP_REGEN_SECONDS = 10;
+    const elapsed = now - (user.lastHpUpdate || now);
+    if (elapsed > 0 && currentHp < maxHp) {
+        const regenAmount = Math.floor(elapsed / HP_REGEN_SECONDS);
+        if (regenAmount > 0) {
+            currentHp = Math.min(maxHp, currentHp + regenAmount);
+        }
+    }
+
+    // Если currentHp больше max HP (баг), корректируем
+    if (currentHp > maxHp) {
+        currentHp = maxHp;
+    }
+
+    // Сохраняем, если изменилось
+    if (currentHp !== user.currentHp) {
+        db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?')
+            .run(currentHp, now - (elapsed % HP_REGEN_SECONDS), userId);
+    }
 
     const openPrivateTabs = JSON.parse(user.openPrivateTabs || '[]');
 
@@ -163,13 +185,24 @@ router.post('/character/equip', (req: any, res) => {
 
     if (itemId === undefined || itemId === null) {
         if (!currentEquipped) return res.status(400).json({ error: 'Слот пуст' });
+
+        // Считаем старый max HP
+        const base = { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 };
+        const oldStats = currentStats(base, equipment);
+        const oldMaxHp = oldStats.hp;
+
         inventory.push(currentEquipped);
         delete equipment[slotId];
-        db.prepare('UPDATE users SET inventory = ?, equipment = ? WHERE id = ?')
-            .run(JSON.stringify(inventory), JSON.stringify(equipment), userId);
+
+        // Считаем новый max HP и корректируем currentHp
+        const newStats = currentStats(base, equipment);
+        const newMaxHp = newStats.hp;
+        const newHp = Math.max(1, Math.floor(user.currentHp * newMaxHp / (oldMaxHp || 1)));
+
         const now = Math.floor(Date.now() / 1000);
-        db.prepare('UPDATE users SET lastHpUpdate = ? WHERE id = ?').run(now, userId);
-        return res.json({ inventory, equipment });
+        db.prepare('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?')
+            .run(JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId);
+        return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp });
     }
 
     const itemIndex = inventory.findIndex((i: any) => i.id == itemId);
@@ -200,16 +233,23 @@ router.post('/character/equip', (req: any, res) => {
         inventory.push(currentEquipped);
     }
 
+    // Считаем старый max HP до смены экипировки
+    const base = { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 };
+    const oldStats = currentStats(base, equipment);
+
     inventory.splice(itemIndex, 1);
     equipment[slotId] = item;
 
-    db.prepare('UPDATE users SET inventory = ?, equipment = ? WHERE id = ?')
-        .run(JSON.stringify(inventory), JSON.stringify(equipment), userId);
+    // Считаем новый max HP и корректируем currentHp
+    const newStats = currentStats(base, equipment);
+    const newMaxHp = newStats.hp;
+    const newHp = Math.max(1, Math.floor(user.currentHp * newMaxHp / (oldStats.hp || 1)));
 
     const now = Math.floor(Date.now() / 1000);
-    db.prepare('UPDATE users SET lastHpUpdate = ? WHERE id = ?').run(now, userId);
+    db.prepare('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?')
+        .run(JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId);
 
-    res.json({ inventory, equipment });
+    res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp });
 });
 
 // Разобрать предмет(ы)

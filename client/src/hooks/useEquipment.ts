@@ -1,5 +1,4 @@
 import { equipItem } from '../api';
-import { calculateStats } from '../utils/stats';
 import { useGame } from '../contexts/GameContext';
 
 export function useEquipment(onEquip?: () => void) {
@@ -20,7 +19,7 @@ export function useEquipment(onEquip?: () => void) {
                 ...character,
                 inventory: data.inventory,
                 equipment: data.equipment,
-                currentHp: Math.min(character.currentHp, calculateStats({ ...character, equipment: data.equipment }).hp),
+                currentHp: data.currentHp ?? Math.max(1, character.currentHp),
             });
             onEquip?.();
         } catch (err: any) {
@@ -38,7 +37,7 @@ export function useEquipment(onEquip?: () => void) {
                     ...character,
                     inventory: data.inventory,
                     equipment: data.equipment,
-                    currentHp: Math.min(character.currentHp, calculateStats({ ...character, equipment: data.equipment }).hp),
+                    currentHp: data.currentHp ?? Math.max(1, character.currentHp),
                 });
                 onEquip?.();
             } catch (err: any) {

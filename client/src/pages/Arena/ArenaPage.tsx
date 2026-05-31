@@ -85,6 +85,7 @@ export default function ArenaPage() {
           showHealth={isBattleActive}
           showStamina={false}
           showExp={false}
+          showRegenHint={false}
           readOnly
           compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
         />
@@ -102,6 +103,7 @@ export default function ArenaPage() {
             showHealth={isBattleActive}
             showStamina={false}
             showExp={false}
+          showRegenHint={false}
             readOnly
             compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
           />

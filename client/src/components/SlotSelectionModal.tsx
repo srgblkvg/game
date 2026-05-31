@@ -1,6 +1,5 @@
 import { useGame } from '../contexts/GameContext';
 import { equipItem } from '../api';
-import { calculateStats } from '../utils/stats';
 import { slotNames, slotCategories } from '../utils/itemUtils';
 
 interface SlotSelectionModalProps {
@@ -20,7 +19,7 @@ export default function SlotSelectionModal({ slotId, onClose, onEquip }: SlotSel
                 ...character,
                 inventory: data.inventory,
                 equipment: data.equipment,
-                currentHp: Math.min(character.currentHp, calculateStats({ ...character, equipment: data.equipment }).hp),
+                currentHp: data.currentHp ?? Math.max(1, character.currentHp),
             });
             onClose();
             onEquip?.();

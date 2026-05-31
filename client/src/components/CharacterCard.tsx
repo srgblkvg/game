@@ -24,6 +24,7 @@ interface CharacterCardProps {
   showHealth?: boolean;
   showStamina?: boolean;
   showExp?: boolean;
+  showRegenHint?: boolean;
   readOnly?: boolean;
   onEquip?: (slotId: string, itemId?: string) => void;
   availableItems?: any[];
@@ -38,6 +39,7 @@ export default function CharacterCard({
   showHealth = true,
   showStamina = true,
   showExp = true,
+  showRegenHint = true,
   readOnly = false,
   onEquip,
   availableItems,
@@ -64,6 +66,14 @@ export default function CharacterCard({
 
   const stats = char.stats || { s: 0, a: 0, d: 0, m: 0 };
   const hp = char.maxHp ?? stats.hp ?? (stats.s + stats.a + stats.d + stats.m);
+  const formatRegenTime = (maxHp: number, curHp: number) => {
+    const missing = maxHp - curHp;
+    const totalSec = missing * 10;
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    if (min > 0) return `${min} мин ${sec} сек`;
+    return `${sec} сек`;
+  };
   const expNeeded = 10 * Math.pow(2, char.level - 1);
 
   const isMobile = compact === 'mobile' || compact === 'verySmall';
@@ -317,10 +327,15 @@ export default function CharacterCard({
 
       {showHealth && char.currentHp !== undefined && (
         <div style={{ width: '100%', marginTop: '0.5rem', textAlign: 'center' }}>
-          <div style={{ fontSize: isVerySmall ? '0.55rem' : isMobile ? '0.75rem' : '0.85rem' }}>Здоровье: {char.currentHp}/{hp}</div>
+          <div style={{ fontSize: isVerySmall ? '0.55rem' : isMobile ? '0.75rem' : '0.85rem', marginBottom: '3px' }}>Здоровье: {char.currentHp}/{hp}</div>
           <div style={{ height: '14px', background: '#333', borderRadius: '4px', overflow: 'hidden', border: '1px solid #555' }}>
             <div style={{ width: `${(char.currentHp / hp) * 100}%`, height: '100%', background: '#e74c3c', transition: 'width 0.4s ease' }} />
           </div>
+          {showRegenHint && char.currentHp < hp && (
+            <div style={{ fontSize: isVerySmall ? '0.45rem' : isMobile ? '0.6rem' : '0.7rem', color: '#888', marginTop: '2px' }}>
+              +1 HP / 10 сек &mdash; полное через {formatRegenTime(hp, char.currentHp)}
+            </div>
+          )}
         </div>
       )}
 
