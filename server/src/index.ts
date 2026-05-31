@@ -16,7 +16,7 @@ import { PORT } from './env';
 import authRoutes from './routes/auth';
 import adminAuthRoutes from './routes/adminAuth';
 import characterRoutes from './routes/character';
-import battleRoutes from './routes/battle';
+import battleRoutes, { adminRouter as adminBattleRoutes } from './routes/battle';
 import arenaRoutes from './routes/arena';
 import shopRoutes from './routes/shop';
 import jobsRoutes from './routes/jobs';
@@ -57,6 +57,7 @@ app.use('/api/admin', authMiddleware, requireAdmin, adminRoutes);
 app.use('/api/admin', authMiddleware, requireAdmin, adminCraftRoutes);
 app.use('/api/admin', authMiddleware, requireAdmin, adminJobsRoutes);
 app.use('/api/admin/chat', authMiddleware, requireAdmin, adminChatRoutes);
+app.use('/api/admin', authMiddleware, requireAdmin, adminBattleRoutes);
 
 
 // Игровые маршруты (только для игроков)

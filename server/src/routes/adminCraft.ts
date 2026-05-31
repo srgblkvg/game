@@ -5,22 +5,27 @@ const router = Router();
 
 // ==================== Ресурсы (craft_items) ====================
 router.get('/craft-items', (req, res) => {
-    const items = db.prepare('SELECT * FROM craft_items ORDER BY id').all();
+    const items = db.prepare(`
+        SELECT c.*, r.name as rarity_name, r.display_name as rarity_display, r.color as rarity_color
+        FROM craft_items c
+        JOIN rarities r ON c.rarity_id = r.id
+        ORDER BY c.id
+    `).all();
     res.json(items);
 });
 
 router.post('/craft-items', (req, res) => {
-    const { name, rarity, description, type, image } = req.body;
-    if (!name || rarity === undefined) return res.status(400).json({ error: 'name, rarity required' });
-    db.prepare('INSERT INTO craft_items (name, rarity, description, type, image) VALUES (?, ?, ?, ?, ?)')
-        .run(name, rarity, description || '', type || 'craft', image || null);
+    const { name, rarity_id, description, type, image } = req.body;
+    if (!name || rarity_id === undefined) return res.status(400).json({ error: 'name, rarity_id required' });
+    db.prepare('INSERT INTO craft_items (name, rarity_id, description, type, image) VALUES (?, ?, ?, ?, ?)')
+        .run(name, rarity_id, description || '', type || 'craft', image || null);
     res.json({ success: true });
 });
 
 router.put('/craft-items/:id', (req, res) => {
-    const { name, rarity, description, type, image } = req.body;
-    db.prepare('UPDATE craft_items SET name=?, rarity=?, description=?, type=?, image=? WHERE id=?')
-        .run(name, rarity, description, type || 'craft', image || null, req.params.id);
+    const { name, rarity_id, description, type, image } = req.body;
+    db.prepare('UPDATE craft_items SET name=?, rarity_id=?, description=?, type=?, image=? WHERE id=?')
+        .run(name, rarity_id, description, type || 'craft', image || null, req.params.id);
     res.json({ success: true });
 });
 
@@ -34,16 +39,30 @@ router.get('/recipes', (req, res) => {
     const recipes = db.prepare('SELECT * FROM craft_recipes ORDER BY id').all() as any[];
     for (const recipe of recipes) {
         recipe.ingredients = db.prepare(`
-      SELECT ci.id, ci.name, ci.rarity, ci.type as itemType, ci.image, cri.quantity
-      FROM craft_recipe_ingredients cri
-      JOIN craft_items ci ON ci.id = cri.craft_item_id
-      WHERE cri.recipe_id = ?
-    `).all(recipe.id);
+            SELECT ci.id, ci.name, ci.rarity_id, ci.type as itemType, ci.image, cri.quantity,
+                   r.display_name as rarity_display, r.color as rarity_color
+            FROM craft_recipe_ingredients cri
+            JOIN craft_items ci ON ci.id = cri.craft_item_id
+            JOIN rarities r ON ci.rarity_id = r.id
+            WHERE cri.recipe_id = ?
+        `).all(recipe.id);
 
         if (recipe.result_type === 'item') {
-            recipe.result = db.prepare('SELECT id, name, slot, rarity, image FROM items WHERE id = ?').get(recipe.result_id) || null;
+            recipe.result = db.prepare(`
+                SELECT i.id, i.name, i.slot, i.rarity_id, i.image,
+                       r.display_name as rarity_display, r.color as rarity_color
+                FROM items i
+                JOIN rarities r ON i.rarity_id = r.id
+                WHERE i.id = ?
+            `).get(recipe.result_id) || null;
         } else if (recipe.result_type === 'craft_item') {
-            recipe.result = db.prepare('SELECT id, name, rarity, image FROM craft_items WHERE id = ?').get(recipe.result_id) || null;
+            recipe.result = db.prepare(`
+                SELECT c.id, c.name, c.rarity_id, c.image,
+                       r.display_name as rarity_display, r.color as rarity_color
+                FROM craft_items c
+                JOIN rarities r ON c.rarity_id = r.id
+                WHERE c.id = ?
+            `).get(recipe.result_id) || null;
         } else {
             recipe.result = null;
         }

@@ -40,7 +40,7 @@ router.post('/battle', (req: any, res) => {
     const attackerData = {
         id: attacker.id,
         name: attacker.username,
-        base: { s: 5 * Math.pow(2, attacker.level - 1), a: 5 * Math.pow(2, attacker.level - 1), v: 100, d: 5 * Math.pow(2, attacker.level - 1), m: 5 * Math.pow(2, attacker.level - 1) },
+        base: { s: attacker.baseS ?? 5, a: attacker.baseA ?? 5, d: attacker.baseD ?? 5, m: attacker.baseM ?? 5 },
         equipment: JSON.parse(attacker.equipment || '{}'),
         level: attacker.level,
         money: attacker.money,
@@ -48,7 +48,7 @@ router.post('/battle', (req: any, res) => {
     const defenderData = {
         id: defender.id,
         name: defender.username,
-        base: { s: 5 * Math.pow(2, defender.level - 1), a: 5 * Math.pow(2, defender.level - 1), v: 100, d: 5 * Math.pow(2, defender.level - 1), m: 5 * Math.pow(2, defender.level - 1) },
+        base: { s: defender.baseS ?? 5, a: defender.baseA ?? 5, d: defender.baseD ?? 5, m: defender.baseM ?? 5 },
         equipment: JSON.parse(defender.equipment || '{}'),
         level: defender.level,
         money: defender.money,
@@ -69,19 +69,19 @@ router.post('/battle', (req: any, res) => {
 
     let newExp = attacker.exp + result.expGained;
     let newLevel = attacker.level;
-    const expRequirements = [10, 15, 22, 33, 50, 75, 113, 170, 255, 383];
-    while (newLevel < 10) {
-        const required = expRequirements[newLevel - 1];
-        if (required === undefined) break;
+    let levelsGained = 0;
+    // XP для уровня N: 10 * 2^(N-1). Без ограничения уровня.
+    while (true) {
+        const required = 10 * Math.pow(2, newLevel - 1);
         if (newExp >= required) {
             newExp -= required;
             newLevel++;
+            levelsGained++;
         } else break;
     }
-    if (newLevel > 10) newLevel = 10;
 
-    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=? WHERE id=?`)
-        .run(newLevel, newExp, result.moneyGained, result.winnerId === attacker.id ? 1 : 0, result.attackerHpAfter, now, now, attacker.id);
+    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ? WHERE id=?`)
+        .run(newLevel, newExp, result.moneyGained, result.winnerId === attacker.id ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, attacker.id);
 
     db.prepare(`UPDATE users SET currentHp=?, totalBattles=totalBattles+1, protectionUntil=?, lastHpUpdate=? WHERE id=?`)
         .run(result.defenderHpAfter, now + 3600, now, defender.id);
@@ -103,6 +103,7 @@ router.post('/battle', (req: any, res) => {
         moneyGained: result.moneyGained,
         newLevel,
         newExp,
+        levelsGained,
         opponent: {
             name: defenderData.name,
             level: defenderData.level,
@@ -129,6 +130,24 @@ router.get('/battles', (req: any, res) => {
     LIMIT ?
   `).all(userId, userId, limit);
     res.json(battles);
+});
+
+// Админка: все бои (отдельный роутер)
+export const adminRouter = Router();
+
+adminRouter.get('/battles', (req: any, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = (page - 1) * limit;
+    const total = (db.prepare('SELECT COUNT(*) as cnt FROM battles').get() as any).cnt;
+    const battles = db.prepare(`
+        SELECT b.*, a.username as attackerName, d.username as defenderName
+        FROM battles b
+        JOIN users a ON b.attackerId = a.id
+        JOIN users d ON b.defenderId = d.id
+        ORDER BY b.createdAt DESC LIMIT ? OFFSET ?
+    `).all(limit, offset);
+    res.json({ battles, total });
 });
 
 export default router;

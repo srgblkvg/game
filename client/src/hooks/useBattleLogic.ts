@@ -31,22 +31,15 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     const [maxHpLeft, setMaxHpLeft] = useState(0);
     const [hpRight, setHpRight] = useState(0);
     const [maxHpRight, setMaxHpRight] = useState(0);
-    const [stamLeft, setStamLeft] = useState(100);
-    const [maxStamLeft, setMaxStamLeft] = useState(100);
-    const [stamRight, setStamRight] = useState(100);
-    const [maxStamRight, setMaxStamRight] = useState(100);
     const [modalMessage, setModalMessage] = useState<string | null>(null);
     const [speed, setSpeed] = useState(1);
     const [autoPlaying, setAutoPlaying] = useState(false);
 
     const logContainerRef = useRef<HTMLDivElement>(null);
     const timerRef = useRef<number | null>(null);
-    const regenIntervalRef = useRef<number | null>(null);
     const stepLock = useRef(false);
     const currentStepRef = useRef(currentStep);
     const speedRef = useRef(speed);
-    const regenLeftRef = useRef(1);
-    const regenRightRef = useRef(1);
 
     useEffect(() => { currentStepRef.current = currentStep; }, [currentStep]);
     useEffect(() => { speedRef.current = speed; }, [speed]);
@@ -56,7 +49,14 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             const token = localStorage.getItem('token');
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            const res = await fetch(`/api/arena/opponent?change=${change}`, { headers });
+
+            // Если смена, добавляем excludeId
+            let url = `/api/arena/opponent?change=${change}`;
+            if (change && opponent?.id) {
+                url += `&excludeId=${opponent.id}`;
+            }
+
+            const res = await fetch(url, { headers });
             const data = await res.json();
             if (!res.ok) {
                 setModalMessage(data.error || 'Ошибка загрузки соперника');
@@ -68,13 +68,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             setHpLeft(character.currentHp);
             setMaxHpRight(data.stats.hp);
             setHpRight(data.stats.hp);
-            setMaxStamLeft(pStats.maxStamina);
-            setStamLeft(pStats.maxStamina);
-            setMaxStamRight(data.stats.maxStamina ?? 100);
-            setStamRight(data.stats.maxStamina ?? 100);
-            regenLeftRef.current = pStats.staminaRegen || 1;
-            regenRightRef.current = data.stats.regen || 1;
-
+            speedRef.current = speed;
             if (change && data.playerMoney !== undefined) {
                 setCharacter({ ...character, money: data.playerMoney });
             }
@@ -122,14 +116,6 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             } else {
                 setHpRight(prev => Math.max(0, prev - step.damage));
                 showDamageNumber('right', step.damage);
-            }
-        }
-
-        if (step.type === 'stamina' && step.stamina !== undefined) {
-            if (step.actor === 'attacker') {
-                setStamLeft(step.stamina);
-            } else {
-                setStamRight(step.stamina);
             }
         }
 
@@ -208,7 +194,9 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         stepLock.current = true;
         setCurrentStep(next);
         executeStep(battleSteps[next]);
-        await new Promise(r => setTimeout(r, 700 / speedRef.current));
+        // extra pause after damage so HP bar animates before next step
+        const isDamage = battleSteps[next]?.type === 'damage';
+        await new Promise(r => setTimeout(r, (isDamage ? 1000 : 700) / speedRef.current));
         stepLock.current = false;
     }, [battleSteps, executeStep]);
 
@@ -234,42 +222,23 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     }, [battleSteps, autoPlaying, startAuto]);
 
     useEffect(() => {
-        if (battleSteps.length > 0 && currentStep < battleSteps.length - 1) {
-            regenIntervalRef.current = window.setInterval(() => {
-                setStamLeft(prev => Math.min(prev + regenLeftRef.current * 0.2, maxStamLeft));
-                setStamRight(prev => Math.min(prev + regenRightRef.current * 0.2, maxStamRight));
-            }, 100);
-            return () => {
-                if (regenIntervalRef.current) clearInterval(regenIntervalRef.current);
-            };
-        } else {
-            if (regenIntervalRef.current) {
-                clearInterval(regenIntervalRef.current);
-                regenIntervalRef.current = null;
-            }
-        }
-    }, [battleSteps.length, currentStep, maxStamLeft, maxStamRight]);
+        // stamina is fully server-driven — no client-side interval
+    }, []);
 
     useEffect(() => {
         if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0 && autoPlaying) {
             stopAuto();
-            if (battleResult) {
-                setHpLeft(Math.max(0, battleResult.hpAfter ?? 0));
-                setHpRight(Math.max(0, battleResult.hpDefenderAfter ?? 0));
-            }
         }
-    }, [currentStep, battleSteps.length, autoPlaying, battleResult, stopAuto]);
+    }, [currentStep, battleSteps.length, autoPlaying, stopAuto]);
 
     useEffect(() => {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
-            if (regenIntervalRef.current) clearInterval(regenIntervalRef.current);
         };
     }, []);
 
     const handleSkip = () => {
         stopAuto();
-        if (regenIntervalRef.current) clearInterval(regenIntervalRef.current);
         const last = battleSteps.length - 1;
         setCurrentStep(last);
         currentStepRef.current = last;
@@ -288,11 +257,13 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
 
     const finishBattle = () => {
         if (!battleResult) return;
+        const statsGained = (battleResult.levelsGained || 0) * 5;
         setCharacter({
             ...character,
             currentHp: Math.max(0, battleResult.hpAfter),
             level: battleResult.newLevel,
             exp: battleResult.newExp,
+            statPoints: (character.statPoints || 0) + statsGained,
             money: battleResult.moneyAfter ?? character.money,
             totalBattles: character.totalBattles + 1,
             wins: battleResult.winnerId === userId ? character.wins + 1 : character.wins,
@@ -312,10 +283,6 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         modalMessage,
         speed,
         autoPlaying,
-        stamLeft,
-        maxStamLeft,
-        stamRight,
-        maxStamRight,
         logContainerRef,
         loadOpponent,
         handleStartBattle,

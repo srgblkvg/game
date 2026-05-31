@@ -1,3 +1,4 @@
+// client/src/pages/CraftPage.tsx
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
@@ -9,8 +10,12 @@ import Inventory from '../components/Inventory';
 import LongPressItemSlot from '../components/LongPressItemSlot';
 import LongPressResourceSlot from '../components/LongPressResourceSlot';
 import ItemTooltip from '../components/ItemTooltip';
-import { getRarityColor, isCraftItem } from '../utils/itemUtils';
+import { isCraftItem } from '../utils/itemUtils';
 import { formatMoney } from '../utils/money';
+import BackButton from '../components/ui/BackButton';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import ItemIcon from '../components/ui/ItemIcon';
 
 export default function CraftPage() {
     const { user } = useAuth();
@@ -26,7 +31,6 @@ export default function CraftPage() {
     } | null>(null);
     const { sendItemLink } = useGlobalChat();
 
-    // Категории: всегда начинаем с двух открытых
     const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
         'Материалы': true,
         'Улучшения': true,
@@ -39,16 +43,11 @@ export default function CraftPage() {
     }, []);
 
     useEffect(() => {
-        if (!user || !character) {
-            navigate('/login');
-        }
+        if (!user || !character) { navigate('/login'); }
     }, [user, character, navigate]);
 
-    // Fallback-функция должна быть объявлена ДО эффекта
     const getRecipeCategoryFallback = (recipe: any): string => {
-        if (recipe.result_type === 'craft_item' && recipe.result?.itemType === 'upgrade') {
-            return 'Улучшения';
-        }
+        if (recipe.result_type === 'craft_item' && recipe.result?.itemType === 'upgrade') return 'Улучшения';
         return 'Материалы';
     };
 
@@ -56,14 +55,10 @@ export default function CraftPage() {
         fetchRecipes()
             .then(data => {
                 setRecipes(data);
-                // Обновляем открытые категории на основе полученных рецептов
-                const cats: Record<string, boolean> = {
-                    'Материалы': true,
-                    'Улучшения': true,
-                };
+                const cats: Record<string, boolean> = { 'Материалы': true, 'Улучшения': true };
                 data.forEach((r: any) => {
                     const cat = r.category?.name || getRecipeCategoryFallback(r);
-                    cats[cat] = true; // гарантируем, что категория будет открыта
+                    cats[cat] = true;
                 });
                 setOpenCategories(prev => ({ ...cats, ...prev }));
             })
@@ -73,9 +68,7 @@ export default function CraftPage() {
     if (!user || !character) return null;
 
     const getOriginalCraftItemCount = (itemId: string | number): number => {
-        const original = character.inventory.find(
-            (i: any) => isCraftItem(i) && i.id == itemId
-        );
+        const original = character.inventory.find((i: any) => isCraftItem(i) && i.id == itemId);
         return original && isCraftItem(original) ? original.count : 0;
     };
 
@@ -96,147 +89,76 @@ export default function CraftPage() {
 
     useEffect(() => {
         const nonEmptySlots = craftSlots.filter(s => s !== null);
-        if (nonEmptySlots.length !== 2) {
-            setUpgradeInfo(null);
-            return;
-        }
+        if (nonEmptySlots.length !== 2) { setUpgradeInfo(null); return; }
         const items = nonEmptySlots.filter(s => !isCraftItem(s));
         const stones = nonEmptySlots.filter(s => isCraftItem(s) && s.itemType === 'upgrade');
-        if (items.length !== 1 || stones.length !== 1) {
-            setUpgradeInfo(null);
-            return;
-        }
+        if (items.length !== 1 || stones.length !== 1) { setUpgradeInfo(null); return; }
         const item = items[0];
         const stone = stones[0];
-        if (item.rarity !== stone.rarity) {
-            setUpgradeInfo(null);
-            return;
-        }
+        if (item.rarity_id !== stone.rarity_id) { setUpgradeInfo(null); return; }
         const nextLevel = (item.upgradeLevel || 0) + 1;
         fetchUpgradeInfo(nextLevel)
-            .then((data: any) => {
-                setUpgradeInfo({
-                    item,
-                    stone,
-                    nextLevel,
-                    chance: data.chance,
-                    cost: data.money_cost,
-                });
-            })
-            .catch(() => {
-                setUpgradeInfo(null);
-            });
+            .then((data: any) => setUpgradeInfo({ item, stone, nextLevel, chance: data.chance, cost: data.money_cost }))
+            .catch(() => setUpgradeInfo(null));
     }, [craftSlots]);
 
-    const handleLongPress = useCallback(
-        (item: any, e: React.TouchEvent | React.MouseEvent) => {
-            if (item) {
-                const touch = (e as React.TouchEvent).touches?.[0] ?? e;
-                setTooltipData({ item, x: touch.clientX, y: touch.clientY });
-            }
-        },
-        []
-    );
+    const handleLongPress = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
+        if (item) {
+            const touch = (e as React.TouchEvent).touches?.[0] ?? e;
+            setTooltipData({ item, x: touch.clientX, y: touch.clientY });
+        }
+    }, []);
 
     const handleItemClick = useCallback((item: any) => {
         if (isCraftItem(item)) return;
         setTooltipData(null);
         const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
-        if (freeSlotIndex === -1) {
-            alert('Все слоты заняты');
-            return;
-        }
-        setCraftSlots(prev => {
-            const newSlots = [...prev];
-            newSlots[freeSlotIndex] = item;
-            return newSlots;
-        });
+        if (freeSlotIndex === -1) { alert('Все слоты заняты'); return; }
+        setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = item; return n; });
     }, [craftSlots]);
 
     const handleMaterialClick = useCallback((mat: any) => {
         if (!isCraftItem(mat)) return;
         setTooltipData(null);
         const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
-        if (freeSlotIndex === -1) {
-            alert('Все слоты заняты');
-            return;
-        }
+        if (freeSlotIndex === -1) { alert('Все слоты заняты'); return; }
         const used = materialUsage[mat.id] || 0;
         const totalAvailable = getOriginalCraftItemCount(mat.id);
-        if (used >= totalAvailable) {
-            alert('Нет доступных ресурсов этого типа');
-            return;
-        }
+        if (used >= totalAvailable) { alert('Нет доступных ресурсов этого типа'); return; }
         setMaterialUsage(prev => ({ ...prev, [mat.id]: (prev[mat.id] || 0) + 1 }));
-        setCraftSlots(prev => {
-            const newSlots = [...prev];
-            newSlots[freeSlotIndex] = { ...mat, count: 1 };
-            return newSlots;
-        });
+        setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = { ...mat, count: 1 }; return n; });
     }, [craftSlots, materialUsage, character.inventory]);
 
     const handleSlotClick = (index: number, e: React.MouseEvent) => {
         const item = craftSlots[index];
         if (!item) return;
         setTooltipData(null);
-        if (e.shiftKey && !isCraftItem(item)) {
-            e.stopPropagation();
-            sendItemLink(item.id);
-            return;
-        }
+        if (e.shiftKey) { e.stopPropagation(); sendItemLink(item.id, item); return; }
         if (isCraftItem(item)) {
-            setMaterialUsage(prev => {
-                const newUsage = { ...prev };
-                newUsage[item.id] = (newUsage[item.id] || 0) - 1;
-                if (newUsage[item.id] <= 0) delete newUsage[item.id];
-                return newUsage;
-            });
+            setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
         }
-        setCraftSlots(prev => {
-            const newSlots = [...prev];
-            newSlots[index] = null;
-            return newSlots;
-        });
+        setCraftSlots(prev => { const n = [...prev]; n[index] = null; return n; });
     };
 
     const handleDropOnSlot = (index: number, e: React.DragEvent) => {
-        e.preventDefault();
-        setTooltipData(null);
+        e.preventDefault(); setTooltipData(null);
         const itemId = e.dataTransfer.getData('text/plain');
         if (!itemId) return;
         const numericItemId = parseFloat(itemId);
         let item = displayInventory.find((i: any) => i.id === numericItemId);
-        if (!item) {
-            item = character.inventory.find(
-                (i: any) => i.id == numericItemId && isCraftItem(i)
-            );
-        }
+        if (!item) item = character.inventory.find((i: any) => i.id == numericItemId && isCraftItem(i));
         if (!item) return;
-
         if (isCraftItem(item)) {
             const used = materialUsage[item.id] || 0;
-            const totalAvailable = getOriginalCraftItemCount(item.id);
-            if (used >= totalAvailable) return;
+            if (used >= getOriginalCraftItemCount(item.id)) return;
             setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
-            setCraftSlots(prev => {
-                const newSlots = [...prev];
-                newSlots[index] = { ...item, count: 1 };
-                return newSlots;
-            });
+            setCraftSlots(prev => { const n = [...prev]; n[index] = { ...item, count: 1 }; return n; });
         } else {
-            setCraftSlots(prev => {
-                const newSlots = [...prev];
-                newSlots[index] = item;
-                return newSlots;
-            });
+            setCraftSlots(prev => { const n = [...prev]; n[index] = item; return n; });
         }
     };
 
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    };
-
+    const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
     const handleDragStartFromSlot = (e: React.DragEvent, item: any) => {
         e.dataTransfer.setData('text/plain', item.id);
         e.dataTransfer.effectAllowed = 'move';
@@ -252,91 +174,47 @@ export default function CraftPage() {
         if (slotIndex === -1) return;
         const item = craftSlots[slotIndex];
         if (!item) return;
-
         if (isCraftItem(item)) {
-            setMaterialUsage(prev => {
-                const newUsage = { ...prev };
-                newUsage[item.id] = (newUsage[item.id] || 0) - 1;
-                if (newUsage[item.id] <= 0) delete newUsage[item.id];
-                return newUsage;
-            });
+            setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
         }
-        setCraftSlots(prev => {
-            const newSlots = [...prev];
-            newSlots[slotIndex] = null;
-            return newSlots;
-        });
+        setCraftSlots(prev => { const n = [...prev]; n[slotIndex] = null; return n; });
     };
 
     const handleRecipeClick = (recipe: any) => {
         setCraftSlots(Array(9).fill(null));
         setMaterialUsage({});
-
-        const canCraft = recipe.ingredients.every((ing: any) => {
-            const totalAvailable = getOriginalCraftItemCount(ing.craft_item_id);
-            return totalAvailable >= ing.quantity;
-        });
-
-        if (!canCraft) {
-            alert('Недостаточно необходимых ресурсов');
-            return;
-        }
-
+        const canCraft = recipe.ingredients.every((ing: any) => getOriginalCraftItemCount(ing.craft_item_id) >= ing.quantity);
+        if (!canCraft) { alert('Недостаточно необходимых ресурсов'); return; }
         const newSlots: (any | null)[] = [];
         const newUsage: Record<string, number> = {};
-
         recipe.ingredients.forEach((ing: any) => {
             for (let i = 0; i < ing.quantity; i++) {
-                newSlots.push({
-                    type: 'craft_item',
-                    id: ing.craft_item_id,
-                    name: ing.name,
-                    rarity: ing.rarity,
-                    count: 1,
-                    itemType: ing.itemType || 'craft',
-                    image: ing.image || null,
-                });
+                newSlots.push({ type: 'craft_item', id: ing.craft_item_id, name: ing.name, rarity_id: ing.rarity_id, rarity_display: ing.rarity_display, rarity_color: ing.rarity_color, count: 1, itemType: ing.itemType || 'craft', image: ing.image || null });
             }
         });
-
-        while (newSlots.length < 9) {
-            newSlots.push(null);
-        }
-
+        while (newSlots.length < 9) newSlots.push(null);
         setCraftSlots(newSlots);
-
-        recipe.ingredients.forEach((ing: any) => {
-            newUsage[ing.craft_item_id] = ing.quantity;
-        });
+        recipe.ingredients.forEach((ing: any) => { newUsage[ing.craft_item_id] = ing.quantity; });
         setMaterialUsage(newUsage);
     };
 
     const activeRecipe = useMemo(() => {
         if (craftSlots.every(s => s === null)) return null;
         for (const recipe of recipes) {
-            const recipeIngredientMap = new Map<number, number>();
-            recipe.ingredients.forEach((ing: any) => {
-                recipeIngredientMap.set(ing.craft_item_id, ing.quantity);
-            });
-
-            const slotIngredientMap = new Map<number, number>();
+            const recipeMap = new Map<number, number>();
+            recipe.ingredients.forEach((ing: any) => recipeMap.set(ing.craft_item_id, ing.quantity));
+            const slotMap = new Map<number, number>();
             for (const slot of craftSlots) {
                 if (slot && isCraftItem(slot)) {
                     const id = Number(slot.id);
-                    slotIngredientMap.set(id, (slotIngredientMap.get(id) || 0) + 1);
+                    slotMap.set(id, (slotMap.get(id) || 0) + 1);
                 }
             }
-
             let match = true;
-            for (const [id, qty] of slotIngredientMap) {
-                if ((recipeIngredientMap.get(id) || 0) !== qty) {
-                    match = false;
-                    break;
-                }
+            for (const [id, qty] of slotMap) {
+                if ((recipeMap.get(id) || 0) !== qty) { match = false; break; }
             }
-            if (match && recipeIngredientMap.size === slotIngredientMap.size) {
-                return recipe;
-            }
+            if (match && recipeMap.size === slotMap.size) return recipe;
         }
         return null;
     }, [craftSlots, recipes]);
@@ -347,14 +225,8 @@ export default function CraftPage() {
         try {
             const res = await fetch('/api/craft/execute', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-                body: JSON.stringify({
-                    recipe_id: activeRecipe.id,
-                    slots: craftSlots.filter(Boolean),
-                }),
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                body: JSON.stringify({ recipe_id: activeRecipe.id, slots: craftSlots.filter(Boolean) }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
@@ -364,9 +236,7 @@ export default function CraftPage() {
             alert(data.message || (data.success ? 'Предмет создан!' : 'Неудача!'));
         } catch (err: any) {
             alert(err.message);
-        } finally {
-            setCrafting(false);
-        }
+        } finally { setCrafting(false); }
     };
 
     const handleUpgrade = async () => {
@@ -381,19 +251,13 @@ export default function CraftPage() {
             alert(data.message || (data.success ? 'Предмет улучшен!' : 'Неудача!'));
         } catch (err: any) {
             alert(err.message);
-        } finally {
-            setCrafting(false);
-        }
+        } finally { setCrafting(false); }
     };
 
     const hasItemsInSlots = craftSlots.some(s => s !== null);
 
-    // Получение названия категории для рецепта
-    const getRecipeCategory = (recipe: any): string => {
-        return recipe.category?.name || getRecipeCategoryFallback(recipe);
-    };
+    const getRecipeCategory = (recipe: any): string => recipe.category?.name || getRecipeCategoryFallback(recipe);
 
-    // Группировка рецептов
     const groupedRecipes = useMemo(() => {
         const groups: Record<string, any[]> = {};
         recipes.forEach(r => {
@@ -402,109 +266,58 @@ export default function CraftPage() {
             groups[cat].push(r);
         });
         for (const key of Object.keys(groups)) {
-            groups[key].sort((a: any, b: any) => {
-                const rarityA = a.result?.rarity ?? 0;
-                const rarityB = b.result?.rarity ?? 0;
-                return rarityA - rarityB;
-            });
+            groups[key].sort((a: any, b: any) => (a.result?.rarity_id ?? 0) - (b.result?.rarity_id ?? 0));
         }
         return groups;
     }, [recipes]);
 
-    const handleMouseEnterSlot = (e: React.MouseEvent, item: any) => {
-        setTooltipData({ item, x: e.clientX, y: e.clientY });
-    };
+    const handleMouseEnterSlot = (e: React.MouseEvent, item: any) => setTooltipData({ item, x: e.clientX, y: e.clientY });
     const handleMouseMoveSlot = (e: React.MouseEvent) => {
         if (tooltipData) setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
     };
     const handleMouseLeaveSlot = () => setTooltipData(null);
 
     return (
-        <div style={{ padding: '1rem', color: '#eee', minHeight: '100vh' }}>
-            <button onClick={() => navigate('/')} style={{ background: '#555', color: '#fff', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '1rem' }}>
-                ← Назад
-            </button>
-            <h2>🔨 Крафт</h2>
+        <div className="px-4 py-4 min-h-screen">
+            <BackButton />
+            <h2 className="text-xl font-bold mb-4">🔨 Крафт</h2>
 
-            {/* Список рецептов по категориям */}
+            {/* Список рецептов */}
             {Object.keys(groupedRecipes).length > 0 && (
-                <div style={{
-                    marginBottom: '1rem',
-                    maxHeight: '400px',
-                    overflowY: 'auto',
-                    background: '#1e1e30',
-                    borderRadius: '8px',
-                    padding: '0.5rem',
-                }}>
+                <div className="mb-4 max-h-[400px] overflow-y-auto bg-[var(--color-bg-secondary)] rounded-lg p-2">
                     {Object.keys(groupedRecipes).map(cat => (
                         <div key={cat}>
                             <div
                                 onClick={() => setOpenCategories(prev => ({ ...prev, [cat]: !prev[cat] }))}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    fontSize: '0.9rem',
-                                    padding: '0.3rem 0',
-                                    userSelect: 'none',
-                                }}
+                                className="flex items-center gap-2 cursor-pointer font-bold text-sm py-1 select-none"
                             >
                                 <span>{openCategories[cat] ? '−' : '+'}</span>
                                 <span>{cat}</span>
                             </div>
                             {openCategories[cat] && (
-                                <div style={{ marginLeft: '1rem' }}>
+                                <div className="ml-4">
                                     {groupedRecipes[cat].map((recipe: any) => (
                                         <div
                                             key={recipe.id}
                                             onClick={() => handleRecipeClick(recipe)}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '0.2rem 0.5rem',
-                                                borderBottom: '1px solid #333',
-                                                fontSize: '0.85rem',
-                                                cursor: 'pointer',
-                                                background: activeRecipe?.id === recipe.id ? '#2a2a4e' : 'transparent',
-                                            }}
+                                            className={`flex items-center justify-between py-1 px-2 border-b border-[var(--color-border-light)] text-xs cursor-pointer ${
+                                                activeRecipe?.id === recipe.id ? 'bg-[var(--color-bg-card-hover)]' : 'bg-transparent'
+                                            }`}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div className="flex items-center gap-2">
                                                 {recipe.result ? (
-                                                    <div style={{
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        border: `1px solid ${getRarityColor(recipe.result.rarity)}`,
-                                                        borderRadius: '4px',
-                                                        background: recipe.result.image
-                                                            ? `url(/${recipe.result.image}) center / contain no-repeat`
-                                                            : getRarityColor(recipe.result.rarity),
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '0.55rem',
-                                                        fontWeight: 'bold',
-                                                        color: '#fff',
-                                                        textShadow: '0 0 2px #000',
-                                                        flexShrink: 0,
-                                                    }}>
-                                                        {!recipe.result.image && (recipe.result.name?.substring(0, 2) || '?')}
-                                                    </div>
+                                                    <ItemIcon
+                                                        color={recipe.result.rarity_color || '#555'}
+                                                        image={recipe.result.image}
+                                                        name={recipe.result.name || '?'}
+                                                        size="sm"
+                                                    />
                                                 ) : (
-                                                    <div style={{
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        border: '1px solid #555',
-                                                        borderRadius: '4px',
-                                                        background: '#333',
-                                                        flexShrink: 0,
-                                                    }} />
+                                                    <div className="w-6 h-6 rounded border border-[var(--color-border-light)] bg-[var(--color-bg-input)] flex-shrink-0" />
                                                 )}
                                                 <div>
                                                     <strong>{recipe.name}</strong>
-                                                    <div style={{ fontSize: '0.7rem', color: '#aaa' }}>
+                                                    <div className="text-[0.65rem] text-[var(--color-text-muted)]">
                                                         {recipe.ingredients.map((ing: any) => `${ing.name} x${ing.quantity}`).join(', ')}
                                                     </div>
                                                 </div>
@@ -518,34 +331,16 @@ export default function CraftPage() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+            <div className="flex gap-8 flex-wrap mt-4">
                 {/* Крафт-блок */}
-                <div style={{
-                    flex: '0 0 auto',
-                    width: '100%',
-                    maxWidth: '256px',
-                    background: '#1e1e30',
-                    border: '2px solid #555',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                    margin: '0 auto',
-                }}>
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 44px)',
-                        gridTemplateRows: 'repeat(3, 44px)',
-                        gap: '4px',
-                        justifyContent: 'center',
-                    }}>
+                <div className="flex-shrink-0 w-full max-w-[256px] mx-auto bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-light)] rounded-xl p-4 flex flex-col gap-2">
+                    {/* Сетка слотов */}
+                    <div className="grid grid-cols-3 gap-1 justify-center" style={{ gridTemplateColumns: 'repeat(3, 44px)', gridTemplateRows: 'repeat(3, 44px)' }}>
                         {craftSlots.map((item, index) => (
                             <div key={index}>
                                 {item && isCraftItem(item) ? (
                                     <LongPressResourceSlot
-                                        item={item}
-                                        draggable
+                                        item={item} draggable
                                         onDragStart={(e) => handleDragStartFromSlot(e, item)}
                                         onClick={(e) => handleSlotClick(index, e)}
                                         onDrop={(e) => handleDropOnSlot(index, e)}
@@ -557,8 +352,7 @@ export default function CraftPage() {
                                     />
                                 ) : (
                                     <LongPressItemSlot
-                                        item={item}
-                                        draggable={!!item}
+                                        item={item} draggable={!!item}
                                         onDragStart={(e) => item && handleDragStartFromSlot(e, item)}
                                         onClick={(e) => handleSlotClick(index, e)}
                                         onDrop={(e) => handleDropOnSlot(index, e)}
@@ -573,105 +367,51 @@ export default function CraftPage() {
                         ))}
                     </div>
 
+                    {/* Инфо о рецепте */}
                     {activeRecipe && (
-                        <div style={{
-                            marginTop: '0.5rem',
-                            padding: '0.5rem',
-                            background: '#2a2a3e',
-                            borderRadius: '8px',
-                            fontSize: '0.85rem',
-                        }}>
-                            <div>Вы можете создать: <strong style={{ color: getRarityColor(activeRecipe.result?.rarity ?? 0) }}>{activeRecipe.result?.name}</strong></div>
+                        <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
+                            <div>Вы можете создать: <strong style={{ color: activeRecipe.result?.rarity_color || '#fff' }}>{activeRecipe.result?.name}</strong></div>
                             <div>Шанс создания: {activeRecipe.success_chance ?? 100}%</div>
                             <div>Стоимость: {formatMoney(activeRecipe.money_cost)}</div>
                         </div>
                     )}
 
+                    {/* Инфо об улучшении */}
                     {upgradeInfo && (
-                        <div style={{
-                            marginTop: '0.5rem',
-                            padding: '0.5rem',
-                            background: '#2a2a3e',
-                            borderRadius: '8px',
-                            fontSize: '0.85rem',
-                        }}>
+                        <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
                             <div>Улучшение до уровня +{upgradeInfo.nextLevel}</div>
                             <div>Шанс: {upgradeInfo.chance}%</div>
                             <div>Стоимость: {formatMoney(upgradeInfo.cost)}</div>
-                            <div style={{ color: '#e74c3c', fontWeight: 'bold', marginTop: '0.3rem' }}>
-                                При неудаче предмет будет разрушен!!!
-                            </div>
+                            <div className="text-red-500 font-bold mt-1">При неудаче предмет будет разрушен!!!</div>
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                        <button
-                            onClick={handleCreate}
-                            disabled={!activeRecipe || crafting}
-                            style={{
-                                padding: '0.5rem 2rem',
-                                background: activeRecipe ? '#2ecc71' : '#555',
-                                color: activeRecipe ? '#fff' : '#888',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontWeight: 'bold',
-                                cursor: activeRecipe ? 'pointer' : 'not-allowed',
-                                width: '100%',
-                                maxWidth: '200px',
-                            }}
-                        >
+                    {/* Кнопки */}
+                    <div className="flex flex-col gap-2 items-center mt-2">
+                        <Button variant={activeRecipe ? 'success' : 'secondary'} size="sm" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate}>
                             {crafting ? 'Создание...' : 'Создать'}
-                        </button>
-                        <button
-                            onClick={handleUpgrade}
-                            disabled={!upgradeInfo || crafting}
-                            style={{
-                                padding: '0.5rem 2rem',
-                                background: upgradeInfo ? '#f39c12' : '#555',
-                                color: upgradeInfo ? '#fff' : '#888',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontWeight: 'bold',
-                                cursor: upgradeInfo ? 'pointer' : 'not-allowed',
-                                width: '100%',
-                                maxWidth: '200px',
-                            }}
-                        >
+                        </Button>
+                        <Button variant={upgradeInfo ? 'primary' : 'secondary'} size="sm" fullWidth disabled={!upgradeInfo || crafting} onClick={handleUpgrade}
+                            style={{ background: upgradeInfo ? '#f39c12' : undefined }}>
                             {crafting ? 'Улучшение...' : 'Улучшить'}
-                        </button>
-                        <button
-                            onClick={async () => {
-                                const itemsToSalvage = craftSlots.filter(s => s && !isCraftItem(s));
-                                if (itemsToSalvage.length === 0) return;
-                                try {
-                                    const result = await salvageItems(itemsToSalvage.map(s => s.id));
-                                    setCharacter({ ...character, inventory: result.inventory });
-                                    setCraftSlots(prev => prev.map(s => (s && !isCraftItem(s) && itemsToSalvage.some(i => i.id === s.id) ? null : s)));
-                                    setMaterialUsage({});
-                                } catch (err: any) {
-                                    alert(err.message);
-                                }
-                            }}
-                            disabled={!hasItemsInSlots}
-                            style={{
-                                padding: '0.5rem 2rem',
-                                background: hasItemsInSlots ? '#c0392b' : '#555',
-                                color: hasItemsInSlots ? '#fff' : '#888',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontWeight: 'bold',
-                                cursor: hasItemsInSlots ? 'pointer' : 'not-allowed',
-                                width: '100%',
-                                maxWidth: '200px',
-                            }}
-                        >
+                        </Button>
+                        <Button variant="danger" size="sm" fullWidth disabled={!hasItemsInSlots} onClick={async () => {
+                            const itemsToSalvage = craftSlots.filter(s => s && !isCraftItem(s));
+                            if (itemsToSalvage.length === 0) return;
+                            try {
+                                const result = await salvageItems(itemsToSalvage.map(s => s.id));
+                                setCharacter({ ...character, inventory: result.inventory });
+                                setCraftSlots(prev => prev.map(s => (s && !isCraftItem(s) && itemsToSalvage.some(i => i.id === s.id) ? null : s)));
+                                setMaterialUsage({});
+                            } catch (err: any) { alert(err.message); }
+                        }}>
                             Разобрать
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
                 {/* Инвентарь */}
-                <div style={{ flex: 1, minWidth: '300px' }} onDragOver={handleDragOver} onDrop={handleDropOnInventory}>
+                <div className="flex-1 min-w-[300px]" onDragOver={handleDragOver} onDrop={handleDropOnInventory}>
                     <Inventory
                         onItemClick={handleItemClick}
                         onMaterialClick={handleMaterialClick}

@@ -4,6 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
 import { fetchCharacter } from '../../api/character';
 import { changeUsername, changePassword, changeGender } from '../../api';
+import BackButton from '../../components/ui/BackButton';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+
+const inputClass = 'w-full p-1.5 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none';
 
 export default function AccountPage() {
     const { user, loginUser, logout } = useAuth();
@@ -22,108 +27,87 @@ export default function AccountPage() {
     if (!user) return null;
 
     const handleChangeUsername = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setUsernameMsg('');
+        e.preventDefault(); setUsernameMsg('');
         try {
             const result = await changeUsername(newUsername);
             loginUser({ ...user, username: result.newUsername }, localStorage.getItem('token')!);
-            setNewUsername('');
-            setUsernameMsg('Имя успешно изменено');
-        } catch (err: any) {
-            setUsernameMsg(err.message);
-        }
+            setNewUsername(''); setUsernameMsg('Имя успешно изменено');
+        } catch (err: any) { setUsernameMsg(err.message); }
     };
 
     const handleChangePassword = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setPasswordMsg('');
+        e.preventDefault(); setPasswordMsg('');
         try {
             await changePassword(oldPassword, newPassword);
-            setOldPassword('');
-            setNewPassword('');
-            setPasswordMsg('Пароль успешно изменён');
-        } catch (err: any) {
-            setPasswordMsg(err.message);
-        }
+            setOldPassword(''); setNewPassword(''); setPasswordMsg('Пароль успешно изменён');
+        } catch (err: any) { setPasswordMsg(err.message); }
     };
 
     const handleGenderChange = async (newGender: 'male' | 'female') => {
         try {
             await changeGender(newGender);
             loginUser({ ...user, gender: newGender }, localStorage.getItem('token')!);
-            // Принудительно обновляем данные персонажа с сервера, чтобы гарантировать актуальный gender
             const fresh = await fetchCharacter();
             setCharacter(fresh);
             setGenderMsg('Пол изменён');
-        } catch (err: any) {
-            setGenderMsg(err.message);
-        }
+        } catch (err: any) { setGenderMsg(err.message); }
     };
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
+    const handleLogout = () => { logout(); navigate('/login'); };
 
     const currentGender = user.gender || 'male';
 
     return (
-        <div style={{ padding: '1rem', color: '#eee', maxWidth: '500px', margin: '0 auto' }}>
-            <button onClick={() => navigate('/')} style={{ background: '#555', border: 'none', color: '#fff', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '1rem' }}>← Назад</button>
-            <h2>👤 Аккаунт</h2>
-            <p>Текущее имя: <strong>{user.username}</strong></p>
+        <div className="max-w-lg mx-auto px-4 py-4">
+            <BackButton />
+            <h2 className="text-xl font-bold mb-4">👤 Аккаунт</h2>
+            <p className="mb-4">Текущее имя: <strong>{user.username}</strong></p>
 
             {/* Смена имени */}
-            <div style={{ background: '#1e1e30', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                <h3>Сменить имя</h3>
+            <Card className="mb-4">
+                <h3 className="font-bold mb-2">Сменить имя</h3>
                 <form onSubmit={handleChangeUsername}>
-                    <input type="text" placeholder="Новое имя" value={newUsername} onChange={e => setNewUsername(e.target.value)} style={inputStyle} required />
-                    <button type="submit" style={{ ...buttonStyle, background: '#3498db' }}>Сохранить</button>
+                    <input type="text" placeholder="Новое имя" value={newUsername} onChange={e => setNewUsername(e.target.value)} className={inputClass} required />
+                    <Button variant="primary" size="sm" type="submit">Сохранить</Button>
                 </form>
-                {usernameMsg && <p style={{ margin: '0.5rem 0', color: usernameMsg.includes('успешно') ? '#2ecc71' : '#e74c3c' }}>{usernameMsg}</p>}
-            </div>
+                {usernameMsg && <p className={`mt-2 text-sm ${usernameMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{usernameMsg}</p>}
+            </Card>
 
             {/* Смена пароля */}
-            <div style={{ background: '#1e1e30', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                <h3>Сменить пароль</h3>
+            <Card className="mb-4">
+                <h3 className="font-bold mb-2">Сменить пароль</h3>
                 <form onSubmit={handleChangePassword}>
-                    <input type="password" placeholder="Старый пароль" value={oldPassword} onChange={e => setOldPassword(e.target.value)} style={inputStyle} required />
-                    <input type="password" placeholder="Новый пароль" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={inputStyle} required />
-                    <button type="submit" style={{ ...buttonStyle, background: '#3498db' }}>Сохранить</button>
+                    <input type="password" placeholder="Старый пароль" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className={inputClass} required />
+                    <input type="password" placeholder="Новый пароль" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputClass} required />
+                    <Button variant="primary" size="sm" type="submit">Сохранить</Button>
                 </form>
-                {passwordMsg && <p style={{ margin: '0.5rem 0', color: passwordMsg.includes('успешно') ? '#2ecc71' : '#e74c3c' }}>{passwordMsg}</p>}
-            </div>
+                {passwordMsg && <p className={`mt-2 text-sm ${passwordMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{passwordMsg}</p>}
+            </Card>
 
             {/* Выбор пола */}
-            <div style={{ background: '#1e1e30', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                <h3>Пол</h3>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button
+            <Card className="mb-4">
+                <h3 className="font-bold mb-2">Пол</h3>
+                <div className="flex gap-4">
+                    <Button
+                        variant={currentGender === 'male' ? 'primary' : 'secondary'}
+                        size="sm"
                         onClick={() => handleGenderChange('male')}
-                        style={{
-                            ...buttonStyle,
-                            background: currentGender === 'male' ? '#3498db' : '#555',
-                        }}
                     >
                         Мужской
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant={currentGender === 'female' ? 'primary' : 'secondary'}
+                        size="sm"
+                        style={{ background: currentGender === 'female' ? '#e91e63' : undefined }}
                         onClick={() => handleGenderChange('female')}
-                        style={{
-                            ...buttonStyle,
-                            background: currentGender === 'female' ? '#e91e63' : '#555',
-                        }}
                     >
                         Женский
-                    </button>
+                    </Button>
                 </div>
-                {genderMsg && <p style={{ margin: '0.5rem 0', color: genderMsg.includes('успешно') ? '#2ecc71' : '#e74c3c' }}>{genderMsg}</p>}
-            </div>
+                {genderMsg && <p className={`mt-2 text-sm ${genderMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{genderMsg}</p>}
+            </Card>
 
-            <button onClick={handleLogout} style={{ ...buttonStyle, background: '#c0392b' }}>Выйти</button>
+            <Button variant="danger" size="md" fullWidth onClick={handleLogout}>Выйти</Button>
         </div>
     );
 }
-
-const inputStyle: React.CSSProperties = { width: '100%', padding: '0.4rem', marginBottom: '0.5rem', background: '#333', border: '1px solid #555', borderRadius: '4px', color: '#fff' };
-const buttonStyle: React.CSSProperties = { border: 'none', color: '#fff', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' };

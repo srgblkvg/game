@@ -167,7 +167,7 @@ export function setupWebSocket(server: any) {
           const inventory = JSON.parse(currentUser.inventory || '[]');
           item = inventory.find((i: any) => i.id == itemId);
         }
-        if (!item || item.type === 'material') return;
+        if (!item) return;
 
         const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, NULL, ?, ?)');
         const itemDataJson = JSON.stringify(item);
@@ -189,7 +189,7 @@ export function setupWebSocket(server: any) {
       if (data.type === 'public') {
         const content: string = data.content.trim();
 
-        // Команда /w — шепот
+        // Команда /w — ЛС
         if (content.startsWith('/w ')) {
           const withoutCommand = content.slice(3).trim();
           const spaceIndex = withoutCommand.indexOf(' ');
@@ -199,8 +199,12 @@ export function setupWebSocket(server: any) {
           if (!privateContent) return;
 
           const targetUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(targetName) as any;
-          if (!targetUser || targetUser.id === userId) {
+          if (!targetUser) {
             sendToUser(userId, { type: 'error', message: 'Пользователь не найден' });
+            return;
+          }
+          if (targetUser.id === userId) {
+            sendToUser(userId, { type: 'error', message: 'Нельзя отправить личное сообщение самому себе' });
             return;
           }
 

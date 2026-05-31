@@ -1,19 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        // если нужно перезаписывать путь, можно добавить rewrite, но тут не нужно
       },
       '/ws': {
         target: 'ws://localhost:3001',
-        ws: true, // обязательно для WebSocket
+        ws: true,
       },
     },
   },

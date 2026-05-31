@@ -1,4 +1,3 @@
-// client/src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
@@ -30,6 +29,7 @@ function App() {
         padding: '0 1rem',
         boxSizing: 'border-box',
         width: '100%',
+        overflowX: 'auto',      // ← позволяет прокручивать на мобильных
       }}>
         <Routes>
           <Route path="/login" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <Navigate to="/" />) : <LoginPage />} />

@@ -2,15 +2,8 @@ import RatingBlock from './RatingBlock';
 
 export default function RightSidebar() {
     return (
-        <div className="right-sidebar" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            minWidth: 0,
-            overflow: 'hidden',
-        }}>
+        <div className="flex flex-col gap-4 min-w-0 overflow-hidden w-full sm:w-auto">
             <RatingBlock />
-            {/* здесь позже можно добавлять другие блоки */}
         </div>
     );
 }

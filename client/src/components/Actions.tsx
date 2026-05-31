@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import Button from './ui/Button';
 
 interface ActionsProps {
     canAttack: boolean;
@@ -7,116 +7,63 @@ interface ActionsProps {
     onArenaClick: () => void;
 }
 
+const cards = [
+    { title: '🛒 Магазин', subtitle: 'Снаряжение', cost: 0, path: '/shop', buttonText: 'Перейти', bgClass: 'url(/action_shop.webp)', variant: 'danger' as const },
+    { title: '⚔️ Разбой', subtitle: 'Бой с игроками', cost: 10, path: null, buttonText: 'В бой', bgClass: 'url(/action_arena.webp)', variant: 'danger' as const },
+    { title: '🛠️ Приключения', subtitle: 'Заработок', cost: 0, path: '/jobs', buttonText: 'Выбрать', bgClass: 'url(/action_adventures.webp)', variant: 'danger' as const },
+    { title: '🔨 Крафт', subtitle: 'Разбор и создание', cost: 0, path: '/craft', buttonText: 'Перейти', bgClass: 'url(/action_craft.webp)', variant: 'danger' as const },
+];
+
 export default function Actions({ canAttack, attackCooldownSec, onArenaClick }: ActionsProps) {
     const navigate = useNavigate();
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
-
-    useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth < 600);
-        window.addEventListener('resize', handler);
-        return () => window.removeEventListener('resize', handler);
-    }, []);
-
-    const cards = [
-        {
-            title: '🛒 Магазин',
-            subtitle: 'Снаряжение',
-            cost: 0,
-            action: () => navigate('/shop'),
-            buttonText: 'Перейти',
-            bgImage: 'url(/action_shop.webp)',
-        },
-        {
-            title: '⚔️ Разбой',
-            subtitle: 'Бой с игроками',
-            cost: 10,
-            action: onArenaClick,
-            disabled: !canAttack,
-            buttonText: canAttack ? 'В бой' : `⏳ ${Math.floor(attackCooldownSec / 60)}:${String(attackCooldownSec % 60).padStart(2, '0')}`,
-            bgImage: 'url(/action_arena.webp)',
-        },
-        {
-            title: '🛠️ Приключения',
-            subtitle: 'Заработок',
-            cost: 0,
-            action: () => navigate('/jobs'),
-            buttonText: 'Выбрать',
-            bgImage: 'url(/action_adventures.webp)',
-        },
-        {
-            title: '🔨 Крафт',
-            subtitle: 'Разбор и создание',
-            cost: 0,
-            action: () => navigate('/craft'),
-            buttonText: 'Перейти',
-            bgImage: 'url(/action_craft.webp)',
-        },
-    ];
 
     return (
-        <div style={{
-            marginTop: '1.5rem',
-            width: '100%',
-        }}>
-            <div className={isMobile ? 'hide-scrollbar' : ''} style={{
-                display: 'flex',
-                flexWrap: isMobile ? 'nowrap' : 'wrap',
-                gap: '0.75rem',
-                justifyContent: isMobile ? 'flex-start' : 'center',
-                overflowX: isMobile ? 'auto' : 'visible',
-                scrollSnapType: isMobile ? 'x mandatory' : 'none',
-                paddingBottom: isMobile ? '0.5rem' : 0,
-            }}>
-                {cards.map((card, i) => (
-                    <div key={i} style={{
-                        background: '#1e1e30',
-                        borderRadius: '10px',
-                        padding: '1rem',
-                        width: isMobile ? '180px' : undefined,
-                        maxWidth: '250px',
-                        flex: isMobile ? '0 0 auto' : '1 1 200px',
-                        border: '2px solid #555',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        textAlign: 'center',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                        scrollSnapAlign: isMobile ? 'start' : 'none',
-                    }}>
-                        <div style={{
-                            position: 'absolute',
-                            top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundImage: card.bgImage,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            opacity: 0.25,
-                            zIndex: 0,
-                        }} />
-                        <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
-                            <h3 style={{ margin: '0 0 0.3rem 0', fontSize: '0.95rem' }}>{card.title}</h3>
-                            <p style={{ fontSize: '0.75rem', color: '#aaa', margin: '0.2rem 0' }}>{card.subtitle}</p>
-                            {card.cost > 0 && (
-                                <p style={{ fontSize: '0.7rem', color: '#888', marginBottom: '0.4rem' }}>{card.cost} бронзы</p>
-                            )}
-                            {card.cost === 0 && <div style={{ marginBottom: '0.4rem' }} />}
-                            <button
-                                onClick={card.action}
-                                disabled={card.disabled}
-                                style={{
-                                    background: card.disabled ? '#555' : '#e63946',
-                                    border: 'none', borderRadius: '5px',
-                                    color: card.disabled ? '#888' : '#fff',
-                                    padding: '0.35rem 1rem', fontSize: '0.8rem',
-                                    fontWeight: 'bold', cursor: card.disabled ? 'not-allowed' : 'pointer',
-                                    opacity: card.disabled ? 0.7 : 1,
-                                }}>
-                                {card.buttonText}
-                            </button>
+        <div className="mt-6 w-screen ml-[calc(-50vw+50%)] sm:w-full sm:ml-0">
+            <div className="flex sm:flex-wrap gap-3 overflow-x-auto sm:overflow-visible justify-start sm:justify-center hide-scrollbar px-8">
+                {cards.map((card, i) => {
+                    const isArena = i === 1;
+                    const disabled = isArena && !canAttack;
+                    const buttonText = isArena && !canAttack
+                        ? `⏳ ${Math.floor(attackCooldownSec / 60)}:${String(attackCooldownSec % 60).padStart(2, '0')}`
+                        : card.buttonText;
+
+                    return (
+                        <div
+                            key={i}
+                            className="relative bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden w-[200px] sm:min-w-[200px] sm:max-w-[280px] sm:flex-1 flex-shrink-0 sm:flex-shrink"
+                        >
+                            {/* Фон */}
+                            <div
+                                className="absolute inset-0 bg-cover bg-center opacity-25 z-0"
+                                style={{ backgroundImage: card.bgClass }}
+                            />
+                            <div className="relative z-10 w-full flex flex-col flex-1">
+                                <div>
+                                    <h3 className="text-[0.95rem] font-bold mb-1">{card.title}</h3>
+                                    <p className="text-xs text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                                </div>
+                                <div className="mt-auto">
+                                    {card.cost > 0 && (
+                                        <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-1">Цена: {card.cost} сер.</p>
+                                    )}
+                                    {card.cost === 0 && <div className="mb-1" />}
+                                    <Button
+                                        variant={disabled ? 'secondary' : 'danger'}
+                                        size="xs"
+                                        fullWidth
+                                        disabled={disabled}
+                                        onClick={() => {
+                                            if (isArena) onArenaClick();
+                                            else if (card.path) navigate(card.path);
+                                        }}
+                                    >
+                                        {buttonText}
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

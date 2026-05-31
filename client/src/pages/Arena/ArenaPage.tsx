@@ -5,8 +5,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useBattleLogic } from '../../hooks/useBattleLogic';
 import { calculateStats } from '../../utils/stats';
 import CharacterCard from '../../components/CharacterCard';
-import ArenaModal from './ArenaModal';
-import '../../styles/arena.css';
+import BackButton from '../../components/ui/BackButton';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import { formatMoney } from '../../utils/money';
+import { renderBattleLog } from '../../utils/battleLog';
 
 export default function ArenaPage() {
   const { user } = useAuth();
@@ -31,16 +34,10 @@ export default function ArenaPage() {
     currentStep,
     battleResult,
     loading,
-    hpLeft,
-    maxHpLeft,
-    hpRight,
-    maxHpRight,
+    hpLeft, maxHpLeft,
+    hpRight, maxHpRight,
     modalMessage,
     speed,
-    stamLeft,
-    maxStamLeft,
-    stamRight,
-    maxStamRight,
     logContainerRef,
     loadOpponent,
     handleStartBattle,
@@ -69,33 +66,24 @@ export default function ArenaPage() {
   );
 
   return (
-    <div style={{ padding: '1rem', color: '#eee', minHeight: '100vh' }}>
-      <button onClick={() => navigate('/')} style={backBtnStyle}>← Назад</button>
-      <h1 style={{ textAlign: 'center' }}>⚔️ Арена</h1>
+    <div className="px-4 py-4 min-h-screen">
+      <BackButton />
+      <h1 className="text-center text-xl font-bold mb-4">⚔️ Арена</h1>
 
-      <div style={{
-        display: 'flex',
-        justifyContent: isMobile ? 'space-between' : 'center',
-        gap: isMobile ? '0.5rem' : '2rem',
-        margin: '1rem 0',
-        flexWrap: 'nowrap',
-        padding: isMobile ? '0 0.5rem' : 0,
-      }}>
+      {/* Карточки бойцов */}
+      <div className="flex justify-between sm:justify-center gap-2 sm:gap-8 my-4 px-1 sm:px-0">
         <CharacterCard
           char={{
             username: character.username,
             level: character.level,
             equipment: character.equipment,
             stats: calculateStats(character),
-            currentHp: hpLeft,
-            maxHp: maxHpLeft,
-            stamina: stamLeft,
-            maxStamina: maxStamLeft,
+            currentHp: hpLeft, maxHp: maxHpLeft,
             gender: character.gender || 'male',
           }}
           side="left"
           showHealth={isBattleActive}
-          showStamina={isBattleActive}
+          showStamina={false}
           showExp={false}
           readOnly
           compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
@@ -107,15 +95,12 @@ export default function ArenaPage() {
               level: opponent.level,
               equipment: opponent.equipment,
               stats: opponent.stats,
-              currentHp: hpRight,
-              maxHp: maxHpRight,
-              stamina: stamRight,
-              maxStamina: maxStamRight,
+              currentHp: hpRight, maxHp: maxHpRight,
               gender: opponent.gender || 'male',
             }}
             side="right"
             showHealth={isBattleActive}
-            showStamina={isBattleActive}
+            showStamina={false}
             showExp={false}
             readOnly
             compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
@@ -123,117 +108,89 @@ export default function ArenaPage() {
         )}
       </div>
 
-      {/* Остальная часть без изменений (управление боем, лог, кнопки) */}
+      {/* Управление скоростью */}
       {battleSteps.length > 0 && currentStep < battleSteps.length - 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <button onClick={toggleSpeed}
-            style={{ background: '#3498db', border: 'none', color: '#fff', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: 'pointer' }}>
+        <div className="flex justify-center gap-4 mb-4">
+          <Button variant="primary" size="sm" onClick={toggleSpeed}>
             {speed === 2 ? 'x1' : 'x2'}
-          </button>
-          <button onClick={handleSkip}
-            style={{ padding: '0.3rem 0.8rem', background: '#555', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleSkip}>
             Пропустить
-          </button>
+          </Button>
         </div>
       )}
 
+      {/* Кнопки до боя */}
       {!battleSteps.length && (
-        <div style={{ textAlign: 'center', margin: '2rem' }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            marginTop: isMobile ? '1.5rem' : '0',
-          }}>
-            <button
+        <div className="text-center my-8">
+          <div className="flex justify-center flex-wrap gap-4">
+            <Button
+              variant="danger"
+              size="md"
               onClick={handleStartBattle}
               disabled={loading || !opponent}
-              style={{
-                fontSize: '1.2rem',
-                padding: '0.6rem 1.8rem',
-                background: '#e63946',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                minWidth: '180px',
-              }}
+              className="text-lg px-6 py-2 min-w-[180px] rounded-xl"
             >
               {loading ? 'Поиск...' : '⚡ В бой!'}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
               onClick={() => loadOpponent(true)}
               disabled={loading || character.money < 10}
-              style={{
-                fontSize: '1.2rem',
-                padding: '0.6rem 1.8rem',
-                background: '#555',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                minWidth: '180px',
-              }}
+              className="text-lg px-6 py-2 min-w-[180px] rounded-xl"
             >
-              🔄 Сменить (10 бронзы)
-            </button>
+              🔄 Сменить (10 сер.)
+            </Button>
           </div>
         </div>
       )}
 
+      {/* Лог боя */}
       {battleSteps.length > 0 && (
         <div>
-          <div ref={logContainerRef} style={{
-            background: '#111',
-            padding: '1rem',
-            borderRadius: '8px',
-            height: '7.5em',
-            overflowY: 'auto',
-            fontFamily: 'monospace',
-            fontSize: '0.85rem',
-            lineHeight: '1.5',
-          }}>
-            {visibleSteps.map((step, i) => (
-              <div key={i} style={{ marginBottom: 2 }}>{step.message}</div>
-            ))}
+          <div
+            ref={logContainerRef}
+            className="bg-black rounded-lg p-3 h-[8em] overflow-y-auto font-mono text-xs leading-relaxed"
+          >
+            {renderBattleLog(visibleSteps)}
           </div>
 
           {currentStep >= battleSteps.length - 1 && battleResult && (
-            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-              <p style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
+            <div className="text-center mt-4">
+              <p className="font-bold text-lg">
                 {battleResult.winnerId === user.id ? '🏆 Победа!' : '💀 Поражение'}
               </p>
               <p>Опыт: +{battleResult.expGained}</p>
               {battleResult.moneyStolen > 0 && (
                 <p>
                   {battleResult.winnerId === user.id
-                    ? `🪙 Захвачено ${battleResult.moneyStolen}`
-                    : `💸 Потеряно ${battleResult.moneyStolen}`}
+                    ? `🪙 Захвачено ${formatMoney(battleResult.moneyStolen)}`
+                    : `💸 Потеряно ${formatMoney(battleResult.moneyStolen)}`}
                 </p>
               )}
-              <button
-                onClick={() => {
-                  finishBattle();
-                  navigate('/');
-                }}
-                style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#e63946', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer' }}
+              {battleResult.levelsGained > 0 && (
+                <p className="text-[var(--color-accent-purple)]">⬆ Уровень +{battleResult.levelsGained} (+{battleResult.levelsGained * 5} очк.)</p>
+              )}
+              <Button
+                variant="danger"
+                size="md"
+                className="mt-4"
+                onClick={() => { finishBattle(); navigate('/'); }}
               >
                 Вернуться на главную
-              </button>
+              </Button>
             </div>
           )}
         </div>
       )}
 
-      {modalMessage && <ArenaModal message={modalMessage} onClose={() => setModalMessage(null)} />}
+      {modalMessage && (
+        <Modal open={!!modalMessage} onClose={() => setModalMessage(null)}>
+          <p className="whitespace-pre-wrap mb-4">{modalMessage}</p>
+          <Button variant="danger" size="sm" fullWidth onClick={() => setModalMessage(null)}>OK</Button>
+        </Modal>
+      )}
     </div>
   );
 }
-
-const backBtnStyle: React.CSSProperties = {
-  background: '#555', border: 'none', color: '#fff', padding: '0.4rem 1rem',
-  borderRadius: '6px', cursor: 'pointer', marginBottom: '1rem',
-};

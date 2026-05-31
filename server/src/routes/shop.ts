@@ -4,17 +4,26 @@ import { buyItemSchema } from '../validation';
 
 const router = Router();
 
+// Получить все предметы для магазина
 router.get('/shop/items', (req: any, res) => {
-    const items = db.prepare('SELECT * FROM items').all() as any[];
+    const items = db.prepare(`
+        SELECT i.*, r.display_name as rarity_display, r.color as rarity_color, r.id as rarity_id
+        FROM items i
+        JOIN rarities r ON i.rarity_id = r.id
+        ORDER BY i.id
+    `).all() as any[];
+
     const result = items.map((item: any) => ({
         ...item,
         bonuses: JSON.parse(item.bonuses || '{}'),
         extra: JSON.parse(item.extra || '{}'),
-        price: 100 * Math.pow(10, item.rarity),
+        price: 100 * Math.pow(10, item.rarity_id),
     }));
+
     res.json(result);
 });
 
+// Купить предмет
 router.post('/shop/buy', (req: any, res) => {
     const parsed = buyItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
@@ -25,13 +34,17 @@ router.post('/shop/buy', (req: any, res) => {
     const user = db.prepare('SELECT money, inventory, inventorySlots FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const dbItem = db.prepare('SELECT * FROM items WHERE id = ?').get(itemId) as any;
+    const dbItem = db.prepare(`
+        SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
+        FROM items i
+        JOIN rarities r ON i.rarity_id = r.id
+        WHERE i.id = ?
+    `).get(itemId) as any;
     if (!dbItem) return res.status(404).json({ error: 'Item not found' });
 
-    const price = 100 * Math.pow(10, dbItem.rarity);
+    const price = 100 * Math.pow(10, dbItem.rarity_id);
     if (user.money < price) return res.status(400).json({ error: 'Недостаточно монет' });
 
-    // Проверка заполненности инвентаря
     const inventory = JSON.parse(user.inventory || '[]');
     const equipmentCount = inventory.filter(
         (item: any) => !item.type || (item.type !== 'material' && item.type !== 'craft_item')
@@ -45,7 +58,9 @@ router.post('/shop/buy', (req: any, res) => {
         id: Date.now() + Math.random(),
         name: dbItem.name,
         slot: dbItem.slot,
-        rarity: dbItem.rarity,
+        rarity_id: dbItem.rarity_id,
+        rarity_display: dbItem.rarity_display,
+        rarity_color: dbItem.rarity_color,
         bonuses: JSON.parse(dbItem.bonuses || '{}'),
         extra: JSON.parse(dbItem.extra || '{}'),
         image: dbItem.image || null,

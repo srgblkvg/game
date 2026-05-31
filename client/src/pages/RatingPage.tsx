@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { fetchRating } from '../api/character';
+import BackButton from '../components/ui/BackButton';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 
 const LIMIT = 20;
 
@@ -21,39 +25,36 @@ export default function RatingPage() {
     const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '…' : nick;
 
     return (
-        <div style={{ padding: '1rem', color: '#eee', maxWidth: '600px', margin: '0 auto' }}>
-            <button onClick={() => navigate('/')} style={{ background: '#555', border: 'none', color: '#fff', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '1rem' }}>← Назад</button>
-            <h2>🏆 Рейтинг игроков</h2>
+        <div className="max-w-xl mx-auto px-4 py-4">
+            <BackButton />
+            <h2 className="text-xl font-bold mb-4">🏆 Рейтинг игроков</h2>
 
-            <div style={{ background: '#1e1e30', borderRadius: '8px', padding: '1rem' }}>
+            <Card>
                 {players.length === 0 ? (
-                    <div>Нет игроков</div>
+                    <p className="text-[var(--color-text-muted)]">Нет игроков</p>
                 ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <table className="w-full border-collapse">
                         <thead>
-                            <tr style={{ borderBottom: '1px solid #444' }}>
-                                <th style={{ textAlign: 'left', padding: '0.3rem' }}>Игрок</th>
-                                <th style={{ textAlign: 'right', padding: '0.3rem' }}>Побед</th>
+                            <tr className="border-b border-[var(--color-border-default)]">
+                                <th className="text-left p-1.5 text-sm">Игрок</th>
+                                <th className="text-right p-1.5 text-sm">Побед</th>
                             </tr>
                         </thead>
                         <tbody>
                             {players.map((p, i) => (
-                                <tr key={p.id} style={{ borderBottom: '1px solid #333' }}>
-                                    <td style={{ padding: '0.3rem' }}>
+                                <tr key={p.id} className="border-b border-[var(--color-border-light)]">
+                                    <td className="p-1.5">
                                         <span
                                             onClick={() => navigate(`/profile/${p.id}`)}
-                                            style={{
-                                                cursor: 'pointer',
-                                                color: '#eee',
-                                                transition: 'color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => (e.currentTarget.style.color = '#3498db')}
-                                            onMouseLeave={(e) => (e.currentTarget.style.color = '#eee')}
+                                            className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors"
                                         >
-                                            {i + 1 + (page - 1) * LIMIT}. {truncate(p.username)} <span style={{ color: '#888' }}>[{p.level}]</span>
+                                            {i + 1 + (page - 1) * LIMIT}. {truncate(p.username)}{' '}
+                                            <span className="text-[var(--color-text-muted)]">[{p.level}]</span>
                                         </span>
                                     </td>
-                                    <td style={{ textAlign: 'right', padding: '0.3rem', color: '#2ecc71', fontWeight: 'bold' }}>{p.wins}</td>
+                                    <td className="text-right p-1.5 text-[var(--color-accent-success)] font-bold">
+                                        {p.wins}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -61,25 +62,13 @@ export default function RatingPage() {
                 )}
 
                 {totalPages > 1 && (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
-                        <button
-                            disabled={page <= 1}
-                            onClick={() => setPage(page - 1)}
-                            style={{ background: '#555', border: 'none', color: '#fff', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: page > 1 ? 'pointer' : 'not-allowed' }}
-                        >
-                            ← Назад
-                        </button>
-                        <span>стр. {page} из {totalPages}</span>
-                        <button
-                            disabled={page >= totalPages}
-                            onClick={() => setPage(page + 1)}
-                            style={{ background: '#555', border: 'none', color: '#fff', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: page < totalPages ? 'pointer' : 'not-allowed' }}
-                        >
-                            Вперёд →
-                        </button>
+                    <div className="flex justify-center gap-4 mt-4 items-center">
+                        <Button size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Назад</Button>
+                        <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
+                        <Button size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Вперёд →</Button>
                     </div>
                 )}
-            </div>
+            </Card>
         </div>
     );
 }

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { fetchAdminJobs, createAdminJob, updateAdminJob, deleteAdminJob, adminFinishJobsByJobId } from '../../api';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+
+const inputClass = 'w-full p-1.5 mb-1 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm';
 
 export default function AdminJobs() {
     const [jobs, setJobs] = useState<any[]>([]);
@@ -40,61 +44,79 @@ export default function AdminJobs() {
         try {
             const res = await adminFinishJobsByJobId(jobId);
             setMessage(`Завершено работ: ${res.count}`);
-            loadJobs(); // список игроков не обновляем, т.к. это другой компонент
+            loadJobs();
         } catch (e: any) { setMessage(e.message); }
     };
 
+    const formData = editingJob || newJob;
+    const setForm = editingJob ? setEditingJob : setNewJob;
+
     return (
         <div>
-            <div style={{ marginBottom: '1rem', background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h3>{editingJob ? 'Редактировать работу' : 'Добавить работу'}</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label>Название<br /><input placeholder="Название" value={editingJob ? editingJob.name : newJob.name} onChange={e => editingJob ? setEditingJob({ ...editingJob, name: e.target.value }) : setNewJob({ ...newJob, name: e.target.value })} style={inputStyle} /></label>
-                    <label>Описание<br /><input placeholder="Описание" value={editingJob ? editingJob.description : newJob.description} onChange={e => editingJob ? setEditingJob({ ...editingJob, description: e.target.value }) : setNewJob({ ...newJob, description: e.target.value })} style={inputStyle} /></label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <label style={{ flex: 1 }}>Длительность (сек)<br /><input type="number" value={editingJob ? editingJob.duration : newJob.duration} onChange={e => editingJob ? setEditingJob({ ...editingJob, duration: +e.target.value }) : setNewJob({ ...newJob, duration: +e.target.value })} style={inputStyle} /></label>
-                        <label style={{ flex: 1 }}>Мин. награда<br /><input type="number" value={editingJob ? editingJob.rewardMin : newJob.rewardMin} onChange={e => editingJob ? setEditingJob({ ...editingJob, rewardMin: +e.target.value }) : setNewJob({ ...newJob, rewardMin: +e.target.value })} style={inputStyle} /></label>
-                        <label style={{ flex: 1 }}>Макс. награда<br /><input type="number" value={editingJob ? editingJob.rewardMax : newJob.rewardMax} onChange={e => editingJob ? setEditingJob({ ...editingJob, rewardMax: +e.target.value }) : setNewJob({ ...newJob, rewardMax: +e.target.value })} style={inputStyle} /></label>
+            <Card className="mb-4">
+                <h3 className="font-bold mb-2">{editingJob ? 'Редактировать работу' : 'Добавить работу'}</h3>
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm">
+                        Название<br />
+                        <input placeholder="Название" value={formData.name} onChange={e => setForm({ ...formData, name: e.target.value })} className={inputClass} />
+                    </label>
+                    <label className="text-sm">
+                        Описание<br />
+                        <input placeholder="Описание" value={formData.description} onChange={e => setForm({ ...formData, description: e.target.value })} className={inputClass} />
+                    </label>
+                    <div className="flex gap-2">
+                        <label className="text-sm flex-1">
+                            Длительность (сек)<br />
+                            <input type="number" value={formData.duration} onChange={e => setForm({ ...formData, duration: +e.target.value })} className={inputClass} />
+                        </label>
+                        <label className="text-sm flex-1">
+                            Мин. награда<br />
+                            <input type="number" value={formData.rewardMin} onChange={e => setForm({ ...formData, rewardMin: +e.target.value })} className={inputClass} />
+                        </label>
+                        <label className="text-sm flex-1">
+                            Макс. награда<br />
+                            <input type="number" value={formData.rewardMax} onChange={e => setForm({ ...formData, rewardMax: +e.target.value })} className={inputClass} />
+                        </label>
                     </div>
                 </div>
-                <div style={{ marginTop: '1rem' }}>
+                <div className="mt-3 flex gap-2">
                     {editingJob ? (
                         <>
-                            <button onClick={handleUpdateJob} style={{ background: '#2ecc71', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', marginRight: '0.5rem' }}>Сохранить</button>
-                            <button onClick={() => setEditingJob(null)} style={{ background: '#e74c3c', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Отмена</button>
+                            <Button variant="success" size="sm" onClick={handleUpdateJob}>Сохранить</Button>
+                            <Button variant="danger" size="sm" onClick={() => setEditingJob(null)}>Отмена</Button>
                         </>
                     ) : (
-                        <button onClick={handleCreateJob} style={{ background: '#2ecc71', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Создать</button>
+                        <Button variant="success" size="sm" onClick={handleCreateJob}>Создать</Button>
                     )}
                 </div>
-            </div>
+            </Card>
 
-            <div style={{ background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h3>Все работы</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #444' }}>
-                            <th>ID</th><th>Название</th><th>Длит.</th><th>Мин.</th><th>Макс.</th><th>Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {jobs.map((job: any) => (
-                            <tr key={job.id} style={{ borderBottom: '1px solid #333' }}>
-                                <td>{job.id}</td><td>{job.name}</td><td>{job.duration}</td><td>{job.rewardMin}</td><td>{job.rewardMax}</td>
-                                <td>
-                                    <button onClick={() => setEditingJob(job)} style={{ background: '#3498db', border: 'none', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', marginRight: '0.3rem' }}>Ред.</button>
-                                    <button onClick={() => handleDeleteJob(job.id)} style={{ background: '#c0392b', border: 'none', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', marginRight: '0.3rem' }}>Удалить</button>
-                                    <button onClick={() => handleFinishAllJobsByType(job.id)} style={{ background: '#8e44ad', border: 'none', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}>Завершить все</button>
-                                </td>
+            <Card>
+                <h3 className="font-bold mb-2">Все работы</h3>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm">
+                        <thead>
+                            <tr className="border-b border-[var(--color-border-default)]">
+                                <th className="text-left p-1">ID</th><th className="text-left p-1">Название</th><th className="text-left p-1">Длит.</th><th className="text-left p-1">Мин.</th><th className="text-left p-1">Макс.</th><th className="text-left p-1">Действия</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {jobs.map((job: any) => (
+                                <tr key={job.id} className="border-b border-[var(--color-border-light)]">
+                                    <td className="p-1">{job.id}</td><td className="p-1">{job.name}</td><td className="p-1">{job.duration}</td><td className="p-1">{job.rewardMin}</td><td className="p-1">{job.rewardMax}</td>
+                                    <td className="p-1">
+                                        <Button variant="primary" size="xs" className="mr-1" onClick={() => setEditingJob(job)}>Ред.</Button>
+                                        <Button variant="danger" size="xs" className="mr-1" onClick={() => handleDeleteJob(job.id)}>Удалить</Button>
+                                        <Button size="xs" style={{ background: '#8e44ad' }} onClick={() => handleFinishAllJobsByType(job.id)}>Завершить все</Button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
 
-            {message && <div style={{ marginTop: '1rem', background: '#2a2a3e', padding: '0.5rem', borderRadius: '4px' }}>{message}</div>}
+            {message && <div className="mt-4 p-3 bg-[var(--color-bg-card)] rounded text-sm">{message}</div>}
         </div>
     );
 }
-
-const inputStyle: React.CSSProperties = { width: '100%', padding: '0.3rem', marginBottom: '0.5rem', background: '#333', border: '1px solid #555', borderRadius: '4px', color: '#fff' };

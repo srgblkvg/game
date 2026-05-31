@@ -1,13 +1,12 @@
 import { currentStats, CharStats, GameItem } from './stats';
 
 export interface BattleStep {
-  type: 'attack' | 'dodge' | 'counter' | 'block' | 'fullBlock' | 'crit' | 'stun' | 'damage' | 'info' | 'end' | 'money' | 'stamina';
+  type: 'attack' | 'dodge' | 'counter' | 'block' | 'fullBlock' | 'crit' | 'stun' | 'damage' | 'info' | 'end' | 'money';
   actor?: 'attacker' | 'defender';
   target?: 'attacker' | 'defender';
   message: string;
   damage?: number;
   amount?: number;
-  stamina?: number;
 }
 
 interface BattleResult {
@@ -22,22 +21,22 @@ interface BattleResult {
 }
 
 const dodgeChance = (defA: number, atkM: number, defExtraDodge: number) =>
-  Math.max(0, (defA / (defA + 50)) * (1 - atkM / (atkM + 100)) + Math.min(1, defExtraDodge / 100));
+  Math.max(0, (defA / (defA + 50)) * (1 - atkM / (atkM + 100)) + Math.min(0.5, defExtraDodge / 200));
 
-const critChance = (m: number, extraCrit: number) => Math.min(1, m / (m + 50) + extraCrit / 100);
+const critChance = (m: number, extraCrit: number) => Math.min(0.8, m / (m + 50) + extraCrit / 200);
 const critMult = (m: number) => 1.5 + 0.5 * (m / (m + 50));
 
-const blockChance = (d: number, extraFullBlock: number) => Math.min(1, d / (d + 50) + extraFullBlock / 100);
+const blockChance = (d: number, extraFullBlock: number) => Math.min(1, d / (d + 50) + extraFullBlock / 200);
 const blockRed = (d: number) => Math.min(d, 75) / 100;
 
 const counterChance = (defStats: CharStats, atkStats: CharStats, defExtraCounter: number) => {
   const sum = (defStats.m + defStats.a) + (atkStats.m + atkStats.d);
-  return Math.min(1, (sum > 0 ? (defStats.m + defStats.a) / sum : 0) + defExtraCounter / 100);
+  return Math.min(0.5, (sum > 0 ? (defStats.m + defStats.a) / sum * 0.5 : 0) + defExtraCounter / 200);
 };
 
 const stunChance = (atkStats: CharStats, defStats: CharStats) => {
   const sum = (atkStats.s + atkStats.m) + (defStats.s + defStats.d);
-  return sum > 0 ? (atkStats.s + atkStats.m) / sum : 0;
+  return sum > 0 ? (atkStats.s + atkStats.m) / sum * 0.3 : 0;
 };
 
 export function runBattle(
@@ -48,8 +47,6 @@ export function runBattle(
   const statsD = currentStats(defender.base, defender.equipment);
   let hpA = statsA.hp;
   let hpD = statsD.hp;
-  let stamA = statsA.maxStamina;
-  let stamD = statsD.maxStamina;
   let stunnedA = false;
   let stunnedD = false;
   const log: string[] = [];
@@ -66,24 +63,16 @@ export function runBattle(
 
   let turns = 0;
   const maxTurns = 200;
-  while (hpA > 1 && hpD > 1 && turns < maxTurns) {
+  while (hpA > 0 && hpD > 0 && turns < maxTurns) {
     turns++;
     if (turn === 'A') {
       // Ход атакующего (игрок)
-      if (!stunnedA) stamA = Math.min(statsA.maxStamina, stamA + statsA.regen);
-      else {
+      if (stunnedA) {
         addStep({ type: 'stun', actor: 'attacker', message: `${attacker.name} оглушён и пропускает ход` });
         stunnedA = false;
         turn = 'D';
         continue;
       }
-      if (stamA < statsA.attackCost) {
-        addStep({ type: 'info', message: `${attacker.name} не хватает выносливости` });
-        turn = 'D';
-        continue;
-      }
-      stamA -= statsA.attackCost;
-      addStep({ type: 'stamina', actor: 'attacker', stamina: stamA, message: `Выносливость: ${stamA}` });
       addStep({ type: 'attack', actor: 'attacker', message: `${attacker.name} атакует!` });
 
       if (Math.random() < dodgeChance(statsD.a, statsA.m, statsD.extra.dodge)) {
@@ -129,20 +118,12 @@ export function runBattle(
       turn = 'D';
     } else {
       // Ход защитника (бот)
-      if (!stunnedD) stamD = Math.min(statsD.maxStamina, stamD + statsD.regen);
-      else {
+      if (stunnedD) {
         addStep({ type: 'stun', actor: 'defender', message: `${defender.name} оглушён и пропускает ход` });
         stunnedD = false;
         turn = 'A';
         continue;
       }
-      if (stamD < statsD.attackCost) {
-        addStep({ type: 'info', message: `${defender.name} не хватает выносливости` });
-        turn = 'A';
-        continue;
-      }
-      stamD -= statsD.attackCost;
-      addStep({ type: 'stamina', actor: 'defender', stamina: stamD, message: `Выносливость: ${stamD}` });
       addStep({ type: 'attack', actor: 'defender', message: `${defender.name} атакует!` });
 
       if (Math.random() < dodgeChance(statsA.a, statsD.m, statsA.extra.dodge)) {
@@ -188,7 +169,7 @@ export function runBattle(
     }
   }
 
-  const winnerId = hpA <= 1 ? defender.id : attacker.id;
+  const winnerId = hpA <= 0 ? defender.id : attacker.id;
   const winnerName = winnerId === attacker.id ? attacker.name : defender.name;
   addStep({ type: 'end', message: `${winnerName} победил!` });
 

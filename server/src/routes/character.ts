@@ -10,54 +10,98 @@ router.get('/character/me', (req: any, res) => {
     const user: any = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    const inventory = JSON.parse(user.inventory || '[]');
+    let inventory = JSON.parse(user.inventory || '[]');
     const equipment = JSON.parse(user.equipment || '{}');
+    let changed = false;
 
-    const getCraftData = db.prepare('SELECT type, image FROM craft_items WHERE id = ?');
-    const enrichedInventory = inventory.map((item: any) => {
-        if (item.type === 'craft_item' || item.type === 'material') {
-            // Пробуем найти по id
-            const craftRow = getCraftData.get(Number(item.id)) as any;
-            if (craftRow) {
-                return {
-                    ...item,
-                    itemType: craftRow.type || 'craft',
-                    image: craftRow.image || null
-                };
+    const getItemData = db.prepare(`
+        SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color
+        FROM items i JOIN rarities r ON i.rarity_id = r.id
+        WHERE i.name = ? AND i.slot = ?
+    `);
+    const getCraftData = db.prepare(`
+        SELECT c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color
+        FROM craft_items c JOIN rarities r ON c.rarity_id = r.id
+        WHERE c.id = ?
+    `);
+
+    inventory = inventory.map((item: any) => {
+        if ((item.type === 'craft_item' || item.type === 'material')) {
+            if (item.rarity_id === undefined) {
+                const craftRow = getCraftData.get(Number(item.id)) as any;
+                if (craftRow) {
+                    changed = true;
+                    return {
+                        ...item,
+                        rarity_id: craftRow.rarity_id,
+                        rarity_display: craftRow.rarity_display,
+                        rarity_color: craftRow.rarity_color,
+                        itemType: item.itemType || craftRow.type || 'craft',
+                        image: item.image ?? craftRow.image ?? null,
+                    };
+                }
             }
-            // Если не нашли, ищем по редкости и типу
-            const craftByRarity = db.prepare('SELECT id, type, image FROM craft_items WHERE rarity = ? AND type = ?')
-                .get(item.rarity, item.itemType || 'craft') as any;
-            if (craftByRarity) {
-                return {
-                    ...item,
-                    id: craftByRarity.id,          // обновляем id на правильный
-                    itemType: craftByRarity.type || 'craft',
-                    image: craftByRarity.image || null
-                };
+        } else if (item.slot) {
+            if (item.rarity_id === undefined) {
+                const itemRow = getItemData.get(item.name, item.slot) as any;
+                if (itemRow) {
+                    changed = true;
+                    return {
+                        ...item,
+                        rarity_id: itemRow.rarity_id,
+                        rarity_display: itemRow.rarity_display,
+                        rarity_color: itemRow.rarity_color,
+                        image: itemRow.image || item.image || null,
+                    };
+                }
             }
         }
         return item;
     });
 
-    if (JSON.stringify(enrichedInventory) !== JSON.stringify(inventory)) {
-        db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(enrichedInventory), userId);
+    // Обогащаем экипировку (если там есть предметы без rarity_id)
+    let equipChanged = false;
+    const enrichedEquipment: Record<string, any> = {};
+    for (const [slotId, item] of Object.entries(equipment) as [string, any][]) {
+        if (item && item.slot && item.rarity_id === undefined) {
+            const itemRow = getItemData.get(item.name, item.slot) as any;
+            if (itemRow) {
+                equipChanged = true;
+                enrichedEquipment[slotId] = {
+                    ...item,
+                    rarity_id: itemRow.rarity_id,
+                    rarity_display: itemRow.rarity_display,
+                    rarity_color: itemRow.rarity_color,
+                    image: itemRow.image || item.image || null,
+                };
+            } else {
+                enrichedEquipment[slotId] = item;
+            }
+        } else {
+            enrichedEquipment[slotId] = item;
+        }
     }
 
-    const stats = currentStats(
-        { s: 5 * Math.pow(2, user.level - 1), a: 5 * Math.pow(2, user.level - 1), v: 100, d: 5 * Math.pow(2, user.level - 1), m: 5 * Math.pow(2, user.level - 1) },
-        equipment
-    );
+    if (changed) {
+        db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    }
+    if (equipChanged) {
+        db.prepare('UPDATE users SET equipment = ? WHERE id = ?').run(JSON.stringify(enrichedEquipment), userId);
+    }
 
-    // Проверка завершённой работы
+    const base = { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 };
+    const stats = currentStats(base, enrichedEquipment);
+
     let jobData = null;
     if (user.activeJob) {
         jobData = JSON.parse(user.activeJob);
         const nowSec = Math.floor(Date.now() / 1000);
         if (nowSec >= jobData.endTime) {
             const newMoney = user.money + jobData.reward;
-            db.prepare('UPDATE users SET money = ?, activeJob = NULL WHERE id = ?')
-                .run(newMoney, userId);
+            const expGain = jobData.expReward || 0;
+            const newExp = user.exp + expGain;
+            db.prepare('UPDATE users SET money = ?, exp = ?, activeJob = NULL WHERE id = ?')
+                .run(newMoney, newExp, userId);
             db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)')
                 .run(userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString());
             user.money = newMoney;
@@ -66,39 +110,10 @@ router.get('/character/me', (req: any, res) => {
         }
     }
 
-    // Регенерация здоровья
     const now = Math.floor(Date.now() / 1000);
-    const elapsed = now - (user.lastHpUpdate || 0);
-    const hpRegen = stats.extra.hpRegen || 0;
     let currentHp = user.currentHp;
-    if (elapsed > 0 && hpRegen > 0) {
-        currentHp = Math.min(user.currentHp + elapsed * hpRegen, stats.hp);
-        db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?')
-            .run(currentHp, now, userId);
-    }
 
     const openPrivateTabs = JSON.parse(user.openPrivateTabs || '[]');
-
-    if (user.inventory) {
-        let inventory = JSON.parse(user.inventory);
-        let changed = false;
-        const getCraftType = db.prepare('SELECT type FROM craft_items WHERE id = ?');
-        inventory = inventory.map((item: any) => {
-            if ((item.type === 'craft_item' || item.type === 'material') && (!item.itemType || item.image === undefined)) {
-                const craftRow = getCraftType.get(Number(item.id)) as any;
-                if (craftRow) {
-                    changed = true;
-                    return { ...item, itemType: craftRow.type || 'craft', image: craftRow.image || null };
-                }
-            }
-            return item;
-        });
-        if (changed) {
-            // обновляем инвентарь в БД, чтобы в следующий раз не обогащать
-            db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
-        }
-        user.inventory = JSON.stringify(inventory);
-    }
 
     res.json({
         id: user.id,
@@ -109,8 +124,8 @@ router.get('/character/me', (req: any, res) => {
         totalBattles: user.totalBattles,
         wins: user.wins,
         inventory,
-        equipment,
-        baseStats: { s: 5 * Math.pow(2, user.level - 1), a: 5 * Math.pow(2, user.level - 1), v: 100, d: 5 * Math.pow(2, user.level - 1), m: 5 * Math.pow(2, user.level - 1) },
+        equipment: enrichedEquipment,
+        baseStats: { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 },
         currentHp,
         stats,
         lastAttackTime: user.lastAttackTime || 0,
@@ -120,6 +135,7 @@ router.get('/character/me', (req: any, res) => {
         role: user.role || 'player',
         openPrivateTabs,
         gender: user.gender || 'male',
+        statPoints: user.statPoints || 0,
     });
 });
 
@@ -145,7 +161,6 @@ router.post('/character/equip', (req: any, res) => {
     const equipment: Record<string, any> = JSON.parse(user.equipment || '{}');
     const currentEquipped = equipment[slotId];
 
-    // Снятие предмета
     if (itemId === undefined || itemId === null) {
         if (!currentEquipped) return res.status(400).json({ error: 'Слот пуст' });
         inventory.push(currentEquipped);
@@ -157,11 +172,10 @@ router.post('/character/equip', (req: any, res) => {
         return res.json({ inventory, equipment });
     }
 
-    // Надевание предмета
     const itemIndex = inventory.findIndex((i: any) => i.id == itemId);
     if (itemIndex === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
     const item = inventory[itemIndex];
-    if (!item || item.type === 'material') return res.status(400).json({ error: 'Нельзя надеть материал' });
+    if (!item || item.type === 'material' || item.type === 'craft_item') return res.status(400).json({ error: 'Нельзя надеть материал или ресурс' });
 
     if (!isSlotCompatible(slotId, item)) return res.status(400).json({ error: 'Предмет не подходит к слоту' });
 
@@ -210,24 +224,29 @@ router.post('/character/salvage', (req: any, res) => {
     let inventory: any[] = JSON.parse(user.inventory || '[]');
     const idsToDelete = new Set(itemIds.map((id: any) => String(id)));
 
-    // Собираем редкости разбираемых предметов
-    const materialsToAdd: { rarity: number; count: number }[] = [];
+    const materialsToAdd: { rarity_id: number; count: number }[] = [];
     inventory = inventory.filter((item: any) => {
         const itemIdStr = String(item.id);
         if (idsToDelete.has(itemIdStr) && item.type !== 'craft_item') {
-            const rarity = item.rarity || 0;
-            const existing = materialsToAdd.find(m => m.rarity === rarity);
+            const rarityId = item.rarity_id ?? 0;
+            const existing = materialsToAdd.find(m => m.rarity_id === rarityId);
             if (existing) existing.count += 1;
-            else materialsToAdd.push({ rarity, count: 1 });
+            else materialsToAdd.push({ rarity_id: rarityId, count: 1 });
             return false;
         }
         return true;
     });
 
-    // Для каждого полученного материала находим craft_item и добавляем в инвентарь
-    const getCraftItemByRarity = db.prepare('SELECT id, name, rarity, type, image FROM craft_items WHERE rarity = ?');
+    const getCraftItemByRarityId = db.prepare(`
+        SELECT c.id, c.name, c.rarity_id, c.type, c.image,
+               r.display_name as rarity_display, r.color as rarity_color
+        FROM craft_items c
+        JOIN rarities r ON c.rarity_id = r.id
+        WHERE c.rarity_id = ?
+    `);
+
     for (const mat of materialsToAdd) {
-        const craftItem = getCraftItemByRarity.get(mat.rarity) as any;
+        const craftItem = getCraftItemByRarityId.get(mat.rarity_id) as any;
         if (!craftItem) continue;
 
         const existingCraft = inventory.find(
@@ -240,7 +259,9 @@ router.post('/character/salvage', (req: any, res) => {
                 type: 'craft_item',
                 id: craftItem.id,
                 name: craftItem.name,
-                rarity: craftItem.rarity,
+                rarity_id: craftItem.rarity_id,
+                rarity_display: craftItem.rarity_display,
+                rarity_color: craftItem.rarity_color,
                 count: mat.count,
                 itemType: craftItem.type || 'craft',
                 image: craftItem.image || null,
@@ -282,17 +303,6 @@ router.get('/users/find', (req: any, res) => {
     res.json(user);
 });
 
-// GET /users/list?ids=1,2,3
-router.get('/users/list', (req: any, res) => {
-    const idsParam = req.query.ids as string;
-    if (!idsParam) return res.json([]);
-    const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n));
-    if (ids.length === 0) return res.json([]);
-    const placeholders = ids.map(() => '?').join(',');
-    const users = db.prepare(`SELECT id, username FROM users WHERE id IN (${placeholders})`).all(...ids);
-    res.json(users);
-});
-
 // Публичный профиль игрока
 router.get('/character/public/:userId', (req: any, res) => {
     const userId = parseInt(req.params.userId);
@@ -300,10 +310,34 @@ router.get('/character/public/:userId', (req: any, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const equipment = JSON.parse(user.equipment || '{}');
-    const stats = currentStats(
-        { s: 5 * Math.pow(2, user.level - 1), a: 5 * Math.pow(2, user.level - 1), v: 100, d: 5 * Math.pow(2, user.level - 1), m: 5 * Math.pow(2, user.level - 1) },
-        equipment
-    );
+
+    const getItemData = db.prepare(`
+        SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color
+        FROM items i JOIN rarities r ON i.rarity_id = r.id
+        WHERE i.name = ? AND i.slot = ?
+    `);
+    const enrichedEquipment: Record<string, any> = {};
+    for (const [slotId, item] of Object.entries(equipment) as [string, any][]) {
+        if (item && item.slot && item.rarity_id === undefined) {
+            const itemRow = getItemData.get(item.name, item.slot) as any;
+            if (itemRow) {
+                enrichedEquipment[slotId] = {
+                    ...item,
+                    rarity_id: itemRow.rarity_id,
+                    rarity_display: itemRow.rarity_display,
+                    rarity_color: itemRow.rarity_color,
+                    image: itemRow.image || item.image || null,
+                };
+            } else {
+                enrichedEquipment[slotId] = item;
+            }
+        } else {
+            enrichedEquipment[slotId] = item;
+        }
+    }
+
+    const base = { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 };
+    const stats = currentStats(base, enrichedEquipment);
 
     res.json({
         id: user.id,
@@ -311,7 +345,7 @@ router.get('/character/public/:userId', (req: any, res) => {
         level: user.level,
         totalBattles: user.totalBattles,
         wins: user.wins,
-        equipment,
+        equipment: enrichedEquipment,
         stats,
         currentHp: user.currentHp,
         gender: user.gender || 'male',
@@ -326,11 +360,11 @@ router.get('/rating', (req: any, res) => {
 
     const total = (db.prepare('SELECT COUNT(*) as cnt FROM users').get() as any).cnt;
     const users = db.prepare(`
-    SELECT id, username, level, wins
-    FROM users
-    ORDER BY wins DESC, level DESC
-    LIMIT ? OFFSET ?
-  `).all(limit, offset);
+        SELECT id, username, level, wins
+        FROM users
+        ORDER BY wins DESC, level DESC
+        LIMIT ? OFFSET ?
+    `).all(limit, offset);
 
     res.json({ users, total });
 });
@@ -338,10 +372,50 @@ router.get('/rating', (req: any, res) => {
 // Сохранение открытых вкладок приватного чата
 router.post('/character/save-tabs', (req: any, res) => {
     const userId = req.userId;
-    const { tabs } = req.body; // массив ID пользователей
+    const { tabs } = req.body;
     if (!Array.isArray(tabs)) return res.status(400).json({ error: 'tabs должен быть массивом' });
     db.prepare('UPDATE users SET openPrivateTabs = ? WHERE id = ?').run(JSON.stringify(tabs), userId);
     res.json({ success: true });
+});
+
+// GET /users/list?ids=1,2,3
+router.get('/users/list', (req: any, res) => {
+    const idsParam = req.query.ids as string;
+    if (!idsParam) return res.json([]);
+    const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n));
+    if (ids.length === 0) return res.json([]);
+    const placeholders = ids.map(() => '?').join(',');
+    const users = db.prepare(`SELECT id, username FROM users WHERE id IN (${placeholders})`).all(...ids);
+    res.json(users);
+});
+
+// Распределение очков статов
+router.post('/character/allocate-stats', (req: any, res) => {
+    const userId = req.userId;
+    const { s, a, d, m } = req.body;
+    const total = (s || 0) + (a || 0) + (d || 0) + (m || 0);
+    if (total <= 0) return res.status(400).json({ error: 'Укажите, сколько очков распределить' });
+
+    const user: any = db.prepare('SELECT statPoints, baseS, baseA, baseD, baseM FROM users WHERE id = ?').get(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (total > (user.statPoints || 0)) return res.status(400).json({ error: 'Недостаточно очков' });
+
+    const newS = (user.baseS || 5) + (s || 0);
+    const newA = (user.baseA || 5) + (a || 0);
+    const newD = (user.baseD || 5) + (d || 0);
+    const newM = (user.baseM || 5) + (m || 0);
+    const newPoints = (user.statPoints || 0) - total;
+
+    db.prepare('UPDATE users SET baseS = ?, baseA = ?, baseD = ?, baseM = ?, statPoints = ? WHERE id = ?')
+        .run(newS, newA, newD, newM, newPoints, userId);
+
+    res.json({ baseS: newS, baseA: newA, baseD: newD, baseM: newM, statPoints: newPoints });
+});
+
+// Список названий характеристик
+router.get('/stat-names', (req: any, res) => {
+    const stats = db.prepare('SELECT * FROM stat_names').all();
+    res.json(stats);
 });
 
 export default router;

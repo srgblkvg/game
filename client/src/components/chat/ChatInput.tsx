@@ -133,7 +133,7 @@ export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSen
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
                     disabled={isBanned}
-                    placeholder={isBanned ? 'Чат заблокирован' : (isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w имя текст для шепота)')}
+                    placeholder={isBanned ? 'Чат заблокирован' : (isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w ник текст для ЛС)')}
                     style={{
                         flex: 1,
                         padding: '0.3rem',

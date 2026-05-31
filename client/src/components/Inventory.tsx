@@ -1,4 +1,3 @@
-// client/src/components/Inventory.tsx
 import { useState, useMemo, useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,8 +28,8 @@ const nextSortOrder = (order: SortOrder): SortOrder => {
 const sortItems = (items: any[], order: SortOrder): any[] => {
     if (order === 'none') return items;
     return [...items].sort((a, b) => {
-        const rarityA = a.rarity ?? 0;
-        const rarityB = b.rarity ?? 0;
+        const rarityA = a.rarity_id ?? 0;
+        const rarityB = b.rarity_id ?? 0;
         return order === 'asc' ? rarityA - rarityB : rarityB - rarityA;
     });
 };
@@ -180,7 +179,6 @@ export default function Inventory({
                             onMouseLeave={handleMouseLeave}
                             onLongPress={handleLongPress}
                             highlighted={isSelected}
-                            style={isSelected ? { border: '2px solid #f1c40f' } : {}}   // <-- исправлено
                         />
                     );
                 })}
@@ -261,7 +259,12 @@ export default function Inventory({
                                 item={item}
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, item.id)}
-                                onClick={() => {
+                                onClick={(e) => {
+                                    if (e.shiftKey) {
+                                        e.stopPropagation(); // Предотвращаем сворачивание чата
+                                        sendItemLink(item.id, item);
+                                        return;
+                                    }
                                     setTooltipData(null);
                                     onMaterialClick?.(item);
                                 }}

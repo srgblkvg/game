@@ -65,8 +65,18 @@ export default function ContextMenu({ x, y, onReply, onWhisper, onProfile, onClo
                 boxShadow: '0 4px 12px rgba(0,0,0,0.8)',
             }}
         >
-            <div onClick={onReply} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>Ответить в общий</div>
-            <div onClick={onWhisper} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>Шепот</div>
+            <div onClick={(e) => {
+                e.stopPropagation();
+                onReply();
+            }} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>
+                Ответить в общий
+            </div>
+            <div onClick={(e) => {
+                e.stopPropagation();
+                onWhisper();
+            }} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>
+                ЛС
+            </div>
             <div onClick={onProfile} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>👤 Профиль</div>
         </div>
     );

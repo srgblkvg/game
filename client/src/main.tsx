@@ -5,7 +5,7 @@ import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
 import { ChatProvider } from './contexts/ChatContext';
-import './index.css';
+import './styles/theme.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

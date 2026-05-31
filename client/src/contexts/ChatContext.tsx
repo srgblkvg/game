@@ -27,6 +27,7 @@ interface ChatContextType {
     sendItemLink: (itemId: string, itemData?: any) => void;
     bannedUntil: number | null;
     chatError: string | null;
+    setChatError: (msg: string | null) => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -212,7 +213,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     return (
-        <ChatContext.Provider value={{ messages, onlineUsers, addMessages, sendPublic, sendPrivate, sendItemLink, bannedUntil, chatError }}>
+        <ChatContext.Provider value={{ messages, onlineUsers, addMessages, sendPublic, sendPrivate, sendItemLink, bannedUntil, chatError, setChatError }}>
             {children}
         </ChatContext.Provider>
     );

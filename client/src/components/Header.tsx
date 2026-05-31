@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchBattles, fetchCharacter } from '../api';
 import { MoneyDisplay } from './MoneyDisplay';
+import Button from './ui/Button';
 
 export default function Header() {
     const { user } = useAuth();
@@ -66,72 +67,55 @@ export default function Header() {
 
     return (
         <>
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1rem',
-                background: '#1e1e30',
-                borderBottom: '1px solid #444',
-            }}>
+            {/* Верхняя панель */}
+            <div className="flex justify-between items-center gap-2 px-4 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
                 <div />
-                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+                <div className="flex gap-2 ml-auto">
                     {user.role === 'player' && (
                         <>
-                            <button onClick={() => navigate('/account')} style={{
-                                background: '#555', border: 'none', color: '#fff', padding: '0.2rem 0.6rem',
-                                borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem',
-                            }}>
+                            <Button size="xs" onClick={() => navigate('/account')}>
                                 👤 Аккаунт
-                            </button>
-                            <button onClick={handleHistoryClick} className={hasNewBattles ? 'blink' : ''} style={{
-                                background: '#555', border: 'none', color: '#fff', padding: '0.2rem 0.6rem',
-                                borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem',
-                            }}>
+                            </Button>
+                            <Button
+                                size="xs"
+                                onClick={handleHistoryClick}
+                                className={hasNewBattles ? 'blink' : ''}
+                            >
                                 {hasNewBattles ? '🔔 ' : ''}📜 Уведомления
-                            </button>
+                            </Button>
                         </>
                     )}
                     {user.role === 'admin' && (
-                        <button onClick={() => navigate('/adminpanel')} style={{
-                            background: '#e63946', border: 'none', color: '#fff', padding: '0.2rem 0.6rem',
-                            borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem',
-                        }}>
+                        <Button variant="danger" size="sm" onClick={() => navigate('/adminpanel')}>
                             🛡 Панель администратора
-                        </button>
+                        </Button>
                     )}
                 </div>
             </div>
 
             {user.role === 'player' && (
-                <div style={{
-                    textAlign: 'center',
-                    padding: '0.3rem 0',
-                    background: '#1e1e30',
-                    borderBottom: '1px solid #444',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '1rem',
-                }}>
-                    {character && (
-                        <span style={{ color: '#f1c40f', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                            Деньги: <MoneyDisplay money={character.money} />
-                        </span>
-                    )}
+                <>
+                    {/* Строка с деньгами */}
+                    <div className="text-center py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+                        {character && (
+                            <span className="text-[var(--color-text-accent)] text-sm font-bold">
+                                Деньги: <MoneyDisplay money={character.money} />
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Строка с таймером защиты */}
                     {protectionSec > 0 && (
-                        <span style={{
-                            color: '#3498db',
-                            fontSize: '0.85rem',
-                            background: 'rgba(52, 152, 219, 0.15)',
-                            padding: '0.2rem 1rem',
-                            borderRadius: '12px',
-                        }}>
-                            🛡 Защита: {formatTime(protectionSec)}
-                        </span>
+                        <div className="text-center py-1 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+                            <span
+                                className="text-[var(--color-accent-info)] text-sm px-4 py-0.5 rounded-xl"
+                                style={{ background: 'rgba(52, 152, 219, 0.15)' }}
+                            >
+                                🛡 Защита: {formatTime(protectionSec)}
+                            </span>
+                        </div>
                     )}
-                </div>
+                </>
             )}
         </>
     );

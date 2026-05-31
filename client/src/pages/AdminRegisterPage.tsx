@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 
 export default function AdminRegisterPage() {
     const [username, setUsername] = useState('');
@@ -34,21 +36,35 @@ export default function AdminRegisterPage() {
 
     if (!allowRegister) {
         return (
-            <div style={{ padding: '2rem', color: '#eee', textAlign: 'center' }}>
-                <h2>Администратор уже существует</h2>
-                <p>Регистрация нового администратора невозможна.</p>
+            <div className="text-center mt-8 px-4">
+                <h2 className="text-lg font-bold mb-2">Администратор уже существует</h2>
+                <p className="text-[var(--color-text-secondary)]">Регистрация нового администратора невозможна.</p>
             </div>
         );
     }
 
     return (
-        <div style={{ padding: '2rem', color: '#eee', maxWidth: '400px', margin: '0 auto' }}>
-            <h2>Создание администратора</h2>
-            <p>Первый администратор системы. После создания вы сможете войти как администратор.</p>
-            <input type="text" placeholder="Логин" value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem', background: '#333', border: '1px solid #555', borderRadius: '4px', color: '#fff' }} />
-            <input type="password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem', background: '#333', border: '1px solid #555', borderRadius: '4px', color: '#fff' }} />
-            <button onClick={handleRegister} style={{ width: '100%', padding: '0.5rem', background: '#e63946', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer' }}>Создать администратора</button>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+        <div className="max-w-md mx-auto mt-8 px-4">
+            <Card padding="lg">
+                <h2 className="text-lg font-bold mb-2">Создание администратора</h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                    Первый администратор системы. После создания вы сможете войти как администратор.
+                </p>
+                <input
+                    type="text" placeholder="Логин"
+                    value={username} onChange={e => setUsername(e.target.value)}
+                    className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none"
+                />
+                <input
+                    type="password" placeholder="Пароль"
+                    value={password} onChange={e => setPassword(e.target.value)}
+                    className="w-full p-2 mb-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none"
+                />
+                <Button variant="danger" fullWidth onClick={handleRegister}>
+                    Создать администратора
+                </Button>
+                {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+            </Card>
         </div>
     );
 }

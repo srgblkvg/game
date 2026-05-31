@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+@theme {
+  /* Основная палитра */
+  --color-bg-primary: #1a1a2e;
+  --color-bg-secondary: #1e1e30;
+  --color-bg-card: #2a2a3e;
+  --color-bg-card-hover: #2a2a4e;
+  --color-bg-input: #333;
+  --color-bg-modal: #2a2a3e;
+
+  /* Текст */
+  --color-text-primary: #eee;
+  --color-text-secondary: #ccc;
+  --color-text-muted: #888;
+  --color-text-accent: #f1c40f;
+
+  /* Акценты */
+  --color-accent-success: #2ecc71;
+  --color-accent-danger: #e63946;
+  --color-accent-info: #3498db;
+  --color-accent-warning: #f1c40f;
+  --color-accent-purple: #9b59b6;
+
+  /* Рамки */
+  --color-border-default: #444;
+  --color-border-light: #555;
+
+  /* Редкости */
+  --color-rarity-junk: #888888;
+  --color-rarity-common: #cccccc;
+  --color-rarity-uncommon: #2ecc71;
+  --color-rarity-rare: #3498db;
+  --color-rarity-epic: #9b59b6;
+  --color-rarity-legendary: #f1c40f;
+  --color-rarity-mythic: #e74c3c;
+
+  /* Тени */
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+/* Глобальные стили */
+html,
+body,
+#root {
+  background: var(--color-bg-primary);
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  color: var(--color-text-primary);
+  box-sizing: border-box;
+}
+
+body {
+  padding-bottom: 42px;
+}
+
+/* Кастомная полоса прокрутки */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 3px;
+}
+
+@keyframes attack-anim-right {
+  0%   { transform: rotate(0deg) translateX(0); }
+  30%  { transform: rotate(-10deg) translateX(-30px); }
+  100% { transform: rotate(0deg) translateX(0); }
+}
+
+/* Анимации боя */
+#fighter-left.attacking {
+  animation: attack-anim 0.6s ease-in-out;
+}
+#fighter-right.attacking {
+  animation: attack-anim-right 0.6s ease-in-out;
+}
+
+@keyframes attack-anim {
+  0%   { transform: rotate(0deg) translateX(0); }
+  30%  { transform: rotate(10deg) translateX(30px); }
+  100% { transform: rotate(0deg) translateX(0); }
+}
+
+.fighter-card.dodging {
+  animation: dodge-anim 0.5s ease-out;
+}
+
+@keyframes dodge-anim {
+  0%   { opacity: 1; transform: translateX(0); }
+  30%  { opacity: 0.7; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.fighter-card.blocking {
+  box-shadow: 0 0 15px 5px #3498db, 0 0 0 4px #2980b9;
+  transition: box-shadow 0.3s;
+}
+
+.fighter-card.stunned {
+  animation: stun-pulse 0.5s infinite alternate;
+  border-color: #f1c40f !important;
+}
+
+@keyframes stun-pulse {
+  from { box-shadow: 0 0 10px #f1c40f; }
+  to   { box-shadow: 0 0 20px #f1c40f; }
+}
+
+.damage-float {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #e74c3c;
+  text-shadow: 0 0 5px black;
+  animation: float-up 1s ease-out forwards;
+  pointer-events: none;
+  z-index: 999;
+}
+
+@keyframes float-up {
+  0%   { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -40px); }
+}
+
+.effect-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  pointer-events: none;
+  color: #f1c40f;
+  text-shadow: 0 0 10px black;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 10;
+}
+.effect-overlay.show {
+  opacity: 1;
+  animation: effect-fade 1.2s ease-out forwards;
+}
+
+@keyframes effect-fade {
+  0%   { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(0.8); }
+}
+
+@keyframes blinker {
+  50% { opacity: 0.2; }
+}
+.blink {
+  animation: blinker 1s linear infinite;
+}
+
+/* Скрываем полосу прокрутки для горизонтальных вкладок */
+.hide-scrollbar {
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { scrollbar-width: none; }
+
+/* Боевые карточки */
+.action-card:hover .action-card-bg {
+  transform: scale(1.05);
+}

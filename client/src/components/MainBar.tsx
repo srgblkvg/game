@@ -11,11 +11,8 @@ interface MainBarProps {
 
 export default function MainBar({ canAttack, attackCooldownSec, onArenaClick, selectedInventoryItemId, onInventoryItemClick }: MainBarProps) {
     return (
-        <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <Inventory
-                selectedItemId={selectedInventoryItemId}
-                onItemClick={onInventoryItemClick}
-            />
+        <div className="flex-1 min-w-[280px] flex flex-col gap-6">
+            <Inventory selectedItemId={selectedInventoryItemId} onItemClick={onInventoryItemClick} />
             <Actions canAttack={canAttack} attackCooldownSec={attackCooldownSec} onArenaClick={onArenaClick} />
         </div>
     );

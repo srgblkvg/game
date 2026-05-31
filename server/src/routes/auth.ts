@@ -19,7 +19,7 @@ router.post('/register', (req, res) => {
 
     const passwordHash = bcrypt.hashSync(password, 10);
     const now = Math.floor(Date.now() / 1000);
-    const startHp = 5 + 5 + 100 + 5 + 5;
+    const startHp = 5 + 5 + 5 + 5;
     const info = db.prepare('INSERT INTO users (username, passwordHash, currentHp, lastHpUpdate, level, gender) VALUES (?, ?, ?, ?, 1, \'male\')')
         .run(username, passwordHash, startHp, now);
     const userId = info.lastInsertRowid;

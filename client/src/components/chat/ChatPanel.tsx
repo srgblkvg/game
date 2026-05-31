@@ -1,4 +1,3 @@
-// client/src/components/chat/ChatPanel.tsx
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,13 +18,14 @@ export default function ChatPanel() {
     const auth = useAuth();
     const navigate = useNavigate();
     const userId = user?.id!;
+    const currentUsername = character?.username || user?.username || '';
     const isPlayer = user?.role === 'player';
     const visible = isPlayer && auth.token;
 
     const [privateChatWith, setPrivateChatWith] = useState<number | null>(null);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-    const { messages, onlineUsers, addMessages, sendPublic, sendPrivate, bannedUntil, chatError } = useGlobalChat();
+    const { messages, onlineUsers, addMessages, sendPublic, sendPrivate, bannedUntil, chatError, setChatError } = useGlobalChat();
 
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; username: string } | null>(null);
     const [pendingMention, setPendingMention] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function ChatPanel() {
         };
     }, [isPanelOpen]);
 
-    // Инициализация вкладок из данных персонажа (приходят с сервера)
+    // Инициализация вкладок из данных персонажа
     useEffect(() => {
         if (!character?.openPrivateTabs?.length) return;
         const ids = character.openPrivateTabs;
@@ -116,8 +116,16 @@ export default function ChatPanel() {
     }, [privateChatWith, addMessages]);
 
     const handleSend = useCallback((text: string) => {
-        if (text.startsWith('/w ')) {
-            const withoutCommand = text.slice(3).trim();
+        // Удаляем @ перед именами, которых нет в онлайне
+        const cleanedText = text.replace(/@(\S+)/g, (match, name) => {
+            if (onlineUsers.some(u => u.username.toLowerCase() === name.toLowerCase())) {
+                return match;
+            }
+            return name;
+        });
+
+        if (cleanedText.startsWith('/w ')) {
+            const withoutCommand = cleanedText.slice(3).trim();
             const spaceIndex = withoutCommand.indexOf(' ');
             if (spaceIndex === -1) return;
             const targetName = withoutCommand.slice(0, spaceIndex).toLowerCase();
@@ -125,17 +133,21 @@ export default function ChatPanel() {
             if (!content) return;
             const targetUser = onlineUsers.find(u => u.username.toLowerCase() === targetName);
             if (targetUser) {
-                sendPrivate(targetUser.id, content);
+                if (targetUser.id === userId) {
+                    setChatError('Нельзя отправить личное сообщение самому себе');
+                } else {
+                    sendPrivate(targetUser.id, content);
+                }
             } else {
-                sendPublic(text);
+                sendPublic(cleanedText);
             }
             return;
         }
 
         if (privateChatWith === null) {
-            sendPublic(text);
+            sendPublic(cleanedText);
         } else {
-            sendPrivate(privateChatWith, text);
+            sendPrivate(privateChatWith, cleanedText);
         }
     }, [privateChatWith, onlineUsers, sendPublic, sendPrivate]);
 
@@ -214,16 +226,25 @@ export default function ChatPanel() {
         return parts.map((part, i) => {
             if (part.startsWith('@')) {
                 const name = part.slice(1);
-                const isSelf = msg.senderId === userId;
+                const isSelfMention = name.toLowerCase() === currentUsername.toLowerCase();
                 return (
-                    <span key={i} style={{
-                        color: '#f1c40f', cursor: 'pointer', textDecoration: isSelf ? 'none' : 'underline'
-                    }} onClick={(e) => handleNickClick(e, name, isSelf)}>{part}</span>
+                    <span
+                        key={i}
+                        style={{
+                            color: '#f1c40f',
+                            cursor: isSelfMention ? 'default' : 'pointer',
+                            textDecoration: isSelfMention ? 'none' : 'underline',
+                            opacity: isSelfMention ? 0.7 : 1,
+                        }}
+                        onClick={isSelfMention ? undefined : (e) => handleNickClick(e, name, false)}
+                    >
+                        {part}
+                    </span>
                 );
             }
             return part;
         });
-    }, [userId, handleNickClick]);
+    }, [currentUsername, handleNickClick]);
 
     const displayedMessages = useMemo(() => messages.filter(msg => {
         if (privateChatWith === null) {

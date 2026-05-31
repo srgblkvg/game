@@ -1,4 +1,5 @@
 import CharacterCard from './CharacterCard';
+import StatAllocation from './StatAllocation';
 import { calculateStats } from '../utils/stats';
 import type { Character } from '../contexts/GameContext';
 
@@ -38,6 +39,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         selectedItemId={selectedItemId}
         highlightedSlots={highlightedSlots}
       />
+      <StatAllocation />
     </div>
   );
 }

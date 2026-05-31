@@ -11,24 +11,36 @@ function isCraftItem(item: any): boolean {
 router.get('/craft/recipes', (req, res) => {
     const recipes = db.prepare('SELECT * FROM craft_recipes ORDER BY id').all() as any[];
     for (const recipe of recipes) {
-        // Ингредиенты
         recipe.ingredients = db.prepare(`
-      SELECT ci.id as craft_item_id, ci.name, ci.rarity, ci.type as itemType, ci.image, cri.quantity
+      SELECT ci.id as craft_item_id, ci.name, ci.rarity_id, ci.type as itemType, ci.image, cri.quantity,
+             r.display_name as rarity_display, r.color as rarity_color
       FROM craft_recipe_ingredients cri
       JOIN craft_items ci ON ci.id = cri.craft_item_id
+      JOIN rarities r ON ci.rarity_id = r.id
       WHERE cri.recipe_id = ?
     `).all(recipe.id);
 
-        // Результат
         if (recipe.result_type === 'item') {
-            recipe.result = db.prepare('SELECT id, name, slot, rarity, image FROM items WHERE id = ?').get(recipe.result_id) || null;
+            recipe.result = db.prepare(`
+        SELECT i.id, i.name, i.slot, i.rarity_id, i.image,
+               r.display_name as rarity_display, r.color as rarity_color
+        FROM items i
+        JOIN rarities r ON i.rarity_id = r.id
+        WHERE i.id = ?
+      `).get(recipe.result_id) || null;
         } else if (recipe.result_type === 'craft_item') {
-            recipe.result = db.prepare('SELECT id, name, rarity, image FROM craft_items WHERE id = ?').get(recipe.result_id) || null;
+            recipe.result = db.prepare(`
+        SELECT c.id, c.name, c.rarity_id, c.image,
+               r.display_name as rarity_display, r.color as rarity_color
+        FROM craft_items c
+        JOIN rarities r ON c.rarity_id = r.id
+        WHERE c.id = ?
+      `).get(recipe.result_id) || null;
         } else {
             recipe.result = null;
         }
 
-        // Категория – вот что было пропущено
+        // Категория
         recipe.category = db.prepare('SELECT * FROM craft_recipe_categories WHERE id = ?').get(recipe.category_id) || null;
     }
     res.json(recipes);
@@ -48,9 +60,11 @@ router.post('/craft/execute', (req: any, res) => {
     if (!recipe) return res.status(400).json({ error: 'Рецепт не найден' });
 
     const ingredients = db.prepare(`
-    SELECT ci.id, ci.name, ci.rarity, cri.quantity
+    SELECT ci.id, ci.name, ci.rarity_id, ci.type as itemType, cri.quantity,
+           r.display_name as rarity_display, r.color as rarity_color
     FROM craft_recipe_ingredients cri
     JOIN craft_items ci ON ci.id = cri.craft_item_id
+    JOIN rarities r ON ci.rarity_id = r.id
     WHERE cri.recipe_id = ?
   `).all(recipe.id) as any[];
 
@@ -60,6 +74,7 @@ router.post('/craft/execute', (req: any, res) => {
         ingredientMap.set(Number(ing.id), ing.quantity);
     }
 
+    // Проверка ресурсов до списания
     for (const [itemId, needed] of ingredientMap) {
         const existing = inventory.find((i: any) => isCraftItem(i) && Number(i.id) === itemId);
         if (!existing || existing.count < needed) {
@@ -67,10 +82,12 @@ router.post('/craft/execute', (req: any, res) => {
         }
     }
 
+    // Проверка денег
     if (user.money < recipe.money_cost) {
         return res.status(400).json({ error: 'Недостаточно денег' });
     }
 
+    // Проверка заполненности инвентаря для результата-предмета
     if (recipe.result_type === 'item') {
         const inventorySlots = user.inventorySlots || 10;
         const equipmentCount = inventory.filter((item: any) => !isCraftItem(item)).length;
@@ -79,6 +96,7 @@ router.post('/craft/execute', (req: any, res) => {
         }
     }
 
+    // Списание ресурсов
     let newInventory = inventory.map((item: any) => {
         if (isCraftItem(item) && ingredientMap.has(Number(item.id))) {
             const needed = ingredientMap.get(Number(item.id))!;
@@ -98,20 +116,32 @@ router.post('/craft/execute', (req: any, res) => {
 
     if (success) {
         if (recipe.result_type === 'item') {
-            const resultItem = db.prepare('SELECT * FROM items WHERE id = ?').get(recipe.result_id) as any;
+            const resultItem = db.prepare(`
+        SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
+        FROM items i
+        JOIN rarities r ON i.rarity_id = r.id
+        WHERE i.id = ?
+      `).get(recipe.result_id) as any;
             if (!resultItem) return res.status(500).json({ error: 'Результирующий предмет не найден' });
             newInventory.push({
                 id: Date.now() + Math.random(),
                 name: resultItem.name,
                 slot: resultItem.slot,
-                rarity: resultItem.rarity,
+                rarity_id: resultItem.rarity_id,
+                rarity_display: resultItem.rarity_display,
+                rarity_color: resultItem.rarity_color,
                 bonuses: JSON.parse(resultItem.bonuses || '{}'),
                 extra: JSON.parse(resultItem.extra || '{}'),
-                upgradeLevel: 0,
                 image: resultItem.image || null,
+                upgradeLevel: 0,
             });
         } else if (recipe.result_type === 'craft_item') {
-            const resultCraftItem = db.prepare('SELECT * FROM craft_items WHERE id = ?').get(recipe.result_id) as any;
+            const resultCraftItem = db.prepare(`
+        SELECT c.*, r.display_name as rarity_display, r.color as rarity_color
+        FROM craft_items c
+        JOIN rarities r ON c.rarity_id = r.id
+        WHERE c.id = ?
+      `).get(recipe.result_id) as any;
             if (!resultCraftItem) return res.status(500).json({ error: 'Результирующий ресурс не найден' });
             const existing = newInventory.find((i: any) => isCraftItem(i) && Number(i.id) === recipe.result_id);
             if (existing) {
@@ -121,7 +151,9 @@ router.post('/craft/execute', (req: any, res) => {
                     type: 'craft_item',
                     id: resultCraftItem.id,
                     name: resultCraftItem.name,
-                    rarity: resultCraftItem.rarity,
+                    rarity_id: resultCraftItem.rarity_id,
+                    rarity_display: resultCraftItem.rarity_display,
+                    rarity_color: resultCraftItem.rarity_color,
                     count: 1,
                     itemType: resultCraftItem.type || 'craft',
                     image: resultCraftItem.image || null,
@@ -160,7 +192,7 @@ router.post('/craft/upgrade', (req: any, res) => {
         return res.status(400).json({ error: 'Положите предмет и камень усиления того же качества' });
     }
 
-    if (itemSlot.rarity !== stoneSlot.rarity) {
+    if (itemSlot.rarity_id !== stoneSlot.rarity_id) {
         return res.status(400).json({ error: 'Редкость камня должна совпадать с редкостью предмета' });
     }
 
@@ -221,8 +253,16 @@ router.post('/craft/upgrade', (req: any, res) => {
         const itemIdx = newInventory.findIndex((i: any) => i.id === itemSlot.id && !isCraftItem(i));
         if (itemIdx !== -1) {
             const destroyedItem = newInventory[itemIdx];
-            const rarity = destroyedItem.rarity || 0;
-            const craftItem = db.prepare('SELECT id, name, rarity, type FROM craft_items WHERE rarity = ? AND type = \'craft\'').get(rarity) as any;
+            const rarityId = destroyedItem.rarity_id || 0;
+
+            const craftItem = db.prepare(`
+        SELECT c.id, c.name, c.rarity_id, c.type, c.image,
+               r.display_name as rarity_display, r.color as rarity_color
+        FROM craft_items c
+        JOIN rarities r ON c.rarity_id = r.id
+        WHERE c.rarity_id = ? AND c.type = 'craft'
+      `).get(rarityId) as any;
+
             if (craftItem) {
                 const existingCraft = newInventory.find((i: any) => isCraftItem(i) && i.id === craftItem.id);
                 if (existingCraft) {
@@ -232,9 +272,12 @@ router.post('/craft/upgrade', (req: any, res) => {
                         type: 'craft_item',
                         id: craftItem.id,
                         name: craftItem.name,
-                        rarity: craftItem.rarity,
+                        rarity_id: craftItem.rarity_id,
+                        rarity_display: craftItem.rarity_display,
+                        rarity_color: craftItem.rarity_color,
                         count: 1,
-                        itemType: craftItem.type || 'craft'
+                        itemType: craftItem.type || 'craft',
+                        image: craftItem.image || null,
                     });
                 }
             }

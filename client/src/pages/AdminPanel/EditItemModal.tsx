@@ -1,18 +1,25 @@
+// client/src/pages/AdminPanel/EditItemModal.tsx
 import { useState } from 'react';
 
-const rarityNames = ['Серый', 'Белый', 'Зелёный', 'Синий', 'Фиолетовый', 'Жёлтый', 'Красный'];
+interface Rarity {
+    id: number;
+    name: string;
+    display_name: string;
+    color: string;
+}
 
 interface EditItemModalProps {
     item: any;
+    rarities: Rarity[];
     onSave: (data: any) => void;
     onClose: () => void;
 }
 
-export default function EditItemModal({ item, onSave, onClose }: EditItemModalProps) {
+export default function EditItemModal({ item, rarities, onSave, onClose }: EditItemModalProps) {
     const [form, setForm] = useState({
         name: item.name || '',
         slot: item.slot || 'helmet',
-        rarity: item.rarity ?? 0,
+        rarity_id: item.rarity_id ?? 0,
         bonuses: {
             s: item.bonuses?.s ?? 0,
             a: item.bonuses?.a ?? 0,
@@ -58,15 +65,13 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
                     <option value="weapon1">Оружие 1</option>
                     <option value="weapon2">Оружие 2</option>
                 </select>
-                <select value={form.rarity} onChange={e => set('rarity', parseInt(e.target.value))} style={inputStyle}>
-                    {rarityNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
+                <select value={form.rarity_id} onChange={e => set('rarity_id', +e.target.value)} style={inputStyle}>
+                    {rarities.map(r => (
+                        <option key={r.id} value={r.id} style={{ color: r.color }}>{r.display_name}</option>
+                    ))}
                 </select>
-                <input
-                    placeholder="Изображение (имя файла в public)"
-                    value={form.image || ''}
-                    onChange={e => set('image', e.target.value)}
-                    style={inputStyle}
-                />
+                <input placeholder="Изображение (имя файла в public)" value={form.image || ''} onChange={e => set('image', e.target.value)} style={inputStyle} />
+
                 <details>
                     <summary style={{ cursor: 'pointer', margin: '0.5rem 0' }}>Бонусы и доп. характеристики</summary>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>

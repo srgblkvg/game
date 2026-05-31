@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react';
 import { fetchAdminUsers, addMoneyToUser, adminFinishJob } from '../../api';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+
+const inputClass = 'p-1.5 mr-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm w-24';
 
 export default function AdminUsers() {
     const [users, setUsers] = useState<any[]>([]);
     const [message, setMessage] = useState('');
-
-    // таймеры
     const [timerUserId, setTimerUserId] = useState('');
-    // пополнение
     const [moneyUserId, setMoneyUserId] = useState('');
     const [moneyAmount, setMoneyAmount] = useState('100');
-    // завершение работы
     const [finishJobUserId, setFinishJobUserId] = useState('');
-    // текущее время для отображения таймеров
     const [now, setNow] = useState(Math.floor(Date.now() / 1000));
 
     useEffect(() => {
@@ -32,8 +31,7 @@ export default function AdminUsers() {
             const token = localStorage.getItem('token');
             if (token) headers['Authorization'] = `Bearer ${token}`;
             const res = await fetch('http://localhost:3001/api/admin/reset-timers', {
-                method: 'POST',
-                headers,
+                method: 'POST', headers,
                 body: JSON.stringify(all ? { all: true } : { userId: parseInt(timerUserId) }),
             });
             const data = await res.json();
@@ -78,34 +76,34 @@ export default function AdminUsers() {
 
     return (
         <div>
-            <div style={{ marginBottom: '1rem', background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h3>Сброс таймеров</h3>
-                <input type="number" placeholder="ID игрока" value={timerUserId} onChange={e => setTimerUserId(e.target.value)} style={{ padding: '0.3rem', marginRight: '0.5rem' }} />
-                <button onClick={() => resetTimers(false)} style={{ marginRight: '0.5rem' }}>Сбросить</button>
-                <button onClick={() => resetTimers(true)} style={{ background: '#c0392b', color: '#fff' }}>Сбросить всем</button>
-            </div>
+            <Card className="mb-4">
+                <h3 className="font-bold mb-2">Сброс таймеров</h3>
+                <input type="number" placeholder="ID игрока" value={timerUserId} onChange={e => setTimerUserId(e.target.value)} className={inputClass} />
+                <Button size="sm" onClick={() => resetTimers(false)} className="mr-2">Сбросить</Button>
+                <Button variant="danger" size="sm" onClick={() => resetTimers(true)}>Сбросить всем</Button>
+            </Card>
 
-            <div style={{ marginBottom: '1rem', background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h3>Пополнить баланс</h3>
-                <input type="number" placeholder="ID игрока" value={moneyUserId} onChange={e => setMoneyUserId(e.target.value)} style={{ padding: '0.3rem', marginRight: '0.5rem', width: '120px' }} />
-                <input type="number" placeholder="Сумма" value={moneyAmount} onChange={e => setMoneyAmount(e.target.value)} style={{ padding: '0.3rem', marginRight: '0.5rem', width: '100px' }} />
-                <button onClick={handleAddMoney} style={{ background: '#2ecc71', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: 'pointer', color: '#fff' }}>Пополнить</button>
-            </div>
+            <Card className="mb-4">
+                <h3 className="font-bold mb-2">Пополнить баланс</h3>
+                <input type="number" placeholder="ID игрока" value={moneyUserId} onChange={e => setMoneyUserId(e.target.value)} className={inputClass} />
+                <input type="number" placeholder="Сумма" value={moneyAmount} onChange={e => setMoneyAmount(e.target.value)} className={`${inputClass} w-20`} />
+                <Button variant="success" size="sm" onClick={handleAddMoney}>Пополнить</Button>
+            </Card>
 
-            <div style={{ marginBottom: '1rem', background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h3>Завершить работу по ID</h3>
-                <input type="number" placeholder="ID игрока" value={finishJobUserId} onChange={e => setFinishJobUserId(e.target.value)} style={{ padding: '0.3rem', marginRight: '0.5rem', width: '120px' }} />
-                <button onClick={() => handleFinishJob(parseInt(finishJobUserId))} style={{ background: '#f39c12', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: 'pointer', color: '#fff' }}>Завершить работу</button>
-            </div>
+            <Card className="mb-4">
+                <h3 className="font-bold mb-2">Завершить работу по ID</h3>
+                <input type="number" placeholder="ID игрока" value={finishJobUserId} onChange={e => setFinishJobUserId(e.target.value)} className={inputClass} />
+                <Button size="sm" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(parseInt(finishJobUserId))}>Завершить работу</Button>
+            </Card>
 
-            <div style={{ background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h3>Список игроков</h3>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+            <Card>
+                <h3 className="font-bold mb-2">Список игроков</h3>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm min-w-[800px]">
                         <thead>
-                            <tr style={{ borderBottom: '1px solid #444' }}>
-                                <th>ID</th><th>Имя</th><th>Ур.</th><th>Деньги</th><th>Боёв</th><th>Побед</th>
-                                <th>Атака через</th><th>Защита до</th><th>Работа</th><th>Действия</th>
+                            <tr className="border-b border-[var(--color-border-default)]">
+                                <th className="text-left p-1">ID</th><th className="text-left p-1">Имя</th><th className="text-left p-1">Ур.</th><th className="text-left p-1">Деньги</th><th className="text-left p-1">Боёв</th><th className="text-left p-1">Побед</th>
+                                <th className="text-left p-1">Атака через</th><th className="text-left p-1">Защита до</th><th className="text-left p-1">Работа</th><th className="text-left p-1">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -114,14 +112,14 @@ export default function AdminUsers() {
                                 const protectionRemaining = u.protectionUntil ? formatRemaining(u.protectionUntil) : '—';
                                 const jobName = getActiveJobName(u);
                                 return (
-                                    <tr key={u.id} style={{ borderBottom: '1px solid #333' }}>
-                                        <td>{u.id}</td><td>{u.username}</td><td>{u.level}</td><td>{u.money}</td><td>{u.totalBattles}</td><td>{u.wins}</td>
-                                        <td style={{ color: attackRemaining === 'Готов' ? '#2ecc71' : '#f1c40f' }}>{attackRemaining}</td>
-                                        <td style={{ color: protectionRemaining === 'Готов' ? '#2ecc71' : '#3498db' }}>{protectionRemaining}</td>
-                                        <td style={{ color: jobName !== 'Нет' ? '#e67e22' : '#aaa' }}>{jobName}</td>
-                                        <td>
+                                    <tr key={u.id} className="border-b border-[var(--color-border-light)]">
+                                        <td className="p-1">{u.id}</td><td className="p-1">{u.username}</td><td className="p-1">{u.level}</td><td className="p-1">{u.money}</td><td className="p-1">{u.totalBattles}</td><td className="p-1">{u.wins}</td>
+                                        <td className="p-1" style={{ color: attackRemaining === 'Готов' ? '#2ecc71' : '#f1c40f' }}>{attackRemaining}</td>
+                                        <td className="p-1" style={{ color: protectionRemaining === 'Готов' ? '#2ecc71' : '#3498db' }}>{protectionRemaining}</td>
+                                        <td className="p-1" style={{ color: jobName !== 'Нет' ? '#e67e22' : '#aaa' }}>{jobName}</td>
+                                        <td className="p-1">
                                             {jobName !== 'Нет' && (
-                                                <button onClick={() => handleFinishJob(u.id)} style={{ background: '#f39c12', border: 'none', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}>🏁 Завершить</button>
+                                                <Button size="xs" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(u.id)}>🏁 Завершить</Button>
                                             )}
                                         </td>
                                     </tr>
@@ -130,9 +128,9 @@ export default function AdminUsers() {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </Card>
 
-            {message && <div style={{ marginTop: '1rem', background: '#2a2a3e', padding: '0.5rem', borderRadius: '4px' }}>{message}</div>}
+            {message && <div className="mt-4 p-3 bg-[var(--color-bg-card)] rounded text-sm">{message}</div>}
         </div>
     );
 }

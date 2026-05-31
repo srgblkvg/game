@@ -10,42 +10,52 @@ export const slotCategories: Record<string, string> = {
     weapon1: 'weapon', weapon2: 'weapon',
 };
 
-export function getRarityColor(rarity: number): string {
-    const colors = ['#888', '#ccc', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e74c3c'];
-    return colors[rarity] || '#888';
+const rarityColors = ['#888888', '#cccccc', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e74c3c'];
+const rarityColorNames = ['gray', 'white', 'green', 'blue', 'purple', 'yellow', 'red'];
+const slotImageFolders: Record<string, string> = {
+    weapon1: 'sword', weapon2: 'shield', ring1: 'ring', ring2: 'ring',
+};
+
+export function getRarityColor(item: any): string {
+    return item?.rarity_color || (item?.rarity_id != null ? rarityColors[item.rarity_id] : undefined) || '#888';
+}
+
+export function getItemImage(item: any): string | null {
+    if (item?.image) return item.image;
+    if (item?.rarity_id == null) return null;
+    const color = rarityColorNames[item.rarity_id] || 'gray';
+    if (item?.type === 'craft_item' || item?.type === 'material') {
+        return `fragment/fragment_${color}.webp`;
+    }
+    if (item?.slot) {
+        const folder = slotImageFolders[item.slot] || item.slot;
+        return `${folder}/${folder}_${color}.webp`;
+    }
+    return null;
 }
 
 export function isCraftItem(item: any): item is {
-    type: string;          // 'material' | 'craft_item'
-    rarity: number;
+    type: string;
+    rarity_id: number;
     count: number;
     name: string;
     id: string | number;
     itemType?: string;
+    rarity_display?: string;
+    rarity_color?: string;
+    image?: string;
 } {
     return item?.type === 'material' || item?.type === 'craft_item';
 }
 
 export function getCompatibleSlots(item: any): string[] {
-    if (!item || item.type === 'material') return [];
-    const slot = item.slot;               // 'weapon1', 'weapon2', 'ring1', 'ring2', 'helmet', ...
-    if (!slot) return [];
-
-    // Двуручное оружие — только в weapon1
-    if (item.name?.includes('двуручн') && slot.startsWith('weapon')) {
-        return ['weapon1'];
-    }
-
-    // Кольца можно в оба слота
-    if (slot === 'ring1' || slot === 'ring2') {
-        return ['ring1', 'ring2'];
-    }
-
-    // Оружие — каждый только в свой слот
-    if (slot === 'weapon1' || slot === 'weapon2') {
+    if (!item || item.type === 'material' || item.type === 'craft_item') return [];
+    const slot = item.slot;
+    const cat = slotCategories[slot] || slot;
+    if (cat === 'ring') return ['ring1', 'ring2'];
+    if (cat === 'weapon') {
+        if (item.name?.includes('двуручн')) return ['weapon1'];
         return [slot];
     }
-
-    // Всё остальное — точный слот
     return [slot];
 }

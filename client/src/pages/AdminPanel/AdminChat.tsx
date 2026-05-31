@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
-    fetchAdminMessages,
-    deleteChatMessage,
-    deleteAllChatMessages,
-    banChatUser,
-    fetchBannedUsers,
-    unbanChatUser,
+    fetchAdminMessages, deleteChatMessage, deleteAllChatMessages,
+    banChatUser, fetchBannedUsers, unbanChatUser,
 } from '../../api/chat';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+
+const inputClass = 'p-1.5 mr-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm';
 
 export default function AdminChat() {
     const [messages, setMessages] = useState<any[]>([]);
@@ -18,125 +18,103 @@ export default function AdminChat() {
 
     const loadData = async () => {
         try {
-            const [msgs, banned] = await Promise.all([
-                fetchAdminMessages(),
-                fetchBannedUsers(),
-            ]);
-            setMessages(msgs);
-            setBannedUsers(banned);
-        } catch (e: any) {
-            setMessage(e.message);
-        }
+            const [msgs, banned] = await Promise.all([fetchAdminMessages(), fetchBannedUsers()]);
+            setMessages(msgs); setBannedUsers(banned);
+        } catch (e: any) { setMessage(e.message); }
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    useEffect(() => { loadData(); }, []);
 
     const handleDelete = async () => {
-        try {
-            await deleteChatMessage(parseInt(deleteId));
-            setMessage('Сообщение удалено');
-            loadData();
-        } catch (e: any) { setMessage(e.message); }
+        try { await deleteChatMessage(parseInt(deleteId)); setMessage('Сообщение удалено'); loadData(); }
+        catch (e: any) { setMessage(e.message); }
     };
 
     const handleDeleteAll = async () => {
-        try {
-            await deleteAllChatMessages();
-            setMessage('Все сообщения удалены');
-            loadData();
-        } catch (e: any) { setMessage(e.message); }
+        try { await deleteAllChatMessages(); setMessage('Все сообщения удалены'); loadData(); }
+        catch (e: any) { setMessage(e.message); }
     };
 
     const handleBan = async () => {
-        try {
-            await banChatUser(parseInt(banUserId), parseInt(banMinutes));
-            setMessage(`Игрок ${banUserId} заблокирован на ${banMinutes} мин`);
-            loadData();
-        } catch (e: any) { setMessage(e.message); }
+        try { await banChatUser(parseInt(banUserId), parseInt(banMinutes)); setMessage(`Игрок ${banUserId} заблокирован на ${banMinutes} мин`); loadData(); }
+        catch (e: any) { setMessage(e.message); }
     };
 
     const handleUnban = async (userId: number) => {
-        try {
-            await unbanChatUser(userId);
-            setMessage(`Игрок ${userId} разбанен`);
-            loadData();
-        } catch (e: any) { setMessage(e.message); }
+        try { await unbanChatUser(userId); setMessage(`Игрок ${userId} разбанен`); loadData(); }
+        catch (e: any) { setMessage(e.message); }
     };
 
     return (
         <div>
-            <h3>Управление чатом</h3>
+            <h3 className="font-bold mb-3">Управление чатом</h3>
 
-            {/* Блокировка */}
-            <div style={{ marginBottom: '1rem', background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h4>Блокировка игрока</h4>
-                <input type="number" placeholder="ID игрока" value={banUserId} onChange={e => setBanUserId(e.target.value)} style={{ marginRight: '0.5rem' }} />
-                <input type="number" placeholder="Минут" value={banMinutes} onChange={e => setBanMinutes(e.target.value)} style={{ marginRight: '0.5rem', width: '80px' }} />
-                <button onClick={handleBan} style={{ background: '#e67e22', border: 'none', color: '#fff', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: 'pointer' }}>Заблокировать</button>
-            </div>
+            <Card className="mb-4">
+                <h4 className="font-bold mb-2">Блокировка игрока</h4>
+                <input type="number" placeholder="ID игрока" value={banUserId} onChange={e => setBanUserId(e.target.value)} className={inputClass} />
+                <input type="number" placeholder="Минут" value={banMinutes} onChange={e => setBanMinutes(e.target.value)} className={`${inputClass} w-20`} />
+                <Button size="sm" style={{ background: '#e67e22' }} onClick={handleBan}>Заблокировать</Button>
+            </Card>
 
-            {/* Заблокированные */}
-            <div style={{ marginBottom: '1rem', background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h4>Заблокированные игроки</h4>
+            <Card className="mb-4">
+                <h4 className="font-bold mb-2">Заблокированные игроки</h4>
                 {bannedUsers.length === 0 ? (
-                    <p>Нет заблокированных</p>
+                    <p className="text-[var(--color-text-muted)]">Нет заблокированных</p>
                 ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <table className="w-full border-collapse text-sm">
                         <thead>
-                            <tr style={{ borderBottom: '1px solid #444' }}>
-                                <th>ID</th><th>Имя</th><th>До</th><th></th>
+                            <tr className="border-b border-[var(--color-border-default)]">
+                                <th className="text-left p-1">ID</th><th className="text-left p-1">Имя</th><th className="text-left p-1">До</th><th className="text-left p-1"></th>
                             </tr>
                         </thead>
                         <tbody>
                             {bannedUsers.map((u: any) => (
-                                <tr key={u.id} style={{ borderBottom: '1px solid #333' }}>
-                                    <td>{u.id}</td>
-                                    <td>{u.username}</td>
-                                    <td>{new Date(u.chatBannedUntil * 1000).toLocaleString()}</td>
-                                    <td>
-                                        <button onClick={() => handleUnban(u.id)} style={{ background: '#2ecc71', border: 'none', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}>Разбанить</button>
+                                <tr key={u.id} className="border-b border-[var(--color-border-light)]">
+                                    <td className="p-1">{u.id}</td>
+                                    <td className="p-1">{u.username}</td>
+                                    <td className="p-1">{new Date(u.chatBannedUntil * 1000).toLocaleString()}</td>
+                                    <td className="p-1">
+                                        <Button variant="success" size="xs" onClick={() => handleUnban(u.id)}>Разбанить</Button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 )}
-            </div>
+            </Card>
 
-            {/* Удаление */}
-            <div style={{ marginBottom: '1rem', background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h4>Удаление</h4>
-                <input type="number" placeholder="ID сообщения" value={deleteId} onChange={e => setDeleteId(e.target.value)} style={{ marginRight: '0.5rem' }} />
-                <button onClick={handleDelete} style={{ background: '#c0392b', color: '#fff', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: 'pointer', marginRight: '0.5rem' }}>Удалить одно</button>
-                <button onClick={handleDeleteAll} style={{ background: '#c0392b', color: '#fff', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: 'pointer' }}>Удалить все</button>
-            </div>
+            <Card className="mb-4">
+                <h4 className="font-bold mb-2">Удаление</h4>
+                <input type="number" placeholder="ID сообщения" value={deleteId} onChange={e => setDeleteId(e.target.value)} className={inputClass} />
+                <Button variant="danger" size="sm" className="mr-2" onClick={handleDelete}>Удалить одно</Button>
+                <Button variant="danger" size="sm" onClick={handleDeleteAll}>Удалить все</Button>
+            </Card>
 
-            {message && <div style={{ margin: '1rem 0', color: '#2ecc71' }}>{message}</div>}
+            {message && <p className="mb-4 text-[var(--color-accent-success)]">{message}</p>}
 
-            {/* Сообщения */}
-            <div style={{ background: '#1e1e30', padding: '1rem', borderRadius: '8px' }}>
-                <h4>Последние сообщения</h4>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #444' }}>
-                            <th>ID</th><th>От</th><th>Кому</th><th>Текст</th><th>Время</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {messages.map((m: any) => (
-                            <tr key={m.id} style={{ borderBottom: '1px solid #333' }}>
-                                <td>{m.id}</td>
-                                <td>{m.senderName} (ID {m.senderId})</td>
-                                <td>{m.targetId ? `${m.targetName || 'ID ' + m.targetId}` : 'Общий'}</td>
-                                <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.content}</td>
-                                <td>{new Date(m.createdAt).toLocaleString()}</td>
+            <Card>
+                <h4 className="font-bold mb-2">Последние сообщения</h4>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm">
+                        <thead>
+                            <tr className="border-b border-[var(--color-border-default)]">
+                                <th className="text-left p-1">ID</th><th className="text-left p-1">От</th><th className="text-left p-1">Кому</th><th className="text-left p-1">Текст</th><th className="text-left p-1">Время</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {messages.map((m: any) => (
+                                <tr key={m.id} className="border-b border-[var(--color-border-light)]">
+                                    <td className="p-1">{m.id}</td>
+                                    <td className="p-1">{m.senderName} (ID {m.senderId})</td>
+                                    <td className="p-1">{m.targetId ? `${m.targetName || 'ID ' + m.targetId}` : 'Общий'}</td>
+                                    <td className="p-1 max-w-[200px] overflow-hidden text-ellipsis">{m.content}</td>
+                                    <td className="p-1">{new Date(m.createdAt).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
         </div>
     );
 }

@@ -6,60 +6,51 @@ import AdminItems from './AdminItems';
 import AdminJobs from './AdminJobs';
 import AdminChat from './AdminChat';
 import AdminCraft from './AdminCraft';
+import AdminBattles from './AdminBattles';
+import Button from '../../components/ui/Button';
+
+const tabs = [
+    { key: 'users', label: 'Игроки' },
+    { key: 'items', label: 'Предметы' },
+    { key: 'jobs', label: 'Работы' },
+    { key: 'battles', label: 'Бои' },
+    { key: 'chat', label: 'Чат' },
+    { key: 'craft', label: 'Крафт' },
+] as const;
+type Tab = typeof tabs[number]['key'];
 
 export default function AdminPanel() {
-    const [tab, setTab] = useState<'users' | 'items' | 'jobs' | 'chat' | 'craft'>('users');
+    const [tab, setTab] = useState<Tab>('users');
     const { logout } = useAuth();
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
+    const handleLogout = () => { logout(); navigate('/login'); };
 
     return (
-        <div style={{ padding: '1rem', color: '#eee' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h1>Панель администратора</h1>
-                <button
-                    onClick={handleLogout}
-                    style={{
-                        background: '#c0392b',
-                        border: 'none',
-                        color: '#fff',
-                        padding: '0.4rem 1rem',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        fontWeight: 'bold',
-                    }}
-                >
-                    Выйти
-                </button>
+        <div className="px-4 py-4">
+            <div className="flex justify-between items-center mb-4">
+                <h1 className="text-xl font-bold">Панель администратора</h1>
+                <Button variant="danger" size="sm" onClick={handleLogout}>Выйти</Button>
             </div>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                {(['users', 'items', 'jobs', 'chat', 'craft'] as const).map(t => (
-                    <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        style={{
-                            padding: '0.5rem 1rem',
-                            background: tab === t ? '#e63946' : '#555',
-                            border: 'none',
-                            borderRadius: '6px',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontWeight: tab === t ? 'bold' : 'normal',
-                        }}
+
+            <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar flex-wrap">
+                {tabs.map(t => (
+                    <Button
+                        key={t.key}
+                        variant={tab === t.key ? 'danger' : 'secondary'}
+                        size="sm"
+                        onClick={() => setTab(t.key)}
+                        className="whitespace-nowrap"
                     >
-                        {t === 'users' ? 'База Игроков' : t === 'items' ? 'База Предметов' : t === 'jobs' ? 'База Работ' : t === 'chat' ? 'Чат' : 'База Крафта'}
-                    </button>
+                        {t.label}
+                    </Button>
                 ))}
             </div>
 
             {tab === 'users' && <AdminUsers />}
             {tab === 'items' && <AdminItems />}
             {tab === 'jobs' && <AdminJobs />}
+            {tab === 'battles' && <AdminBattles />}
             {tab === 'chat' && <AdminChat />}
             {tab === 'craft' && <AdminCraft />}
         </div>

@@ -5,8 +5,13 @@ import { fetchBattles } from '../api';
 import { fetchJobHistory } from '../api';
 import { fetchAllPrivateMessagesNew } from '../api/chat';
 import { formatMoney } from '../utils/money';
+import { renderBattleLog } from '../utils/battleLog';
+import BackButton from '../components/ui/BackButton';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import Modal from '../components/ui/Modal';
 
-const LIMIT = 10; // элементов на странице
+const LIMIT = 10;
 
 export default function HistoryPage() {
     const { user } = useAuth();
@@ -18,8 +23,8 @@ export default function HistoryPage() {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [selectedBattle, setSelectedBattle] = useState<any>(null);
 
-    // Загрузка всех данных
     const loadData = useCallback(async () => {
         if (!user) return;
         setLoading(true);
@@ -36,9 +41,7 @@ export default function HistoryPage() {
             setPrivateMessages(Array.isArray(pm) ? pm : []);
         } catch (e) {
             console.error(e);
-            setBattles([]);
-            setJobHistory([]);
-            setPrivateMessages([]);
+            setBattles([]); setJobHistory([]); setPrivateMessages([]);
         } finally {
             setLoading(false);
         }
@@ -49,30 +52,22 @@ export default function HistoryPage() {
         loadData();
     }, [user, loadData, navigate]);
 
-    // Формируем объединённый массив для вкладки «Все»
     const allEntries = [
         ...battles.map((b: any) => ({
-            id: `battle-${b.id}`,
-            type: 'battle' as const,
-            timestamp: new Date(b.createdAt).getTime(),
-            data: b,
+            id: `battle-${b.id}`, type: 'battle' as const,
+            timestamp: new Date(b.createdAt).getTime(), data: b,
         })),
         ...jobHistory.map((j: any) => ({
-            id: `job-${j.id}`,
-            type: 'job' as const,
-            timestamp: new Date(j.finishedAt).getTime(),
-            data: j,
+            id: `job-${j.id}`, type: 'job' as const,
+            timestamp: new Date(j.finishedAt).getTime(), data: j,
         })),
         ...privateMessages.map((m: any) => ({
-            id: `msg-${m.id}`,
-            type: 'message' as const,
-            timestamp: new Date(m.createdAt).getTime(),
-            data: m,
+            id: `msg-${m.id}`, type: 'message' as const,
+            timestamp: new Date(m.createdAt).getTime(), data: m,
         })),
     ].sort((a, b) => b.timestamp - a.timestamp);
 
-    // Определяем, какой массив отображать, в зависимости от вкладки
-    const getCurrentData = (): any[] => {
+    const currentData = (() => {
         switch (tab) {
             case 'all': return allEntries;
             case 'battles': return battles;
@@ -80,186 +75,170 @@ export default function HistoryPage() {
             case 'messages': return privateMessages;
             default: return [];
         }
-    };
+    })();
 
-    const currentData = getCurrentData();
     const totalItems = currentData.length;
     const totalPagesCalc = Math.ceil(totalItems / LIMIT);
 
-    // При смене вкладки сбрасываем страницу и пересчитываем totalPages
-    useEffect(() => {
-        setPage(1);
-    }, [tab]);
+    useEffect(() => { setPage(1); }, [tab]);
+    useEffect(() => { setTotalPages(totalPagesCalc || 1); }, [totalPagesCalc]);
 
-    useEffect(() => {
-        setTotalPages(totalPagesCalc || 1);
-    }, [totalPagesCalc]);
-
-    // Пагинация: режем текущий массив
     const startIdx = (page - 1) * LIMIT;
     const paginatedData = currentData.slice(startIdx, startIdx + LIMIT);
 
-    const handlePageChange = (newPage: number) => {
-        setPage(newPage);
-    };
+    const isBattle = (e: any): e is { type: 'battle'; data: any } => e.type === 'battle';
+    const isJob = (e: any): e is { type: 'job'; data: any } => e.type === 'job';
+    const isMessage = (e: any): e is { type: 'message'; data: any } => e.type === 'message';
 
-    // Утилиты для type guard'ов
-    const isBattle = (entry: any): entry is { type: 'battle'; data: any } => entry.type === 'battle';
-    const isJob = (entry: any): entry is { type: 'job'; data: any } => entry.type === 'job';
-    const isMessage = (entry: any): entry is { type: 'message'; data: any } => entry.type === 'message';
+    const tabs = [
+        { key: 'all', label: 'Все' } as const,
+        { key: 'battles', label: 'Нападения' } as const,
+        { key: 'jobs', label: 'Работы' } as const,
+        { key: 'messages', label: 'Сообщения' } as const,
+    ];
 
     if (!user) return null;
 
-    return (
-        <div style={{ padding: '1rem', color: '#eee' }}>
-            <button
-                onClick={() => navigate('/')}
-                style={{
-                    background: '#555', border: 'none', color: '#fff', padding: '0.4rem 1rem',
-                    borderRadius: '6px', cursor: 'pointer', marginBottom: '1rem',
-                }}
-            >
-                ← Назад
-            </button>
-            <h2>📜 Уведомления</h2>
+    const renderBattleEntry = (b: any) => (
+        <div
+            className="border-b border-[var(--color-border-light)] py-2 text-sm cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded"
+            onClick={() => setSelectedBattle(b)}
+        >
+            <div className="flex items-center gap-2">
+                <strong>{b.attackerId === user.id ? '⚔ Вы атаковали' : '🛡 На вас напали'}</strong>
+                <span>игрока {b.attackerId === user.id ? b.defenderName : b.attackerName}</span>
+            </div>
+            <div className="flex items-center gap-3 mt-0.5">
+                <span className={`font-bold ${b.winnerId === user.id ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>
+                    {b.winnerId === user.id ? 'Победа' : 'Поражение'}
+                </span>
+                {b.moneyStolen > 0 && (
+                    <span className="text-[var(--color-text-accent)] text-xs">
+                        {b.winnerId === user.id ? '+' : '-'}{formatMoney(b.moneyStolen)}
+                    </span>
+                )}
+                {b.expGained > 0 && (
+                    <span className="text-[var(--color-accent-purple)] text-xs">+{b.expGained} опыта</span>
+                )}
+                <span className="text-[var(--color-text-muted)] text-xs ml-auto">
+                    {new Date(b.createdAt).toLocaleString()}
+                </span>
+            </div>
+        </div>
+    );
 
-            <div className="hide-scrollbar" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                {(['all', 'battles', 'jobs', 'messages'] as const).map((t) => (
-                    <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        style={{
-                            padding: '0.5rem 1rem',
-                            background: tab === t ? '#e63946' : '#555',
-                            border: 'none',
-                            borderRadius: '6px',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontWeight: tab === t ? 'bold' : 'normal',
-                            whiteSpace: 'nowrap',         // запрещаем перенос текста
-                        }}
+    const renderBattleModal = () => {
+        if (!selectedBattle) return null;
+        let steps: any[] = [];
+        try {
+            steps = typeof selectedBattle.steps === 'string'
+                ? JSON.parse(selectedBattle.steps)
+                : (selectedBattle.steps || []);
+        } catch { steps = []; }
+
+        return (
+            <Modal
+                open={!!selectedBattle}
+                onClose={() => setSelectedBattle(null)}
+                title={`⚔ ${selectedBattle.attackerName} vs ${selectedBattle.defenderName}`}
+                maxWidth="700px"
+                borderColor="var(--color-border-default)"
+            >
+                <div className="bg-black rounded-lg p-3 max-h-[60vh] overflow-y-auto font-mono text-xs leading-relaxed">
+                    {renderBattleLog(steps)}
+                </div>
+                <div className="flex gap-4 justify-between mt-3 text-sm">
+                    <span className={selectedBattle.winnerId === user.id ? 'text-[var(--color-accent-success)] font-bold' : 'text-red-500 font-bold'}>
+                        {selectedBattle.winnerId === user.id ? '🏆 Победа' : '💀 Поражение'}
+                    </span>
+                    <span>Опыт: +{selectedBattle.expGained || 0}</span>
+                    {selectedBattle.moneyStolen > 0 && (
+                        <span className="text-[var(--color-text-accent)]">
+                            {selectedBattle.winnerId === user.id ? '+' : '-'}{formatMoney(selectedBattle.moneyStolen)}
+                        </span>
+                    )}
+                </div>
+                <div className="flex justify-center mt-4">
+                    <Button variant="secondary" size="sm" onClick={() => setSelectedBattle(null)}>Закрыть</Button>
+                </div>
+            </Modal>
+        );
+    };
+
+    return (
+        <div className="px-4 py-4">
+            <BackButton />
+            <h2 className="text-xl font-bold mb-4">📜 Уведомления</h2>
+
+            <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
+                {tabs.map((t) => (
+                    <Button
+                        key={t.key}
+                        variant={tab === t.key ? 'danger' : 'secondary'}
+                        size="sm"
+                        onClick={() => setTab(t.key)}
+                        className="whitespace-nowrap"
                     >
-                        {t === 'all' ? 'Все' : t === 'battles' ? 'Нападения' : t === 'jobs' ? 'Работы' : 'Сообщения'}
-                    </button>
+                        {t.label}
+                    </Button>
                 ))}
             </div>
 
             {loading ? (
-                <div>Загрузка...</div>
+                <p className="text-[var(--color-text-muted)]">Загрузка...</p>
             ) : (
-                <div style={{ background: '#1e1e30', borderRadius: '8px', padding: '1rem' }}>
-                    {/* Содержимое вкладки */}
+                <Card>
                     {paginatedData.length === 0 ? (
-                        <div>Нет записей</div>
+                        <p className="text-[var(--color-text-muted)]">Нет записей</p>
                     ) : tab === 'all' ? (
                         paginatedData.map((entry) => (
-                            <div key={entry.id} style={{ borderBottom: '1px solid #333', padding: '0.5rem 0', fontSize: '0.9rem' }}>
-                                {isBattle(entry) && (
-                                    <>
-                                        <strong>
-                                            {entry.data.attackerId === user.id ? 'Вы атаковали' : 'На вас напали'}
-                                        </strong>{' '}
-                                        игрока{' '}
-                                        {entry.data.attackerId === user.id
-                                            ? entry.data.defenderName
-                                            : entry.data.attackerName}
-                                        <span style={{ marginLeft: '1rem', color: entry.data.winnerId === user.id ? '#2ecc71' : '#e74c3c' }}>
-                                            {entry.data.winnerId === user.id ? 'Победа' : 'Поражение'}
-                                        </span>
-                                        {entry.data.moneyStolen > 0 && (
-                                            <span style={{ marginLeft: '0.5rem', color: '#f1c40f' }}>
-                                                {entry.data.winnerId === user.id ? '+' : '-'}
-                                                {formatMoney(entry.data.moneyStolen)}
-                                            </span>
-                                        )}
-                                        <div style={{ fontSize: '0.7rem', color: '#888' }}>
-                                            {new Date(entry.data.createdAt).toLocaleString()}
-                                        </div>
-                                    </>
-                                )}
+                            <div key={entry.id}>
+                                {isBattle(entry) && renderBattleEntry(entry.data)}
                                 {isJob(entry) && (
-                                    <>
+                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
                                         <span>🛠️ «{entry.data.jobName}» завершена. Награда: {formatMoney(entry.data.reward)}</span>
-                                        <div style={{ fontSize: '0.7rem', color: '#888' }}>
-                                            {new Date(entry.data.finishedAt).toLocaleString()}
-                                        </div>
-                                    </>
+                                        <div className="text-xs text-[var(--color-text-muted)]">{new Date(entry.data.finishedAt).toLocaleString()}</div>
+                                    </div>
                                 )}
                                 {isMessage(entry) && (
-                                    <>
-                                        <span style={{ color: '#c084fc' }}>
-                                            💬 {entry.data.senderName}: {entry.data.content}
-                                        </span>
-                                        <div style={{ fontSize: '0.7rem', color: '#888' }}>
-                                            {new Date(entry.data.createdAt).toLocaleString()}
-                                        </div>
-                                    </>
+                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
+                                        <span className="text-purple-400">💬 {entry.data.senderName}: {entry.data.content}</span>
+                                        <div className="text-xs text-[var(--color-text-muted)]">{new Date(entry.data.createdAt).toLocaleString()}</div>
+                                    </div>
                                 )}
                             </div>
                         ))
                     ) : tab === 'battles' ? (
                         paginatedData.map((b: any) => (
-                            <div key={b.id} style={{ borderBottom: '1px solid #333', padding: '0.5rem 0', fontSize: '0.9rem' }}>
-                                <strong>{b.attackerId === user.id ? 'Вы атаковали' : 'На вас напали'}</strong>{' '}
-                                игрока {b.attackerId === user.id ? b.defenderName : b.attackerName}
-                                <span style={{ marginLeft: '1rem', color: b.winnerId === user.id ? '#2ecc71' : '#e74c3c' }}>
-                                    {b.winnerId === user.id ? 'Победа' : 'Поражение'}
-                                </span>
-                                {b.moneyStolen > 0 && (
-                                    <span style={{ marginLeft: '0.5rem', color: '#f1c40f' }}>
-                                        {b.winnerId === user.id ? '+' : '-'}
-                                        {formatMoney(b.moneyStolen)}
-                                    </span>
-                                )}
-                                <div style={{ fontSize: '0.7rem', color: '#888' }}>
-                                    {new Date(b.createdAt).toLocaleString()}
-                                </div>
-                            </div>
+                            <div key={b.id}>{renderBattleEntry(b)}</div>
                         ))
                     ) : tab === 'jobs' ? (
                         paginatedData.map((j: any) => (
-                            <div key={j.id} style={{ borderBottom: '1px solid #333', padding: '0.5rem 0', fontSize: '0.9rem' }}>
+                            <div key={j.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
                                 <span>🛠️ «{j.jobName}» завершена. Награда: {formatMoney(j.reward)}</span>
-                                <div style={{ fontSize: '0.7rem', color: '#888' }}>
-                                    {new Date(j.finishedAt).toLocaleString()}
-                                </div>
+                                <div className="text-xs text-[var(--color-text-muted)]">{new Date(j.finishedAt).toLocaleString()}</div>
                             </div>
                         ))
                     ) : (
                         paginatedData.map((m: any) => (
-                            <div key={m.id} style={{ borderBottom: '1px solid #333', padding: '0.5rem 0', fontSize: '0.9rem' }}>
-                                <span style={{ color: '#c084fc' }}>
-                                    💬 {m.senderName}: {m.content}
-                                </span>
-                                <div style={{ fontSize: '0.7rem', color: '#888' }}>
-                                    {new Date(m.createdAt).toLocaleString()}
-                                </div>
+                            <div key={m.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
+                                <span className="text-purple-400">💬 {m.senderName}: {m.content}</span>
+                                <div className="text-xs text-[var(--color-text-muted)]">{new Date(m.createdAt).toLocaleString()}</div>
                             </div>
                         ))
                     )}
 
-                    {/* Пагинация (только если больше одной страницы) */}
                     {totalPages > 1 && (
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
-                            <button
-                                disabled={page <= 1}
-                                onClick={() => handlePageChange(page - 1)}
-                                style={{ background: '#555', border: 'none', color: '#fff', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: page > 1 ? 'pointer' : 'not-allowed' }}
-                            >
-                                ← Назад
-                            </button>
-                            <span>стр. {page} из {totalPages}</span>
-                            <button
-                                disabled={page >= totalPages}
-                                onClick={() => handlePageChange(page + 1)}
-                                style={{ background: '#555', border: 'none', color: '#fff', padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: page < totalPages ? 'pointer' : 'not-allowed' }}
-                            >
-                                Вперёд →
-                            </button>
+                        <div className="flex justify-center gap-4 mt-4 items-center">
+                            <Button size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Назад</Button>
+                            <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
+                            <Button size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Вперёд →</Button>
                         </div>
                     )}
-                </div>
+                </Card>
             )}
+
+            {renderBattleModal()}
         </div>
     );
 }

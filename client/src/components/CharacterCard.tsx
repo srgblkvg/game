@@ -1,3 +1,4 @@
+// client/src/components/CharacterCard.tsx
 import { useState, useEffect } from 'react';
 import { useGlobalChat } from '../contexts/ChatContext';
 import LongPressSlot from './LongPressSlot';
@@ -49,6 +50,7 @@ export default function CharacterCard({
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const { sendItemLink } = useGlobalChat();
 
+  // Закрытие тултипа при любом клике в документе
   useEffect(() => {
     const handleGlobalClick = () => {
       setHoveredSlot(null);
@@ -61,15 +63,15 @@ export default function CharacterCard({
   if (!char) return null;
 
   const stats = char.stats || { s: 0, a: 0, d: 0, m: 0 };
-  const hp = char.maxHp ?? stats.hp ?? (stats.s + stats.a + 100 + stats.d + stats.m);
-  const expNeeded = [10, 15, 22, 33, 50, 75, 113, 170, 255, 383];
+  const hp = char.maxHp ?? stats.hp ?? (stats.s + stats.a + stats.d + stats.m);
+  const expNeeded = 10 * Math.pow(2, char.level - 1);
 
   const isMobile = compact === 'mobile' || compact === 'verySmall';
   const isVerySmall = compact === 'verySmall';
   const showExpBar = showExp && !isMobile && char.exp !== undefined;
 
   const expPercent = (showExpBar && char.exp !== undefined)
-    ? Math.min(100, (char.exp / expNeeded[char.level - 1]) * 100)
+    ? Math.min(100, (char.exp! / expNeeded) * 100)
     : 0;
 
   const isWeapon2Blocked = char.equipment['weapon1']?.name?.includes('двуручн');
@@ -79,11 +81,13 @@ export default function CharacterCard({
 
   const cardWidth = isVerySmall ? '110px' : isMobile ? '150px' : '200px';
   const cardMargin = isVerySmall ? '2px' : isMobile ? '10px' : '20px';
-  const frameHeight = isVerySmall ? '140px' : isMobile ? '180px' : '220px';
-  const fontSizeStats = isVerySmall ? '0.55rem' : isMobile ? '0.7rem' : '0.8rem';
+  const frameHeight = isVerySmall ? '140px' : isMobile ? '180px' : '240px';
+  const fontSizeStats = isVerySmall ? '0.5rem' : isMobile ? '0.65rem' : '0.8rem';
   const fontSizeName = isVerySmall ? '0.65rem' : isMobile ? '0.9rem' : '1.1rem';
-  const slotGap = isVerySmall ? '3px' : isMobile ? '6px' : '10px';
+  const slotGap = isVerySmall ? '3px' : isMobile ? '6px' : '4px';
   const slotSize = isVerySmall ? '24px' : isMobile ? '36px' : undefined;
+  const statsMaxWidth = isVerySmall ? '38px' : isMobile ? '46px' : '60px';
+  const statsPadding = isVerySmall ? '0.15rem 0.2rem' : isMobile ? '0.2rem 0.3rem' : '0.4rem 0.6rem';
 
   const handleDrop = async (slotId: string, e: React.DragEvent) => {
     if (readOnly) return;
@@ -153,7 +157,7 @@ export default function CharacterCard({
     if (!availableItems || !selectedSlot) return [];
     const cat = slotCategories[selectedSlot];
     return availableItems.filter((item: any) => {
-      if (item.type === 'material') return false;
+      if (item.type === 'material' || item.type === 'craft_item') return false;
       if (cat === 'ring') return item.slot === 'ring1' || item.slot === 'ring2';
       if (cat === 'weapon') return item.slot === 'weapon1' || item.slot === 'weapon2';
       return item.slot === selectedSlot;
@@ -167,21 +171,21 @@ export default function CharacterCard({
     : 'url(/character_man.webp)';
 
   return (
-    <div className={`fighter-card ${side}`} style={{
+    <div className={`fighter-card ${side} flex-shrink-0`} style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       width: cardWidth,
-      minWidth: isVerySmall ? '110px' : 'auto',
+      minWidth: cardWidth,
       margin: cardMargin, color: '#eee',
     }}>
       <div style={{ width: '100%', textAlign: 'center', marginBottom: '0.5rem' }}>
         <h2 style={{ margin: 0, fontSize: fontSizeName }}>{truncate(char.username)}</h2>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
           <span style={{ fontSize: isVerySmall ? '0.6rem' : isMobile ? '0.75rem' : '0.85rem' }}>Ур. {char.level}</span>
-          {showExpBar && (
+          {showExpBar && char.exp !== undefined && (
             <div style={{ width: '100px', height: '14px', background: '#222', borderRadius: '4px', overflow: 'hidden', border: '1px solid #555', position: 'relative' }}>
               <div style={{ width: `${expPercent}%`, height: '100%', background: '#9b59b6', transition: 'width 0.3s' }} />
               <span style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: '#fff', textShadow: '0 0 2px #000' }}>
-                {char.exp}{expNeeded[char.level - 1] !== undefined ? `/${expNeeded[char.level - 1]}` : ''}
+                {char.exp}/{expNeeded}
               </span>
             </div>
           )}
@@ -189,11 +193,15 @@ export default function CharacterCard({
       </div>
 
       <div id={cardId} style={{
-        border: `2px solid ${side === 'left' ? '#e63946' : '#457b9d'}`,
+        border: '2px solid #555',
         borderRadius: '12px', padding: '0.8rem', width: '100%',
         background: '#2a2a3e', position: 'relative', height: frameHeight,
-        overflow: 'hidden',
       }}>
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          borderRadius: '10px', overflow: 'hidden',
+        }}>
         <div style={{
           position: 'absolute',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -204,34 +212,35 @@ export default function CharacterCard({
           transform: side === 'right' ? 'scaleX(-1)' : 'none',
           zIndex: 0,
         }} />
+        </div>
 
         <div style={{
           position: 'absolute', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
           background: 'rgba(0,0,0,0.7)',
-          padding: '0.4rem 0.6rem',
+          padding: statsPadding,
           borderRadius: '8px',
           zIndex: 1,
           color: '#eee',
           fontSize: fontSizeStats,
-          lineHeight: '1.3',
+          lineHeight: '1.2',
         }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
-                <td style={{ textAlign: 'left', maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>Сила</td>
+                <td style={{ textAlign: 'left', maxWidth: statsMaxWidth, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '6px' }}>Сила</td>
                 <td style={{ textAlign: 'right' }}>{stats.s}</td>
               </tr>
               <tr>
-                <td style={{ textAlign: 'left', maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>Ловк</td>
+                <td style={{ textAlign: 'left', maxWidth: statsMaxWidth, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '6px' }}>Ловкость</td>
                 <td style={{ textAlign: 'right' }}>{stats.a}</td>
               </tr>
               <tr>
-                <td style={{ textAlign: 'left', maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>Защ</td>
+                <td style={{ textAlign: 'left', maxWidth: statsMaxWidth, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '6px' }}>Защита</td>
                 <td style={{ textAlign: 'right' }}>{stats.d}</td>
               </tr>
               <tr>
-                <td style={{ textAlign: 'left', maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>Маст</td>
+                <td style={{ textAlign: 'left', maxWidth: statsMaxWidth, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '6px' }}>Мастерство</td>
                 <td style={{ textAlign: 'right' }}>{stats.m}</td>
               </tr>
             </tbody>
@@ -278,6 +287,7 @@ export default function CharacterCard({
           ))}
         </div>
 
+        {/* Оружие */}
         <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: slotGap, zIndex: 1 }}>
           {['weapon1', 'weapon2'].map(slotId => {
             const item = char.equipment[slotId];

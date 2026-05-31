@@ -22,6 +22,13 @@ db.exec(`
     inventorySlots INTEGER DEFAULT 10,
     activeJob TEXT DEFAULT NULL,
     chatBannedUntil INTEGER DEFAULT 0,
+    openPrivateTabs TEXT DEFAULT '[]',
+    gender TEXT DEFAULT 'male',
+    statPoints INTEGER DEFAULT 0,
+    baseS INTEGER DEFAULT 5,
+    baseA INTEGER DEFAULT 5,
+    baseD INTEGER DEFAULT 5,
+    baseM INTEGER DEFAULT 5,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
@@ -36,31 +43,27 @@ db.exec(`
   )
 `);
 
-// ---------- Миграции (добавление новых колонок, если их ещё нет) ----------
-const migrations = [
-  'ALTER TABLE users ADD COLUMN totalBattles INTEGER DEFAULT 0',
-  'ALTER TABLE users ADD COLUMN wins INTEGER DEFAULT 0',
-  'ALTER TABLE users ADD COLUMN currentHp INTEGER DEFAULT 100',
-  'ALTER TABLE users ADD COLUMN money INTEGER DEFAULT 0',
-  'ALTER TABLE users ADD COLUMN lastHpUpdate INTEGER DEFAULT 0',
-  'ALTER TABLE users ADD COLUMN lastAttackTime INTEGER DEFAULT 0',
-  'ALTER TABLE users ADD COLUMN protectionUntil INTEGER DEFAULT 0',
-  'ALTER TABLE users ADD COLUMN inventorySlots INTEGER DEFAULT 10',
-  'ALTER TABLE users ADD COLUMN activeJob TEXT DEFAULT NULL',
-  'ALTER TABLE users ADD COLUMN chatBannedUntil INTEGER DEFAULT 0',
-  'ALTER TABLE chat_messages ADD COLUMN item_data TEXT DEFAULT NULL',
-  'ALTER TABLE users ADD COLUMN openPrivateTabs TEXT DEFAULT \'[]\'',
-  'ALTER TABLE items ADD COLUMN upgradeLevel INTEGER DEFAULT 0',
-  'ALTER TABLE items ADD COLUMN image TEXT DEFAULT NULL',
-  'ALTER TABLE craft_items ADD COLUMN type TEXT DEFAULT \'craft\'',
-  'ALTER TABLE craft_recipes ADD COLUMN result_type TEXT DEFAULT \'\'',
-  'ALTER TABLE craft_recipes ADD COLUMN result_id INTEGER DEFAULT 0',
-  'ALTER TABLE craft_recipes ADD COLUMN success_chance INTEGER DEFAULT 100',
-  'ALTER TABLE craft_recipes ADD COLUMN category_id INTEGER DEFAULT NULL',
-  'ALTER TABLE users ADD COLUMN gender TEXT DEFAULT \'male\'',
-];
-for (const sql of migrations) {
-  try { db.exec(sql); } catch (e) { /* колонка уже существует */ }
+// ---------- Таблица редкостей ----------
+db.exec(`
+  CREATE TABLE IF NOT EXISTS rarities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    color TEXT NOT NULL
+  );
+`);
+
+// ---------- Начальные редкости ----------
+const rarityCount = (db.prepare('SELECT COUNT(*) as cnt FROM rarities').get() as any).cnt;
+if (rarityCount === 0) {
+  const insertRarity = db.prepare('INSERT INTO rarities (id, name, display_name, color) VALUES (?, ?, ?, ?)');
+  insertRarity.run(0, 'junk', 'Хлам', '#888888');
+  insertRarity.run(1, 'common', 'Обычный', '#cccccc');
+  insertRarity.run(2, 'uncommon', 'Необычный', '#2ecc71');
+  insertRarity.run(3, 'rare', 'Редкий', '#3498db');
+  insertRarity.run(4, 'epic', 'Эпический', '#9b59b6');
+  insertRarity.run(5, 'legendary', 'Легендарный', '#f1c40f');
+  insertRarity.run(6, 'mythic', 'Мифический', '#e74c3c');
 }
 
 // ---------- Таблица боёв ----------
@@ -116,10 +119,13 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     slot TEXT NOT NULL,
-    rarity INTEGER NOT NULL,
+    rarity_id INTEGER NOT NULL DEFAULT 0,
     bonuses TEXT DEFAULT '{}',
     extra TEXT DEFAULT '{}',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    upgradeLevel INTEGER DEFAULT 0,
+    image TEXT DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (rarity_id) REFERENCES rarities(id)
   )
 `);
 
@@ -151,17 +157,17 @@ db.exec(`
 const itemCount = (db.prepare('SELECT COUNT(*) as cnt FROM items').get() as any).cnt;
 if (itemCount === 0) {
   const initialItems = [
-    { name: 'Серый шлем', slot: 'helmet', rarity: 0, bonuses: { s: 0, a: 0, d: 5, m: 0 }, extra: { stamReg: 0, crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
-    { name: 'Белый меч', slot: 'weapon1', rarity: 1, bonuses: { s: 10, a: 0, d: 0, m: 0 }, extra: { stamReg: 0, crit: 2, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
-    { name: 'Зелёное кольцо', slot: 'ring1', rarity: 2, bonuses: { s: 0, a: 15, d: 0, m: 0 }, extra: { stamReg: 1, crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
-    { name: 'Синий амулет', slot: 'amulet', rarity: 3, bonuses: { s: 0, a: 0, d: 0, m: 20 }, extra: { stamReg: 0, crit: 0, dodge: 5, counter: 0, fullBlock: 0, hpRegen: 0 } },
-    { name: 'Фиолетовые перчатки', slot: 'gloves', rarity: 4, bonuses: { s: 15, a: 0, d: 0, m: 0 }, extra: { stamReg: 0, crit: 5, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
-    { name: 'Жёлтый пояс', slot: 'belt', rarity: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { stamReg: 2, crit: 0, dodge: 0, counter: 10, fullBlock: 0, hpRegen: 0 } },
-    { name: 'Красные ботинки', slot: 'boots', rarity: 6, bonuses: { s: 0, a: 30, d: 0, m: 0 }, extra: { stamReg: 0, crit: 0, dodge: 10, counter: 0, fullBlock: 5, hpRegen: 2 } }
+    { name: 'Серый шлем', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 5, m: 0 }, extra: { stamReg: 0, crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
+    { name: 'Белый меч', slot: 'weapon1', rarity_id: 1, bonuses: { s: 10, a: 0, d: 0, m: 0 }, extra: { stamReg: 0, crit: 2, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
+    { name: 'Зелёное кольцо', slot: 'ring1', rarity_id: 2, bonuses: { s: 0, a: 15, d: 0, m: 0 }, extra: { stamReg: 1, crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
+    { name: 'Синий амулет', slot: 'amulet', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 20 }, extra: { stamReg: 0, crit: 0, dodge: 5, counter: 0, fullBlock: 0, hpRegen: 0 } },
+    { name: 'Фиолетовые перчатки', slot: 'gloves', rarity_id: 4, bonuses: { s: 15, a: 0, d: 0, m: 0 }, extra: { stamReg: 0, crit: 5, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
+    { name: 'Жёлтый пояс', slot: 'belt', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { stamReg: 2, crit: 0, dodge: 0, counter: 10, fullBlock: 0, hpRegen: 0 } },
+    { name: 'Красные ботинки', slot: 'boots', rarity_id: 6, bonuses: { s: 0, a: 30, d: 0, m: 0 }, extra: { stamReg: 0, crit: 0, dodge: 10, counter: 0, fullBlock: 5, hpRegen: 2 } }
   ];
-  const insert = db.prepare('INSERT INTO items (name, slot, rarity, bonuses, extra) VALUES (?, ?, ?, ?, ?)');
+  const insert = db.prepare('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image) VALUES (?, ?, ?, ?, ?, ?)');
   for (const item of initialItems) {
-    insert.run(item.name, item.slot, item.rarity, JSON.stringify(item.bonuses), JSON.stringify(item.extra));
+    insert.run(item.name, item.slot, item.rarity_id, JSON.stringify(item.bonuses), JSON.stringify(item.extra), null);
   }
 }
 
@@ -180,9 +186,11 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS craft_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    rarity INTEGER NOT NULL DEFAULT 0,
+    rarity_id INTEGER NOT NULL DEFAULT 0,
     description TEXT DEFAULT '',
-    type TEXT DEFAULT 'craft'
+    type TEXT DEFAULT 'craft',
+    image TEXT DEFAULT NULL,
+    FOREIGN KEY (rarity_id) REFERENCES rarities(id)
   );
 `);
 
@@ -192,7 +200,11 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
-    money_cost INTEGER NOT NULL DEFAULT 0
+    money_cost INTEGER NOT NULL DEFAULT 0,
+    result_type TEXT DEFAULT '',
+    result_id INTEGER DEFAULT 0,
+    success_chance INTEGER DEFAULT 100,
+    category_id INTEGER DEFAULT NULL
   );
 `);
 
@@ -228,16 +240,44 @@ db.exec(`
 
 // ---------- Индексы ----------
 db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_craft_items_rarity ON craft_items(rarity);
+  CREATE INDEX IF NOT EXISTS idx_craft_items_rarity_id ON craft_items(rarity_id);
   CREATE INDEX IF NOT EXISTS idx_craft_recipe_ingredients_recipe ON craft_recipe_ingredients(recipe_id);
 `);
+
+// ---------- Таблица названий характеристик ----------
+db.exec(`
+  CREATE TABLE IF NOT EXISTS stat_names (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    nameRu TEXT NOT NULL
+  )
+`);
+
+const statCount = (db.prepare('SELECT COUNT(*) as cnt FROM stat_names').get() as any).cnt;
+if (statCount === 0) {
+  const insert = db.prepare('INSERT INTO stat_names (name, nameRu) VALUES (?, ?)');
+  const stats = [
+    ['s', 'Сила'],
+    ['a', 'Ловкость'],
+    ['d', 'Защита'],
+    ['m', 'Мастерство'],
+    ['crit', 'Крит'],
+    ['dodge', 'Уклонение'],
+    ['counter', 'Контрудар'],
+    ['fullBlock', 'Полный блок'],
+    ['block', 'Блок'],
+    ['hpRegen', 'Реген HP'],
+    ['stamReg', 'Реген вын.'],
+  ];
+  for (const [name, nameRu] of stats) insert.run(name, nameRu);
+}
 
 // ---------- Начальные ресурсы (материалы) ----------
 const craftItemCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_items').get() as any).cnt;
 if (craftItemCount === 0) {
-  const insertCraft = db.prepare('INSERT INTO craft_items (name, rarity, type) VALUES (?, ?, ?)');
+  const insertCraft = db.prepare('INSERT INTO craft_items (name, rarity_id, type, image) VALUES (?, ?, ?, ?)');
   const names = ['Серый материал', 'Белый материал', 'Зелёный материал', 'Синий материал', 'Фиолетовый материал', 'Жёлтый материал', 'Красный материал'];
-  names.forEach((name, i) => insertCraft.run(name, i, 'craft'));
+  names.forEach((name, i) => insertCraft.run(name, i, 'craft', null));
 }
 
 // ---------- Начальные категории рецептов ----------
@@ -263,7 +303,7 @@ if (upgradeChanceCount === 0) {
 // ---------- Миграция старых материалов в инвентарях ----------
 const usersWithMaterials = db.prepare('SELECT id, inventory FROM users WHERE inventory LIKE ?').all('%material%') as any[];
 if (usersWithMaterials.length > 0) {
-  const getCraftItemByRarity = db.prepare('SELECT id, name, rarity, type, image FROM craft_items WHERE rarity = ?');
+  const getCraftItemByRarity = db.prepare('SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ?');
   const updateUser = db.prepare('UPDATE users SET inventory = ? WHERE id = ?');
 
   for (const user of usersWithMaterials) {
@@ -284,7 +324,9 @@ if (usersWithMaterials.length > 0) {
             type: 'craft_item',
             id: craftItem.id,
             name: craftItem.name,
-            rarity: craftItem.rarity,
+            rarity_id: craftItem.rarity_id,
+            rarity_display: craftItem.display_name,
+            rarity_color: craftItem.color,
             count: item.count || 1,
             itemType: craftItem.type || 'craft',
             image: craftItem.image || null,
@@ -299,5 +341,16 @@ if (usersWithMaterials.length > 0) {
     }
   }
 }
+
+// ---------- Миграция: базовые характеристики и очки статов ----------
+try { db.exec('ALTER TABLE users ADD COLUMN statPoints INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE users ADD COLUMN baseS INTEGER DEFAULT 5'); } catch {}
+try { db.exec('ALTER TABLE users ADD COLUMN baseA INTEGER DEFAULT 5'); } catch {}
+try { db.exec('ALTER TABLE users ADD COLUMN baseD INTEGER DEFAULT 5'); } catch {}
+try { db.exec('ALTER TABLE users ADD COLUMN baseM INTEGER DEFAULT 5'); } catch {}
+
+// Инициализация статов для существующих игроков (у кого NULL)
+db.exec(`UPDATE users SET baseS = 5, baseA = 5, baseD = 5, baseM = 5
+  WHERE baseS IS NULL OR baseS = 0`);
 
 export default db;

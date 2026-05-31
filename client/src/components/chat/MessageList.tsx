@@ -16,7 +16,6 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
     const prevMessageCount = useRef(messages.length);
     const initialLoad = useRef(true);
 
-    // Мгновенная прокрутка при первой загрузке, плавная при новых сообщениях
     useLayoutEffect(() => {
         if (!containerRef.current) return;
         const prevCount = prevMessageCount.current;
@@ -35,7 +34,6 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
         prevMessageCount.current = currentCount;
     }, [messages]);
 
-    // Сброс флага при монтировании заново
     useEffect(() => {
         initialLoad.current = true;
     }, []);
@@ -47,22 +45,30 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
         <div ref={containerRef} style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
             {messages.map(msg => {
                 const isPrivate = msg.targetId !== null;
-                const isOwn = msg.senderId === currentUserId;
-                const prefix = isPrivate ? 'Шепот: ' : '';
-                const color = isPrivate ? '#c084fc' : '#3498db';
-                const fontWeight = isOwn ? 'bold' : 'normal';
+                const isOwnMessage = msg.senderId === currentUserId;
+                const prefix = isPrivate ? 'ЛС: ' : '';
+                const nickColor = isPrivate ? '#c084fc' : '#ffffff';
+                const fontWeight = isOwnMessage ? 'bold' : 'normal';
+
+                const authorNickElement = isOwnMessage ? (
+                    <span style={{ fontWeight, color: nickColor, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                        {prefix}{truncate(msg.senderName)}
+                    </span>
+                ) : (
+                    <span
+                        style={{ fontWeight, color: nickColor, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        onClick={(e) => onNickClick(e, msg.senderName, false)}
+                    >
+                        {prefix}{truncate(msg.senderName)}
+                    </span>
+                );
 
                 return (
                     <div key={msg.id} style={{
                         display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
                         marginBottom: '0.3rem', color: isPrivate ? '#c084fc' : undefined,
                     }}>
-                        <span
-                            style={{ fontWeight, color, fontSize: '0.8rem', cursor: isOwn ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
-                            onClick={(e) => onNickClick(e, msg.senderName, isOwn)}
-                        >
-                            {prefix}{truncate(msg.senderName)}
-                        </span>
+                        {authorNickElement}
 
                         {msg.item ? (
                             <span

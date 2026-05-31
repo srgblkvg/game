@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
 interface GameItem {
-  id: string;
-  name: string;
+  id?: string | number;
+  name?: string;
   slot: string;
-  rarity: number;
+  rarity_id: number;
+  rarity_display?: string;
+  rarity_color?: string;
   bonuses: { s: number; a: number; d: number; m: number };
   extra: { stamReg: number; crit: number; dodge: number; counter: number; fullBlock: number; hpRegen: number };
   upgradeLevel?: number;
@@ -18,16 +20,25 @@ export interface Character {
   money: number;
   totalBattles: number;
   wins: number;
-  inventory: (GameItem | { type: 'material'; rarity: number; count: number; name: string; id: string })[];
+  inventory: (GameItem | {
+    type: 'material' | 'craft_item';
+    rarity_id: number;
+    rarity_display?: string;
+    rarity_color?: string;
+    count: number;
+    name: string;
+    id: string;
+    itemType?: string;
+    image?: string;
+  })[];
   equipment: Record<string, GameItem>;
-  baseStats: { s: number; a: number; v: number; d: number; m: number };
+  baseStats: { s: number; a: number; d: number; m: number };
   currentHp: number;
   stats?: {
     s: number;
     a: number;
     d: number;
     m: number;
-    v: number;
     hp: number;
     maxStamina: number;
     regen: number;
@@ -43,9 +54,11 @@ export interface Character {
     endTime: number;
     reward: number;
     duration: number;
+    expReward?: number;
   } | null;
   openPrivateTabs?: number[];
   gender?: string;
+  statPoints?: number;
 }
 
 interface GameContextType {
@@ -57,7 +70,6 @@ const GameContext = createContext<GameContextType | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [character, setCharacter] = useState<Character | null>(null);
-
   return (
     <GameContext.Provider value={{ character, setCharacter }}>
       {children}

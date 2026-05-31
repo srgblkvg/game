@@ -1,5 +1,5 @@
 import React from 'react';
-import { getRarityColor } from '../utils/itemUtils';
+import { getRarityColor, getItemImage } from '../utils/itemUtils';
 
 interface ItemSlotProps {
     item: any;
@@ -34,17 +34,19 @@ export default function ItemSlot({
     style,
     title,
 }: ItemSlotProps) {
-    const borderColor = item ? getRarityColor(item.rarity) : (highlighted ? '#2ecc71' : '#555');
+    const itemColor = getRarityColor(item);
+    const borderColor = item ? itemColor : (highlighted ? '#2ecc71' : '#555');
+    const img = getItemImage(item);
 
-    const backgroundStyle = item?.image
+    const backgroundStyle = img
         ? {
-            backgroundImage: `url(/${item.image})`,
+            backgroundImage: `url(/${img})`,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
         }
         : {
-            backgroundColor: item ? getRarityColor(item.rarity) : 'rgba(0,0,0,0.65)',
+            backgroundColor: item ? itemColor : 'rgba(0,0,0,0.65)',
         };
 
     return (
@@ -59,7 +61,7 @@ export default function ItemSlot({
             onMouseLeave={onMouseLeave}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
-            onContextMenu={(e) => e.preventDefault()}   // ← убирает системное меню
+            onContextMenu={(e) => e.preventDefault()}
             title={title}
             style={{
                 width: '44px',

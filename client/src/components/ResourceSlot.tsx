@@ -1,5 +1,5 @@
 import React from 'react';
-import { getRarityColor } from '../utils/itemUtils';
+import { getRarityColor, getItemImage } from '../utils/itemUtils';
 
 interface ResourceSlotProps {
     item: any;
@@ -30,11 +30,12 @@ export default function ResourceSlot({
     onTouchEnd,
     style,
 }: ResourceSlotProps) {
-    const color = getRarityColor(item.rarity);
+    const color = getRarityColor(item);
+    const img = getItemImage(item);
 
-    const backgroundStyle = item?.image
+    const backgroundStyle = img
         ? {
-            backgroundImage: `url(/${item.image})`,
+            backgroundImage: `url(/${img})`,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
@@ -55,7 +56,7 @@ export default function ResourceSlot({
             onMouseLeave={onMouseLeave}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
-            onContextMenu={(e) => e.preventDefault()}   // ← убирает системное меню
+            onContextMenu={(e) => e.preventDefault()}
             style={{
                 width: '44px',
                 height: '44px',

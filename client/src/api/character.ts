@@ -86,3 +86,16 @@ export async function saveOpenTabs(tabs: number[]) {
     if (!res.ok) throw new Error('Ошибка сохранения вкладок');
     return res.json();
 }
+
+export async function allocateStats(s: number, a: number, d: number, m: number) {
+    const res = await fetch(`${BASE_URL}/character/allocate-stats`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ s, a, d, m }),
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Ошибка распределения');
+    }
+    return res.json();
+}

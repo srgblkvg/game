@@ -27,11 +27,12 @@ router.post('/jobs/start', (req: any, res) => {
     const now = Math.floor(Date.now() / 1000);
     const endTime = now + job.duration;
     const reward = Math.floor(Math.random() * (job.rewardMax - job.rewardMin + 1)) + job.rewardMin;
+    const expReward = Math.max(1, Math.floor(job.duration / 3600));
 
-    const activeJob = JSON.stringify({ jobId, name: job.name, startTime: now, endTime, reward, duration: job.duration });
+    const activeJob = JSON.stringify({ jobId, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward });
     db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, userId);
 
-    res.json({ success: true, endTime, reward, jobName: job.name });
+    res.json({ success: true, endTime, reward, jobName: job.name, expReward });
 });
 
 router.get('/jobs/history', (req: any, res) => {

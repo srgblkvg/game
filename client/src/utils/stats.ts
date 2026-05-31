@@ -21,17 +21,16 @@ export function calculateStats(char: Character) {
 
   const s = char.baseStats.s + sums.s;
   const a = char.baseStats.a + sums.a;
-  const v = char.baseStats.v;
   const d = char.baseStats.d + sums.d;
   const m = char.baseStats.m + sums.m;
-  const hp = s + a + v + d + m;
+  const hp = s + a + d + m;
 
-  // Стоимость атаки
+  // Стоимость атаки (используем rarity_id)
   let cost = 12;
   const weapon1 = char.equipment['weapon1'];
   const weapon2 = char.equipment['weapon2'];
-  if (weapon1) cost += weapon1.rarity * 6 * (weapon1.name?.includes('двуручн') ? 1.6 : 1);
-  if (weapon2) cost += weapon2.rarity * 6;
+  if (weapon1) cost += weapon1.rarity_id * 6 * (weapon1.name?.includes('двуручн') ? 1.6 : 1);
+  if (weapon2) cost += weapon2.rarity_id * 6;
   const attackCost = Math.round(cost);
 
   const hpRegen = 1 + (extra.hpRegen || 0);
@@ -40,7 +39,6 @@ export function calculateStats(char: Character) {
   return {
     s,
     a,
-    v,
     d,
     m,
     hp,

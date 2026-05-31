@@ -4,8 +4,14 @@ import { createItemSchema, addMoneySchema, resetTimersSchema } from '../validati
 
 const router = Router();
 
+// ---------- Предметы ----------
 router.get('/items', (req: any, res) => {
-    const items = db.prepare('SELECT * FROM items ORDER BY created_at DESC').all();
+    const items = db.prepare(`
+        SELECT i.*, r.name as rarity_name, r.display_name as rarity_display, r.color as rarity_color
+        FROM items i
+        JOIN rarities r ON i.rarity_id = r.id
+        ORDER BY i.id DESC
+    `).all();
     res.json(items);
 });
 
@@ -13,20 +19,19 @@ router.post('/items', (req: any, res) => {
     const parsed = createItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
-    const { name, slot, rarity, bonuses, extra, image } = parsed.data; // image добавлено
-    db.prepare('INSERT INTO items (name, slot, rarity, bonuses, extra, image) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(name, slot, rarity, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null);
+    const { name, slot, rarity_id, bonuses, extra, image } = parsed.data;
+    db.prepare('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null);
     res.json({ success: true });
 });
-
 
 router.put('/items/:id', (req: any, res) => {
     const parsed = createItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
-    const { name, slot, rarity, bonuses, extra, image } = parsed.data;
-    db.prepare('UPDATE items SET name=?, slot=?, rarity=?, bonuses=?, extra=?, image=? WHERE id=?')
-        .run(name, slot, rarity, JSON.stringify(bonuses), JSON.stringify(extra), image || null, req.params.id);
+    const { name, slot, rarity_id, bonuses, extra, image } = parsed.data;
+    db.prepare('UPDATE items SET name=?, slot=?, rarity_id=?, bonuses=?, extra=?, image=? WHERE id=?')
+        .run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, req.params.id);
     res.json({ success: true });
 });
 
@@ -35,6 +40,7 @@ router.delete('/items/:id', (req: any, res) => {
     res.json({ success: true });
 });
 
+// ---------- Игроки ----------
 router.get('/users', (req: any, res) => {
     const users = db.prepare('SELECT id, username, level, money, totalBattles, wins, lastAttackTime, protectionUntil, activeJob, inventorySlots FROM users ORDER BY id').all();
     res.json(users);
@@ -64,6 +70,12 @@ router.post('/reset-timers', (req: any, res) => {
     if (!userId) return res.status(400).json({ error: 'userId required' });
     db.prepare('UPDATE users SET lastAttackTime = 0, protectionUntil = 0 WHERE id = ?').run(userId);
     res.json({ success: true });
+});
+
+// Получить список редкостей
+router.get('/rarities', (req: any, res) => {
+    const rarities = db.prepare('SELECT * FROM rarities ORDER BY id').all();
+    res.json(rarities);
 });
 
 export default router;
