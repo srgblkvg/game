@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
 
 interface ActionsProps {
@@ -44,7 +45,7 @@ export default function Actions({ canAttack, attackCooldownSec, onArenaClick }: 
                                 </div>
                                 <div className="mt-auto">
                                     {card.cost > 0 && (
-                                        <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-1">Цена: {card.cost} сер.</p>
+                                        <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-1">Цена: {formatMoney(card.cost)}</p>
                                     )}
                                     {card.cost === 0 && <div className="mb-1" />}
                                     <Button

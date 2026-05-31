@@ -3,6 +3,7 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import { renderBattleLog } from '../../utils/battleLog';
+import { formatMoney } from '../../utils/money';
 
 const stepColors: Record<string, string> = {
   damage: '#e74c3c', crit: '#f1c40f', dodge: '#3498db',
@@ -63,7 +64,7 @@ export default function AdminBattles() {
                         {selected.winnerId === selected.attackerId ? '🏆 Победил атакующий' : '💀 Победил защитник'}
                     </span>
                     <span>Опыт: +{selected.expGained || 0}</span>
-                    {selected.moneyStolen > 0 && <span className="text-[var(--color-text-accent)]">💰 {selected.moneyStolen} сер.</span>}
+                    {selected.moneyStolen > 0 && <span className="text-[var(--color-text-accent)]">💰 {formatMoney(selected.moneyStolen)}</span>}
                 </div>
                 <div className="flex justify-center mt-4">
                     <Button variant="secondary" size="sm" onClick={() => setSelected(null)}>Закрыть</Button>

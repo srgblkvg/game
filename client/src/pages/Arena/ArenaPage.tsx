@@ -142,7 +142,7 @@ export default function ArenaPage() {
               disabled={loading || character.money < 10}
               className="text-lg px-6 py-2 min-w-[180px] rounded-xl"
             >
-              🔄 Сменить (10 сер.)
+              {`🔄 Сменить (${formatMoney(10)})`}
             </Button>
           </div>
         </div>

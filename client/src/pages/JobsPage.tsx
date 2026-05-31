@@ -115,7 +115,7 @@ export default function JobsPage() {
             <h3 className="font-bold mb-1">{job.name}</h3>
             <p className="text-sm text-[var(--color-text-muted)] mb-2">{job.description}</p>
             <div className="text-[var(--color-text-accent)] mb-1 text-sm">
-              Награда: {job.rewardMin}–{job.rewardMax} сер.
+              Награда: {job.rewardMin}–{job.rewardMax} серебра
             </div>
             <div className="text-[var(--color-accent-purple)] text-xs mb-1">
               Опыт: +{Math.max(1, Math.floor(job.duration / 3600))}

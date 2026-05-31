@@ -5,10 +5,9 @@ import { useGame } from '../contexts/GameContext';
 import { fetchShopItems, buyItem } from '../api';
 import { formatMoney } from '../utils/money';
 import { getRarityColor } from '../utils/itemUtils';
-import ItemTooltip from '../components/ItemTooltip';
+import ItemStats from '../components/ItemStats';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
-import ItemStats from '../components/ItemStats';
 import FilterBar from '../components/ui/FilterBar';
 
 const filterSlots = [
@@ -33,7 +32,6 @@ export default function ShopPage() {
     const [message, setMessage] = useState('');
     const [filterSlot, setFilterSlot] = useState('all');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-    const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
 
     useEffect(() => {
         if (!user) { navigate('/login'); return; }
@@ -63,11 +61,6 @@ export default function ShopPage() {
         });
 
     if (!user || !character) return null;
-
-    const hasExtra = (item: any) => {
-        if (!item.extra) return false;
-        return Object.values(item.extra).some((v: any) => v > 0);
-    };
 
     return (
         <div className="px-4 py-4">
@@ -108,16 +101,10 @@ export default function ShopPage() {
                                     boxShadow: '0 4px 12px rgba(0,0,0,0.8)',
                                 }}
                             >
-                                {/* Верх: иконка + инфо */}
-                                <div className="flex-1"
-                                    onMouseEnter={(e) => setTooltipData({ item, x: e.clientX, y: e.clientY })}
-                                    onMouseMove={(e) => setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
-                                    onMouseLeave={() => setTooltipData(null)}
-                                >
+                                <div className="flex-1">
                                     <ItemStats item={item} imageSize={36} />
                                 </div>
 
-                                {/* Низ: цена + кнопка */}
                                 <div className="mt-2">
                                     <div className="text-center text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)] mb-1">
                                         Цена: {formatMoney(price)}
@@ -138,7 +125,6 @@ export default function ShopPage() {
                 </div>
             )}
 
-            {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
         </div>
     );
 }
