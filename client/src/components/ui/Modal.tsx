@@ -6,6 +6,7 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   maxWidth?: string;
+  width?: string;
   borderColor?: string;
 }
 
@@ -14,10 +15,22 @@ export default function Modal({
   onClose,
   title,
   children,
-  maxWidth = '400px',
+  maxWidth,
+  width,
   borderColor = 'var(--color-accent-danger)',
 }: ModalProps) {
   if (!open) return null;
+
+  const style: Record<string, string> = {
+    border: `2px solid ${borderColor}`,
+    padding: '1.5rem',
+  };
+  if (width) {
+    style.width = width;
+    style.maxWidth = width;
+  } else if (maxWidth) {
+    style.maxWidth = maxWidth;
+  }
 
   return (
     <div
@@ -27,7 +40,7 @@ export default function Modal({
     >
       <div
         className="bg-[var(--color-bg-modal)] rounded-xl text-[var(--color-text-primary)] shadow-lg mx-4 relative"
-        style={{ maxWidth, border: `2px solid ${borderColor}`, padding: '1.5rem' }}
+        style={style}
         onClick={e => e.stopPropagation()}
       >
         <button

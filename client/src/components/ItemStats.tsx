@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getRarityColor, getItemImage, isCraftItem } from '../utils/itemUtils';
+import { getRarityColor, getItemImage, isCraftItem, getItemTypeName } from '../utils/itemUtils';
 import type { ReactNode } from 'react';
 
 interface ItemStatsProps {
@@ -87,9 +87,22 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       )}
 
       {resource && (
-        <div className="text-xs" style={{ color: '#aaa' }}>
-          <div>Количество: {item.count}</div>
-          <div>Тип: {item.itemType || 'craft'}</div>
+        <div className="text-xs">
+          {[
+            ['Тип', getItemTypeName(item)],
+            ['Количество', String(item.count)],
+          ].map(([name, val], i) => (
+            <div
+              key={i}
+              className="flex justify-between py-0.5 px-1"
+              style={{
+                background: i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
+              }}
+            >
+              <span>{name}</span>
+              <span className="font-bold text-white">{val}</span>
+            </div>
+          ))}
         </div>
       )}
 

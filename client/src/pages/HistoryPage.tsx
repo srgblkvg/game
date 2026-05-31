@@ -141,7 +141,7 @@ export default function HistoryPage() {
                 open={!!selectedBattle}
                 onClose={() => setSelectedBattle(null)}
                 title={`⚔ ${selectedBattle.attackerName} vs ${selectedBattle.defenderName}`}
-                maxWidth="700px"
+                width="min(900px, calc(100vw - 2rem))"
                 borderColor="var(--color-border-default)"
             >
                 <div className="bg-black rounded-lg p-3 max-h-[60vh] overflow-y-auto font-mono text-xs leading-relaxed">

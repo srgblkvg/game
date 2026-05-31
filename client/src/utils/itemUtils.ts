@@ -48,6 +48,17 @@ export function isCraftItem(item: any): item is {
     return item?.type === 'material' || item?.type === 'craft_item';
 }
 
+const typeNameRu: Record<string, string> = {
+  craft: 'Материал',
+  material: 'Материал',
+  craft_item: 'Материал',
+};
+
+export function getItemTypeName(item: any): string {
+  if (item?.slot) return slotNames[item.slot] || item.slot;
+  return typeNameRu[item?.itemType || item?.type] || item?.itemType || item?.type || '?';
+}
+
 export function getCompatibleSlots(item: any): string[] {
     if (!item || item.type === 'material' || item.type === 'craft_item') return [];
     const slot = item.slot;
