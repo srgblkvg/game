@@ -1,3 +1,4 @@
+import { Icon } from "@iconify/react";
 // client/src/pages/CraftPage.tsx
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -280,7 +281,7 @@ export default function CraftPage() {
     return (
         <div className="px-4 py-4 min-h-screen">
             <BackButton />
-            <h2 className="text-xl font-bold mb-4">🔨 Крафт</h2>
+            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:anvil" width="22" height="22" class="inline mr-2"/>Крафт</h2>
 
             {/* Список рецептов */}
             <RecipeList

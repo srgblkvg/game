@@ -12,7 +12,6 @@ interface CharacterCardProps {
   char: CharacterCardData;
   side?: 'left' | 'right';
   showHealth?: boolean;
-  showStamina?: boolean;
   showExp?: boolean;
   showRegenHint?: boolean;
   readOnly?: boolean;
@@ -24,7 +23,7 @@ interface CharacterCardProps {
 }
 
 export default function CharacterCard({
-  char, side = 'left', showHealth = true, showStamina = true,
+  char, side = 'left', showHealth = true,
   showExp = true, showRegenHint = true, readOnly = false,
   onEquip, availableItems, selectedItemId, highlightedSlots,
   compact = false,
@@ -59,8 +58,8 @@ export default function CharacterCard({
   const cardMargin = isVerySmall ? '2px' : isMobile ? '10px' : '20px';
   const frameHeight = isVerySmall ? '140px' : isMobile ? '180px' : '240px';
   const fontSizeName = isVerySmall ? '0.65rem' : isMobile ? '0.9rem' : '1.1rem';
-  const slotGap = isVerySmall ? '3px' : isMobile ? '6px' : '4px';
-  const slotSize = isVerySmall ? '24px' : isMobile ? '36px' : undefined;
+  const slotGap = isVerySmall ? '2px' : isMobile ? '4px' : '4px';
+  const slotSize = isVerySmall ? '20px' : isMobile ? '26px' : undefined;
 
   const cardId = `fighter-${side}`;
   const bgImage = char.gender === 'female'
@@ -126,7 +125,7 @@ export default function CharacterCard({
       <div style={{ width: '100%', textAlign: 'center', marginBottom: '0.5rem' }}>
         <h2 style={{ margin: 0, fontSize: fontSizeName }}>{truncate(char.username)}</h2>
         <div className="flex items-center justify-center gap-2 mt-1">
-          <span style={{ fontSize: isVerySmall ? '0.6rem' : isMobile ? '0.75rem' : '0.85rem' }}>Ур. {char.level}</span>
+          <span style={{ fontSize: isVerySmall ? '0.65rem' : isMobile ? '0.75rem' : '0.85rem' }}>Ур. {char.level}</span>
           {showExpBar && (
             <div style={{ width: '100px', height: '14px', background: '#222', borderRadius: '4px', overflow: 'hidden', border: '1px solid #555', position: 'relative' }}>
               <div style={{ width: `${expPercent}%`, height: '100%', background: '#9b59b6', transition: 'width 0.3s' }} />
@@ -177,18 +176,6 @@ export default function CharacterCard({
       {/* Здоровье */}
       {showHealth && char.currentHp !== undefined && (
         <HealthBar currentHp={char.currentHp} maxHp={hp} compact={compact} showRegenHint={showRegenHint} />
-      )}
-
-      {/* Выносливость */}
-      {showStamina && char.stamina !== undefined && (
-        <div style={{ width: '100%', marginTop: '0.3rem', textAlign: 'center' }}>
-          <div style={{ fontSize: isVerySmall ? '0.5rem' : isMobile ? '0.7rem' : '0.8rem' }}>
-            Вын: {Math.round(char.stamina)}/{char.maxStamina ?? 100}
-          </div>
-          <div style={{ height: '5px', background: '#333', borderRadius: '3px', marginTop: '2px' }}>
-            <div style={{ width: `${(char.stamina / (char.maxStamina ?? 100)) * 100}%`, height: '100%', background: '#f1c40f', transition: 'width 0.4s ease' }} />
-          </div>
-        </div>
       )}
 
       {/* Тултип */}

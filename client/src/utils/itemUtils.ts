@@ -1,6 +1,6 @@
 export const slotNames: Record<string, string> = {
     helmet: 'Шлем', chest: 'Нагрудник', gloves: 'Перчатки', boots: 'Ботинки',
-    amulet: 'Амулет', ring1: 'Кольцо 1', ring2: 'Кольцо 2', belt: 'Пояс',
+    amulet: 'Амулет', ring1: 'Кольцо', ring2: 'Кольцо', belt: 'Пояс',
     weapon1: 'Оружие 1', weapon2: 'Оружие 2',
 };
 

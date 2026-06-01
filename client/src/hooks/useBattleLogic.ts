@@ -222,10 +222,6 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     }, [battleSteps, autoPlaying, startAuto]);
 
     useEffect(() => {
-        // stamina is fully server-driven — no client-side interval
-    }, []);
-
-    useEffect(() => {
         if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0 && autoPlaying) {
             stopAuto();
         }

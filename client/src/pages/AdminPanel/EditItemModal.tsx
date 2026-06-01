@@ -23,8 +23,8 @@ const slots = [
   { value: 'gloves', label: 'Перчатки' },
   { value: 'boots', label: 'Ботинки' },
   { value: 'amulet', label: 'Амулет' },
-  { value: 'ring1', label: 'Кольцо 1' },
-  { value: 'ring2', label: 'Кольцо 2' },
+  { value: 'ring1', label: 'Кольцо' },
+  { value: 'ring2', label: 'Кольцо' },
   { value: 'belt', label: 'Пояс' },
   { value: 'weapon1', label: 'Оружие 1' },
   { value: 'weapon2', label: 'Оружие 2' },
@@ -36,7 +36,7 @@ export default function EditItemModal({ item, rarities, onSave, onClose }: EditI
     slot: item.slot || 'helmet',
     rarity_id: item.rarity_id ?? 0,
     bonuses: { s: item.bonuses?.s ?? 0, a: item.bonuses?.a ?? 0, d: item.bonuses?.d ?? 0, m: item.bonuses?.m ?? 0 },
-    extra: { stamReg: item.extra?.stamReg ?? 0, crit: item.extra?.crit ?? 0, dodge: item.extra?.dodge ?? 0, counter: item.extra?.counter ?? 0, fullBlock: item.extra?.fullBlock ?? 0, hpRegen: item.extra?.hpRegen ?? 0 },
+    extra: { crit: item.extra?.crit ?? 0, dodge: item.extra?.dodge ?? 0, counter: item.extra?.counter ?? 0, fullBlock: item.extra?.fullBlock ?? 0, hpRegen: item.extra?.hpRegen ?? 0 },
     image: item.image || '',
   });
 
@@ -69,7 +69,6 @@ export default function EditItemModal({ item, rarities, onSave, onClose }: EditI
           <label className="text-xs">Ловк <input type="number" value={form.bonuses.a} onChange={e => set('bonuses.a', +e.target.value)} className={smallInputClass} /></label>
           <label className="text-xs">Защ <input type="number" value={form.bonuses.d} onChange={e => set('bonuses.d', +e.target.value)} className={smallInputClass} /></label>
           <label className="text-xs">Маст <input type="number" value={form.bonuses.m} onChange={e => set('bonuses.m', +e.target.value)} className={smallInputClass} /></label>
-          <label className="text-xs">Реген вын. <input type="number" value={form.extra.stamReg} onChange={e => set('extra.stamReg', +e.target.value)} className={smallInputClass} /></label>
           <label className="text-xs">Крит % <input type="number" value={form.extra.crit} onChange={e => set('extra.crit', +e.target.value)} className={smallInputClass} /></label>
           <label className="text-xs">Уклонение % <input type="number" value={form.extra.dodge} onChange={e => set('extra.dodge', +e.target.value)} className={smallInputClass} /></label>
           <label className="text-xs">Контрудар % <input type="number" value={form.extra.counter} onChange={e => set('extra.counter', +e.target.value)} className={smallInputClass} /></label>

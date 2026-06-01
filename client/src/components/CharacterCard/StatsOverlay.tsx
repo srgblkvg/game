@@ -1,22 +1,30 @@
+import { Icon } from '@iconify/react';
+
 interface StatsOverlayProps {
   stats: { s: number; a: number; d: number; m: number };
   compact?: boolean | 'mobile' | 'verySmall';
 }
 
+const STAT_ICONS: Record<string, string> = {
+  'Сила': 'game-icons:biceps',
+  'Ловкость': 'game-icons:sprint',
+  'Защита': 'game-icons:shield',
+  'Мастерство': 'game-icons:crossed-swords',
+};
+
 export default function StatsOverlay({ stats, compact }: StatsOverlayProps) {
   const isMobile = compact === 'mobile' || compact === 'verySmall';
   const isVerySmall = compact === 'verySmall';
-  const fontSize = isVerySmall ? '0.5rem' : isMobile ? '0.65rem' : '0.8rem';
-  const maxWidth = isVerySmall ? '38px' : isMobile ? '46px' : '60px';
+  const iconSize = isVerySmall ? '10' : isMobile ? '10' : '14';
+  const fontSize = isVerySmall ? '0.65rem' : isMobile ? '0.65rem' : '0.8rem';
   const padding = isVerySmall ? '0.15rem 0.2rem' : isMobile ? '0.2rem 0.3rem' : '0.4rem 0.6rem';
 
   const tdStyle = {
     textAlign: 'left' as const,
-    maxWidth,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap' as const,
-    paddingRight: '6px',
+    paddingRight: '2px',
   };
 
   const rows = [
@@ -39,8 +47,10 @@ export default function StatsOverlay({ stats, compact }: StatsOverlayProps) {
         <tbody>
           {rows.map(([label, value]) => (
             <tr key={label}>
-              <td style={tdStyle}>{label}</td>
-              <td style={{ textAlign: 'right' }}>{value}</td>
+              <td style={tdStyle}>
+                <Icon icon={STAT_ICONS[label]} width={iconSize} height={iconSize} className="inline mr-0.5" />
+              </td>
+              <td style={{ textAlign: 'right', paddingLeft: '2px' }}>{value}</td>
             </tr>
           ))}
         </tbody>

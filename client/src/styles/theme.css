@@ -52,7 +52,7 @@ body,
 }
 
 body {
-  padding-bottom: 42px;
+  padding-bottom: max(env(safe-area-inset-bottom, 42px), 50px);
 }
 
 /* Кастомная полоса прокрутки */

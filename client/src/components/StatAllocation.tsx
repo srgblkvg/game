@@ -1,14 +1,15 @@
 import { useState } from 'react';
+import { Icon } from '@iconify/react';
 import { useGame } from '../contexts/GameContext';
 import { allocateStats, fetchCharacter } from '../api/character';
 import Button from './ui/Button';
 import Card from './ui/Card';
 
 const STATS = [
-  { key: 's' as const, label: 'Сила', color: '#e74c3c', desc: 'Урон в атаке' },
-  { key: 'a' as const, label: 'Ловкость', color: '#2ecc71', desc: 'Уклонение, очерёдность хода' },
-  { key: 'd' as const, label: 'Защита', color: '#3498db', desc: 'Шанс и сила блока' },
-  { key: 'm' as const, label: 'Мастерство', color: '#9b59b6', desc: 'Крит, контратака, оглушение' },
+  { key: 's' as const, label: 'Сила', icon: 'game-icons:biceps', color: '#e74c3c', desc: 'Урон в атаке' },
+  { key: 'a' as const, label: 'Ловкость', icon: 'game-icons:sprint', color: '#2ecc71', desc: 'Уклонение, очерёдность хода' },
+  { key: 'd' as const, label: 'Защита', icon: 'game-icons:shield', color: '#3498db', desc: 'Шанс и сила блока' },
+  { key: 'm' as const, label: 'Мастерство', icon: 'game-icons:crossed-swords', color: '#9b59b6', desc: 'Крит, контратака, оглушение' },
 ];
 
 export default function StatAllocation() {
@@ -45,7 +46,7 @@ export default function StatAllocation() {
   };
 
   return (
-    <Card className="mt-4">
+    <Card className="mt-4 w-full">
       <div
         className="flex items-center justify-between cursor-pointer select-none"
         onClick={() => setCollapsed(!collapsed)}
@@ -61,11 +62,14 @@ export default function StatAllocation() {
 
       {!collapsed && (
         <div className="mt-2">
-          {STATS.map(({ key, label, color, desc }) => (
+          {STATS.map(({ key, label, icon, color, desc }) => (
             <div key={key} className="flex items-center gap-2 py-1 border-b border-[var(--color-border-light)] last:border-b-0">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-sm font-bold" style={{ color }}>{label}</span>
+                  <span className="text-sm font-bold flex items-center gap-1" style={{ color }}>
+                    <Icon icon={icon} width="16" height="16" />
+                    {label}
+                  </span>
                   <span className="text-sm font-bold text-white">
                     {(character.baseStats?.[key] ?? 5) + alloc[key]}
                     {alloc[key] > 0 && (

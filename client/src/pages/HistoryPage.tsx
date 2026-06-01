@@ -1,3 +1,4 @@
+import { Icon } from "@iconify/react";
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -105,7 +106,7 @@ export default function HistoryPage() {
             onClick={() => setSelectedBattle(b)}
         >
             <div className="flex items-center gap-2">
-                <strong>{b.attackerId === user.id ? '⚔ Вы атаковали' : '🛡 На вас напали'}</strong>
+                <strong>{b.attackerId === user.id ? (<><Icon icon="game-icons:crossed-swords" width="16" height="16" className="inline mr-1" />Вы атаковали</>) : (<><Icon icon="game-icons:shield" width="16" height="16" className="inline mr-1" />На вас напали</>)}</strong>
                 <span>игрока {b.attackerId === user.id ? b.defenderName : b.attackerName}</span>
             </div>
             <div className="flex items-center gap-3 mt-0.5">
@@ -149,7 +150,7 @@ export default function HistoryPage() {
                 </div>
                 <div className="flex gap-4 justify-between mt-3 text-sm">
                     <span className={selectedBattle.winnerId === user.id ? 'text-[var(--color-accent-success)] font-bold' : 'text-red-500 font-bold'}>
-                        {selectedBattle.winnerId === user.id ? '🏆 Победа' : '💀 Поражение'}
+                        {selectedBattle.winnerId === user.id ? (<><Icon icon="game-icons:trophy" width="16" height="16" className="inline mr-1" />Победа</>) : (<><Icon icon="game-icons:death-skull" width="16" height="16" className="inline mr-1" />Поражение</>)}
                     </span>
                     <span>Опыт: +{selectedBattle.expGained || 0}</span>
                     {selectedBattle.moneyStolen > 0 && (
@@ -168,7 +169,7 @@ export default function HistoryPage() {
     return (
         <div className="px-4 py-4">
             <BackButton />
-            <h2 className="text-xl font-bold mb-4">📜 Уведомления</h2>
+            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:ringing-bell" width="22" height="22" className="inline mr-2"/>Уведомления</h2>
 
             <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
                 {tabs.map((t) => (
@@ -196,13 +197,13 @@ export default function HistoryPage() {
                                 {isBattle(entry) && renderBattleEntry(entry.data)}
                                 {isJob(entry) && (
                                     <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                        <span>🛠️ «{entry.data.jobName}» завершена. Награда: {formatMoney(entry.data.reward)}</span>
+                                        <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{entry.data.jobName}» завершена. Награда: {formatMoney(entry.data.reward)}</span>
                                         <div className="text-xs text-[var(--color-text-muted)]">{new Date(entry.data.finishedAt).toLocaleString()}</div>
                                     </div>
                                 )}
                                 {isMessage(entry) && (
                                     <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                        <span className="text-purple-400">💬 {entry.data.senderName}: {entry.data.content}</span>
+                                        <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{entry.data.senderName}: {entry.data.content}</span>
                                         <div className="text-xs text-[var(--color-text-muted)]">{new Date(entry.data.createdAt).toLocaleString()}</div>
                                     </div>
                                 )}
@@ -215,14 +216,14 @@ export default function HistoryPage() {
                     ) : tab === 'jobs' ? (
                         paginatedData.map((j: any) => (
                             <div key={j.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                <span>🛠️ «{j.jobName}» завершена. Награда: {formatMoney(j.reward)}</span>
+                                <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» завершена. Награда: {formatMoney(j.reward)}</span>
                                 <div className="text-xs text-[var(--color-text-muted)]">{new Date(j.finishedAt).toLocaleString()}</div>
                             </div>
                         ))
                     ) : (
                         paginatedData.map((m: any) => (
                             <div key={m.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                <span className="text-purple-400">💬 {m.senderName}: {m.content}</span>
+                                <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{m.senderName}: {m.content}</span>
                                 <div className="text-xs text-[var(--color-text-muted)]">{new Date(m.createdAt).toLocaleString()}</div>
                             </div>
                         ))

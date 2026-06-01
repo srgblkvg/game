@@ -21,14 +21,14 @@ export default function HealthBar({ currentHp, maxHp, compact, showRegenHint }: 
 
   return (
     <div style={{ width: '100%', marginTop: '0.5rem', textAlign: 'center' }}>
-      <div style={{ fontSize: isVerySmall ? '0.55rem' : isMobile ? '0.75rem' : '0.85rem', marginBottom: '3px' }}>
+      <div style={{ fontSize: isVerySmall ? '0.65rem' : isMobile ? '0.75rem' : '0.85rem', marginBottom: '3px' }}>
         Здоровье: {currentHp}/{maxHp}
       </div>
       <div style={{ height: '14px', background: '#333', borderRadius: '4px', overflow: 'hidden', border: '1px solid #555' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: '#e74c3c', transition: 'width 0.4s ease' }} />
       </div>
       {showRegenHint && currentHp < maxHp && (
-        <div style={{ fontSize: isVerySmall ? '0.45rem' : isMobile ? '0.6rem' : '0.7rem', color: '#888', marginTop: '2px' }}>
+        <div style={{ fontSize: isVerySmall ? '0.55rem' : isMobile ? '0.6rem' : '0.7rem', color: '#888', marginTop: '2px' }}>
           +1 HP / 10 сек &mdash; полное через {formatRegenTime()}
         </div>
       )}

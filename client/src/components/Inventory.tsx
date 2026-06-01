@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { Icon } from '@iconify/react';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import { expandInventory } from '../api';
@@ -131,9 +132,11 @@ export default function Inventory({
     };
 
     return (
-        <div style={{ flex: 1, minWidth: '280px', background: '#1e1e30', borderRadius: '12px', padding: '1rem', border: '2px solid #555', color: '#eee' }}>
+        <div style={{ width: '100%', background: '#1e1e30', borderRadius: '12px', padding: '1rem', border: '2px solid #555', color: '#eee' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <h3 style={{ margin: 0 }}>🎒 Инвентарь ({inventory.length}/{maxSlots})</h3>
+                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon icon="game-icons:backpack" width="18" height="18" />
+                    Инвентарь ({inventory.length}/{maxSlots})</h3>
                 <button
                     onClick={() => setSortEquipment(nextSortOrder(sortEquipment))}
                     style={{

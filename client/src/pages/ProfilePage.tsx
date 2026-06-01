@@ -1,3 +1,4 @@
+import { Icon } from "@iconify/react";
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -46,14 +47,13 @@ export default function ProfilePage() {
                     }}
                     side="left"
                     showHealth={false}
-                    showStamina={false}
                     showExp={false}
                     readOnly
                 />
 
                 <div className="flex flex-col justify-center items-center gap-2 min-w-[180px]">
-                    <p className="text-base">⚔️ Боёв: {profile.totalBattles}</p>
-                    <p className="text-base">🏆 Побед: {profile.wins}</p>
+                    <p className="text-base"><Icon icon="game-icons:crossed-swords" width="16" height="16" className="inline mr-1" />Боёв: {profile.totalBattles}</p>
+                    <p className="text-base"><Icon icon="game-icons:trophy" width="16" height="16" className="inline mr-1" />Побед: {profile.wins}</p>
                 </div>
             </div>
 

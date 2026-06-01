@@ -43,7 +43,6 @@ export const createItemSchema = z.object({
     m: z.number().int().min(0).max(9999).optional(),
   }).optional(),
   extra: z.object({
-    stamReg: z.number().int().min(0).max(100).optional(),
     crit: z.number().int().min(0).max(100).optional(),
     dodge: z.number().int().min(0).max(100).optional(),
     counter: z.number().int().min(0).max(100).optional(),

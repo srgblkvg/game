@@ -5,7 +5,6 @@ export interface GameItem {
     rarity_id: number;
     bonuses: { s: number; a: number; d: number; m: number };
     extra: {
-        stamReg: number;
         crit: number;
         dodge: number;
         counter: number;
@@ -21,12 +20,8 @@ export interface CharStats {
     d: number;
     m: number;
     hp: number;
-    maxStamina: number;
-    regen: number;
-    attackCost: number;
     bonuses: { s: number; a: number; d: number; m: number };
     extra: {
-        stamReg: number;
         crit: number;
         dodge: number;
         counter: number;
@@ -39,7 +34,7 @@ export function currentStats(
     equipment: Record<string, GameItem>
 ): CharStats {
     const sums: Record<string, number> = { s: 0, a: 0, d: 0, m: 0 };
-    const extra: Record<string, number> = { stamReg: 0, crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
+    const extra: Record<string, number> = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
 
     for (const item of Object.values(equipment)) {
         if (item.bonuses) {
@@ -53,7 +48,7 @@ export function currentStats(
         if (item.extra) {
             for (const k of Object.keys(item.extra)) {
                 const key = k as keyof typeof item.extra;
-                extra[k] = (extra[k] || 0) + (item.extra[key] || 0);
+                extra[key] = (extra[key] || 0) + (item.extra[key] || 0);
             }
         }
     }
@@ -70,12 +65,8 @@ export function currentStats(
     return {
         ...st,
         hp,
-        maxStamina: 100,
-        regen: 1,
-        attackCost: 0,
         bonuses: { s: sums.s || 0, a: sums.a || 0, d: sums.d || 0, m: sums.m || 0 },
         extra: {
-            stamReg: extra.stamReg || 0,
             crit: extra.crit || 0,
             dodge: extra.dodge || 0,
             counter: extra.counter || 0,

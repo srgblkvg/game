@@ -29,9 +29,7 @@ export interface CharacterCardData {
   exp?: number;
   currentHp?: number;
   maxHp?: number;
-  stamina?: number;
-  maxStamina?: number;
   equipment: Record<string, any>;
-  stats?: { s: number; a: number; d: number; m: number; hp?: number; maxStamina?: number };
+  stats?: { s: number; a: number; d: number; m: number; hp?: number };
   gender?: string;
 }

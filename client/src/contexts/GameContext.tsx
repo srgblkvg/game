@@ -8,7 +8,7 @@ interface GameItem {
   rarity_display?: string;
   rarity_color?: string;
   bonuses: { s: number; a: number; d: number; m: number };
-  extra: { stamReg: number; crit: number; dodge: number; counter: number; fullBlock: number; hpRegen: number };
+  extra: { crit: number; dodge: number; counter: number; fullBlock: number; hpRegen: number };
   upgradeLevel?: number;
 }
 
@@ -40,9 +40,6 @@ export interface Character {
     d: number;
     m: number;
     hp: number;
-    maxStamina: number;
-    regen: number;
-    attackCost: number;
   };
   lastAttackTime: number;
   protectionUntil: number;

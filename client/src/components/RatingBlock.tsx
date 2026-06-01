@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import { fetchRating } from '../api/character';
 
 export default function RatingBlock() {
@@ -10,7 +11,16 @@ export default function RatingBlock() {
         fetchRating(1, 10).then(data => setPlayers(data.users)).catch(console.error);
     }, []);
 
-    if (players.length === 0) return null;
+    const trophy = <Icon icon="game-icons:trophy" width="18" height="18" />;
+
+    if (players.length === 0) return (
+        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[180px] overflow-hidden">
+            <h3 className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1" onClick={() => navigate('/rating')}>
+                {trophy} Рейтинг
+            </h3>
+            <p className="text-[var(--color-text-muted)] text-sm">Пока пусто</p>
+        </div>
+    );
 
     const maxNickLength = 12;
     const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '…' : nick;
@@ -18,10 +28,10 @@ export default function RatingBlock() {
     return (
         <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[180px] overflow-hidden">
             <h3
-                className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer"
+                className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1"
                 onClick={() => navigate('/rating')}
             >
-                🏆 Рейтинг
+                {trophy} Рейтинг
             </h3>
             <ul className="list-none p-0 m-0">
                 {players.map((p, i) => (

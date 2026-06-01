@@ -27,7 +27,10 @@ const critChance = (m: number, extraCrit: number) => Math.min(0.8, m / (m + 50) 
 const critMult = (m: number) => 1.5 + 0.5 * (m / (m + 50));
 
 const blockChance = (d: number, extraFullBlock: number) => Math.min(1, d / (d + 50) + extraFullBlock / 200);
-const blockRed = (d: number) => Math.min(d, 75) / 100;
+const blockRed = (d: number, s: number) => {
+  const ratio = d / Math.max(1, s);
+  return Math.min(0.75, 0.5 * ratio);
+};
 
 const counterChance = (defStats: CharStats, atkStats: CharStats, defExtraCounter: number) => {
   const sum = (defStats.m + defStats.a) + (atkStats.m + atkStats.d);
@@ -104,7 +107,7 @@ export function runBattle(
         dmg = 0;
         addStep({ type: 'fullBlock', actor: 'defender', message: `ПОЛНЫЙ БЛОК!` });
       } else if (Math.random() < blockChance(statsD.d, 0)) {
-        const blocked = dmg * blockRed(statsD.d);
+        const blocked = dmg * blockRed(statsD.d, statsA.s);
         dmg -= blocked;
         addStep({ type: 'block', actor: 'defender', message: `Блок (-${Math.round(blocked)})` });
       }
@@ -154,7 +157,7 @@ export function runBattle(
         dmg = 0;
         addStep({ type: 'fullBlock', actor: 'attacker', message: `ПОЛНЫЙ БЛОК!` });
       } else if (Math.random() < blockChance(statsA.d, 0)) {
-        const blocked = dmg * blockRed(statsA.d);
+        const blocked = dmg * blockRed(statsA.d, statsD.s);
         dmg -= blocked;
         addStep({ type: 'block', actor: 'attacker', message: `Блок (-${Math.round(blocked)})` });
       }
@@ -179,6 +182,9 @@ export function runBattle(
     if (defender.level > attacker.level) expGained = 2;
     else if (defender.level === attacker.level) expGained = 1;
     moneyGained = 10;
+  } else {
+    if (attacker.level > defender.level) expGained = 2;
+    else if (attacker.level === defender.level) expGained = 1;
   }
 
   // --- ограбление монет ---

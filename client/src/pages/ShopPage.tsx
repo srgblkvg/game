@@ -1,3 +1,4 @@
+import { Icon } from "@iconify/react";
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,7 +66,7 @@ export default function ShopPage() {
     return (
         <div className="px-4 py-4">
             <BackButton />
-            <h2 className="text-xl font-bold mb-4">🛒 Магазин</h2>
+            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:buy-card" width="22" height="22" class="inline mr-2"/>Магазин</h2>
 
             {message && <p className="mb-3 text-[var(--color-accent-success)] text-sm">{message}</p>}
 
@@ -85,7 +86,7 @@ export default function ShopPage() {
             {loading ? (
                 <p className="text-[var(--color-text-muted)]">Загрузка...</p>
             ) : (
-                <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
+                <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
                     {filteredItems.map((item: any) => {
                         const price = 100 * Math.pow(10, item.rarity_id);
                         const canAfford = character.money >= price;

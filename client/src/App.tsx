@@ -29,7 +29,6 @@ function App() {
         padding: '0 1rem',
         boxSizing: 'border-box',
         width: '100%',
-        overflowX: 'auto',      // ← позволяет прокручивать на мобильных
       }}>
         <Routes>
           <Route path="/login" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <Navigate to="/" />) : <LoginPage />} />

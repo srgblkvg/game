@@ -1,4 +1,5 @@
 import React from 'react';
+import { Icon } from '@iconify/react';
 import { getRarityColor, getItemImage } from '../utils/itemUtils';
 
 interface SlotBaseProps {
@@ -14,11 +15,22 @@ interface SlotBaseProps {
   onTouchStart?: (e: React.TouchEvent) => void;
   onTouchEnd?: (e: React.TouchEvent) => void;
   style?: React.CSSProperties;
-  style?: React.CSSProperties;
   customStyle?: React.CSSProperties;
   title?: string;
   children?: React.ReactNode;
 }
+
+const EQUIPMENT_ICONS: Record<string, string> = {
+  'Шлем': 'game-icons:helmet',
+  'Нагрудник': 'game-icons:chest-armor',
+  'Перчатки': 'game-icons:gloves',
+  'Ботинки': 'game-icons:boots',
+  'Амулет': 'game-icons:gem-necklace',
+  'Кольцо': 'game-icons:ring',
+  'Пояс': 'game-icons:belt',
+  'Оружие 1': 'game-icons:broadsword',
+  'Оружие 2': 'game-icons:shield',
+};
 
 export default function SlotBase({
   item, draggable, onClick, onDragStart, onDrop, onDragOver,
@@ -35,8 +47,12 @@ export default function SlotBase({
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
       }
+    : item
+    ? {
+        backgroundColor: color,
+      }
     : {
-        backgroundColor: item ? color : 'rgba(0,0,0,0.65)',
+        backgroundColor: title ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.6)',
       };
 
   const baseStyle: React.CSSProperties = {
@@ -52,6 +68,8 @@ export default function SlotBase({
     ...style,
     ...customStyle,
   };
+
+  const iconName = title ? EQUIPMENT_ICONS[title] : null;
 
   return (
     <div
@@ -70,6 +88,19 @@ export default function SlotBase({
       style={baseStyle}
     >
       {children}
+      {!item && (
+        iconName ? (
+          <Icon icon={iconName} width="24" height="24" style={{ opacity: 0.5 }} />
+        ) : (
+          <span style={{
+            color: 'rgba(255,255,255,0.35)',
+            fontSize: '0.55rem',
+            textAlign: 'center',
+            lineHeight: 1.1,
+            pointerEvents: 'none',
+          }}>Пусто</span>
+        )
+      )}
     </div>
   );
 }

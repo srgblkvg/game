@@ -1,3 +1,4 @@
+import { Icon } from "@iconify/react";
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../../contexts/GameContext';
@@ -67,8 +68,8 @@ export default function ArenaPage() {
 
   return (
     <div className="px-4 py-4 min-h-screen">
-      <BackButton />
-      <h1 className="text-center text-xl font-bold mb-4">⚔️ Арена</h1>
+      <BackButton to="/" />
+      <h1 className="text-center text-xl font-bold mb-4"><Icon icon='game-icons:crossed-swords' width="22" height="22" className="inline mr-2"/>Арена</h1>
 
       {/* Карточки бойцов */}
       <div className="flex justify-between sm:justify-center gap-2 sm:gap-8 my-4 px-1 sm:px-0">
@@ -83,7 +84,6 @@ export default function ArenaPage() {
           }}
           side="left"
           showHealth={isBattleActive}
-          showStamina={false}
           showExp={false}
           showRegenHint={false}
           readOnly
@@ -101,7 +101,6 @@ export default function ArenaPage() {
             }}
             side="right"
             showHealth={isBattleActive}
-            showStamina={false}
             showExp={false}
           showRegenHint={false}
             readOnly
@@ -131,18 +130,18 @@ export default function ArenaPage() {
               size="md"
               onClick={handleStartBattle}
               disabled={loading || !opponent}
-              className="text-lg px-6 py-2 min-w-[180px] rounded-xl"
+              className="text-lg px-6 py-2 w-full sm:w-auto sm:min-w-[180px] rounded-xl"
             >
-              {loading ? 'Поиск...' : '⚡ В бой!'}
+              {loading ? 'Поиск...' : <><Icon icon="game-icons:crossed-swords" width="18" height="18" className="inline mr-1" />В бой!</>}
             </Button>
             <Button
               variant="secondary"
               size="md"
               onClick={() => loadOpponent(true)}
               disabled={loading || character.money < 10}
-              className="text-lg px-6 py-2 min-w-[180px] rounded-xl"
+              className="text-lg px-6 py-2 w-full sm:w-auto sm:min-w-[180px] rounded-xl"
             >
-              {`🔄 Сменить (${formatMoney(10)})`}
+              {<><Icon icon="game-icons:cycle" width="18" height="18" className="inline mr-1" />Сменить ({formatMoney(10)})</>}
             </Button>
           </div>
         </div>
@@ -161,18 +160,22 @@ export default function ArenaPage() {
           {currentStep >= battleSteps.length - 1 && battleResult && (
             <div className="text-center mt-4">
               <p className="font-bold text-lg">
-                {battleResult.winnerId === user.id ? '🏆 Победа!' : '💀 Поражение'}
+                {battleResult.winnerId === user.id ? (
+                  <><Icon icon="game-icons:trophy" width="18" height="18" className="inline mr-1" />Победа!</>
+                ) : (
+                  <><Icon icon="game-icons:death-skull" width="18" height="18" className="inline mr-1" />Поражение</>
+                )}
               </p>
               <p>Опыт: +{battleResult.expGained}</p>
               {battleResult.moneyStolen > 0 && (
                 <p>
                   {battleResult.winnerId === user.id
-                    ? `🪙 Захвачено ${formatMoney(battleResult.moneyStolen)}`
-                    : `💸 Потеряно ${formatMoney(battleResult.moneyStolen)}`}
+                    ? <><Icon icon="game-icons:coins" width="16" height="16" className="inline mr-1" />Захвачено {formatMoney(battleResult.moneyStolen)}</>
+                    : <><Icon icon="game-icons:cash" width="16" height="16" className="inline mr-1" />Потеряно {formatMoney(battleResult.moneyStolen)}</>}
                 </p>
               )}
               {battleResult.levelsGained > 0 && (
-                <p className="text-[var(--color-accent-purple)]">⬆ Уровень +{battleResult.levelsGained} (+{battleResult.levelsGained * 5} очк.)</p>
+                <p className="text-[var(--color-accent-purple)]"><Icon icon="game-icons:level-end-flag" width="16" height="16" className="inline mr-1" />Уровень +{battleResult.levelsGained} (+{battleResult.levelsGained * 5} очк.)</p>
               )}
               <Button
                 variant="danger"

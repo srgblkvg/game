@@ -31,9 +31,9 @@ export function setupMiddleware(app: Express) {
     app.use('/api/admin/register', authLimiter);
 
     const battleLimiter = rateLimit({ windowMs: 60_000, max: 30, message: { error: 'Слишком много боёв, подождите' }, standardHeaders: true, legacyHeaders: false });
-    const chatLimiter = rateLimit({ windowMs: 60_000, max: 30, message: { error: 'Слишком много сообщений, подождите' }, standardHeaders: true, legacyHeaders: false });
+    const chatLimiter = rateLimit({ windowMs: 60_000, max: 60, message: { error: 'Слишком много сообщений, подождите' }, standardHeaders: true, legacyHeaders: false });
     const craftLimiter = rateLimit({ windowMs: 60_000, max: 20, message: { error: 'Слишком много крафтов, подождите' }, standardHeaders: true, legacyHeaders: false });
-    const playerLimiter = rateLimit({ windowMs: 60_000, max: 100, message: { error: 'Слишком много запросов, подождите' }, standardHeaders: true, legacyHeaders: false });
+    const playerLimiter = rateLimit({ windowMs: 60_000, max: 200, message: { error: 'Слишком много запросов, подождите' }, standardHeaders: true, legacyHeaders: false });
 
     app.use('/api/battle', battleLimiter);
     app.use('/api/arena', battleLimiter);

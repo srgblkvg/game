@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
@@ -261,7 +262,7 @@ export default function ChatPanel() {
     return (
         <div ref={panelRef} className="chat-panel" style={{
             position: 'fixed', bottom: 0, left: 0, width: '100%',
-            height: isPanelOpen ? '300px' : '40px', transition: 'height 0.3s',
+            height: isPanelOpen ? 'min(300px, 50vh)' : '40px', transition: 'height 0.3s',
             background: '#1e1e30', borderTop: '2px solid #555',
             display: visible ? 'flex' : 'none',
             flexDirection: 'column', zIndex: 1000,
@@ -271,7 +272,7 @@ export default function ChatPanel() {
                 borderBottom: '1px solid #444', display: 'flex',
                 justifyContent: 'space-between', alignItems: 'center',
             }}>
-                <span>💬 Чат ({onlineUsers.length}) {privateChatWith && `– личные с ${openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}`}</span>
+                <span><Icon icon="game-icons:chat-bubble" width="18" height="18" className="inline mr-1" />Чат ({onlineUsers.length}) {privateChatWith && `– личные с ${openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}`}</span>
                 <span>{isPanelOpen ? '▼' : '▲'}</span>
             </div>
 

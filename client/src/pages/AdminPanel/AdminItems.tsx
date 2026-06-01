@@ -21,8 +21,8 @@ const slots = [
     { value: 'gloves', label: 'Перчатки' },
     { value: 'boots', label: 'Ботинки' },
     { value: 'amulet', label: 'Амулет' },
-    { value: 'ring1', label: 'Кольцо 1' },
-    { value: 'ring2', label: 'Кольцо 2' },
+    { value: 'ring1', label: 'Кольцо' },
+    { value: 'ring2', label: 'Кольцо' },
     { value: 'belt', label: 'Пояс' },
     { value: 'weapon1', label: 'Оружие 1' },
     { value: 'weapon2', label: 'Оружие 2' },
@@ -36,7 +36,7 @@ export default function AdminItems() {
     const [newItem, setNewItem] = useState({
         name: '', slot: 'helmet', rarity_id: 0,
         bonuses: { s: 0, a: 0, d: 0, m: 0 },
-        extra: { stamReg: 0, crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 },
+        extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 },
         image: '',
     });
 
@@ -58,7 +58,7 @@ export default function AdminItems() {
             await createAdminItem(newItem);
             setMessage('Предмет создан');
             loadItems();
-            setNewItem({ name: '', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { stamReg: 0, crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 }, image: '' });
+            setNewItem({ name: '', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 }, image: '' });
         } catch (e: any) { setMessage(e.message); }
     };
 
@@ -98,7 +98,6 @@ export default function AdminItems() {
                         <label className="text-xs">Ловк <input type="number" value={newItem.bonuses.a} onChange={e => setNewItem({ ...newItem, bonuses: { ...newItem.bonuses, a: +e.target.value } })} className={smallInputClass} /></label>
                         <label className="text-xs">Защ <input type="number" value={newItem.bonuses.d} onChange={e => setNewItem({ ...newItem, bonuses: { ...newItem.bonuses, d: +e.target.value } })} className={smallInputClass} /></label>
                         <label className="text-xs">Маст <input type="number" value={newItem.bonuses.m} onChange={e => setNewItem({ ...newItem, bonuses: { ...newItem.bonuses, m: +e.target.value } })} className={smallInputClass} /></label>
-                        <label className="text-xs">Реген вын. <input type="number" value={newItem.extra.stamReg} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, stamReg: +e.target.value } })} className={smallInputClass} /></label>
                         <label className="text-xs">Крит % <input type="number" value={newItem.extra.crit} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, crit: +e.target.value } })} className={smallInputClass} /></label>
                         <label className="text-xs">Уклонение % <input type="number" value={newItem.extra.dodge} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, dodge: +e.target.value } })} className={smallInputClass} /></label>
                         <label className="text-xs">Контрудар % <input type="number" value={newItem.extra.counter} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, counter: +e.target.value } })} className={smallInputClass} /></label>

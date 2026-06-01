@@ -68,24 +68,32 @@ router.post('/battle', (req: any, res) => {
         }
     }
 
-    let newExp = attacker.exp + result.expGained;
+    // --- Обновление атакующего ---
+    let newExp = attacker.exp + (result.winnerId === attacker.id ? result.expGained : 0);
     let newLevel = attacker.level;
     let levelsGained = 0;
-    // XP для уровня N: 10 * 2^(N-1). Без ограничения уровня.
     while (true) {
         const required = 10 * Math.pow(2, newLevel - 1);
-        if (newExp >= required) {
-            newExp -= required;
-            newLevel++;
-            levelsGained++;
-        } else break;
+        if (newExp >= required) { newExp -= required; newLevel++; levelsGained++; }
+        else break;
     }
 
     db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ? WHERE id=?`)
-        .run(newLevel, newExp, result.moneyGained, result.winnerId === attacker.id ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, attacker.id);
+        .run(newLevel, newExp, result.winnerId === attacker.id ? result.moneyGained : 0, result.winnerId === attacker.id ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, attacker.id);
 
-    db.prepare(`UPDATE users SET currentHp=?, totalBattles=totalBattles+1, protectionUntil=?, lastHpUpdate=? WHERE id=?`)
-        .run(result.defenderHpAfter, now + 3600, now, defender.id);
+    // --- Обновление защитника ---
+    const defExp = defender.exp + (result.winnerId === defender.id ? result.expGained : 0);
+    let defLevel = defender.level;
+    let defLevelsGained = 0;
+    let defExpRemain = defExp;
+    while (true) {
+        const required = 10 * Math.pow(2, defLevel - 1);
+        if (defExpRemain >= required) { defExpRemain -= required; defLevel++; defLevelsGained++; }
+        else break;
+    }
+
+    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ? WHERE id=?`)
+        .run(defLevel, defExpRemain, result.winnerId === defender.id ? result.moneyGained : 0, result.winnerId === defender.id ? 1 : 0, result.defenderHpAfter, now + 3600, now, defLevelsGained * 5, defender.id);
 
     db.prepare(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)

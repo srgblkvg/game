@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchBattles, fetchCharacter } from '../api';
@@ -34,7 +35,7 @@ export default function Header() {
         const interval = setInterval(() => {
             checkForNewBattles();
             fetchCharacter().then(setCharacter).catch(console.error);
-        }, 5000);
+        }, 10000);
 
         return () => clearInterval(interval);
     }, [user, setCharacter]);
@@ -66,57 +67,50 @@ export default function Header() {
     };
 
     return (
-        <>
-            {/* Верхняя панель */}
-            <div className="flex justify-between items-center gap-2 px-4 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
-                <div />
-                <div className="flex gap-2 ml-auto">
-                    {user.role === 'player' && (
-                        <>
-                            <Button size="xs" onClick={() => navigate('/account')}>
-                                👤 Аккаунт
-                            </Button>
-                            <Button
-                                size="xs"
-                                onClick={handleHistoryClick}
-                                className={hasNewBattles ? 'blink' : ''}
-                            >
-                                {hasNewBattles ? '🔔 ' : ''}📜 Уведомления
-                            </Button>
-                        </>
-                    )}
-                    {user.role === 'admin' && (
-                        <Button variant="danger" size="sm" onClick={() => navigate('/adminpanel')}>
-                            🛡 Панель администратора
-                        </Button>
-                    )}
-                </div>
-            </div>
-
-            {user.role === 'player' && (
-                <>
-                    {/* Строка с деньгами */}
-                    <div className="text-center py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
-                        {character && (
-                            <span className="text-[var(--color-text-accent)] text-sm font-bold">
-                                Деньги: <MoneyDisplay money={character.money} />
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Строка с таймером защиты */}
-                    {protectionSec > 0 && (
-                        <div className="text-center py-1 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
-                            <span
-                                className="text-[var(--color-accent-info)] text-sm px-4 py-0.5 rounded-xl"
-                                style={{ background: 'rgba(52, 152, 219, 0.15)' }}
-                            >
-                                🛡 Защита: {formatTime(protectionSec)}
-                            </span>
-                        </div>
-                    )}
-                </>
+        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)] flex-wrap">
+            {user.role === 'player' && character && (
+                <span className="text-[var(--color-text-accent)] text-sm font-bold flex items-center gap-1">
+                    <Icon icon="game-icons:coins" width="18" height="18" />
+                    <MoneyDisplay money={character.money} />
+                </span>
             )}
-        </>
+            {user.role === 'player' && protectionSec > 0 && (
+                <span className="text-[var(--color-accent-info)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1" style={{ background: 'rgba(52, 152, 219, 0.15)' }}>
+                    <Icon icon="game-icons:shield" width="18" height="18" />
+                    {formatTime(protectionSec)}
+                </span>
+            )}
+            <div className="flex gap-2 ml-auto">
+                {user.role === 'player' && (
+                    <>
+                        <Button size="xs" onClick={() => navigate('/account')}>
+                            <span className="flex items-center gap-1">
+                                <Icon icon="game-icons:person" width="18" height="18" />
+                                Аккаунт
+                            </span>
+                        </Button>
+                        <Button
+                            size="xs"
+                            onClick={handleHistoryClick}
+                            className={hasNewBattles ? 'blink' : ''}
+                        >
+                            <span className="flex items-center gap-1">
+                                {hasNewBattles && <Icon icon="game-icons:bell" width="18" height="18" />}
+                                <Icon icon="game-icons:ringing-bell" width="18" height="18" />
+                                Уведомления
+                            </span>
+                        </Button>
+                    </>
+                )}
+                {user.role === 'admin' && (
+                    <Button variant="danger" size="sm" onClick={() => navigate('/adminpanel')}>
+                        <span className="flex items-center gap-1">
+                            <Icon icon="game-icons:shield" width="18" height="18" />
+                            Панель администратора
+                        </span>
+                    </Button>
+                )}
+            </div>
+        </div>
     );
 }

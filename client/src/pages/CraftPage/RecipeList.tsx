@@ -1,4 +1,4 @@
-import ItemIcon from '../ui/ItemIcon';
+import ItemIcon from '../../components/ui/ItemIcon';
 
 interface Props {
   groupedRecipes: Record<string, any[]>;

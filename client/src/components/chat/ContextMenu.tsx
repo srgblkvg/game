@@ -1,3 +1,4 @@
+import { Icon } from "@iconify/react";
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 interface ContextMenuProps {
@@ -77,7 +78,7 @@ export default function ContextMenu({ x, y, onReply, onWhisper, onProfile, onClo
             }} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>
                 ЛС
             </div>
-            <div onClick={onProfile} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>👤 Профиль</div>
+            <div onClick={onProfile} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}><Icon icon='game-icons:person' width='14' height='14' className="inline mr-1"/>Профиль</div>
         </div>
     );
 }

@@ -15,7 +15,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
   const stats = calculateStats(character);
 
   return (
-    <div>
+    <div className="w-full sm:w-auto flex flex-col items-center sm:items-start">
       <CharacterCard
         char={{
           username: character.username,
@@ -23,15 +23,12 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
           exp: character.exp,
           currentHp: character.currentHp,
           maxHp: stats.hp,
-          stamina: 100,
-          maxStamina: 100,
           equipment: character.equipment,
           stats: stats,
           gender: character.gender,
         }}
         side="left"
         showHealth
-        showStamina={false}
         showExp
         readOnly={false}
         onEquip={onEquip}
