@@ -3,6 +3,7 @@ import { Router } from 'express';
 import db from '../database';
 import { currentStats } from '../game/stats';
 import { arenaEnterSchema } from '../validation';
+import { getBaseStats, enrichEquipment, spendMoney } from '../db/helpers';
 
 const router = Router();
 
@@ -48,31 +49,8 @@ router.get('/arena/opponent', (req: any, res) => {
     };
     const equipment = JSON.parse(opponent.equipment || '{}');
 
-    // Обогащаем экипировку полями редкости (rarity_display, rarity_color)
-    const getItemData = db.prepare(`
-        SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color
-        FROM items i JOIN rarities r ON i.rarity_id = r.id
-        WHERE i.name = ? AND i.slot = ?
-    `);
-    const enrichedEquipment: Record<string, any> = {};
-    for (const [slotId, item] of Object.entries(equipment) as [string, any][]) {
-        if (item && item.slot) {
-            const itemRow = getItemData.get(item.name, item.slot) as any;
-            if (itemRow) {
-                enrichedEquipment[slotId] = {
-                    ...item,
-                    rarity_id: itemRow.rarity_id,
-                    rarity_display: itemRow.rarity_display,
-                    rarity_color: itemRow.rarity_color,
-                    image: itemRow.image || item.image || null,
-                };
-            } else {
-                enrichedEquipment[slotId] = item;
-            }
-        } else {
-            enrichedEquipment[slotId] = item;
-        }
-    }
+    // Обогащаем экипировку
+    const { enriched: enrichedEquipment } = enrichEquipment(db, equipment);
 
     const stats = currentStats(base, enrichedEquipment);
 

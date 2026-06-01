@@ -5,6 +5,7 @@ import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { salvageItems } from '../api';
+import { getHeaders } from '../api/helpers';
 import { fetchRecipes, upgradeItem, fetchUpgradeInfo } from '../api/craft';
 import Inventory from '../components/Inventory';
 import LongPressItemSlot from '../components/LongPressItemSlot';
@@ -14,8 +15,7 @@ import { isCraftItem } from '../utils/itemUtils';
 import { formatMoney } from '../utils/money';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
-import ItemIcon from '../components/ui/ItemIcon';
+import RecipeList from './CraftPage/RecipeList';
 
 export default function CraftPage() {
     const { user } = useAuth();
@@ -225,7 +225,7 @@ export default function CraftPage() {
         try {
             const res = await fetch('/api/craft/execute', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                headers: getHeaders(),
                 body: JSON.stringify({ recipe_id: activeRecipe.id, slots: craftSlots.filter(Boolean) }),
             });
             const data = await res.json();
@@ -283,53 +283,13 @@ export default function CraftPage() {
             <h2 className="text-xl font-bold mb-4">🔨 Крафт</h2>
 
             {/* Список рецептов */}
-            {Object.keys(groupedRecipes).length > 0 && (
-                <div className="mb-4 max-h-[400px] overflow-y-auto bg-[var(--color-bg-secondary)] rounded-lg p-2">
-                    {Object.keys(groupedRecipes).map(cat => (
-                        <div key={cat}>
-                            <div
-                                onClick={() => setOpenCategories(prev => ({ ...prev, [cat]: !prev[cat] }))}
-                                className="flex items-center gap-2 cursor-pointer font-bold text-sm py-1 select-none"
-                            >
-                                <span>{openCategories[cat] ? '−' : '+'}</span>
-                                <span>{cat}</span>
-                            </div>
-                            {openCategories[cat] && (
-                                <div className="ml-4">
-                                    {groupedRecipes[cat].map((recipe: any) => (
-                                        <div
-                                            key={recipe.id}
-                                            onClick={() => handleRecipeClick(recipe)}
-                                            className={`flex items-center justify-between py-1 px-2 border-b border-[var(--color-border-light)] text-xs cursor-pointer ${
-                                                activeRecipe?.id === recipe.id ? 'bg-[var(--color-bg-card-hover)]' : 'bg-transparent'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                {recipe.result ? (
-                                                    <ItemIcon
-                                                        color={recipe.result.rarity_color || '#555'}
-                                                        image={recipe.result.image}
-                                                        name={recipe.result.name || '?'}
-                                                        size="sm"
-                                                    />
-                                                ) : (
-                                                    <div className="w-6 h-6 rounded border border-[var(--color-border-light)] bg-[var(--color-bg-input)] flex-shrink-0" />
-                                                )}
-                                                <div>
-                                                    <strong>{recipe.name}</strong>
-                                                    <div className="text-[0.65rem] text-[var(--color-text-muted)]">
-                                                        {recipe.ingredients.map((ing: any) => `${ing.name} x${ing.quantity}`).join(', ')}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
+            <RecipeList
+                groupedRecipes={groupedRecipes}
+                openCategories={openCategories}
+                activeRecipe={activeRecipe}
+                onToggleCategory={(cat) => setOpenCategories(prev => ({ ...prev, [cat]: !prev[cat] }))}
+                onRecipeClick={handleRecipeClick}
+            />
 
             <div className="flex gap-8 flex-wrap mt-4">
                 {/* Крафт-блок */}

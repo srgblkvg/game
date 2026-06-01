@@ -50,8 +50,9 @@ export default function LoginPage() {
                     placeholder="Пароль"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full p-2 mb-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
+                    className="w-full p-2 mb-1 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
                 />
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">Минимум 8 символов, цифра и спецсимвол</p>
                 <div className="flex gap-2">
                     <Button variant="danger" fullWidth onClick={handleLogin}>Войти</Button>
                     <Button variant="secondary" fullWidth onClick={handleRegister}>Регистрация</Button>

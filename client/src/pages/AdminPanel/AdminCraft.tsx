@@ -9,11 +9,12 @@ import {
 } from '../../api/admin';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
+import { getHeaders } from '../../api/helpers';
+import RecipeForm from './AdminCraft/RecipeForm';
+import RecipeListItem from './AdminCraft/RecipeListItem';
+import { inputClass, selectClass } from '../../utils/formStyles';
 
 interface Rarity { id: number; name: string; display_name: string; color: string; }
-
-const inputClass = 'w-full p-1.5 mb-1 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm';
-const selectClass = 'w-full p-1.5 mb-1 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm';
 
 const tabs = [
     { key: 'resources', label: 'Ресурсы' },
@@ -52,7 +53,7 @@ export default function AdminCraft() {
     // Loaders
     useEffect(() => {
         fetchAdminCraftItems().then(setResources).catch(console.error);
-        fetch('/api/admin/rarities', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json()).then(setRarities).catch(console.error);
+        fetch('/api/admin/rarities', { headers: getHeaders() }).then(r => r.json()).then(setRarities).catch(console.error);
         fetchAdminRecipes().then(setRecipes).catch(console.error);
         fetchAdminItems().then(setItems).catch(console.error);
         fetchRecipeCategories().then(setCategories).catch(console.error);
@@ -112,9 +113,6 @@ export default function AdminCraft() {
         try { await deleteUpgradeChance(level); setUpgradeChances(await fetchUpgradeChances()); } catch (e: any) { setMessage(e.message); }
     };
 
-    const addIngredient = (setter: any) => setter((prev: any) => ({ ...prev, ingredients: [...prev.ingredients, { craft_item_id: 0, quantity: 1 }] }));
-    const removeIngredient = (index: number, setter: any) => setter((prev: any) => ({ ...prev, ingredients: prev.ingredients.filter((_: any, i: number) => i !== index) }));
-
     const renderResourceForm = (res: any, setter: any, submitText: string, onSubmit: () => void) => (
         <div>
             <input placeholder="Название" value={res.name} onChange={e => setter({ ...res, name: e.target.value })} className={inputClass} />
@@ -130,59 +128,6 @@ export default function AdminCraft() {
                 <input placeholder="имя файла в public" value={res.image || ''} onChange={e => setter({ ...res, image: e.target.value })} className={inputClass} />
             </label>
             <Button variant="success" size="sm" onClick={onSubmit}>{submitText}</Button>
-        </div>
-    );
-
-    const renderRecipeForm = (recipe: any, setter: any, submitText: string, onSubmit: () => void) => (
-        <div>
-            <input placeholder="Название" value={recipe.name} onChange={e => setter({ ...recipe, name: e.target.value })} className={inputClass} />
-            <input placeholder="Описание" value={recipe.description} onChange={e => setter({ ...recipe, description: e.target.value })} className={inputClass} />
-            <label className="text-sm">Стоимость (монет)
-                <input type="number" value={recipe.money_cost} onChange={e => setter({ ...recipe, money_cost: +e.target.value })} className={inputClass} />
-            </label>
-            <label className="text-sm">Категория:
-                <select value={recipe.category_id || ''} onChange={e => setter({ ...recipe, category_id: e.target.value ? +e.target.value : null })} className={selectClass}>
-                    <option value="">Без категории</option>
-                    {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-            </label>
-            <label className="text-sm">Тип результата:
-                <select value={recipe.result_type} onChange={e => setter({ ...recipe, result_type: e.target.value, result_id: 0 })} className={selectClass}>
-                    <option value="">Без результата</option>
-                    <option value="item">Предмет (снаряжение)</option>
-                    <option value="craft_item">Ресурс</option>
-                </select>
-            </label>
-            {recipe.result_type === 'item' && (
-                <select value={recipe.result_id} onChange={e => setter({ ...recipe, result_id: +e.target.value })} className={selectClass}>
-                    <option value={0}>Выберите предмет</option>
-                    {items.map((it: any) => <option key={it.id} value={it.id}>{it.name}</option>)}
-                </select>
-            )}
-            {recipe.result_type === 'craft_item' && (
-                <select value={recipe.result_id} onChange={e => setter({ ...recipe, result_id: +e.target.value })} className={selectClass}>
-                    <option value={0}>Выберите ресурс</option>
-                    {resources.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-            )}
-            <label className="text-sm">Шанс создания (%):
-                <input type="number" min="0" max="100" value={recipe.success_chance ?? 100} onChange={e => setter({ ...recipe, success_chance: +e.target.value })} className={`${inputClass} w-20`} />
-            </label>
-            <div className="mt-2">
-                <strong className="text-sm">Ингредиенты:</strong>
-                {recipe.ingredients.map((ing: any, idx: number) => (
-                    <div key={idx} className="flex gap-2 mt-1">
-                        <select value={ing.craft_item_id} onChange={e => { const n = [...recipe.ingredients]; n[idx].craft_item_id = +e.target.value; setter({ ...recipe, ingredients: n }); }} className={selectClass}>
-                            <option value={0}>Выберите ресурс</option>
-                            {resources.map(r => <option key={r.id} value={r.id}>{r.name} ({r.rarity_display})</option>)}
-                        </select>
-                        <input type="number" placeholder="Кол-во" value={ing.quantity} onChange={e => { const n = [...recipe.ingredients]; n[idx].quantity = +e.target.value; setter({ ...recipe, ingredients: n }); }} className={`${inputClass} w-20`} />
-                        <Button variant="danger" size="xs" onClick={() => removeIngredient(idx, setter)}>×</Button>
-                    </div>
-                ))}
-                <Button size="xs" className="mt-1" onClick={() => addIngredient(setter)}>+ Добавить ингредиент</Button>
-            </div>
-            <Button variant="success" size="sm" className="mt-3" onClick={onSubmit}>{submitText}</Button>
         </div>
     );
 
@@ -230,23 +175,14 @@ export default function AdminCraft() {
                     <Card className="mb-4">
                         <h3 className="font-bold mb-2">{editingRecipe ? 'Редактировать рецепт' : 'Добавить рецепт'}</h3>
                         {editingRecipe
-                            ? renderRecipeForm(editingRecipe, setEditingRecipe, 'Сохранить', handleUpdateRecipe)
-                            : renderRecipeForm(newRecipe, setNewRecipe, 'Создать', handleCreateRecipe)}
+                            ? <RecipeForm recipe={editingRecipe} onChange={setEditingRecipe} onSubmit={handleUpdateRecipe} submitText="Сохранить" onCancel={() => setEditingRecipe(null)} categories={categories} items={items} resources={resources} />
+                            : <RecipeForm recipe={newRecipe} onChange={setNewRecipe} onSubmit={handleCreateRecipe} submitText="Создать" categories={categories} items={items} resources={resources} />}
                         {editingRecipe && <Button variant="danger" size="sm" className="ml-2 mt-2" onClick={() => setEditingRecipe(null)}>Отмена</Button>}
                     </Card>
                     <Card>
                         <h3 className="font-bold mb-2">Все рецепты</h3>
                         {recipes.map((recipe: any) => (
-                            <div key={recipe.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                <strong>{recipe.name}</strong> (стоимость: {recipe.money_cost})<br />
-                                <small>{recipe.description}</small>
-                                <div>Ингредиенты: {recipe.ingredients.map((i: any) => `${i.name} x${i.quantity}`).join(', ') || 'нет'}</div>
-                                {recipe.result && <div>Результат: {recipe.result.name} ({recipe.result.rarity_display})</div>}
-                                <div>Категория: {recipe.category?.name || '—'}</div>
-                                <div>Шанс: {recipe.success_chance ?? 100}%</div>
-                                <Button variant="primary" size="xs" className="mr-1 mt-1" onClick={() => setEditingRecipe(recipe)}>Ред.</Button>
-                                <Button variant="danger" size="xs" className="mt-1" onClick={() => handleDeleteRecipe(recipe.id)}>Удалить</Button>
-                            </div>
+                            <RecipeListItem key={recipe.id} recipe={recipe} onEdit={() => setEditingRecipe(recipe)} onDelete={() => handleDeleteRecipe(recipe.id)} />
                         ))}
                     </Card>
                 </>

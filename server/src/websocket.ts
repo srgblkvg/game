@@ -1,8 +1,14 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import jwt from 'jsonwebtoken';
+import xss from 'xss';
 import db from './database';
+import { wsPublicMessageSchema, wsPrivateMessageSchema, wsItemLinkSchema } from './validation';
+import { auditWsConnect, auditWsDisconnect } from './audit';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
+
+// Санитизация контента от XSS
+const sanitize = (text: string) => xss(text, { whiteList: {}, stripIgnoreTag: true });
 
 // Интервал пинг-понга (секунды)
 const HEARTBEAT_INTERVAL = 30;
@@ -125,6 +131,7 @@ export function setupWebSocket(server: any) {
     clients.set(userId, ws);
     const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level };
     onlineUsers.set(userId, onlineUser);
+    auditWsConnect(user.username, user.id);
 
     // Отправляем текущий список онлайна
     ws.send(JSON.stringify({
@@ -159,6 +166,8 @@ export function setupWebSocket(server: any) {
 
       // Отправка предмета в чат
       if (data.type === 'itemLink') {
+        const parsed = wsItemLinkSchema.safeParse(data);
+        if (!parsed.success) return;
         let item = data.itemData;
         if (!item) {
           const itemId = data.itemId;
@@ -171,13 +180,14 @@ export function setupWebSocket(server: any) {
 
         const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, NULL, ?, ?)');
         const itemDataJson = JSON.stringify(item);
-        const info = stmt.run(userId, `[${item.name}]`, itemDataJson);
+        const itemName = sanitize(item.name);
+        const info = stmt.run(userId, `[${itemName}]`, itemDataJson);
         const msg = {
           id: info.lastInsertRowid,
           senderId: userId,
           senderName: user.username,
           targetId: null,
-          content: `[${item.name}]`,
+          content: `[${itemName}]`,
           createdAt: new Date().toISOString(),
           item: item,
           itemRarity: item.rarity,
@@ -187,6 +197,11 @@ export function setupWebSocket(server: any) {
       }
 
       if (data.type === 'public') {
+        const parsed = wsPublicMessageSchema.safeParse(data);
+        if (!parsed.success) {
+          sendToUser(userId, { type: 'error', message: 'Некорректное сообщение' });
+          return;
+        }
         const content: string = data.content.trim();
 
         // Команда /w — ЛС
@@ -209,13 +224,14 @@ export function setupWebSocket(server: any) {
           }
 
           const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
-          const info = stmt.run(userId, targetUser.id, privateContent);
+          const sanitizedPrivate = sanitize(privateContent);
+          const info = stmt.run(userId, targetUser.id, sanitizedPrivate);
           const msg = {
             id: info.lastInsertRowid,
             senderId: userId,
             senderName: user.username,
             targetId: targetUser.id,
-            content: privateContent,
+            content: sanitizedPrivate,
             createdAt: new Date().toISOString(),
           };
 
@@ -227,28 +243,35 @@ export function setupWebSocket(server: any) {
         }
 
         // Обычное сообщение в общий чат
+        const sanitizedContent = sanitize(content);
         const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, NULL, ?)');
-        const info = stmt.run(userId, content);
+        const info = stmt.run(userId, sanitizedContent);
         const msg = {
           id: info.lastInsertRowid,
           senderId: userId,
           senderName: user.username,
           targetId: null,
-          content,
+          content: sanitizedContent,
           createdAt: new Date().toISOString(),
         };
         broadcast('message', { message: msg });
       } else if (data.type === 'private') {
+        const parsed = wsPrivateMessageSchema.safeParse(data);
+        if (!parsed.success) {
+          sendToUser(userId, { type: 'error', message: 'Некорректное сообщение' });
+          return;
+        }
         const targetId = data.targetUserId;
         if (!targetId) return;
+        const sanitizedContent = sanitize(data.content);
         const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
-        const info = stmt.run(userId, targetId, data.content);
+        const info = stmt.run(userId, targetId, sanitizedContent);
         const msg = {
           id: info.lastInsertRowid,
           senderId: userId,
           senderName: user.username,
           targetId,
-          content: data.content,
+          content: sanitizedContent,
           createdAt: new Date().toISOString(),
         };
         sendToUser(userId, { type: 'message', message: msg });
@@ -262,6 +285,7 @@ export function setupWebSocket(server: any) {
     ws.on('close', () => {
       clients.delete(userId);
       onlineUsers.delete(userId);
+      auditWsDisconnect(user.username, userId);
       notifyUserOffline(userId);
     });
   });

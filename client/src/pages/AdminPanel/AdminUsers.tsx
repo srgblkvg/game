@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchAdminUsers, addMoneyToUser, adminFinishJob } from '../../api';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-
-const inputClass = 'p-1.5 mr-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm w-24';
+import { inputClass } from '../../utils/formStyles';
 
 export default function AdminUsers() {
     const [users, setUsers] = useState<any[]>([]);

@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import db from '../database';
 import { changeUsernameSchema, changePasswordSchema } from '../validation';
+import { auditPasswordChange, auditUsernameChange } from '../audit';
+import { revokeToken } from '../tokenBlacklist';
 
 const router = Router();
 
@@ -15,7 +18,9 @@ router.post('/account/change-username', (req: any, res) => {
     const existing = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(newUsername, userId);
     if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
 
+    const oldUser = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
     db.prepare('UPDATE users SET username = ? WHERE id = ?').run(newUsername, userId);
+    if (oldUser) auditUsernameChange(userId, oldUser.username, newUsername, req.ip);
     res.json({ success: true, newUsername });
 });
 
@@ -43,6 +48,21 @@ router.post('/account/change-password', (req: any, res) => {
 
     const passwordHash = bcrypt.hashSync(newPassword, 10);
     db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(passwordHash, userId);
+    const u = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
+    if (u) auditPasswordChange(userId, u.username, req.ip);
+    res.json({ success: true });
+});
+
+router.post('/account/logout', (req: any, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Не авторизован' });
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded: any = jwt.decode(token);
+      if (decoded?.jti && decoded?.exp) {
+        revokeToken(decoded.jti, decoded.exp);
+      }
+    } catch { /* игнорируем ошибки декодирования */ }
     res.json({ success: true });
 });
 

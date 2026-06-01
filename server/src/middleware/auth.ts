@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../env';
+import { isTokenRevoked } from '../tokenBlacklist';
 
 export function authMiddleware(req: any, res: any, next: any) {
     const authHeader = req.headers.authorization;
@@ -7,6 +8,9 @@ export function authMiddleware(req: any, res: any, next: any) {
     try {
         const token = authHeader.split(' ')[1];
         const decoded: any = jwt.verify(token, JWT_SECRET);
+        if (decoded.jti && isTokenRevoked(decoded.jti)) {
+          return res.status(401).json({ error: 'Токен отозван' });
+        }
         req.userId = decoded.userId;
         req.adminId = decoded.adminId;
         req.role = decoded.role;

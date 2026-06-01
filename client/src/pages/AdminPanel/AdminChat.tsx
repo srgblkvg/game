@@ -5,8 +5,7 @@ import {
 } from '../../api/chat';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-
-const inputClass = 'p-1.5 mr-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm';
+import { inputClass } from '../../utils/formStyles';
 
 export default function AdminChat() {
     const [messages, setMessages] = useState<any[]>([]);

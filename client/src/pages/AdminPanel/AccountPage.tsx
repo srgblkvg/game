@@ -7,8 +7,7 @@ import { changeUsername, changePassword, changeGender } from '../../api';
 import BackButton from '../../components/ui/BackButton';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-
-const inputClass = 'w-full p-1.5 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none';
+import { inputClass } from '../../utils/formStyles';
 
 export default function AccountPage() {
     const { user, loginUser, logout } = useAuth();
@@ -79,6 +78,7 @@ export default function AccountPage() {
                 <form onSubmit={handleChangePassword}>
                     <input type="password" placeholder="Старый пароль" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className={inputClass} required />
                     <input type="password" placeholder="Новый пароль" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputClass} required />
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Минимум 8 символов, цифра и спецсимвол</p>
                     <Button variant="primary" size="sm" type="submit">Сохранить</Button>
                 </form>
                 {passwordMsg && <p className={`mt-2 text-sm ${passwordMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{passwordMsg}</p>}

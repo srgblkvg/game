@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../database';
 import { currentStats } from '../game/stats';
+import { getBaseStats } from '../db/helpers';
 import { runBattle } from '../game/battle';
 import { battleSchema } from '../validation';
 
@@ -40,7 +41,7 @@ router.post('/battle', (req: any, res) => {
     const attackerData = {
         id: attacker.id,
         name: attacker.username,
-        base: { s: attacker.baseS ?? 5, a: attacker.baseA ?? 5, d: attacker.baseD ?? 5, m: attacker.baseM ?? 5 },
+        base: getBaseStats(attacker),
         equipment: JSON.parse(attacker.equipment || '{}'),
         level: attacker.level,
         money: attacker.money,
@@ -48,7 +49,7 @@ router.post('/battle', (req: any, res) => {
     const defenderData = {
         id: defender.id,
         name: defender.username,
-        base: { s: defender.baseS ?? 5, a: defender.baseA ?? 5, d: defender.baseD ?? 5, m: defender.baseM ?? 5 },
+        base: getBaseStats(defender),
         equipment: JSON.parse(defender.equipment || '{}'),
         level: defender.level,
         money: defender.money,

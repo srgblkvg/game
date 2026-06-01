@@ -3,7 +3,9 @@ import { z } from 'zod';
 // Авторизация
 export const registerSchema = z.object({
   username: z.string().min(3).max(20).regex(/^[a-zA-Zа-яА-Я0-9_]+$/, 'Только буквы, цифры и _'),
-  password: z.string().min(4).max(64),
+  password: z.string().min(8, 'Минимум 8 символов').max(64)
+    .regex(/[0-9]/, 'Пароль должен содержать хотя бы одну цифру')
+    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/, 'Пароль должен содержать хотя бы один спецсимвол'),
 });
 
 export const loginSchema = z.object({
@@ -79,5 +81,25 @@ export const changeUsernameSchema = z.object({
 
 export const changePasswordSchema = z.object({
   oldPassword: z.string(),
-  newPassword: z.string().min(4).max(64),
+  newPassword: z.string().min(8, 'Минимум 8 символов').max(64)
+    .regex(/[0-9]/, 'Пароль должен содержать хотя бы одну цифру')
+    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/, 'Пароль должен содержать хотя бы один спецсимвол'),
+});
+
+// WebSocket сообщения
+export const wsPublicMessageSchema = z.object({
+  type: z.literal('public'),
+  content: z.string().min(1, 'Сообщение не может быть пустым').max(500, 'Сообщение слишком длинное'),
+});
+
+export const wsPrivateMessageSchema = z.object({
+  type: z.literal('private'),
+  targetUserId: z.number().int().positive(),
+  content: z.string().min(1).max(500),
+});
+
+export const wsItemLinkSchema = z.object({
+  type: z.literal('itemLink'),
+  itemId: z.number().int().positive().optional(),
+  itemData: z.any().optional(),
 });

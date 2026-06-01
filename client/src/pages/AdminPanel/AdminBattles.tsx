@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
+import { getHeaders } from '../../api/helpers';
 import { renderBattleLog } from '../../utils/battleLog';
 import { formatMoney } from '../../utils/money';
 
@@ -23,7 +24,7 @@ export default function AdminBattles() {
     const load = async () => {
         try {
             const res = await fetch(`/api/admin/battles?page=${page}&limit=${LIMIT}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                headers: getHeaders(),
             });
             const data = await res.json();
             setBattles(data.battles || []);
