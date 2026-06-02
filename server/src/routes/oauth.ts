@@ -147,20 +147,39 @@ router.get('/vk/callback', async (req, res) => {
 
         // VK ID возвращает user_id в ответе токена, а данные пользователя — в id_token (JWT)
         let vkUserId: string;
-        let displayName: string;
+        let displayName = '';
 
+        // Пробуем достать имя из id_token
         if (tokenData.id_token) {
             try {
                 const idPayload = JSON.parse(Buffer.from(tokenData.id_token.split('.')[1], 'base64').toString());
+                logger.info({ idTokenFields: Object.keys(idPayload) }, 'VK id_token payload');
                 vkUserId = String(idPayload.sub || idPayload.user_id);
-                displayName = `${idPayload.first_name || ''} ${idPayload.last_name || ''}`.trim();
+                displayName = [
+                    idPayload.first_name || idPayload.given_name || '',
+                    idPayload.last_name || idPayload.family_name || '',
+                ].join(' ').trim();
             } catch {
                 vkUserId = String(tokenData.user_id);
-                displayName = '';
             }
         } else {
             vkUserId = String(tokenData.user_id);
-            displayName = '';
+        }
+
+        // Если имя не получено — пробуем API VK
+        if (!displayName && tokenData.access_token) {
+            try {
+                const vkApiRes = await fetch(
+                    `https://api.vk.com/method/users.get?user_ids=${vkUserId}&v=5.199&access_token=${tokenData.access_token}`
+                );
+                const vkApiData: any = await vkApiRes.json();
+                if (vkApiData.response && vkApiData.response[0]) {
+                    const u = vkApiData.response[0];
+                    displayName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+                }
+            } catch (e) {
+                logger.warn({ e }, 'VK users.get fallback failed');
+            }
         }
 
         if (!vkUserId) {
@@ -168,7 +187,7 @@ router.get('/vk/callback', async (req, res) => {
             return res.redirect(`${FRONTEND_URL}/login?error=userinfo_failed`);
         }
 
-        if (!displayName) displayName = `vk_${vkUserId}`;
+        if (!displayName) displayName = `id${vkUserId}`;
         const user = findOrCreateUser('vkontakte', vkUserId, displayName);
         const jwtToken = makeToken(user.id, 'player');
         logger.info({ provider: 'vkontakte', userId: user.id }, 'OAuth login');
