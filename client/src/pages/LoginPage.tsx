@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { login, register } from '../api';
+import { login } from '../api';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
@@ -23,17 +23,6 @@ export default function LoginPage() {
         }
     };
 
-    const handleRegister = async () => {
-        try {
-            setError('');
-            const result = await register(username, password);
-            loginUser(result.user, result.token);
-            navigate('/');
-        } catch (e: any) {
-            setError(e.message);
-        }
-    };
-
     return (
         <div className="max-w-md mx-auto mt-8 px-4">
             <Card padding="lg">
@@ -50,14 +39,16 @@ export default function LoginPage() {
                     placeholder="Пароль"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full p-2 mb-1 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
+                    className="w-full p-2 mb-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
                 />
-                <p className="text-xs text-[var(--color-text-muted)] mb-3">Минимум 8 символов, цифра и спецсимвол</p>
-                <div className="flex gap-2">
-                    <Button variant="danger" fullWidth onClick={handleLogin}>Войти</Button>
-                    <Button variant="secondary" fullWidth onClick={handleRegister}>Регистрация</Button>
-                </div>
+                <Button variant="danger" fullWidth onClick={handleLogin}>Войти</Button>
                 {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+                <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
+                    Нет аккаунта?{' '}
+                    <Link to="/register" className="text-[var(--color-accent-info)] hover:underline">
+                        Зарегистрироваться
+                    </Link>
+                </p>
             </Card>
         </div>
     );

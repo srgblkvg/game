@@ -3,9 +3,15 @@ import { z } from 'zod';
 // Авторизация
 export const registerSchema = z.object({
   username: z.string().min(3).max(20).regex(/^[a-zA-Zа-яА-Я0-9_]+$/, 'Только буквы, цифры и _'),
+  email: z.string().email('Некорректный email').max(255),
   password: z.string().min(8, 'Минимум 8 символов').max(64)
     .regex(/[0-9]/, 'Пароль должен содержать хотя бы одну цифру')
     .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/, 'Пароль должен содержать хотя бы один спецсимвол'),
+});
+
+export const verifyEmailSchema = z.object({
+  email: z.string().email(),
+  code: z.string().length(6),
 });
 
 export const loginSchema = z.object({

@@ -61,4 +61,10 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // Инициализация статов для существующих игроков (у кого NULL)
   db.exec(`UPDATE users SET baseS = 5, baseA = 5, baseD = 5, baseM = 5
     WHERE baseS IS NULL OR baseS = 0`);
+
+  // Email верификация
+  try { db.exec('ALTER TABLE users ADD COLUMN email TEXT UNIQUE'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN emailCode TEXT'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN emailCodeExpires INTEGER DEFAULT 0'); } catch {}
 }

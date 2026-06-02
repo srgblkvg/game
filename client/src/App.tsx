@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
 import ArenaPage from './pages/Arena/ArenaPage';
 import ShopPage from './pages/ShopPage';
@@ -32,6 +33,7 @@ function App() {
       }}>
         <Routes>
           <Route path="/login" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <Navigate to="/" />) : <LoginPage />} />
+          <Route path="/register" element={user ? <Navigate to="/" /> : <RegisterPage />} />
           <Route path="/" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <HomePage />) : <Navigate to="/login" />} />
           <Route path="/profile/:userId" element={user?.role === 'player' ? <ProfilePage /> : <Navigate to="/login" />} />
           <Route path="/arena" element={user?.role === 'player' ? <ArenaPage /> : <Navigate to="/login" />} />
