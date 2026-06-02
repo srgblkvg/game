@@ -31,7 +31,7 @@ export default function LoginPage() {
                 <h1 className="text-xl font-bold mb-4">Вход в игру</h1>
                 <input
                     type="text"
-                    placeholder="Логин"
+                    placeholder="Email или логин"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                     className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"

@@ -145,18 +145,31 @@ router.get('/vk/callback', async (req, res) => {
             return res.redirect(`${FRONTEND_URL}/login?error=token_failed`);
         }
 
-        const userRes = await fetch('https://id.vk.com/oauth2/user_info', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` },
-        });
-        const userData: any = await userRes.json();
-        if (!userRes.ok || !userData.user?.user_id) {
-            logger.error({ userData }, 'VK user info failed');
+        // VK ID возвращает user_id в ответе токена, а данные пользователя — в id_token (JWT)
+        let vkUserId: string;
+        let displayName: string;
+
+        if (tokenData.id_token) {
+            try {
+                const idPayload = JSON.parse(Buffer.from(tokenData.id_token.split('.')[1], 'base64').toString());
+                vkUserId = String(idPayload.sub || idPayload.user_id);
+                displayName = `${idPayload.first_name || ''} ${idPayload.last_name || ''}`.trim();
+            } catch {
+                vkUserId = String(tokenData.user_id);
+                displayName = '';
+            }
+        } else {
+            vkUserId = String(tokenData.user_id);
+            displayName = '';
+        }
+
+        if (!vkUserId) {
+            logger.error({ tokenData }, 'VK: no user_id in token response');
             return res.redirect(`${FRONTEND_URL}/login?error=userinfo_failed`);
         }
 
-        const vkUser = userData.user;
-        const displayName = `${vkUser.first_name || ''} ${vkUser.last_name || ''}`.trim() || `vk_${vkUser.user_id}`;
-        const user = findOrCreateUser('vkontakte', String(vkUser.user_id), displayName);
+        if (!displayName) displayName = `vk_${vkUserId}`;
+        const user = findOrCreateUser('vkontakte', vkUserId, displayName);
         const jwtToken = makeToken(user.id, 'player');
         logger.info({ provider: 'vkontakte', userId: user.id }, 'OAuth login');
         res.redirect(`${FRONTEND_URL}/?jwt=${jwtToken}`);

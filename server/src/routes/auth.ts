@@ -71,18 +71,19 @@ router.post('/login', (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
     const { username, password } = parsed.data;
+    const login = username; // может быть email или username
     const now = Math.floor(Date.now() / 1000);
 
-    // Проверяем блокировку пользователя
-    const userRow: any = db.prepare('SELECT id, passwordHash, failedLogins, lockedUntil FROM users WHERE username = ?').get(username);
+    // Ищем пользователя по email или username
+    const userRow: any = db.prepare('SELECT id, passwordHash, failedLogins, lockedUntil FROM users WHERE username = ? OR email = ?').get(login, login);
     if (userRow && userRow.lockedUntil > now) {
       const mins = Math.ceil((userRow.lockedUntil - now) / 60);
-      auditAccountLocked(username, req.ip);
+      auditAccountLocked(login, req.ip);
       return res.status(423).json({ error: `Аккаунт заблокирован. Попробуйте через ${mins} мин.` });
     }
 
     // Сначала ищем среди администраторов
-    const admin: any = db.prepare('SELECT * FROM admins WHERE username = ?').get(username);
+    const admin: any = db.prepare('SELECT * FROM admins WHERE username = ?').get(login);
     if (admin && bcrypt.compareSync(password, admin.passwordHash)) {
         const token = jwt.sign({ adminId: admin.id, role: 'admin', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
         return res.json({ token, user: { id: admin.id, username: admin.username, level: 0, role: 'admin' } });
@@ -96,15 +97,15 @@ router.post('/login', (req, res) => {
           const lockedUntil = newFailed >= 5 ? now + 15 * 60 : 0;
           db.prepare('UPDATE users SET failedLogins = ?, lockedUntil = ? WHERE id = ?')
             .run(newFailed, lockedUntil, userRow.id);
-          if (newFailed >= 5) auditAccountLocked(username, req.ip);
+          if (newFailed >= 5) auditAccountLocked(login, req.ip);
         }
-        auditLoginFailure(username, req.ip);
+        auditLoginFailure(login, req.ip);
         return res.status(401).json({ error: 'Неверный логин или пароль' });
     }
 
     // Успешный вход — сбрасываем счётчик
     db.prepare('UPDATE users SET failedLogins = 0, lockedUntil = 0 WHERE id = ?').run(userRow.id);
-    auditLoginSuccess(username, userRow.id, req.ip);
+    auditLoginSuccess(login, userRow.id, req.ip);
 
     const token = jwt.sign({ userId: userRow.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: userRow.id, username: userRow.username, level: userRow.level, role: 'player' } });
