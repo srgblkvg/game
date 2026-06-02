@@ -17,36 +17,57 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function getTokenFromURL(): string | null {
+    const params = new URLSearchParams(window.location.search);
+    const jwt = params.get('jwt');
+    if (jwt) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('jwt');
+        window.history.replaceState({}, '', url.toString());
+    }
+    return jwt;
+}
+
+function parseUserFromToken(token: string): User | null {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return {
+            id: payload.adminId || payload.userId,
+            username: '',
+            level: payload.role === 'admin' ? 0 : 1,
+            role: payload.role,
+            gender: payload.gender || 'male',
+        };
+    } catch {
+        return null;
+    }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
-
-    // Проверка JWT из URL (OAuth редирект)
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const jwt = params.get('jwt');
-        if (jwt) {
-            localStorage.setItem('token', jwt);
-            setToken(jwt);
-            // Убираем jwt из URL
-            const url = new URL(window.location.href);
-            url.searchParams.delete('jwt');
-            window.history.replaceState({}, '', url.toString());
+    // Синхронно при первом рендере: проверяем JWT из URL, затем из localStorage
+    const [token, setToken] = useState<string | null>(() => {
+        const urlJwt = getTokenFromURL();
+        if (urlJwt) {
+            localStorage.setItem('token', urlJwt);
+            return urlJwt;
         }
-    }, []);
+        return localStorage.getItem('token');
+    });
 
+    const [user, setUser] = useState<User | null>(() => {
+        const t = token;
+        if (t) return parseUserFromToken(t);
+        return null;
+    });
+
+    // Синхронизируем user при изменении token
     useEffect(() => {
-        if (!token) return;
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            setUser({
-                id: payload.adminId || payload.userId,
-                username: '',
-                level: payload.role === 'admin' ? 0 : 1,
-                role: payload.role,
-                gender: payload.gender || 'male',
-            });
-        } catch { }
+        if (!token) {
+            setUser(null);
+            return;
+        }
+        const u = parseUserFromToken(token);
+        if (u) setUser(u);
     }, [token]);
 
     const loginUser = (u: User, t: string) => {
