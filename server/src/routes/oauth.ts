@@ -159,25 +159,29 @@ router.get('/vk/callback', async (req, res) => {
         }
 
         // VK ID возвращает user_id в ответе токена, а данные пользователя — в id_token (JWT)
-        let vkUserId: string;
+        let vkUserId = String(tokenData.user_id || '');
         let displayName = '';
 
         // Пробуем достать имя из id_token
         if (tokenData.id_token) {
             try {
-                const idPayload = JSON.parse(Buffer.from(tokenData.id_token.split('.')[1], 'base64').toString());
-                logger.info({ idTokenFields: Object.keys(idPayload) }, 'VK id_token payload');
-                vkUserId = String(idPayload.sub || idPayload.user_id);
+                const parts = tokenData.id_token.split('.');
+                const rawPayload = parts[1];
+                // VK может использовать url-safe base64
+                const payload = Buffer.from(rawPayload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString();
+                console.log('VK_ID_TOKEN_PAYLOAD:', payload);
+                const idPayload = JSON.parse(payload);
+                vkUserId = vkUserId || String(idPayload.sub || idPayload.user_id || '');
                 displayName = [
                     idPayload.first_name || idPayload.given_name || '',
                     idPayload.last_name || idPayload.family_name || '',
                 ].join(' ').trim();
-            } catch {
-                vkUserId = String(tokenData.user_id);
+            } catch (e) {
+                console.log('VK_ID_TOKEN_PARSE_ERROR:', e);
             }
-        } else {
-            vkUserId = String(tokenData.user_id);
         }
+
+        console.log('VK_FINAL:', { vkUserId, displayName, hasAccessToken: !!tokenData.access_token });
 
         // Если имя не получено — пробуем API VK
         if (!displayName && tokenData.access_token) {
