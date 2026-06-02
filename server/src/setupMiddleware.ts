@@ -8,6 +8,9 @@ import { z } from 'zod';
 import logger from './logger';
 
 export function setupMiddleware(app: Express) {
+  // Доверяем nginx прокси для корректной работы rate-limit и IP
+  app.set('trust proxy', 1);
+
   app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
