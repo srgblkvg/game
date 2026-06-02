@@ -28,6 +28,12 @@ export function runSchema(db: InstanceType<typeof Database>) {
       baseA INTEGER DEFAULT 5,
       baseD INTEGER DEFAULT 5,
       baseM INTEGER DEFAULT 5,
+      email TEXT,
+      emailVerified INTEGER DEFAULT 0,
+      emailCode TEXT,
+      emailCodeExpires INTEGER DEFAULT 0,
+      failedLogins INTEGER DEFAULT 0,
+      lockedUntil INTEGER DEFAULT 0,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);

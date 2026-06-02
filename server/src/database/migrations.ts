@@ -63,7 +63,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     WHERE baseS IS NULL OR baseS = 0`);
 
   // Email верификация
-  try { db.exec('ALTER TABLE users ADD COLUMN email TEXT UNIQUE'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN emailCode TEXT'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN emailCodeExpires INTEGER DEFAULT 0'); } catch {}
