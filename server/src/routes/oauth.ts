@@ -34,7 +34,20 @@ function makeToken(userId: number, role: string): string {
 function findOrCreateUser(provider: string, oauthId: string, username: string): { id: number; username: string; level: number } {
     const existing: any = db.prepare('SELECT id, username, level FROM users WHERE oauthProvider = ? AND oauthId = ?')
         .get(provider, oauthId);
-    if (existing) return existing;
+    if (existing) {
+        // Обновляем имя если было vk_undefined или id123456
+        if (existing.username.startsWith('vk_') || existing.username.startsWith('id')) {
+            let newName = username;
+            let suffix = 1;
+            while (newName !== existing.username && db.prepare('SELECT id FROM users WHERE username = ?').get(newName)) {
+                newName = `${username.substring(0, 17)}_${suffix}`;
+                suffix++;
+            }
+            db.prepare('UPDATE users SET username = ? WHERE id = ?').run(newName, existing.id);
+            return { id: existing.id, username: newName, level: existing.level };
+        }
+        return existing;
+    }
 
     let finalUsername = username.replace(/\s+/g, '_').substring(0, 20);
     let suffix = 1;
