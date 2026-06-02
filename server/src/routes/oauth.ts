@@ -35,7 +35,7 @@ function findOrCreateUser(provider: string, oauthId: string, username: string): 
     const existing: any = db.prepare('SELECT id, username, level FROM users WHERE oauthProvider = ? AND oauthId = ?')
         .get(provider, oauthId);
     if (existing) {
-        // Обновляем имя если было vk_undefined или id123456
+        // Обновляем имя если было id... или vk_...
         if (existing.username.startsWith('vk_') || existing.username.startsWith('id')) {
             let newName = username;
             let suffix = 1;
@@ -153,55 +153,47 @@ router.get('/vk/callback', async (req, res) => {
             body: new URLSearchParams(bodyParams),
         });
         const tokenData: any = await tokenRes.json();
+        console.log('VK_TOKEN_RESPONSE:', JSON.stringify(tokenData));
         if (!tokenRes.ok) {
             logger.error({ tokenData, pkce: !!pkce }, 'VK token exchange failed');
             return res.redirect(`${FRONTEND_URL}/login?error=token_failed`);
         }
 
-        // VK ID возвращает user_id в ответе токена, а данные пользователя — в id_token (JWT)
-        let vkUserId = String(tokenData.user_id || '');
+        // Ищем user_id во всех возможных местах
+        let vkUserId = '';
         let displayName = '';
 
-        // Пробуем достать имя из id_token
+        // 1. Из id_token (JWT)
         if (tokenData.id_token) {
             try {
-                const parts = tokenData.id_token.split('.');
-                const rawPayload = parts[1];
-                // VK может использовать url-safe base64
-                const payload = Buffer.from(rawPayload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString();
-                console.log('VK_ID_TOKEN_PAYLOAD:', payload);
-                const idPayload = JSON.parse(payload);
-                vkUserId = vkUserId || String(idPayload.sub || idPayload.user_id || '');
-                displayName = [
-                    idPayload.first_name || idPayload.given_name || '',
-                    idPayload.last_name || idPayload.family_name || '',
-                ].join(' ').trim();
-            } catch (e) {
-                console.log('VK_ID_TOKEN_PARSE_ERROR:', e);
-            }
+                const rawPayload = tokenData.id_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                const idPayload = JSON.parse(Buffer.from(rawPayload, 'base64').toString());
+                vkUserId = String(idPayload.sub || idPayload.user_id || '');
+                displayName = [idPayload.first_name, idPayload.last_name].filter(Boolean).join(' ');
+            } catch {}
         }
 
-        console.log('VK_FINAL:', { vkUserId, displayName, hasAccessToken: !!tokenData.access_token });
+        // 2. Из поля user_id ответа
+        if (!vkUserId) vkUserId = String(tokenData.user_id || '');
 
-        // Если имя не получено — пробуем API VK
+        // 3. Если всё ещё нет — ошибка
+        if (!vkUserId) {
+            logger.error({ tokenKeys: Object.keys(tokenData) }, 'VK: no user_id found');
+            return res.redirect(`${FRONTEND_URL}/login?error=userinfo_failed`);
+        }
+
+        // 4. Имя через API VK
         if (!displayName && tokenData.access_token) {
             try {
-                const vkApiRes = await fetch(
+                const apiRes = await fetch(
                     `https://api.vk.com/method/users.get?user_ids=${vkUserId}&v=5.199&access_token=${tokenData.access_token}`
                 );
-                const vkApiData: any = await vkApiRes.json();
-                if (vkApiData.response && vkApiData.response[0]) {
-                    const u = vkApiData.response[0];
+                const apiData: any = await apiRes.json();
+                if (apiData.response?.[0]) {
+                    const u = apiData.response[0];
                     displayName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
                 }
-            } catch (e) {
-                logger.warn({ e }, 'VK users.get fallback failed');
-            }
-        }
-
-        if (!vkUserId) {
-            logger.error({ tokenData }, 'VK: no user_id in token response');
-            return res.redirect(`${FRONTEND_URL}/login?error=userinfo_failed`);
+            } catch {}
         }
 
         if (!displayName) displayName = `id${vkUserId}`;
