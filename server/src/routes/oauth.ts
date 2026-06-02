@@ -127,7 +127,7 @@ router.get('/vk', (_req, res) => {
 });
 
 router.get('/vk/callback', async (req, res) => {
-    const { code, state } = req.query;
+    const { code, state, device_id } = req.query;
     if (!code || typeof code !== 'string') {
         return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
     }
@@ -145,6 +145,9 @@ router.get('/vk/callback', async (req, res) => {
         };
         if (pkce) {
             bodyParams.code_verifier = pkce.verifier;
+        }
+        if (device_id && typeof device_id === 'string') {
+            bodyParams.device_id = device_id;
         }
 
         const tokenRes = await fetch('https://id.vk.com/oauth2/auth', {
