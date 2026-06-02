@@ -16,6 +16,17 @@ const REDIRECT_URI_YA = 'https://mmoarena.ru/api/oauth/yandex/callback';
 const REDIRECT_URI_VK = 'https://mmoarena.ru/api/oauth/vk/callback';
 const FRONTEND_URL = 'https://mmoarena.ru';
 
+// Хранилище code_verifier для PKCE (в памяти)
+const pkceStore = new Map<string, { verifier: string; expires: number }>();
+
+// Очистка просроченных записей раз в 5 минут
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, val] of pkceStore) {
+        if (val.expires < now) pkceStore.delete(key);
+    }
+}, 5 * 60 * 1000);
+
 function makeToken(userId: number, role: string): string {
     return jwt.sign({ userId, role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
 }
@@ -92,31 +103,45 @@ router.get('/yandex/callback', async (req, res) => {
 
 // --- VK ID ---
 router.get('/vk', (_req, res) => {
-    const url = `https://id.vk.com/authorize?response_type=code&client_id=${VK_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI_VK)}&scope=email`;
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+    const state = crypto.randomBytes(16).toString('hex');
+
+    pkceStore.set(state, { verifier, expires: Date.now() + 10 * 60 * 1000 });
+
+    const url = `https://id.vk.com/authorize?response_type=code&client_id=${VK_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI_VK)}&scope=email&state=${state}&code_challenge=${challenge}&code_challenge_method=S256`;
     res.redirect(url);
 });
 
 router.get('/vk/callback', async (req, res) => {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code || typeof code !== 'string') {
         return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
     }
 
+    const pkce = state && typeof state === 'string' ? pkceStore.get(state) : undefined;
+    if (pkce) pkceStore.delete(state as string);
+
     try {
+        const bodyParams: Record<string, string> = {
+            grant_type: 'authorization_code',
+            code,
+            client_id: VK_CLIENT_ID,
+            client_secret: VK_CLIENT_SECRET,
+            redirect_uri: REDIRECT_URI_VK,
+        };
+        if (pkce) {
+            bodyParams.code_verifier = pkce.verifier;
+        }
+
         const tokenRes = await fetch('https://id.vk.com/oauth2/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                grant_type: 'authorization_code',
-                code,
-                client_id: VK_CLIENT_ID,
-                client_secret: VK_CLIENT_SECRET,
-                redirect_uri: REDIRECT_URI_VK,
-            }),
+            body: new URLSearchParams(bodyParams),
         });
         const tokenData: any = await tokenRes.json();
         if (!tokenRes.ok) {
-            logger.error({ tokenData }, 'VK token exchange failed');
+            logger.error({ tokenData, pkce: !!pkce }, 'VK token exchange failed');
             return res.redirect(`${FRONTEND_URL}/login?error=token_failed`);
         }
 
