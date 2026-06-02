@@ -67,4 +67,8 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN emailCode TEXT'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN emailCodeExpires INTEGER DEFAULT 0'); } catch {}
+
+  // OAuth провайдеры
+  try { db.exec('ALTER TABLE users ADD COLUMN oauthProvider TEXT'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN oauthId TEXT'); } catch {}
 }

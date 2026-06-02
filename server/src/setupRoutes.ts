@@ -18,11 +18,13 @@ import jobsRoutes from './routes/jobs';
 import accountRoutes from './routes/account';
 import chatRoutes from './routes/chat';
 import craftRoutes from './routes/craft';
+import oauthRoutes from './routes/oauth';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
   app.use('/api', authRoutes);
   app.use('/api', adminAuthRoutes);
+  app.use('/api/oauth', oauthRoutes);
 
   // Админские маршруты
   app.use('/api/admin', authMiddleware, requireAdmin, adminRoutes);

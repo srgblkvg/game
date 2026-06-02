@@ -5,6 +5,8 @@ import { login } from '../api';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
+const BASE_URL = '/api/oauth';
+
 export default function LoginPage() {
     const { loginUser } = useAuth();
     const navigate = useNavigate();
@@ -43,6 +45,22 @@ export default function LoginPage() {
                 />
                 <Button variant="danger" fullWidth onClick={handleLogin}>Войти</Button>
                 {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+
+                <div className="flex items-center gap-2 my-4">
+                    <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                    <span className="text-xs text-[var(--color-text-muted)]">или</span>
+                    <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                </div>
+
+                <div className="flex gap-2">
+                    <a href={`${BASE_URL}/yandex`} className="flex-1">
+                        <Button variant="secondary" fullWidth>Яндекс ID</Button>
+                    </a>
+                    <a href={`${BASE_URL}/vk`} className="flex-1">
+                        <Button variant="secondary" fullWidth>VK ID</Button>
+                    </a>
+                </div>
+
                 <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
                     Нет аккаунта?{' '}
                     <Link to="/register" className="text-[var(--color-accent-info)] hover:underline">

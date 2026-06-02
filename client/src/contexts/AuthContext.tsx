@@ -5,7 +5,7 @@ interface User {
     username: string;
     level: number;
     role: 'player' | 'admin';
-    gender?: string; // <-- добавить
+    gender?: string;
 }
 
 interface AuthContextType {
@@ -21,6 +21,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
 
+    // Проверка JWT из URL (OAuth редирект)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const jwt = params.get('jwt');
+        if (jwt) {
+            localStorage.setItem('token', jwt);
+            setToken(jwt);
+            // Убираем jwt из URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete('jwt');
+            window.history.replaceState({}, '', url.toString());
+        }
+    }, []);
+
     useEffect(() => {
         if (!token) return;
         try {
@@ -30,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 username: '',
                 level: payload.role === 'admin' ? 0 : 1,
                 role: payload.role,
-                gender: payload.gender || 'male', // если вдруг будет в токене
+                gender: payload.gender || 'male',
             });
         } catch { }
     }, [token]);

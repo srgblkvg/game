@@ -108,6 +108,22 @@ export default function RegisterPage() {
                     {loading ? '...' : 'Зарегистрироваться'}
                 </Button>
                 {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+
+                <div className="flex items-center gap-2 my-4">
+                    <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                    <span className="text-xs text-[var(--color-text-muted)]">или</span>
+                    <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                </div>
+
+                <div className="flex gap-2">
+                    <a href="/api/oauth/yandex" className="flex-1">
+                        <Button variant="secondary" fullWidth>Яндекс ID</Button>
+                    </a>
+                    <a href="/api/oauth/vk" className="flex-1">
+                        <Button variant="secondary" fullWidth>VK ID</Button>
+                    </a>
+                </div>
+
                 <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
                     Уже есть аккаунт?{' '}
                     <Link to="/login" className="text-[var(--color-accent-info)] hover:underline">
