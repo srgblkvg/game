@@ -57,6 +57,7 @@ export default function HomePage() {
   const attackCooldownSec = Math.max(0, 300 - (nowSec - (character.lastAttackTime || 0)));
   const canAttack = attackCooldownSec <= 0;
   const pveCooldownSec = Math.max(0, 300 - (nowSec - (character.lastPveAttackTime || 0)));
+  const bankCooldownSec = Math.max(0, 1800 - (nowSec - ((character as any).lastBankVisit || 0)));
 
   return (
     <div className="px-4 py-4">
@@ -76,6 +77,7 @@ export default function HomePage() {
           canAttack={canAttack}
           attackCooldownSec={attackCooldownSec}
           pveCooldownSec={pveCooldownSec}
+          bankCooldownSec={bankCooldownSec}
           onArenaClick={handleArenaClick}
           selectedInventoryItemId={selectedInventoryItemId}
           onInventoryItemClick={handleInventoryItemClick}

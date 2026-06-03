@@ -7,6 +7,7 @@ interface ActionsProps {
     canAttack: boolean;
     attackCooldownSec: number;
     pveCooldownSec: number;
+    bankCooldownSec: number;
     onArenaClick: () => void;
 }
 
@@ -29,8 +30,8 @@ const castleCards: ActionCard[] = [
     { icon: 'game-icons:drink-me', title: 'Трактир', subtitle: 'Лечение и квесты', cost: 0, path: '/tavern', buttonText: 'Перейти', bgClass: 'url(/action_adventures.webp)', variant: 'danger' },
 ];
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, onArenaClick, navigate }: {
-    cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number;
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, navigate }: {
+    cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
     onArenaClick: () => void; navigate: (path: string) => void;
 }) {
     return (
@@ -38,10 +39,12 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, onArena
             {cards.map((card, i) => {
                 const isArena = card.path === null;
                 const isHunt = card.path === '/bestiary';
+                const isBank = card.path === '/bank';
                 const huntDisabled = isHunt && pveCooldownSec > 0;
                 const arenaDisabled = isArena && !canAttack;
-                const disabled = arenaDisabled || huntDisabled;
-                const cdSec = isArena ? attackCooldownSec : isHunt ? pveCooldownSec : 0;
+                const bankDisabled = isBank && bankCooldownSec > 0;
+                const disabled = arenaDisabled || huntDisabled || bankDisabled;
+                const cdSec = isArena ? attackCooldownSec : isHunt ? pveCooldownSec : isBank ? bankCooldownSec : 0;
                 const btnText = disabled && cdSec > 0
                     ? `${Math.floor(cdSec / 60)}:${String(cdSec % 60).padStart(2, '0')}`
                     : card.buttonText;
@@ -69,7 +72,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, onArena
     );
 }
 
-export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, onArenaClick }: ActionsProps) {
+export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick }: ActionsProps) {
     const navigate = useNavigate();
     return (
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4">
@@ -77,13 +80,13 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                     <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 За стенами
                 </h2>
-                <CardGrid cards={outsideCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
+                <CardGrid cards={outsideCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
             </div>
             <div className="border-t border-[var(--color-border-light)] pt-4">
                 <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                     <Icon icon="game-icons:castle" width="14" height="14" />🏰 В замке
                 </h2>
-                <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
+                <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
             </div>
         </div>
     );

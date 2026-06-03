@@ -359,9 +359,6 @@ export default function BestiaryPage() {
                 <Button variant="danger" size="md" onClick={() => { stopAuto(); navigate('/'); }}>
                   На главную
                 </Button>
-                <Button variant="secondary" size="md" onClick={backToFloors}>
-                  К этажам
-                </Button>
               </div>
             </Card>
           )}
