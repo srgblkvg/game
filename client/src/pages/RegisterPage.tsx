@@ -13,6 +13,7 @@ export default function RegisterPage() {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -45,6 +46,10 @@ export default function RegisterPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && username && email && password) handleRegister();
     };
 
     if (step === 'code') {
@@ -87,6 +92,7 @@ export default function RegisterPage() {
                     placeholder="Логин"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
                 />
                 <input
@@ -94,15 +100,26 @@ export default function RegisterPage() {
                     placeholder="Email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
                 />
-                <input
-                    type="password"
-                    placeholder="Пароль"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full p-2 mb-1 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
-                />
+                <div className="relative mb-1">
+                    <input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Пароль"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full p-2 pr-10 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                    >
+                        {showPassword ? '🙈' : '👁'}
+                    </button>
+                </div>
                 <p className="text-xs text-[var(--color-text-muted)] mb-3">Минимум 8 символов, цифра и спецсимвол</p>
                 <Button variant="danger" fullWidth onClick={handleRegister} disabled={!username || !email || !password || loading}>
                     {loading ? '...' : 'Зарегистрироваться'}

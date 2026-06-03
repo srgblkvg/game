@@ -106,8 +106,8 @@ export default function HistoryPage() {
             onClick={() => setSelectedBattle(b)}
         >
             <div className="flex items-center gap-2">
-                <strong>{b.attackerId === user.id ? (<><Icon icon="game-icons:crossed-swords" width="16" height="16" className="inline mr-1" />Вы атаковали</>) : (<><Icon icon="game-icons:shield" width="16" height="16" className="inline mr-1" />На вас напали</>)}</strong>
-                <span>игрока {b.attackerId === user.id ? b.defenderName : b.attackerName}</span>
+                <strong>{b.attackerId === user.id ? (<><Icon icon="game-icons:crossed-swords" width="16" height="16" className="inline mr-1" />Вы атаковали</>) : (<><Icon icon="game-icons:shield" width="16" height="16" className="inline mr-1" />На вас напал</>)}</strong>
+                <span> игрок {b.attackerId === user.id ? b.defenderName : b.attackerName}</span>
             </div>
             <div className="flex items-center gap-3 mt-0.5">
                 <span className={`font-bold ${b.winnerId === user.id ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>

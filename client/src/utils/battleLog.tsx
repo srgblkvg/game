@@ -10,7 +10,7 @@ const stepColors: Record<string, string> = {
 const stepIcons: Record<string, string> = {
   attack: 'game-icons:crossed-swords',
   damage: 'game-icons:blood',
-  crit: 'game-icons:lightning-arc',
+  crit: 'game-icons:flame',
   dodge: 'game-icons:sprint',
   block: 'game-icons:shield',
   fullBlock: 'game-icons:shield',

@@ -21,7 +21,7 @@ export default function Actions({ canAttack, attackCooldownSec, onArenaClick }: 
 
     return (
         <div className="mt-6 w-screen ml-[calc(-50vw+50%)] sm:w-full sm:ml-0">
-            <div className="flex sm:flex-wrap gap-3 overflow-x-auto sm:overflow-visible justify-start sm:justify-center hide-scrollbar px-8">
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 px-4 sm:px-0 max-w-lg mx-auto">
                 {cards.map((card, i) => {
                     const isArena = i === 1;
                     const disabled = isArena && !canAttack;
@@ -32,7 +32,7 @@ export default function Actions({ canAttack, attackCooldownSec, onArenaClick }: 
                     return (
                         <div
                             key={i}
-                            className="relative bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden w-[200px] sm:min-w-[200px] sm:max-w-[280px] sm:flex-1 flex-shrink-0 sm:flex-shrink"
+                            className="relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border-2 border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden"
                         >
                             <div
                                 className="absolute inset-0 bg-cover bg-center opacity-25 z-0"

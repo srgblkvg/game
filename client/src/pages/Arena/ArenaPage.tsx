@@ -152,7 +152,7 @@ export default function ArenaPage() {
         <div>
           <div
             ref={logContainerRef}
-            className="bg-black rounded-lg p-3 h-[8em] overflow-y-auto font-mono text-xs leading-relaxed"
+            className="bg-black rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed"
           >
             {renderBattleLog(visibleSteps)}
           </div>

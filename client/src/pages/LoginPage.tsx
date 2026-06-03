@@ -12,6 +12,7 @@ export default function LoginPage() {
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
 
     const handleLogin = async () => {
@@ -25,6 +26,10 @@ export default function LoginPage() {
         }
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && username && password) handleLogin();
+    };
+
     return (
         <div className="max-w-md mx-auto mt-8 px-4">
             <Card padding="lg">
@@ -34,15 +39,26 @@ export default function LoginPage() {
                     placeholder="Email или логин"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
                 />
-                <input
-                    type="password"
-                    placeholder="Пароль"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full p-2 mb-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
-                />
+                <div className="relative mb-3">
+                    <input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Пароль"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full p-2 pr-10 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                    >
+                        {showPassword ? '🙈' : '👁'}
+                    </button>
+                </div>
                 <Button variant="danger" fullWidth onClick={handleLogin}>Войти</Button>
                 {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
 
