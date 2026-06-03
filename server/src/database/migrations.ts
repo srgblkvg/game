@@ -74,4 +74,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   // Стоимость предмета
   try { db.exec('ALTER TABLE items ADD COLUMN cost INTEGER DEFAULT NULL'); } catch {}
+
+  // Кулдаун PvE атак
+  try { db.exec('ALTER TABLE users ADD COLUMN lastPveAttackTime INTEGER DEFAULT 0'); } catch {}
 }

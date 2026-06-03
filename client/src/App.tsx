@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import ScrollToTop from './components/ScrollToTop';
 import RatingPage from './pages/RatingPage';
 import CraftPage from './pages/CraftPage';
+import BestiaryPage from './pages/BestiaryPage';
 
 function App() {
   const { user } = useAuth();
@@ -43,6 +44,7 @@ function App() {
           <Route path="/account" element={user?.role === 'player' ? <AccountPage /> : <Navigate to="/login" />} />
           <Route path="/rating" element={user?.role === 'player' ? <RatingPage /> : <Navigate to="/login" />} />
           <Route path="/craft" element={user?.role === 'player' ? <CraftPage /> : <Navigate to="/login" />} />
+          <Route path="/bestiary" element={user?.role === 'player' ? <BestiaryPage /> : <Navigate to="/login" />} />
           <Route path="/admin/register" element={<AdminRegisterPage />} />
           <Route path="/adminpanel" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} />
           <Route path="*" element={<Navigate to="/" />} />

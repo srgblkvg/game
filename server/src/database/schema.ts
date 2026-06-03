@@ -201,6 +201,31 @@ export function runSchema(db: InstanceType<typeof Database>) {
     )
   `);
 
+  // Таблица мобов (PvE)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS mobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      level INTEGER NOT NULL DEFAULT 1,
+      hp INTEGER NOT NULL DEFAULT 10,
+      atk INTEGER NOT NULL DEFAULT 2,
+      agi INTEGER NOT NULL DEFAULT 1,
+      def INTEGER NOT NULL DEFAULT 1,
+      mst INTEGER NOT NULL DEFAULT 0,
+      xp INTEGER NOT NULL DEFAULT 0,
+      gold_min INTEGER NOT NULL DEFAULT 1,
+      gold_max INTEGER NOT NULL DEFAULT 3,
+      loot_junk REAL NOT NULL DEFAULT 0.8,
+      loot_common REAL NOT NULL DEFAULT 0.2,
+      loot_uncommon REAL NOT NULL DEFAULT 0,
+      loot_rare REAL NOT NULL DEFAULT 0,
+      loot_epic REAL NOT NULL DEFAULT 0,
+      loot_legendary REAL NOT NULL DEFAULT 0,
+      loot_mythic REAL NOT NULL DEFAULT 0,
+      location TEXT DEFAULT 'Склеп'
+    )
+  `);
+
   // Индексы
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_wins ON users(wins DESC);

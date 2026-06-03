@@ -14,6 +14,7 @@ const cards = [
     { icon: 'game-icons:crossed-swords', title: 'Разбой', subtitle: 'Бой с игроками', cost: 10, path: null, buttonText: 'В бой', bgClass: 'url(/action_arena.webp)', variant: 'danger' as const },
     { icon: 'game-icons:swap-bag', title: 'Приключения', subtitle: 'Заработок', cost: 0, path: '/jobs', buttonText: 'Выбрать', bgClass: 'url(/action_adventures.webp)', variant: 'danger' as const },
     { icon: 'game-icons:anvil', title: 'Крафт', subtitle: 'Разбор и создание', cost: 0, path: '/craft', buttonText: 'Перейти', bgClass: 'url(/action_craft.webp)', variant: 'danger' as const },
+    { icon: 'game-icons:death-skull', title: 'Бестиарий', subtitle: 'Охота на мобов', cost: 0, path: '/bestiary', buttonText: 'Перейти', bgClass: 'url(/action_arena.webp)', variant: 'danger' as const },
 ];
 
 export default function Actions({ canAttack, attackCooldownSec, onArenaClick }: ActionsProps) {
