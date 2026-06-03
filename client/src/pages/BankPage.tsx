@@ -22,6 +22,12 @@ export default function BankPage() {
     const [error, setError] = useState('');
 
     useEffect(() => { if (!user) navigate('/login'); else loadBank(); }, [user]);
+    // Live cooldown countdown
+    useEffect(() => {
+        if (cooldown <= 0) return;
+        const t = setInterval(() => setCooldown(prev => Math.max(0, prev - 1)), 1000);
+        return () => clearInterval(t);
+    }, [cooldown > 0]);
 
     const loadBank = async () => {
         try {
