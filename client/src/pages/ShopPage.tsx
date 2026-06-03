@@ -106,7 +106,7 @@ export default function ShopPage() {
                                     {item.image && (
                                         <div className="flex justify-center mb-2">
                                             <img
-                                                src={`/${item.image}`}
+                                                src={item.image}
                                                 alt={item.name}
                                                 className="object-contain rounded"
                                                 style={{

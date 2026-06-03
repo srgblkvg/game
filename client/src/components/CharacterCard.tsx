@@ -20,13 +20,14 @@ interface CharacterCardProps {
   selectedItemId?: string | null;
   highlightedSlots?: string[];
   compact?: boolean | 'mobile' | 'verySmall';
+  isMob?: boolean;
 }
 
 export default function CharacterCard({
   char, side = 'left', showHealth = true,
   showExp = true, showRegenHint = true, readOnly = false,
   onEquip, availableItems, selectedItemId, highlightedSlots,
-  compact = false,
+  compact = false, isMob = false,
 }: CharacterCardProps) {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
@@ -62,9 +63,11 @@ export default function CharacterCard({
   const slotSize = isVerySmall ? '20px' : isMobile ? '26px' : undefined;
 
   const cardId = `fighter-${side}`;
-  const bgImage = char.gender === 'female'
-    ? 'url(/character_woman.webp)'
-    : 'url(/character_man.webp)';
+  const bgImage = isMob
+    ? 'none'
+    : (char.gender === 'female'
+      ? 'url(/character_woman.webp)'
+      : 'url(/character_man.webp)');
 
   // --- Handlers ---
   const handleDrop = (slotId: string, e: React.DragEvent) => {
@@ -154,6 +157,7 @@ export default function CharacterCard({
 
         <StatsOverlay stats={stats} compact={compact} />
 
+        {!isMob && (
         <EquipmentSlots
           equipment={char.equipment}
           side={side}
@@ -169,6 +173,7 @@ export default function CharacterCard({
           onMouseLeave={handleMouseLeaveSlot}
           onLongPress={handleSlotLongPress}
         />
+        )}
 
         <div className="effect-overlay" id={`effect-${side}`}></div>
       </div>

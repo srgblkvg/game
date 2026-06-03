@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Icon } from '@iconify/react';
 
 interface BuffsBlockProps {
     room?: { type: string; until: number } | null;
@@ -31,13 +30,18 @@ export default function BuffsBlock({ room, drink }: BuffsBlockProps) {
 
     return (
         <div className="w-full mt-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-xl overflow-hidden">
-            <button
+            <div
                 onClick={() => setOpen(!open)}
-                className="w-full p-2 flex items-center justify-between text-xs font-bold text-[var(--color-text-accent)]"
+                className="w-full p-2 flex items-center justify-between cursor-pointer select-none"
             >
-                <span><Icon icon="game-icons:drink-me" width="14" height="14" className="inline mr-1" />Усиления</span>
-                <Icon icon={open ? 'game-icons:chevron-up' : 'game-icons:chevron-down'} width="12" height="12" />
-            </button>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm">{open ? '▼' : '▶'}</span>
+                    <span className="text-xs font-bold text-[var(--color-text-accent)]">Усиления</span>
+                </div>
+                <span className="text-xs text-[var(--color-text-muted)]">
+                    {[hasRoom, hasDrink].filter(Boolean).length} акт.
+                </span>
+            </div>
             {open && (
                 <div className="px-3 pb-2 space-y-1 text-xs">
                     {hasRoom && (

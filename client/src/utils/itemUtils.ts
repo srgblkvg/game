@@ -20,16 +20,23 @@ export function getRarityColor(item: any): string {
     return item?.rarity_color || (item?.rarity_id != null ? rarityColors[item.rarity_id] : undefined) || '#888';
 }
 
+function ensureLeadingSlash(path: string): string {
+    return path.startsWith('/') ? path : `/${path}`;
+}
+
 export function getItemImage(item: any): string | null {
-    if (item?.image) return item.image;
+    if (item?.image) return ensureLeadingSlash(item.image);
     if (item?.rarity_id == null) return null;
     const color = rarityColorNames[item.rarity_id] || 'gray';
+    if (item?.type === 'upgrade') {
+        return `/stone/stoneUpgrade_${color}.webp`;
+    }
     if (item?.type === 'craft_item' || item?.type === 'material') {
-        return `fragment/fragment_${color}.webp`;
+        return `/fragment/fragment_${color}.webp`;
     }
     if (item?.slot) {
         const folder = slotImageFolders[item.slot] || item.slot;
-        return `${folder}/${folder}_${color}.webp`;
+        return `/${folder}/${folder}_${color}.webp`;
     }
     return null;
 }
@@ -45,13 +52,14 @@ export function isCraftItem(item: any): item is {
     rarity_color?: string;
     image?: string;
 } {
-    return item?.type === 'material' || item?.type === 'craft_item';
+    return item?.type === 'material' || item?.type === 'craft_item' || item?.type === 'upgrade';
 }
 
 const typeNameRu: Record<string, string> = {
   craft: 'Материал',
   material: 'Материал',
   craft_item: 'Материал',
+  upgrade: 'Камень',
 };
 
 export function getItemTypeName(item: any): string {

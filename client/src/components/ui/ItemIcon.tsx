@@ -29,7 +29,7 @@ export default function ItemIcon({
       style={{
         borderColor: resolvedColor,
         background: img
-          ? `url(/${img}) center / contain no-repeat`
+          ? `url(${img}) center / contain no-repeat`
           : resolvedColor,
         textShadow: '0 0 2px #000',
       }}

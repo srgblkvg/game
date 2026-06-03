@@ -49,7 +49,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
             style={{
               width: imageSize, height: imageSize,
               border: `2px solid ${color}`,
-              background: img ? `url(/${img}) center / contain no-repeat` : color,
+              background: img ? `url(${img}) center / contain no-repeat` : color,
               textShadow: '0 0 2px #000',
               fontSize: imageSize < 40 ? '0.6rem' : '0.7rem',
             }}

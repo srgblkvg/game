@@ -39,6 +39,8 @@ export default function BestiaryPage() {
   const [error, setError] = useState('');
   const [speed, setSpeed] = useState(1);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
+  const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
 
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
@@ -54,6 +56,11 @@ export default function BestiaryPage() {
   useEffect(() => { stepsRef.current = battleSteps; }, [battleSteps]);
   useEffect(() => { if (!user) navigate('/login'); }, [user, navigate]);
   useEffect(() => { loadMobs(); updateCooldown(); }, []);
+  useEffect(() => {
+    const handler = () => { setIsMobile(window.innerWidth < 600); setIsVerySmall(window.innerWidth < 420); };
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   const updateCooldown = useCallback(() => {
     const now = Math.floor(Date.now() / 1000);
@@ -295,7 +302,7 @@ export default function BestiaryPage() {
               showHealth={battleActive}
               showExp={false}
               readOnly
-              compact
+              compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : true}
             />
             {selectedMob && (
               <CharacterCard
@@ -303,8 +310,7 @@ export default function BestiaryPage() {
                   username: selectedMob.name,
                   level: selectedMob.level,
                   equipment: {},
-                  stats: { s: selectedMob.atk, a: selectedMob.agi, d: selectedMob.def, m: selectedMob.mst, hp: selectedMob.hp,
-                    bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 } },
+                  stats: { s: selectedMob.atk, a: selectedMob.agi, d: selectedMob.def, m: selectedMob.mst, hp: selectedMob.hp },
                   currentHp: mobHp,
                   maxHp: mobMaxHp,
                   gender: 'male',
@@ -313,7 +319,8 @@ export default function BestiaryPage() {
                 showHealth={battleActive}
                 showExp={false}
                 readOnly
-                compact
+                compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : true}
+                isMob
               />
             )}
           </div>
