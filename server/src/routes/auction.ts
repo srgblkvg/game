@@ -6,13 +6,17 @@ const router = Router();
 // Мин. цены по редкости
 const priceFloor: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
 
+// API: получить минимальные цены (для клиента)
+router.get('/auction/price-floor', (_req, res) => {
+    res.json(priceFloor);
+});
+
 // Все лоты
 router.get('/auction', (req: any, res) => {
     const now = Math.floor(Date.now() / 1000);
     // Закрываем просроченные лоты
     const expired = db.prepare('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NOT NULL').all(now) as any[];
     for (const lot of expired) {
-        const seller = db.prepare('SELECT money FROM users WHERE id = ?').get(lot.sellerId) as any;
         const commission = Math.floor(lot.currentBid * 0.1);
         const payout = lot.currentBid - commission;
         db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(payout, lot.sellerId);
@@ -33,17 +37,20 @@ router.get('/auction', (req: any, res) => {
 // Создать лот
 router.post('/auction/sell', (req: any, res) => {
     const userId = req.userId;
-    const { itemData, startPrice, buyoutPrice, duration } = req.body;
+    const { itemData, startPrice, buyoutPrice, duration, count } = req.body;
 
     if (!itemData || !startPrice) return res.status(400).json({ error: 'Нет данных' });
 
+    const isMaterial = itemData.type === 'craft_item' || itemData.type === 'material';
+    const itemCount = isMaterial ? Math.max(1, count || (itemData.count || 1)) : 1;
+
     const rarity = itemData.rarity_id ?? 0;
-    const floor = priceFloor[rarity] || 5;
+    const floor = (priceFloor[rarity] || 5) * itemCount;
     if (startPrice < floor) return res.status(400).json({ error: `Мин. цена для этой редкости: ${floor} 🥇` });
 
     // Проверка лимита (5 лотов)
-    const count = (db.prepare('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ?').get(userId) as any).cnt;
-    if (count >= 5) return res.status(400).json({ error: 'Максимум 5 лотов одновременно' });
+    const userLotCount = (db.prepare('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ?').get(userId) as any).cnt;
+    if (userLotCount >= 5) return res.status(400).json({ error: 'Максимум 5 лотов' });
 
     // Комиссия за листинг 5%
     const listingFee = Math.max(1, Math.floor(startPrice * 0.05));
@@ -55,7 +62,24 @@ router.post('/auction/sell', (req: any, res) => {
     const inventory = JSON.parse(user.inventory || '[]');
     const idx = inventory.findIndex((i: any) => i.id === itemData.id);
     if (idx === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
-    inventory.splice(idx, 1);
+    const invItem = inventory[idx];
+
+    if (isMaterial) {
+        const availableCount = invItem.count || 0;
+        if (itemCount > availableCount) return res.status(400).json({ error: `Недостаточно: есть ${availableCount}, выбрано ${itemCount}` });
+        if (itemCount >= availableCount) {
+            // Продаём весь стек
+            inventory.splice(idx, 1);
+        } else {
+            // Продаём часть стека
+            invItem.count = availableCount - itemCount;
+        }
+    } else {
+        inventory.splice(idx, 1);
+    }
+
+    // Обогащаем itemData количеством
+    const sellItemData = { ...itemData, count: itemCount, type: itemData.type || 'item' };
 
     const now = Math.floor(Date.now() / 1000);
     const dur = duration || 24;
@@ -64,7 +88,7 @@ router.post('/auction/sell', (req: any, res) => {
     db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?').run(listingFee, JSON.stringify(inventory), userId);
     db.prepare(`INSERT INTO auction_lots (sellerId, itemData, startPrice, buyoutPrice, currentBid, duration, endsAt, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-        .run(userId, JSON.stringify(itemData), startPrice, buyoutPrice || null, null, dur, endsAt, now);
+        .run(userId, JSON.stringify(sellItemData), startPrice, buyoutPrice || null, null, dur, endsAt, now);
 
     res.json({ success: true, listingFee });
 });
@@ -97,7 +121,7 @@ router.post('/auction/bid', (req: any, res) => {
     res.json({ success: true });
 });
 
-// Выкуп (buyout)
+// Выкуп (buyout) — полный выкуп лота
 router.post('/auction/buyout', (req: any, res) => {
     const userId = req.userId;
     const { lotId } = req.body;
@@ -128,6 +152,70 @@ router.post('/auction/buyout', (req: any, res) => {
     db.prepare('DELETE FROM auction_lots WHERE id = ?').run(lotId);
 
     res.json({ success: true });
+});
+
+// Купить часть стека (Buy N from stack)
+router.post('/auction/buy-partial', (req: any, res) => {
+    const userId = req.userId;
+    const { lotId, quantity } = req.body;
+
+    if (!lotId || !quantity || quantity < 1) return res.status(400).json({ error: 'Нет данных' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const lot = db.prepare('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?').get(lotId, now) as any;
+    if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
+    if (lot.sellerId === userId) return res.status(400).json({ error: 'Нельзя купить свой лот' });
+
+    const itemData = JSON.parse(lot.itemData);
+    const stackCount = itemData.count || 1;
+    if (stackCount <= 1) return res.status(400).json({ error: 'Этот лот нельзя купить частично' });
+    if (quantity > stackCount) return res.status(400).json({ error: `В лоте только ${stackCount} шт.` });
+
+    // Цена за штуку от totalPrice
+    const totalPrice = lot.currentBid ?? lot.startPrice;
+    const pricePerItem = Math.ceil(totalPrice / stackCount);
+    const cost = pricePerItem * quantity;
+
+    const user = db.prepare('SELECT money, inventory FROM users WHERE id = ?').get(userId) as any;
+    if (!user || user.money < cost) return res.status(400).json({ error: 'Недостаточно монет' });
+
+    // Комиссия 10% пропорционально
+    const commission = Math.floor(cost * 0.1);
+    const payout = cost - commission;
+
+    const inventory = JSON.parse(user.inventory || '[]');
+
+    // Добавляем покупателю: если у него уже есть такой же craft_item, увеличиваем count
+    const singleItem = { ...itemData, count: quantity };
+    const existingIdx = inventory.findIndex((i: any) =>
+        i.type === 'craft_item' && i.id === itemData.id
+    );
+    if (existingIdx !== -1) {
+        inventory[existingIdx].count = (inventory[existingIdx].count || 0) + quantity;
+    } else {
+        inventory.push(singleItem);
+    }
+
+    // Обновляем лот: уменьшаем count
+    const remainingCount = stackCount - quantity;
+    if (remainingCount <= 0) {
+        // Полностью распродано
+        db.prepare('DELETE FROM auction_lots WHERE id = ?').run(lotId);
+    } else {
+        const newItemData = { ...itemData, count: remainingCount };
+        const newStartPrice = Math.max(1, Math.floor(lot.startPrice * remainingCount / stackCount));
+        const newBuyoutPrice = lot.buyoutPrice ? Math.max(1, Math.floor(lot.buyoutPrice * remainingCount / stackCount)) : null;
+        // Пропорционально уменьшаем ставку, если есть
+        const newCurrentBid = lot.currentBid ? Math.max(newStartPrice, Math.floor(lot.currentBid * remainingCount / stackCount)) : null;
+        db.prepare(`UPDATE auction_lots SET itemData = ?, startPrice = ?, buyoutPrice = ?, currentBid = ? WHERE id = ?`)
+            .run(JSON.stringify(newItemData), newStartPrice, newBuyoutPrice, newCurrentBid, lotId);
+    }
+
+    // Списываем деньги покупателю и начисляем продавцу
+    db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?').run(cost, JSON.stringify(inventory), userId);
+    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(payout, lot.sellerId);
+
+    res.json({ success: true, cost, remaining: remainingCount });
 });
 
 export default router;

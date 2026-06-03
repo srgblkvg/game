@@ -96,7 +96,7 @@ export default function JobsPage() {
   if (activeJob && remaining !== null && remaining > 0) {
     return (
       <div className="text-center py-8 px-4">
-        <h2 className="text-xl font-bold mb-3"><Icon icon="game-icons:hourglass" width="18" height="18" class="inline mr-1"/>Выполняется работа</h2>
+        <h2 className="text-xl font-bold mb-3"><Icon icon="game-icons:hourglass" width="18" height="18" className="inline mr-1"/>Выполняется работа</h2>
         <p className="text-lg">{activeJob.name}</p>
         <p className="text-[var(--color-text-secondary)]">Осталось: {formatTime(remaining)}</p>
         <p className="text-[var(--color-text-accent)]">Награда: {formatMoney(activeJob.reward)}</p>
@@ -108,7 +108,7 @@ export default function JobsPage() {
   return (
     <div className="px-4 py-4">
       <BackButton />
-      <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:swap-bag" width="22" height="22" class="inline mr-2"/>Доступные работы</h2>
+      <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:swap-bag" width="22" height="22" className="inline mr-2"/>Доступные работы</h2>
       {error && <p className="text-red-500 mb-4">{error}</p>}
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(250px,1fr))]">
         {jobs.map((job: any) => (

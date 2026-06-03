@@ -28,7 +28,7 @@ export default function RatingPage() {
     return (
         <div className="max-w-xl mx-auto px-4 py-4">
             <BackButton />
-            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" class="inline mr-2"/>Рейтинг игроков</h2>
+            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2"/>Рейтинг Скорби</h2>
 
             <Card>
                 {players.length === 0 ? (
@@ -38,7 +38,7 @@ export default function RatingPage() {
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
                                 <th className="text-left p-1.5 text-sm">Игрок</th>
-                                <th className="text-right p-1.5 text-sm">Побед</th>
+                                <th className="text-right p-1.5 text-sm">ELO</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -50,11 +50,11 @@ export default function RatingPage() {
                                             className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors"
                                         >
                                             {i + 1 + (page - 1) * LIMIT}. {truncate(p.username)}{' '}
-                                            <span className="text-[var(--color-text-muted)]">[{p.level}]</span>
+                                            <span style={{ color: p.rank?.color }}>({p.rank?.icon} {p.rank?.name})</span>
                                         </span>
                                     </td>
-                                    <td className="text-right p-1.5 text-[var(--color-accent-success)] font-bold">
-                                        {p.wins}
+                                    <td className="text-right p-1.5 font-bold" style={{ color: p.rank?.color }}>
+                                        {p.elo}
                                     </td>
                                 </tr>
                             ))}

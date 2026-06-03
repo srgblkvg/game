@@ -3,12 +3,14 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 interface GameItem {
   id?: string | number;
   name?: string;
-  slot: string;
-  rarity_id: number;
+  slot?: string;
+  type?: string;
+  count?: number;
+  rarity_id?: number;
   rarity_display?: string;
   rarity_color?: string;
-  bonuses: { s: number; a: number; d: number; m: number };
-  extra: { crit: number; dodge: number; counter: number; fullBlock: number };
+  bonuses?: { s: number; a: number; d: number; m: number };
+  extra?: { crit: number; dodge: number; counter: number; fullBlock: number };
   upgradeLevel?: number;
 }
 

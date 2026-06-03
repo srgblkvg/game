@@ -167,4 +167,31 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   // Авто-подтверждение для пользователей без email (старые/OAuth аккаунты)
   db.prepare('UPDATE users SET emailVerified = 1 WHERE email IS NULL OR email = ?').run('');
+
+  // Переименование материалов из старых названий в новые (из ideas)
+  const materialRenames: Record<string, string> = {
+    'Серый материал': 'Пыль забвения',
+    'Белый материал': 'Осколок скорби',
+    'Зелёный материал': 'Фрагмент ужаса',
+    'Синий материал': 'Эссенция мрака',
+    'Фиолетовый материал': 'Сердцевина бездны',
+    'Жёлтый материал': 'Искра погибели',
+    'Красный материал': 'Слеза вечности',
+  };
+  for (const [oldName, newName] of Object.entries(materialRenames)) {
+    db.prepare('UPDATE craft_items SET name = ? WHERE name = ?').run(newName, oldName);
+  }
+  // Переименование в инвентарях
+  const allUsers = db.prepare('SELECT id, inventory FROM users').all() as any[];
+  for (const u of allUsers) {
+    let inv = JSON.parse(u.inventory || '[]');
+    let changed = false;
+    for (const item of inv) {
+      if (materialRenames[item.name]) {
+        item.name = materialRenames[item.name];
+        changed = true;
+      }
+    }
+    if (changed) db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inv), u.id);
+  }
 }
