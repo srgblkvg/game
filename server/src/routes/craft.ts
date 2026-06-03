@@ -30,7 +30,7 @@ router.get('/craft/recipes', (req, res) => {
       `).get(recipe.result_id) || null;
         } else if (recipe.result_type === 'craft_item') {
             recipe.result = db.prepare(`
-        SELECT c.id, c.name, c.rarity_id, c.image,
+        SELECT c.id, c.name, c.rarity_id, c.image, c.type as itemType,
                r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
         JOIN rarities r ON c.rarity_id = r.id

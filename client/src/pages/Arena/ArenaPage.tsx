@@ -166,7 +166,7 @@ export default function ArenaPage() {
                   <><Icon icon="game-icons:death-skull" width="18" height="18" className="inline mr-1" />Поражение</>
                 )}
               </p>
-              <p>Опыт: +{battleResult.expGained}</p>
+              {battleResult.expGained > 0 && <p>Опыт: +{battleResult.expGained}</p>}
               {battleResult.moneyStolen > 0 && (
                 <p>
                   {battleResult.winnerId === user.id

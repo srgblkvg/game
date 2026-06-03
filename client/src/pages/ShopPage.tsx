@@ -103,7 +103,26 @@ export default function ShopPage() {
                                 }}
                             >
                                 <div className="flex-1">
-                                    <ItemStats item={item} imageSize={36} />
+                                    {/* Изображение предмета */}
+                                    {item.image && (
+                                        <div className="flex justify-center mb-2">
+                                            <img
+                                                src={`/${item.image}`}
+                                                alt={item.name}
+                                                className="object-contain rounded"
+                                                style={{
+                                                    width: 64,
+                                                    height: 64,
+                                                    border: `2px solid ${color}`,
+                                                    background: '#1a1a2e',
+                                                }}
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                    <ItemStats item={item} imageSize={36} showImage={false} />
                                 </div>
 
                                 <div className="mt-2">

@@ -237,27 +237,32 @@ export function runSeed(db: InstanceType<typeof Database>) {
       { name: 'Удавная перевязь', slot: 'belt', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 21, dodge: 0, counter: 0, fullBlock: 20 }, cost: 8000 },
     ];
 
+    const rarityColorNames = ['gray', 'white', 'green', 'blue', 'purple', 'yellow', 'red'];
+
     for (const item of allItems) {
+      const folder = item.slot === 'weapon1' ? 'sword' : item.slot;
+      const color = rarityColorNames[item.rarity_id] || 'gray';
+      const image = `${folder}/${folder}_${color}.webp`;
+
       insert.run(
         item.name,
         item.slot,
         item.rarity_id,
         JSON.stringify(item.bonuses),
         JSON.stringify(item.extra),
-        null,
+        image,
         item.cost
       );
     }
   }
 
-  // Начальные работы (20 работ)
-  const jobCount = (db.prepare('SELECT COUNT(*) as cnt FROM jobs').get() as any).cnt;
-  if (jobCount === 0) {
-    const insertJob = db.prepare(
-      'INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)'
-    );
+  // Начальные работы (20 работ) — всегда удаляем старые и вставляем новые
+  db.prepare('DELETE FROM jobs').run();
+  const insertJob = db.prepare(
+    'INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)'
+  );
 
-    const jobs: Array<{ name: string; description: string; duration: number; rewardMin: number; rewardMax: number }> = [
+  const jobs: Array<{ name: string; description: string; duration: number; rewardMin: number; rewardMax: number }> = [
       // 🏰 На территории замка — 10 минут
       { name: 'Обход стен', description: 'Дозор по крепостной стене. Факел, ветер, шёпот из бойниц.', duration: 600, rewardMin: 2, rewardMax: 5 },
       { name: 'Чистка склепа', description: 'Вынести истлевшие останки, заменить свечи, отогнать крыс.', duration: 600, rewardMin: 3, rewardMax: 6 },
@@ -284,9 +289,8 @@ export function runSeed(db: InstanceType<typeof Database>) {
       { name: 'Контракт в Бездонный Овраг', description: 'Трещина в земле на севере. Там, куда не смотрит свет.', duration: 28800, rewardMin: 330, rewardMax: 680 },
     ];
 
-    for (const job of jobs) {
-      insertJob.run(job.name, job.description, job.duration, job.rewardMin, job.rewardMax);
-    }
+  for (const job of jobs) {
+    insertJob.run(job.name, job.description, job.duration, job.rewardMin, job.rewardMax);
   }
 
   // Начальные названия характеристик
@@ -301,12 +305,16 @@ export function runSeed(db: InstanceType<typeof Database>) {
     for (const [name, nameRu] of stats) insert.run(name, nameRu);
   }
 
-  // Начальные ресурсы (материалы)
+  // Начальные ресурсы (материалы + камни улучшения)
   const craftItemCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_items').get() as any).cnt;
   if (craftItemCount === 0) {
     const insertCraft = db.prepare('INSERT INTO craft_items (name, rarity_id, type, image) VALUES (?, ?, ?, ?)');
-    const names = ['Пыль забвения', 'Осколок скорби', 'Фрагмент ужаса', 'Эссенция мрака', 'Сердцевина бездны', 'Искра погибели', 'Слеза вечности'];
-    names.forEach((name, i) => insertCraft.run(name, i, 'craft', null));
+    // Материалы (type='craft')
+    const materialNames = ['Пыль забвения', 'Осколок скорби', 'Фрагмент ужаса', 'Эссенция мрака', 'Сердцевина бездны', 'Искра погибели', 'Слеза вечности'];
+    materialNames.forEach((name, i) => insertCraft.run(name, i, 'craft', null));
+    // Камни улучшения (type='upgrade')
+    const stoneNames = ['Камень улучшения (Хлам)', 'Камень улучшения (Обычный)', 'Камень улучшения (Необычный)', 'Камень улучшения (Редкий)', 'Камень улучшения (Эпический)', 'Камень улучшения (Легендарный)', 'Камень улучшения (Мифический)'];
+    stoneNames.forEach((name, i) => insertCraft.run(name, i, 'upgrade', null));
   }
 
   // Начальные категории рецептов
@@ -327,6 +335,64 @@ export function runSeed(db: InstanceType<typeof Database>) {
     insertUpgrade.run(5, 25, 4000);
     insertUpgrade.run(6, 10, 8000);
     insertUpgrade.run(7, 5, 16000);
+  }
+
+  // Начальные рецепты крафта (материалы + камни улучшения)
+  const recipeCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_recipes').get() as any).cnt;
+  if (recipeCount === 0) {
+    const insertRecipe = db.prepare(
+      'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+    const insertIngredient = db.prepare(
+      'INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)'
+    );
+    const getCraftItemId = (name: string): number =>
+      (db.prepare('SELECT id FROM craft_items WHERE name = ?').get(name) as any).id;
+    const getCatId = (name: string): number =>
+      (db.prepare('SELECT id FROM craft_recipe_categories WHERE name = ?').get(name) as any).id;
+
+    const matCatId = getCatId('Материалы');
+    const upgCatId = getCatId('Улучшения');
+
+    // Рецепты улучшения материалов (раздел «Материалы»)
+    const materialRecipes: Array<{
+      name: string; description: string; cost: number;
+      result: string; chance: number; ingredients: Array<{ name: string; qty: number }>;
+    }> = [
+      { name: 'Пыль забвения → Осколок скорби', description: '5 Пыли забвения в 1 Осколок скорби', cost: 20, result: 'Осколок скорби', chance: 80, ingredients: [{ name: 'Пыль забвения', qty: 5 }] },
+      { name: 'Осколок скорби → Фрагмент ужаса', description: '5 Осколков скорби в 1 Фрагмент ужаса', cost: 80, result: 'Фрагмент ужаса', chance: 75, ingredients: [{ name: 'Осколок скорби', qty: 5 }] },
+      { name: 'Фрагмент ужаса → Эссенция мрака', description: '5 Фрагментов ужаса в 1 Эссенцию мрака', cost: 300, result: 'Эссенция мрака', chance: 70, ingredients: [{ name: 'Фрагмент ужаса', qty: 5 }] },
+      { name: 'Эссенция мрака → Сердцевина бездны', description: '5 Эссенций мрака в 1 Сердцевину бездны', cost: 1000, result: 'Сердцевина бездны', chance: 65, ingredients: [{ name: 'Эссенция мрака', qty: 5 }] },
+      { name: 'Сердцевина бездны → Искра погибели', description: '7 Сердцевин бездны в 1 Искру погибели', cost: 3500, result: 'Искра погибели', chance: 60, ingredients: [{ name: 'Сердцевина бездны', qty: 7 }] },
+      { name: 'Искра погибели → Слеза вечности', description: '9 Искр погибели в 1 Слезу вечности', cost: 12000, result: 'Слеза вечности', chance: 50, ingredients: [{ name: 'Искра погибели', qty: 9 }] },
+    ];
+
+    // Рецепты создания камней улучшения (раздел «Улучшения»)
+    const stoneRecipes: Array<{
+      name: string; description: string; cost: number;
+      result: string; chance: number; ingredients: Array<{ name: string; qty: number }>;
+    }> = [
+      { name: 'Камень улучшения (Хлам)', description: '3 Пыли забвения в Камень улучшения (Хлам)', cost: 15, result: 'Камень улучшения (Хлам)', chance: 90, ingredients: [{ name: 'Пыль забвения', qty: 3 }] },
+      { name: 'Камень улучшения (Обычный)', description: '3 Осколка скорби в Камень улучшения (Обычный)', cost: 50, result: 'Камень улучшения (Обычный)', chance: 85, ingredients: [{ name: 'Осколок скорби', qty: 3 }] },
+      { name: 'Камень улучшения (Необычный)', description: '4 Фрагмента ужаса в Камень улучшения (Необычный)', cost: 150, result: 'Камень улучшения (Необычный)', chance: 80, ingredients: [{ name: 'Фрагмент ужаса', qty: 4 }] },
+      { name: 'Камень улучшения (Редкий)', description: '4 Эссенции мрака в Камень улучшения (Редкий)', cost: 500, result: 'Камень улучшения (Редкий)', chance: 75, ingredients: [{ name: 'Эссенция мрака', qty: 4 }] },
+      { name: 'Камень улучшения (Эпический)', description: '5 Сердцевин бездны в Камень улучшения (Эпический)', cost: 1500, result: 'Камень улучшения (Эпический)', chance: 70, ingredients: [{ name: 'Сердцевина бездны', qty: 5 }] },
+      { name: 'Камень улучшения (Легендарный)', description: '6 Искр погибели в Камень улучшения (Легендарный)', cost: 5000, result: 'Камень улучшения (Легендарный)', chance: 65, ingredients: [{ name: 'Искра погибели', qty: 6 }] },
+      { name: 'Камень улучшения (Мифический)', description: '9 Слёз вечности в Камень улучшения (Мифический)', cost: 15000, result: 'Камень улучшения (Мифический)', chance: 50, ingredients: [{ name: 'Слеза вечности', qty: 9 }] },
+    ];
+
+    const allRecipes = [
+      ...materialRecipes.map(r => ({ ...r, categoryId: matCatId })),
+      ...stoneRecipes.map(r => ({ ...r, categoryId: upgCatId })),
+    ];
+
+    for (const r of allRecipes) {
+      const info = insertRecipe.run(r.name, r.description, r.cost, 'craft_item', getCraftItemId(r.result), r.chance, r.categoryId);
+      const recipeId = info.lastInsertRowid;
+      for (const ing of r.ingredients) {
+        insertIngredient.run(recipeId, getCraftItemId(ing.name), ing.qty);
+      }
+    }
   }
 
   // Мобы (PvE бестиарий)
