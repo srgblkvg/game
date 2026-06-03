@@ -6,6 +6,7 @@ import Button from './ui/Button';
 interface ActionsProps {
     canAttack: boolean;
     attackCooldownSec: number;
+    pveCooldownSec: number;
     onArenaClick: () => void;
 }
 
@@ -28,17 +29,21 @@ const castleCards: ActionCard[] = [
     { icon: 'game-icons:drink-me', title: 'Трактир', subtitle: 'Лечение и квесты', cost: 0, path: '/tavern', buttonText: 'Перейти', bgClass: 'url(/action_adventures.webp)', variant: 'danger' },
 ];
 
-function CardGrid({ cards, canAttack, attackCooldownSec, onArenaClick, navigate }: {
-    cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number;
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, onArenaClick, navigate }: {
+    cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number;
     onArenaClick: () => void; navigate: (path: string) => void;
 }) {
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {cards.map((card, i) => {
                 const isArena = card.path === null;
-                const disabled = isArena && !canAttack;
-                const btnText = isArena && !canAttack
-                    ? `${Math.floor(attackCooldownSec / 60)}:${String(attackCooldownSec % 60).padStart(2, '0')}`
+                const isHunt = card.path === '/bestiary';
+                const huntDisabled = isHunt && pveCooldownSec > 0;
+                const arenaDisabled = isArena && !canAttack;
+                const disabled = arenaDisabled || huntDisabled;
+                const cdSec = isArena ? attackCooldownSec : isHunt ? pveCooldownSec : 0;
+                const btnText = disabled && cdSec > 0
+                    ? `${Math.floor(cdSec / 60)}:${String(cdSec % 60).padStart(2, '0')}`
                     : card.buttonText;
 
                 return (
@@ -53,7 +58,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, onArenaClick, navigate 
                                 {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="xs" fullWidth disabled={disabled}
                                     onClick={() => { if (isArena) onArenaClick(); else if (card.path) navigate(card.path); }}>
-                                    {isArena && !canAttack ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
+                                    {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
                                 </Button>
                             </div>
                         </div>
@@ -64,7 +69,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, onArenaClick, navigate 
     );
 }
 
-export default function Actions({ canAttack, attackCooldownSec, onArenaClick }: ActionsProps) {
+export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, onArenaClick }: ActionsProps) {
     const navigate = useNavigate();
     return (
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4">
@@ -72,13 +77,13 @@ export default function Actions({ canAttack, attackCooldownSec, onArenaClick }: 
                 <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                     <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 За стенами
                 </h2>
-                <CardGrid cards={outsideCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
+                <CardGrid cards={outsideCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
             </div>
             <div className="border-t border-[var(--color-border-light)] pt-4">
                 <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                     <Icon icon="game-icons:castle" width="14" height="14" />🏰 В замке
                 </h2>
-                <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
+                <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
             </div>
         </div>
     );

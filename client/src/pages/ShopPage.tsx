@@ -14,7 +14,7 @@ import FilterBar from '../components/ui/FilterBar';
 const filterSlots = [
     { value: 'all', label: 'Все' },
     { value: 'weapon1', label: 'Оружие' },
-    { value: 'weapon2', label: 'Щит' },
+    { value: 'shield', label: 'Щит' },
     { value: 'ring', label: 'Кольцо' },
     { value: 'helmet', label: 'Шлем' },
     { value: 'chest', label: 'Нагрудник' },
@@ -52,12 +52,11 @@ export default function ShopPage() {
     const filteredItems = items
         .filter((item: any) => {
             if (filterSlot === 'all') return true;
-            if (filterSlot === 'ring') return item.slot === 'ring1' || item.slot === 'ring2';
             return item.slot === filterSlot;
         })
         .sort((a: any, b: any) => {
-            const priceA = 100 * Math.pow(10, a.rarity_id);
-            const priceB = 100 * Math.pow(10, b.rarity_id);
+            const priceA = a.price || 100 * Math.pow(10, a.rarity_id);
+            const priceB = b.price || 100 * Math.pow(10, b.rarity_id);
             return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
         });
 

@@ -56,6 +56,7 @@ export default function HomePage() {
   const nowSec = Math.floor(Date.now() / 1000);
   const attackCooldownSec = Math.max(0, 300 - (nowSec - (character.lastAttackTime || 0)));
   const canAttack = attackCooldownSec <= 0;
+  const pveCooldownSec = Math.max(0, 300 - (nowSec - (character.lastPveAttackTime || 0)));
 
   return (
     <div className="px-4 py-4">
@@ -74,6 +75,7 @@ export default function HomePage() {
         <MainBar
           canAttack={canAttack}
           attackCooldownSec={attackCooldownSec}
+          pveCooldownSec={pveCooldownSec}
           onArenaClick={handleArenaClick}
           selectedInventoryItemId={selectedInventoryItemId}
           onInventoryItemClick={handleInventoryItemClick}

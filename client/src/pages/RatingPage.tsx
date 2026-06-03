@@ -38,7 +38,7 @@ export default function RatingPage() {
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
                                 <th className="text-left p-1.5 text-sm">Игрок</th>
-                                <th className="text-right p-1.5 text-sm">ELO</th>
+                                <th className="text-right p-1.5 text-sm">Очки рейтинга</th>
                             </tr>
                         </thead>
                         <tbody>

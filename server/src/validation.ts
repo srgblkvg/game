@@ -40,7 +40,7 @@ export const startJobSchema = z.object({
 // Админка: предметы (теперь rarity_id вместо rarity)
 export const createItemSchema = z.object({
   name: z.string().min(1).max(100),
-  slot: z.enum(['helmet', 'chest', 'gloves', 'boots', 'amulet', 'ring1', 'ring2', 'belt', 'weapon1', 'weapon2']),
+  slot: z.enum(['helmet', 'chest', 'gloves', 'boots', 'amulet', 'ring', 'belt', 'weapon1', 'shield']),
   rarity_id: z.number().int().min(0).max(6),
   bonuses: z.object({
     s: z.number().int().min(0).max(9999).optional(),

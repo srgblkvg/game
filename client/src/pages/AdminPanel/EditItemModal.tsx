@@ -23,11 +23,10 @@ const slots = [
   { value: 'gloves', label: 'Перчатки' },
   { value: 'boots', label: 'Ботинки' },
   { value: 'amulet', label: 'Амулет' },
-  { value: 'ring1', label: 'Кольцо' },
-  { value: 'ring2', label: 'Кольцо' },
+  { value: 'ring', label: 'Кольцо' },
   { value: 'belt', label: 'Пояс' },
-  { value: 'weapon1', label: 'Оружие 1' },
-  { value: 'weapon2', label: 'Оружие 2' },
+  { value: 'weapon1', label: 'Оружие' },
+  { value: 'shield', label: 'Щит' },
 ];
 
 export default function EditItemModal({ item, rarities, onSave, onClose }: EditItemModalProps) {
