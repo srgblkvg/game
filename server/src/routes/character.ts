@@ -80,12 +80,25 @@ router.get('/character/me', (req: any, res) => {
         if (nowSec >= jobData.endTime) {
             const newMoney = user.money + jobData.reward;
             const expGain = jobData.expReward || 0;
-            const newExp = user.exp + expGain;
-            db.prepare('UPDATE users SET money = ?, exp = ?, activeJob = NULL WHERE id = ?')
-                .run(newMoney, newExp, userId);
+            let newExp = user.exp + expGain;
+            let newLevel = user.level;
+            let levelsGained = 0;
+            while (true) {
+                const required = 10 * Math.pow(2, newLevel - 1);
+                if (newExp >= required) {
+                    newExp -= required;
+                    newLevel++;
+                    levelsGained++;
+                } else break;
+            }
+            const newStatPoints = (user.statPoints || 0) + levelsGained * 5;
+            db.prepare('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL WHERE id = ?')
+                .run(newMoney, newExp, newLevel, newStatPoints, userId);
             db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)')
                 .run(userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString());
             user.money = newMoney;
+            user.level = newLevel;
+            user.statPoints = newStatPoints;
             user.activeJob = null;
             jobData = null;
         }

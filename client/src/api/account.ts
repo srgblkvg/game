@@ -38,3 +38,16 @@ export async function changeGender(gender: 'male' | 'female') {
     }
     return res.json();
 }
+
+export async function deleteAccount(currentPassword: string) {
+    const res = await fetch(`${BASE_URL}/account/delete`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ currentPassword }),
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Ошибка удаления аккаунта');
+    }
+    return res.json();
+}

@@ -46,6 +46,13 @@ export default function LoginPage() {
                 <Button variant="danger" fullWidth onClick={handleLogin}>Войти</Button>
                 {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
 
+                <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
+                    Нет аккаунта?{' '}
+                    <Link to="/register" className="text-[var(--color-accent-info)] hover:underline">
+                        Зарегистрироваться
+                    </Link>
+                </p>
+
                 <div className="flex items-center gap-2 my-4">
                     <div className="flex-1 h-px bg-[var(--color-border-light)]" />
                     <span className="text-xs text-[var(--color-text-muted)]">или</span>
@@ -61,12 +68,6 @@ export default function LoginPage() {
                     </a>
                 </div>
 
-                <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
-                    Нет аккаунта?{' '}
-                    <Link to="/register" className="text-[var(--color-accent-info)] hover:underline">
-                        Зарегистрироваться
-                    </Link>
-                </p>
             </Card>
         </div>
     );

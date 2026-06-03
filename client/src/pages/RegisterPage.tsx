@@ -109,6 +109,13 @@ export default function RegisterPage() {
                 </Button>
                 {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
 
+                <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
+                    Уже есть аккаунт?{' '}
+                    <Link to="/login" className="text-[var(--color-accent-info)] hover:underline">
+                        Войти
+                    </Link>
+                </p>
+
                 <div className="flex items-center gap-2 my-4">
                     <div className="flex-1 h-px bg-[var(--color-border-light)]" />
                     <span className="text-xs text-[var(--color-text-muted)]">или</span>
@@ -124,12 +131,6 @@ export default function RegisterPage() {
                     </a>
                 </div>
 
-                <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
-                    Уже есть аккаунт?{' '}
-                    <Link to="/login" className="text-[var(--color-accent-info)] hover:underline">
-                        Войти
-                    </Link>
-                </p>
             </Card>
         </div>
     );

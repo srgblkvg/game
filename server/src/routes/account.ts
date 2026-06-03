@@ -15,6 +15,17 @@ router.post('/account/change-username', (req: any, res) => {
     const userId = req.userId;
     const { newUsername } = parsed.data;
 
+    const user = db.prepare('SELECT passwordHash FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    // Проверяем текущий пароль
+    const currentPassword = (req.body as any).currentPassword;
+    if (currentPassword !== undefined) {
+        if (!bcrypt.compareSync(currentPassword, user.passwordHash)) {
+            return res.status(400).json({ error: 'Неверный текущий пароль' });
+        }
+    }
+
     const existing = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(newUsername, userId);
     if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
 
@@ -51,6 +62,35 @@ router.post('/account/change-password', (req: any, res) => {
     const u = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
     if (u) auditPasswordChange(userId, u.username, req.ip);
     res.json({ success: true });
+});
+
+router.post('/account/delete', (req: any, res) => {
+    const userId = req.userId;
+    const { currentPassword } = req.body;
+
+    const user = db.prepare('SELECT passwordHash, username FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    if (!bcrypt.compareSync(currentPassword, user.passwordHash)) {
+        return res.status(400).json({ error: 'Неверный пароль' });
+    }
+
+    // Удаляем связанные данные
+    db.prepare('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?').run(userId, userId);
+    db.prepare('DELETE FROM job_history WHERE userId = ?').run(userId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+
+    // Отзываем токен
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+            const decoded: any = jwt.decode(token);
+            if (decoded?.jti && decoded?.exp) revokeToken(decoded.jti, decoded.exp);
+        } catch {}
+    }
+
+    res.json({ success: true, message: 'Аккаунт удалён. Восстановить невозможно.' });
 });
 
 router.post('/account/logout', (req: any, res) => {

@@ -107,9 +107,9 @@ router.post('/battle', (req: any, res) => {
         steps: result.steps,
         winnerId: result.winnerId,
         hpAfter: result.attackerHpAfter,
-        hpDefenderAfter: result.defenderHpAfter,   // <-- добавить
-        expGained: result.expGained,
-        moneyGained: result.moneyGained,
+        hpDefenderAfter: result.defenderHpAfter,
+        expGained: result.winnerId === attacker.id ? result.expGained : 0,
+        moneyGained: result.winnerId === attacker.id ? result.moneyGained : 0,
         newLevel,
         newExp,
         levelsGained,

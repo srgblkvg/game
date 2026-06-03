@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
 import { fetchCharacter } from '../../api/character';
-import { changeUsername, changePassword, changeGender } from '../../api';
+import { changeUsername, changePassword, changeGender, deleteAccount } from '../../api';
 import BackButton from '../../components/ui/BackButton';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -22,6 +22,9 @@ export default function AccountPage() {
     const [passwordMsg, setPasswordMsg] = useState('');
 
     const [genderMsg, setGenderMsg] = useState('');
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deleteMsg, setDeleteMsg] = useState('');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     if (!user) return null;
 
@@ -53,6 +56,14 @@ export default function AccountPage() {
     };
 
     const handleLogout = () => { logout(); navigate('/login'); };
+
+    const handleDeleteAccount = async (e: React.FormEvent) => {
+        e.preventDefault(); setDeleteMsg('');
+        try {
+            await deleteAccount(deletePassword);
+            logout(); navigate('/login');
+        } catch (err: any) { setDeleteMsg(err.message); }
+    };
 
     const currentGender = user.gender || 'male';
 
@@ -108,6 +119,45 @@ export default function AccountPage() {
             </Card>
 
             <Button variant="danger" size="md" fullWidth onClick={handleLogout}>Выйти</Button>
+
+            {/* Удаление аккаунта */}
+            <div className="mt-6 pt-4 border-t border-[var(--color-border-light)]">
+                {!showDeleteConfirm ? (
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        fullWidth
+                        onClick={() => setShowDeleteConfirm(true)}
+                        style={{ color: '#e03030', borderColor: '#e03030' }}
+                    >
+                        ⚠️ Удалить аккаунт
+                    </Button>
+                ) : (
+                    <Card>
+                        <h3 className="font-bold mb-2 text-red-500">Удаление аккаунта</h3>
+                        <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                            Это действие необратимо. Все данные будут удалены: персонаж, история боёв, инвентарь.
+                        </p>
+                        <form onSubmit={handleDeleteAccount}>
+                            <input
+                                type="password"
+                                placeholder="Введите пароль для подтверждения"
+                                value={deletePassword}
+                                onChange={e => setDeletePassword(e.target.value)}
+                                className={inputClass}
+                                required
+                            />
+                            <div className="flex gap-2 mt-2">
+                                <Button variant="danger" size="sm" type="submit">Удалить навсегда</Button>
+                                <Button variant="secondary" size="sm" onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); }}>
+                                    Отмена
+                                </Button>
+                            </div>
+                        </form>
+                        {deleteMsg && <p className="mt-2 text-sm text-red-500">{deleteMsg}</p>}
+                    </Card>
+                )}
+            </div>
         </div>
     );
 }

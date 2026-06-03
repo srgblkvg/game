@@ -20,12 +20,12 @@ router.post('/register', async (req, res) => {
 
     const { username, email, password } = parsed.data;
 
-    const existing = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, email) as any;
+    const existing = db.prepare('SELECT id, username FROM users WHERE username = ? OR email = ?').get(username, email) as any;
     if (existing) {
         if (existing.username === username) {
-            return res.status(400).json({ error: 'Пользователь уже существует' });
+            return res.status(400).json({ error: 'Имя или email уже зарегистрированы' });
         }
-        return res.status(400).json({ error: 'Email уже используется' });
+        return res.status(400).json({ error: 'Имя или email уже зарегистрированы' });
     }
 
     const passwordHash = bcrypt.hashSync(password, 10);
@@ -103,12 +103,19 @@ router.post('/login', (req, res) => {
         return res.status(401).json({ error: 'Неверный логин или пароль' });
     }
 
-    // Успешный вход — сбрасываем счётчик
+    // Успешный вход — проверяем подтверждение почты
+    const user: any = db.prepare('SELECT emailVerified FROM users WHERE id = ?').get(userRow.id);
+    if (user && !user.emailVerified) {
+        return res.status(403).json({ error: 'Почта не подтверждена. Проверьте email для кода подтверждения.' });
+    }
+
+    // Сбрасываем счётчик неудачных попыток
     db.prepare('UPDATE users SET failedLogins = 0, lockedUntil = 0 WHERE id = ?').run(userRow.id);
     auditLoginSuccess(login, userRow.id, req.ip);
 
     const token = jwt.sign({ userId: userRow.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: userRow.id, username: userRow.username, level: userRow.level, role: 'player' } });
+    const fullUser: any = db.prepare('SELECT gender FROM users WHERE id = ?').get(userRow.id);
+    res.json({ token, user: { id: userRow.id, username: userRow.username, level: userRow.level, role: 'player', gender: fullUser?.gender || 'male' } });
 });
 
 export default router;
