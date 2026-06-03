@@ -108,4 +108,37 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     createdAt INTEGER NOT NULL,
     FOREIGN KEY (sellerId) REFERENCES users(id)
   )`); } catch {}
+
+  // Турнир
+  try { db.exec(`CREATE TABLE IF NOT EXISTS tournaments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    division TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'registration',
+    registrationStart INTEGER NOT NULL,
+    registrationEnd INTEGER NOT NULL,
+    prizePool INTEGER DEFAULT 0,
+    createdAt INTEGER NOT NULL
+  )`); } catch {}
+
+  try { db.exec(`CREATE TABLE IF NOT EXISTS tournament_participants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tournamentId INTEGER NOT NULL,
+    userId INTEGER NOT NULL,
+    goldenTicket INTEGER DEFAULT 0,
+    snapshotStats TEXT,
+    seed INTEGER,
+    FOREIGN KEY (tournamentId) REFERENCES tournaments(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
+
+  try { db.exec(`CREATE TABLE IF NOT EXISTS tournament_matches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tournamentId INTEGER NOT NULL,
+    round INTEGER NOT NULL,
+    player1Id INTEGER,
+    player2Id INTEGER,
+    winnerId INTEGER,
+    log TEXT,
+    FOREIGN KEY (tournamentId) REFERENCES tournaments(id)
+  )`); } catch {}
 }
