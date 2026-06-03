@@ -17,7 +17,7 @@ export default function AdminJobs() {
 
   const handleFinishAll = async (jobId: number) => {
     try {
-      const res = await adminFinishJobsByJobId(jobId);
+      await adminFinishJobsByJobId(jobId);
       crud.clearMessage();
       crud.load();
     } catch (e: any) { /* ignore */ }

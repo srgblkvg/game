@@ -3,7 +3,6 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import { getHeaders } from '../../api/helpers';
-import { renderBattleLog } from '../../utils/battleLog';
 import { formatMoney } from '../../utils/money';
 
 const stepColors: Record<string, string> = {

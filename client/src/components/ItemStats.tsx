@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { getRarityColor, getItemImage, isCraftItem, getItemTypeName } from '../utils/itemUtils';
 import type { ReactNode } from 'react';
 

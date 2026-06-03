@@ -4,7 +4,6 @@ import { fetchAdminItems, createAdminItem, updateAdminItem, deleteAdminItem } fr
 import { getHeaders } from '../../api/helpers';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-import Modal from '../../components/ui/Modal';
 import { inputClass, selectClass, smallInputClass } from '../../utils/formStyles';
 import EditItemModal from './EditItemModal';
 
