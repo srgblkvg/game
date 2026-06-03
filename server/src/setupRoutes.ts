@@ -20,6 +20,7 @@ import chatRoutes from './routes/chat';
 import craftRoutes from './routes/craft';
 import oauthRoutes from './routes/oauth';
 import mobsRoutes from './routes/mobs';
+import bankRoutes from './routes/bank';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -49,4 +50,5 @@ export function setupRoutes(app: Express) {
   app.use('/api', chatRoutes);
   app.use('/api', authMiddleware, requirePlayer, craftRoutes);
   app.use('/api', authMiddleware, requirePlayer, mobsRoutes);
+  app.use('/api', authMiddleware, requirePlayer, bankRoutes);
 }

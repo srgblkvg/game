@@ -130,6 +130,8 @@ router.get('/character/me', (req: any, res) => {
         protectionUntil: user.protectionUntil || 0,
         inventorySlots: user.inventorySlots || 10,
         activeJob: jobData, role: user.role || 'player',
+        bank: user.bank || 0,
+        lastBankVisit: user.lastBankVisit || 0,
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,
     });

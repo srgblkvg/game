@@ -77,4 +77,8 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   // Кулдаун PvE атак
   try { db.exec('ALTER TABLE users ADD COLUMN lastPveAttackTime INTEGER DEFAULT 0'); } catch {}
+
+  // Банк (сокровищница)
+  try { db.exec('ALTER TABLE users ADD COLUMN bank INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN lastBankVisit INTEGER DEFAULT 0'); } catch {}
 }
