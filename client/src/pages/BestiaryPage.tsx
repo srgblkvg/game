@@ -100,42 +100,104 @@ export default function BestiaryPage() {
     return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0 };
   };
 
-  const computeHp = useCallback((stepIndex: number) => {
-    const steps = stepsRef.current;
-    const { player: startPlayerHp, mob: startMobHp } = initialHpRef.current;
-    let pHp = startPlayerHp;
-    let mHp = startMobHp;
-    let currentAttacker: 'player' | 'mob' | null = null;
-    for (let i = 0; i <= stepIndex && i < steps.length; i++) {
-      const step = steps[i];
-      if (!step) continue;
-      if (step.type === 'attack') currentAttacker = step.message.startsWith('Вы') ? 'player' : 'mob';
-      else if (step.type === 'damage' && step.damage) {
-        if (currentAttacker === 'player') mHp = Math.max(0, mHp - step.damage);
-        else if (currentAttacker === 'mob') pHp = Math.max(0, pHp - step.damage);
-      }
+  // --- Animation helpers (same as useBattleLogic) ---
+  const showEffectText = (side: 'left' | 'right', text: string, color = '#f1c40f') => {
+    const overlay = document.getElementById(`effect-${side}`);
+    if (!overlay) return;
+    overlay.textContent = text;
+    overlay.style.color = color;
+    overlay.classList.add('show');
+    overlay.addEventListener('animationend', () => overlay.classList.remove('show'), { once: true });
+  };
+
+  const showDamageNumber = (side: 'left' | 'right', dmg: number) => {
+    const card = document.getElementById(`fighter-${side}`);
+    if (!card) return;
+    const float = document.createElement('div');
+    float.className = 'damage-float';
+    float.textContent = `-${dmg}`;
+    card.appendChild(float);
+    float.addEventListener('animationend', () => float.remove());
+  };
+
+  const executeStep = (step: any, side: 'left' | 'right') => {
+    const frame = document.getElementById(`fighter-${side}`);
+    const card = document.querySelector(`.fighter-card.${side}`) as HTMLElement;
+    if (step.type === 'attack') {
+      if (card) card.style.zIndex = '20';
+      frame?.classList.add('attacking');
+      setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
+    } else if (step.type === 'dodge') {
+      frame?.classList.add('dodging');
+      setTimeout(() => frame?.classList.remove('dodging'), 500);
+      showEffectText(side, 'УКЛОНЕНИЕ!', '#f1c40f');
+    } else if (step.type === 'counter') {
+      if (card) card.style.zIndex = '20';
+      frame?.classList.add('attacking');
+      setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
+      showEffectText(side, 'КОНТРАТАКА!', '#f1c40f');
+    } else if (step.type === 'block') {
+      frame?.classList.add('blocking');
+      setTimeout(() => frame?.classList.remove('blocking'), 600);
+      showEffectText(side, 'БЛОК!', '#3498db');
+    } else if (step.type === 'fullBlock') {
+      frame?.classList.add('blocking');
+      setTimeout(() => frame?.classList.remove('blocking'), 600);
+      showEffectText(side, 'ПОЛНЫЙ БЛОК!', '#9b59b6');
+    } else if (step.type === 'crit') {
+      frame?.classList.add('attacking');
+      setTimeout(() => frame?.classList.remove('attacking'), 600);
+      showEffectText(side, 'КРИТ!', '#e74c3c');
+    } else if (step.type === 'stun') {
+      frame?.classList.add('stunned');
+      setTimeout(() => frame?.classList.remove('stunned'), 1000);
+      showEffectText(side, 'ОГЛУШЁН', '#f1c40f');
     }
-    return { playerHp: pHp, mobHp: mHp };
-  }, []);
+  };
 
   const scrollLog = useCallback(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, []);
   const stopAuto = useCallback(() => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } }, []);
 
-  const nextStep = useCallback(() => {
+  const nextStep = useCallback(async () => {
     if (stepLock.current) return;
     const steps = stepsRef.current;
     const next = currentStepRef.current + 1;
     if (next >= steps.length) { stopAuto(); return; }
     stepLock.current = true;
+    const step = steps[next];
     currentStepRef.current = next;
     setCurrentStep(next);
-    const hp = computeHp(next);
-    setPlayerHp(hp.playerHp);
-    setMobHp(hp.mobHp);
+
+    // Resolve which side acts: player when message starts with 'Вы' or step.actor is 'attacker'
+    const playerActor = step.actor === 'attacker' || step.message?.startsWith('Вы');
+
+    if (step.type === 'attack' || step.type === 'crit' || step.type === 'counter') {
+      executeStep(step, playerActor ? 'left' : 'right');
+    } else if (step.type === 'dodge') {
+      executeStep(step, playerActor ? 'left' : 'right');
+    } else if (step.type === 'block' || step.type === 'fullBlock') {
+      // Block is on the defender side
+      executeStep(step, playerActor ? 'right' : 'left');
+    } else if (step.type === 'stun') {
+      executeStep(step, playerActor ? 'right' : 'left');
+    }
+
+    // Apply damage
+    if (step.type === 'damage' && step.damage) {
+      if (step.target === 'attacker') {
+        setPlayerHp(prev => Math.max(0, prev - step.damage));
+        showDamageNumber('left', step.damage);
+      } else {
+        setMobHp(prev => Math.max(0, prev - step.damage));
+        showDamageNumber('right', step.damage);
+      }
+    }
+
     scrollLog();
-    const isDamage = steps[next]?.type === 'damage';
-    setTimeout(() => { stepLock.current = false; }, (isDamage ? 1000 : 700) / speedRef.current);
-  }, [computeHp, scrollLog, stopAuto]);
+    const isDamage = step?.type === 'damage';
+    await new Promise(r => setTimeout(r, (isDamage ? 1000 : 700) / speedRef.current));
+    stepLock.current = false;
+  }, [scrollLog, stopAuto]);
 
   const startAuto = useCallback(() => {
     stopAuto();
@@ -194,9 +256,11 @@ export default function BestiaryPage() {
     const last = steps.length - 1;
     currentStepRef.current = last;
     setCurrentStep(last);
-    const hp = computeHp(last);
-    setPlayerHp(hp.playerHp);
-    setMobHp(hp.mobHp);
+    // Set final HP from battle result
+    if (battleResult) {
+      setPlayerHp(Math.max(0, battleResult.hpAfter ?? 0));
+      setMobHp(Math.max(0, battleResult.hpDefenderAfter ?? 0));
+    }
   };
 
   const toggleSpeed = () => {
