@@ -81,4 +81,10 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // Банк (сокровищница)
   try { db.exec('ALTER TABLE users ADD COLUMN bank INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN lastBankVisit INTEGER DEFAULT 0'); } catch {}
+
+  // Трактир: комната отдыха и напитки
+  try { db.exec('ALTER TABLE users ADD COLUMN roomType TEXT DEFAULT NULL'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN roomUntil INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN activeDrink TEXT DEFAULT NULL'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN drinkUntil INTEGER DEFAULT 0'); } catch {}
 }

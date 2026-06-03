@@ -108,9 +108,18 @@ router.get('/character/me', (req: any, res) => {
     const maxHp = stats.hp;
     let currentHp = user.currentHp;
     const HP_REGEN_SECONDS = 10;
+
+    // Ускорение от комнаты
+    let regenRate = 1;
+    if (user.roomType && user.roomUntil > now) {
+        if (user.roomType === 'closet') regenRate = 3;
+        else if (user.roomType === 'bed') regenRate = 10;
+        else if (user.roomType === 'chamber') regenRate = 50;
+    }
+
     const elapsed = now - (user.lastHpUpdate || now);
     if (elapsed > 0 && currentHp < maxHp) {
-        const regenAmount = Math.floor(elapsed / HP_REGEN_SECONDS);
+        const regenAmount = Math.floor(elapsed / HP_REGEN_SECONDS) * regenRate;
         if (regenAmount > 0) currentHp = Math.min(maxHp, currentHp + regenAmount);
     }
     if (currentHp > maxHp) currentHp = maxHp;
@@ -132,6 +141,8 @@ router.get('/character/me', (req: any, res) => {
         activeJob: jobData, role: user.role || 'player',
         bank: user.bank || 0,
         lastBankVisit: user.lastBankVisit || 0,
+        room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
+        drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,
     });

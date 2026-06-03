@@ -1,0 +1,121 @@
+import { Router } from 'express';
+import db from '../database';
+import { currentStats } from '../game/stats';
+import { getBaseStats, enrichEquipment } from '../db/helpers';
+
+const router = Router();
+
+// Комнаты отдыха
+const rooms: Record<string, { name: string; rate: number; cost1h: number; cost8h: number }> = {
+    closet: { name: 'Чулан', rate: 3, cost1h: 100, cost8h: 600 },
+    bed: { name: 'Койка', rate: 10, cost1h: 500, cost8h: 3000 },
+    chamber: { name: 'Покой', rate: 50, cost1h: 2000, cost8h: 12000 },
+};
+
+// Напитки
+const drinks: Record<string, { name: string; bonuses: Record<string, number>; cost: number }> = {
+    rage_small: { name: 'Настойка ярости', bonuses: { s: 10 }, cost: 150 },
+    rage_med: { name: 'Крепкая настойка ярости', bonuses: { s: 25 }, cost: 600 },
+    rage_big: { name: 'Эликсир берсерка', bonuses: { s: 50 }, cost: 2500 },
+    shadow_small: { name: 'Настойка теней', bonuses: { a: 10 }, cost: 150 },
+    shadow_med: { name: 'Крепкая настойка теней', bonuses: { a: 25 }, cost: 600 },
+    shadow_big: { name: 'Эликсир призрака', bonuses: { a: 50 }, cost: 2500 },
+    stone_small: { name: 'Настойка камня', bonuses: { d: 10 }, cost: 150 },
+    stone_med: { name: 'Крепкая настойка камня', bonuses: { d: 25 }, cost: 600 },
+    stone_big: { name: 'Эликсир бастиона', bonuses: { d: 50 }, cost: 2500 },
+    eye_small: { name: 'Настойка ока', bonuses: { m: 10 }, cost: 150 },
+    eye_med: { name: 'Крепкая настойка ока', bonuses: { m: 25 }, cost: 600 },
+    eye_big: { name: 'Эликсир пророка', bonuses: { m: 50 }, cost: 2500 },
+    grog_small: { name: 'Грог Моры', bonuses: { s: 5, a: 5, d: 5, m: 5 }, cost: 400 },
+    grog_med: { name: 'Крепкий грог', bonuses: { s: 12, a: 12, d: 12, m: 12 }, cost: 1800 },
+    dragon_blood: { name: 'Кровь дракона', bonuses: { s: 30, a: 30, d: 30, m: 30 }, cost: 10000 },
+};
+
+// Статус трактира
+router.get('/tavern', (req: any, res) => {
+    const userId = req.userId;
+    const user = db.prepare('SELECT currentHp, money, roomType, roomUntil, activeDrink, drinkUntil, lastHpUpdate FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const maxHp = 20; // TODO: использовать реальный maxHp
+
+    res.json({
+        currentHp: user.currentHp,
+        maxHp,
+        money: user.money,
+        room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
+        drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
+        rooms: Object.entries(rooms).map(([key, r]) => ({ key, ...r })),
+        drinks: Object.entries(drinks).map(([key, d]) => ({ key, ...d })),
+    });
+});
+
+// Мгновенное лечение
+router.post('/tavern/heal', (req: any, res) => {
+    const userId = req.userId;
+    const { full } = req.body; // full=true — полное, иначе 50%
+
+    const user = db.prepare('SELECT currentHp, money FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const maxHp = 20; // TODO
+    const missingHp = maxHp - user.currentHp;
+    if (missingHp <= 0) return res.status(400).json({ error: 'HP уже полное' });
+
+    const healAmount = full ? missingHp : Math.ceil(missingHp * 0.5);
+    const cost = healAmount * 2;
+
+    if (user.money < cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${cost})` });
+
+    db.prepare('UPDATE users SET money = money - ?, currentHp = ? WHERE id = ?').run(cost, user.currentHp + healAmount, userId);
+
+    res.json({ success: true, hpAfter: user.currentHp + healAmount, cost });
+});
+
+// Аренда комнаты
+router.post('/tavern/room', (req: any, res) => {
+    const userId = req.userId;
+    const { roomType, hours } = req.body; // hours: 1 or 8
+
+    const room = rooms[roomType];
+    if (!room) return res.status(400).json({ error: 'Неизвестный тип комнаты' });
+
+    const duration = hours === 8 ? 8 : 1;
+    const cost = hours === 8 ? room.cost8h : room.cost1h;
+
+    const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.money < cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${cost})` });
+
+    const now = Math.floor(Date.now() / 1000);
+    const until = now + duration * 3600;
+
+    db.prepare('UPDATE users SET money = money - ?, roomType = ?, roomUntil = ? WHERE id = ?')
+        .run(cost, roomType, until, userId);
+
+    res.json({ success: true, room: { type: roomType, name: room.name, until, rate: room.rate } });
+});
+
+// Купить напиток
+router.post('/tavern/drink', (req: any, res) => {
+    const userId = req.userId;
+    const { drinkType } = req.body;
+
+    const drink = drinks[drinkType];
+    if (!drink) return res.status(400).json({ error: 'Неизвестный напиток' });
+
+    const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.money < drink.cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${drink.cost})` });
+
+    const now = Math.floor(Date.now() / 1000);
+    const until = now + 3600; // 1 час
+
+    db.prepare('UPDATE users SET money = money - ?, activeDrink = ?, drinkUntil = ? WHERE id = ?')
+        .run(drink.cost, drinkType, until, userId);
+
+    res.json({ success: true, drink: { type: drinkType, name: drink.name, bonuses: drink.bonuses, until } });
+});
+
+export default router;
