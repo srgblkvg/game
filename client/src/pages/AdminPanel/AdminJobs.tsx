@@ -47,7 +47,7 @@ export default function AdminJobs() {
               <input type="number" value={formData.rewardMin} onChange={e => setForm({ rewardMin: +e.target.value })} className={inputClass} />
             </label>
             <label className="text-sm flex-1">Макс. награда<br />
-              <input type="number" value={formData.rewardMax} onChange={e => setForm({ rewardMax: +e.target.value })} className={inputClass} />
+              <input type="number" value={(formData as any).rewardMax ?? ''} onChange={e => setForm({ ...formData, rewardMax: +e.target.value } as any)} className={inputClass} />
             </label>
           </div>
         </div>

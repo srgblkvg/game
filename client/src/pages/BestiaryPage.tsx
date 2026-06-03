@@ -297,9 +297,6 @@ export default function BestiaryPage() {
   const pStats = calculateStats(character);
   const visibleSteps = battleSteps.slice(Math.max(0, currentStep - 4), currentStep + 1);
 
-  // Mob HP bar percentage
-  const playerHpPct = playerMaxHp > 0 ? (playerHp / playerMaxHp) * 100 : 100;
-
   return (
     <div className="px-4 py-4 max-w-4xl mx-auto">
       <BackButton to="/" />

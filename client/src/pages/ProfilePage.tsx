@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import CharacterCard from '../components/CharacterCard';
 import { fetchPublicProfile } from '../api/character';

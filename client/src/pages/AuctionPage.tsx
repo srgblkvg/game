@@ -79,6 +79,7 @@ export default function AuctionPage() {
         if (item) {
             const isMaterial = item.type === 'craft_item' || item.type === 'material';
             const maxCount = isMaterial ? (item.count || 1) : 1;
+            void maxCount;
             setSellCount(1);
             const rarity = item.rarity_id ?? 0;
             const floor = PRICE_FLOOR[rarity] || 5;
