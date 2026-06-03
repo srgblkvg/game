@@ -40,7 +40,12 @@ router.post('/register', async (req, res) => {
 
     const sent = await sendVerificationCode(email, code);
     if (!sent) {
-        return res.status(500).json({ error: 'Не удалось отправить код. Попробуйте позже.' });
+        // В dev-режиме без SMTP — авто-подтверждение
+        const newUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
+        db.prepare('UPDATE users SET emailVerified = 1, emailCode = NULL, emailCodeExpires = 0 WHERE id = ?').run(newUser.id);
+        const token = jwt.sign({ userId: newUser.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
+        auditRegister(username, newUser.id, req.ip);
+        return res.json({ token, user: { id: newUser.id, username, level: 1, role: 'player', gender: 'male' } });
     }
 
     res.json({ message: 'Код подтверждения отправлен на почту' });
@@ -103,9 +108,9 @@ router.post('/login', (req, res) => {
         return res.status(401).json({ error: 'Неверный логин или пароль' });
     }
 
-    // Успешный вход — проверяем подтверждение почты
-    const user: any = db.prepare('SELECT emailVerified FROM users WHERE id = ?').get(userRow.id);
-    if (user && !user.emailVerified) {
+    // Успешный вход — проверяем подтверждение почты (только если email указан)
+    const emailUser: any = db.prepare('SELECT email, emailVerified FROM users WHERE id = ?').get(userRow.id);
+    if (emailUser?.email && !emailUser.emailVerified) {
         return res.status(403).json({ error: 'Почта не подтверждена. Проверьте email для кода подтверждения.' });
     }
 

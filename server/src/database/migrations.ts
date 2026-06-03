@@ -164,4 +164,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (orderId) REFERENCES orders(id),
     FOREIGN KEY (userId) REFERENCES users(id)
   )`); } catch {}
+
+  // Авто-подтверждение для пользователей без email (старые/OAuth аккаунты)
+  db.prepare('UPDATE users SET emailVerified = 1 WHERE email IS NULL OR email = ?').run('');
 }
