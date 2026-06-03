@@ -77,14 +77,15 @@ export default function BestiaryPage() {
     try { setMobs(await fetchMobs()); } catch (e: any) { setError(e.message); }
   };
 
-  // Floors sorted by min mob level
-  const floors = [...new Set(mobs.map((m: any) => m.location))].sort((a: string, b: string) => {
-    const aMobs = mobs.filter((m: any) => m.location === a);
-    const bMobs = mobs.filter((m: any) => m.location === b);
-    const aMin = aMobs.length ? Math.min(...aMobs.map((m: any) => m.level)) : 999;
-    const bMin = bMobs.length ? Math.min(...bMobs.map((m: any) => m.level)) : 999;
-    return aMin - bMin;
-  });
+  // API returns mobs in level order — just deduplicate, no sort needed
+  const floors: string[] = [];
+  const seen = new Set<string>();
+  for (const m of mobs) {
+    if (!seen.has(m.location)) {
+      seen.add(m.location);
+      floors.push(m.location);
+    }
+  }
 
   const getFloorInfo = (floor: string) => {
     const fm = mobs.filter((m: any) => m.location === floor).sort((a: any, b: any) => a.level - b.level);
@@ -234,8 +235,8 @@ export default function BestiaryPage() {
 
       {phase === 'floors' ? (
         <>
-          <h1 className="text-xl font-bold mb-4">
-            <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />Охота
+          <h1 className="text-xl font-bold mb-4" style={{color:'red'}}>
+            <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА v4
           </h1>
           {cooldownRemaining > 0 && (
             <div className="mb-4 text-sm text-[var(--color-accent-warning)] bg-[#2a2a2a] rounded p-2 text-center">

@@ -77,8 +77,8 @@ export function currentStats(
 export function isSlotCompatible(slotId: string, item: GameItem): boolean {
     if (!item) return false;
     const itemSlot = item.slot;
-    if (itemSlot === 'ring1' || itemSlot === 'ring2') return slotId === 'ring1' || slotId === 'ring2';
+    if (itemSlot === 'ring' || itemSlot === 'ring1' || itemSlot === 'ring2') return slotId === 'ring1' || slotId === 'ring2';
     if (itemSlot === 'weapon1') return slotId === 'weapon1';
-    if (itemSlot === 'weapon2') return slotId === 'weapon2';
+    if (itemSlot === 'shield') return slotId === 'shield';
     return itemSlot === slotId;
 }
