@@ -299,7 +299,6 @@ export default function BestiaryPage() {
 
   // Mob HP bar percentage
   const playerHpPct = playerMaxHp > 0 ? (playerHp / playerMaxHp) * 100 : 100;
-  const mobHpPct = mobMaxHp > 0 ? (mobHp / mobMaxHp) * 100 : 100;
 
   return (
     <div className="px-4 py-4 max-w-4xl mx-auto">

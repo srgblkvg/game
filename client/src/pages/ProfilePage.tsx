@@ -10,7 +10,6 @@ import Button from '../components/ui/Button';
 export default function ProfilePage() {
     const { userId } = useParams<{ userId: string }>();
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 

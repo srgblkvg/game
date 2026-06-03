@@ -149,7 +149,7 @@ export default function TavernPage() {
                             </div>
                             <h3 className="font-bold text-xs mb-1">{drink.name}</h3>
                             <div className="text-[0.65rem] text-[var(--color-text-muted)] mb-2 flex-1">
-                                {Object.entries(drink.bonuses).map(([k, v]) => (
+                                {Object.entries(drink.bonuses as Record<string, number>).map(([k, v]) => (
                                     <span key={k} className="block">{statNames[k] || k}: +{v}</span>
                                 ))}
                                 <span className="block text-[var(--color-text-muted)]">1 час</span>

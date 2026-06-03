@@ -56,7 +56,7 @@ export default function HomePage() {
   const nowSec = Math.floor(Date.now() / 1000);
   const attackCooldownSec = Math.max(0, 300 - (nowSec - (character.lastAttackTime || 0)));
   const canAttack = attackCooldownSec <= 0;
-  const pveCooldownSec = Math.max(0, 300 - (nowSec - (character.lastPveAttackTime || 0)));
+  const pveCooldownSec = Math.max(0, 300 - (nowSec - ((character as any).lastPveAttackTime || 0)));
   const bankCooldownSec = Math.max(0, 1800 - (nowSec - ((character as any).lastBankVisit || 0)));
 
   return (
