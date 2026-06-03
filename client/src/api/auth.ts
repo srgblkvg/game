@@ -26,6 +26,19 @@ export async function verifyEmail(email: string, code: string) {
     return data;
 }
 
+export async function resendCode(email: string) {
+    const res = await fetch(`${BASE_URL}/resend-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        throw new Error(data.error || 'Ошибка отправки');
+    }
+    return data;
+}
+
 export async function login(username: string, password: string) {
     const res = await fetch(`${BASE_URL}/login`, {
         method: 'POST',

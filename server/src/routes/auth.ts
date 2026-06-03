@@ -71,6 +71,26 @@ router.post('/verify-email', (req, res) => {
     res.json({ token, user: { id: user.id, username: user.username, level: 1, role: 'player' } });
 });
 
+// Повторная отправка кода подтверждения
+router.post('/resend-code', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email обязателен' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const user: any = db.prepare('SELECT id, emailVerified FROM users WHERE email = ?').get(email);
+    if (!user) return res.status(400).json({ error: 'Email не найден' });
+    if (user.emailVerified) return res.status(400).json({ error: 'Email уже подтверждён' });
+
+    const code = generateCode();
+    const codeExpires = now + 600;
+    db.prepare('UPDATE users SET emailCode = ?, emailCodeExpires = ? WHERE id = ?').run(code, codeExpires, user.id);
+
+    const sent = await sendVerificationCode(email, code);
+    if (!sent) return res.status(500).json({ error: 'Не удалось отправить код. Попробуйте позже.' });
+
+    res.json({ message: 'Код отправлен повторно' });
+});
+
 router.post('/login', (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
@@ -111,7 +131,7 @@ router.post('/login', (req, res) => {
     // Успешный вход — проверяем подтверждение почты (только если email указан)
     const emailUser: any = db.prepare('SELECT email, emailVerified FROM users WHERE id = ?').get(userRow.id);
     if (emailUser?.email && !emailUser.emailVerified) {
-        return res.status(403).json({ error: 'Почта не подтверждена. Проверьте email для кода подтверждения.' });
+        return res.status(403).json({ error: 'Почта не подтверждена. Проверьте email для кода подтверждения.', email: emailUser.email });
     }
 
     // Сбрасываем счётчик неудачных попыток

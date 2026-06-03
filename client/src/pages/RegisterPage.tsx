@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { register, verifyEmail } from '../api';
+import { register, verifyEmail, resendCode } from '../api';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
@@ -20,6 +20,7 @@ export default function RegisterPage() {
     // Шаг 2: подтверждение кода
     const [step, setStep] = useState<'form' | 'code'>('form');
     const [code, setCode] = useState('');
+    const [resendMsg, setResendMsg] = useState('');
 
     const handleRegister = async () => {
         try {
@@ -29,6 +30,19 @@ export default function RegisterPage() {
             setStep('code');
         } catch (e: any) {
             setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        try {
+            setResendMsg('');
+            setLoading(true);
+            await resendCode(email);
+            setResendMsg('Код отправлен повторно');
+        } catch (e: any) {
+            setResendMsg(e.message);
         } finally {
             setLoading(false);
         }
@@ -73,11 +87,15 @@ export default function RegisterPage() {
                         {loading ? '...' : 'Подтвердить'}
                     </Button>
                     {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
-                    <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
-                        <button onClick={() => setStep('form')} className="text-[var(--color-accent-info)] hover:underline">
+                    {resendMsg && <p className={`text-sm mt-2 ${resendMsg.includes('отправлен') ? 'text-green-400' : 'text-red-500'}`}>{resendMsg}</p>}
+                    <div className="flex gap-2 mt-3">
+                        <button onClick={handleResend} disabled={loading} className="flex-1 text-sm text-[var(--color-accent-info)] hover:underline">
+                            Отправить код повторно
+                        </button>
+                        <button onClick={() => setStep('form')} className="flex-1 text-sm text-[var(--color-text-muted)] hover:underline">
                             ← Назад
                         </button>
-                    </p>
+                    </div>
                 </Card>
             </div>
         );
