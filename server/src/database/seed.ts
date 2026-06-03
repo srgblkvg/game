@@ -14,32 +14,279 @@ export function runSeed(db: InstanceType<typeof Database>) {
     insertRarity.run(6, 'mythic', 'Мифический', '#e74c3c');
   }
 
-  // Начальные предметы
+  // Начальные предметы (189 предметов — по 21 на каждый слот)
   const itemCount = (db.prepare('SELECT COUNT(*) as cnt FROM items').get() as any).cnt;
   if (itemCount === 0) {
-    const initialItems = [
-      { name: 'Серый шлем', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 5, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 } },
-      { name: 'Белый меч', slot: 'weapon1', rarity_id: 1, bonuses: { s: 10, a: 0, d: 0, m: 0 }, extra: { crit: 2, dodge: 0, counter: 0, fullBlock: 0 } },
-      { name: 'Зелёное кольцо', slot: 'ring1', rarity_id: 2, bonuses: { s: 0, a: 15, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 } },
-      { name: 'Синий амулет', slot: 'amulet', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 20 }, extra: { crit: 0, dodge: 5, counter: 0, fullBlock: 0 } },
-      { name: 'Фиолетовые перчатки', slot: 'gloves', rarity_id: 4, bonuses: { s: 15, a: 0, d: 0, m: 0 }, extra: { crit: 5, dodge: 0, counter: 0, fullBlock: 0 } },
-      { name: 'Жёлтый пояс', slot: 'belt', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 10, fullBlock: 0 } },
-      { name: 'Красные ботинки', slot: 'boots', rarity_id: 6, bonuses: { s: 0, a: 30, d: 0, m: 0 }, extra: { crit: 0, dodge: 10, counter: 0, fullBlock: 5 } }
+    const insert = db.prepare(
+      'INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+
+    const allItems: Array<{
+      name: string;
+      slot: string;
+      rarity_id: number;
+      bonuses: { s: number; a: number; d: number; m: number };
+      extra: { crit: number; dodge: number; counter: number; fullBlock: number };
+      cost: number;
+    }> = [
+      // ─── 🪖 Шлемы (Helmets) — 21 предмет ───
+      { name: 'Скорбный капюшон', slot: 'helmet', rarity_id: 0, bonuses: { s: 1, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 10 },
+      { name: 'Гнилостный саллет', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 1, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 8 },
+      { name: 'Могильный череп', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 1, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 12 },
+      { name: 'Кровавая маска', slot: 'helmet', rarity_id: 1, bonuses: { s: 2, a: 0, d: 0, m: 3 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 40 },
+      { name: 'Катакомбный бацинет', slot: 'helmet', rarity_id: 1, bonuses: { s: 0, a: 3, d: 2, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 35 },
+      { name: 'Истлевший капюшон', slot: 'helmet', rarity_id: 1, bonuses: { s: 0, a: 0, d: 3, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 30 },
+      { name: 'Призрачный венец', slot: 'helmet', rarity_id: 2, bonuses: { s: 5, a: 0, d: 0, m: 4 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 120 },
+      { name: 'Проклятый клобук', slot: 'helmet', rarity_id: 2, bonuses: { s: 0, a: 6, d: 4, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 100 },
+      { name: 'Шепчущий шлем', slot: 'helmet', rarity_id: 2, bonuses: { s: 0, a: 0, d: 5, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 110 },
+      { name: 'Плакальщицы бацинет', slot: 'helmet', rarity_id: 3, bonuses: { s: 8, a: 0, d: 6, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 280 },
+      { name: 'Ритуальная маска', slot: 'helmet', rarity_id: 3, bonuses: { s: 0, a: 9, d: 0, m: 7 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 300 },
+      { name: 'Костяная корона', slot: 'helmet', rarity_id: 3, bonuses: { s: 7, a: 0, d: 0, m: 8 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 320 },
+      { name: 'Погребальный венец', slot: 'helmet', rarity_id: 4, bonuses: { s: 12, a: 0, d: 10, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 700 },
+      { name: 'Черепная диадема', slot: 'helmet', rarity_id: 4, bonuses: { s: 0, a: 13, d: 0, m: 11 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 750 },
+      { name: 'Мертвенный наголовник', slot: 'helmet', rarity_id: 4, bonuses: { s: 11, a: 9, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 800 },
+      { name: 'Висельника корона', slot: 'helmet', rarity_id: 5, bonuses: { s: 18, a: 0, d: 15, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2200 },
+      { name: 'Безымянный капюшон', slot: 'helmet', rarity_id: 5, bonuses: { s: 0, a: 19, d: 0, m: 14 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2400 },
+      { name: 'Криптовый шлем', slot: 'helmet', rarity_id: 5, bonuses: { s: 16, a: 14, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2600 },
+      { name: 'Жертвенный венец', slot: 'helmet', rarity_id: 6, bonuses: { s: 25, a: 0, d: 20, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7000 },
+      { name: 'Утопленника маска', slot: 'helmet', rarity_id: 6, bonuses: { s: 0, a: 26, d: 0, m: 22 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7500 },
+      { name: 'Пепельная корона', slot: 'helmet', rarity_id: 6, bonuses: { s: 23, a: 19, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 8000 },
+
+      // ─── 🛡️ Нагрудники (Chest) — 21 предмет ───
+      { name: 'Скорлупный доспех', slot: 'chest', rarity_id: 0, bonuses: { s: 0, a: 0, d: 1, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 10 },
+      { name: 'Выпотрошенная кольчуга', slot: 'chest', rarity_id: 0, bonuses: { s: 0, a: 0, d: 2, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 12 },
+      { name: 'Гробовой панцирь', slot: 'chest', rarity_id: 0, bonuses: { s: 1, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 8 },
+      { name: 'Рёберный нагрудник', slot: 'chest', rarity_id: 1, bonuses: { s: 0, a: 0, d: 3, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 35 },
+      { name: 'Хитиновая кираса', slot: 'chest', rarity_id: 1, bonuses: { s: 0, a: 3, d: 2, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 40 },
+      { name: 'Кандальная бригантина', slot: 'chest', rarity_id: 1, bonuses: { s: 0, a: 0, d: 2, m: 2 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 45 },
+      { name: 'Саркофаговый латник', slot: 'chest', rarity_id: 2, bonuses: { s: 0, a: 0, d: 6, m: 4 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 130 },
+      { name: 'Плащаничное облачение', slot: 'chest', rarity_id: 2, bonuses: { s: 0, a: 5, d: 5, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 120 },
+      { name: 'Эшафотный панцирь', slot: 'chest', rarity_id: 2, bonuses: { s: 6, a: 0, d: 4, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 140 },
+      { name: 'Заупокойная кираса', slot: 'chest', rarity_id: 3, bonuses: { s: 0, a: 0, d: 8, m: 7 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 350 },
+      { name: 'Крематорный нагрудник', slot: 'chest', rarity_id: 3, bonuses: { s: 9, a: 0, d: 6, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 320 },
+      { name: 'Некропольный доспех', slot: 'chest', rarity_id: 3, bonuses: { s: 0, a: 8, d: 7, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 360 },
+      { name: 'Склепный панцирь', slot: 'chest', rarity_id: 4, bonuses: { s: 13, a: 0, d: 11, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 800 },
+      { name: 'Удавленничий латник', slot: 'chest', rarity_id: 4, bonuses: { s: 0, a: 12, d: 10, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 750 },
+      { name: 'Братской могилы экзоскелет', slot: 'chest', rarity_id: 4, bonuses: { s: 11, a: 0, d: 0, m: 12 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 850 },
+      { name: 'Забальзамированная кираса', slot: 'chest', rarity_id: 5, bonuses: { s: 18, a: 0, d: 16, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2500 },
+      { name: 'Исповедальный доспех', slot: 'chest', rarity_id: 5, bonuses: { s: 0, a: 20, d: 15, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2700 },
+      { name: 'Скальпированный панцирь', slot: 'chest', rarity_id: 5, bonuses: { s: 17, a: 0, d: 0, m: 16 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2800 },
+      { name: 'Саркофаговый экзоскелет', slot: 'chest', rarity_id: 6, bonuses: { s: 26, a: 0, d: 22, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7500 },
+      { name: 'Крематорная кираса', slot: 'chest', rarity_id: 6, bonuses: { s: 24, a: 20, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 8000 },
+      { name: 'Эшафотное облачение', slot: 'chest', rarity_id: 6, bonuses: { s: 0, a: 25, d: 21, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7800 },
+
+      // ─── 🧤 Перчатки (Gloves) — 21 предмет ───
+      { name: 'Отсечённые пальчатки', slot: 'gloves', rarity_id: 0, bonuses: { s: 1, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 8 },
+      { name: 'Мумифицированные рукавицы', slot: 'gloves', rarity_id: 0, bonuses: { s: 0, a: 0, d: 1, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 10 },
+      { name: 'Костяшковые захваты', slot: 'gloves', rarity_id: 0, bonuses: { s: 0, a: 1, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7 },
+      { name: 'Жильные перчатки', slot: 'gloves', rarity_id: 1, bonuses: { s: 3, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 30 },
+      { name: 'Фаланговые латы', slot: 'gloves', rarity_id: 1, bonuses: { s: 0, a: 2, d: 2, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 35 },
+      { name: 'Ладонные рукавицы', slot: 'gloves', rarity_id: 1, bonuses: { s: 0, a: 0, d: 3, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 32 },
+      { name: 'Когтистые боевые рукавицы', slot: 'gloves', rarity_id: 2, bonuses: { s: 5, a: 4, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 110 },
+      { name: 'Суставчатые когти', slot: 'gloves', rarity_id: 2, bonuses: { s: 0, a: 6, d: 0, m: 3 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 120 },
+      { name: 'Щупальцевые захваты', slot: 'gloves', rarity_id: 2, bonuses: { s: 4, a: 0, d: 5, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 115 },
+      { name: 'Крючковатые перчатки', slot: 'gloves', rarity_id: 3, bonuses: { s: 8, a: 0, d: 0, m: 6 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 300 },
+      { name: 'Хваткие латы', slot: 'gloves', rarity_id: 3, bonuses: { s: 0, a: 9, d: 6, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 310 },
+      { name: 'Десничные кистени', slot: 'gloves', rarity_id: 3, bonuses: { s: 7, a: 7, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 320 },
+      { name: 'Пальцы мертвеца', slot: 'gloves', rarity_id: 4, bonuses: { s: 13, a: 0, d: 10, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 720 },
+      { name: 'Сведённые рукавицы', slot: 'gloves', rarity_id: 4, bonuses: { s: 0, a: 12, d: 0, m: 11 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 750 },
+      { name: 'Ногтевые сжиматели', slot: 'gloves', rarity_id: 4, bonuses: { s: 10, a: 10, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 700 },
+      { name: 'Фаланговые когти', slot: 'gloves', rarity_id: 5, bonuses: { s: 19, a: 0, d: 14, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2300 },
+      { name: 'Ладонные боевые рукавицы', slot: 'gloves', rarity_id: 5, bonuses: { s: 0, a: 18, d: 0, m: 16 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2400 },
+      { name: 'Костяшковые латы', slot: 'gloves', rarity_id: 5, bonuses: { s: 16, a: 15, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2500 },
+      { name: 'Пальцы мертвеца культяпки', slot: 'gloves', rarity_id: 6, bonuses: { s: 26, a: 20, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7200 },
+      { name: 'Щупальцевые захваты', slot: 'gloves', rarity_id: 6, bonuses: { s: 0, a: 27, d: 0, m: 21 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7500 },
+      { name: 'Хваткие когти', slot: 'gloves', rarity_id: 6, bonuses: { s: 23, a: 0, d: 22, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7800 },
+
+      // ─── 🥾 Ботинки (Boots) — 21 предмет ───
+      { name: 'Стоптанные обмотки', slot: 'boots', rarity_id: 0, bonuses: { s: 0, a: 1, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 9 },
+      { name: 'Могильные башмаки', slot: 'boots', rarity_id: 0, bonuses: { s: 0, a: 0, d: 1, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7 },
+      { name: 'Бродяжьи ступни', slot: 'boots', rarity_id: 0, bonuses: { s: 1, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 8 },
+      { name: 'Костяные сапоги', slot: 'boots', rarity_id: 1, bonuses: { s: 0, a: 3, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 30 },
+      { name: 'Погребённые поножи', slot: 'boots', rarity_id: 1, bonuses: { s: 0, a: 0, d: 3, m: 2 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 35 },
+      { name: 'Шагающие лапы', slot: 'boots', rarity_id: 1, bonuses: { s: 2, a: 2, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 32 },
+      { name: 'Болотные ботфорты', slot: 'boots', rarity_id: 2, bonuses: { s: 0, a: 6, d: 0, m: 4 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 120 },
+      { name: 'Заледенелые котурны', slot: 'boots', rarity_id: 2, bonuses: { s: 5, a: 4, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 110 },
+      { name: 'Теневые сапоги', slot: 'boots', rarity_id: 2, bonuses: { s: 0, a: 5, d: 4, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 115 },
+      { name: 'Окаменелые поножи', slot: 'boots', rarity_id: 3, bonuses: { s: 0, a: 8, d: 6, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 300 },
+      { name: 'Пустотные башмаки', slot: 'boots', rarity_id: 3, bonuses: { s: 7, a: 7, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 320 },
+      { name: 'Бездонные ступни', slot: 'boots', rarity_id: 3, bonuses: { s: 0, a: 9, d: 0, m: 7 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 310 },
+      { name: 'Копытные сапоги', slot: 'boots', rarity_id: 4, bonuses: { s: 12, a: 11, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 750 },
+      { name: 'Трясинные ботфорты', slot: 'boots', rarity_id: 4, bonuses: { s: 0, a: 14, d: 0, m: 10 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 720 },
+      { name: 'Скитальческие лапы', slot: 'boots', rarity_id: 4, bonuses: { s: 11, a: 0, d: 10, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 700 },
+      { name: 'Могильные котурны', slot: 'boots', rarity_id: 5, bonuses: { s: 18, a: 16, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2300 },
+      { name: 'Шагающие поножи', slot: 'boots', rarity_id: 5, bonuses: { s: 0, a: 20, d: 0, m: 15 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2500 },
+      { name: 'Заледенелые ступни', slot: 'boots', rarity_id: 5, bonuses: { s: 17, a: 0, d: 15, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2400 },
+      { name: 'Теневые ботфорты', slot: 'boots', rarity_id: 6, bonuses: { s: 25, a: 22, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7500 },
+      { name: 'Пустотные сапоги', slot: 'boots', rarity_id: 6, bonuses: { s: 0, a: 27, d: 0, m: 21 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7800 },
+      { name: 'Бездонные лапы', slot: 'boots', rarity_id: 6, bonuses: { s: 24, a: 20, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7200 },
+
+      // ─── ⚔️ Оружие (Weapons) — 21 предмет ───
+      { name: 'Стон могильщика', slot: 'weapon1', rarity_id: 0, bonuses: { s: 2, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 12 },
+      { name: 'Гниль утопленника', slot: 'weapon1', rarity_id: 0, bonuses: { s: 1, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 8 },
+      { name: 'Плач червей', slot: 'weapon1', rarity_id: 0, bonuses: { s: 1, a: 1, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 10 },
+      { name: 'Голод палача', slot: 'weapon1', rarity_id: 1, bonuses: { s: 3, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 40 },
+      { name: 'Шёпот душегуба', slot: 'weapon1', rarity_id: 1, bonuses: { s: 3, a: 0, d: 0, m: 2 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 45 },
+      { name: 'Тлен некроманта', slot: 'weapon1', rarity_id: 1, bonuses: { s: 4, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 35 },
+      { name: 'Скорбь инквизитора', slot: 'weapon1', rarity_id: 2, bonuses: { s: 6, a: 0, d: 0, m: 4 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 130 },
+      { name: 'Мор отступника', slot: 'weapon1', rarity_id: 2, bonuses: { s: 5, a: 4, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 120 },
+      { name: 'Жажда гробовщика', slot: 'weapon1', rarity_id: 2, bonuses: { s: 7, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 110 },
+      { name: 'Агония мученика', slot: 'weapon1', rarity_id: 3, bonuses: { s: 10, a: 0, d: 6, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 320 },
+      { name: 'Погибель лжепророка', slot: 'weapon1', rarity_id: 3, bonuses: { s: 9, a: 0, d: 0, m: 7 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 350 },
+      { name: 'Коса жреца', slot: 'weapon1', rarity_id: 3, bonuses: { s: 8, a: 7, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 300 },
+      { name: 'Бездна вивисектора', slot: 'weapon1', rarity_id: 4, bonuses: { s: 14, a: 0, d: 0, m: 11 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 800 },
+      { name: 'Расплата схимника', slot: 'weapon1', rarity_id: 4, bonuses: { s: 13, a: 10, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 750 },
+      { name: 'Забвение костяного короля', slot: 'weapon1', rarity_id: 4, bonuses: { s: 15, a: 0, d: 10, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 850 },
+      { name: 'Проклятие еретика', slot: 'weapon1', rarity_id: 5, bonuses: { s: 20, a: 0, d: 0, m: 16 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2600 },
+      { name: 'Ужас псаря', slot: 'weapon1', rarity_id: 5, bonuses: { s: 19, a: 15, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2400 },
+      { name: 'Казнь мёртвой невесты', slot: 'weapon1', rarity_id: 5, bonuses: { s: 18, a: 0, d: 15, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 2700 },
+      { name: 'Жатва слепой девы', slot: 'weapon1', rarity_id: 6, bonuses: { s: 27, a: 0, d: 0, m: 22 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7800 },
+      { name: 'Наваждение червей', slot: 'weapon1', rarity_id: 6, bonuses: { s: 26, a: 20, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7500 },
+      { name: 'Суд костяного короля', slot: 'weapon1', rarity_id: 6, bonuses: { s: 28, a: 0, d: 21, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: 8000 },
+
+      // ─── 🔰 Щиты (Shields) — 21 предмет ───
+      { name: 'Гробовая преграда', slot: 'shield', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 1 }, cost: 10 },
+      { name: 'Костяная плита', slot: 'shield', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 2 }, cost: 12 },
+      { name: 'Истлевшая защита', slot: 'shield', rarity_id: 0, bonuses: { s: 1, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 1 }, cost: 8 },
+      { name: 'Погребальный барьер', slot: 'shield', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 3 }, cost: 40 },
+      { name: 'Черепная стена', slot: 'shield', rarity_id: 1, bonuses: { s: 2, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 2 }, cost: 35 },
+      { name: 'Скорбный затвор', slot: 'shield', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 2 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 3 }, cost: 45 },
+      { name: 'Надгробный бастион', slot: 'shield', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 4 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 4 }, cost: 120 },
+      { name: 'Ритуальная преграда', slot: 'shield', rarity_id: 2, bonuses: { s: 5, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 5 }, cost: 130 },
+      { name: 'Проклятый оплот', slot: 'shield', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 5 }, cost: 110 },
+      { name: 'Саркофаговая стена', slot: 'shield', rarity_id: 3, bonuses: { s: 8, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 6 }, cost: 320 },
+      { name: 'Мертвецкий затвор', slot: 'shield', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 6 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 7 }, cost: 350 },
+      { name: 'Кровоточащая крепость', slot: 'shield', rarity_id: 3, bonuses: { s: 7, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 7 }, cost: 300 },
+      { name: 'Вдовий бастион', slot: 'shield', rarity_id: 4, bonuses: { s: 12, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 10 }, cost: 750 },
+      { name: 'Заупокойная преграда', slot: 'shield', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 10 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 11 }, cost: 800 },
+      { name: 'Жертвенная стена', slot: 'shield', rarity_id: 4, bonuses: { s: 10, a: 8, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 9 }, cost: 720 },
+      { name: 'Погребальная крепость', slot: 'shield', rarity_id: 5, bonuses: { s: 17, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 15 }, cost: 2500 },
+      { name: 'Истлевший оплот', slot: 'shield', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 14 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 17 }, cost: 2700 },
+      { name: 'Костяной бастион', slot: 'shield', rarity_id: 5, bonuses: { s: 16, a: 13, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 14 }, cost: 2400 },
+      { name: 'Саркофаговая крепость', slot: 'shield', rarity_id: 6, bonuses: { s: 24, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 22 }, cost: 7500 },
+      { name: 'Мёртвая стена', slot: 'shield', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 20 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 24 }, cost: 8000 },
+      { name: 'Проклятый бастион', slot: 'shield', rarity_id: 6, bonuses: { s: 23, a: 18, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 21 }, cost: 7800 },
+
+      // ─── 🧿 Амулеты (Amulets) — 21 предмет ───
+      { name: 'Зуб мёртвых', slot: 'amulet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 1, dodge: 0, counter: 0, fullBlock: 0 }, cost: 10 },
+      { name: 'Осколок гнили', slot: 'amulet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 1, counter: 0, fullBlock: 0 }, cost: 8 },
+      { name: 'Фаланга скорби', slot: 'amulet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 1 }, cost: 12 },
+      { name: 'Глаз падших', slot: 'amulet', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 2, dodge: 0, counter: 0, fullBlock: 0 }, cost: 35 },
+      { name: 'Клык забытых', slot: 'amulet', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 3, counter: 0, fullBlock: 0 }, cost: 40 },
+      { name: 'Медальон бездны', slot: 'amulet', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 2, fullBlock: 0 }, cost: 30 },
+      { name: 'Реликвия неупокоенных', slot: 'amulet', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 4, dodge: 0, counter: 3, fullBlock: 0 }, cost: 120 },
+      { name: 'Сердце тьмы', slot: 'amulet', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 5, counter: 0, fullBlock: 0 }, cost: 110 },
+      { name: 'Фетиш мора', slot: 'amulet', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 5, fullBlock: 0 }, cost: 115 },
+      { name: 'Печать загробья', slot: 'amulet', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 6, dodge: 0, counter: 0, fullBlock: 5 }, cost: 300 },
+      { name: 'Слеза чертога боли', slot: 'amulet', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 8, counter: 0, fullBlock: 0 }, cost: 320 },
+      { name: 'Идол вечного сна', slot: 'amulet', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 7, dodge: 0, counter: 6, fullBlock: 0 }, cost: 350 },
+      { name: 'Узел шёпота', slot: 'amulet', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 10, dodge: 0, counter: 8, fullBlock: 0 }, cost: 750 },
+      { name: 'Талисман лимба', slot: 'amulet', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 12, counter: 0, fullBlock: 0 }, cost: 720 },
+      { name: 'Ладонка пустоты', slot: 'amulet', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 9, dodge: 0, counter: 0, fullBlock: 9 }, cost: 800 },
+      { name: 'Ключ некрополя', slot: 'amulet', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 15, dodge: 0, counter: 12, fullBlock: 0 }, cost: 2500 },
+      { name: 'Сердце безмолвия', slot: 'amulet', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 17, counter: 0, fullBlock: 0 }, cost: 2700 },
+      { name: 'Желчь мёртвых', slot: 'amulet', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 14, dodge: 0, counter: 0, fullBlock: 13 }, cost: 2400 },
+      { name: 'Глаз бездны', slot: 'amulet', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 22, dodge: 0, counter: 18, fullBlock: 0 }, cost: 7800 },
+      { name: 'Печать плача', slot: 'amulet', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 24, counter: 0, fullBlock: 0 }, cost: 7500 },
+      { name: 'Слеза могилы', slot: 'amulet', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 20, dodge: 0, counter: 0, fullBlock: 19 }, cost: 8000 },
+
+      // ─── 💍 Кольца (Rings) — 21 предмет ───
+      { name: 'Виток немых', slot: 'ring1', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 1, counter: 0, fullBlock: 0 }, cost: 9 },
+      { name: 'Петля слепых', slot: 'ring1', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 1, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7 },
+      { name: 'Обруч глухих', slot: 'ring1', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 1 }, cost: 10 },
+      { name: 'Кольцо мёртвых уз', slot: 'ring1', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 2, counter: 0, fullBlock: 0 }, cost: 32 },
+      { name: 'Печатка кровавых клятв', slot: 'ring1', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 2, dodge: 0, counter: 0, fullBlock: 0 }, cost: 35 },
+      { name: 'Спираль тёмных обетов', slot: 'ring1', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 2, fullBlock: 0 }, cost: 30 },
+      { name: 'Хватка сломанных судеб', slot: 'ring1', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 4, dodge: 0, counter: 3, fullBlock: 0 }, cost: 115 },
+      { name: 'Оковы разорванных душ', slot: 'ring1', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 5, counter: 0, fullBlock: 0 }, cost: 110 },
+      { name: 'Узел теневого ковена', slot: 'ring1', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 4, fullBlock: 0 }, cost: 120 },
+      { name: 'Кольцо костяного трона', slot: 'ring1', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 7, dodge: 0, counter: 0, fullBlock: 6 }, cost: 320 },
+      { name: 'Печатка пепельного царства', slot: 'ring1', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 8, counter: 0, fullBlock: 0 }, cost: 350 },
+      { name: 'Виток червового короля', slot: 'ring1', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 6, dodge: 0, counter: 6, fullBlock: 0 }, cost: 300 },
+      { name: 'Хватка багрового пира', slot: 'ring1', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 10, dodge: 8, counter: 0, fullBlock: 0 }, cost: 750 },
+      { name: 'Спираль воронья', slot: 'ring1', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 11, counter: 0, fullBlock: 0 }, cost: 700 },
+      { name: 'Цепь крысиного короля', slot: 'ring1', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 9, dodge: 0, counter: 0, fullBlock: 10 }, cost: 800 },
+      { name: 'Кольцо змеиного гнезда', slot: 'ring1', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 16, dodge: 0, counter: 14, fullBlock: 0 }, cost: 2500 },
+      { name: 'Обруч волчьего часа', slot: 'ring1', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 18, counter: 0, fullBlock: 0 }, cost: 2700 },
+      { name: 'Оковы проклятых', slot: 'ring1', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 15, dodge: 0, counter: 0, fullBlock: 14 }, cost: 2400 },
+      { name: 'Кольцо забвенных', slot: 'ring1', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 22, dodge: 0, counter: 19, fullBlock: 0 }, cost: 7500 },
+      { name: 'Печатка разорванных душ', slot: 'ring1', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 24, counter: 0, fullBlock: 0 }, cost: 7800 },
+      { name: 'Хватка теневого ковена', slot: 'ring1', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 21, dodge: 0, counter: 0, fullBlock: 20 }, cost: 8000 },
+
+      // ─── 🩸 Пояса (Belts) — 21 предмет ───
+      { name: 'Кишечный ремень', slot: 'belt', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 1, fullBlock: 0 }, cost: 8 },
+      { name: 'Кожаная перевязь', slot: 'belt', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 1, counter: 0, fullBlock: 0 }, cost: 10 },
+      { name: 'Жильный кушак', slot: 'belt', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 1, dodge: 0, counter: 0, fullBlock: 0 }, cost: 7 },
+      { name: 'Сухожильный пояс', slot: 'belt', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 2, counter: 0, fullBlock: 0 }, cost: 30 },
+      { name: 'Скальповый ремень', slot: 'belt', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 2, dodge: 0, counter: 0, fullBlock: 0 }, cost: 35 },
+      { name: 'Кандальная портупея', slot: 'belt', rarity_id: 1, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 2 }, cost: 32 },
+      { name: 'Рёберный кушак', slot: 'belt', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 4, dodge: 0, counter: 3, fullBlock: 0 }, cost: 110 },
+      { name: 'Мускульный жгут', slot: 'belt', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 5, counter: 0, fullBlock: 0 }, cost: 120 },
+      { name: 'Позвоночная перевязь', slot: 'belt', rarity_id: 2, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 3, dodge: 0, counter: 4, fullBlock: 0 }, cost: 115 },
+      { name: 'Удавной ремень', slot: 'belt', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 7, dodge: 0, counter: 0, fullBlock: 6 }, cost: 300 },
+      { name: 'Трупный кушак', slot: 'belt', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 8, counter: 0, fullBlock: 0 }, cost: 320 },
+      { name: 'Петлевой пояс', slot: 'belt', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 6, dodge: 6, counter: 0, fullBlock: 0 }, cost: 350 },
+      { name: 'Мертвецкая портупея', slot: 'belt', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 11, dodge: 0, counter: 9, fullBlock: 0 }, cost: 750 },
+      { name: 'Жгутовый ремень', slot: 'belt', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 12, counter: 0, fullBlock: 0 }, cost: 700 },
+      { name: 'Цепная перевязь', slot: 'belt', rarity_id: 4, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 10, dodge: 0, counter: 0, fullBlock: 9 }, cost: 800 },
+      { name: 'Удавной жгут', slot: 'belt', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 16, dodge: 0, counter: 14, fullBlock: 0 }, cost: 2500 },
+      { name: 'Трупная портупея', slot: 'belt', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 18, counter: 0, fullBlock: 0 }, cost: 2700 },
+      { name: 'Позвоночный пояс', slot: 'belt', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 15, dodge: 0, counter: 0, fullBlock: 13 }, cost: 2400 },
+      { name: 'Мертвецкий ремень', slot: 'belt', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 23, dodge: 0, counter: 19, fullBlock: 0 }, cost: 7500 },
+      { name: 'Кандальный кушак', slot: 'belt', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 24, counter: 0, fullBlock: 0 }, cost: 7800 },
+      { name: 'Удавная перевязь', slot: 'belt', rarity_id: 6, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 21, dodge: 0, counter: 0, fullBlock: 20 }, cost: 8000 },
     ];
-    const insert = db.prepare('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image) VALUES (?, ?, ?, ?, ?, ?)');
-    for (const item of initialItems) {
-      insert.run(item.name, item.slot, item.rarity_id, JSON.stringify(item.bonuses), JSON.stringify(item.extra), null);
+
+    for (const item of allItems) {
+      insert.run(
+        item.name,
+        item.slot,
+        item.rarity_id,
+        JSON.stringify(item.bonuses),
+        JSON.stringify(item.extra),
+        null,
+        item.cost
+      );
     }
   }
 
-  // Начальные работы
+  // Начальные работы (20 работ)
   const jobCount = (db.prepare('SELECT COUNT(*) as cnt FROM jobs').get() as any).cnt;
   if (jobCount === 0) {
-    const insertJob = db.prepare('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)');
-    insertJob.run('Помощь жителям', 'Помощь горожанам', 600, 0, 250);
-    insertJob.run('Патруль городских стен', 'Обход стен', 1800, 100, 500);
-    insertJob.run('Служба в карауле', 'Караул у ворот', 3600, 250, 1000);
-    insertJob.run('Дальнее ополчение', 'Поход за границу', 28800, 1000, 8000);
+    const insertJob = db.prepare(
+      'INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)'
+    );
+
+    const jobs: Array<{ name: string; description: string; duration: number; rewardMin: number; rewardMax: number }> = [
+      // 🏰 На территории замка — 10 минут
+      { name: 'Обход стен', description: 'Дозор по крепостной стене. Факел, ветер, шёпот из бойниц.', duration: 600, rewardMin: 2, rewardMax: 5 },
+      { name: 'Чистка склепа', description: 'Вынести истлевшие останки, заменить свечи, отогнать крыс.', duration: 600, rewardMin: 3, rewardMax: 6 },
+      { name: 'Кормление псов', description: 'Псарня у восточной башни. Мясо с костями, не спрашивай чьими.', duration: 600, rewardMin: 2, rewardMax: 5 },
+      { name: 'Заточка оружия', description: 'Точильный круг в оружейной. Клинки для гарнизона, кровь не отмывать.', duration: 600, rewardMin: 3, rewardMax: 7 },
+      { name: 'Растопка печей', description: 'Главный зал, кухня, казармы. Угля хватит, только не смотри в поддувало.', duration: 600, rewardMin: 2, rewardMax: 5 },
+      // 🏰 На территории замка — 30 минут
+      { name: 'Уборка темницы', description: 'Цепи, сырость, стоны из пустых камер. Вынести ведро — и назад.', duration: 1800, rewardMin: 10, rewardMax: 20 },
+      { name: 'Помощь на кухне', description: 'Разделка мяса для гарнизона. Топором. Не принюхивайся.', duration: 1800, rewardMin: 10, rewardMax: 22 },
+      { name: 'Осмотр крипты', description: 'Проверить сохранность саркофагов, доложить о свежих трещинах.', duration: 1800, rewardMin: 12, rewardMax: 25 },
+      { name: 'Полив сада костей', description: 'На внутреннем дворе растут белые цветы. Удобрять только золой.', duration: 1800, rewardMin: 10, rewardMax: 22 },
+      { name: 'Сортировка арсенала', description: 'Пересчитать стрелы, заменить сгнившую тетиву, промаркировать яды.', duration: 1800, rewardMin: 12, rewardMax: 25 },
+      // 💀 За территорией замка — 1 час
+      { name: 'Вылазка в Деревню Пепла', description: 'Сгоревшее поселение к востоку. Найти припасы, не стать пеплом.', duration: 3600, rewardMin: 35, rewardMax: 80 },
+      { name: 'Охота на бродячих мертвецов', description: 'Лес Черепов. Мертвецы не спят. Вернись с трофеями.', duration: 3600, rewardMin: 40, rewardMax: 90 },
+      { name: 'Сбор скверноцвета', description: 'Ядовитые луга. Цветы для алхимика. Надевай перчатки.', duration: 3600, rewardMin: 35, rewardMax: 75 },
+      { name: 'Разведка Старого Тракта', description: 'Заброшенная дорога на север. Карта, отметки, не сворачивай.', duration: 3600, rewardMin: 40, rewardMax: 85 },
+      { name: 'Зачистка Катакомб', description: 'Первый ярус подземелий за стеной. Пауки, плесень, золото.', duration: 3600, rewardMin: 45, rewardMax: 100 },
+      // 💀 За территорией замка — 8 часов
+      { name: 'Экспедиция к Чёрному Монастырю', description: 'Руины на холме. Реликвии, еретики, колокола звонят сами.', duration: 28800, rewardMin: 300, rewardMax: 600 },
+      { name: 'Поход в Гнилую Топь', description: 'Болота к югу. Утопленники, трясина, редкий лут.', duration: 28800, rewardMin: 280, rewardMax: 550 },
+      { name: 'Осада Башни Плакальщиц', description: 'Западная граница. Призраки, крики, сокровища в подвале.', duration: 28800, rewardMin: 320, rewardMax: 650 },
+      { name: 'Рейд на Некрополь Королей', description: 'Древние гробницы. Ловушки, стража, короны мертвецов.', duration: 28800, rewardMin: 350, rewardMax: 700 },
+      { name: 'Контракт в Бездонный Овраг', description: 'Трещина в земле на севере. Там, куда не смотрит свет.', duration: 28800, rewardMin: 330, rewardMax: 680 },
+    ];
+
+    for (const job of jobs) {
+      insertJob.run(job.name, job.description, job.duration, job.rewardMin, job.rewardMax);
+    }
   }
 
   // Начальные названия характеристик
