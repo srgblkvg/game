@@ -53,8 +53,8 @@ export const createItemSchema = z.object({
     dodge: z.number().int().min(0).max(100).optional(),
     counter: z.number().int().min(0).max(100).optional(),
     fullBlock: z.number().int().min(0).max(100).optional(),
-    hpRegen: z.number().int().min(0).max(100).optional(),
   }).optional(),
+  cost: z.number().int().min(0).max(999999).nullable().optional(),
   image: z.string().max(500).nullable().optional(),
 });
 

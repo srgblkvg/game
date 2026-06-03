@@ -17,7 +17,7 @@ router.get('/shop/items', (req: any, res) => {
         ...item,
         bonuses: JSON.parse(item.bonuses || '{}'),
         extra: JSON.parse(item.extra || '{}'),
-        price: 100 * Math.pow(10, item.rarity_id),
+        price: item.cost ?? Math.floor(100 * Math.pow(10, item.rarity_id)),
     }));
 
     res.json(result);
@@ -42,7 +42,7 @@ router.post('/shop/buy', (req: any, res) => {
     `).get(itemId) as any;
     if (!dbItem) return res.status(404).json({ error: 'Item not found' });
 
-    const price = 100 * Math.pow(10, dbItem.rarity_id);
+    const price = dbItem.cost ?? Math.floor(100 * Math.pow(10, dbItem.rarity_id));
     if (user.money < price) return res.status(400).json({ error: 'Недостаточно монет' });
 
     const inventory = JSON.parse(user.inventory || '[]');

@@ -71,4 +71,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // OAuth провайдеры
   try { db.exec('ALTER TABLE users ADD COLUMN oauthProvider TEXT'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN oauthId TEXT'); } catch {}
+
+  // Стоимость предмета
+  try { db.exec('ALTER TABLE items ADD COLUMN cost INTEGER DEFAULT NULL'); } catch {}
 }

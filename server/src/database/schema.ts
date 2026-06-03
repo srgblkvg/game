@@ -116,6 +116,7 @@ export function runSchema(db: InstanceType<typeof Database>) {
       extra TEXT DEFAULT '{}',
       upgradeLevel INTEGER DEFAULT 0,
       image TEXT DEFAULT NULL,
+      cost INTEGER DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (rarity_id) REFERENCES rarities(id)
     )

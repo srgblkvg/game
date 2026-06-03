@@ -19,9 +19,9 @@ router.post('/items', (req: any, res) => {
     const parsed = createItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
-    const { name, slot, rarity_id, bonuses, extra, image } = parsed.data;
-    db.prepare('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null);
+    const { name, slot, rarity_id, bonuses, extra, image, cost } = parsed.data;
+    db.prepare('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, cost ?? null);
     res.json({ success: true });
 });
 
@@ -29,9 +29,9 @@ router.put('/items/:id', (req: any, res) => {
     const parsed = createItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
-    const { name, slot, rarity_id, bonuses, extra, image } = parsed.data;
-    db.prepare('UPDATE items SET name=?, slot=?, rarity_id=?, bonuses=?, extra=?, image=? WHERE id=?')
-        .run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, req.params.id);
+    const { name, slot, rarity_id, bonuses, extra, image, cost } = parsed.data;
+    db.prepare('UPDATE items SET name=?, slot=?, rarity_id=?, bonuses=?, extra=?, image=?, cost=? WHERE id=?')
+        .run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, cost ?? null, req.params.id);
     res.json({ success: true });
 });
 

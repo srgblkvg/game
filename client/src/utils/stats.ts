@@ -2,7 +2,7 @@ import type { Character } from '../contexts/GameContext';
 
 export function calculateStats(char: Character) {
   const sums = { s: 0, a: 0, d: 0, m: 0 };
-  const extra = { crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 };
+  const extra = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
 
   for (const item of Object.values(char.equipment)) {
     if (item.bonuses) {
@@ -26,14 +26,11 @@ export function calculateStats(char: Character) {
   const m = char.baseStats.m + sums.m;
   const hp = s + a + d + m;
 
-  const hpRegen = 1 + (extra.hpRegen || 0);
-
   return {
     s,
     a,
     d,
     m,
     hp,
-    hpRegen,
   };
 }

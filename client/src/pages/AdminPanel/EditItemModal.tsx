@@ -36,7 +36,8 @@ export default function EditItemModal({ item, rarities, onSave, onClose }: EditI
     slot: item.slot || 'helmet',
     rarity_id: item.rarity_id ?? 0,
     bonuses: { s: item.bonuses?.s ?? 0, a: item.bonuses?.a ?? 0, d: item.bonuses?.d ?? 0, m: item.bonuses?.m ?? 0 },
-    extra: { crit: item.extra?.crit ?? 0, dodge: item.extra?.dodge ?? 0, counter: item.extra?.counter ?? 0, fullBlock: item.extra?.fullBlock ?? 0, hpRegen: item.extra?.hpRegen ?? 0 },
+    extra: { crit: item.extra?.crit ?? 0, dodge: item.extra?.dodge ?? 0, counter: item.extra?.counter ?? 0, fullBlock: item.extra?.fullBlock ?? 0 },
+    cost: item.cost ?? '',
     image: item.image || '',
   });
 
@@ -73,9 +74,10 @@ export default function EditItemModal({ item, rarities, onSave, onClose }: EditI
           <label className="text-xs">Уклонение % <input type="number" value={form.extra.dodge} onChange={e => set('extra.dodge', +e.target.value)} className={smallInputClass} /></label>
           <label className="text-xs">Контрудар % <input type="number" value={form.extra.counter} onChange={e => set('extra.counter', +e.target.value)} className={smallInputClass} /></label>
           <label className="text-xs">Полный блок % <input type="number" value={form.extra.fullBlock} onChange={e => set('extra.fullBlock', +e.target.value)} className={smallInputClass} /></label>
-          <label className="text-xs">Реген HP <input type="number" value={form.extra.hpRegen} onChange={e => set('extra.hpRegen', +e.target.value)} className={smallInputClass} /></label>
         </div>
       </details>
+
+      <label className="text-xs mt-2 block">Стоимость (🥇, пусто = авто) <input type="number" value={form.cost} onChange={e => set('cost', e.target.value ? +e.target.value : '')} className={smallInputClass} style={{width:'100%'}} /></label>
 
       <div className="flex gap-4 justify-center mt-4">
         <Button variant="success" size="sm" onClick={() => onSave(form)}>Сохранить</Button>

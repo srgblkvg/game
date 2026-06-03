@@ -18,13 +18,13 @@ export function runSeed(db: InstanceType<typeof Database>) {
   const itemCount = (db.prepare('SELECT COUNT(*) as cnt FROM items').get() as any).cnt;
   if (itemCount === 0) {
     const initialItems = [
-      { name: 'Серый шлем', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 5, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
-      { name: 'Белый меч', slot: 'weapon1', rarity_id: 1, bonuses: { s: 10, a: 0, d: 0, m: 0 }, extra: { crit: 2, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
-      { name: 'Зелёное кольцо', slot: 'ring1', rarity_id: 2, bonuses: { s: 0, a: 15, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
-      { name: 'Синий амулет', slot: 'amulet', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 20 }, extra: { crit: 0, dodge: 5, counter: 0, fullBlock: 0, hpRegen: 0 } },
-      { name: 'Фиолетовые перчатки', slot: 'gloves', rarity_id: 4, bonuses: { s: 15, a: 0, d: 0, m: 0 }, extra: { crit: 5, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 } },
-      { name: 'Жёлтый пояс', slot: 'belt', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 10, fullBlock: 0, hpRegen: 0 } },
-      { name: 'Красные ботинки', slot: 'boots', rarity_id: 6, bonuses: { s: 0, a: 30, d: 0, m: 0 }, extra: { crit: 0, dodge: 10, counter: 0, fullBlock: 5, hpRegen: 2 } }
+      { name: 'Серый шлем', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 5, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 } },
+      { name: 'Белый меч', slot: 'weapon1', rarity_id: 1, bonuses: { s: 10, a: 0, d: 0, m: 0 }, extra: { crit: 2, dodge: 0, counter: 0, fullBlock: 0 } },
+      { name: 'Зелёное кольцо', slot: 'ring1', rarity_id: 2, bonuses: { s: 0, a: 15, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 } },
+      { name: 'Синий амулет', slot: 'amulet', rarity_id: 3, bonuses: { s: 0, a: 0, d: 0, m: 20 }, extra: { crit: 0, dodge: 5, counter: 0, fullBlock: 0 } },
+      { name: 'Фиолетовые перчатки', slot: 'gloves', rarity_id: 4, bonuses: { s: 15, a: 0, d: 0, m: 0 }, extra: { crit: 5, dodge: 0, counter: 0, fullBlock: 0 } },
+      { name: 'Жёлтый пояс', slot: 'belt', rarity_id: 5, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 10, fullBlock: 0 } },
+      { name: 'Красные ботинки', slot: 'boots', rarity_id: 6, bonuses: { s: 0, a: 30, d: 0, m: 0 }, extra: { crit: 0, dodge: 10, counter: 0, fullBlock: 5 } }
     ];
     const insert = db.prepare('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image) VALUES (?, ?, ?, ?, ?, ?)');
     for (const item of initialItems) {
@@ -49,7 +49,7 @@ export function runSeed(db: InstanceType<typeof Database>) {
     const stats = [
       ['s', 'Сила'], ['a', 'Ловкость'], ['d', 'Защита'], ['m', 'Мастерство'],
       ['crit', 'Крит'], ['dodge', 'Уклонение'], ['counter', 'Контрудар'],
-      ['fullBlock', 'Полный блок'], ['block', 'Блок'], ['hpRegen', 'Реген HP'],
+      ['fullBlock', 'Полный блок'], ['block', 'Блок'],
     ];
     for (const [name, nameRu] of stats) insert.run(name, nameRu);
   }

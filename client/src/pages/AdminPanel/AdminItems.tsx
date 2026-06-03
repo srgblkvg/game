@@ -36,7 +36,8 @@ export default function AdminItems() {
     const [newItem, setNewItem] = useState({
         name: '', slot: 'helmet', rarity_id: 0,
         bonuses: { s: 0, a: 0, d: 0, m: 0 },
-        extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 },
+        extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 },
+        cost: '',
         image: '',
     });
 
@@ -58,7 +59,7 @@ export default function AdminItems() {
             await createAdminItem(newItem);
             setMessage('Предмет создан');
             loadItems();
-            setNewItem({ name: '', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0, hpRegen: 0 }, image: '' });
+            setNewItem({ name: '', slot: 'helmet', rarity_id: 0, bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }, cost: '', image: '' });
         } catch (e: any) { setMessage(e.message); }
     };
 
@@ -102,9 +103,9 @@ export default function AdminItems() {
                         <label className="text-xs">Уклонение % <input type="number" value={newItem.extra.dodge} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, dodge: +e.target.value } })} className={smallInputClass} /></label>
                         <label className="text-xs">Контрудар % <input type="number" value={newItem.extra.counter} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, counter: +e.target.value } })} className={smallInputClass} /></label>
                         <label className="text-xs">Полный блок % <input type="number" value={newItem.extra.fullBlock} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, fullBlock: +e.target.value } })} className={smallInputClass} /></label>
-                        <label className="text-xs">Реген HP <input type="number" value={newItem.extra.hpRegen} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, hpRegen: +e.target.value } })} className={smallInputClass} /></label>
                     </div>
                 </details>
+                <label className="text-xs mt-2 block">Стоимость (🥇) <input type="number" value={newItem.cost} onChange={e => setNewItem({ ...newItem, cost: e.target.value })} className={smallInputClass} style={{width:'100%'}} /></label>
                 <Button variant="success" size="sm" className="mt-3" onClick={handleCreateItem}>Создать</Button>
             </Card>
 

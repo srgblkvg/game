@@ -8,7 +8,7 @@ interface GameItem {
   rarity_display?: string;
   rarity_color?: string;
   bonuses: { s: number; a: number; d: number; m: number };
-  extra: { crit: number; dodge: number; counter: number; fullBlock: number; hpRegen: number };
+  extra: { crit: number; dodge: number; counter: number; fullBlock: number };
   upgradeLevel?: number;
 }
 

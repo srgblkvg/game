@@ -9,7 +9,6 @@ export interface GameItem {
         dodge: number;
         counter: number;
         fullBlock: number;
-        hpRegen: number;
     };
     upgradeLevel?: number;
 }
