@@ -93,4 +93,19 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN seasonWins INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN seasonLosses INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN lastEloDecay INTEGER DEFAULT 0'); } catch {}
+
+  // Аукцион
+  try { db.exec(`CREATE TABLE IF NOT EXISTS auction_lots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sellerId INTEGER NOT NULL,
+    itemData TEXT NOT NULL,
+    startPrice INTEGER NOT NULL,
+    buyoutPrice INTEGER,
+    currentBid INTEGER,
+    currentBidderId INTEGER,
+    duration INTEGER NOT NULL DEFAULT 24,
+    endsAt INTEGER NOT NULL,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (sellerId) REFERENCES users(id)
+  )`); } catch {}
 }

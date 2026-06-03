@@ -22,6 +22,7 @@ import oauthRoutes from './routes/oauth';
 import mobsRoutes from './routes/mobs';
 import bankRoutes from './routes/bank';
 import tavernRoutes from './routes/tavern';
+import auctionRoutes from './routes/auction';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -53,4 +54,5 @@ export function setupRoutes(app: Express) {
   app.use('/api', authMiddleware, requirePlayer, mobsRoutes);
   app.use('/api', authMiddleware, requirePlayer, bankRoutes);
   app.use('/api', authMiddleware, requirePlayer, tavernRoutes);
+  app.use('/api', authMiddleware, requirePlayer, auctionRoutes);
 }
