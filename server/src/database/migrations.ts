@@ -87,4 +87,10 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN roomUntil INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN activeDrink TEXT DEFAULT NULL'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN drinkUntil INTEGER DEFAULT 0'); } catch {}
+
+  // ELO рейтинг
+  try { db.exec('ALTER TABLE users ADD COLUMN elo INTEGER DEFAULT 1000'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN seasonWins INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN seasonLosses INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN lastEloDecay INTEGER DEFAULT 0'); } catch {}
 }
