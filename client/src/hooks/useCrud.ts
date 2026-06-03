@@ -16,7 +16,7 @@ interface CrudState<T> {
   loading: boolean;
 }
 
-export function useCrud<T extends { id: number }>({ fetchAll, createItem, updateItem, deleteItem, defaultItem }: CrudOptions<T>) {
+export function useCrud<T>({ fetchAll, createItem, updateItem, deleteItem, defaultItem }: CrudOptions<T>) {
   const [state, setState] = useState<CrudState<T>>({
     items: [],
     editing: null,
@@ -49,7 +49,7 @@ export function useCrud<T extends { id: number }>({ fetchAll, createItem, update
   const update = useCallback(async () => {
     if (!state.editing) return;
     try {
-      await updateItem(state.editing.id, state.editing);
+      await updateItem((state.editing as any).id, state.editing);
       setState(s => ({ ...s, message: 'Обновлено', editing: null }));
       await load();
     } catch (e: any) {

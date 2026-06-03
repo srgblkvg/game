@@ -294,7 +294,7 @@ export default function BestiaryPage() {
 
   const battleActive = battleSteps.length > 0;
   const battleDone = battleActive && currentStep >= battleSteps.length - 1;
-  const pStats = calculateStats(character);
+  // pStats used by CharacterCard via calculateStats called inline
   const visibleSteps = battleSteps.slice(Math.max(0, currentStep - 4), currentStep + 1);
 
   return (
