@@ -42,7 +42,7 @@ export default function SlotBase({
 
   const bgStyle = img
     ? {
-        backgroundImage: `url(/${img})`,
+        backgroundImage: `url(${img})`,
         backgroundSize: 'contain',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
