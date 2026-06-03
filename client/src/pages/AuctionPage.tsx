@@ -14,6 +14,12 @@ import { formatMoney } from '../utils/money';
 // Мин. цены по редкости (копия серверного priceFloor)
 const PRICE_FLOOR: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
 
+// Helper: find item by ID, handling string/number type mismatch
+const findItemById = (inventory: any[] | undefined, id: string): any => {
+    if (!inventory) return undefined;
+    return inventory.find((i: any) => String(i.id) === id);
+};
+
 export default function AuctionPage() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
@@ -50,11 +56,12 @@ export default function AuctionPage() {
         return data;
     };
 
+    // Count user's active lots for slot display
+    const userLotCount = lots.filter((l: any) => l.sellerId === character?.id).length;
+    const maxSlots = 5;
+
     // Auto-calc min price when item or count changes
-    const getSelectedItem = () => {
-        const item = character?.inventory.find((i: any) => i.id === sellItemId);
-        return item;
-    };
+    const getSelectedItem = () => findItemById(character?.inventory, sellItemId);
 
     const getAutoMinPrice = () => {
         const item = getSelectedItem();
@@ -68,14 +75,14 @@ export default function AuctionPage() {
 
     const handleSelectItem = (itemId: string) => {
         setSellItemId(itemId);
-        const item = character?.inventory.find((i: any) => i.id === itemId);
+        const item = findItemById(character?.inventory, itemId);
         if (item) {
             const isMaterial = item.type === 'craft_item' || item.type === 'material';
-            const count = isMaterial ? (item.count || 1) : 1;
+            const maxCount = isMaterial ? (item.count || 1) : 1;
             setSellCount(1);
             const rarity = item.rarity_id ?? 0;
             const floor = PRICE_FLOOR[rarity] || 5;
-            setStartPrice(String(floor * count));
+            setStartPrice(String(floor));
             setBuyoutPrice('');
         }
     };
@@ -92,14 +99,16 @@ export default function AuctionPage() {
     };
 
     const handleSell = async () => {
-        const item = character?.inventory.find((i: any) => i.id === sellItemId);
+        const item = findItemById(character?.inventory, sellItemId);
         if (!item) { setError('Выберите предмет'); return; }
         const isMaterial = item.type === 'craft_item' || item.type === 'material';
         const count = isMaterial ? sellCount : 1;
+        const priceNum = parseInt(startPrice);
+        if (isNaN(priceNum) || priceNum <= 0) { setError('Укажите корректную стартовую цену'); return; }
         try {
             await api('/auction/sell', {
                 itemData: item,
-                startPrice: parseInt(startPrice),
+                startPrice: priceNum,
                 buyoutPrice: buyoutPrice ? parseInt(buyoutPrice) : null,
                 duration,
                 count,
@@ -158,6 +167,13 @@ export default function AuctionPage() {
             {tab === 'sell' && (
                 <Card className="mb-4">
                     <h3 className="font-bold mb-2">Выставить лот</h3>
+
+                    {/* Slot availability */}
+                    <p className={`text-xs mb-2 ${userLotCount >= maxSlots ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>
+                        Доступно слотов: {userLotCount} из {maxSlots}
+                        {userLotCount >= maxSlots && ' (максимум достигнут)'}
+                    </p>
+
                     <select value={sellItemId} onChange={e => handleSelectItem(e.target.value)} className={inputClass}>
                         <option value="">— Выберите предмет —</option>
                         {character?.inventory
@@ -172,7 +188,9 @@ export default function AuctionPage() {
                     {/* Count selector for stackable items */}
                     {isMaterial && maxItemCount > 1 && (
                         <div className="mb-2">
-                            <label className="text-xs text-[var(--color-text-muted)] block mb-1">Количество для продажи</label>
+                            <label className="text-xs text-[var(--color-text-muted)] block mb-1">
+                                Количество для продажи (макс: {maxItemCount})
+                            </label>
                             <div className="flex gap-2 items-center">
                                 <input
                                     type="range"
@@ -182,7 +200,17 @@ export default function AuctionPage() {
                                     onChange={e => handleCountChange(parseInt(e.target.value))}
                                     className="flex-1"
                                 />
-                                <span className="text-sm font-bold w-8 text-right">{sellCount}</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={maxItemCount}
+                                    value={sellCount}
+                                    onChange={e => {
+                                        const v = parseInt(e.target.value);
+                                        if (!isNaN(v)) handleCountChange(Math.max(1, Math.min(maxItemCount, v)));
+                                    }}
+                                    className={inputClass + ' w-16 text-center'}
+                                />
                                 <button
                                     type="button"
                                     className="text-xs px-2 py-1 rounded bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)]"

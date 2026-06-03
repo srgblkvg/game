@@ -60,7 +60,7 @@ router.post('/auction/sell', (req: any, res) => {
 
     // Убираем предмет из инвентаря
     const inventory = JSON.parse(user.inventory || '[]');
-    const idx = inventory.findIndex((i: any) => i.id === itemData.id);
+    const idx = inventory.findIndex((i: any) => String(i.id) === String(itemData.id));
     if (idx === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
     const invItem = inventory[idx];
 
@@ -188,7 +188,7 @@ router.post('/auction/buy-partial', (req: any, res) => {
     // Добавляем покупателю: если у него уже есть такой же craft_item, увеличиваем count
     const singleItem = { ...itemData, count: quantity };
     const existingIdx = inventory.findIndex((i: any) =>
-        i.type === 'craft_item' && i.id === itemData.id
+        (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
     );
     if (existingIdx !== -1) {
         inventory[existingIdx].count = (inventory[existingIdx].count || 0) + quantity;

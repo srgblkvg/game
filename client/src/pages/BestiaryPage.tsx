@@ -16,7 +16,16 @@ const rarityColors: Record<number, string> = {
   0: '#6b6b6b', 1: '#a0a0a0', 2: '#4a9b4a', 3: '#4a7ac0', 4: '#a040c0', 5: '#d4a020', 6: '#e03030',
 };
 
-type Phase = 'floors' | 'battle';
+const PVE_COOLDOWN_SEC = 300; // 5 minutes
+
+type Phase = 'floors' | 'mob_card' | 'battle';
+
+const STAT_LABELS: Record<string, { label: string; icon: string }> = {
+  atk: { label: 'АТК', icon: 'game-icons:biceps' },
+  agi: { label: 'ЛВК', icon: 'game-icons:sprint' },
+  def: { label: 'ЗЩТ', icon: 'game-icons:shield' },
+  mst: { label: 'МСТ', icon: 'game-icons:crossed-swords' },
+};
 
 export default function BestiaryPage() {
   const { user } = useAuth();
@@ -37,9 +46,11 @@ export default function BestiaryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [speed, setSpeed] = useState(1);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
   // Refs to avoid stale closure in timer callbacks
   const timerRef = useRef<number | null>(null);
+  const cooldownTimerRef = useRef<number | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const stepLock = useRef(false);
   const stepsRef = useRef<any[]>([]);
@@ -53,6 +64,46 @@ export default function BestiaryPage() {
   useEffect(() => { if (!user) navigate('/login'); }, [user, navigate]);
   useEffect(() => { loadMobs(); }, []);
 
+  // Compute cooldown from character data
+  useEffect(() => {
+    if (!character) return;
+    updateCooldown();
+  }, [character]);
+
+  const updateCooldown = useCallback(() => {
+    const now = Math.floor(Date.now() / 1000);
+    const lastPve = (character as any)?.lastPveAttackTime || 0;
+    const elapsed = now - lastPve;
+    const remaining = Math.max(0, PVE_COOLDOWN_SEC - elapsed);
+    setCooldownRemaining(remaining);
+
+    // Start countdown timer
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+      cooldownTimerRef.current = null;
+    }
+    if (remaining > 0) {
+      cooldownTimerRef.current = window.setInterval(() => {
+        setCooldownRemaining((prev) => {
+          const next = Math.max(0, prev - 1);
+          if (next <= 0 && cooldownTimerRef.current) {
+            clearInterval(cooldownTimerRef.current);
+            cooldownTimerRef.current = null;
+          }
+          return next;
+        });
+      }, 1000);
+    }
+    return remaining;
+  }, [character]);
+
+  // Cleanup cooldown timer on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    };
+  }, []);
+
   const loadMobs = async () => {
     try {
       setMobs(await fetchMobs());
@@ -61,13 +112,19 @@ export default function BestiaryPage() {
     }
   };
 
-  // Group mobs by location, sorted alphabetically
+  // Group mobs by location, sorted alphabetically; mobs within each floor sorted by level
   const floors = [...new Set(mobs.map((m: any) => m.location))].sort();
 
+  const getFloorMobs = (floor: string) => {
+    return mobs
+      .filter((m: any) => m.location === floor)
+      .sort((a: any, b: any) => a.level - b.level);
+  };
+
   const getFloorInfo = (floor: string) => {
-    const fm = mobs.filter((m: any) => m.location === floor);
-    const minLevel = Math.min(...fm.map((m: any) => m.level));
-    const maxLevel = Math.max(...fm.map((m: any) => m.level));
+    const fm = getFloorMobs(floor);
+    const minLevel = fm.length > 0 ? fm[0].level : 0;
+    const maxLevel = fm.length > 0 ? fm[fm.length - 1].level : 0;
     return { count: fm.length, minLevel, maxLevel };
   };
 
@@ -84,7 +141,6 @@ export default function BestiaryPage() {
       if (!step) continue;
 
       if (step.type === 'attack') {
-        // "Вы атакуете!" → player; anything else → mob
         currentAttacker = step.message.startsWith('Вы') ? 'player' : 'mob';
       } else if (step.type === 'damage' && step.damage) {
         if (currentAttacker === 'player') {
@@ -165,41 +221,60 @@ export default function BestiaryPage() {
     };
   }, []);
 
-  const selectFloor = async (floor: string) => {
+  // Step 1: Select a floor → show random mob card with stats and attack button
+  const selectFloor = (floor: string) => {
     setSelectedFloor(floor);
-    const fm = mobs.filter((m: any) => m.location === floor);
+    const fm = getFloorMobs(floor);
     const mob = fm[Math.floor(Math.random() * fm.length)];
     setSelectedMob(mob);
     setMobMaxHp(mob.hp);
     setMobHp(mob.hp);
-    setPhase('battle');
+    setPhase('mob_card');
+    setError('');
     setBattleSteps([]);
     setBattleResult(null);
     setCurrentStep(-1);
     currentStepRef.current = -1;
-    setError('');
+  };
 
-    if (!character) return;
+  // Step 2: Attack the selected mob
+  const handleAttack = async () => {
+    if (!character || !selectedMob || cooldownRemaining > 0) return;
 
-    // Capture initial HPs before battle
+    setPhase('battle');
+
     const startHp = character.currentHp;
     const pStats = calculateStats(character);
-    initialHpRef.current = { player: startHp, mob: mob.hp };
+    initialHpRef.current = { player: startHp, mob: selectedMob.hp };
     setPlayerMaxHp(pStats.hp);
     setPlayerHp(startHp);
 
     setLoading(true);
     try {
-      const result = await attackMob(mob.id);
+      const result = await attackMob(selectedMob.id);
       setBattleSteps(result.steps || []);
       setBattleResult(result);
 
       // Fetch fresh character after battle
       const fresh = await fetchCharacter();
       setCharacter(fresh);
+      // Update cooldown after attack
+      const now = Math.floor(Date.now() / 1000);
+      setCooldownRemaining(PVE_COOLDOWN_SEC);
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+      cooldownTimerRef.current = window.setInterval(() => {
+        setCooldownRemaining((prev) => {
+          const next = Math.max(0, prev - 1);
+          if (next <= 0 && cooldownTimerRef.current) {
+            clearInterval(cooldownTimerRef.current);
+            cooldownTimerRef.current = null;
+          }
+          return next;
+        });
+      }, 1000);
     } catch (e: any) {
       setError(e.message);
-      setPhase('floors');
+      setPhase('mob_card');
     } finally {
       setLoading(false);
     }
@@ -238,6 +313,23 @@ export default function BestiaryPage() {
     setBattleResult(null);
     setCurrentStep(-1);
     currentStepRef.current = -1;
+    // Refresh cooldown from character
+    updateCooldown();
+  };
+
+  const backToMobCard = () => {
+    stopAuto();
+    setPhase('mob_card');
+    setBattleSteps([]);
+    setBattleResult(null);
+    setCurrentStep(-1);
+    currentStepRef.current = -1;
+  };
+
+  const formatCooldown = (totalSec: number) => {
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${sec.toString().padStart(2, '0')}`;
   };
 
   if (!user || !character) return null;
@@ -255,12 +347,18 @@ export default function BestiaryPage() {
       <BackButton to="/" />
 
       {phase === 'floors' ? (
-        /* ── Floor Selection ── */
+        /* ―― Floor Selection ―― */
         <>
           <h1 className="text-xl font-bold mb-4">
             <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />
             Охота
           </h1>
+          {cooldownRemaining > 0 && (
+            <div className="mb-4 text-sm text-[var(--color-accent-warning)] bg-[#2a2a2a] rounded p-2 text-center">
+              <Icon icon="game-icons:duration" width="16" height="16" className="inline mr-1" />
+              До следующей атаки: {formatCooldown(cooldownRemaining)}
+            </div>
+          )}
           {error && <p className="text-red-500 mb-4">{error}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {floors.map((floor) => {
@@ -290,13 +388,13 @@ export default function BestiaryPage() {
             })}
           </div>
         </>
-      ) : (
-        /* ── Battle Phase ── */
+      ) : phase === 'mob_card' ? (
+        /* ―― Mob Card with Stats and Attack Button ―― */
         <>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold">
               <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />
-              Охота: {selectedFloor}
+              {selectedFloor}
             </h1>
             <Button variant="ghost" size="xs" onClick={backToFloors}>
               <Icon icon="game-icons:castle-ruins" width="14" height="14" className="inline mr-1" />
@@ -309,6 +407,106 @@ export default function BestiaryPage() {
               <p className="text-red-500 mb-3">{error}</p>
               <Button variant="secondary" size="sm" onClick={backToFloors}>
                 Вернуться к выбору этажа
+              </Button>
+            </Card>
+          )}
+
+          {selectedMob && (
+            <>
+              {/* Mob Stats Card — character-card style, no equipment slots */}
+              <div className="flex justify-center mb-6">
+                <div
+                  style={{
+                    background: '#2a2a3e',
+                    border: '2px solid #555',
+                    borderRadius: '12px',
+                    padding: '1.2rem',
+                    width: '220px',
+                    textAlign: 'center',
+                    color: '#eee',
+                  }}
+                >
+                  {/* Mob name + level */}
+                  <h2 className="text-lg font-bold mb-1">{selectedMob.name}</h2>
+                  <p className="text-sm text-[var(--color-text-muted)] mb-3">Ур. {selectedMob.level}</p>
+
+                  {/* HP bar */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span>HP</span>
+                      <span>{selectedMob.hp}</span>
+                    </div>
+                    <div className="w-full bg-[#333] rounded h-3 overflow-hidden">
+                      <div
+                        className="h-full rounded"
+                        style={{
+                          width: '100%',
+                          backgroundColor: 'var(--color-accent-danger)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stats table: ATK, AGI, DEF, MST */}
+                  <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                    <tbody>
+                      {(['atk', 'agi', 'def', 'mst'] as const).map((key) => (
+                        <tr key={key} className="border-b border-[#444]">
+                          <td className="text-left py-1.5 px-2">
+                            <Icon
+                              icon={STAT_LABELS[key].icon}
+                              width="16"
+                              height="16"
+                              className="inline mr-2"
+                            />
+                            {STAT_LABELS[key].label}
+                          </td>
+                          <td className="text-right py-1.5 px-2 font-mono tabular-nums">
+                            {selectedMob[key]}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Attack button with cooldown */}
+                  <div className="mt-5">
+                    {cooldownRemaining > 0 ? (
+                      <Button variant="secondary" size="md" disabled className="w-full">
+                        <Icon icon="game-icons:duration" width="16" height="16" className="inline mr-1" />
+                        {formatCooldown(cooldownRemaining)}
+                      </Button>
+                    ) : (
+                      <Button variant="danger" size="md" onClick={handleAttack} className="w-full">
+                        <Icon icon="game-icons:crossed-swords" width="18" height="18" className="inline mr-1" />
+                        Атаковать
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        /* ―― Battle Phase ―― */
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-bold">
+              <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />
+              Охота: {selectedFloor}
+            </h1>
+            <Button variant="ghost" size="xs" onClick={backToMobCard}>
+              <Icon icon="game-icons:castle-ruins" width="14" height="14" className="inline mr-1" />
+              Назад
+            </Button>
+          </div>
+
+          {error && (
+            <Card className="mb-4 text-center">
+              <p className="text-red-500 mb-3">{error}</p>
+              <Button variant="secondary" size="sm" onClick={backToMobCard}>
+                Вернуться
               </Button>
             </Card>
           )}
@@ -429,10 +627,16 @@ export default function BestiaryPage() {
                   </p>
                 )}
               </div>
-              <Button variant="danger" size="md" onClick={backToFloors}>
-                <Icon icon="game-icons:castle-ruins" width="16" height="16" className="inline mr-1" />
-                Вернуться к выбору этажа
-              </Button>
+              <div className="flex justify-center gap-3">
+                <Button variant="danger" size="md" onClick={backToMobCard}>
+                  <Icon icon="game-icons:crossed-swords" width="16" height="16" className="inline mr-1" />
+                  К мобу
+                </Button>
+                <Button variant="secondary" size="md" onClick={backToFloors}>
+                  <Icon icon="game-icons:castle-ruins" width="16" height="16" className="inline mr-1" />
+                  К этажам
+                </Button>
+              </div>
             </Card>
           )}
         </>

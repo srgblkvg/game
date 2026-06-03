@@ -137,6 +137,7 @@ router.get('/character/me', (req: any, res) => {
         baseStats: { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 },
         currentHp, stats, lastAttackTime: user.lastAttackTime || 0,
         protectionUntil: user.protectionUntil || 0,
+        lastPveAttackTime: user.lastPveAttackTime || 0,
         inventorySlots: user.inventorySlots || 10,
         activeJob: jobData, role: user.role || 'player',
         bank: user.bank || 0,
