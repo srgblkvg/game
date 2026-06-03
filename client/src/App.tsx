@@ -21,6 +21,7 @@ import BankPage from './pages/BankPage';
 import TavernPage from './pages/TavernPage';
 import AuctionPage from './pages/AuctionPage';
 import TournamentPage from './pages/TournamentPage';
+import OrdersPage from './pages/OrdersPage';
 
 function App() {
   const { user } = useAuth();
@@ -53,6 +54,7 @@ function App() {
           <Route path="/tavern" element={user?.role === 'player' ? <TavernPage /> : <Navigate to="/login" />} />
           <Route path="/auction" element={user?.role === 'player' ? <AuctionPage /> : <Navigate to="/login" />} />
           <Route path="/tournament" element={user?.role === 'player' ? <TournamentPage /> : <Navigate to="/login" />} />
+          <Route path="/orders" element={user?.role === 'player' ? <OrdersPage /> : <Navigate to="/login" />} />
           <Route path="/admin/register" element={<AdminRegisterPage />} />
           <Route path="/adminpanel" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} />
           <Route path="*" element={<Navigate to="/" />} />

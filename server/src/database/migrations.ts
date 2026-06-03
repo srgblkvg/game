@@ -141,4 +141,27 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     log TEXT,
     FOREIGN KEY (tournamentId) REFERENCES tournaments(id)
   )`); } catch {}
+
+  // Ордена (гильдии)
+  try { db.exec(`CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    masterId INTEGER NOT NULL,
+    level INTEGER DEFAULT 1,
+    exp INTEGER DEFAULT 0,
+    treasury INTEGER DEFAULT 0,
+    taxRate INTEGER DEFAULT 0,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (masterId) REFERENCES users(id)
+  )`); } catch {}
+
+  try { db.exec(`CREATE TABLE IF NOT EXISTS order_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    orderId INTEGER NOT NULL,
+    userId INTEGER NOT NULL UNIQUE,
+    rank TEXT NOT NULL DEFAULT 'recruit',
+    joinedAt INTEGER NOT NULL,
+    FOREIGN KEY (orderId) REFERENCES orders(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
 }
