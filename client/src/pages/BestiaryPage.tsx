@@ -11,6 +11,7 @@ import Card from '../components/ui/Card';
 import { renderBattleLog } from '../utils/battleLog';
 import { formatMoney } from '../utils/money';
 import { calculateStats } from '../utils/stats';
+import CharacterCard from '../components/CharacterCard';
 
 const rarityColors: Record<number, string> = {
   0: '#6b6b6b', 1: '#a0a0a0', 2: '#4a9b4a', 3: '#4a7ac0', 4: '#a040c0', 5: '#d4a020', 6: '#e03030',
@@ -280,40 +281,40 @@ export default function BestiaryPage() {
 
           {/* Player + Mob cards side by side */}
           <div className="flex justify-center gap-4 sm:gap-8 mb-4">
-            {/* Player card */}
-            <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-3 w-[160px] text-center">
-              <h3 className="font-bold text-xs mb-1">{character.username}</h3>
-              <p className="text-[0.65rem] text-[var(--color-text-muted)]">Ур. {character.level}</p>
-              {battleActive && (
-                <div className="mt-2">
-                  <div className="bg-[#333] rounded h-3 overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded transition-all duration-300" style={{ width: `${Math.max(0, playerHpPct)}%` }} />
-                  </div>
-                  <p className="text-[0.6rem] mt-0.5">{playerHp}/{playerMaxHp}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Mob card */}
+            <CharacterCard
+              char={{
+                username: character.username,
+                level: character.level,
+                equipment: character.equipment,
+                stats: calculateStats(character),
+                currentHp: playerHp,
+                maxHp: playerMaxHp,
+                gender: character.gender || 'male',
+              }}
+              side="left"
+              showHealth={battleActive}
+              showExp={false}
+              readOnly
+              compact
+            />
             {selectedMob && (
-              <div className="bg-[var(--color-bg-secondary)] border-2 border-red-900 rounded-xl p-3 w-[160px] text-center">
-                <h3 className="font-bold text-xs mb-1">{selectedMob.name}</h3>
-                <p className="text-[0.65rem] text-[var(--color-text-muted)]">Ур. {selectedMob.level}</p>
-                <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-1 text-[0.6rem] text-[var(--color-text-muted)]">
-                  <span className="text-left">АТК:</span><span className="text-right">{selectedMob.atk}</span>
-                  <span className="text-left">ЛВК:</span><span className="text-right">{selectedMob.agi}</span>
-                  <span className="text-left">ЗЩТ:</span><span className="text-right">{selectedMob.def}</span>
-                  <span className="text-left">МСТ:</span><span className="text-right">{selectedMob.mst}</span>
-                </div>
-                {battleActive && (
-                  <div className="mt-2">
-                    <div className="bg-[#333] rounded h-3 overflow-hidden">
-                      <div className="h-full bg-red-500 rounded transition-all duration-300" style={{ width: `${Math.max(0, mobHpPct)}%` }} />
-                    </div>
-                    <p className="text-[0.6rem] mt-0.5">{mobHp}/{mobMaxHp}</p>
-                  </div>
-                )}
-              </div>
+              <CharacterCard
+                char={{
+                  username: selectedMob.name,
+                  level: selectedMob.level,
+                  equipment: {},
+                  stats: { s: selectedMob.atk, a: selectedMob.agi, d: selectedMob.def, m: selectedMob.mst, hp: selectedMob.hp,
+                    bonuses: { s: 0, a: 0, d: 0, m: 0 }, extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 } },
+                  currentHp: mobHp,
+                  maxHp: mobMaxHp,
+                  gender: 'male',
+                }}
+                side="right"
+                showHealth={battleActive}
+                showExp={false}
+                readOnly
+                compact
+              />
             )}
           </div>
 
