@@ -628,9 +628,9 @@ export default function BestiaryPage() {
                 )}
               </div>
               <div className="flex justify-center gap-3">
-                <Button variant="danger" size="md" onClick={backToMobCard}>
-                  <Icon icon="game-icons:crossed-swords" width="16" height="16" className="inline mr-1" />
-                  К мобу
+                <Button variant="danger" size="md" onClick={() => navigate('/')}>
+                  <Icon icon="game-icons:castle" width="16" height="16" className="inline mr-1" />
+                  На главную
                 </Button>
                 <Button variant="secondary" size="md" onClick={backToFloors}>
                   <Icon icon="game-icons:castle-ruins" width="16" height="16" className="inline mr-1" />
