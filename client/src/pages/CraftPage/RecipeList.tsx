@@ -13,6 +13,7 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
 
   return (
     <div className="mb-4 max-h-[400px] overflow-y-auto bg-[var(--color-bg-secondary)] rounded-lg p-2">
+      <h3 className="font-bold text-sm mb-2 px-1">Рецепты</h3>
       {Object.keys(groupedRecipes).map(cat => (
         <div key={cat}>
           <div

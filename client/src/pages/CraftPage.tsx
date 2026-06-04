@@ -35,10 +35,7 @@ export default function CraftPage() {
     } | null>(null);
     const { sendItemLink } = useGlobalChat();
 
-    const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-        'Материалы': true,
-        'Улучшения': true,
-    });
+    const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
     // Инструкция по улучшению
     const [showUpgradeInfo, setShowUpgradeInfo] = useState(false);
@@ -62,12 +59,6 @@ export default function CraftPage() {
         fetchRecipes()
             .then(data => {
                 setRecipes(data);
-                const cats: Record<string, boolean> = { 'Материалы': true, 'Улучшения': true };
-                data.forEach((r: any) => {
-                    const cat = r.category?.name || getRecipeCategoryFallback(r);
-                    cats[cat] = true;
-                });
-                setOpenCategories(prev => ({ ...cats, ...prev }));
             })
             .catch(console.error);
     }, []);
