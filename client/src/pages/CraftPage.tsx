@@ -17,6 +17,7 @@ import { isCraftItem } from '../utils/itemUtils';
 import { formatMoney } from '../utils/money';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 import RecipeList from './CraftPage/RecipeList';
 
 export default function CraftPage() {

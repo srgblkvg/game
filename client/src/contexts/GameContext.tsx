@@ -54,6 +54,8 @@ export interface Character {
     reward: number;
     duration: number;
     expReward?: number;
+    rewardMin?: number;
+    rewardMax?: number;
   } | null;
   openPrivateTabs?: number[];
   gender?: string;
