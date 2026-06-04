@@ -56,7 +56,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
             {!img && (resource ? '?' : item.name?.substring(0, 2))}
           </div>
         )}
-        <div className="font-bold text-sm truncate min-w-0" style={{ color }}>
+        <div className="font-bold text-xs leading-tight break-words min-w-0" style={{ color }}>
           {item.name}
           {upgradeLevel > 0 && <span style={{ color: '#f39c12' }}> +{upgradeLevel}</span>}
         </div>
