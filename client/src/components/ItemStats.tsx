@@ -58,7 +58,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
         )}
         <div className="font-bold text-sm" style={{ color }}>
           {item.name}
-          {upgradeLevel > 0 && ` +${upgradeLevel}`}
+          {upgradeLevel > 0 && <span style={{ color: '#f39c12' }}> +{upgradeLevel}</span>}
         </div>
       </div>
 
@@ -102,6 +102,13 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
               <span className="font-bold text-white">{val}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Уровень улучшения */}
+      {!resource && upgradeLevel > 0 && (
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center" style={{ color: '#f39c12' }}>
+          Улучшение +{upgradeLevel} (+{upgradeLevel * 5}% к характеристикам)
         </div>
       )}
 

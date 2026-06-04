@@ -24,7 +24,7 @@ const outsideCards: ActionCard[] = [
 const castleCards: ActionCard[] = [
     { icon: 'game-icons:crossed-swords', title: 'Арена', subtitle: 'PvP бой', cost: 10, path: null, buttonText: 'В бой', bgClass: 'url(/action_arena.webp)', variant: 'danger' },
     { icon: 'game-icons:buy-card', title: 'Магазин', subtitle: 'Снаряжение', cost: 0, path: '/shop', buttonText: 'Перейти', bgClass: 'url(/action_shop.webp)', variant: 'danger' },
-    { icon: 'game-icons:treasure-map', title: 'Банк', subtitle: 'Хранилище', cost: 0, path: '/bank', buttonText: 'Перейти', bgClass: 'url(/action_craft.webp)', variant: 'danger' },
+    { icon: 'game-icons:bank', title: 'Банк', subtitle: 'Хранилище', cost: 0, path: '/bank', buttonText: 'Перейти', bgClass: 'url(/action_craft.webp)', variant: 'danger' },
     { icon: 'game-icons:anvil', title: 'Крафт', subtitle: 'Улучшения', cost: 0, path: '/craft', buttonText: 'Перейти', bgClass: 'url(/action_craft.webp)', variant: 'danger' },
     { icon: 'game-icons:auction', title: 'Аукцион', subtitle: 'Торги', cost: 0, path: '/auction', buttonText: 'Перейти', bgClass: 'url(/action_shop.webp)', variant: 'danger' },
     { icon: 'game-icons:drink-me', title: 'Трактир', subtitle: 'Лечение и квесты', cost: 0, path: '/tavern', buttonText: 'Перейти', bgClass: 'url(/action_adventures.webp)', variant: 'danger' },
@@ -84,7 +84,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             </div>
             <div className="border-t border-[var(--color-border-light)] pt-4">
                 <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
-                    <Icon icon="game-icons:castle" width="14" height="14" />🏰 В замке
+                    <Icon icon="game-icons:castle" width="14" height="14" />🏰 Площадь
                 </h2>
                 <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
             </div>

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useGlobalChat } from '../contexts/ChatContext';
+import { useAcquire } from '../contexts/AcquireContext';
 import { salvageItems } from '../api';
 import { getHeaders } from '../api/helpers';
 import { fetchRecipes, upgradeItem, fetchUpgradeInfo } from '../api/craft';
@@ -27,6 +28,7 @@ export default function CraftPage() {
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const [recipes, setRecipes] = useState<any[]>([]);
     const [crafting, setCrafting] = useState(false);
+    const { showAcquire } = useAcquire();
     const [upgradeInfo, setUpgradeInfo] = useState<{
         item: any; stone: any; nextLevel: number; chance: number; cost: number;
     } | null>(null);
@@ -36,6 +38,9 @@ export default function CraftPage() {
         'Материалы': true,
         'Улучшения': true,
     });
+
+    // Инструкция по улучшению
+    const [showUpgradeInfo, setShowUpgradeInfo] = useState(false);
 
     useEffect(() => {
         const handleGlobalClick = () => setTooltipData(null);
@@ -234,7 +239,9 @@ export default function CraftPage() {
             setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
             setCraftSlots(Array(9).fill(null));
             setMaterialUsage({});
-            alert(data.message || (data.success ? 'Предмет создан!' : 'Неудача!'));
+            if (data.success && activeRecipe.result) {
+                showAcquire(activeRecipe.result, 1, 'Создано');
+            }
         } catch (err: any) {
             alert(err.message);
         } finally { setCrafting(false); }
@@ -249,7 +256,11 @@ export default function CraftPage() {
             setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
             setCraftSlots(Array(9).fill(null));
             setMaterialUsage({});
-            alert(data.message || (data.success ? 'Предмет улучшен!' : 'Неудача!'));
+            if (data.success && upgradeInfo.item) {
+                showAcquire(upgradeInfo.item, 1, `Улучшено до +${upgradeInfo.nextLevel}`);
+            } else if (!data.success) {
+                alert('Предмет разрушен при улучшении!');
+            }
         } catch (err: any) {
             alert(err.message);
         } finally { setCrafting(false); }
@@ -282,6 +293,60 @@ export default function CraftPage() {
         <div className="px-4 py-4 min-h-screen">
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:anvil" width="22" height="22" className="inline mr-2"/>Крафт</h2>
+
+            {/* Инструкция по улучшению */}
+            <Card className="mb-4">
+                <div
+                    className="flex items-center justify-between cursor-pointer select-none"
+                    onClick={() => setShowUpgradeInfo(!showUpgradeInfo)}
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm">{showUpgradeInfo ? '▼' : '▶'}</span>
+                        <h3 className="font-bold text-sm">🔨 Как работает улучшение предметов</h3>
+                    </div>
+                </div>
+                {showUpgradeInfo && (
+                    <div className="mt-3 text-xs text-[var(--color-text-muted)] space-y-2">
+                        <p>Улучшение предметов происходит с помощью <span className="text-[var(--color-accent-purple)]">камней улучшения</span> той же редкости, что и предмет.</p>
+
+                        <div>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">📋 Как улучшить:</h4>
+                            <ol className="list-decimal pl-4 mt-1 space-y-0.5">
+                                <li>Перетащите <b>предмет</b> и <b>камень улучшения</b> той же редкости в слоты крафта</li>
+                                <li>Нажмите <b>«Улучшить»</b></li>
+                                <li>При успехе — предмет получает +1 уровень, а характеристики увеличиваются на <b>+5% за каждый уровень</b></li>
+                                <li>При неудаче — <span className="text-red-500">предмет разрушается</span>, вы получаете материал той же редкости</li>
+                            </ol>
+                        </div>
+
+                        <div>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">📊 Шансы:</h4>
+                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                                <li>+1: 100%</li>
+                                <li>+2: 90%</li>
+                                <li>+3: 80%</li>
+                                <li>+4: 65%</li>
+                                <li>+5: 50%</li>
+                                <li>+6: 35%</li>
+                                <li>+7: 25%</li>
+                                <li>+8: 15%</li>
+                                <li>+9: 8%</li>
+                                <li>+10: 3%</li>
+                            </ul>
+                            <p className="mt-1">Шансы можно изменить в админ-панели (раздел «Крафт» → шансы улучшения).</p>
+                        </div>
+
+                        <div>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">💡 Советы:</h4>
+                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                                <li>Улучшайте только ценные предметы — потеря на высоких уровнях болезненна</li>
+                                <li>Заточка до +7 даёт <span className="text-[var(--color-accent-success)]">+5 рейтинга</span>, до +10 — <span className="text-[var(--color-accent-success)]">+50 рейтинга</span></li>
+                                <li>Характеристики растут на 5% за уровень: предмет +5 имеет +25% к статам</li>
+                            </ul>
+                        </div>
+                    </div>
+                )}
+            </Card>
 
             {/* Список рецептов */}
             <RecipeList

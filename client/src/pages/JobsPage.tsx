@@ -63,6 +63,8 @@ export default function JobsPage() {
           endTime: result.endTime, reward: result.reward,
           duration: result.endTime - Math.floor(Date.now() / 1000),
           expReward: result.expReward || 0,
+          rewardMin: result.rewardMin,
+          rewardMax: result.rewardMax,
         },
       });
       setRemaining(result.endTime - Math.floor(Date.now() / 1000));
@@ -99,7 +101,7 @@ export default function JobsPage() {
         <h2 className="text-xl font-bold mb-3"><Icon icon="game-icons:hourglass" width="18" height="18" className="inline mr-1"/>Выполняется работа</h2>
         <p className="text-lg">{activeJob.name}</p>
         <p className="text-[var(--color-text-secondary)]">Осталось: {formatTime(remaining)}</p>
-        <p className="text-[var(--color-text-accent)]">Награда: {formatMoney(activeJob.reward)}</p>
+        <p className="text-[var(--color-text-accent)]">Награда: {formatMoney((activeJob as any).rewardMin || activeJob.reward)}–{formatMoney((activeJob as any).rewardMax || activeJob.reward)}</p>
         <p className="text-[var(--color-accent-purple)]">Опыт: +{activeJob.expReward || 0}</p>
       </div>
     );

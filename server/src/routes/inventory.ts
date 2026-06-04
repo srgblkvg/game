@@ -57,9 +57,9 @@ router.post('/character/equip', (req: any, res) => {
         }
     }
 
-    if (item.name?.includes('двуручн') && slotId === 'weapon1' && equipment['weapon2']) {
-        inventory.push(equipment['weapon2']);
-        delete equipment['weapon2'];
+    if (item.name?.includes('двуручн') && slotId === 'weapon1' && equipment['shield']) {
+        inventory.push(equipment['shield']);
+        delete equipment['shield'];
     }
 
     if (currentEquipped) {

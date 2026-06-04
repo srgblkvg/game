@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../database';
 import { currentStats } from '../game/stats';
+import { getDrinkBonuses } from '../game/drinks';
 import { getUserById, getBaseStats, enrichEquipment } from '../db/helpers';
 
 const router = Router();
@@ -71,7 +72,8 @@ router.get('/character/me', (req: any, res) => {
     }
 
     const base = getBaseStats(user);
-    const stats = currentStats(base, enrichedEquipment);
+    const drinkBonuses = getDrinkBonuses(user);
+    const stats = currentStats(base, enrichedEquipment, drinkBonuses);
 
     let jobData = null;
     if (user.activeJob) {
@@ -144,6 +146,7 @@ router.get('/character/me', (req: any, res) => {
         lastBankVisit: user.lastBankVisit || 0,
         room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
         drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
+        drinkBonuses,
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,
     });

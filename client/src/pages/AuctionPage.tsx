@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
+import { useAcquire } from '../contexts/AcquireContext';
 import { fetchCharacter } from '../api/character';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
@@ -24,6 +25,7 @@ export default function AuctionPage() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
+    const { showAcquire } = useAcquire();
 
     const [lots, setLots] = useState<any[]>([]);
     const [message, setMessage] = useState('');
@@ -67,10 +69,7 @@ export default function AuctionPage() {
         const item = getSelectedItem();
         if (!item) return 0;
         const rarity = item.rarity_id ?? 0;
-        const floor = PRICE_FLOOR[rarity] || 5;
-        const isMaterial = item.type === 'craft_item' || item.type === 'material';
-        const count = isMaterial ? sellCount : 1;
-        return floor * count;
+        return PRICE_FLOOR[rarity] || 5;
     };
 
     const handleSelectItem = (itemId: string) => {
@@ -90,13 +89,6 @@ export default function AuctionPage() {
 
     const handleCountChange = (count: number) => {
         setSellCount(count);
-        // Recalculate min price
-        const item = getSelectedItem();
-        if (item) {
-            const rarity = item.rarity_id ?? 0;
-            const floor = PRICE_FLOOR[rarity] || 5;
-            setStartPrice(String(floor * count));
-        }
     };
 
     const handleSell = async () => {
@@ -106,6 +98,8 @@ export default function AuctionPage() {
         const count = isMaterial ? sellCount : 1;
         const priceNum = parseInt(startPrice);
         if (isNaN(priceNum) || priceNum <= 0) { setError('Укажите корректную стартовую цену'); return; }
+        const buyoutNum = buyoutPrice ? parseInt(buyoutPrice) : 0;
+        if (buyoutNum > 0 && buyoutNum <= priceNum) { setError('Цена выкупа должна быть выше стартовой'); return; }
         try {
             await api('/auction/sell', {
                 itemData: item,
@@ -114,9 +108,10 @@ export default function AuctionPage() {
                 duration,
                 count,
             });
+            showAcquire(item, count, 'Выставлено на аукцион');
             const fresh = await fetchCharacter();
             setCharacter(fresh);
-            setMessage('Лот выставлен!');
+            setMessage('');
             setSellItemId('');
             setStartPrice('');
             setBuyoutPrice('');
@@ -131,14 +126,22 @@ export default function AuctionPage() {
     };
 
     const handleBuyout = async (lotId: number) => {
-        try { await api('/auction/buyout', { lotId }); setMessage('Куплено!'); load(); const fresh = await fetchCharacter(); setCharacter(fresh); }
+        try {
+            await api('/auction/buyout', { lotId });
+            const lot = lots.find(l => l.id === lotId);
+            if (lot) showAcquire(lot.itemData, lot.itemData.count || 1, 'Выкуплено');
+            setMessage('');
+            load(); const fresh = await fetchCharacter(); setCharacter(fresh);
+        }
         catch (e: any) { setError(e.message); }
     };
 
     const handleBuyPartial = async (lotId: number, quantity: number) => {
         try {
-            const result = await api('/auction/buy-partial', { lotId, quantity });
-            setMessage(`Куплено ${quantity} шт. за ${formatMoney(result.cost)} 🥇`);
+            await api('/auction/buy-partial', { lotId, quantity });
+            const lot = lots.find(l => l.id === lotId);
+            if (lot) showAcquire(lot.itemData, quantity, 'Куплено');
+            setMessage('');
             load();
             const fresh = await fetchCharacter();
             setCharacter(fresh);
@@ -171,8 +174,8 @@ export default function AuctionPage() {
 
                     {/* Slot availability */}
                     <p className={`text-xs mb-2 ${userLotCount >= maxSlots ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>
-                        Доступно слотов: {userLotCount} из {maxSlots}
-                        {userLotCount >= maxSlots && ' (максимум достигнут)'}
+                        Занято слотов: {userLotCount} из {maxSlots}
+                        {userLotCount >= maxSlots && ' (максимум)'}
                     </p>
 
                     <select value={sellItemId} onChange={e => handleSelectItem(e.target.value)} className={inputClass}>
@@ -223,13 +226,28 @@ export default function AuctionPage() {
 
                     <div className="mb-2">
                         <label className="text-xs text-[var(--color-text-muted)] block mb-1">
-                            Стартовая цена (мин: {formatMoney(autoMin)} 🥇)
+                            Стартовая цена за 1 шт (мин: {formatMoney(autoMin)} 🥇)
                         </label>
-                        <input type="number" placeholder="Стартовая цена" value={startPrice}
+                        <input type="number" placeholder="Цена за 1 шт" value={startPrice}
                             onChange={e => setStartPrice(e.target.value)} className={inputClass} min={autoMin} />
+                        {isMaterial && sellCount > 1 && (
+                            <p className="text-xs text-[var(--color-accent-info)] mt-1">
+                                Итого за {sellCount} шт: {formatMoney(parseInt(startPrice || '0') * sellCount)} 🥇
+                            </p>
+                        )}
                     </div>
-                    <input type="number" placeholder="Выкуп (необязательно)" value={buyoutPrice}
-                        onChange={e => setBuyoutPrice(e.target.value)} className={inputClass} />
+                    <div className="mb-2">
+                        <label className="text-xs text-[var(--color-text-muted)] block mb-1">
+                            Цена выкупа за 1 шт (необязательно)
+                        </label>
+                        <input type="number" placeholder="Выкуп за 1 шт" value={buyoutPrice}
+                            onChange={e => setBuyoutPrice(e.target.value)} className={inputClass} />
+                        {isMaterial && sellCount > 1 && buyoutPrice && (
+                            <p className="text-xs text-[var(--color-accent-info)] mt-1">
+                                Итого выкуп за {sellCount} шт: {formatMoney(parseInt(buyoutPrice) * sellCount)} 🥇
+                            </p>
+                        )}
+                    </div>
                     <select value={duration} onChange={e => setDuration(+e.target.value)} className={inputClass}>
                         <option value={6}>6 часов</option>
                         <option value={12}>12 часов</option>
@@ -251,6 +269,8 @@ export default function AuctionPage() {
                 const isStack = stackCount > 1;
                 const totalPrice = lot.currentBid ?? lot.startPrice;
                 const pricePerItem = Math.ceil(totalPrice / stackCount);
+                // Цена за штуку для частичного выкупа — от выкупа (если есть)
+                const buyoutPerItem = lot.buyoutPrice ? Math.ceil(lot.buyoutPrice / stackCount) : pricePerItem;
                 const minBid = lot.currentBid ? Math.floor(lot.currentBid * 1.05) : lot.startPrice;
                 const hoursLeft = Math.max(0, Math.ceil((lot.endsAt - Date.now() / 1000) / 3600));
 
@@ -267,9 +287,15 @@ export default function AuctionPage() {
                                 </p>
                                 <p className="text-xs">
                                     Старт: {formatMoney(lot.startPrice)}
+                                    {isStack && <span className="text-[var(--color-accent-info)]"> ({formatMoney(pricePerItem)} / шт)</span>}
                                     {lot.currentBid && <> • Ставка: {formatMoney(lot.currentBid)}</>}
                                 </p>
-                                {lot.buyoutPrice && <p className="text-xs">Выкуп: {formatMoney(lot.buyoutPrice)}</p>}
+                                {lot.buyoutPrice && (
+                                    <p className="text-xs">
+                                        Выкуп: {formatMoney(lot.buyoutPrice)}
+                                        {isStack && <span className="text-[var(--color-accent-info)]"> ({formatMoney(Math.ceil(lot.buyoutPrice / stackCount))} / шт)</span>}
+                                    </p>
+                                )}
                                 {isStack && (
                                     <p className="text-xs text-[var(--color-accent-info)]">
                                         ≈ {formatMoney(pricePerItem)} 🥇 / шт
@@ -305,7 +331,7 @@ export default function AuctionPage() {
                                 />
                                 <Button variant="secondary" size="xs"
                                     onClick={() => handleBuyPartial(lot.id, partialQty[lot.id] ?? 1)}>
-                                    Купить {partialQty[lot.id] ?? 1} шт ({formatMoney(pricePerItem * (partialQty[lot.id] ?? 1))} 🥇)
+                                    Купить {partialQty[lot.id] ?? 1} шт ({formatMoney(buyoutPerItem * (partialQty[lot.id] ?? 1))} 🥇)
                                 </Button>
                             </div>
                         )}

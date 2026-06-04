@@ -28,8 +28,8 @@ const EQUIPMENT_ICONS: Record<string, string> = {
   'Амулет': 'game-icons:gem-necklace',
   'Кольцо': 'game-icons:ring',
   'Пояс': 'game-icons:belt',
-  'Оружие 1': 'game-icons:broadsword',
-  'Оружие 2': 'game-icons:shield',
+  'Оружие': 'game-icons:broadsword',
+  'Щит': 'game-icons:shield',
 };
 
 export default function SlotBase({

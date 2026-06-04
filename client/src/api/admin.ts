@@ -227,3 +227,57 @@ export async function deleteUpgradeChance(level: number) {
     if (!res.ok) throw new Error('Ошибка удаления шанса улучшения');
     return res.json();
 }
+
+// Смена пароля администратора
+export async function changeAdminPassword(oldPassword: string, newPassword: string) {
+    const res = await fetch(`${BASE_URL}/admin/change-password`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ oldPassword, newPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка смены пароля');
+    return data;
+}
+
+// Бан игрока
+export async function banUser(userId: number, duration: number, unit: 'minutes' | 'hours' | 'days') {
+    const res = await fetch(`${BASE_URL}/admin/ban-user`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ userId, duration, unit }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка бана');
+    return data;
+}
+
+// Разбан игрока
+export async function unbanUser(userId: number) {
+    const res = await fetch(`${BASE_URL}/admin/unban-user`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ userId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка разбана');
+    return data;
+}
+
+// Удаление игрока
+export async function deleteUser(userId: number) {
+    const res = await fetch(`${BASE_URL}/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка удаления');
+    return data;
+}
+
+// IP-адреса игрока
+export async function fetchUserIps(userId: number) {
+    const res = await fetch(`${BASE_URL}/admin/users/${userId}/ips`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Ошибка загрузки IP');
+    return res.json();
+}

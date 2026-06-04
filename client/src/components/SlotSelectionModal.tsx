@@ -32,7 +32,7 @@ export default function SlotSelectionModal({ slotId, onClose, onEquip }: SlotSel
         if (item.type === 'material') return false;
         const cat = slotCategories[slotId];
         if (cat === 'ring') return item.slot === 'ring1' || item.slot === 'ring2';
-        if (cat === 'weapon') return item.slot === 'weapon1' || item.slot === 'weapon2';
+        if (cat === 'weapon') return item.slot === 'weapon1' || item.slot === 'shield';
         return item.slot === slotId;
     });
 

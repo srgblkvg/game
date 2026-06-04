@@ -2,6 +2,8 @@ import { Router } from 'express';
 import db from '../database';
 import { getBaseStats, enrichEquipment } from '../db/helpers';
 import { currentStats } from '../game/stats';
+import { addPveRating } from '../game/rating';
+import { getDrinkBonuses } from '../game/drinks';
 
 const router = Router();
 
@@ -35,7 +37,7 @@ router.post('/mob/attack', (req: any, res) => {
     const userBase = getBaseStats(user);
     const userEquip = JSON.parse(user.equipment || '{}');
     const { enriched: enrichedEquip } = enrichEquipment(db, userEquip);
-    const userStats = currentStats(userBase, enrichedEquip);
+    const userStats = currentStats(userBase, enrichedEquip, getDrinkBonuses(user));
 
     // Статы моба (s=atk, a=agi, d=def, m=mst)
     const mobBase = { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst };
@@ -82,7 +84,7 @@ router.post('/mob/attack', (req: any, res) => {
             }
 
             dmg = Math.max(0, Math.round(dmg));
-            addStep({ type: 'damage', damage: dmg, message: `Урон: ${dmg}` });
+            addStep({ type: 'damage', damage: dmg, target: 'mob', message: `Урон: ${dmg}` });
             hpMob = Math.max(0, hpMob - dmg);
             turn = 'mob';
         } else {
@@ -104,7 +106,7 @@ router.post('/mob/attack', (req: any, res) => {
             }
 
             dmg = Math.max(0, Math.round(dmg));
-            addStep({ type: 'damage', damage: dmg, message: `Урон: ${dmg}` });
+            addStep({ type: 'damage', damage: dmg, target: 'player', message: `Урон: ${dmg}` });
             hpUser = Math.max(0, hpUser - dmg);
             turn = 'player';
         }
@@ -193,11 +195,41 @@ router.post('/mob/attack', (req: any, res) => {
 
     // Потеря золота при поражении: 10% от имеющегося
     let goldLost = 0;
+    let ratingGained = 0;
     if (!playerWon) {
         goldLost = Math.floor(user.money * 0.1);
         if (goldLost > 0) {
             db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(goldLost, userId);
             addStep({ type: 'money', message: `${mob.name} забирает ${goldLost} монет!` });
+        }
+    } else {
+        // PvE-рейтинг
+        const today = new Date().toISOString().slice(0, 10);
+        const isBoss = mob.level >= 100;
+        const ratingAmount = isBoss ? 10 : mob.level > user.level ? 2 : 1;
+
+        const result = addPveRating(db, userId, ratingAmount, user.pveRating || 0, user.elo || 1000, (u: any) => {
+            if (isBoss) return u.lastBossKillDate !== today;
+            const now2 = Math.floor(Date.now() / 1000);
+            return !u.lastPveRatingTime || (now2 - u.lastPveRatingTime) >= 3600;
+        });
+
+        if (result) {
+            ratingGained = result.eloAdded;
+            const updateFields = ['pveRating = pveRating + ?'];
+            const updateValues = [result.eloAdded];
+            if (isBoss) {
+                updateFields.push('lastBossKillDate = ?');
+                updateValues.push(today);
+            } else {
+                updateFields.push('lastPveRatingTime = ?');
+                updateValues.push(now);
+            }
+            if (ratingGained > 0) {
+                addStep({ type: 'rating', message: `Рейтинг +${ratingGained}` });
+            }
+            db.prepare(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`)
+                .run(...updateValues, userId);
         }
     }
 

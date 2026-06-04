@@ -1,6 +1,9 @@
 import type { Character } from '../contexts/GameContext';
 
-export function calculateStats(char: Character) {
+export function calculateStats(
+  char: Character,
+  drinkBonuses?: { s: number; a: number; d: number; m: number }
+) {
   const sums = { s: 0, a: 0, d: 0, m: 0 };
   const extra = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
 
@@ -14,10 +17,18 @@ export function calculateStats(char: Character) {
     }
     if (item.extra) {
       for (const k of Object.keys(item.extra)) {
-        if (k === 'stamReg') continue; // stamina removed
+        if (k === 'stamReg') continue;
         extra[k as keyof typeof extra] += item.extra[k as keyof typeof item.extra] || 0;
       }
     }
+  }
+
+  // Применяем бонусы напитков
+  if (drinkBonuses) {
+    sums.s += drinkBonuses.s || 0;
+    sums.a += drinkBonuses.a || 0;
+    sums.d += drinkBonuses.d || 0;
+    sums.m += drinkBonuses.m || 0;
   }
 
   const s = char.baseStats.s + sums.s;
@@ -26,11 +37,5 @@ export function calculateStats(char: Character) {
   const m = char.baseStats.m + sums.m;
   const hp = s + a + d + m;
 
-  return {
-    s,
-    a,
-    d,
-    m,
-    hp,
-  };
+  return { s, a, d, m, hp };
 }

@@ -46,13 +46,19 @@ body,
   background: var(--color-bg-primary);
   min-height: 100vh;
   margin: 0;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+  font-size: 19px;
   color: var(--color-text-primary);
   box-sizing: border-box;
 }
 
 body {
   padding-bottom: max(env(safe-area-inset-bottom, 42px), 50px);
+}
+
+h1, h2, h3 {
+  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+  font-weight: 700;
 }
 
 /* Кастомная полоса прокрутки */

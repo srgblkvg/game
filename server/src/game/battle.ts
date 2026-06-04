@@ -43,11 +43,11 @@ const stunChance = (atkStats: CharStats, defStats: CharStats) => {
 };
 
 export function runBattle(
-  attacker: { id: number; name: string; base: any; equipment: Record<string, GameItem>; level: number; money: number },
-  defender: { id: number; name: string; base: any; equipment: Record<string, GameItem>; level: number; money: number }
+  attacker: { id: number; name: string; base: any; equipment: Record<string, GameItem>; level: number; money: number; drinkBonuses?: { s: number; a: number; d: number; m: number } },
+  defender: { id: number; name: string; base: any; equipment: Record<string, GameItem>; level: number; money: number; drinkBonuses?: { s: number; a: number; d: number; m: number } }
 ): BattleResult {
-  const statsA = currentStats(attacker.base, attacker.equipment);
-  const statsD = currentStats(defender.base, defender.equipment);
+  const statsA = currentStats(attacker.base, attacker.equipment, attacker.drinkBonuses);
+  const statsD = currentStats(defender.base, defender.equipment, defender.drinkBonuses);
   let hpA = statsA.hp;
   let hpD = statsD.hp;
   let stunnedA = false;

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
+import { useAcquire } from '../contexts/AcquireContext';
 import { fetchShopItems, buyItem } from '../api';
 import { formatMoney } from '../utils/money';
 import { getRarityColor } from '../utils/itemUtils';
@@ -28,6 +29,7 @@ export default function ShopPage() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
+    const { showAcquire } = useAcquire();
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
@@ -42,8 +44,9 @@ export default function ShopPage() {
     const handleBuy = async (itemId: number) => {
         try {
             const res = await buyItem(itemId);
+            const boughtItem = items.find(i => i.id === itemId);
+            if (boughtItem) showAcquire(boughtItem, 1, 'Куплено');
             setCharacter(prev => prev ? { ...prev, money: res.moneyAfter } : prev);
-            setMessage(`Куплено! Баланс: ${formatMoney(res.moneyAfter)}`);
         } catch (e: any) {
             setMessage(e.message);
         }
@@ -55,8 +58,8 @@ export default function ShopPage() {
             return item.slot === filterSlot;
         })
         .sort((a: any, b: any) => {
-            const priceA = a.price || 100 * Math.pow(10, a.rarity_id);
-            const priceB = b.price || 100 * Math.pow(10, b.rarity_id);
+            const priceA = a.price ?? 100 * Math.pow(10, a.rarity_id);
+            const priceB = b.price ?? 100 * Math.pow(10, b.rarity_id);
             return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
         });
 
@@ -87,7 +90,7 @@ export default function ShopPage() {
             ) : (
                 <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
                     {filteredItems.map((item: any) => {
-                        const price = 100 * Math.pow(10, item.rarity_id);
+                        const price = item.price;
                         const canAfford = character.money >= price;
                         const color = getRarityColor(item);
 
@@ -102,30 +105,11 @@ export default function ShopPage() {
                                 }}
                             >
                                 <div className="flex-1">
-                                    {/* Изображение предмета */}
-                                    {item.image && (
-                                        <div className="flex justify-center mb-2">
-                                            <img
-                                                src={item.image}
-                                                alt={item.name}
-                                                className="object-contain rounded"
-                                                style={{
-                                                    width: 64,
-                                                    height: 64,
-                                                    border: `2px solid ${color}`,
-                                                    background: '#1a1a2e',
-                                                }}
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-                                    <ItemStats item={item} imageSize={36} showImage={false} />
+                                    <ItemStats item={item} imageSize={40} />
                                 </div>
 
                                 <div className="mt-2">
-                                    <div className="text-center text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)] mb-1">
+                                    <div className="text-center text-[0.7rem] sm:text-xs text-[var(--color-text-secondary)] mb-1">
                                         Цена: {formatMoney(price)}
                                     </div>
                                     <Button

@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
+import { useAcquire } from '../contexts/AcquireContext';
 import { fetchCharacter } from '../api/character';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
@@ -23,6 +24,7 @@ export default function TavernPage() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
+    const { showAcquire } = useAcquire();
 
     const [tavern, setTavern] = useState<any>(null);
     const [message, setMessage] = useState('');
@@ -52,17 +54,32 @@ export default function TavernPage() {
     };
 
     const handleHeal = async (full: boolean) => {
-        try { await api('/tavern/heal', { full }); setMessage(full ? 'Полное исцеление!' : 'Частичное исцеление!'); load(); }
+        try {
+            await api('/tavern/heal', { full });
+            showAcquire({ name: full ? 'Полное исцеление' : 'Частичное исцеление', rarity_id: 2 }, 1, 'Вылечено');
+            setMessage('');
+            load();
+        }
         catch (e: any) { setError(e.message); }
     };
 
     const handleRent = async (roomType: string, hours: number) => {
-        try { await api('/tavern/room', { roomType, hours }); setMessage('Комната арендована!'); load(); }
+        try {
+            const data = await api('/tavern/room', { roomType, hours });
+            showAcquire({ name: data.room.name, rarity_id: 3 }, 1, `Аренда на ${hours}ч`);
+            setMessage('');
+            load();
+        }
         catch (e: any) { setError(e.message); }
     };
 
     const handleDrink = async (drinkType: string) => {
-        try { await api('/tavern/drink', { drinkType }); setMessage('Напиток выпит!'); load(); }
+        try {
+            const data = await api('/tavern/drink', { drinkType });
+            showAcquire({ name: data.drink.name, rarity_id: 3 }, 1, 'Выпито');
+            setMessage('');
+            load();
+        }
         catch (e: any) { setError(e.message); }
     };
 
@@ -141,27 +158,32 @@ export default function TavernPage() {
             )}
 
             {tab === 'drink' && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {tavern.drinks.map((drink: any) => (
-                        <Card key={drink.key} className="flex flex-col">
-                            <div className="w-full h-20 bg-[var(--color-bg-input)] rounded mb-2 flex items-center justify-center text-[var(--color-text-muted)] text-2xl">
-                                <Icon icon="game-icons:potion-ball" width="32" height="32" />
-                            </div>
-                            <h3 className="font-bold text-xs mb-1">{drink.name}</h3>
-                            <div className="text-[0.65rem] text-[var(--color-text-muted)] mb-2 flex-1">
-                                {Object.entries(drink.bonuses as Record<string, number>).map(([k, v]) => (
-                                    <span key={k} className="block">{statNames[k] || k}: +{v}</span>
-                                ))}
-                                <span className="block text-[var(--color-text-muted)]">1 час</span>
-                            </div>
-                            <div className="mt-auto">
-                                <Button variant="danger" size="xs" fullWidth onClick={() => handleDrink(drink.key)}>
-                                    {formatMoney(drink.cost)}
-                                </Button>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
+                <>
+                    <p className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-2 mb-3">
+                        ⚠️ Можно находиться под действием только одного напитка. Новый напиток заменит предыдущий.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {tavern.drinks.map((drink: any) => (
+                            <Card key={drink.key} className="flex flex-col">
+                                <div className="w-full h-20 bg-[var(--color-bg-input)] rounded mb-2 flex items-center justify-center text-[var(--color-text-muted)] text-2xl">
+                                    <Icon icon="game-icons:potion-ball" width="32" height="32" />
+                                </div>
+                                <h3 className="font-bold text-xs mb-1">{drink.name}</h3>
+                                <div className="text-[0.65rem] text-[var(--color-text-muted)] mb-2 flex-1">
+                                    {Object.entries(drink.bonuses as Record<string, number>).map(([k, v]) => (
+                                        <span key={k} className="block">{statNames[k] || k}: +{v}</span>
+                                    ))}
+                                    <span className="block text-[var(--color-text-muted)]">1 час</span>
+                                </div>
+                                <div className="mt-auto">
+                                    <Button variant="danger" size="xs" fullWidth onClick={() => handleDrink(drink.key)}>
+                                        {formatMoney(drink.cost)}
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </>
             )}
         </div>
     );

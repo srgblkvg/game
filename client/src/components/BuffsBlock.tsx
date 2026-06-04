@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Card from './ui/Card';
 
 interface BuffsBlockProps {
     room?: { type: string; until: number } | null;
@@ -15,9 +16,17 @@ function formatTime(seconds: number) {
 const roomNames: Record<string, string> = { closet: 'Чулан', bed: 'Койка', chamber: 'Покой' };
 const roomRates: Record<string, number> = { closet: 3, bed: 10, chamber: 50 };
 
+const drinkNames: Record<string, string> = {
+    rage_small: 'Настойка ярости', rage_med: 'Крепкая настойка ярости', rage_big: 'Эликсир берсерка',
+    shadow_small: 'Настойка теней', shadow_med: 'Крепкая настойка теней', shadow_big: 'Эликсир призрака',
+    stone_small: 'Настойка камня', stone_med: 'Крепкая настойка камня', stone_big: 'Эликсир бастиона',
+    eye_small: 'Настойка ока', eye_med: 'Крепкая настойка ока', eye_big: 'Эликсир пророка',
+    grog_small: 'Грог Моры', grog_med: 'Крепкий грог', dragon_blood: 'Кровь дракона',
+};
+
 export default function BuffsBlock({ room, drink }: BuffsBlockProps) {
     const [now, setNow] = useState(Math.floor(Date.now() / 1000));
-    const [open, setOpen] = useState(false);
+    const [collapsed, setCollapsed] = useState(true);
 
     useEffect(() => {
         const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
@@ -26,38 +35,51 @@ export default function BuffsBlock({ room, drink }: BuffsBlockProps) {
 
     const hasRoom = room && room.until > now;
     const hasDrink = drink && drink.until > now;
-    if (!hasRoom && !hasDrink) return null;
+    const activeCount = [hasRoom, hasDrink].filter(Boolean).length;
 
     return (
-        <div className="w-full mt-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-xl overflow-hidden">
+        <Card className="mt-4 w-full">
             <div
-                onClick={() => setOpen(!open)}
-                className="w-full p-2 flex items-center justify-between cursor-pointer select-none"
+                className="flex items-center justify-between cursor-pointer select-none"
+                onClick={() => setCollapsed(!collapsed)}
             >
                 <div className="flex items-center gap-2">
-                    <span className="text-sm">{open ? '▼' : '▶'}</span>
-                    <span className="text-xs font-bold text-[var(--color-text-accent)]">Усиления</span>
+                    <span className="text-sm">{collapsed ? '▶' : '▼'}</span>
+                    <h3 className="font-bold text-sm">Усиления</h3>
                 </div>
                 <span className="text-xs text-[var(--color-text-muted)]">
-                    {[hasRoom, hasDrink].filter(Boolean).length} акт.
+                    {activeCount > 0 ? `${activeCount} акт.` : 'Нет'}
                 </span>
             </div>
-            {open && (
-                <div className="px-3 pb-2 space-y-1 text-xs">
-                    {hasRoom && (
-                        <div className="flex justify-between text-[var(--color-accent-success)]">
-                            <span>Комната: {roomNames[room.type] || room.type} (×{roomRates[room.type] || '?'})</span>
-                            <span>{formatTime(room.until - now)}</span>
-                        </div>
-                    )}
-                    {hasDrink && (
-                        <div className="flex justify-between text-[var(--color-accent-purple)]">
-                            <span>Напиток активен</span>
-                            <span>{formatTime(drink.until - now)}</span>
+
+            {!collapsed && (
+                <div className="mt-2">
+                    {!hasRoom && !hasDrink ? (
+                        <p className="text-xs text-[var(--color-text-muted)] py-1">
+                            Нет активных усилений
+                        </p>
+                    ) : (
+                        <div className="space-y-1">
+                            {hasRoom && (
+                                <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
+                                    <span className="text-[var(--color-accent-success)]">
+                                        Комната: {roomNames[room!.type] || room!.type} (×{roomRates[room!.type] || '?'})
+                                    </span>
+                                    <span className="text-[var(--color-text-muted)]">{formatTime(room!.until - now)}</span>
+                                </div>
+                            )}
+                            {hasDrink && (
+                                <div className="flex justify-between text-xs py-1">
+                                    <span className="text-[var(--color-accent-purple)]">
+                                        Напиток: {drinkNames[drink!.type] || drink!.type}
+                                    </span>
+                                    <span className="text-[var(--color-text-muted)]">{formatTime(drink!.until - now)}</span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
             )}
-        </div>
+        </Card>
     );
 }

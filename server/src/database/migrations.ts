@@ -168,6 +168,80 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // Авто-подтверждение для пользователей без email (старые/OAuth аккаунты)
   db.prepare('UPDATE users SET emailVerified = 1 WHERE email IS NULL OR email = ?').run('');
 
+  // Бан игроков админом
+  try { db.exec('ALTER TABLE users ADD COLUMN bannedUntil INTEGER DEFAULT 0'); } catch {}
+
+  // Время последнего входа
+  try { db.exec('ALTER TABLE users ADD COLUMN lastLoginAt DATETIME'); } catch {}
+
+  // Переименование weapon2 → shield в equipment игроков
+  const allUsersEquip = db.prepare('SELECT id, equipment FROM users').all() as any[];
+  for (const u of allUsersEquip) {
+    let equip = JSON.parse(u.equipment || '{}');
+    if (equip['weapon2']) {
+      equip['shield'] = equip['weapon2'];
+      delete equip['weapon2'];
+      db.prepare('UPDATE users SET equipment = ? WHERE id = ?').run(JSON.stringify(equip), u.id);
+    }
+  }
+
+  // Переименование slot='weapon2' → 'shield' в таблице предметов
+  db.prepare("UPDATE items SET slot = 'shield' WHERE slot = 'weapon2'").run();
+
+  // --- Рейтинговая система ---
+
+  // Отслеживание для декай и PvE-рейтинга
+  try { db.exec('ALTER TABLE users ADD COLUMN lastPvpTime INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN lastPveRatingTime INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN lastBossKillDate TEXT DEFAULT NULL'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN pveRating INTEGER DEFAULT 0'); } catch {}
+
+  // Таблица сезонов
+  try { db.exec(`CREATE TABLE IF NOT EXISTS seasons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    startDate TEXT NOT NULL,
+    endDate TEXT NOT NULL,
+    status TEXT DEFAULT 'active'
+  )`); } catch {}
+
+  // Hall of Fame
+  try { db.exec(`CREATE TABLE IF NOT EXISTS hall_of_fame (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    seasonId INTEGER NOT NULL,
+    userId INTEGER NOT NULL,
+    rank INTEGER NOT NULL,
+    elo INTEGER NOT NULL,
+    title TEXT,
+    reward TEXT,
+    FOREIGN KEY (seasonId) REFERENCES seasons(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
+
+  // Создать первый сезон, если нет активного
+  const activeSeason = db.prepare("SELECT id FROM seasons WHERE status = 'active' LIMIT 1").get() as any;
+  if (!activeSeason) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    const seasonName = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+    db.prepare('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)').run(seasonName, startOfMonth, endOfMonth);
+  }
+
+  // Лог IP-адресов при входе
+  try { db.exec(`CREATE TABLE IF NOT EXISTS login_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    ip TEXT NOT NULL,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
+
+  // Индекс для быстрого поиска IP по пользователю
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(userId, createdAt DESC)'); } catch {}
+
   // Переименование материалов из старых названий в новые (из ideas)
   const materialRenames: Record<string, string> = {
     'Серый материал': 'Пыль забвения',

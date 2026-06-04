@@ -3,6 +3,8 @@ import db from '../database';
 import { currentStats } from '../game/stats';
 import { getBaseStats } from '../db/helpers';
 import { runBattle } from '../game/battle';
+import { calcElo } from '../game/rating';
+import { getDrinkBonuses } from '../game/drinks';
 import { battleSchema } from '../validation';
 
 const router = Router();
@@ -45,6 +47,7 @@ router.post('/battle', (req: any, res) => {
         equipment: JSON.parse(attacker.equipment || '{}'),
         level: attacker.level,
         money: attacker.money,
+        drinkBonuses: getDrinkBonuses(attacker),
     };
     const defenderData = {
         id: defender.id,
@@ -53,6 +56,7 @@ router.post('/battle', (req: any, res) => {
         equipment: JSON.parse(defender.equipment || '{}'),
         level: defender.level,
         money: defender.money,
+        drinkBonuses: getDrinkBonuses(defender),
     };
 
     const result = runBattle(attackerData, defenderData);
@@ -69,16 +73,9 @@ router.post('/battle', (req: any, res) => {
     }
 
     // --- Расчёт ELO ---
-    const attackerElo = attacker.elo || 1000;
-    const defenderElo = defender.elo || 1000;
-    const kFactor = attacker.level <= 10 ? 40 : attacker.level <= 25 ? 30 : attacker.level <= 50 ? 20 : 15;
-
-    const expectedA = 1 / (1 + Math.pow(10, (defenderElo - attackerElo) / 400));
-    const expectedD = 1 - expectedA;
-
     const attackerWon = result.winnerId === attacker.id;
-    const newAttackerElo = Math.round(attackerElo + kFactor * ((attackerWon ? 1 : 0) - expectedA));
-    const newDefenderElo = Math.round(defenderElo + kFactor * ((attackerWon ? 0 : 1) - expectedD));
+    const newAttackerElo = calcElo(attacker.elo || 1000, defender.elo || 1000, attackerWon, attacker.level);
+    const newDefenderElo = calcElo(defender.elo || 1000, attacker.elo || 1000, !attackerWon, defender.level);
 
     // --- Обновление атакующего ---
     let newExp = attacker.exp + (result.winnerId === attacker.id ? result.expGained : 0);
@@ -90,8 +87,8 @@ router.post('/battle', (req: any, res) => {
         else break;
     }
 
-    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+? WHERE id=?`)
-        .run(newLevel, newExp, result.winnerId === attacker.id ? result.moneyGained : 0, result.winnerId === attacker.id ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, attacker.id);
+    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=? WHERE id=?`)
+        .run(newLevel, newExp, result.winnerId === attacker.id ? result.moneyGained : 0, result.winnerId === attacker.id ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now, attacker.id);
 
     // --- Обновление защитника ---
     const defExp = defender.exp + (result.winnerId === defender.id ? result.expGained : 0);
@@ -104,8 +101,8 @@ router.post('/battle', (req: any, res) => {
         else break;
     }
 
-    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+? WHERE id=?`)
-        .run(defLevel, defExpRemain, result.winnerId === defender.id ? result.moneyGained : 0, result.winnerId === defender.id ? 1 : 0, result.defenderHpAfter, now + 3600, now, defLevelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, defender.id);
+    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=? WHERE id=?`)
+        .run(defLevel, defExpRemain, result.winnerId === defender.id ? result.moneyGained : 0, result.winnerId === defender.id ? 1 : 0, result.defenderHpAfter, now + 3600, now, defLevelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now, defender.id);
 
     db.prepare(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -133,7 +130,7 @@ router.post('/battle', (req: any, res) => {
         },
         moneyAfter: updatedAttacker.money,
         moneyStolen,
-        eloChange: newAttackerElo - attackerElo,
+        eloChange: newAttackerElo - (attacker.elo || 1000),
     });
 });
 

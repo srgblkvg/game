@@ -30,7 +30,8 @@ export interface CharStats {
 
 export function currentStats(
     base: { s: number; a: number; d: number; m: number },
-    equipment: Record<string, GameItem>
+    equipment: Record<string, GameItem>,
+    drinkBonuses?: { s: number; a: number; d: number; m: number }
 ): CharStats {
     const sums: Record<string, number> = { s: 0, a: 0, d: 0, m: 0 };
     const extra: Record<string, number> = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
@@ -50,6 +51,14 @@ export function currentStats(
                 extra[key] = (extra[key] || 0) + (item.extra[key] || 0);
             }
         }
+    }
+
+    // Применяем бонусы напитков
+    if (drinkBonuses) {
+        sums.s += drinkBonuses.s || 0;
+        sums.a += drinkBonuses.a || 0;
+        sums.d += drinkBonuses.d || 0;
+        sums.m += drinkBonuses.m || 0;
     }
 
     const st = {

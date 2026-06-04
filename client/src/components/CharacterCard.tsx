@@ -14,6 +14,7 @@ interface CharacterCardProps {
   showHealth?: boolean;
   showExp?: boolean;
   showRegenHint?: boolean;
+  regenRate?: number;
   readOnly?: boolean;
   onEquip?: (slotId: string, itemId?: string) => void;
   availableItems?: any[];
@@ -25,7 +26,7 @@ interface CharacterCardProps {
 
 export default function CharacterCard({
   char, side = 'left', showHealth = true,
-  showExp = true, showRegenHint = true, readOnly = false,
+  showExp = true, showRegenHint = true, regenRate = 1, readOnly = false,
   onEquip, availableItems, selectedItemId, highlightedSlots,
   compact = false, isMob = false,
 }: CharacterCardProps) {
@@ -113,7 +114,7 @@ export default function CharacterCard({
     return availableItems.filter((item: any) => {
       if (item.type === 'material' || item.type === 'craft_item') return false;
       if (cat === 'ring') return item.slot === 'ring1' || item.slot === 'ring2';
-      if (cat === 'weapon') return item.slot === 'weapon1' || item.slot === 'weapon2';
+      if (cat === 'weapon') return item.slot === 'weapon1' || item.slot === 'shield';
       return item.slot === selectedSlot;
     });
   };
@@ -180,7 +181,7 @@ export default function CharacterCard({
 
       {/* Здоровье */}
       {showHealth && char.currentHp !== undefined && (
-        <HealthBar currentHp={char.currentHp} maxHp={hp} compact={compact} showRegenHint={showRegenHint} />
+        <HealthBar currentHp={char.currentHp} maxHp={hp} compact={compact} showRegenHint={showRegenHint} regenRate={regenRate} />
       )}
 
       {/* Тултип */}

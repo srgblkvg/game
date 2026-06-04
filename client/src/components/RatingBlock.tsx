@@ -31,7 +31,7 @@ export default function RatingBlock() {
                 className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1"
                 onClick={() => navigate('/rating')}
             >
-                {trophy} Рейтинг Скорби
+                {trophy} Рейтинг
             </h3>
             <ul className="list-none p-0 m-0">
                 {players.map((p, i) => (

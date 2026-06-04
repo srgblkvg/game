@@ -13,7 +13,18 @@ interface LeftSidebarProps {
 
 export default function LeftSidebar({ character, onEquip, selectedItemId, highlightedSlots }: LeftSidebarProps) {
   if (!character) return null;
-  const stats = calculateStats(character);
+  const drinkBonuses = (character as any).drinkBonuses;
+  const stats = calculateStats(character, drinkBonuses);
+
+  // Реген из комнаты
+  const room = (character as any).room;
+  const now = Math.floor(Date.now() / 1000);
+  let regenRate = 1;
+  if (room && room.until > now) {
+    if (room.type === 'closet') regenRate = 3;
+    else if (room.type === 'bed') regenRate = 10;
+    else if (room.type === 'chamber') regenRate = 50;
+  }
 
   return (
     <div className="w-full sm:w-auto flex flex-col items-center sm:items-start">
@@ -31,6 +42,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         side="left"
         showHealth
         showExp
+        regenRate={regenRate}
         readOnly={false}
         onEquip={onEquip}
         availableItems={character.inventory}

@@ -5,6 +5,7 @@ import { fetchMobs, attackMob } from '../api/mobs';
 import { fetchCharacter } from '../api/character';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
+import { useAcquire } from '../contexts/AcquireContext';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -23,6 +24,7 @@ export default function BestiaryPage() {
   const { user } = useAuth();
   const { character, setCharacter } = useGame();
   const navigate = useNavigate();
+  const { showAcquire } = useAcquire();
 
   const [phase, setPhase] = useState<'floors' | 'battle'>('floors');
   const [mobs, setMobs] = useState<any[]>([]);
@@ -97,7 +99,15 @@ export default function BestiaryPage() {
 
   const getFloorInfo = (floor: string) => {
     const fm = mobs.filter((m: any) => m.location === floor).sort((a: any, b: any) => a.level - b.level);
-    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0 };
+    const goldMin = fm.reduce((min, m) => Math.min(min, m.gold_min), Infinity);
+    const goldMax = fm.reduce((max, m) => Math.max(max, m.gold_max), 0);
+    const avgXp = fm.length > 0 ? Math.round(fm.reduce((s, m) => s + (m.xp || 0), 0) / fm.length) : 0;
+    // Есть ли шанс лута
+    const hasLoot = fm.some((m: any) =>
+      m.loot_junk > 0 || m.loot_common > 0 || m.loot_uncommon > 0 ||
+      m.loot_rare > 0 || m.loot_epic > 0 || m.loot_legendary > 0 || m.loot_mythic > 0
+    );
+    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, hasLoot };
   };
 
   // --- Animation helpers (same as useBattleLogic) ---
@@ -184,7 +194,7 @@ export default function BestiaryPage() {
 
     // Apply damage
     if (step.type === 'damage' && step.damage) {
-      if (step.target === 'attacker') {
+      if (step.target === 'player') {
         setPlayerHp(prev => Math.max(0, prev - step.damage));
         showDamageNumber('left', step.damage);
       } else {
@@ -226,7 +236,7 @@ export default function BestiaryPage() {
     if (!character || cooldownRemaining > 0) return;
     setPhase('battle');
     const startHp = character.currentHp;
-    const pStats = calculateStats(character);
+    const pStats = calculateStats(character, (character as any).drinkBonuses);
     initialHpRef.current = { player: startHp, mob: mob.hp };
     setPlayerMaxHp(pStats.hp);
     setPlayerHp(startHp);
@@ -235,6 +245,9 @@ export default function BestiaryPage() {
       const result = await attackMob(mob.id);
       setBattleSteps(result.steps || []);
       setBattleResult(result);
+      if (result.materialDropped) {
+        showAcquire(result.materialDropped, 1, 'Добыто');
+      }
       const fresh = await fetchCharacter();
       setCharacter(fresh);
       setCooldownRemaining(PVE_COOLDOWN_SEC);
@@ -304,7 +317,7 @@ export default function BestiaryPage() {
       {phase === 'floors' ? (
         <>
           <h1 className="text-xl font-bold mb-4" style={{color:'red'}}>
-            <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА v4
+            <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
           </h1>
           {cooldownRemaining > 0 && (
             <div className="mb-4 text-sm text-[var(--color-accent-warning)] bg-[#2a2a2a] rounded p-2 text-center">
@@ -326,6 +339,9 @@ export default function BestiaryPage() {
                   <div className="text-xs text-[var(--color-text-muted)] space-y-1">
                     <p>Монстров: {info.count}</p>
                     <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
+                    <p>🥇 {info.goldMin}–{info.goldMax}</p>
+                    <p>⭐ ~{info.avgXp} XP</p>
+                    {info.hasLoot && <p className="text-[var(--color-accent-purple)]">📦 Лут</p>}
                   </div>
                   {disabled && (
                     <div className="mt-2">
@@ -353,7 +369,7 @@ export default function BestiaryPage() {
                 username: character.username,
                 level: character.level,
                 equipment: character.equipment,
-                stats: calculateStats(character),
+                stats: calculateStats(character, (character as any).drinkBonuses),
                 currentHp: playerHp,
                 maxHp: playerMaxHp,
                 gender: character.gender || 'male',
@@ -361,6 +377,7 @@ export default function BestiaryPage() {
               side="left"
               showHealth={battleActive}
               showExp={false}
+              showRegenHint={false}
               readOnly
               compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : true}
             />
@@ -378,6 +395,7 @@ export default function BestiaryPage() {
                 side="right"
                 showHealth={battleActive}
                 showExp={false}
+                showRegenHint={false}
                 readOnly
                 compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : true}
                 isMob

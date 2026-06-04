@@ -3,18 +3,19 @@ interface HealthBarProps {
   maxHp: number;
   compact?: boolean | 'mobile' | 'verySmall';
   showRegenHint?: boolean;
+  regenRate?: number;
 }
 
-export default function HealthBar({ currentHp, maxHp, compact, showRegenHint }: HealthBarProps) {
+export default function HealthBar({ currentHp, maxHp, compact, showRegenHint, regenRate = 1 }: HealthBarProps) {
   const isMobile = compact === 'mobile' || compact === 'verySmall';
   const isVerySmall = compact === 'verySmall';
   const pct = Math.min(100, Math.max(0, (currentHp / maxHp) * 100));
 
   const formatRegenTime = () => {
     const missing = maxHp - currentHp;
-    const totalSec = missing * 10;
+    const totalSec = (missing / regenRate) * 10;
     const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
+    const sec = Math.round(totalSec % 60);
     if (min > 0) return `${min} мин ${sec} сек`;
     return `${sec} сек`;
   };
@@ -29,7 +30,7 @@ export default function HealthBar({ currentHp, maxHp, compact, showRegenHint }: 
       </div>
       {showRegenHint && currentHp < maxHp && (
         <div style={{ fontSize: isVerySmall ? '0.55rem' : isMobile ? '0.6rem' : '0.7rem', color: '#888', marginTop: '2px' }}>
-          +1 HP / 10 сек &mdash; полное через {formatRegenTime()}
+          +{regenRate} HP / 10 сек &mdash; полное через {formatRegenTime()}
         </div>
       )}
     </div>

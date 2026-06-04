@@ -71,8 +71,11 @@ export default function RegisterPage() {
             <div className="max-w-md mx-auto mt-8 px-4">
                 <Card padding="lg">
                     <h1 className="text-xl font-bold mb-2">Подтверждение почты</h1>
-                    <p className="text-sm text-[var(--color-text-muted)] mb-4">
+                    <p className="text-sm text-[var(--color-text-muted)] mb-2">
                         Код отправлен на <span className="text-[var(--color-text-primary)]">{email}</span>
+                    </p>
+                    <p className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-2 mb-3">
+                        ⚠ Письмо может попасть в спам. Если не пришло — проверьте папку «Спам».
                     </p>
                     <input
                         type="text"

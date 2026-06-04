@@ -82,7 +82,7 @@ export default function BankPage() {
     return (
         <div className="max-w-md mx-auto px-4 py-4">
             <BackButton to="/" />
-            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:treasure-map" width="22" height="22" className="inline mr-2" />Сундук Мертвеца</h1>
+            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
             <p className="text-xs text-[var(--color-text-muted)] mb-4 italic">
                 «Что положено в сундук — то не достанется грабителю. Что в кармане — то ветер.»
             </p>
@@ -94,7 +94,7 @@ export default function BankPage() {
                         <p className="text-lg font-bold">{formatMoney(pocket)} 🥇</p>
                     </div>
                     <div>
-                        <p className="text-xs text-[var(--color-text-muted)]">В сундуке</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">В банке</p>
                         <p className="text-lg font-bold">{formatMoney(bank)} 🥇</p>
                     </div>
                 </div>
@@ -132,7 +132,7 @@ export default function BankPage() {
                 <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
                     <li>• Вклад: комиссия 2%, снятие: бесплатно</li>
                     <li>• Один визит в 30 минут (все операции сразу)</li>
-                    <li>• Золото в сундуке защищено от PvP-грабежа</li>
+                    <li>• Золото в банке защищено от PvP-грабежа</li>
                     <li>• Проценты не начисляются</li>
                 </ul>
             </Card>

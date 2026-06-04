@@ -87,8 +87,11 @@ export default function LoginPage() {
 
                 {showVerification ? (
                     <>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                        <p className="text-sm text-[var(--color-text-muted)] mb-2">
                             Введите код подтверждения, отправленный на почту
+                        </p>
+                        <p className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-2 mb-3">
+                            ⚠ Письмо может попасть в спам. Если не пришло — проверьте папку «Спам».
                         </p>
                         <input
                             type="text"

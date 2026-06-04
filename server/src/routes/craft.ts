@@ -69,14 +69,14 @@ router.post('/craft/execute', (req: any, res) => {
   `).all(recipe.id) as any[];
 
     let inventory: any[] = JSON.parse(user.inventory || '[]');
-    const ingredientMap = new Map<number, number>();
+    const ingredientMap = new Map<string, number>();
     for (const ing of ingredients) {
-        ingredientMap.set(Number(ing.id), ing.quantity);
+        ingredientMap.set(String(ing.id), ing.quantity);
     }
 
     // Проверка ресурсов до списания
     for (const [itemId, needed] of ingredientMap) {
-        const existing = inventory.find((i: any) => isCraftItem(i) && Number(i.id) === itemId);
+        const existing = inventory.find((i: any) => isCraftItem(i) && String(i.id) === String(itemId));
         if (!existing || existing.count < needed) {
             return res.status(400).json({ error: `Недостаточно ресурса (требуется ${needed})` });
         }
@@ -98,12 +98,12 @@ router.post('/craft/execute', (req: any, res) => {
 
     // Списание ресурсов
     let newInventory = inventory.map((item: any) => {
-        if (isCraftItem(item) && ingredientMap.has(Number(item.id))) {
-            const needed = ingredientMap.get(Number(item.id))!;
+        if (isCraftItem(item) && ingredientMap.has(String(item.id))) {
+            const needed = ingredientMap.get(String(item.id))!;
             if (item.count > needed) {
                 return { ...item, count: item.count - needed };
             } else {
-                ingredientMap.delete(Number(item.id));
+                ingredientMap.delete(String(item.id));
                 return null;
             }
         }
@@ -143,7 +143,7 @@ router.post('/craft/execute', (req: any, res) => {
         WHERE c.id = ?
       `).get(recipe.result_id) as any;
             if (!resultCraftItem) return res.status(500).json({ error: 'Результирующий ресурс не найден' });
-            const existing = newInventory.find((i: any) => isCraftItem(i) && Number(i.id) === recipe.result_id);
+            const existing = newInventory.find((i: any) => isCraftItem(i) && String(i.id) === String(recipe.result_id));
             if (existing) {
                 existing.count += 1;
             } else {
@@ -245,6 +245,17 @@ router.post('/craft/upgrade', (req: any, res) => {
             return res.status(500).json({ error: 'Внутренняя ошибка: предмет не найден после списания камня' });
         }
         newInventory[itemIdx] = { ...newInventory[itemIdx], upgradeLevel: targetLevel };
+
+        // Рейтинг за заточку (+7 = +5 ELO, +10 = +50 ELO)
+        let ratingBonus = 0;
+        if (targetLevel === 7) ratingBonus = 5;
+        else if (targetLevel === 10) ratingBonus = 50;
+        if (ratingBonus > 0) {
+            const newElo = Math.max(100, (user.elo || 1000) + ratingBonus);
+            db.prepare('UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ? WHERE id = ?')
+                .run(newMoney, JSON.stringify(newInventory), newElo, ratingBonus, userId);
+            return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, eloAdded: ratingBonus, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` });
+        }
 
         db.prepare('UPDATE users SET inventory = ?, money = ? WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });

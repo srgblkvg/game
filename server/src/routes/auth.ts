@@ -7,6 +7,7 @@ import { registerSchema, loginSchema, verifyEmailSchema } from '../validation';
 import { JWT_SECRET } from '../env';
 import { auditRegister, auditLoginSuccess, auditLoginFailure, auditAccountLocked } from '../audit';
 import { sendVerificationCode } from '../email';
+import { applyDecay, checkSeasonReset } from '../game/rating';
 
 const router = Router();
 
@@ -40,12 +41,10 @@ router.post('/register', async (req, res) => {
 
     const sent = await sendVerificationCode(email, code);
     if (!sent) {
-        // В dev-режиме без SMTP — авто-подтверждение
-        const newUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
-        db.prepare('UPDATE users SET emailVerified = 1, emailCode = NULL, emailCodeExpires = 0 WHERE id = ?').run(newUser.id);
-        const token = jwt.sign({ userId: newUser.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
-        auditRegister(username, newUser.id, req.ip);
-        return res.json({ token, user: { id: newUser.id, username, level: 1, role: 'player', gender: 'male' } });
+        // Письмо не ушло — пользователь создан, но потребует подтверждения при входе
+        // Удаляем код (нельзя подтвердить без письма) — пусть запросит повторно через resend-code
+        db.prepare('UPDATE users SET emailCode = NULL, emailCodeExpires = 0 WHERE email = ?').run(email);
+        return res.status(500).json({ error: 'Не удалось отправить письмо с кодом. Попробуйте позже или запросите код повторно на странице входа.' });
     }
 
     res.json({ message: 'Код подтверждения отправлен на почту' });
@@ -64,7 +63,7 @@ router.post('/verify-email', (req, res) => {
     if (user.emailCode !== code) return res.status(400).json({ error: 'Неверный код' });
     if (user.emailCodeExpires < now) return res.status(400).json({ error: 'Код истёк. Запросите новый.' });
 
-    db.prepare('UPDATE users SET emailVerified = 1, emailCode = NULL, emailCodeExpires = 0 WHERE id = ?').run(user.id);
+    db.prepare('UPDATE users SET emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, lastLoginAt = ? WHERE id = ?').run(now, user.id);
 
     const token = jwt.sign({ userId: user.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
     auditRegister(user.username, user.id, req.ip);
@@ -100,11 +99,24 @@ router.post('/login', (req, res) => {
     const now = Math.floor(Date.now() / 1000);
 
     // Ищем пользователя по email или username
-    const userRow: any = db.prepare('SELECT id, passwordHash, failedLogins, lockedUntil FROM users WHERE username = ? OR email = ?').get(login, login);
+    const userRow: any = db.prepare('SELECT id, passwordHash, failedLogins, lockedUntil, bannedUntil FROM users WHERE username = ? OR email = ?').get(login, login);
     if (userRow && userRow.lockedUntil > now) {
       const mins = Math.ceil((userRow.lockedUntil - now) / 60);
       auditAccountLocked(login, req.ip);
       return res.status(423).json({ error: `Аккаунт заблокирован. Попробуйте через ${mins} мин.` });
+    }
+
+    // Проверка бана от админа
+    if (userRow && userRow.bannedUntil > now) {
+      const remaining = userRow.bannedUntil - now;
+      const days = Math.floor(remaining / 86400);
+      const hours = Math.floor((remaining % 86400) / 3600);
+      const mins = Math.floor((remaining % 3600) / 60);
+      const parts = [];
+      if (days > 0) parts.push(`${days} дн.`);
+      if (hours > 0) parts.push(`${hours} ч.`);
+      if (mins > 0) parts.push(`${mins} мин.`);
+      return res.status(423).json({ error: `Вы забанены. Осталось: ${parts.join(' ')}` });
     }
 
     // Сначала ищем среди администраторов
@@ -135,8 +147,20 @@ router.post('/login', (req, res) => {
     }
 
     // Сбрасываем счётчик неудачных попыток
-    db.prepare('UPDATE users SET failedLogins = 0, lockedUntil = 0 WHERE id = ?').run(userRow.id);
+    db.prepare('UPDATE users SET failedLogins = 0, lockedUntil = 0, lastLoginAt = ? WHERE id = ?').run(now, userRow.id);
     auditLoginSuccess(login, userRow.id, req.ip);
+
+    // Декай рейтинга и проверка сезона
+    const ratingUser: any = db.prepare('SELECT elo, lastPvpTime FROM users WHERE id = ?').get(userRow.id);
+    if (ratingUser) {
+        applyDecay(db, userRow.id, ratingUser.lastPvpTime || 0, ratingUser.elo || 1000);
+    }
+    checkSeasonReset(db);
+
+    // Логируем IP
+    if (req.ip) {
+        db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(userRow.id, req.ip);
+    }
 
     const token = jwt.sign({ userId: userRow.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
     const fullUser: any = db.prepare('SELECT gender FROM users WHERE id = ?').get(userRow.id);

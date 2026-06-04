@@ -32,7 +32,7 @@ router.post('/jobs/start', (req: any, res) => {
     const activeJob = JSON.stringify({ jobId, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward });
     db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, userId);
 
-    res.json({ success: true, endTime, reward, jobName: job.name, expReward });
+    res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax });
 });
 
 router.get('/jobs/history', (req: any, res) => {

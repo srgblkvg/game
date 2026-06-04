@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import db from '../database';
 import { createItemSchema, addMoneySchema, resetTimersSchema } from '../validation';
 
@@ -42,8 +43,67 @@ router.delete('/items/:id', (req: any, res) => {
 
 // ---------- Игроки ----------
 router.get('/users', (req: any, res) => {
-    const users = db.prepare('SELECT id, username, level, money, totalBattles, wins, lastAttackTime, protectionUntil, activeJob, inventorySlots FROM users ORDER BY id').all();
+    const users = db.prepare(`
+        SELECT id, username, level, money, totalBattles, wins,
+               lastAttackTime, protectionUntil, activeJob, inventorySlots,
+               email, emailVerified, oauthProvider, createdAt, bannedUntil, lastLoginAt
+        FROM users ORDER BY lastLoginAt DESC NULLS LAST
+    `).all();
     res.json(users);
+});
+
+// Бан игрока
+router.post('/ban-user', (req: any, res) => {
+    const { userId, duration, unit } = req.body;
+    if (!userId || !duration) return res.status(400).json({ error: 'Требуются userId и duration' });
+
+    const multipliers: Record<string, number> = { minutes: 60, hours: 3600, days: 86400 };
+    const multiplier = multipliers[unit] || 3600;
+    const seconds = duration * multiplier;
+    const bannedUntil = Math.floor(Date.now() / 1000) + seconds;
+
+    const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'Игрок не найден' });
+
+    db.prepare('UPDATE users SET bannedUntil = ? WHERE id = ?').run(bannedUntil, userId);
+    res.json({ success: true, bannedUntil, message: `${user.username} забанен на ${duration} ${unit}` });
+});
+
+// Разбан игрока
+router.post('/unban-user', (req: any, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'Требуется userId' });
+
+    db.prepare('UPDATE users SET bannedUntil = 0 WHERE id = ?').run(userId);
+    res.json({ success: true, message: 'Игрок разбанен' });
+});
+
+// Удаление игрока
+router.delete('/users/:id', (req: any, res) => {
+    const userId = parseInt(req.params.id);
+    const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'Игрок не найден' });
+
+    // Каскадное удаление
+    db.prepare('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?').run(userId, userId);
+    db.prepare('DELETE FROM job_history WHERE userId = ?').run(userId);
+    db.prepare('DELETE FROM chat_messages WHERE senderId = ?').run(userId);
+    db.prepare('DELETE FROM login_logs WHERE userId = ?').run(userId);
+    db.prepare('DELETE FROM auction_lots WHERE sellerId = ?').run(userId);
+    db.prepare('DELETE FROM tournament_participants WHERE userId = ?').run(userId);
+    db.prepare('DELETE FROM order_members WHERE userId = ?').run(userId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+
+    res.json({ success: true, message: `Игрок ${user.username} (ID ${userId}) удалён` });
+});
+
+// IP-адреса игрока
+router.get('/users/:id/ips', (req: any, res) => {
+    const userId = parseInt(req.params.id);
+    const ips = db.prepare(
+        'SELECT ip, MAX(createdAt) as lastSeen, COUNT(*) as count FROM login_logs WHERE userId = ? GROUP BY ip ORDER BY lastSeen DESC'
+    ).all(userId);
+    res.json(ips);
 });
 
 router.post('/add-money', (req: any, res) => {
@@ -76,6 +136,24 @@ router.post('/reset-timers', (req: any, res) => {
 router.get('/rarities', (req: any, res) => {
     const rarities = db.prepare('SELECT * FROM rarities ORDER BY id').all();
     res.json(rarities);
+});
+
+// Смена пароля администратора
+router.post('/change-password', (req: any, res) => {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) return res.status(400).json({ error: 'Требуются старый и новый пароль' });
+    if (newPassword.length < 8) return res.status(400).json({ error: 'Новый пароль должен быть минимум 8 символов' });
+
+    const admin = db.prepare('SELECT passwordHash FROM admins WHERE id = ?').get(req.adminId) as any;
+    if (!admin) return res.status(404).json({ error: 'Администратор не найден' });
+
+    if (!bcrypt.compareSync(oldPassword, admin.passwordHash)) {
+        return res.status(400).json({ error: 'Неверный старый пароль' });
+    }
+
+    const passwordHash = bcrypt.hashSync(newPassword, 10);
+    db.prepare('UPDATE admins SET passwordHash = ? WHERE id = ?').run(passwordHash, req.adminId);
+    res.json({ success: true });
 });
 
 export default router;

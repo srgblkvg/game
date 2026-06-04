@@ -1,19 +1,19 @@
 export const slotNames: Record<string, string> = {
     helmet: 'Шлем', chest: 'Нагрудник', gloves: 'Перчатки', boots: 'Ботинки',
     amulet: 'Амулет', ring1: 'Кольцо', ring2: 'Кольцо', belt: 'Пояс',
-    weapon1: 'Оружие 1', weapon2: 'Оружие 2',
+    weapon1: 'Оружие', shield: 'Щит',
 };
 
 export const slotCategories: Record<string, string> = {
     helmet: 'helmet', chest: 'chest', gloves: 'gloves', boots: 'boots',
     amulet: 'amulet', ring1: 'ring', ring2: 'ring', belt: 'belt',
-    weapon1: 'weapon', weapon2: 'weapon',
+    weapon1: 'weapon', shield: 'weapon',
 };
 
 const rarityColors = ['#888888', '#cccccc', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e74c3c'];
 const rarityColorNames = ['gray', 'white', 'green', 'blue', 'purple', 'yellow', 'red'];
 const slotImageFolders: Record<string, string> = {
-    weapon1: 'sword', weapon2: 'shield', ring1: 'ring', ring2: 'ring',
+    weapon1: 'sword', shield: 'shield', ring1: 'ring', ring2: 'ring',
 };
 
 export function getRarityColor(item: any): string {
@@ -74,6 +74,7 @@ export function getCompatibleSlots(item: any): string[] {
     if (cat === 'ring') return ['ring1', 'ring2'];
     if (cat === 'weapon') {
         if (item.name?.includes('двуручн')) return ['weapon1'];
+        if (slot === 'shield') return ['shield'];
         return [slot];
     }
     return [slot];

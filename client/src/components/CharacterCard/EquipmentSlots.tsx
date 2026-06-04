@@ -18,7 +18,7 @@ interface EquipmentSlotsProps {
 
 const LEFT_SLOTS = ['amulet', 'ring1', 'ring2', 'belt'];
 const RIGHT_SLOTS = ['helmet', 'chest', 'gloves', 'boots'];
-const WEAPON_SLOTS = ['weapon1', 'weapon2'];
+const WEAPON_SLOTS = ['weapon1', 'shield'];
 
 export default function EquipmentSlots(props: EquipmentSlotsProps) {
   const slotStyle = props.slotSize
@@ -58,7 +58,7 @@ export default function EquipmentSlots(props: EquipmentSlotsProps) {
       {/* Оружие (снизу по центру) */}
       <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: props.slotGap, zIndex: 1 }}>
         {WEAPON_SLOTS.map(slotId =>
-          renderSlot(slotId, slotId === 'weapon2' && props.isWeapon2Blocked)
+          renderSlot(slotId, slotId === 'shield' && props.isWeapon2Blocked)
         )}
       </div>
     </>
