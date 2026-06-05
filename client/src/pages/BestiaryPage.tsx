@@ -22,8 +22,6 @@ const rarityNames: Record<number, string> = {
   0: 'Хлам', 1: 'Обычный', 2: 'Необычный', 3: 'Редкий', 4: 'Эпический', 5: 'Легендарный', 6: 'Мифический',
 };
 
-const PVE_COOLDOWN_SEC = 300;
-
 export default function BestiaryPage() {
   const { user } = useAuth();
   const { character, setCharacter } = useGame();
@@ -70,9 +68,7 @@ export default function BestiaryPage() {
   }, []);
 
   const updateCooldown = useCallback(() => {
-    const now = Math.floor(Date.now() / 1000);
-    const lastPve = (character as any)?.lastPveAttackTime || 0;
-    const remaining = Math.max(0, PVE_COOLDOWN_SEC - (now - lastPve));
+    const remaining = (character as any)?.pveCooldownSec ?? Math.max(0, 300 - (Math.floor(Date.now() / 1000) - ((character as any)?.lastPveAttackTime || 0)));
     setCooldownRemaining(remaining);
     if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null; }
     if (remaining > 0) {
@@ -263,7 +259,7 @@ export default function BestiaryPage() {
       }
       const fresh = await fetchCharacter();
       setCharacter(fresh);
-      setCooldownRemaining(PVE_COOLDOWN_SEC);
+      setCooldownRemaining((fresh as any)?.pveCooldownSec ?? 300);
       if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
       cooldownTimerRef.current = window.setInterval(() => {
         setCooldownRemaining(prev => {

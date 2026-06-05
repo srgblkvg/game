@@ -89,7 +89,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
         <div className="text-xs">
           {[
             ['Тип', getItemTypeName(item)],
-            ['Количество', String(item.count)],
+            ...(item.count != null ? [['Количество', String(item.count)]] : []),
           ].map(([name, val], i) => (
             <div
               key={i}
