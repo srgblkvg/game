@@ -55,7 +55,7 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
                     <span className={recipe.success_chance < 100 ? 'text-orange-400' : 'text-[var(--color-accent-success)]'}>
                       {recipe.success_chance ?? 100}%
                     </span>
-                    <span className="text-[var(--color-text-muted)] ml-1">{recipe.money_cost} 🥇</span>
+                    <span className="text-[var(--color-text-muted)] ml-1">{recipe.money_cost} серебра</span>
                   </div>
                 </div>
               ))}

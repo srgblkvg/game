@@ -64,7 +64,7 @@ export default function AdminBattles() {
                         {selected.winnerId === selected.attackerId ? '🏆 Победил атакующий' : '💀 Победил защитник'}
                     </span>
                     <span>Опыт: +{selected.expGained || 0}</span>
-                    {selected.moneyStolen > 0 && <span className="text-[var(--color-text-accent)]">💰 {formatMoney(selected.moneyStolen)}</span>}
+                    {selected.moneyStolen > 0 && <span className="text-[var(--color-text-accent)]">Серебро: {formatMoney(selected.moneyStolen)}</span>}
                 </div>
                 <div className="flex justify-center mt-4">
                     <Button variant="secondary" size="sm" onClick={() => setSelected(null)}>Закрыть</Button>
@@ -86,7 +86,7 @@ export default function AdminBattles() {
                                 <th className="text-left p-1.5">Защитник</th>
                                 <th className="text-left p-1.5">Победитель</th>
                                 <th className="text-left p-1.5">Опыт</th>
-                                <th className="text-left p-1.5">💰</th>
+                                <th className="text-left p-1.5">Серебро</th>
                                 <th className="text-left p-1.5">Время</th>
                                 <th className="text-left p-1.5"></th>
                             </tr>

@@ -31,6 +31,7 @@ export function setupMiddleware(app: Express) {
     });
     app.use('/api/login', authLimiter);
     app.use('/api/register', authLimiter);
+    app.use('/api/guest', authLimiter);
     app.use('/api/admin/register', authLimiter);
 
     const battleLimiter = rateLimit({ windowMs: 60_000, max: 30, message: { error: 'Слишком много боёв, подождите' }, standardHeaders: true, legacyHeaders: false });

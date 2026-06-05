@@ -1,5 +1,5 @@
 import { Express } from 'express';
-import { authMiddleware, requireAdmin, requirePlayer } from './middleware/auth';
+import { authMiddleware, requireAdmin, requirePlayer, requireFullAccess } from './middleware/auth';
 import authRoutes from './routes/auth';
 import adminAuthRoutes from './routes/adminAuth';
 import adminRoutes from './routes/admin';
@@ -52,11 +52,11 @@ export function setupRoutes(app: Express) {
   app.use('/api', jobsRoutes);
   app.use('/api', accountRoutes);
   app.use('/api', chatRoutes);
-  app.use('/api', authMiddleware, requirePlayer, craftRoutes);
-  app.use('/api', authMiddleware, requirePlayer, mobsRoutes);
-  app.use('/api', authMiddleware, requirePlayer, bankRoutes);
-  app.use('/api', authMiddleware, requirePlayer, tavernRoutes);
-  app.use('/api', authMiddleware, requirePlayer, auctionRoutes);
-  app.use('/api', authMiddleware, requirePlayer, tournamentRoutes);
-  app.use('/api', authMiddleware, requirePlayer, ordersRoutes);
+  app.use('/api', craftRoutes);
+  app.use('/api', mobsRoutes);
+  app.use('/api', bankRoutes);
+  app.use('/api', tavernRoutes);
+  app.use('/api', auctionRoutes);
+  app.use('/api', tournamentRoutes);
+  app.use('/api', ordersRoutes);
 }

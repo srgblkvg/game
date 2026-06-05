@@ -166,8 +166,8 @@ export default function ArenaPage() {
               {battleResult.moneyStolen > 0 && (
                 <p>
                   {battleResult.winnerId === user.id
-                    ? <><Icon icon="game-icons:coins" width="16" height="16" className="inline mr-1" />Захвачено {formatMoney(battleResult.moneyStolen)}</>
-                    : <><Icon icon="game-icons:cash" width="16" height="16" className="inline mr-1" />Потеряно {formatMoney(battleResult.moneyStolen)}</>}
+                    ? <>Захвачено {formatMoney(battleResult.moneyStolen)}</>
+                    : <>Потеряно {formatMoney(battleResult.moneyStolen)}</>}
                 </p>
               )}
               {battleResult.levelsGained > 0 && (

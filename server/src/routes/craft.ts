@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import db from '../database';
+import { requireFullAccess } from '../middleware/auth';
 
 const router = Router();
+
+// Все маршруты крафта требуют полный доступ
+router.use('/craft', requireFullAccess);
 
 function isCraftItem(item: any): boolean {
     return item?.type === 'material' || item?.type === 'craft_item';

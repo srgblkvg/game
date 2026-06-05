@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import db from '../database';
-import { changeUsernameSchema, changePasswordSchema } from '../validation';
+import { changeUsernameSchema, changePasswordSchema, registerGuestSchema } from '../validation';
 import { auditPasswordChange, auditUsernameChange } from '../audit';
 import { revokeToken } from '../tokenBlacklist';
+import { JWT_SECRET } from '../env';
 
 const router = Router();
 
@@ -104,6 +106,40 @@ router.post('/account/logout', (req: any, res) => {
       }
     } catch { /* игнорируем ошибки декодирования */ }
     res.json({ success: true });
+});
+
+// Регистрация из гостевого аккаунта
+router.post('/account/register-guest', (req: any, res) => {
+    const userId = req.userId;
+    if (!req.isGuest) return res.status(400).json({ error: 'Только для гостевых аккаунтов' });
+
+    const parsed = registerGuestSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные', details: parsed.error.flatten() });
+
+    const { username, password, email, code } = parsed.data;
+
+    const existing = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, userId);
+    if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
+
+    const emailTaken = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, userId);
+    if (emailTaken) return res.status(400).json({ error: 'Этот email уже используется' });
+
+    // Проверяем код подтверждения email
+    const now = Math.floor(Date.now() / 1000);
+    const guestUser = db.prepare('SELECT emailCode, emailCodeExpires FROM users WHERE id = ?').get(userId) as any;
+    if (!guestUser?.emailCode || guestUser.emailCodeExpires < now) {
+        return res.status(400).json({ error: 'Код подтверждения недействителен или истёк. Запросите новый.' });
+    }
+    if (guestUser.emailCode !== code) {
+        return res.status(400).json({ error: 'Неверный код подтверждения' });
+    }
+
+    const passwordHash = bcrypt.hashSync(password, 10);
+    db.prepare('UPDATE users SET username = ?, passwordHash = ?, email = ?, emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, isGuest = 0 WHERE id = ?')
+        .run(username, passwordHash, email, userId);
+
+    const token = jwt.sign({ userId, role: 'player', isGuest: false, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, token, username });
 });
 
 export default router;

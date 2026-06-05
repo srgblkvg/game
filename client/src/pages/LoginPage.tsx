@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { login, verifyEmail, resendCode } from '../api';
+import { login, verifyEmail, resendCode, guestLogin } from '../api';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
@@ -75,6 +75,20 @@ export default function LoginPage() {
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && username && password) handleLogin();
+    };
+
+    const handleGuestLogin = async () => {
+        try {
+            setError('');
+            setLoading(true);
+            const result = await guestLogin();
+            loginUser(result.user, result.token);
+            navigate('/');
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Показываем поле кода если есть ошибка о неподтверждённой почте
@@ -169,6 +183,16 @@ export default function LoginPage() {
                                 VK ID
                             </a>
                         </div>
+
+                        <div className="flex items-center gap-2 my-4">
+                            <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                            <span className="text-xs text-[var(--color-text-muted)]">или</span>
+                            <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                        </div>
+
+                        <Button variant="secondary" fullWidth onClick={handleGuestLogin} disabled={loading}>
+                            {loading ? '...' : 'Гостевой вход'}
+                        </Button>
                     </>
                 )}
             </Card>

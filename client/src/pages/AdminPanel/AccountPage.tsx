@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
 import { fetchCharacter } from '../../api/character';
-import { changeUsername, changePassword, changeGender, deleteAccount } from '../../api';
+import { changeUsername, changePassword, changeGender, deleteAccount, registerGuest, resendCode } from '../../api';
 import BackButton from '../../components/ui/BackButton';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -26,7 +26,60 @@ export default function AccountPage() {
     const [deleteMsg, setDeleteMsg] = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+    // Гостевая регистрация
+    const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
+    const [guestUsername, setGuestUsername] = useState('');
+    const [guestEmail, setGuestEmail] = useState('');
+    const [guestPassword, setGuestPassword] = useState('');
+    const [guestShowPassword, setGuestShowPassword] = useState(false);
+    const [guestCode, setGuestCode] = useState('');
+    const [guestMsg, setGuestMsg] = useState('');
+    const [guestLoading, setGuestLoading] = useState(false);
+    const [guestResendMsg, setGuestResendMsg] = useState('');
+
     if (!user) return null;
+
+    const handleRegisterGuest = async () => {
+        setGuestMsg('');
+        if (!guestUsername || !guestEmail || !guestPassword) {
+            setGuestMsg('Заполните все поля');
+            return;
+        }
+        if (guestPassword.length < 8) {
+            setGuestMsg('Пароль: минимум 8 символов');
+            return;
+        }
+        try {
+            setGuestLoading(true);
+            // Отправляем код на почту (обновляет emailCode у существующего гостя)
+            await resendCode(guestEmail);
+            setGuestStep('code');
+        } catch (e: any) { setGuestMsg(e.message); }
+        finally { setGuestLoading(false); }
+    };
+
+    const handleGuestResend = async () => {
+        setGuestResendMsg('');
+        try {
+            setGuestLoading(true);
+            await resendCode(guestEmail);
+            setGuestResendMsg('Код отправлен повторно');
+        } catch (e: any) { setGuestResendMsg(e.message); }
+        finally { setGuestLoading(false); }
+    };
+
+    const handleGuestVerify = async () => {
+        setGuestMsg('');
+        try {
+            setGuestLoading(true);
+            const result = await registerGuest(guestUsername, guestPassword, guestEmail, guestCode);
+            localStorage.setItem('token', result.token);
+            loginUser({ id: user.id, username: result.username, level: user.level, role: 'player', isGuest: false }, result.token);
+            setGuestMsg('Аккаунт успешно создан!');
+            fetchCharacter().then(setCharacter);
+        } catch (e: any) { setGuestMsg(e.message); }
+        finally { setGuestLoading(false); }
+    };
 
     const handleChangeUsername = async (e: React.FormEvent) => {
         e.preventDefault(); setUsernameMsg('');
@@ -70,10 +123,92 @@ export default function AccountPage() {
     return (
         <div className="max-w-lg mx-auto px-4 py-4">
             <BackButton />
-            <h2 className="text-xl font-bold mb-4">👤 Аккаунт</h2>
+            <h2 className="text-xl font-bold mb-4">Аккаунт</h2>
             <p className="mb-4">Текущее имя: <strong>{character?.username || user.username}</strong></p>
 
+            {/* Гостевая регистрация */}
+            {user.isGuest && (
+                <Card className="mb-4">
+                    {guestStep === 'code' ? (
+                        <>
+                            <h3 className="font-bold mb-2">Подтверждение почты</h3>
+                            <p className="text-sm text-[var(--color-text-muted)] mb-2">
+                                Код отправлен на <span className="text-[var(--color-text-primary)]">{guestEmail}</span>
+                            </p>
+                            <p className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-2 mb-3">
+                                ⚠ Письмо может попасть в спам. Если не пришло — проверьте папку «Спам».
+                            </p>
+                            <input
+                                type="text"
+                                placeholder="123456"
+                                maxLength={6}
+                                value={guestCode}
+                                onChange={e => setGuestCode(e.target.value.replace(/\D/g, ''))}
+                                className="w-full p-2 mb-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-center text-2xl tracking-[0.5em] outline-none focus:border-[var(--color-accent-info)]"
+                                autoFocus
+                            />
+                            <Button variant="danger" fullWidth onClick={handleGuestVerify} disabled={guestCode.length !== 6 || guestLoading}>
+                                {guestLoading ? '...' : 'Подтвердить'}
+                            </Button>
+                            {guestMsg && <p className="text-red-500 mt-2 text-sm">{guestMsg}</p>}
+                            {guestResendMsg && <p className={`text-sm mt-2 ${guestResendMsg.includes('отправлен') ? 'text-green-400' : 'text-red-500'}`}>{guestResendMsg}</p>}
+                            <div className="flex gap-2 mt-3">
+                                <button onClick={handleGuestResend} disabled={guestLoading} className="flex-1 text-sm text-[var(--color-accent-info)] hover:underline">
+                                    Отправить код повторно
+                                </button>
+                                <button onClick={() => setGuestStep('form')} className="flex-1 text-sm text-[var(--color-text-muted)] hover:underline">
+                                    ← Назад
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <h3 className="font-bold mb-2">Регистрация аккаунта</h3>
+                            <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                                Создайте постоянный аккаунт — все накопленные ресурсы сохранятся.
+                            </p>
+                            <input
+                                type="text"
+                                placeholder="Логин"
+                                value={guestUsername}
+                                onChange={e => setGuestUsername(e.target.value)}
+                                className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
+                            />
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                value={guestEmail}
+                                onChange={e => setGuestEmail(e.target.value)}
+                                className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
+                            />
+                            <div className="relative mb-1">
+                                <input
+                                    type={guestShowPassword ? 'text' : 'password'}
+                                    placeholder="Пароль"
+                                    value={guestPassword}
+                                    onChange={e => setGuestPassword(e.target.value)}
+                                    className="w-full p-2 pr-10 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setGuestShowPassword(!guestShowPassword)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                                >
+                                    {guestShowPassword ? '🙈' : '👁'}
+                                </button>
+                            </div>
+                            <p className="text-xs text-[var(--color-text-muted)] mb-3">Минимум 8 символов, цифра и спецсимвол</p>
+                            <Button variant="danger" fullWidth onClick={handleRegisterGuest} disabled={!guestUsername || !guestEmail || !guestPassword || guestLoading}>
+                                {guestLoading ? '...' : 'Зарегистрироваться'}
+                            </Button>
+                            {guestMsg && <p className="text-red-500 mt-2 text-sm">{guestMsg}</p>}
+                        </>
+                    )}
+                </Card>
+            )}
+
             {/* Смена имени */}
+            {!user.isGuest && (
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Сменить имя</h3>
                 <form onSubmit={handleChangeUsername}>
@@ -82,8 +217,10 @@ export default function AccountPage() {
                 </form>
                 {usernameMsg && <p className={`mt-2 text-sm ${usernameMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{usernameMsg}</p>}
             </Card>
+            )}
 
             {/* Смена пароля */}
+            {!user.isGuest && (
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Сменить пароль</h3>
                 <form onSubmit={handleChangePassword}>
@@ -94,8 +231,10 @@ export default function AccountPage() {
                 </form>
                 {passwordMsg && <p className={`mt-2 text-sm ${passwordMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{passwordMsg}</p>}
             </Card>
+            )}
 
             {/* Выбор пола */}
+            {!user.isGuest && (
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Пол</h3>
                 <div className="flex gap-4">
@@ -117,10 +256,12 @@ export default function AccountPage() {
                 </div>
                 {genderMsg && <p className={`mt-2 text-sm ${genderMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{genderMsg}</p>}
             </Card>
+            )}
 
             <Button variant="danger" size="md" fullWidth onClick={handleLogout}>Выйти</Button>
 
             {/* Удаление аккаунта */}
+            {!user.isGuest && (
             <div className="mt-6 pt-4 border-t border-[var(--color-border-light)]">
                 {!showDeleteConfirm ? (
                     <Button
@@ -158,6 +299,7 @@ export default function AccountPage() {
                     </Card>
                 )}
             </div>
+            )}
         </div>
     );
 }

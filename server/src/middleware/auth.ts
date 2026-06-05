@@ -14,6 +14,7 @@ export function authMiddleware(req: any, res: any, next: any) {
         req.userId = decoded.userId;
         req.adminId = decoded.adminId;
         req.role = decoded.role;
+        req.isGuest = decoded.isGuest || false;
         next();
     } catch {
         res.status(401).json({ error: 'Токен недействителен' });
@@ -27,5 +28,10 @@ export function requireAdmin(req: any, res: any, next: any) {
 
 export function requirePlayer(req: any, res: any, next: any) {
     if (req.role === 'admin') return res.status(403).json({ error: 'Администратор не может выполнять игровые действия' });
+    next();
+}
+
+export function requireFullAccess(req: any, res: any, next: any) {
+    if (req.isGuest) return res.status(403).json({ error: 'На гостевом аккаунте доступ к этой функции заблокирован' });
     next();
 }

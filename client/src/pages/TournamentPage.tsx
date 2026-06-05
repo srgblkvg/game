@@ -73,7 +73,7 @@ export default function TournamentPage() {
                             <span className="text-xs text-[var(--color-text-muted)]">{t.status === 'registration' ? 'Регистрация' : t.status}</span>
                         </div>
                         <div className="text-xs text-[var(--color-text-muted)] mb-2">
-                            <p>Призовой фонд: {formatMoney(t.prizePool)} 🥇</p>
+                            <p>Призовой фонд: {formatMoney(t.prizePool)}</p>
                             <p>Участников: {t.participantCount}</p>
                             {t.participants.slice(0, 5).map((p: any) => (
                                 <span key={p.id} className="mr-2">{p.username}{p.goldenTicket ? '🎫' : ''}</span>
@@ -87,7 +87,7 @@ export default function TournamentPage() {
                                     Записаться (бесплатно)
                                 </Button>
                                 <Button variant="secondary" size="xs" onClick={() => handleRegister(t.division, true)}>
-                                    🎫 Золотой билет (1000 🥇)
+                                    🎫 Золотой билет (1000)
                                 </Button>
                             </div>
                         )}

@@ -35,6 +35,8 @@ export default function AdminUsers() {
 
     // Поиск по имени
     const [searchQuery, setSearchQuery] = useState('');
+    // Фильтр: все / игроки / гости
+    const [userFilter, setUserFilter] = useState<string>('all');
 
     useEffect(() => {
         const interval = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 5000);
@@ -42,8 +44,8 @@ export default function AdminUsers() {
     }, []);
 
     const loadUsers = useCallback(async () => {
-        try { setUsers(await fetchAdminUsers()); } catch (e) { console.error(e); }
-    }, []);
+        try { setUsers(await fetchAdminUsers(userFilter)); } catch (e) { console.error(e); }
+    }, [userFilter]);
 
     useEffect(() => { loadUsers(); }, [loadUsers]);
 
@@ -246,6 +248,11 @@ export default function AdminUsers() {
             <Card>
                 <div className="flex justify-between items-center mb-2">
                     <h3 className="font-bold">Список игроков ({filteredUsers.length}{searchQuery ? ` / ${users.length}` : ''})</h3>
+                    <div className="flex gap-1">
+                        <Button size="xs" variant={userFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setUserFilter('all')}>Все</Button>
+                        <Button size="xs" variant={userFilter === 'players' ? 'primary' : 'secondary'} onClick={() => setUserFilter('players')}>Игроки</Button>
+                        <Button size="xs" variant={userFilter === 'guests' ? 'primary' : 'secondary'} onClick={() => setUserFilter('guests')}>🎭 Гости</Button>
+                    </div>
                     <input
                         type="text"
                         placeholder="Поиск по имени..."
@@ -285,7 +292,7 @@ export default function AdminUsers() {
                                 return (
                                     <tr key={u.id} className={`border-b border-[var(--color-border-light)] ${u.bannedUntil > now ? 'bg-red-900/20' : ''}`}>
                                         <td className="p-1">{u.id}</td>
-                                        <td className="p-1">{u.username}</td>
+                                        <td className="p-1">{u.username}{u.isGuest ? <span className="ml-1 text-amber-400 text-xs">🎭</span> : ''}</td>
                                         <td className="p-1">{u.level}</td>
                                         <td className="p-1">{u.money}</td>
                                         <td className="p-1">{u.totalBattles}</td>
@@ -349,7 +356,7 @@ export default function AdminUsers() {
                     if (!user) return null;
                     return (
                         <div className="mt-2 p-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-sm">
-                            <h4 className="font-bold mb-1">#{user.id} {user.username}</h4>
+                            <h4 className="font-bold mb-1">#{user.id} {user.username}{user.isGuest ? <span className="ml-1 text-amber-400">🎭 Гость</span> : ''}</h4>
                             <div className="grid grid-cols-2 gap-1" style={{ fontSize: '12px' }}>
                                 <div>Email: {user.email || '—'}</div>
                                 <div>Подтверждён: {user.emailVerified ? 'Да' : 'Нет'}</div>

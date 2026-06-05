@@ -91,6 +91,27 @@ router.post('/resend-code', async (req, res) => {
     res.json({ message: 'Код отправлен повторно' });
 });
 
+// Гостевой вход — без регистрации, ограниченный доступ
+router.post('/guest', (req, res) => {
+    const now = Math.floor(Date.now() / 1000);
+    const guestId = `Гость_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+    const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
+
+    db.prepare(`INSERT INTO users (username, passwordHash, currentHp, lastHpUpdate, level, gender, isGuest, emailVerified, exp, money)
+        VALUES (?, '', ?, ?, 1, 'male', 1, 1, 0, 0)`)
+        .run(guestId, startHp, now);
+
+    const user: any = db.prepare('SELECT id FROM users WHERE username = ?').get(guestId);
+    const token = jwt.sign({ userId: user.id, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
+
+    auditLoginSuccess(guestId, user.id, req.ip);
+    if (req.ip) {
+        db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip);
+    }
+
+    res.json({ token, user: { id: user.id, username: guestId, level: 1, role: 'player', isGuest: true, gender: 'male' } });
+});
+
 router.post('/login', (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });

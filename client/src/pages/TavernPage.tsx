@@ -104,7 +104,7 @@ export default function TavernPage() {
                 <div className="flex justify-between items-center">
                     <div>
                         <p className="text-xs text-[var(--color-text-muted)]">HP: {tavern.currentHp}/{character?.stats?.hp || tavern.maxHp}</p>
-                        <p className="text-xs text-[var(--color-text-muted)]">{formatMoney(tavern.money)}</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">{tavern.money != null ? formatMoney(tavern.money) : '...'}</p>
                     </div>
                     <div className="text-xs text-right">
                         {tavern.room && tavern.room.until > now && (

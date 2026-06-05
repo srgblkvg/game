@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import db from '../database';
+import { requireFullAccess } from '../middleware/auth';
 
 const router = Router();
+
+// Все маршруты банка требуют полный доступ
+router.use('/bank', requireFullAccess);
 
 // Получить состояние банка
 router.get('/bank', (req: any, res) => {

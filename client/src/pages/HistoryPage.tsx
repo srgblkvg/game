@@ -118,7 +118,7 @@ export default function HistoryPage() {
                         {b.winnerId === user.id ? '+' : '-'}{formatMoney(b.moneyStolen)}
                     </span>
                 )}
-                {b.expGained > 0 && (
+                {b.expGained > 0 && b.winnerId === user.id && (
                     <span className="text-[var(--color-accent-purple)] text-xs">+{b.expGained} опыта</span>
                 )}
                 <span className="text-[var(--color-text-muted)] text-xs ml-auto">
@@ -152,7 +152,7 @@ export default function HistoryPage() {
                     <span className={selectedBattle.winnerId === user.id ? 'text-[var(--color-accent-success)] font-bold' : 'text-red-500 font-bold'}>
                         {selectedBattle.winnerId === user.id ? (<><Icon icon="game-icons:trophy" width="16" height="16" className="inline mr-1" />Победа</>) : (<><Icon icon="game-icons:death-skull" width="16" height="16" className="inline mr-1" />Поражение</>)}
                     </span>
-                    <span>Опыт: +{selectedBattle.expGained || 0}</span>
+                    {selectedBattle.winnerId === user.id && <span>Опыт: +{selectedBattle.expGained || 0}</span>}
                     {selectedBattle.moneyStolen > 0 && (
                         <span className="text-[var(--color-text-accent)]">
                             {selectedBattle.winnerId === user.id ? '+' : '-'}{formatMoney(selectedBattle.moneyStolen)}

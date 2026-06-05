@@ -178,6 +178,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // Время последнего входа
   try { db.exec('ALTER TABLE users ADD COLUMN lastLoginAt DATETIME'); } catch {}
 
+  // Гостевые аккаунты
+  try { db.exec('ALTER TABLE users ADD COLUMN isGuest INTEGER DEFAULT 0'); } catch {}
+
   // Переименование weapon2 → shield в equipment игроков
   const allUsersEquip = db.prepare('SELECT id, equipment FROM users').all() as any[];
   for (const u of allUsersEquip) {

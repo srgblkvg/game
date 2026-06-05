@@ -4,7 +4,6 @@ import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchBattles, fetchCharacter } from '../api';
-import { MoneyDisplay } from './MoneyDisplay';
 import Button from './ui/Button';
 
 export default function Header() {
@@ -70,9 +69,8 @@ export default function Header() {
     return (
         <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)] flex-wrap">
             {user.role === 'player' && character && (
-                <span className="text-[var(--color-text-accent)] text-sm font-bold flex items-center gap-1">
-                    <Icon icon="game-icons:coins" width="18" height="18" />
-                    <MoneyDisplay money={character.money} />
+                <span className="text-white text-sm font-bold">
+                    Серебро: {character.money.toLocaleString()}
                 </span>
             )}
             {user.role === 'player' && (
@@ -108,6 +106,11 @@ export default function Header() {
                                 Уведомления
                             </span>
                         </Button>
+                        <a href="https://vk.com/club239320810" target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center px-2 py-1 rounded text-xs font-semibold bg-[#0077FF] text-white hover:bg-[#0066DD] transition-colors"
+                            title="Сообщество VK">
+                            <Icon icon="mdi:vk" width="20" height="20" />
+                        </a>
                     </>
                 )}
                 {user.role === 'admin' && (

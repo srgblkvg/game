@@ -41,7 +41,14 @@ router.get('/tavern', (req: any, res) => {
     const base = getBaseStats(user);
     const equipment = JSON.parse(user.equipment || '{}');
     const { enriched } = enrichEquipment(db, equipment);
-    const stats = currentStats(base, enriched);
+
+    // Бонусы от активного напитка
+    let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;
+    if (user.activeDrink && user.drinkUntil > now && drinks[user.activeDrink]) {
+        drinkBonuses = drinks[user.activeDrink]?.bonuses as any;
+    }
+
+    const stats = currentStats(base, enriched, drinkBonuses);
     const maxHp = stats.hp;
 
     res.json({
@@ -63,10 +70,18 @@ router.post('/tavern/heal', (req: any, res) => {
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    const now = Math.floor(Date.now() / 1000);
     const base = getBaseStats(user);
     const equipment = JSON.parse(user.equipment || '{}');
     const { enriched } = enrichEquipment(db, equipment);
-    const stats = currentStats(base, enriched);
+
+    // Бонусы от активного напитка
+    let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;
+    if (user.activeDrink && user.drinkUntil > now && drinks[user.activeDrink]) {
+        drinkBonuses = drinks[user.activeDrink]?.bonuses as any;
+    }
+
+    const stats = currentStats(base, enriched, drinkBonuses);
     const maxHp = stats.hp;
     const missingHp = maxHp - user.currentHp;
     if (missingHp <= 0) return res.status(400).json({ error: 'HP уже полное' });

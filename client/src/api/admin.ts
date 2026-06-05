@@ -37,8 +37,8 @@ export async function deleteAdminItem(id: number) {
 }
 
 // Игроки
-export async function fetchAdminUsers() {
-    const res = await fetch(`${BASE_URL}/admin/users`, { headers: getHeaders() });
+export async function fetchAdminUsers(filter: string = 'all') {
+    const res = await fetch(`${BASE_URL}/admin/users?filter=${filter}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Ошибка загрузки пользователей');
     return res.json();
 }

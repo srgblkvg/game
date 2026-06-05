@@ -51,3 +51,16 @@ export async function deleteAccount(currentPassword: string) {
     }
     return res.json();
 }
+
+export async function registerGuest(username: string, password: string, email: string, code: string) {
+    const res = await fetch(`${BASE_URL}/account/register-guest`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ username, password, email, code }),
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Ошибка регистрации');
+    }
+    return res.json();
+}

@@ -14,16 +14,16 @@ router.get('/arena/opponent', (req: any, res) => {
     const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
     const difficulty = (req.query.difficulty as string) || 'equal'; // easy | equal | hard
 
-    const user: any = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    const user: any = db.prepare('SELECT id, username, level, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, inventorySlots, lastAttackTime FROM users WHERE id = ?').get(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
     let opponents = db.prepare(
-        'SELECT * FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
+        'SELECT id, username, level, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
     ).all(userId, now) as any[];
 
     // Фильтр по сложности
-    const diffLabel = difficulty === 'easy' ? 'ниже вашим' : difficulty === 'hard' ? 'выше вашим' : 'равным вашему';
+    const diffLabel = difficulty === 'easy' ? 'ниже вашего' : difficulty === 'hard' ? 'выше вашего' : 'равным вашему';
     if (difficulty === 'easy') {
         opponents = opponents.filter((o: any) => o.level < user.level);
     } else if (difficulty === 'hard') {

@@ -91,11 +91,11 @@ export default function BankPage() {
                 <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
                         <p className="text-xs text-[var(--color-text-muted)]">При себе</p>
-                        <p className="text-lg font-bold">{formatMoney(pocket)} 🥇</p>
+                        <p className="text-lg font-bold">{formatMoney(pocket)}</p>
                     </div>
                     <div>
                         <p className="text-xs text-[var(--color-text-muted)]">В банке</p>
-                        <p className="text-lg font-bold">{formatMoney(bank)} 🥇</p>
+                        <p className="text-lg font-bold">{formatMoney(bank)}</p>
                     </div>
                 </div>
             </Card>

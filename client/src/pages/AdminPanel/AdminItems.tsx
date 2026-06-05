@@ -103,7 +103,7 @@ export default function AdminItems() {
                         <label className="text-xs">Полный блок % <input type="number" value={newItem.extra.fullBlock} onChange={e => setNewItem({ ...newItem, extra: { ...newItem.extra, fullBlock: +e.target.value } })} className={smallInputClass} /></label>
                     </div>
                 </details>
-                <label className="text-xs mt-2 block">Стоимость (🥇) <input type="number" value={newItem.cost} onChange={e => setNewItem({ ...newItem, cost: e.target.value })} className={smallInputClass} style={{width:'100%'}} /></label>
+                <label className="text-xs mt-2 block">Стоимость (серебро) <input type="number" value={newItem.cost} onChange={e => setNewItem({ ...newItem, cost: e.target.value })} className={smallInputClass} style={{width:'100%'}} /></label>
                 <Button variant="success" size="sm" className="mt-3" onClick={handleCreateItem}>Создать</Button>
             </Card>
 

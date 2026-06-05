@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import db from '../database';
+import { requireFullAccess } from '../middleware/auth';
 
 const router = Router();
+
+// Все маршруты аукциона требуют полный доступ
+router.use('/auction', requireFullAccess);
 
 // Мин. цены по редкости
 const priceFloor: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };

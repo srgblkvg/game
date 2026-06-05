@@ -43,12 +43,16 @@ router.delete('/items/:id', (req: any, res) => {
 
 // ---------- Игроки ----------
 router.get('/users', (req: any, res) => {
-    const users = db.prepare(`
+    const filter = req.query.filter as string || 'all'; // all | guests | players
+    let query = `
         SELECT id, username, level, money, totalBattles, wins,
                lastAttackTime, protectionUntil, activeJob, inventorySlots,
-               email, emailVerified, oauthProvider, createdAt, bannedUntil, lastLoginAt, premiumUntil
-        FROM users ORDER BY lastLoginAt DESC NULLS LAST
-    `).all();
+               email, emailVerified, oauthProvider, createdAt, bannedUntil, lastLoginAt, premiumUntil, isGuest
+        FROM users`;
+    if (filter === 'guests') query += ' WHERE isGuest = 1';
+    else if (filter === 'players') query += ' WHERE isGuest = 0';
+    query += ' ORDER BY lastLoginAt DESC NULLS LAST';
+    const users = db.prepare(query).all();
     res.json(users);
 });
 

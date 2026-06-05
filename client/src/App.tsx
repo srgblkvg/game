@@ -23,6 +23,7 @@ import AuctionPage from './pages/AuctionPage';
 import TournamentPage from './pages/TournamentPage';
 import OrdersPage from './pages/OrdersPage';
 import PremiumPage from './pages/PremiumPage';
+import MetrikaTracker from './components/MetrikaTracker';
 
 function App() {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <MetrikaTracker />
       <Header />
       <div style={{
         maxWidth: '1024px',

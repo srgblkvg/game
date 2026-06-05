@@ -93,7 +93,7 @@ export default function OrdersPage() {
                 <div>
                     {!myOrder && character && character.level >= 5 && character.money >= 5000 && (
                         <Card className="mb-4">
-                            <h3 className="font-bold mb-2">Создать орден (5000 🥇)</h3>
+                            <h3 className="font-bold mb-2">Создать орден (5000 серебра)</h3>
                             <div className="flex gap-2">
                                 <input placeholder="Название" value={orderName} onChange={e => setOrderName(e.target.value)} className={inputClass} />
                                 <Button variant="danger" size="sm" onClick={handleCreate}>Создать</Button>
@@ -106,7 +106,7 @@ export default function OrdersPage() {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <h3 className="font-bold">{o.name}</h3>
-                                    <p className="text-xs text-[var(--color-text-muted)]">Ур. {o.level} • {o.memberCount} участников • {formatMoney(o.treasury)} 🥇</p>
+                                    <p className="text-xs text-[var(--color-text-muted)]">Ур. {o.level} • {o.memberCount} участников • {formatMoney(o.treasury)}</p>
                                     <p className="text-xs text-[var(--color-text-muted)]">Магистр: {o.masterName}</p>
                                 </div>
                                 {!myOrder && <Button variant="primary" size="xs" onClick={() => handleJoin(o.id)}>Вступить</Button>}
@@ -123,7 +123,7 @@ export default function OrdersPage() {
                         <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                             <p>Уровень: <strong>{myOrder.level}</strong></p>
                             <p>Опыт: <strong>{myOrder.exp}</strong></p>
-                            <p>Казна: <strong>{formatMoney(myOrder.treasury)} 🥇</strong></p>
+                            <p>Казна: <strong>{formatMoney(myOrder.treasury)}</strong></p>
                             <p>Налог: <strong>{myOrder.taxRate}%</strong></p>
                             <p>Магистр: <strong>{myOrder.masterName}</strong></p>
                             <p>Участников: <strong>{myOrder.members?.length || 0}</strong></p>

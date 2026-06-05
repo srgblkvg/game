@@ -158,7 +158,8 @@ export default function AuctionPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton to="/" />
-            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:auction" width="22" height="22" className="inline mr-2" />Некропольный Торг</h1>
+            <h1 className="text-xl font-bold mb-1"><Icon icon="game-icons:auction" width="22" height="22" className="inline mr-2" />Аукцион</h1>
+            <p className="text-xs text-[var(--color-text-muted)] mb-4">Торговая площадка Мёртвых земель — покупайте и продавайте предметы между игроками</p>
 
             <div className="flex gap-2 mb-4">
                 <Button variant={tab === 'buy' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('buy'); clearMessages(); }}>Покупка</Button>
@@ -226,13 +227,13 @@ export default function AuctionPage() {
 
                     <div className="mb-2">
                         <label className="text-xs text-[var(--color-text-muted)] block mb-1">
-                            Стартовая цена за 1 шт (мин: {formatMoney(autoMin)} 🥇)
+                            Стартовая цена за 1 шт (мин: {formatMoney(autoMin)})
                         </label>
                         <input type="number" placeholder="Цена за 1 шт" value={startPrice}
                             onChange={e => setStartPrice(e.target.value)} className={inputClass} min={autoMin} />
                         {isMaterial && sellCount > 1 && (
                             <p className="text-xs text-[var(--color-accent-info)] mt-1">
-                                Итого за {sellCount} шт: {formatMoney(parseInt(startPrice || '0') * sellCount)} 🥇
+                                Итого за {sellCount} шт: {formatMoney(parseInt(startPrice || '0') * sellCount)}
                             </p>
                         )}
                     </div>
@@ -244,7 +245,7 @@ export default function AuctionPage() {
                             onChange={e => setBuyoutPrice(e.target.value)} className={inputClass} />
                         {isMaterial && sellCount > 1 && buyoutPrice && (
                             <p className="text-xs text-[var(--color-accent-info)] mt-1">
-                                Итого выкуп за {sellCount} шт: {formatMoney(parseInt(buyoutPrice) * sellCount)} 🥇
+                                Итого выкуп за {sellCount} шт: {formatMoney(parseInt(buyoutPrice) * sellCount)}
                             </p>
                         )}
                     </div>
@@ -298,7 +299,7 @@ export default function AuctionPage() {
                                 )}
                                 {isStack && (
                                     <p className="text-xs text-[var(--color-accent-info)]">
-                                        ≈ {formatMoney(pricePerItem)} 🥇 / шт
+                                        ≈ {formatMoney(pricePerItem)} / шт
                                     </p>
                                 )}
                             </div>
@@ -331,7 +332,7 @@ export default function AuctionPage() {
                                 />
                                 <Button variant="secondary" size="xs"
                                     onClick={() => handleBuyPartial(lot.id, partialQty[lot.id] ?? 1)}>
-                                    Купить {partialQty[lot.id] ?? 1} шт ({formatMoney(buyoutPerItem * (partialQty[lot.id] ?? 1))} 🥇)
+                                    Купить {partialQty[lot.id] ?? 1} шт ({formatMoney(buyoutPerItem * (partialQty[lot.id] ?? 1))})
                                 </Button>
                             </div>
                         )}

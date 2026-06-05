@@ -49,12 +49,13 @@ export default function CharacterCard({
 
   const isMobile = compact === 'mobile' || compact === 'verySmall';
   const isVerySmall = compact === 'verySmall';
-  const showExpBar = showExp && !isMobile && char.exp !== undefined;
-  const expPercent = showExpBar ? Math.min(100, (char.exp! / expNeeded) * 100) : 0;
+  const showExpBar = showExp && !isMobile;
+  const expValue = char.exp ?? 0;
+  const expPercent = showExpBar ? Math.min(100, (expValue / expNeeded) * 100) : 0;
   const isWeapon2Blocked = char.equipment['weapon1']?.name?.includes('двуручн');
 
-  const maxNickLength = isVerySmall ? 6 : isMobile ? 8 : 12;
-  const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '…' : nick;
+  const maxNickLength = 0; // больше не используется — CSS truncate
+  const truncate = (nick: string) => nick; // CSS обрезает
 
   const cardWidth = isVerySmall ? '110px' : isMobile ? '150px' : '200px';
   const cardMargin = isVerySmall ? '2px' : isMobile ? '10px' : '20px';
@@ -127,14 +128,14 @@ export default function CharacterCard({
     }}>
       {/* Имя и уровень */}
       <div style={{ width: '100%', textAlign: 'center', marginBottom: '0.5rem' }}>
-        <h2 style={{ margin: 0, fontSize: fontSizeName }}>{truncate(char.username)}</h2>
+        <h2 style={{ margin: 0, fontSize: fontSizeName, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{truncate(char.username)}</h2>
         <div className="flex items-center justify-center gap-2 mt-1">
           <span style={{ fontSize: isVerySmall ? '0.65rem' : isMobile ? '0.75rem' : '0.85rem' }}>Ур. {char.level}</span>
           {showExpBar && (
             <div style={{ width: '100px', height: '14px', background: '#222', borderRadius: '4px', overflow: 'hidden', border: '1px solid #555', position: 'relative' }}>
               <div style={{ width: `${expPercent}%`, height: '100%', background: '#9b59b6', transition: 'width 0.3s' }} />
               <span className="absolute inset-0 flex items-center justify-center text-white text-[0.55rem]" style={{ textShadow: '0 0 2px #000' }}>
-                {char.exp}/{expNeeded}
+                {expValue}/{expNeeded}
               </span>
             </div>
           )}

@@ -6,6 +6,7 @@ interface User {
     level: number;
     role: 'player' | 'admin';
     gender?: string;
+    isGuest?: boolean;
 }
 
 interface AuthContextType {
@@ -37,6 +38,7 @@ function parseUserFromToken(token: string): User | null {
             level: payload.role === 'admin' ? 0 : 1,
             role: payload.role,
             gender: payload.gender || 'male',
+            isGuest: payload.isGuest || false,
         };
     } catch {
         return null;
