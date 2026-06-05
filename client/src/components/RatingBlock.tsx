@@ -21,10 +21,6 @@ export default function RatingBlock() {
             <p className="text-[var(--color-text-muted)] text-sm">Пока пусто</p>
         </div>
     );
-
-    const maxNickLength = 10;
-    const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '…' : nick;
-
     return (
         <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[210px] overflow-hidden">
             <h3
@@ -38,9 +34,9 @@ export default function RatingBlock() {
                     <li key={p.id} className="flex py-1 border-b border-[var(--color-border-light)] text-sm">
                         <span
                             onClick={(e) => { e.stopPropagation(); navigate(`/profile/${p.id}`); }}
-                            className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors flex-1"
+                            className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors flex-1 truncate"
                         >
-                            {i + 1}. {truncate(p.username)}
+                            {i + 1}. {p.username}
                         </span>
                         <span className="text-xs text-center w-2/6" style={{ color: p.rank?.color }}>
                             {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}

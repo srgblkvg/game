@@ -22,9 +22,6 @@ export default function RatingPage() {
         }).catch(console.error);
     }, [page]);
 
-    const maxNickLength = 12;
-    const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '…' : nick;
-
     return (
         <div className="max-w-xl mx-auto px-4 py-4">
             <BackButton />
@@ -125,9 +122,9 @@ export default function RatingPage() {
                                     <td className="p-1.5">
                                         <span
                                             onClick={() => navigate(`/profile/${p.id}`)}
-                                            className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors"
+                                            className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors block truncate"
                                         >
-                                            {i + 1 + (page - 1) * LIMIT}. {truncate(p.username)}
+                                            {i + 1 + (page - 1) * LIMIT}. {p.username}
                                         </span>
                                     </td>
                                     <td className="p-1.5 text-center" style={{ color: p.rank?.color }}>
