@@ -139,8 +139,8 @@ export default function ShopPage() {
                     )}
                     {groupSlots.map(slot => {
                         const slotItems = grouped[slot];
-                        const isExpanded = expandedSlots.has(slot) || !!searchQuery;
                         const count = slotItems.length;
+                        const isExpanded = expandedSlots.has(slot);
 
                         return (
                             <Card key={slot} className="overflow-hidden">
