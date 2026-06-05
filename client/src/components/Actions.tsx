@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
@@ -30,10 +31,15 @@ const castleCards: ActionCard[] = [
     { icon: 'game-icons:drink-me', title: 'Трактир', subtitle: 'Лечение и квесты', cost: 0, path: '/tavern', buttonText: 'Перейти', bgClass: 'url(/action_adventures.webp)', variant: 'danger' },
 ];
 
+const diffLabels: Record<string, string> = { easy: 'Лёгкий', equal: 'Равный', hard: 'Сложный' };
+const diffIcons: Record<string, string> = { easy: 'game-icons:broken-shield', equal: 'game-icons:crossed-swords', hard: 'game-icons:death-skull' };
+
 function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, navigate }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
     onArenaClick: () => void; navigate: (path: string) => void;
 }) {
+    const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
+
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {cards.map((card, i) => {
@@ -49,6 +55,12 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                     ? `${Math.floor(cdSec / 60)}:${String(cdSec % 60).padStart(2, '0')}`
                     : card.buttonText;
 
+                // Для арены — flip-card
+                if (isArena) {
+                    return <ArenaFlipCard key={i} card={card} disabled={disabled} cdSec={cdSec} btnText={btnText}
+                        arenaDifficulty={arenaDifficulty} setArenaDifficulty={setArenaDifficulty} navigate={navigate} />;
+                }
+
                 return (
                     <div key={i} className="relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden">
                         <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ backgroundImage: card.bgClass }} />
@@ -60,7 +72,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             <div className="mt-auto">
                                 {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="xs" fullWidth disabled={disabled}
-                                    onClick={() => { if (isArena) onArenaClick(); else if (card.path) navigate(card.path); }}>
+                                    onClick={() => { if (card.path) navigate(card.path); }}>
                                     {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
                                 </Button>
                             </div>
@@ -68,6 +80,59 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                     </div>
                 );
             })}
+        </div>
+    );
+}
+
+function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setArenaDifficulty, navigate }: {
+    card: ActionCard; disabled: boolean; cdSec: number; btnText: string;
+    arenaDifficulty: string; setArenaDifficulty: (d: string) => void; navigate: (path: string) => void;
+}) {
+    const [flipped, setFlipped] = useState(false);
+
+    return (
+        <div className="perspective-600">
+            <div className={`relative w-full transition-transform duration-400 ${flipped ? 'rotate-y-180' : ''}`} style={{ transformStyle: 'preserve-3d' }}>
+                {/* Front */}
+                <div className="relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden" style={{ backfaceVisibility: 'hidden' }}>
+                    <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ backgroundImage: card.bgClass }} />
+                    <div className="relative z-10 w-full flex flex-col flex-1">
+                        <h3 className="text-[0.8rem] font-bold mb-0.5 flex items-center justify-center gap-1">
+                            <Icon icon={card.icon} width="14" height="14" />{card.title}
+                        </h3>
+                        <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                        <div className="mt-auto">
+                            {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
+                            <Button variant={disabled ? 'secondary' : 'danger'} size="xs" fullWidth disabled={disabled}
+                                onClick={() => { if (!disabled) setFlipped(true); }}>
+                                {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Back */}
+                <div className="absolute inset-0 bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center justify-center gap-2" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                    <p className="text-[0.65rem] text-[var(--color-text-muted)]">Сложность соперника:</p>
+                    <select
+                        value={arenaDifficulty}
+                        onChange={e => setArenaDifficulty(e.target.value)}
+                        className="bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-light)] rounded px-2 py-1 text-xs w-full"
+                    >
+                        <option value="easy">Лёгкий (ниже ур.)</option>
+                        <option value="equal">Равный</option>
+                        <option value="hard">Сложный (выше ур.)</option>
+                    </select>
+                    <div className="flex gap-1 w-full">
+                        <Button variant="danger" size="xs" fullWidth onClick={() => navigate(`/arena?difficulty=${arenaDifficulty}`)}>
+                            Поиск
+                        </Button>
+                        <Button variant="secondary" size="xs" onClick={() => setFlipped(false)} style={{ minWidth: '24px' }}>
+                            ←
+                        </Button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

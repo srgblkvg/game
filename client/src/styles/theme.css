@@ -189,6 +189,12 @@ h1, h2, h3 {
 .rotate-y-180 {
   transform: rotateY(180deg);
 }
+.perspective-600 {
+  perspective: 600px;
+}
 .perspective-800 {
   perspective: 800px;
+}
+.duration-400 {
+  transition-duration: 400ms;
 }
