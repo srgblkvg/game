@@ -54,9 +54,10 @@ export default function HomePage() {
   if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
 
   const nowSec = Math.floor(Date.now() / 1000);
-  const attackCooldownSec = Math.max(0, 300 - (nowSec - (character.lastAttackTime || 0)));
+  const hasPremium = (character as any).premium && (character as any).premium.until > nowSec;
+  const attackCooldownSec = Math.max(0, (hasPremium ? 150 : 300) - (nowSec - (character.lastAttackTime || 0)));
   const canAttack = attackCooldownSec <= 0;
-  const pveCooldownSec = Math.max(0, 300 - (nowSec - ((character as any).lastPveAttackTime || 0)));
+  const pveCooldownSec = Math.max(0, (hasPremium ? 150 : 300) - (nowSec - ((character as any).lastPveAttackTime || 0)));
   const bankCooldownSec = Math.max(0, 1800 - (nowSec - ((character as any).lastBankVisit || 0)));
 
   return (
