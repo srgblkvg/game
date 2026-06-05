@@ -114,25 +114,24 @@ export default function RatingPage() {
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
-                                <th className="text-left p-1.5 text-sm">Игрок</th>
-                                <th className="text-right p-1.5 text-sm">Очки рейтинга</th>
+                                <th className="text-left p-1.5 text-sm w-2/5">Ник</th>
+                                <th className="text-center p-1.5 text-sm w-1/5">Титул</th>
+                                <th className="text-right p-1.5 text-sm w-2/5">Очки</th>
                             </tr>
                         </thead>
                         <tbody>
                             {players.map((p, i) => (
                                 <tr key={p.id} className="border-b border-[var(--color-border-light)]">
                                     <td className="p-1.5">
-                                        {p.rank && (
-                                            <div className="text-xs leading-tight mb-0.5 text-center" style={{ color: p.rank.color }}>
-                                                {p.rank.icon} {p.rank.name}
-                                            </div>
-                                        )}
                                         <span
                                             onClick={() => navigate(`/profile/${p.id}`)}
                                             className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors"
                                         >
                                             {i + 1 + (page - 1) * LIMIT}. {truncate(p.username)}
                                         </span>
+                                    </td>
+                                    <td className="p-1.5 text-center" style={{ color: p.rank?.color }}>
+                                        {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}
                                     </td>
                                     <td className="text-right p-1.5 font-bold" style={{ color: p.rank?.color }}>
                                         {p.elo}

@@ -35,21 +35,17 @@ export default function RatingBlock() {
             </h3>
             <ul className="list-none p-0 m-0">
                 {players.map((p, i) => (
-                    <li key={p.id} className="flex justify-between py-1 border-b border-[var(--color-border-light)] text-sm">
-                        <div>
-                            {p.rank && (
-                                <div className="text-xs leading-tight text-center" style={{ color: p.rank.color }}>
-                                    {p.rank.icon} {p.rank.name}
-                                </div>
-                            )}
-                            <span
-                                onClick={(e) => { e.stopPropagation(); navigate(`/profile/${p.id}`); }}
-                                className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors"
-                            >
-                                {i + 1}. {truncate(p.username)}
-                            </span>
-                        </div>
-                        <span className="font-bold text-xs" style={{ color: p.rank?.color }}>{p.elo}</span>
+                    <li key={p.id} className="flex py-1 border-b border-[var(--color-border-light)] text-sm">
+                        <span
+                            onClick={(e) => { e.stopPropagation(); navigate(`/profile/${p.id}`); }}
+                            className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors flex-1"
+                        >
+                            {i + 1}. {truncate(p.username)}
+                        </span>
+                        <span className="text-xs text-center w-16" style={{ color: p.rank?.color }}>
+                            {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}
+                        </span>
+                        <span className="font-bold text-xs w-12 text-right" style={{ color: p.rank?.color }}>{p.elo}</span>
                     </li>
                 ))}
             </ul>
