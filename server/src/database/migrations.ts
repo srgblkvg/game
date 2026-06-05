@@ -171,6 +171,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // Бан игроков админом
   try { db.exec('ALTER TABLE users ADD COLUMN bannedUntil INTEGER DEFAULT 0'); } catch {}
 
+  // Премиум
+  try { db.exec('ALTER TABLE users ADD COLUMN premiumUntil INTEGER DEFAULT 0'); } catch {}
+
   // Время последнего входа
   try { db.exec('ALTER TABLE users ADD COLUMN lastLoginAt DATETIME'); } catch {}
 

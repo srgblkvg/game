@@ -146,6 +146,7 @@ router.get('/character/me', (req: any, res) => {
         lastBankVisit: user.lastBankVisit || 0,
         room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
         drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
+        premium: user.premiumUntil > now ? { until: user.premiumUntil } : null,
         drinkBonuses,
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,

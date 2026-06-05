@@ -281,3 +281,15 @@ export async function fetchUserIps(userId: number) {
     if (!res.ok) throw new Error('Ошибка загрузки IP');
     return res.json();
 }
+
+// Премиум
+export async function grantPremium(userId: number, days: number) {
+    const res = await fetch(`${BASE_URL}/admin/premium`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ userId, days }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка выдачи премиума');
+    return data;
+}

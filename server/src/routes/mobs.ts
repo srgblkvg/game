@@ -21,12 +21,15 @@ router.post('/mob/attack', (req: any, res) => {
 
     const now = Math.floor(Date.now() / 1000);
 
-    // Проверка кулдауна PvE (раздельный с PvP — 5 минут)
+    // Проверка кулдауна PvE (раздельный с PvP — 5 мин, премиум 2.5 мин)
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (user.lastPveAttackTime > 0 && (now - user.lastPveAttackTime) < 300) {
-        const remaining = 300 - (now - user.lastPveAttackTime);
+    const hasPremium = (user.premiumUntil || 0) > now;
+    const pveCooldown = hasPremium ? 150 : 300;
+
+    if (user.lastPveAttackTime > 0 && (now - user.lastPveAttackTime) < pveCooldown) {
+        const remaining = pveCooldown - (now - user.lastPveAttackTime);
         return res.status(400).json({ error: `До следующей атаки моба осталось ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
     }
 
@@ -126,6 +129,9 @@ router.post('/mob/attack', (req: any, res) => {
     let goldGained = 0;
     if (playerWon) {
         goldGained = Math.floor(Math.random() * (mob.gold_max - mob.gold_min + 1)) + mob.gold_min;
+        if (hasPremium) {
+            goldGained = Math.floor(goldGained * 1.3); // премиум +30%
+        }
     }
 
     // Шанс дропа материала (~35%)

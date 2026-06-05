@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAdminUsers, addMoneyToUser, adminFinishJob, banUser, unbanUser, deleteUser, fetchUserIps } from '../../api';
+import { fetchAdminUsers, addMoneyToUser, adminFinishJob, banUser, unbanUser, deleteUser, fetchUserIps, grantPremium } from '../../api';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { inputClass } from '../../utils/formStyles';
@@ -28,6 +28,10 @@ export default function AdminUsers() {
 
     // Подтверждение удаления
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+
+    // Премиум
+    const [premiumUserId, setPremiumUserId] = useState('');
+    const [premiumDays, setPremiumDays] = useState('7');
 
     // Поиск по имени
     const [searchQuery, setSearchQuery] = useState('');
@@ -69,6 +73,14 @@ export default function AdminUsers() {
     const handleFinishJob = async (userId: number) => {
         try {
             const res = await adminFinishJob(userId);
+            setMessage(res.message);
+            loadUsers();
+        } catch (e: any) { setMessage(e.message); }
+    };
+
+    const handleGrantPremium = async () => {
+        try {
+            const res = await grantPremium(parseInt(premiumUserId), parseInt(premiumDays));
             setMessage(res.message);
             loadUsers();
         } catch (e: any) { setMessage(e.message); }
@@ -217,6 +229,13 @@ export default function AdminUsers() {
             </Card>
 
             <Card className="mb-4">
+                <h3 className="font-bold mb-2">Выдать премиум</h3>
+                <input type="number" placeholder="ID игрока" value={premiumUserId} onChange={e => setPremiumUserId(e.target.value)} className={inputClass} />
+                <input type="number" placeholder="Дней" value={premiumDays} onChange={e => setPremiumDays(e.target.value)} className={`${inputClass} w-20`} min="1" />
+                <Button variant="success" size="sm" onClick={handleGrantPremium}>Выдать</Button>
+            </Card>
+
+            <Card className="mb-4">
                 <h3 className="font-bold mb-2">Завершить работу по ID</h3>
                 <input type="number" placeholder="ID игрока" value={finishJobUserId} onChange={e => setFinishJobUserId(e.target.value)} className={inputClass} />
                 <Button size="sm" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(parseInt(finishJobUserId))}>Завершить работу</Button>
@@ -250,6 +269,7 @@ export default function AdminUsers() {
                                 <th className="text-left p-1">Рег.</th>
                                 <th className="text-left p-1">Посл. вход</th>
                                 <th className="text-left p-1">Бан</th>
+                                <th className="text-left p-1">Премиум</th>
                                 <th className="text-left p-1">Атака</th>
                                 <th className="text-left p-1">Работа</th>
                                 <th className="text-left p-1">Действия</th>
@@ -283,6 +303,9 @@ export default function AdminUsers() {
                                         </td>
                                         <td className="p-1" style={{ color: banRemaining ? '#e74c3c' : '#2ecc71' }}>
                                             {banRemaining || 'Нет'}
+                                        </td>
+                                        <td className="p-1" style={{ color: (u.premiumUntil || 0) > now ? '#f1c40f' : '#888' }}>
+                                            {(u.premiumUntil || 0) > now ? formatRemaining(u.premiumUntil) : 'Нет'}
                                         </td>
                                         <td className="p-1" style={{ color: attackRemaining === 'Готов' ? '#2ecc71' : '#f1c40f' }}>{attackRemaining}</td>
                                         <td className="p-1" style={{ color: jobName !== 'Нет' ? '#e67e22' : '#aaa' }}>{jobName}</td>

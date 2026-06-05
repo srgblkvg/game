@@ -4,6 +4,7 @@ import Card from './ui/Card';
 interface BuffsBlockProps {
     room?: { type: string; until: number } | null;
     drink?: { type: string; until: number } | null;
+    premium?: { until: number } | null;
 }
 
 function formatTime(seconds: number) {
@@ -24,9 +25,9 @@ const drinkNames: Record<string, string> = {
     grog_small: 'Грог Моры', grog_med: 'Крепкий грог', dragon_blood: 'Кровь дракона',
 };
 
-export default function BuffsBlock({ room, drink }: BuffsBlockProps) {
+export default function BuffsBlock({ room, drink, premium }: BuffsBlockProps) {
     const [now, setNow] = useState(Math.floor(Date.now() / 1000));
-    const [collapsed, setCollapsed] = useState(true);
+    const [collapsed, setCollapsed] = useState(false);
 
     useEffect(() => {
         const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
@@ -35,7 +36,8 @@ export default function BuffsBlock({ room, drink }: BuffsBlockProps) {
 
     const hasRoom = room && room.until > now;
     const hasDrink = drink && drink.until > now;
-    const activeCount = [hasRoom, hasDrink].filter(Boolean).length;
+    const hasPremium = premium && premium.until > now;
+    const activeCount = [hasRoom, hasDrink, hasPremium].filter(Boolean).length;
 
     return (
         <Card className="mt-4 w-full">
@@ -54,26 +56,49 @@ export default function BuffsBlock({ room, drink }: BuffsBlockProps) {
 
             {!collapsed && (
                 <div className="mt-2">
-                    {!hasRoom && !hasDrink ? (
+                    {!hasRoom && !hasDrink && !hasPremium ? (
                         <p className="text-xs text-[var(--color-text-muted)] py-1">
                             Нет активных усилений
                         </p>
                     ) : (
                         <div className="space-y-1">
-                            {hasRoom && (
+                            {hasRoom ? (
                                 <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
                                     <span className="text-[var(--color-accent-success)]">
                                         Комната: {roomNames[room!.type] || room!.type} (×{roomRates[room!.type] || '?'})
                                     </span>
                                     <span className="text-[var(--color-text-muted)]">{formatTime(room!.until - now)}</span>
                                 </div>
+                            ) : (
+                                <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
+                                    <span className="text-[var(--color-text-muted)]">Комната</span>
+                                    <span className="text-[var(--color-text-muted)]">Отсутствует</span>
+                                </div>
                             )}
-                            {hasDrink && (
-                                <div className="flex justify-between text-xs py-1">
+                            {hasDrink ? (
+                                <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
                                     <span className="text-[var(--color-accent-purple)]">
                                         Напиток: {drinkNames[drink!.type] || drink!.type}
                                     </span>
                                     <span className="text-[var(--color-text-muted)]">{formatTime(drink!.until - now)}</span>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
+                                    <span className="text-[var(--color-text-muted)]">Напиток</span>
+                                    <span className="text-[var(--color-text-muted)]">Отсутствует</span>
+                                </div>
+                            )}
+                            {hasPremium ? (
+                                <div className="flex justify-between text-xs py-1">
+                                    <span className="text-[var(--color-accent-gold)]" style={{ color: '#f1c40f' }}>
+                                        Премиум (+30% золота, кулдаун ×0.5)
+                                    </span>
+                                    <span className="text-[var(--color-text-muted)]">{formatTime(premium!.until - now)}</span>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between text-xs py-1">
+                                    <span className="text-[var(--color-text-muted)]">Премиум</span>
+                                    <span className="text-[var(--color-text-muted)]">Отсутствует</span>
                                 </div>
                             )}
                         </div>

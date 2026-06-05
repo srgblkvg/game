@@ -46,7 +46,7 @@ router.get('/users', (req: any, res) => {
     const users = db.prepare(`
         SELECT id, username, level, money, totalBattles, wins,
                lastAttackTime, protectionUntil, activeJob, inventorySlots,
-               email, emailVerified, oauthProvider, createdAt, bannedUntil, lastLoginAt
+               email, emailVerified, oauthProvider, createdAt, bannedUntil, lastLoginAt, premiumUntil
         FROM users ORDER BY lastLoginAt DESC NULLS LAST
     `).all();
     res.json(users);
@@ -154,6 +154,24 @@ router.post('/change-password', (req: any, res) => {
     const passwordHash = bcrypt.hashSync(newPassword, 10);
     db.prepare('UPDATE admins SET passwordHash = ? WHERE id = ?').run(passwordHash, req.adminId);
     res.json({ success: true });
+});
+
+// Выдача премиума
+router.post('/premium', (req: any, res) => {
+    const { userId, days } = req.body;
+    if (!userId || !days || days < 1) return res.status(400).json({ error: 'Требуются userId и days (>= 1)' });
+
+    const user = db.prepare('SELECT id, username, premiumUntil FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'Игрок не найден' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const currentUntil = Math.max(user.premiumUntil || 0, now);
+    const newUntil = currentUntil + days * 86400;
+
+    db.prepare('UPDATE users SET premiumUntil = ? WHERE id = ?').run(newUntil, userId);
+    const untilDate = new Date(newUntil * 1000).toLocaleDateString('ru-RU');
+
+    res.json({ success: true, premiumUntil: newUntil, message: `${user.username}: премиум до ${untilDate} (${days} дн.)` });
 });
 
 export default router;

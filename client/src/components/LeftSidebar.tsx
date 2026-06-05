@@ -50,7 +50,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         highlightedSlots={highlightedSlots}
       />
       <StatAllocation />
-      <BuffsBlock room={(character as any).room} drink={(character as any).drink} />
+      <BuffsBlock room={(character as any).room} drink={(character as any).drink} premium={(character as any).premium} />
     </div>
   );
 }
