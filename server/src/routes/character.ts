@@ -96,8 +96,8 @@ router.get('/character/me', (req: any, res) => {
             const newStatPoints = (user.statPoints || 0) + levelsGained * 5;
             db.prepare('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL WHERE id = ?')
                 .run(newMoney, newExp, newLevel, newStatPoints, userId);
-            db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)')
-                .run(userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString());
+            db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                .run(userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString(), jobData.premiumBonus || 0);
             user.money = newMoney;
             user.level = newLevel;
             user.statPoints = newStatPoints;

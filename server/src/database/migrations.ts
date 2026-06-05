@@ -173,6 +173,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   // Премиум
   try { db.exec('ALTER TABLE users ADD COLUMN premiumUntil INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE job_history ADD COLUMN premiumBonus INTEGER DEFAULT 0'); } catch {}
 
   // Время последнего входа
   try { db.exec('ALTER TABLE users ADD COLUMN lastLoginAt DATETIME'); } catch {}

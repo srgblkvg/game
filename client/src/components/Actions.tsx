@@ -89,6 +89,25 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
     arenaDifficulty: string; setArenaDifficulty: (d: string) => void; navigate: (path: string) => void;
 }) {
     const [flipped, setFlipped] = useState(false);
+    const [checkMsg, setCheckMsg] = useState('');
+
+    const handleSearch = async () => {
+        setCheckMsg('');
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/arena/opponent?change=false&difficulty=${arenaDifficulty}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setCheckMsg(data.error || 'Нет соперников');
+            } else {
+                navigate(`/arena?difficulty=${arenaDifficulty}`);
+            }
+        } catch {
+            setCheckMsg('Ошибка сети');
+        }
+    };
 
     return (
         <div className="perspective-600">
@@ -124,13 +143,16 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                         <option value="hard">Сложный (выше ур.)</option>
                     </select>
                     <div className="flex gap-1 w-full">
-                        <Button variant="danger" size="xs" fullWidth onClick={() => navigate(`/arena?difficulty=${arenaDifficulty}`)}>
+                        <Button variant="danger" size="xs" fullWidth onClick={handleSearch}>
                             Поиск
                         </Button>
-                        <Button variant="secondary" size="xs" onClick={() => setFlipped(false)} style={{ minWidth: '24px' }}>
+                        <Button variant="secondary" size="xs" onClick={() => { setFlipped(false); setCheckMsg(''); }} style={{ minWidth: '24px' }}>
                             ←
                         </Button>
                     </div>
+                    {checkMsg && (
+                        <p className="text-red-400 text-[0.6rem] text-center">{checkMsg}</p>
+                    )}
                 </div>
             </div>
         </div>
