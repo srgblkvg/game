@@ -51,12 +51,14 @@ function startJobForUser(user: any, job: any, res: any) {
     let reward = Math.floor(Math.random() * (job.rewardMax - job.rewardMin + 1)) + job.rewardMin;
     const expReward = Math.max(1, Math.floor(job.duration / 3600));
 
-    // Премиум: +30% к награде
+    // Премиум: случайный бонус от 1 до 30% от базовой награды
+    let premiumBonus = 0;
     if ((user.premiumUntil || 0) > now) {
-        reward = Math.floor(reward * 1.3);
+        premiumBonus = Math.max(1, Math.floor(Math.random() * Math.floor(reward * 0.3)) + 1);
+        reward = reward + premiumBonus;
     }
 
-    const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax });
+    const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, premiumBonus });
     db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, user.id);
 
     res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax });

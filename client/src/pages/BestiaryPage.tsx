@@ -475,7 +475,7 @@ export default function BestiaryPage() {
               {battleResult.playerWon && (
                 <div className="text-sm space-y-1 mb-3">
                   {battleResult.xpGained > 0 && <p>Опыт: +{battleResult.xpGained}</p>}
-                  {battleResult.goldGained > 0 && <p>Золото: +{formatMoney(battleResult.goldGained)}</p>}
+                  {battleResult.goldGained > 0 && <p>Золото: +{formatMoney(battleResult.goldGained)}{battleResult.premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{battleResult.premiumBonus} премиум)</span> : null}</p>}
                   {battleResult.levelsGained > 0 && <p className="text-[var(--color-accent-purple)]">Уровень +{battleResult.levelsGained}</p>}
                   {battleResult.materialDropped && (
                     <p style={{ color: rarityColors[battleResult.materialDropped.rarity_id] || '#aaa' }}>Добыто: {battleResult.materialDropped.name}</p>

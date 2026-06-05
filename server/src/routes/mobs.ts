@@ -155,10 +155,12 @@ router.post('/mob/attack', (req: any, res) => {
 
     // Золото
     let goldGained = 0;
+    let premiumBonus = 0;
     if (playerWon) {
         goldGained = Math.floor(Math.random() * (mob.gold_max - mob.gold_min + 1)) + mob.gold_min;
         if (hasPremium) {
-            goldGained = Math.floor(goldGained * 1.3); // премиум +30%
+            premiumBonus = Math.max(1, Math.floor(Math.random() * Math.floor(goldGained * 0.3)) + 1);
+            goldGained = goldGained + premiumBonus;
         }
     }
 
@@ -279,6 +281,7 @@ router.post('/mob/attack', (req: any, res) => {
         playerWon,
         xpGained: playerWon ? xpGained : 0,
         goldGained,
+        premiumBonus,
         goldLost,
         newLevel,
         newExp,

@@ -104,7 +104,7 @@ export default function JobsPage() {
                 <h2 className="text-xl font-bold mb-3"><Icon icon="game-icons:hourglass" width="18" height="18" className="inline mr-1"/>Выполняется работа</h2>
                 <p className="text-lg">{activeJob.name}</p>
                 <p className="text-[var(--color-text-secondary)]">Осталось: {formatTime(remaining)}</p>
-                <p className="text-[var(--color-text-accent)]">Награда: {formatMoney((activeJob as any).rewardMin || activeJob.reward)}–{formatMoney((activeJob as any).rewardMax || activeJob.reward)}</p>
+                <p className="text-[var(--color-text-accent)]">Награда: {formatMoney((activeJob as any).rewardMin || activeJob.reward)}–{formatMoney((activeJob as any).rewardMax || activeJob.reward)}{(activeJob as any).premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{(activeJob as any).premiumBonus} премиум)</span> : null}</p>
                 <p className="text-[var(--color-accent-purple)]">Опыт: +{activeJob.expReward || 0}</p>
             </div>
         );
