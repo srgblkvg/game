@@ -216,8 +216,8 @@ router.post('/mob/attack', (req: any, res) => {
 
         if (result) {
             ratingGained = result.eloAdded;
-            const updateFields = ['pveRating = pveRating + ?'];
-            const updateValues: (number | string)[] = [result.eloAdded];
+            const updateFields = ['pveRating = pveRating + ?', 'elo = elo + ?'];
+            const updateValues: (number | string)[] = [result.eloAdded, result.eloAdded];
             if (isBoss) {
                 updateFields.push('lastBossKillDate = ?');
                 updateValues.push(today);
