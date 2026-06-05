@@ -34,11 +34,15 @@ const drinks: Record<string, { name: string; bonuses: Record<string, number>; co
 // Статус трактира
 router.get('/tavern', (req: any, res) => {
     const userId = req.userId;
-    const user = db.prepare('SELECT currentHp, money, roomType, roomUntil, activeDrink, drinkUntil, lastHpUpdate FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const maxHp = 20; // TODO: использовать реальный maxHp
+    const base = getBaseStats(user);
+    const equipment = JSON.parse(user.equipment || '{}');
+    const { enriched } = enrichEquipment(db, equipment);
+    const stats = currentStats(base, enriched);
+    const maxHp = stats.hp;
 
     res.json({
         currentHp: user.currentHp,
@@ -56,10 +60,14 @@ router.post('/tavern/heal', (req: any, res) => {
     const userId = req.userId;
     const { full } = req.body; // full=true — полное, иначе 50%
 
-    const user = db.prepare('SELECT currentHp, money FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const maxHp = 20; // TODO
+    const base = getBaseStats(user);
+    const equipment = JSON.parse(user.equipment || '{}');
+    const { enriched } = enrichEquipment(db, equipment);
+    const stats = currentStats(base, enriched);
+    const maxHp = stats.hp;
     const missingHp = maxHp - user.currentHp;
     if (missingHp <= 0) return res.status(400).json({ error: 'HP уже полное' });
 
