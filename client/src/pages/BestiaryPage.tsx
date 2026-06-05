@@ -13,6 +13,7 @@ import { renderBattleLog } from '../utils/battleLog';
 import { formatMoney } from '../utils/money';
 import { calculateStats } from '../utils/stats';
 import CharacterCard from '../components/CharacterCard';
+import ItemTooltip from '../components/ItemTooltip';
 
 const rarityColors: Record<number, string> = {
   0: '#6b6b6b', 1: '#a0a0a0', 2: '#4a9b4a', 3: '#4a7ac0', 4: '#a040c0', 5: '#d4a020', 6: '#e03030',
@@ -46,6 +47,7 @@ export default function BestiaryPage() {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
+  const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
 
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
@@ -358,25 +360,33 @@ export default function BestiaryPage() {
                       <div>
                         <span className="text-[var(--color-accent-purple)] text-[10px]">Лут:</span>
                         <div className="flex flex-wrap gap-1 mt-0.5">
-                          {info.lootImages.map((l: any) => (
-                            <div
-                              key={l.rarity}
-                              className="relative w-7 h-7 flex items-center justify-center"
-                              title={`${l.name}: ${(l.chance * 100).toFixed(0)}%`}
-                            >
-                              <img
-                                src={l.image}
-                                alt={l.name}
-                                className="w-6 h-6 object-contain rounded"
-                              />
-                              <span
-                                className="absolute bottom-0 right-0 text-[8px] text-white px-0.5 rounded-sm leading-none"
-                                style={{ background: 'rgba(0,0,0,0.65)' }}
+                          {info.lootImages.map((l: any) => {
+                            const item = {
+                              name: l.name,
+                              rarity_id: l.rarity,
+                              image: l.image,
+                              type: 'craft_item',
+                              rarity_display: rarityNames[l.rarity],
+                              rarity_color: rarityColors[l.rarity],
+                            };
+                            return (
+                              <div
+                                key={l.rarity}
+                                className="relative w-7 h-7 flex items-center justify-center cursor-default"
+                                onMouseEnter={(e) => setTooltipData({ item, x: e.clientX, y: e.clientY })}
+                                onMouseMove={(e) => setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
+                                onMouseLeave={() => setTooltipData(null)}
                               >
-                                {(l.chance * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                          ))}
+                                <img src={l.image} alt={l.name} className="w-6 h-6 object-contain rounded" />
+                                <span
+                                  className="absolute bottom-0 right-0 text-[8px] text-white px-0.5 rounded-sm leading-none"
+                                  style={{ background: 'rgba(0,0,0,0.65)' }}
+                                >
+                                  {(l.chance * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -495,6 +505,7 @@ export default function BestiaryPage() {
           )}
         </>
       )}
+      {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
     </div>
   );
 }
