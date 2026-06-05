@@ -355,17 +355,29 @@ export default function BestiaryPage() {
                       <span style={{ color: '#2ecc71' }}>◆ ~{info.avgXp} XP</span>
                     </div>
                     {info.lootImages.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap">
+                      <div>
                         <span className="text-[var(--color-accent-purple)] text-[10px]">Лут:</span>
-                        {info.lootImages.map((l: any) => (
-                          <img
-                            key={l.rarity}
-                            src={l.image}
-                            alt={l.name}
-                            title={`${l.name}: ${(l.chance * 100).toFixed(0)}%`}
-                            className="w-5 h-5 object-contain rounded"
-                          />
-                        ))}
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {info.lootImages.map((l: any) => (
+                            <div
+                              key={l.rarity}
+                              className="relative w-7 h-7 flex items-center justify-center"
+                              title={`${l.name}: ${(l.chance * 100).toFixed(0)}%`}
+                            >
+                              <img
+                                src={l.image}
+                                alt={l.name}
+                                className="w-6 h-6 object-contain rounded"
+                              />
+                              <span
+                                className="absolute bottom-0 right-0 text-[8px] text-white px-0.5 rounded-sm leading-none"
+                                style={{ background: 'rgba(0,0,0,0.65)' }}
+                              >
+                                {(l.chance * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
