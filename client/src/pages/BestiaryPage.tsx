@@ -105,16 +105,20 @@ export default function BestiaryPage() {
     const goldMin = fm.reduce((min, m) => Math.min(min, m.gold_min), Infinity);
     const goldMax = fm.reduce((max, m) => Math.max(max, m.gold_max), 0);
     const avgXp = fm.length > 0 ? Math.round(fm.reduce((s, m) => s + (m.xp || 0), 0) / fm.length) : 0;
-    // Лут: собираем макс. шансы по редкостям
-    const lootChances: { rarity: number; chance: number; name: string }[] = [];
-    for (const r of [0, 1, 2, 3, 4, 5, 6]) {
-      const key = ['loot_junk', 'loot_common', 'loot_uncommon', 'loot_rare', 'loot_epic', 'loot_legendary', 'loot_mythic'][r];
-      const maxChance = Math.max(...fm.map((m: any) => m[key] || 0));
-      if (maxChance > 0) {
-        lootChances.push({ rarity: r, chance: maxChance, name: rarityNames[r] });
+    // Лут: собираем изображения и макс. шансы по редкостям
+    const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
+    const seenRarities = new Set<number>();
+    for (const m of fm) {
+      if (m.lootImages) {
+        for (const li of m.lootImages) {
+          if (!seenRarities.has(li.rarity)) {
+            seenRarities.add(li.rarity);
+            lootImages.push(li);
+          }
+        }
       }
     }
-    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootChances };
+    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootImages };
   };
 
   // --- Animation helpers (same as useBattleLogic) ---
@@ -350,15 +354,16 @@ export default function BestiaryPage() {
                       <span style={{ color: '#f1c40f' }}>◆ {info.goldMin}–{info.goldMax} серебра</span>
                       <span style={{ color: '#2ecc71' }}>◆ ~{info.avgXp} XP</span>
                     </div>
-                    {info.lootChances.length > 0 && (
+                    {info.lootImages.length > 0 && (
                       <div className="flex items-center gap-1 flex-wrap">
-                        <span className="text-[var(--color-accent-purple)]">Лут:</span>
-                        {info.lootChances.map((l: any) => (
-                          <span
+                        <span className="text-[var(--color-accent-purple)] text-[10px]">Лут:</span>
+                        {info.lootImages.map((l: any) => (
+                          <img
                             key={l.rarity}
-                            className="inline-block w-3 h-3 rounded-full"
-                            style={{ background: rarityColors[l.rarity] }}
+                            src={l.image}
+                            alt={l.name}
                             title={`${l.name}: ${(l.chance * 100).toFixed(0)}%`}
+                            className="w-5 h-5 object-contain rounded"
                           />
                         ))}
                       </div>

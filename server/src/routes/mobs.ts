@@ -9,8 +9,36 @@ const router = Router();
 
 // Список всех мобов
 router.get('/mobs', (req: any, res) => {
-    const mobs = db.prepare('SELECT * FROM mobs ORDER BY level, id').all();
-    res.json(mobs);
+    const mobs = db.prepare('SELECT * FROM mobs ORDER BY level, id').all() as any[];
+
+    // Собираем изображения материалов по редкостям (первое попавшееся для каждой)
+    const craftImages: Record<number, string> = {};
+    const allCraft = db.prepare('SELECT rarity_id, image FROM craft_items WHERE image IS NOT NULL').all() as any[];
+    for (const c of allCraft) {
+        if (!craftImages[c.rarity_id] && c.image) {
+            craftImages[c.rarity_id] = c.image;
+        }
+    }
+
+    // Обогащаем мобов изображениями лута
+    const enriched = mobs.map((m: any) => {
+        const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
+        const rarityMap: [number, string, string][] = [
+            [0, 'loot_junk', 'Хлам'], [1, 'loot_common', 'Обычный'],
+            [2, 'loot_uncommon', 'Необычный'], [3, 'loot_rare', 'Редкий'],
+            [4, 'loot_epic', 'Эпический'], [5, 'loot_legendary', 'Легендарный'],
+            [6, 'loot_mythic', 'Мифический'],
+        ];
+        for (const [r, key, name] of rarityMap) {
+            const chance = m[key] || 0;
+            if (chance > 0 && craftImages[r]) {
+                lootImages.push({ rarity: r, name, image: craftImages[r], chance });
+            }
+        }
+        return { ...m, lootImages };
+    });
+
+    res.json(enriched);
 });
 
 // Атака моба
