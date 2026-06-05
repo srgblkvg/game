@@ -17,6 +17,9 @@ import CharacterCard from '../components/CharacterCard';
 const rarityColors: Record<number, string> = {
   0: '#6b6b6b', 1: '#a0a0a0', 2: '#4a9b4a', 3: '#4a7ac0', 4: '#a040c0', 5: '#d4a020', 6: '#e03030',
 };
+const rarityNames: Record<number, string> = {
+  0: 'Хлам', 1: 'Обычный', 2: 'Необычный', 3: 'Редкий', 4: 'Эпический', 5: 'Легендарный', 6: 'Мифический',
+};
 
 const PVE_COOLDOWN_SEC = 300;
 
@@ -102,12 +105,16 @@ export default function BestiaryPage() {
     const goldMin = fm.reduce((min, m) => Math.min(min, m.gold_min), Infinity);
     const goldMax = fm.reduce((max, m) => Math.max(max, m.gold_max), 0);
     const avgXp = fm.length > 0 ? Math.round(fm.reduce((s, m) => s + (m.xp || 0), 0) / fm.length) : 0;
-    // Есть ли шанс лута
-    const hasLoot = fm.some((m: any) =>
-      m.loot_junk > 0 || m.loot_common > 0 || m.loot_uncommon > 0 ||
-      m.loot_rare > 0 || m.loot_epic > 0 || m.loot_legendary > 0 || m.loot_mythic > 0
-    );
-    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, hasLoot };
+    // Лут: собираем макс. шансы по редкостям
+    const lootChances: { rarity: number; chance: number; name: string }[] = [];
+    for (const r of [0, 1, 2, 3, 4, 5, 6]) {
+      const key = ['loot_junk', 'loot_common', 'loot_uncommon', 'loot_rare', 'loot_epic', 'loot_legendary', 'loot_mythic'][r];
+      const maxChance = Math.max(...fm.map((m: any) => m[key] || 0));
+      if (maxChance > 0) {
+        lootChances.push({ rarity: r, chance: maxChance, name: rarityNames[r] });
+      }
+    }
+    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootChances };
   };
 
   // --- Animation helpers (same as useBattleLogic) ---
@@ -339,9 +346,19 @@ export default function BestiaryPage() {
                   <div className="text-xs text-[var(--color-text-muted)] space-y-1">
                     <p>Монстров: {info.count}</p>
                     <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
-                    <p>🥇 {info.goldMin}–{info.goldMax}</p>
-                    <p>⭐ ~{info.avgXp} XP</p>
-                    {info.hasLoot && <p className="text-[var(--color-accent-purple)]">📦 Лут</p>}
+                    <p className="font-bold text-[var(--color-text-secondary)]">Награда:</p>
+                    <p><span style={{ color: '#f1c40f' }}>◆</span> {info.goldMin}–{info.goldMax} серебра</p>
+                    <p><span style={{ color: '#2ecc71' }}>◆</span> ~{info.avgXp} XP</p>
+                    {info.lootChances.length > 0 && (
+                      <div>
+                        <p className="text-[var(--color-accent-purple)]">Возможный лут:</p>
+                        {info.lootChances.map((l: any) => (
+                          <p key={l.rarity} style={{ color: rarityColors[l.rarity], paddingLeft: '8px', fontSize: '11px' }}>
+                            {l.name} — {(l.chance * 100).toFixed(0)}%
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {disabled && (
                     <div className="mt-2">
