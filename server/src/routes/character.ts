@@ -140,6 +140,8 @@ router.get('/character/me', (req: any, res) => {
         currentHp, stats, lastAttackTime: user.lastAttackTime || 0,
         protectionUntil: user.protectionUntil || 0,
         lastPveAttackTime: user.lastPveAttackTime || 0,
+        attackCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 150 : 300) - (now - (user.lastAttackTime || 0))),
+        pveCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 150 : 300) - (now - (user.lastPveAttackTime || 0))),
         inventorySlots: user.inventorySlots || 10,
         activeJob: jobData, role: user.role || 'player',
         bank: user.bank || 0,
