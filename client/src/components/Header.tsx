@@ -32,6 +32,7 @@ export default function Header() {
         };
 
         checkForNewBattles();
+        fetchCharacter().then(setCharacter).catch(console.error);
         const interval = setInterval(() => {
             checkForNewBattles();
             fetchCharacter().then(setCharacter).catch(console.error);

@@ -1,9 +1,11 @@
 import Card from '../components/ui/Card';
+import BackButton from '../components/ui/BackButton';
 
 export default function PremiumPage() {
 
     return (
         <div className="py-4 max-w-lg mx-auto">
+            <BackButton />
             <Card>
                 <h2 className="font-bold text-lg mb-3" style={{ color: '#f1c40f' }}>⭐ Премиум</h2>
 
