@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card from './ui/Card';
 
 interface BuffsBlockProps {
@@ -28,6 +29,7 @@ const drinkNames: Record<string, string> = {
 export default function BuffsBlock({ room, drink, premium }: BuffsBlockProps) {
     const [now, setNow] = useState(Math.floor(Date.now() / 1000));
     const [collapsed, setCollapsed] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
@@ -55,54 +57,45 @@ export default function BuffsBlock({ room, drink, premium }: BuffsBlockProps) {
             </div>
 
             {!collapsed && (
-                <div className="mt-2">
-                    {!hasRoom && !hasDrink && !hasPremium ? (
-                        <p className="text-xs text-[var(--color-text-muted)] py-1">
-                            Нет активных усилений
-                        </p>
-                    ) : (
-                        <div className="space-y-1">
-                            {hasRoom ? (
-                                <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
-                                    <span className="text-[var(--color-accent-success)]">
-                                        Комната: {roomNames[room!.type] || room!.type} (×{roomRates[room!.type] || '?'})
-                                    </span>
-                                    <span className="text-[var(--color-text-muted)]">{formatTime(room!.until - now)}</span>
-                                </div>
-                            ) : (
-                                <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
-                                    <span className="text-[var(--color-text-muted)]">Комната</span>
-                                    <span className="text-[var(--color-text-muted)]">Отсутствует</span>
-                                </div>
-                            )}
-                            {hasDrink ? (
-                                <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
-                                    <span className="text-[var(--color-accent-purple)]">
-                                        Напиток: {drinkNames[drink!.type] || drink!.type}
-                                    </span>
-                                    <span className="text-[var(--color-text-muted)]">{formatTime(drink!.until - now)}</span>
-                                </div>
-                            ) : (
-                                <div className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] last:border-b-0">
-                                    <span className="text-[var(--color-text-muted)]">Напиток</span>
-                                    <span className="text-[var(--color-text-muted)]">Отсутствует</span>
-                                </div>
-                            )}
-                            {hasPremium ? (
-                                <div className="flex justify-between text-xs py-1">
-                                    <span className="text-[var(--color-accent-gold)]" style={{ color: '#f1c40f' }}>
-                                        Премиум (+30% золота, кулдаун ×0.5)
-                                    </span>
-                                    <span className="text-[var(--color-text-muted)]">{formatTime(premium!.until - now)}</span>
-                                </div>
-                            ) : (
-                                <div className="flex justify-between text-xs py-1">
-                                    <span className="text-[var(--color-text-muted)]">Премиум</span>
-                                    <span className="text-[var(--color-text-muted)]">Отсутствует</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                <div className="mt-2 space-y-1">
+                    {/* Комната */}
+                    <div
+                        className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1"
+                        onClick={() => navigate('/tavern')}
+                    >
+                        <span className={hasRoom ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}>
+                            Комната{hasRoom && room ? `: ${roomNames[room.type] || room.type} (×${roomRates[room.type] || '?'})` : ''}
+                        </span>
+                        <span className="text-[var(--color-text-muted)]">
+                            {hasRoom && room ? formatTime(room.until - now) : 'Отсутствует'}
+                        </span>
+                    </div>
+
+                    {/* Напиток */}
+                    <div
+                        className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1"
+                        onClick={() => navigate('/tavern')}
+                    >
+                        <span className={hasDrink ? 'text-[var(--color-accent-purple)]' : 'text-[var(--color-text-muted)]'}>
+                            Напиток{hasDrink && drink ? `: ${drinkNames[drink.type] || drink.type}` : ''}
+                        </span>
+                        <span className="text-[var(--color-text-muted)]">
+                            {hasDrink && drink ? formatTime(drink.until - now) : 'Отсутствует'}
+                        </span>
+                    </div>
+
+                    {/* Премиум */}
+                    <div
+                        className="flex justify-between text-xs py-1 cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1"
+                        onClick={() => navigate('/premium')}
+                    >
+                        <span className={hasPremium ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-muted)]'} style={hasPremium ? { color: '#f1c40f' } : undefined}>
+                            Премиум
+                        </span>
+                        <span className="text-[var(--color-text-muted)]">
+                            {hasPremium && premium ? formatTime(premium.until - now) : 'Отсутствует'}
+                        </span>
+                    </div>
                 </div>
             )}
         </Card>
