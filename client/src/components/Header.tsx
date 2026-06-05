@@ -74,11 +74,18 @@ export default function Header() {
                     <MoneyDisplay money={character.money} />
                 </span>
             )}
-            {user.role === 'player' && protectionSec > 0 && (
-                <span className="text-[var(--color-accent-info)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1" style={{ background: 'rgba(52, 152, 219, 0.15)' }}>
-                    <Icon icon="game-icons:shield" width="18" height="18" />
-                    {formatTime(protectionSec)}
-                </span>
+            {user.role === 'player' && (
+                protectionSec > 0 ? (
+                    <span className="text-[var(--color-accent-info)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1" style={{ background: 'rgba(52, 152, 219, 0.15)' }}>
+                        <Icon icon="game-icons:shield" width="18" height="18" />
+                        {formatTime(protectionSec)}
+                    </span>
+                ) : (
+                    <span className="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
+                        <Icon icon="game-icons:shield-disabled" width="18" height="18" />
+                        нет защиты
+                    </span>
+                )
             )}
             <div className="flex gap-2 ml-auto">
                 {user.role === 'player' && (
