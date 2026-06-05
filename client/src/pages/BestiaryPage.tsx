@@ -344,19 +344,26 @@ export default function BestiaryPage() {
                     <h3 className="font-bold text-sm">{floor}</h3>
                   </div>
                   <div className="text-xs text-[var(--color-text-muted)] space-y-1">
-                    <p>Монстров: {info.count}</p>
-                    <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
                     <p className="font-bold text-[var(--color-text-secondary)]">Награда:</p>
-                    <p><span style={{ color: '#f1c40f' }}>◆</span> {info.goldMin}–{info.goldMax} серебра</p>
-                    <p><span style={{ color: '#2ecc71' }}>◆</span> ~{info.avgXp} XP</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                      <span style={{ color: '#f1c40f' }}>◆ {info.goldMin}–{info.goldMax} серебра</span>
+                      <span style={{ color: '#2ecc71' }}>◆ ~{info.avgXp} XP</span>
+                    </div>
                     {info.lootChances.length > 0 && (
                       <div>
-                        <p className="text-[var(--color-accent-purple)]">Возможный лут:</p>
-                        {info.lootChances.map((l: any) => (
-                          <p key={l.rarity} style={{ color: rarityColors[l.rarity], paddingLeft: '8px', fontSize: '11px' }}>
-                            {l.name} — {(l.chance * 100).toFixed(0)}%
-                          </p>
-                        ))}
+                        <p className="text-[var(--color-accent-purple)] mb-0.5">Лут:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {info.lootChances.map((l: any) => (
+                            <span
+                              key={l.rarity}
+                              className="px-1 py-0.5 rounded text-[10px] font-medium"
+                              style={{ background: rarityColors[l.rarity] + '22', color: rarityColors[l.rarity], border: '1px solid ' + rarityColors[l.rarity] + '44' }}
+                              title={`${l.name}: ${(l.chance * 100).toFixed(0)}%`}
+                            >
+                              {(l.chance * 100).toFixed(0)}%
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
