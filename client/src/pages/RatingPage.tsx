@@ -122,12 +122,16 @@ export default function RatingPage() {
                             {players.map((p, i) => (
                                 <tr key={p.id} className="border-b border-[var(--color-border-light)]">
                                     <td className="p-1.5">
+                                        {p.rank && (
+                                            <div className="text-[10px] leading-tight mb-0.5" style={{ color: p.rank.color }}>
+                                                {p.rank.icon} {p.rank.name}
+                                            </div>
+                                        )}
                                         <span
                                             onClick={() => navigate(`/profile/${p.id}`)}
                                             className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors"
                                         >
-                                            {i + 1 + (page - 1) * LIMIT}. {truncate(p.username)}{' '}
-                                            <span style={{ color: p.rank?.color }}>({p.rank?.icon} {p.rank?.name})</span>
+                                            {i + 1 + (page - 1) * LIMIT}. {truncate(p.username)}
                                         </span>
                                     </td>
                                     <td className="text-right p-1.5 font-bold" style={{ color: p.rank?.color }}>

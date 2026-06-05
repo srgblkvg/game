@@ -36,13 +36,19 @@ export default function RatingBlock() {
             <ul className="list-none p-0 m-0">
                 {players.map((p, i) => (
                     <li key={p.id} className="flex justify-between py-1 border-b border-[var(--color-border-light)] text-sm">
-                        <span
-                            onClick={(e) => { e.stopPropagation(); navigate(`/profile/${p.id}`); }}
-                            className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors"
-                        >
-                            {i + 1}. {truncate(p.username)}{' '}
-                            <span style={{ color: p.rank?.color, fontSize: '0.7rem' }}>({p.rank?.icon} {p.rank?.name})</span>
-                        </span>
+                        <div>
+                            {p.rank && (
+                                <div className="text-[10px] leading-tight" style={{ color: p.rank.color }}>
+                                    {p.rank.icon} {p.rank.name}
+                                </div>
+                            )}
+                            <span
+                                onClick={(e) => { e.stopPropagation(); navigate(`/profile/${p.id}`); }}
+                                className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors"
+                            >
+                                {i + 1}. {truncate(p.username)}
+                            </span>
+                        </div>
                         <span className="font-bold text-xs" style={{ color: p.rank?.color }}>{p.elo}</span>
                     </li>
                 ))}
