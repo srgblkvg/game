@@ -123,7 +123,7 @@ export default function RatingPage() {
                                 <tr key={p.id} className="border-b border-[var(--color-border-light)]">
                                     <td className="p-1.5">
                                         {p.rank && (
-                                            <div className="text-[10px] leading-tight mb-0.5" style={{ color: p.rank.color }}>
+                                            <div className="text-xs leading-tight mb-0.5 text-center" style={{ color: p.rank.color }}>
                                                 {p.rank.icon} {p.rank.name}
                                             </div>
                                         )}

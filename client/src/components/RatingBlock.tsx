@@ -38,7 +38,7 @@ export default function RatingBlock() {
                     <li key={p.id} className="flex justify-between py-1 border-b border-[var(--color-border-light)] text-sm">
                         <div>
                             {p.rank && (
-                                <div className="text-[10px] leading-tight" style={{ color: p.rank.color }}>
+                                <div className="text-xs leading-tight text-center" style={{ color: p.rank.color }}>
                                     {p.rank.icon} {p.rank.name}
                                 </div>
                             )}
