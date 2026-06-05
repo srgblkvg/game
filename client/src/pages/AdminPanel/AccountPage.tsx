@@ -11,7 +11,7 @@ import { inputClass } from '../../utils/formStyles';
 
 export default function AccountPage() {
     const { user, loginUser, logout } = useAuth();
-    const { setCharacter } = useGame();
+    const { character, setCharacter } = useGame();
     const navigate = useNavigate();
 
     const [newUsername, setNewUsername] = useState('');
