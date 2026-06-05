@@ -8,6 +8,7 @@ import { JWT_SECRET } from '../env';
 import { auditRegister, auditLoginSuccess, auditLoginFailure, auditAccountLocked } from '../audit';
 import { sendVerificationCode } from '../email';
 import { applyDecay, checkSeasonReset } from '../game/rating';
+import { currentStats } from '../game/stats';
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router.post('/register', async (req, res) => {
 
     const passwordHash = bcrypt.hashSync(password, 10);
     const now = Math.floor(Date.now() / 1000);
-    const startHp = 5 + 5 + 5 + 5;
+    const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
     const code = generateCode();
     const codeExpires = now + 600; // 10 минут
 

@@ -5,6 +5,7 @@ import db from '../database';
 import { JWT_SECRET } from '../env';
 import logger from '../logger';
 import { auditLoginSuccess } from '../audit';
+import { currentStats } from '../game/stats';
 
 const router = Router();
 
@@ -60,7 +61,7 @@ function findOrCreateUser(provider: string, oauthId: string, username: string): 
         suffix++;
     }
 
-    const startHp = 20;
+    const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
     const randomHash = crypto.randomBytes(32).toString('hex');
     const info = db.prepare(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt)
         VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male', ?)`)
