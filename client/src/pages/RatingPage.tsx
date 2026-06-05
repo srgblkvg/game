@@ -114,9 +114,9 @@ export default function RatingPage() {
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
-                                <th className="text-left p-1.5 text-sm w-2/4">Ник</th>
-                                <th className="text-center p-1.5 text-sm w-1/4">Титул</th>
-                                <th className="text-right p-1.5 text-sm w-1/4">Очки</th>
+                                <th className="text-left p-1.5 text-sm w-3/6">Ник</th>
+                                <th className="text-center p-1.5 text-sm w-2/6">Титул</th>
+                                <th className="text-right p-1.5 text-sm w-1/6">Очки</th>
                             </tr>
                         </thead>
                         <tbody>
