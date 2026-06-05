@@ -23,6 +23,7 @@ router.get('/arena/opponent', (req: any, res) => {
     ).all(userId, now) as any[];
 
     // Фильтр по сложности
+    const diffLabel = difficulty === 'easy' ? 'ниже вашим' : difficulty === 'hard' ? 'выше вашим' : 'равным вашему';
     if (difficulty === 'easy') {
         opponents = opponents.filter((o: any) => o.level < user.level);
     } else if (difficulty === 'hard') {
@@ -31,11 +32,8 @@ router.get('/arena/opponent', (req: any, res) => {
         opponents = opponents.filter((o: any) => o.level === user.level);
     }
 
-    // Если нет подходящих — fallback на любых
     if (opponents.length === 0) {
-        opponents = db.prepare(
-            'SELECT * FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
-        ).all(userId, now) as any[];
+        return res.status(404).json({ error: `Нет соперников с уровнем ${diffLabel} (${user.level})` });
     }
 
     if (excludeId !== undefined) {
