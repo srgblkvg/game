@@ -94,7 +94,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
         <div className="perspective-600">
             <div className={`relative w-full transition-transform duration-400 ${flipped ? 'rotate-y-180' : ''}`} style={{ transformStyle: 'preserve-3d' }}>
                 {/* Front */}
-                <div className="relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden" style={{ backfaceVisibility: 'hidden' }}>
+                <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden ${flipped ? 'pointer-events-none' : ''}`} style={{ backfaceVisibility: 'hidden' }}>
                     <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ backgroundImage: card.bgClass }} />
                     <div className="relative z-10 w-full flex flex-col flex-1">
                         <h3 className="text-[0.8rem] font-bold mb-0.5 flex items-center justify-center gap-1">
@@ -112,7 +112,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                 </div>
 
                 {/* Back */}
-                <div className="absolute inset-0 bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center justify-center gap-2" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                <div className={`absolute inset-0 bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center justify-center gap-2 ${!flipped ? 'pointer-events-none' : ''}`} style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                     <p className="text-[0.65rem] text-[var(--color-text-muted)]">Сложность соперника:</p>
                     <select
                         value={arenaDifficulty}
