@@ -10,8 +10,10 @@ interface BuffsBlockProps {
 
 function formatTime(seconds: number) {
     if (seconds <= 0) return 'истекло';
-    const h = Math.floor(seconds / 3600);
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
     const m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return `${d} дн ${h} ч ${m} мин`;
     return h > 0 ? `${h} ч ${m} мин` : `${m} мин`;
 }
 
@@ -28,7 +30,7 @@ const drinkNames: Record<string, string> = {
 
 export default function BuffsBlock({ room, drink, premium }: BuffsBlockProps) {
     const [now, setNow] = useState(Math.floor(Date.now() / 1000));
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
