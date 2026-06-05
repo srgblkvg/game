@@ -312,6 +312,7 @@ export default function ChatPanel() {
                             bannedUntil={bannedUntil}
                             chatError={chatError}
                             pendingMention={pendingMention}
+                            isGuest={user?.isGuest}
                             onClearPending={handleClearPending}
                         />
                     </div>

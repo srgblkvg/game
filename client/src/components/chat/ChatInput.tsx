@@ -11,14 +11,17 @@ interface ChatInputProps {
     chatError: string | null;
     pendingMention?: string | null;
     onClearPending?: () => void;
+    isGuest?: boolean;
 }
 
-export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSend, bannedUntil, chatError, pendingMention, onClearPending }: ChatInputProps) {
+export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSend, bannedUntil, chatError, pendingMention, onClearPending, isGuest }: ChatInputProps) {
     const [input, setInput] = useState('');
     const [autocomplete, setAutocomplete] = useState<{ items: { id: number; name: string }[]; selectedIndex: number } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const isBanned = bannedUntil !== null && bannedUntil > Date.now() / 1000;
+    const isDisabled = isBanned || isGuest;
+    const disabledPlaceholder = isGuest ? 'Чат недоступен для гостей' : 'Чат заблокирован';
 
     useEffect(() => {
         if (pendingMention && !isBanned) {
@@ -52,7 +55,7 @@ export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSen
     }, [onlineUsers, currentUserId]);
 
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (isBanned) return;
+        if (isDisabled) return;
         const value = e.target.value;
         setInput(value);
         buildAutocomplete(value, e.target.selectionStart || 0);
@@ -104,7 +107,7 @@ export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSen
     };
 
     const handleSendClick = () => {
-        if (isBanned) return;
+        if (isDisabled) return;
         const trimmed = input.trim();
         if (trimmed) {
             onSend(trimmed);
@@ -132,22 +135,22 @@ export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSen
                     value={input}
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
-                    disabled={isBanned}
-                    placeholder={isBanned ? 'Чат заблокирован' : (isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w ник текст для ЛС)')}
+                    disabled={isDisabled}
+                    placeholder={isDisabled ? disabledPlaceholder : (isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w ник текст для ЛС)')}
                     style={{
                         flex: 1,
                         padding: '0.3rem',
-                        background: isBanned ? '#222' : '#333',
+                        background: isDisabled ? '#222' : '#333',
                         border: '1px solid #555',
                         borderRadius: '4px',
-                        color: isBanned ? '#888' : '#fff',
-                        cursor: isBanned ? 'not-allowed' : 'text',
+                        color: isDisabled ? '#888' : '#fff',
+                        cursor: isDisabled ? 'not-allowed' : 'text',
                     }}
                 />
-                <button onClick={handleSendClick} disabled={isBanned} style={{
-                    background: isBanned ? '#555' : '#e63946',
-                    border: 'none', color: isBanned ? '#888' : '#fff',
-                    padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: isBanned ? 'not-allowed' : 'pointer',
+                <button onClick={handleSendClick} disabled={isDisabled} style={{
+                    background: isDisabled ? '#555' : '#e63946',
+                    border: 'none', color: isDisabled ? '#888' : '#fff',
+                    padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: isDisabled ? 'not-allowed' : 'pointer',
                 }}>➤</button>
                 {autocomplete && (
                     <Autocomplete

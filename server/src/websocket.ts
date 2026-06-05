@@ -116,7 +116,7 @@ export function setupWebSocket(server: any) {
 
     // ---------- Игрок ----------
     const userId = decoded.userId;
-    const user = db.prepare('SELECT id, username, level, chatBannedUntil FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT id, username, level, chatBannedUntil, isGuest FROM users WHERE id = ?').get(userId) as any;
     if (!user) {
       ws.close(1008, 'User not found');
       return;
@@ -160,6 +160,15 @@ export function setupWebSocket(server: any) {
         sendToUser(userId, {
           type: 'chatBanned',
           until: currentUser.chatBannedUntil,
+        });
+        return;
+      }
+
+      // Гостям чат запрещён
+      if (user.isGuest) {
+        sendToUser(userId, {
+          type: 'error',
+          message: 'Гостевой аккаунт не может писать в чат. Зарегистрируйтесь в разделе Аккаунт.',
         });
         return;
       }
