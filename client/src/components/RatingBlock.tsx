@@ -14,7 +14,7 @@ export default function RatingBlock() {
     const trophy = <Icon icon="game-icons:trophy" width="18" height="18" />;
 
     if (players.length === 0) return (
-        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[190px] overflow-hidden">
+        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[210px] overflow-hidden">
             <h3 className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1" onClick={() => navigate('/rating')}>
                 {trophy} Рейтинг
             </h3>
@@ -26,7 +26,7 @@ export default function RatingBlock() {
     const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '…' : nick;
 
     return (
-        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[190px] overflow-hidden">
+        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[210px] overflow-hidden">
             <h3
                 className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1"
                 onClick={() => navigate('/rating')}
