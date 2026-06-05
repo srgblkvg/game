@@ -1,5 +1,6 @@
 import { Express } from 'express';
 import { authMiddleware, requireAdmin, requirePlayer, requireFullAccess } from './middleware/auth';
+import { guestCooldown } from './middleware/guestCooldown';
 import authRoutes from './routes/auth';
 import adminAuthRoutes from './routes/adminAuth';
 import adminRoutes from './routes/admin';
@@ -25,12 +26,16 @@ import tavernRoutes from './routes/tavern';
 import auctionRoutes from './routes/auction';
 import tournamentRoutes from './routes/tournament';
 import ordersRoutes from './routes/orders';
+import logRoutes from './routes/log';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
   app.use('/api', authRoutes);
   app.use('/api', adminAuthRoutes);
   app.use('/api/oauth', oauthRoutes);
+
+  // Приём клиентских ошибок (можно без авторизации — логируем всё)
+  app.use('/api/log', logRoutes);
 
   // Админские маршруты
   app.use('/api/admin', authMiddleware, requireAdmin, adminRoutes);
@@ -39,8 +44,8 @@ export function setupRoutes(app: Express) {
   app.use('/api/admin/chat', authMiddleware, requireAdmin, adminChatRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminBattleRoutes);
 
-  // Игровые маршруты (только для игроков)
-  app.use('/api', authMiddleware, requirePlayer);
+  // Игровые маршруты (только для игроков) + замедление гостей
+  app.use('/api', authMiddleware, requirePlayer, guestCooldown);
   app.use('/api', characterRoutes);
   app.use('/api', inventoryRoutes);
   app.use('/api', usersRoutes);
