@@ -63,7 +63,7 @@ export default function BuffsBlock({ room, drink, premium }: BuffsBlockProps) {
                     {/* Комната */}
                     <div
                         className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1"
-                        onClick={() => navigate('/tavern')}
+                        onClick={() => navigate('/tavern?tab=room')}
                     >
                         <span className={hasRoom ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}>
                             Комната{hasRoom && room ? `: ${roomNames[room.type] || room.type} (×${roomRates[room.type] || '?'})` : ''}
@@ -76,7 +76,7 @@ export default function BuffsBlock({ room, drink, premium }: BuffsBlockProps) {
                     {/* Напиток */}
                     <div
                         className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1"
-                        onClick={() => navigate('/tavern')}
+                        onClick={() => navigate('/tavern?tab=drink')}
                     >
                         <span className={hasDrink ? 'text-[var(--color-accent-purple)]' : 'text-[var(--color-text-muted)]'}>
                             Напиток{hasDrink && drink ? `: ${drinkNames[drink.type] || drink.type}` : ''}

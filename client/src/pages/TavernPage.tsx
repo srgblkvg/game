@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,12 +24,17 @@ export default function TavernPage() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { showAcquire } = useAcquire();
 
     const [tavern, setTavern] = useState<any>(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const [tab, setTab] = useState<'heal' | 'room' | 'drink'>('heal');
+    const [tab, setTab] = useState<'heal' | 'room' | 'drink'>(() => {
+        const t = searchParams.get('tab');
+        if (t === 'room' || t === 'drink') return t;
+        return 'heal';
+    });
     const [now, setNow] = useState(Math.floor(Date.now() / 1000));
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
