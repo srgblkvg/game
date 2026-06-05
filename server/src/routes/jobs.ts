@@ -24,6 +24,28 @@ router.post('/jobs/start', (req: any, res) => {
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId) as any;
     if (!job) return res.status(404).json({ error: 'Job not found' });
 
+    startJobForUser(user, job, res);
+});
+
+// Случайная работа по длительности
+router.post('/jobs/start-random', (req: any, res) => {
+    const userId = req.userId;
+    const { duration } = req.body; // 600, 1800, 3600, 28800
+
+    if (!duration) return res.status(400).json({ error: 'Укажите длительность' });
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.activeJob) return res.status(400).json({ error: 'Вы уже выполняете работу' });
+
+    const jobs = db.prepare('SELECT * FROM jobs WHERE duration = ?').all(duration) as any[];
+    if (jobs.length === 0) return res.status(404).json({ error: 'Нет подходящих работ' });
+
+    const job = jobs[Math.floor(Math.random() * jobs.length)];
+    startJobForUser(user, job, res);
+});
+
+function startJobForUser(user: any, job: any, res: any) {
     const now = Math.floor(Date.now() / 1000);
     const endTime = now + job.duration;
     let reward = Math.floor(Math.random() * (job.rewardMax - job.rewardMin + 1)) + job.rewardMin;
@@ -34,11 +56,11 @@ router.post('/jobs/start', (req: any, res) => {
         reward = Math.floor(reward * 1.3);
     }
 
-    const activeJob = JSON.stringify({ jobId, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax });
-    db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, userId);
+    const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax });
+    db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, user.id);
 
     res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax });
-});
+}
 
 router.get('/jobs/history', (req: any, res) => {
     const userId = req.userId;

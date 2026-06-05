@@ -22,6 +22,19 @@ export async function startJob(jobId: number) {
     return res.json();
 }
 
+export async function startRandomJob(duration: number) {
+    const res = await fetch(`${BASE_URL}/jobs/start-random`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ duration }),
+    });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Ошибка начала работы');
+    }
+    return res.json();
+}
+
 export async function fetchJobHistory() {
     const res = await fetch(`${BASE_URL}/jobs/history`, { headers: getHeaders() });
     if (!res.ok) {
