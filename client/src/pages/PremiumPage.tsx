@@ -11,7 +11,8 @@ export default function PremiumPage() {
                     <div>
                         <h3 className="font-bold text-[var(--color-accent-gold)]" style={{ color: '#f1c40f' }}>Бонусы премиума:</h3>
                         <ul className="mt-1 space-y-1 ml-4 list-disc text-[var(--color-text-secondary)]">
-                            <li><span style={{ color: '#f1c40f' }}>+30%</span> к доходу с боёв (арена и охота)</li>
+                            <li><span style={{ color: '#f1c40f' }}>+30%</span> к доходу с охоты</li>
+                            <li><span style={{ color: '#f1c40f' }}>+30%</span> к награде за работы</li>
                             <li>Кулдаун после боя <span style={{ color: '#f1c40f' }}>в 2 раза меньше</span> (2.5 мин вместо 5)</li>
                         </ul>
                     </div>

@@ -65,17 +65,14 @@ router.post('/battle', (req: any, res) => {
     const result = runBattle(attackerData, defenderData);
     const moneyStolen = result.steps.find((s: any) => s.type === 'money')?.amount || 0;
     const attackerWins = result.winnerId === attacker.id;
-    let stolenBonus = 0;
 
     if (moneyStolen > 0) {
-        const winnerHasPremium = attackerWins ? hasPremium : ((defender.premiumUntil || 0) > now);
-        stolenBonus = winnerHasPremium ? Math.floor(moneyStolen * 0.3) : 0;
         if (attackerWins) {
             db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(moneyStolen, defender.id);
-            db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(moneyStolen + stolenBonus, attacker.id);
+            db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(moneyStolen, attacker.id);
         } else {
             db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(moneyStolen, attacker.id);
-            db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(moneyStolen + stolenBonus, defender.id);
+            db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(moneyStolen, defender.id);
         }
     }
 
@@ -94,12 +91,8 @@ router.post('/battle', (req: any, res) => {
         else break;
     }
 
-    const attackerMoneyGain = attackerWon
-        ? Math.floor(result.moneyGained * (hasPremium ? 1.3 : 1))
-        : 0;
-
     db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=? WHERE id=?`)
-        .run(newLevel, newExp, attackerMoneyGain, attackerWon ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now, attacker.id);
+        .run(newLevel, newExp, attackerWins ? result.moneyGained : 0, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now, attacker.id);
 
     // --- Обновление защитника ---
     const defExp = defender.exp + (result.winnerId === defender.id ? result.expGained : 0);
@@ -112,13 +105,8 @@ router.post('/battle', (req: any, res) => {
         else break;
     }
 
-    const defenderPremium = (defender.premiumUntil || 0) > now;
-    const defenderMoneyGain = !attackerWon
-        ? Math.floor(result.moneyGained * (defenderPremium ? 1.3 : 1))
-        : 0;
-
     db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=? WHERE id=?`)
-        .run(defLevel, defExpRemain, defenderMoneyGain, !attackerWon ? 1 : 0, result.defenderHpAfter, now + 3600, now, defLevelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now, defender.id);
+        .run(defLevel, defExpRemain, !attackerWins ? result.moneyGained : 0, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defLevelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now, defender.id);
 
     db.prepare(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -134,7 +122,7 @@ router.post('/battle', (req: any, res) => {
         hpAfter: result.attackerHpAfter,
         hpDefenderAfter: result.defenderHpAfter,
         expGained: result.winnerId === attacker.id ? result.expGained : 0,
-        moneyGained: attackerWon ? (attackerMoneyGain + moneyStolen + stolenBonus) : 0,
+        moneyGained: attackerWins ? (result.moneyGained + moneyStolen) : 0,
         newLevel,
         newExp,
         levelsGained,
