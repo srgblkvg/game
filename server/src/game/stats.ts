@@ -28,12 +28,19 @@ export interface CharStats {
     };
 }
 
+export interface StatSums {
+    s: number;
+    a: number;
+    d: number;
+    m: number;
+}
+
 export function currentStats(
     base: { s: number; a: number; d: number; m: number },
     equipment: Record<string, GameItem>,
     drinkBonuses?: { s: number; a: number; d: number; m: number }
 ): CharStats {
-    const sums: Record<string, number> = { s: 0, a: 0, d: 0, m: 0 };
+    const sums: StatSums = { s: 0, a: 0, d: 0, m: 0 };
     const extra: Record<string, number> = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
 
     for (const item of Object.values(equipment)) {
@@ -41,8 +48,8 @@ export function currentStats(
             const level = item.upgradeLevel || 0;
             const multiplier = 1 + level * 0.05;
             for (const k of Object.keys(item.bonuses)) {
-                const key = k as keyof typeof item.bonuses;
-                sums[k] = (sums[k] || 0) + Math.round(item.bonuses[key] * multiplier);
+                const key = k as keyof StatSums;
+                sums[key] = (sums[key] || 0) + Math.round(item.bonuses[key as keyof typeof item.bonuses] * multiplier);
             }
         }
         if (item.extra) {

@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import db from '../database';
 import { JWT_SECRET } from '../env';
 import logger from '../logger';
+import { auditLoginSuccess } from '../audit';
 
 const router = Router();
 
@@ -32,6 +33,7 @@ function makeToken(userId: number, role: string): string {
 }
 
 function findOrCreateUser(provider: string, oauthId: string, username: string): { id: number; username: string; level: number } {
+    const now = Math.floor(Date.now() / 1000);
     const existing: any = db.prepare('SELECT id, username, level FROM users WHERE oauthProvider = ? AND oauthId = ?')
         .get(provider, oauthId);
     if (existing) {
@@ -43,9 +45,11 @@ function findOrCreateUser(provider: string, oauthId: string, username: string): 
                 newName = `${username.substring(0, 17)}_${suffix}`;
                 suffix++;
             }
-            db.prepare('UPDATE users SET username = ? WHERE id = ?').run(newName, existing.id);
+            db.prepare('UPDATE users SET username = ?, lastLoginAt = ? WHERE id = ?').run(newName, now, existing.id);
             return { id: existing.id, username: newName, level: existing.level };
         }
+        // Обновляем время последнего входа
+        db.prepare('UPDATE users SET lastLoginAt = ? WHERE id = ?').run(now, existing.id);
         return existing;
     }
 
@@ -56,12 +60,11 @@ function findOrCreateUser(provider: string, oauthId: string, username: string): 
         suffix++;
     }
 
-    const now = Math.floor(Date.now() / 1000);
     const startHp = 20;
     const randomHash = crypto.randomBytes(32).toString('hex');
-    const info = db.prepare(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender)
-        VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male')`)
-        .run(finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now);
+    const info = db.prepare(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt)
+        VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male', ?)`)
+        .run(finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now);
     return { id: Number(info.lastInsertRowid), username: finalUsername, level: 1 };
 }
 
@@ -106,6 +109,13 @@ router.get('/yandex/callback', async (req, res) => {
 
         const user = findOrCreateUser('yandex', String(userData.id), userData.login || `yandex_${userData.id}`);
         const jwtToken = makeToken(user.id, 'player');
+
+        // Логируем IP и аудит
+        if (req.ip) {
+            db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip);
+        }
+        auditLoginSuccess(user.username, user.id, req.ip);
+
         logger.info({ provider: 'yandex', userId: user.id }, 'OAuth login');
         res.redirect(`${FRONTEND_URL}/?jwt=${jwtToken}`);
     } catch (err) {
@@ -202,6 +212,13 @@ router.get('/vk/callback', async (req, res) => {
         if (!displayName) displayName = `id${vkUserId}`;
         const user = findOrCreateUser('vkontakte', vkUserId, displayName);
         const jwtToken = makeToken(user.id, 'player');
+
+        // Логируем IP и аудит
+        if (req.ip) {
+            db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip);
+        }
+        auditLoginSuccess(user.username, user.id, req.ip);
+
         logger.info({ provider: 'vkontakte', userId: user.id }, 'OAuth login');
         res.redirect(`${FRONTEND_URL}/?jwt=${jwtToken}`);
     } catch (err) {
