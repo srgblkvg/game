@@ -344,26 +344,23 @@ export default function BestiaryPage() {
                     <h3 className="font-bold text-sm">{floor}</h3>
                   </div>
                   <div className="text-xs text-[var(--color-text-muted)] space-y-1">
+                    <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
                     <p className="font-bold text-[var(--color-text-secondary)]">Награда:</p>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                       <span style={{ color: '#f1c40f' }}>◆ {info.goldMin}–{info.goldMax} серебра</span>
                       <span style={{ color: '#2ecc71' }}>◆ ~{info.avgXp} XP</span>
                     </div>
                     {info.lootChances.length > 0 && (
-                      <div>
-                        <p className="text-[var(--color-accent-purple)] mb-0.5">Лут:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {info.lootChances.map((l: any) => (
-                            <span
-                              key={l.rarity}
-                              className="px-1 py-0.5 rounded text-[10px] font-medium"
-                              style={{ background: rarityColors[l.rarity] + '22', color: rarityColors[l.rarity], border: '1px solid ' + rarityColors[l.rarity] + '44' }}
-                              title={`${l.name}: ${(l.chance * 100).toFixed(0)}%`}
-                            >
-                              {(l.chance * 100).toFixed(0)}%
-                            </span>
-                          ))}
-                        </div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[var(--color-accent-purple)]">Лут:</span>
+                        {info.lootChances.map((l: any) => (
+                          <span
+                            key={l.rarity}
+                            className="inline-block w-3 h-3 rounded-full"
+                            style={{ background: rarityColors[l.rarity] }}
+                            title={`${l.name}: ${(l.chance * 100).toFixed(0)}%`}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>
