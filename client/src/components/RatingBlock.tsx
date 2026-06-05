@@ -42,10 +42,10 @@ export default function RatingBlock() {
                         >
                             {i + 1}. {truncate(p.username)}
                         </span>
-                        <span className="text-xs text-center w-16" style={{ color: p.rank?.color }}>
+                        <span className="text-xs text-center w-1/4" style={{ color: p.rank?.color }}>
                             {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}
                         </span>
-                        <span className="font-bold text-xs w-12 text-right" style={{ color: p.rank?.color }}>{p.elo}</span>
+                        <span className="font-bold text-xs w-1/4 text-right" style={{ color: p.rank?.color }}>{p.elo}</span>
                     </li>
                 ))}
             </ul>
