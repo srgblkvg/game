@@ -109,6 +109,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (sellerId) REFERENCES users(id)
   )`); } catch {}
 
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_auction_lots_seller ON auction_lots(sellerId)'); } catch {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_auction_lots_ends ON auction_lots(endsAt)'); } catch {}
+
   // Турнир
   try { db.exec(`CREATE TABLE IF NOT EXISTS tournaments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -180,6 +183,10 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   // Гостевые аккаунты
   try { db.exec('ALTER TABLE users ADD COLUMN isGuest INTEGER DEFAULT 0'); } catch {}
+
+  // Индексы для новых колонок (после миграций)
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_is_guest ON users(isGuest)'); } catch {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_active_job ON users(activeJob)'); } catch {}
 
   // Переименование weapon2 → shield в equipment игроков
   const allUsersEquip = db.prepare('SELECT id, equipment FROM users').all() as any[];

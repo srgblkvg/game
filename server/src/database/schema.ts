@@ -230,8 +230,6 @@ export function runSchema(db: InstanceType<typeof Database>) {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_wins ON users(wins DESC);
     CREATE INDEX IF NOT EXISTS idx_users_chat_banned ON users(chatBannedUntil);
-    CREATE INDEX IF NOT EXISTS idx_users_active_job ON users(activeJob);
-    CREATE INDEX IF NOT EXISTS idx_users_is_guest ON users(isGuest);
     CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(senderId, createdAt);
     CREATE INDEX IF NOT EXISTS idx_chat_messages_target ON chat_messages(targetId, createdAt);
     CREATE INDEX IF NOT EXISTS idx_battles_attacker ON battles(attackerId, createdAt DESC);
@@ -239,8 +237,5 @@ export function runSchema(db: InstanceType<typeof Database>) {
     CREATE INDEX IF NOT EXISTS idx_jobs_duration ON jobs(duration);
     CREATE INDEX IF NOT EXISTS idx_craft_items_rarity_id ON craft_items(rarity_id);
     CREATE INDEX IF NOT EXISTS idx_craft_recipe_ingredients_recipe ON craft_recipe_ingredients(recipe_id);
-    CREATE INDEX IF NOT EXISTS idx_auction_lots_seller ON auction_lots(sellerId);
-    CREATE INDEX IF NOT EXISTS idx_auction_lots_ends ON auction_lots(endsAt);
-    CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(userId, createdAt DESC);
   `);
 }
