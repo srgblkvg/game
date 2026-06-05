@@ -44,14 +44,13 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     useEffect(() => { currentStepRef.current = currentStep; }, [currentStep]);
     useEffect(() => { speedRef.current = speed; }, [speed]);
 
-    const loadOpponent = async (change = false) => {
+    const loadOpponent = async (change = false, difficulty: string = 'equal') => {
         try {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             const token = localStorage.getItem('token');
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            // Если смена, добавляем excludeId
-            let url = `/api/arena/opponent?change=${change}`;
+            let url = `/api/arena/opponent?change=${change}&difficulty=${difficulty}`;
             if (change && opponent?.id) {
                 url += `&excludeId=${opponent.id}`;
             }

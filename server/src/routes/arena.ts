@@ -12,6 +12,7 @@ router.get('/arena/opponent', (req: any, res) => {
     const userId = req.userId;
     const change = req.query.change === 'true';
     const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
+    const difficulty = (req.query.difficulty as string) || 'equal'; // easy | equal | hard
 
     const user: any = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -20,6 +21,22 @@ router.get('/arena/opponent', (req: any, res) => {
     let opponents = db.prepare(
         'SELECT * FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
     ).all(userId, now) as any[];
+
+    // Фильтр по сложности
+    if (difficulty === 'easy') {
+        opponents = opponents.filter((o: any) => o.level < user.level);
+    } else if (difficulty === 'hard') {
+        opponents = opponents.filter((o: any) => o.level > user.level);
+    } else {
+        opponents = opponents.filter((o: any) => o.level === user.level);
+    }
+
+    // Если нет подходящих — fallback на любых
+    if (opponents.length === 0) {
+        opponents = db.prepare(
+            'SELECT * FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
+        ).all(userId, now) as any[];
+    }
 
     if (excludeId !== undefined) {
         opponents = opponents.filter((o: any) => o.id !== excludeId);

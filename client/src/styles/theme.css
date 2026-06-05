@@ -184,3 +184,11 @@ h1, h2, h3 {
 .action-card:hover .action-card-bg {
   transform: scale(1.05);
 }
+
+/* Flip-анимация для арены */
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+.perspective-800 {
+  perspective: 800px;
+}

@@ -19,6 +19,8 @@ export default function ArenaPage() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
+  const [difficulty, setDifficulty] = useState<'easy' | 'equal' | 'hard'>('equal');
+  const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
     const handler = () => {
@@ -54,7 +56,7 @@ export default function ArenaPage() {
 
   useEffect(() => {
     if (!user || opponent) return;
-    loadOpponent();
+    loadOpponent(false, difficulty);
   }, [user]);
 
   if (!user || !character) return null;
@@ -65,6 +67,24 @@ export default function ArenaPage() {
     Math.max(0, currentStep - 4),
     currentStep + 1
   );
+
+  const diffLabels: Record<string, string> = {
+    easy: 'Лёгкий',
+    equal: 'Равный',
+    hard: 'Сложный',
+  };
+
+  const diffIcons: Record<string, string> = {
+    easy: 'game-icons:broken-shield',
+    equal: 'game-icons:crossed-swords',
+    hard: 'game-icons:death-skull',
+  };
+
+  const handleFlip = async (diff: 'easy' | 'equal' | 'hard') => {
+    setDifficulty(diff);
+    setFlipped(true);
+    await loadOpponent(false, diff);
+  };
 
   return (
     <div className="px-4 py-4 min-h-screen">
@@ -121,28 +141,73 @@ export default function ArenaPage() {
         </div>
       )}
 
-      {/* Кнопки до боя */}
+      {/* Выбор соперника до боя — flip card */}
       {!battleSteps.length && (
-        <div className="text-center my-8">
-          <div className="flex justify-center flex-wrap gap-4">
-            <Button
-              variant="danger"
-              size="md"
-              onClick={handleStartBattle}
-              disabled={loading || !opponent}
-              className="text-lg px-6 py-2 w-full sm:w-auto sm:min-w-[180px] rounded-xl"
+        <div className="text-center my-8 flex justify-center">
+          <div className="perspective-800 w-full max-w-xs">
+            <div
+              className={`relative w-full transition-transform duration-500 ${flipped ? 'rotate-y-180' : ''}`}
+              style={{ transformStyle: 'preserve-3d' }}
             >
-              {loading ? 'Поиск...' : <><Icon icon="game-icons:crossed-swords" width="18" height="18" className="inline mr-1" />В бой!</>}
-            </Button>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => loadOpponent(true)}
-              disabled={loading || character.money < 10}
-              className="text-lg px-6 py-2 w-full sm:w-auto sm:min-w-[180px] rounded-xl"
-            >
-              {<><Icon icon="game-icons:cycle" width="18" height="18" className="inline mr-1" />Сменить ({formatMoney(10)})</>}
-            </Button>
+              {/* Передняя сторона — кнопки */}
+              <div className="w-full" style={{ backfaceVisibility: 'hidden' }}>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['easy', 'equal', 'hard'] as const).map(diff => (
+                    <Button
+                      key={diff}
+                      variant={diff === 'equal' ? 'primary' : diff === 'hard' ? 'danger' : 'success'}
+                      size="md"
+                      onClick={() => handleFlip(diff)}
+                      disabled={loading}
+                      className="flex flex-col items-center gap-1 py-3"
+                    >
+                      <Icon icon={diffIcons[diff]} width="24" height="24" />
+                      <span className="text-xs">{diffLabels[diff]}</span>
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                  {difficulty === 'easy' ? 'Соперник ниже уровнем' : difficulty === 'hard' ? 'Соперник выше уровнем' : 'Соперник твоего уровня'}
+                </p>
+              </div>
+
+              {/* Задняя сторона — кнопка боя */}
+              <div
+                className="absolute inset-0 w-full flex flex-col items-center justify-center"
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+              >
+                {loading ? (
+                  <p className="text-sm text-[var(--color-text-muted)]">Поиск соперника...</p>
+                ) : opponent ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                      {diffLabels[difficulty]} соперник: <span className="font-bold">{opponent.name}</span> (ур. {opponent.level})
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="danger"
+                        size="md"
+                        onClick={handleStartBattle}
+                        className="text-lg px-6 py-2 rounded-xl"
+                      >
+                        <Icon icon="game-icons:crossed-swords" width="18" height="18" className="inline mr-1" />В бой!
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => { setFlipped(false); loadOpponent(true, difficulty); }}
+                        disabled={character.money < 10}
+                      >
+                        <Icon icon="game-icons:cycle" width="18" height="18" className="inline mr-1" />{formatMoney(10)}
+                      </Button>
+                    </div>
+                    <Button variant="ghost" size="xs" onClick={() => setFlipped(false)}>← Назад</Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-red-500">Нет соперников</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
