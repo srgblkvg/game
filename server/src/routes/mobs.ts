@@ -61,10 +61,6 @@ router.post('/mob/attack', (req: any, res) => {
         return res.status(400).json({ error: `До следующей атаки моба осталось ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
     }
 
-    if ((user.currentHp ?? 0) <= 0) {
-        return res.status(400).json({ error: 'Недостаточно HP для атаки. Восстановите здоровье.' });
-    }
-
     const mob = db.prepare('SELECT * FROM mobs WHERE id = ?').get(mobId) as any;
     if (!mob) return res.status(404).json({ error: 'Моб не найден' });
 

@@ -20,10 +20,6 @@ router.post('/battle', (req: any, res) => {
     const attacker = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, lastAttackTime, premiumUntil FROM users WHERE id = ?').get(userId) as any;
     if (!attacker) return res.status(404).json({ error: 'Attacker not found' });
 
-    if ((attacker.currentHp ?? 0) <= 0) {
-        return res.status(400).json({ error: 'Недостаточно HP для атаки. Восстановите здоровье.' });
-    }
-
     const hasPremium = (attacker.premiumUntil || 0) > now;
     const attackCooldown = hasPremium ? 150 : 300; // премиум: 2.5 мин вместо 5
 
