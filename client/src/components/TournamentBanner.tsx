@@ -80,10 +80,10 @@ export default function TournamentBanner() {
         );
     }
 
-    // Фильтруем: только активные (registration / in_progress)
+    // Фильтруем: только дивизион игрока + активные (registration / in_progress)
     const now = Math.floor(Date.now() / 1000);
     const active = tournaments
-        .filter(t => t.status === 'registration' || t.status === 'in_progress')
+        .filter(t => (t.status === 'registration' || t.status === 'in_progress') && isPlayerDivision(t.division, userLevel))
         .sort((a, b) => a.registrationEnd - b.registrationEnd);
 
     // Завершённые, где игрок участвовал
@@ -125,9 +125,8 @@ export default function TournamentBanner() {
                         >
                             <div className="flex items-center gap-1.5">
                                 <span className="text-xs">{DIVISION_ICONS[t.division]}</span>
-                                <span className={`text-xs font-medium ${isMine ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
+                                <span className="text-xs font-medium text-[var(--color-accent-success)]">
                                     {DIVISION_LABELS[t.division]}
-                                    {isMine && ' ← ваш'}
                                 </span>
                                 <span className="text-[0.6rem] text-[var(--color-text-muted)] ml-auto">
                                     {t.status === 'registration'
