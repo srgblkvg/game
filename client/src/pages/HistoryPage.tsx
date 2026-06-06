@@ -119,7 +119,7 @@ export default function HistoryPage() {
             <span className="text-[var(--color-text-muted)] ml-1">Участие</span>}
         </EntryRow>;
     };
-    const renderQuestRow = (q: any) => <EntryRow time={fmt(q.createdAt+'Z')} onClick={()=>navigate('/tavern?tab=quests')}>
+    const renderQuestRow = (q: any) => <EntryRow time={q.createdAt.replace('T', ' ').slice(0, 19)} onClick={()=>navigate('/tavern?tab=quests')}>
         <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{q.typeName}»</span>
         {q.rewardXp>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{q.rewardXp} XP</span>}
         <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(q.rewardMoney)}</span>
@@ -165,7 +165,7 @@ export default function HistoryPage() {
             </EntryRow>;
         }
         if (type === 'quest') {
-            return <EntryRow time={fmt(data.createdAt+'Z')} onClick={()=>navigate('/tavern?tab=quests')}>
+            return <EntryRow time={data.createdAt.replace('T', ' ').slice(0, 19)} onClick={()=>navigate('/tavern?tab=quests')}>
                 <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{data.typeName}»</span>
                 {data.rewardXp>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.rewardXp} XP</span>}
                 <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(data.rewardMoney)}</span>
