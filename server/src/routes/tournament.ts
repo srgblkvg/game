@@ -579,7 +579,7 @@ router.post('/tournament/create-custom', (req: any, res) => {
     const userId = req.userId;
     const { prizePool, entryFee, registrationMinutes, maxPlayers, minLevel, maxLevel, name } = req.body;
 
-    if (!prizePool || prizePool < 100) return res.status(400).json({ error: 'Минимальный призовой фонд: 100 серебра' });
+    if (prizePool === undefined || prizePool < 0) return res.status(400).json({ error: 'Призовой фонд не может быть отрицательным' });
     if (entryFee < 0) return res.status(400).json({ error: 'Вступительный взнос не может быть отрицательным' });
     const regMins = Math.max(5, Math.min(120, registrationMinutes || 30));
     const players = Math.max(2, Math.min(16, maxPlayers || 8));
@@ -589,13 +589,15 @@ router.post('/tournament/create-custom', (req: any, res) => {
 
     const user = db.prepare('SELECT level, money FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.money < prizePool) return res.status(400).json({ error: 'Недостаточно серебра для призового фонда' });
 
     const now = Math.floor(Date.now() / 1000);
     const regEnd = now + regMins * 60;
 
-    // Списываем призовой фонд
-    db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(prizePool, userId);
+    // Списываем призовой фонд (если > 0)
+    if (prizePool > 0) {
+        if (user.money < prizePool) return res.status(400).json({ error: 'Недостаточно серебра для призового фонда' });
+        db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(prizePool, userId);
+    }
 
     const result = db.prepare(
         'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'

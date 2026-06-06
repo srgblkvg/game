@@ -101,16 +101,10 @@ export default function TournamentBanner() {
 
     const now = Math.floor(Date.now() / 1000);
 
-    // Все активные + свои завершённые
+    // Только турниры, где игрок может участвовать
     const active = tournaments
-        .filter(t => t.status === 'registration' || t.status === 'in_progress')
-        .sort((a, b) => {
-            const aJoin = canJoin(a, userLevel);
-            const bJoin = canJoin(b, userLevel);
-            if (aJoin && !bJoin) return -1;
-            if (!aJoin && bJoin) return 1;
-            return a.registrationEnd - b.registrationEnd;
-        });
+        .filter(t => (t.status === 'registration' || t.status === 'in_progress') && canJoin(t, userLevel))
+        .sort((a, b) => a.registrationEnd - b.registrationEnd);
 
     const myCompleted = tournaments.filter(t => t.status === 'completed' && t.myRegistration);
 
