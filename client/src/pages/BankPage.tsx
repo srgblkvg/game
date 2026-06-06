@@ -11,13 +11,12 @@ import { formatMoney } from '../utils/money';
 
 export default function BankPage() {
     const { user } = useAuth();
+    const isGuest = user?.isGuest || false;
     const navigate = useNavigate();
 
     const [tab, setTab] = useState<'info' | 'deposit' | 'transfer'>('info');
     const [pocket, setPocket] = useState(0);
     const [bank, setBank] = useState(0);
-    const [canVisit, setCanVisit] = useState(false);
-    const [cooldown, setCooldown] = useState(0);
     const [accountNumber, setAccountNumber] = useState('');
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
@@ -29,12 +28,11 @@ export default function BankPage() {
     const [transfers, setTransfers] = useState<any[]>([]);
     const [operations, setOperations] = useState<any[]>([]);
 
-    useEffect(() => { if (!user) navigate('/login'); else { loadBank(); loadTransfers(); loadOperations(); } }, [user]);
-    useEffect(() => { if (cooldown <= 0) return; const t = setInterval(() => setCooldown(p => Math.max(0, p - 1)), 1000); return () => clearInterval(t); }, [cooldown > 0]);
+    useEffect(() => { if (!user) navigate('/login'); else if (!isGuest) { loadBank(); loadTransfers(); loadOperations(); } }, [user]);
 
-    const loadBank = async () => { try { const r = await fetch(`${BASE_URL}/bank`,{headers:getHeaders()}); const d = await r.json(); setPocket(d.pocket); setBank(d.bank); setCanVisit(d.canVisit); setCooldown(d.cooldownRemaining); setAccountNumber(d.accountNumber||''); } catch{} };
-    const loadTransfers = async (filter = 'all') => { try { setTransfers(await (await fetch(`${BASE_URL}/bank/transfers?filter=${filter}&limit=20`,{headers:getHeaders()})).json()); } catch{} };
-    const loadOperations = async (filter = 'all') => { try { setOperations(await (await fetch(`${BASE_URL}/bank/operations?filter=${filter}&limit=20`,{headers:getHeaders()})).json()); } catch{} };
+    const loadBank = async () => { try { const r = await fetch(`${BASE_URL}/bank`,{headers:getHeaders()}); const d = await r.json(); setPocket(d.pocket); setBank(d.bank); setAccountNumber(d.accountNumber||''); } catch{} };
+    const loadTransfers = async (f='all') => { try { setTransfers(await (await fetch(`${BASE_URL}/bank/transfers?filter=${f}&limit=20`,{headers:getHeaders()})).json()); } catch{} };
+    const loadOperations = async (f='all') => { try { setOperations(await (await fetch(`${BASE_URL}/bank/operations?filter=${f}&limit=20`,{headers:getHeaders()})).json()); } catch{} };
 
     const api = async (url: string, body?: any) => {
         const r = await fetch(`${BASE_URL}${url}`, { method: body?'POST':'GET', headers: getHeaders(), body: body?JSON.stringify(body):undefined });
@@ -54,28 +52,36 @@ export default function BankPage() {
         try { const d = await api('/bank/transfer',{accountNumber:transferAccount.trim().toUpperCase(),amount:amt}); setPocket(d.money); setTransferAccount(''); setTransferAmount(''); setMessage(d.message); setError(''); loadTransfers(); } catch(e:any){setError(e.message)}
     };
 
-    const cdMin = Math.floor(cooldown/60), cdSec = cooldown%60;
     const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>new Date(b.createdAt+'Z').getTime()-new Date(a.createdAt+'Z').getTime()).slice(0,20);
+
+    if (isGuest) {
+        return (
+            <div className="max-w-md mx-auto px-4 py-4">
+                <BackButton to="/" />
+                <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
+                <Card className="text-center py-6">
+                    <Icon icon="game-icons:lock" width="40" height="40" className="mx-auto mb-3 text-[var(--color-text-muted)]" />
+                    <p className="text-sm text-[var(--color-text-muted)]">Банк недоступен на гостевом аккаунте.</p>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-md mx-auto px-4 py-4">
             <BackButton to="/" />
             <h1 className="text-xl font-bold mb-2"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
 
-            {/* Баланс */}
             <Card className="mb-3"><div className="grid grid-cols-2 gap-4 text-center"><div><p className="text-xs text-[var(--color-text-muted)]">При себе</p><p className="text-lg font-bold">{formatMoney(pocket)}</p></div><div><p className="text-xs text-[var(--color-text-muted)]">В банке</p><p className="text-lg font-bold">{formatMoney(bank)}</p></div></div></Card>
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}
 
-            {/* Вкладки */}
             <div className="flex gap-2 mb-3">
                 {(['info','deposit','transfer'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="sm" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'Информация':t==='deposit'?'Пополнение':'Переводы'}</Button>)}
             </div>
 
-            {!canVisit && cooldown>0 && tab!=='info' && <p className="text-sm text-[var(--color-text-muted)] mb-3 text-center">Банк будет доступен через {cdMin}:{String(cdSec).padStart(2,'0')}</p>}
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
 
-            {/* === ИНФОРМАЦИЯ === */}
             {tab==='info' && <Card>
                 <h3 className="font-bold text-sm mb-2">История операций</h3>
                 {allHistory.length===0 ? <p className="text-xs text-[var(--color-text-muted)]">Нет операций</p> :
@@ -92,12 +98,11 @@ export default function BankPage() {
                 })}</div>}
             </Card>}
 
-            {/* === ПОПОЛНЕНИЕ === */}
             {tab==='deposit' && <>
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">Пополнение и снятие</h3>
                     <input type="number" placeholder="Сумма" value={amount} onChange={e=>setAmount(e.target.value)} className={inputClass} min="1" />
-                    <div className="flex gap-3 mt-3"><Button variant="primary" fullWidth onClick={handleDeposit} disabled={!canVisit}>📥 Положить (2%)</Button><Button variant="secondary" fullWidth onClick={handleWithdraw} disabled={!canVisit}>📤 Снять (0%)</Button></div>
+                    <div className="flex gap-3 mt-3"><Button variant="primary" fullWidth onClick={handleDeposit}>📥 Положить (2%)</Button><Button variant="secondary" fullWidth onClick={handleWithdraw}>📤 Снять (0%)</Button></div>
                 </Card>
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">История вкладов</h3>
@@ -110,10 +115,9 @@ export default function BankPage() {
                         <div className="text-[var(--color-text-muted)]">{o.type==='deposit'?`Зачислено: ${formatMoney(o.result)}`:`Получено: ${formatMoney(o.result)}`}</div>
                     </div>)}</div>}
                 </Card>
-                <Card><h3 className="font-bold text-sm mb-2">Правила</h3><ul className="text-xs text-[var(--color-text-muted)] space-y-1"><li>• Пополнение: комиссия 2%</li><li>• Снятие: без комиссии</li><li>• Один визит в 30 минут</li><li>• Серебро в банке защищено от PvP</li></ul></Card>
+                <Card><h3 className="font-bold text-sm mb-2">Правила</h3><ul className="text-xs text-[var(--color-text-muted)] space-y-1"><li>• Пополнение: комиссия 2%</li><li>• Снятие: без комиссии</li><li>• Серебро в банке защищено от PvP</li></ul></Card>
             </>}
 
-            {/* === ПЕРЕВОДЫ === */}
             {tab==='transfer' && <>
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">Перевод по номеру счёта</h3>

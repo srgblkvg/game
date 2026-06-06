@@ -4,23 +4,18 @@ import { requireFullAccess } from '../middleware/auth';
 
 const router = Router();
 
-// Все маршруты банка требуют полный доступ
+// Все маршруты банка требуют полный доступ (гости заблокированы)
 router.use('/bank', requireFullAccess);
 
 // Получить состояние банка
 router.get('/bank', (req: any, res) => {
     const userId = req.userId;
-    const user = db.prepare('SELECT money, bank, lastBankVisit, accountNumber FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT money, bank, accountNumber FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const now = Math.floor(Date.now() / 1000);
-    const cooldownRemaining = Math.max(0, 1800 - (now - (user.lastBankVisit || 0)));
 
     res.json({
         pocket: user.money || 0,
         bank: user.bank || 0,
-        canVisit: cooldownRemaining === 0,
-        cooldownRemaining,
         accountNumber: user.accountNumber,
     });
 });
@@ -31,22 +26,15 @@ router.post('/bank/deposit', (req: any, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
 
-    const now = Math.floor(Date.now() / 1000);
-    const user = db.prepare('SELECT money, bank, lastBankVisit FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT money, bank FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
-
-    if (user.lastBankVisit > 0 && (now - user.lastBankVisit) < 1800) {
-        const remaining = 1800 - (now - user.lastBankVisit);
-        return res.status(400).json({ error: `Банк недоступен. Ждите ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
-    }
-
     if (user.money < amount) return res.status(400).json({ error: 'Недостаточно монет' });
 
     const commission = Math.ceil(amount * 0.02);
     const depositAmount = amount - commission;
 
-    db.prepare('UPDATE users SET money = money - ?, bank = bank + ?, lastBankVisit = ? WHERE id = ?')
-        .run(amount, depositAmount, now, userId);
+    db.prepare('UPDATE users SET money = money - ?, bank = bank + ? WHERE id = ?')
+        .run(amount, depositAmount, userId);
 
     db.prepare('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES (?, ?, ?, ?, ?)')
         .run(userId, 'deposit', amount, commission, depositAmount);
@@ -61,19 +49,12 @@ router.post('/bank/withdraw', (req: any, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
 
-    const now = Math.floor(Date.now() / 1000);
-    const user = db.prepare('SELECT money, bank, lastBankVisit FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT money, bank FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
-
-    if (user.lastBankVisit > 0 && (now - user.lastBankVisit) < 1800) {
-        const remaining = 1800 - (now - user.lastBankVisit);
-        return res.status(400).json({ error: `Банк недоступен. Ждите ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
-    }
-
     if (user.bank < amount) return res.status(400).json({ error: 'Недостаточно монет в банке' });
 
-    db.prepare('UPDATE users SET money = money + ?, bank = bank - ?, lastBankVisit = ? WHERE id = ?')
-        .run(amount, amount, now, userId);
+    db.prepare('UPDATE users SET money = money + ?, bank = bank - ? WHERE id = ?')
+        .run(amount, amount, userId);
 
     db.prepare('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES (?, ?, ?, ?, ?)')
         .run(userId, 'withdraw', amount, 0, amount);
@@ -105,7 +86,6 @@ router.post('/bank/transfer', (req: any, res) => {
     const receivedAmount = transferAmount - commission;
     db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(receivedAmount, target.id);
 
-    // Сохраняем в историю
     db.prepare(`INSERT INTO transfers (fromUserId, toUserId, fromAccount, toAccount, toUsername, amount, commission, received)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(userId, target.id, sender.accountNumber, target.accountNumber, target.username, transferAmount, commission, receivedAmount);
@@ -117,7 +97,7 @@ router.post('/bank/transfer', (req: any, res) => {
 // История переводов
 router.get('/bank/transfers', (req: any, res) => {
     const userId = req.userId;
-    const filter = (req.query.filter as string) || 'all'; // all | in | out
+    const filter = (req.query.filter as string) || 'all';
     const limit = parseInt(req.query.limit as string) || 30;
 
     let query = 'SELECT * FROM transfers WHERE ';
@@ -128,8 +108,7 @@ router.get('/bank/transfers', (req: any, res) => {
     query += ' ORDER BY id DESC LIMIT ?';
     const params: any[] = filter === 'all' ? [userId, userId, limit] : [userId, limit];
 
-    const transfers = db.prepare(query).all(...params);
-    res.json(transfers);
+    res.json(db.prepare(query).all(...params));
 });
 
 // История банковских операций
@@ -143,8 +122,7 @@ router.get('/bank/operations', (req: any, res) => {
     else if (filter === 'withdraw') query += " AND type = 'withdraw'";
     query += ' ORDER BY id DESC LIMIT ?';
 
-    const ops = db.prepare(query).all(userId, limit);
-    res.json(ops);
+    res.json(db.prepare(query).all(userId, limit));
 });
 
 export default router;
