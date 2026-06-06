@@ -282,4 +282,15 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     }
     if (changed) db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inv), u.id);
   }
+
+  // --- Расширенная статистика игроков ---
+  try { db.exec('ALTER TABLE users ADD COLUMN pveTotalBattles INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN pveWins INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN tournamentCount INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN tournamentWins INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN totalJobMoney INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN totalPveMoneyWon INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN totalPvpMoneyWon INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN totalPveMoneyLost INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN totalPvpMoneyLost INTEGER DEFAULT 0'); } catch {}
 }

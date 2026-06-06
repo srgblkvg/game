@@ -272,8 +272,8 @@ router.post('/mob/attack', (req: any, res) => {
     const newStatPoints = (user.statPoints || 0) + levelsGained * 5;
     const newHpAfter = Math.max(0, hpUser);
 
-    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=? WHERE id=?`)
-        .run(newLevel, newExp, goldGained, newHpAfter, now, now, newStatPoints, userId);
+    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`)
+        .run(newLevel, newExp, goldGained, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
 
     res.json({
         log,

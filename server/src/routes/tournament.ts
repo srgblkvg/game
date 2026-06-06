@@ -246,13 +246,16 @@ function finishTournament(tournamentId: number) {
     // Сохраняем результаты в таблицу tournament_participants
     db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?')
         .run(JSON.stringify({ place: 1, prize: firstPrize }), tournamentId, winnerId);
+    db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(winnerId);
     if (secondPlaceId) {
         db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?')
             .run(JSON.stringify({ place: 2, prize: secondPrize }), tournamentId, secondPlaceId);
+        db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(secondPlaceId);
     }
     if (thirdPlaceId) {
         db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?')
             .run(JSON.stringify({ place: 3, prize: thirdPrize }), tournamentId, thirdPlaceId);
+        db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(thirdPlaceId);
     }
 
     db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('completed', tournamentId);
@@ -424,6 +427,9 @@ router.post('/tournament/register', (req: any, res) => {
 
     db.prepare('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)')
         .run(tournament.id, userId, goldenTicket ? 1 : 0);
+
+    // Инкремент счётчика участий в турнирах
+    db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
 
     res.json({ success: true });
 });

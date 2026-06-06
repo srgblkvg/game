@@ -22,7 +22,9 @@ router.get('/users/find', (req: any, res) => {
 // Публичный профиль игрока
 router.get('/character/public/:userId', (req: any, res) => {
     const userId = parseInt(req.params.userId);
-    const user: any = db.prepare('SELECT id, username, level, totalBattles, wins, equipment, currentHp, gender, baseS, baseA, baseD, baseM FROM users WHERE id = ?').get(userId);
+    const user: any = db.prepare(
+        'SELECT id, username, level, totalBattles, wins, equipment, currentHp, gender, baseS, baseA, baseD, baseM, pveTotalBattles, pveWins, tournamentCount, tournamentWins, totalJobMoney, totalPveMoneyWon, totalPvpMoneyWon, totalPveMoneyLost, totalPvpMoneyLost FROM users WHERE id = ?'
+    ).get(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const equipment = JSON.parse(user.equipment || '{}');
@@ -36,6 +38,15 @@ router.get('/character/public/:userId', (req: any, res) => {
         level: user.level,
         totalBattles: user.totalBattles,
         wins: user.wins,
+        pveTotalBattles: user.pveTotalBattles || 0,
+        pveWins: user.pveWins || 0,
+        tournamentCount: user.tournamentCount || 0,
+        tournamentWins: user.tournamentWins || 0,
+        totalJobMoney: user.totalJobMoney || 0,
+        totalPveMoneyWon: user.totalPveMoneyWon || 0,
+        totalPvpMoneyWon: user.totalPvpMoneyWon || 0,
+        totalPveMoneyLost: user.totalPveMoneyLost || 0,
+        totalPvpMoneyLost: user.totalPvpMoneyLost || 0,
         equipment: enrichedEquipment,
         stats,
         currentHp: user.currentHp,
