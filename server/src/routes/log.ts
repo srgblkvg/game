@@ -24,7 +24,7 @@ router.get('/tournament-history', authMiddleware, (req: any, res) => {
         SELECT t.*, tp.snapshotStats
         FROM tournament_participants tp
         JOIN tournaments t ON tp.tournamentId = t.id
-        WHERE tp.userId = ? AND t.status = 'completed'
+        WHERE tp.userId = ? AND t.status IN ('completed', 'cancelled')
         ORDER BY t.id DESC LIMIT ?
     `).all(userId, limit);
 
