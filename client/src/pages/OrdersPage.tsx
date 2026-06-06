@@ -52,17 +52,17 @@ export default function OrdersPage() {
     };
 
     const handleCreate = async () => {
-        try { await api('/orders/create', { name: orderName }); setMessage('Орден создан!'); loadAll(); loadMy(); const f = await fetchCharacter(); setCharacter(f); }
+        try { await api('/orders/create', { name: orderName }); setMessage('Гильдия создана!'); loadAll(); loadMy(); const f = await fetchCharacter(); setCharacter(f); }
         catch (e: any) { setError(e.message); }
     };
 
     const handleJoin = async (orderId: number) => {
-        try { await api('/orders/join', { orderId }); setMessage('Вы вступили в орден!'); loadAll(); loadMy(); }
+        try { await api('/orders/join', { orderId }); setMessage('Вы вступили в гильдию!'); loadAll(); loadMy(); }
         catch (e: any) { setError(e.message); }
     };
 
     const handleLeave = async () => {
-        try { await api('/orders/leave'); setMessage('Вы покинули орден'); loadAll(); setMyOrder(null); }
+        try { await api('/orders/leave'); setMessage('Вы покинули гильдию'); loadAll(); setMyOrder(null); }
         catch (e: any) { setError(e.message); }
     };
 
@@ -79,21 +79,21 @@ export default function OrdersPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton to="/" />
-            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Ордена</h1>
+            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
 
             <div className="flex gap-2 mb-4">
-                <Button variant={tab === 'all' ? 'primary' : 'secondary'} size="xs" onClick={() => setTab('all')}>Все ордена</Button>
-                <Button variant={tab === 'my' ? 'primary' : 'secondary'} size="xs" onClick={() => setTab('my')}>Мой орден</Button>
+                <Button variant={tab === 'all' ? 'primary' : 'secondary'} size="xs" onClick={() => setTab('all')}>Все гильдии</Button>
+                <Button variant={tab === 'my' ? 'primary' : 'secondary'} size="xs" onClick={() => setTab('my')}>Моя гильдия</Button>
             </div>
 
             {tab === 'all' && (
                 <div>
                     {!myOrder && character && character.level >= 5 && character.money >= 5000 && (
                         <Card className="mb-4">
-                            <h3 className="font-bold mb-2">Создать орден (5000 серебра)</h3>
+                            <h3 className="font-bold mb-2">Создать гильдию (5000 серебра)</h3>
                             <div className="flex gap-2">
                                 <input placeholder="Название" value={orderName} onChange={e => setOrderName(e.target.value)} className={inputClass} />
                                 <Button variant="danger" size="sm" onClick={handleCreate}>Создать</Button>
@@ -135,7 +135,7 @@ export default function OrdersPage() {
                         </div>
 
                         {myOrder.members?.find((m: any) => m.userId === user?.id)?.rank !== 'master' && (
-                            <Button variant="danger" size="xs" onClick={handleLeave}>Покинуть орден</Button>
+                            <Button variant="danger" size="xs" onClick={handleLeave}>Покинуть гильдию</Button>
                         )}
                     </Card>
 

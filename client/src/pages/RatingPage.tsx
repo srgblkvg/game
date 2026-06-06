@@ -25,7 +25,7 @@ export default function RatingPage() {
     return (
         <div className="max-w-xl mx-auto px-4 py-4">
             <BackButton />
-            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2"/>Рейтинг</h2>
+            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2"/>Рейтинг игроков</h2>
 
             {/* Инструкция */}
             <Card className="mb-4">
