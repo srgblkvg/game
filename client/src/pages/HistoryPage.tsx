@@ -99,6 +99,7 @@ export default function HistoryPage() {
         { key: 'pve', label: 'Охота' } as const,
         { key: 'jobs', label: 'Работы' } as const,
         { key: 'tournaments', label: 'Турниры' } as const,
+        { key: 'messages', label: 'Сообщения' } as const,
     ];
 
     if (!user) return null;
@@ -241,6 +242,13 @@ export default function HistoryPage() {
                                 </div>
                             );
                         })
+                    ) : tab === 'messages' ? (
+                        paginatedData.map((m: any) => (
+                            <div key={m.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
+                                <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{m.senderName}: {m.content}</span>
+                                <div className="text-xs text-[var(--color-text-muted)]">{new Date(m.createdAt).toLocaleString()}</div>
+                            </div>
+                        ))
                     ) : null}
 
                     {totalPages > 1 && (
