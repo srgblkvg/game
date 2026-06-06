@@ -16,23 +16,16 @@ interface TournamentInfo {
     participants?: { id: number; username: string; snapshotStats?: { place: number; prize: number } }[];
 }
 
-interface DivisionInfo {
-    name: string;
-    label: string;
-}
-
-const DIVISIONS: Record<string, DivisionInfo> = {
-    copper: { name: 'copper', label: 'Медный' },
-    steel: { name: 'steel', label: 'Стальной' },
-    mithril: { name: 'mithril', label: 'Мифриловый' },
-    adamant: { name: 'adamant', label: 'Адамантовый' },
+const DIVISION_LABELS: Record<string, string> = {
+    copper: 'Медный', steel: 'Стальной', mithril: 'Мифриловый', adamant: 'Адамантовый',
 };
 
 const DIVISION_ICONS: Record<string, string> = {
-    copper: 'game-icons:bronze-medal',
-    steel: 'game-icons:silver-medal',
-    mithril: 'game-icons:gold-medal',
-    adamant: 'game-icons:diamond-trophy',
+    copper: '🥉', steel: '🥈', mithril: '🥇', adamant: '👑',
+};
+
+const DIVISION_LEVELS: Record<string, [number, number]> = {
+    copper: [1, 15], steel: [16, 35], mithril: [36, 60], adamant: [61, 999],
 };
 
 function formatTimer(seconds: number): string {
@@ -47,8 +40,14 @@ function formatTimer(seconds: number): string {
     return parts.join(' ') || '0 мин';
 }
 
+function isPlayerDivision(division: string, userLevel: number): boolean {
+    const [min, max] = DIVISION_LEVELS[division] || [0, 0];
+    return userLevel >= min && userLevel <= max;
+}
+
 export default function TournamentBanner() {
-    const [info, setInfo] = useState<{ tournament: TournamentInfo; userLevel: number } | null>(null);
+    const [tournaments, setTournaments] = useState<TournamentInfo[]>([]);
+    const [userLevel, setUserLevel] = useState(1);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -61,156 +60,116 @@ export default function TournamentBanner() {
         fetch('/api/tournament', { headers: getHeaders() })
             .then(r => r.json())
             .then((data: any) => {
-                const tournaments: TournamentInfo[] = data.tournaments || [];
-                const userLevel: number = data.userLevel || 1;
-
-                const found = tournaments.find((t: TournamentInfo) => {
-                    if (t.division === 'copper' && userLevel <= 15) return true;
-                    if (t.division === 'steel' && userLevel >= 16 && userLevel <= 35) return true;
-                    if (t.division === 'mithril' && userLevel >= 36 && userLevel <= 60) return true;
-                    if (t.division === 'adamant' && userLevel >= 61) return true;
-                    return false;
-                });
-
-                if (found) {
-                    setInfo({ tournament: found, userLevel });
-                }
+                setTournaments(data.tournaments || []);
+                setUserLevel(data.userLevel || 1);
             })
             .catch(() => {})
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading || !info) {
-        if (isGuest) {
-            const div = DIVISIONS.copper;
-            const icon = DIVISION_ICONS.copper;
-            return (
-                <div className="bg-[var(--color-bg-card)] rounded-xl p-3 border border-[var(--color-border-default)] opacity-60">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Icon icon={icon} width="18" height="18" className="text-[var(--color-text-muted)]" />
-                        <span className="text-sm font-bold text-[var(--color-text-primary)]">
-                            {div.label} турнир
-                        </span>
-                    </div>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                        🔒 Турниры недоступны на гостевом аккаунте
-                    </p>
-                </div>
-            );
-        }
-        return null;
+    if (loading) return null;
+
+    if (isGuest) {
+        return (
+            <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-3 min-w-[210px] overflow-hidden opacity-60">
+                <h3 className="text-[var(--color-text-accent)] text-base font-bold mb-2 flex items-center gap-1">
+                    <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
+                </h3>
+                <p className="text-xs text-[var(--color-text-muted)]">🔒 Недоступны на гостевом аккаунте</p>
+            </div>
+        );
     }
 
-    const { tournament, userLevel } = info;
-    const div = DIVISIONS[tournament.division] || { name: tournament.division, label: tournament.division };
-    const icon = DIVISION_ICONS[tournament.division] || 'game-icons:trophy';
+    // Фильтруем: только активные (registration / in_progress)
     const now = Math.floor(Date.now() / 1000);
+    const active = tournaments
+        .filter(t => t.status === 'registration' || t.status === 'in_progress')
+        .sort((a, b) => a.registrationEnd - b.registrationEnd);
 
-    // Завершённый турнир — показываем результаты
-    if (tournament.status === 'completed') {
-        const top3 = (tournament.participants || [])
-            .filter(p => p.snapshotStats?.place)
-            .sort((a, b) => (a.snapshotStats?.place || 99) - (b.snapshotStats?.place || 99))
-            .slice(0, 3);
-        const myPlace = tournament.myRegistration?.snapshotStats?.place;
+    // Завершённые, где игрок участвовал
+    const myCompleted = tournaments.filter(
+        t => t.status === 'completed' && t.myRegistration
+    );
 
+    if (active.length === 0 && myCompleted.length === 0) {
         return (
-            <div
-                className="bg-[var(--color-bg-card)] rounded-xl p-3 border border-[var(--color-border-default)] cursor-pointer hover:border-[var(--color-accent-purple)] transition-colors"
+            <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-3 min-w-[210px] overflow-hidden">
+                <h3 className="text-[var(--color-text-accent)] text-base font-bold mb-2 flex items-center gap-1">
+                    <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
+                </h3>
+                <p className="text-xs text-[var(--color-text-muted)]">Нет активных турниров</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-3 min-w-[210px] overflow-hidden">
+            <h3
+                className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1"
                 onClick={() => navigate('/tournament')}
             >
-                <div className="flex items-center gap-2 mb-1">
-                    <Icon icon={icon} width="18" height="18" className="text-[var(--color-text-muted)]" />
-                    <span className="text-sm font-bold text-[var(--color-text-primary)]">
-                        {div.label} турнир
-                    </span>
-                    <span className="text-[0.6rem] text-[var(--color-text-muted)]">(завершён)</span>
-                </div>
-                {top3.length > 0 && (
-                    <div className="text-[0.6rem] text-[var(--color-text-muted)] space-y-0.5">
-                        {top3.map(p => (
-                            <p key={p.id}>
-                                {p.snapshotStats?.place === 1 ? '🥇' : p.snapshotStats?.place === 2 ? '🥈' : '🥉'}{' '}
-                                {p.username}
-                            </p>
-                        ))}
+                <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
+            </h3>
+
+            <div className="space-y-2">
+                {active.map(t => {
+                    const isMine = isPlayerDivision(t.division, userLevel);
+                    const untilEnd = t.registrationEnd - now;
+                    const untilStart = t.registrationStart - now;
+
+                    return (
+                        <div
+                            key={t.id}
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => navigate('/tournament')}
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs">{DIVISION_ICONS[t.division]}</span>
+                                <span className={`text-xs font-medium ${isMine ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
+                                    {DIVISION_LABELS[t.division]}
+                                    {isMine && ' ← ваш'}
+                                </span>
+                                <span className="text-[0.6rem] text-[var(--color-text-muted)] ml-auto">
+                                    {t.status === 'registration'
+                                        ? `⌛ ${formatTimer(Math.max(0, untilEnd))}`
+                                        : '⚔️ идёт'}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
+                                <span>{t.participantCount}/8 уч.</span>
+                                <span>{t.prizePool} 🥇</span>
+                                {t.myRegistration && (
+                                    <span className="text-[var(--color-accent-success)]">✓</span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {myCompleted.length > 0 && (
+                    <div className="border-t border-[var(--color-border-light)] pt-2 mt-2">
+                        {myCompleted.slice(0, 2).map(t => {
+                            const myPlace = t.myRegistration?.snapshotStats?.place;
+                            return (
+                                <div
+                                    key={t.id}
+                                    className="cursor-pointer hover:opacity-80 transition-opacity text-[0.6rem]"
+                                    onClick={() => navigate('/tournament')}
+                                >
+                                    <span className="text-[var(--color-text-muted)]">
+                                        {DIVISION_ICONS[t.division]} {DIVISION_LABELS[t.division]} — завершён
+                                    </span>
+                                    {myPlace && (
+                                        <span className="text-[var(--color-accent-success)] ml-1">
+                                            {myPlace}-е место
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
-                {myPlace && (
-                    <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">
-                        Ваше место: {myPlace}-е
-                    </p>
-                )}
             </div>
-        );
-    }
-
-    // Этап 1: до начала регистрации
-    if (now < tournament.registrationStart) {
-        const until = tournament.registrationStart - now;
-        return (
-            <div className="bg-[var(--color-bg-card)] rounded-xl p-3 border border-[var(--color-border-default)]">
-                <div className="flex items-center gap-2 mb-1">
-                    <Icon icon={icon} width="18" height="18" className="text-[var(--color-accent-info)]" />
-                    <span className="text-sm font-bold text-[var(--color-text-primary)]">
-                        {div.label} турнир
-                    </span>
-                </div>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                    Регистрация через {formatTimer(until)}
-                </p>
-            </div>
-        );
-    }
-
-    // Этап 2: идёт регистрация
-    if (now < tournament.registrationEnd) {
-        const until = tournament.registrationEnd - now;
-        return (
-            <div
-                className="bg-[var(--color-bg-card)] rounded-xl p-3 border border-[var(--color-accent-info)] cursor-pointer hover:border-[var(--color-accent-purple)] transition-colors"
-                onClick={() => navigate('/tournament')}
-            >
-                <div className="flex items-center gap-2 mb-1">
-                    <Icon icon={icon} width="18" height="18" className="text-[var(--color-accent-info)]" />
-                    <span className="text-sm font-bold text-[var(--color-text-primary)]">
-                        {div.label} турнир
-                    </span>
-                </div>
-                <p className="text-xs text-[var(--color-accent-success)] font-medium">
-                    Доступна регистрация ({formatTimer(until)})
-                </p>
-                <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
-                    Участников: {tournament.participantCount} • Призовой фонд: {tournament.prizePool} серебра
-                </p>
-                {tournament.myRegistration && (
-                    <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">✓ Вы зарегистрированы</p>
-                )}
-            </div>
-        );
-    }
-
-    // Этап 3: турнир идёт
-    return (
-        <div
-            className="bg-[var(--color-bg-card)] rounded-xl p-3 border border-[var(--color-accent-danger)] cursor-pointer hover:border-[var(--color-accent-purple)] transition-colors"
-            onClick={() => navigate('/tournament')}
-        >
-            <div className="flex items-center gap-2 mb-1">
-                <Icon icon={icon} width="18" height="18" className="text-[var(--color-accent-danger)]" />
-                <span className="text-sm font-bold text-[var(--color-text-primary)]">
-                    {div.label} турнир
-                </span>
-            </div>
-            <p className="text-xs text-[var(--color-accent-danger)] font-medium">
-                Турнир в самом разгаре!
-            </p>
-            <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
-                Участников: {tournament.participantCount} • Призовой фонд: {tournament.prizePool} серебра
-            </p>
-            {tournament.myRegistration && (
-                <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">✓ Вы участвуете</p>
-            )}
         </div>
     );
 }
