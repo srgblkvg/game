@@ -6,6 +6,9 @@ import { currentStats } from '../game/stats';
 
 const router = Router();
 
+const MAX_PLAYERS = 8;
+const REGISTRATION_WINDOW = 30 * 60; // 30 минут
+
 const divisions = [
     { name: 'copper', label: 'Медный', minLevel: 1, maxLevel: 15, basePool: 500, icon: '🥉' },
     { name: 'steel', label: 'Стальной', minLevel: 16, maxLevel: 35, basePool: 2000, icon: '🥈' },
@@ -274,22 +277,32 @@ function autoAdvance(tournamentId: number) {
     const now = Math.floor(Date.now() / 1000);
 
     if (t.status === 'registration' && now >= t.registrationEnd) {
-        // Регистрация закончилась — стартуем
+        // Время регистрации истекло — стартуем (если отменено в generateBracket, создастся новый)
         db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', tournamentId);
         generateBracket(tournamentId);
-        // После генерации бай-инов некоторые матчи могут быть уже решены
-        // Пытаемся продвинуть дальше
         autoAdvance(tournamentId);
         return;
     }
 
     if (t.status === 'in_progress') {
-        // Разрешаем текущий раунд
         const resolvedRound = resolveCurrentRound(tournamentId);
         if (resolvedRound > 0) {
             advanceWinners(tournamentId, resolvedRound);
-            // Рекурсивно продолжаем, если есть ещё раунды
             autoAdvance(tournamentId);
+        }
+        return;
+    }
+
+    // Если турнир завершён или отменён — создаём новый для этого дивизиона
+    if (t.status === 'completed' || t.status === 'cancelled') {
+        const existing = db.prepare(
+            "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress')"
+        ).get(t.division) as any;
+        if (!existing) {
+            const divConfig = divisions.find(d => d.name === t.division)!;
+            db.prepare(
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
+            ).run(t.division, 'registration', now, now + REGISTRATION_WINDOW, divConfig.basePool, now);
         }
     }
 }
@@ -300,32 +313,31 @@ function autoAdvance(tournamentId: number) {
 
 function getOrCreateTournament() {
     const now = Math.floor(Date.now() / 1000);
-    // Ищем активные турниры (registration, in_progress) + будущие
-    let tournaments = db.prepare(
-        "SELECT * FROM tournaments WHERE (registrationEnd > ? OR status IN ('registration', 'in_progress')) AND status != ? ORDER BY id DESC"
-    ).all(now, 'cancelled') as any[];
 
-    if (tournaments.length === 0) {
-        const day = new Date().getDay();
-        const daysUntilSunday = day === 0 ? 7 : 7 - day;
-        const nextSunday = new Date();
-        nextSunday.setDate(nextSunday.getDate() + daysUntilSunday);
-        nextSunday.setHours(13, 0, 0, 0);
-        const regEnd = Math.floor(nextSunday.getTime() / 1000);
-        const regStart = regEnd - 37 * 3600;
+    // Ищем активные турниры по каждому дивизиону
+    const activeByDivision: Record<string, any> = {};
+    const activeTournaments = db.prepare(
+        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC"
+    ).all() as any[];
 
-        const stmt = db.prepare(
-            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
-        );
-        for (const div of divisions) {
-            stmt.run(div.name, 'registration', regStart, regEnd, div.basePool, now);
+    for (const t of activeTournaments) {
+        if (!activeByDivision[t.division]) {
+            activeByDivision[t.division] = t;
         }
-        tournaments = db.prepare(
-            "SELECT * FROM tournaments WHERE (registrationEnd > ? OR status IN ('registration', 'in_progress')) AND status != ? ORDER BY id DESC"
-        ).all(now, 'cancelled') as any[];
     }
 
-    return tournaments;
+    // Для дивизионов без активного турнира — создаём новый с 30-мин окном
+    for (const div of divisions) {
+        if (!activeByDivision[div.name]) {
+            db.prepare(
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
+            ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, now);
+        }
+    }
+
+    return db.prepare(
+        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC"
+    ).all() as any[];
 }
 
 // ---------------------------------------------------------------------------
@@ -338,20 +350,23 @@ router.get('/tournament', (req: any, res) => {
     const user = db.prepare('SELECT level FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    const now = Math.floor(Date.now() / 1000);
+
     const tournaments = getOrCreateTournament();
 
-    // Автопродвижение для всех активных турниров
-    for (const t of tournaments) {
+    // Автопродвижение для всех турниров (включая completed — чтобы создать новые)
+    const allForAdvance = db.prepare(
+        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress', 'completed') AND createdAt > ? ORDER BY id DESC"
+    ).all(now - 86400) as any[];
+    for (const t of allForAdvance) {
         autoAdvance(t.id);
     }
 
-    // Перезагружаем после автопродвижения
-    const now = Math.floor(Date.now() / 1000);
+    // Перезагружаем активные + недавно завершённые
     const updated = db.prepare(
-        "SELECT * FROM tournaments WHERE (registrationEnd > ? OR status IN ('registration', 'in_progress')) AND status != ? ORDER BY id DESC"
-    ).all(now, 'cancelled') as any[];
+        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC"
+    ).all() as any[];
 
-    // Добавляем completed турниры за последние 7 дней
     const weekAgo = now - 7 * 86400;
     const recentCompleted = db.prepare(
         'SELECT * FROM tournaments WHERE status = ? AND createdAt > ? ORDER BY id DESC'
@@ -432,6 +447,28 @@ router.post('/tournament/register', (req: any, res) => {
 
     // Инкремент счётчика участий в турнирах
     db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
+
+    // Проверка: если набралось 8 игроков — автостарт
+    const count = (db.prepare(
+        'SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?'
+    ).get(tournament.id) as any).cnt;
+    if (count >= MAX_PLAYERS) {
+        db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', tournament.id);
+        generateBracket(tournament.id);
+        // Разрешаем все раунды сразу
+        let tt = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournament.id) as any;
+        while (tt && tt.status === 'in_progress') {
+            const resolvedRound = resolveCurrentRound(tt.id);
+            if (resolvedRound > 0) {
+                advanceWinners(tt.id, resolvedRound);
+                tt = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tt.id) as any;
+            } else {
+                break;
+            }
+        }
+        res.json({ success: true, started: true });
+        return;
+    }
 
     res.json({ success: true });
 });
