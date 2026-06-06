@@ -84,7 +84,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                         </div>
                     </div>
                     {isGuestBlocked && (
-                        <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                             <span className="text-white text-[0.6rem] bg-black/70 px-2 py-1 rounded text-center max-w-[90%]">{guestTooltip}</span>
                         </div>
                     )}
