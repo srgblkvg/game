@@ -316,11 +316,25 @@ function autoAdvance(tournamentId: number) {
     const now = Math.floor(Date.now() / 1000);
 
     if (t.status === 'registration' && now >= t.registrationEnd) {
-        // Время регистрации истекло — стартуем (если отменено в generateBracket, создастся новый)
+        // Время регистрации истекло — стартуем
         db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', tournamentId);
         generateBracket(tournamentId);
         autoAdvance(tournamentId);
         return;
+    }
+
+    // Предупреждение за 5 минут — системное сообщение в чат (один раз)
+    if (t.status === 'registration' && now >= t.registrationEnd - 300 && now < t.registrationEnd) {
+        const key = `tour_warn_${tournamentId}`;
+        const already = db.prepare("SELECT id FROM chat_messages WHERE content LIKE ? AND createdAt > datetime('now', '-5 minutes')").get(`%${key}%`);
+        if (!already) {
+            const label = t.type === 'custom' ? (t.name || 'Турнир') : (divisions.find(d => d.name === t.division)?.label || t.division);
+            const secLeft = t.registrationEnd - now;
+            const minLeft = Math.floor(secLeft / 60);
+            const participants = (db.prepare('SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?').get(tournamentId) as any).cnt;
+            db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)')
+                .run(0, null, `Турнир «${label}» — регистрация закроется через ${minLeft} мин! (${participants}/${MAX_PLAYERS} уч.) [${key}]`);
+        }
     }
 
     if (t.status === 'in_progress') {
