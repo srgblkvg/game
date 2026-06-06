@@ -331,6 +331,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN auctionTrades INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN totalJobSeconds INTEGER DEFAULT 0'); } catch {}
 
+  // --- Унификация xpGained → expGained в pve_battles ---
+  try { db.exec('ALTER TABLE pve_battles RENAME COLUMN xpGained TO expGained'); } catch {}
+
   // --- История выполненных квестов ---
   try { db.exec(`CREATE TABLE IF NOT EXISTS quest_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -395,7 +398,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     mobLevel INTEGER NOT NULL,
     playerWon INTEGER NOT NULL,
     steps TEXT,
-    xpGained INTEGER DEFAULT 0,
+    expGained INTEGER DEFAULT 0,
     goldGained INTEGER DEFAULT 0,
     goldLost INTEGER DEFAULT 0,
     materialDropped TEXT,

@@ -147,10 +147,10 @@ router.post('/mob/attack', (req: any, res) => {
     addStep({ type: 'end', message: playerWon ? `${user.username} побеждает ${mob.name}!` : `${mob.name} побеждает!` });
 
     // XP: +0 если моб слабее, +1 равный, +2 сильнее
-    let xpGained = 0;
+    let expGained = 0;
     if (playerWon) {
-        if (mob.level > user.level + 2) xpGained = 2;
-        else if (Math.abs(mob.level - user.level) <= 2) xpGained = 1;
+        if (mob.level > user.level + 2) expGained = 2;
+        else if (Math.abs(mob.level - user.level) <= 2) expGained = 1;
     }
 
     // Золото
@@ -220,7 +220,7 @@ router.post('/mob/attack', (req: any, res) => {
     }
 
     // Обновление игрока
-    let newExp = user.exp + xpGained;
+    let newExp = user.exp + expGained;
     let newLevel = user.level;
     let levelsGained = 0;
     while (true) {
@@ -276,15 +276,15 @@ router.post('/mob/attack', (req: any, res) => {
         .run(newLevel, newExp, goldGained, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
 
     // Сохраняем в историю PvE
-    db.prepare(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, xpGained, goldGained, goldLost, materialDropped)
+    db.prepare(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .run(userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? xpGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null);
+        .run(userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null);
 
     res.json({
         log,
         steps,
         playerWon,
-        xpGained: playerWon ? xpGained : 0,
+        expGained: playerWon ? expGained : 0,
         goldGained,
         premiumBonus,
         goldLost,
