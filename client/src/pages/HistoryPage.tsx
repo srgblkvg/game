@@ -183,6 +183,7 @@ export default function HistoryPage() {
                                 {isTournament(entry) && (() => {
                                     const ss = entry.data.snapshotStats ? JSON.parse(entry.data.snapshotStats) : null;
                                     const cancelled = entry.data.status === 'cancelled';
+                                    const entryFee = entry.data.entryFee || 0;
                                     return (
                                         <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
                                             <span>
@@ -190,11 +191,21 @@ export default function HistoryPage() {
                                                 Турнир «{entry.data.division === 'custom' ? (entry.data.name || 'Турнир') : entry.data.division}»
                                                 {cancelled ? ' отменён' : ' завершён'}
                                             </span>
-                                            <div className="flex items-center gap-3 mt-0.5">
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                                                 {cancelled ? (
-                                                    <span className="text-[var(--color-text-muted)]">Не набралось игроков</span>
+                                                    <>
+                                                        <span className="text-[var(--color-text-muted)]">Не набралось игроков</span>
+                                                        {entryFee > 0 && <span className="text-[var(--color-accent-success)] text-xs">+{formatMoney(entryFee)} возврат взноса</span>}
+                                                    </>
                                                 ) : ss ? (
-                                                    <span className="text-[var(--color-accent-success)] font-bold">{ss.place}-е место — {formatMoney(ss.prize)}</span>
+                                                    <>
+                                                        <span className="text-[var(--color-accent-success)] font-bold">{ss.place}-е место</span>
+                                                        {ss.prize > 0 ? (
+                                                            <span className="text-[var(--color-accent-success)] text-xs">+{formatMoney(ss.prize)}</span>
+                                                        ) : (
+                                                            <span className="text-[var(--color-text-muted)] text-xs">без приза</span>
+                                                        )}
+                                                    </>
                                                 ) : (
                                                     <span className="text-[var(--color-text-muted)]">Участие</span>
                                                 )}
@@ -240,13 +251,24 @@ export default function HistoryPage() {
                         paginatedData.map((t: any) => {
                             const ss = t.snapshotStats ? JSON.parse(t.snapshotStats) : null;
                             const cancelled = t.status === 'cancelled';
+                            const entryFee = t.entryFee || 0;
                             return (
                                 <div key={t.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
                                     <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{t.division === 'custom' ? (t.name || 'Турнир') : t.division}»{cancelled ? ' отменён' : ' завершён'}</span>
-                                    <div className="flex items-center gap-3 mt-0.5">
-                                        {cancelled ? <span className="text-[var(--color-text-muted)]">Не набралось игроков</span> :
-                                        ss ? <span className="text-[var(--color-accent-success)] font-bold">{ss.place}-е место — {formatMoney(ss.prize)}</span> :
-                                        <span className="text-[var(--color-text-muted)]">Участие</span>}
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                                        {cancelled ? (
+                                            <>
+                                                <span className="text-[var(--color-text-muted)]">Не набралось игроков</span>
+                                                {entryFee > 0 && <span className="text-[var(--color-accent-success)] text-xs">+{formatMoney(entryFee)} возврат взноса</span>}
+                                            </>
+                                        ) : ss ? (
+                                            <>
+                                                <span className="text-[var(--color-accent-success)] font-bold">{ss.place}-е место</span>
+                                                {ss.prize > 0 ? <span className="text-[var(--color-accent-success)] text-xs">+{formatMoney(ss.prize)}</span> : <span className="text-[var(--color-text-muted)] text-xs">без приза</span>}
+                                            </>
+                                        ) : (
+                                            <span className="text-[var(--color-text-muted)]">Участие</span>
+                                        )}
                                         <span className="text-[var(--color-text-muted)] text-xs ml-auto">{new Date(t.createdAt * 1000).toLocaleDateString()}</span>
                                     </div>
                                 </div>
