@@ -12,7 +12,8 @@ interface TournamentInfo {
     registrationEnd: number;
     prizePool: number;
     participantCount: number;
-    myRegistration: { userId: number; goldenTicket: number } | null;
+    myRegistration: { userId: number; goldenTicket: number; snapshotStats?: { place: number; prize: number } } | null;
+    participants?: { id: number; username: string; snapshotStats?: { place: number; prize: number } }[];
 }
 
 interface DivisionInfo {
@@ -63,7 +64,6 @@ export default function TournamentBanner() {
                 const tournaments: TournamentInfo[] = data.tournaments || [];
                 const userLevel: number = data.userLevel || 1;
 
-                // Найти турнир по уровню
                 const found = tournaments.find((t: TournamentInfo) => {
                     if (t.division === 'copper' && userLevel <= 15) return true;
                     if (t.division === 'steel' && userLevel >= 16 && userLevel <= 35) return true;
@@ -105,6 +105,45 @@ export default function TournamentBanner() {
     const div = DIVISIONS[tournament.division] || { name: tournament.division, label: tournament.division };
     const icon = DIVISION_ICONS[tournament.division] || 'game-icons:trophy';
     const now = Math.floor(Date.now() / 1000);
+
+    // Завершённый турнир — показываем результаты
+    if (tournament.status === 'completed') {
+        const top3 = (tournament.participants || [])
+            .filter(p => p.snapshotStats?.place)
+            .sort((a, b) => (a.snapshotStats?.place || 99) - (b.snapshotStats?.place || 99))
+            .slice(0, 3);
+        const myPlace = tournament.myRegistration?.snapshotStats?.place;
+
+        return (
+            <div
+                className="bg-[var(--color-bg-card)] rounded-xl p-3 border border-[var(--color-border-default)] cursor-pointer hover:border-[var(--color-accent-purple)] transition-colors"
+                onClick={() => navigate('/tournament')}
+            >
+                <div className="flex items-center gap-2 mb-1">
+                    <Icon icon={icon} width="18" height="18" className="text-[var(--color-text-muted)]" />
+                    <span className="text-sm font-bold text-[var(--color-text-primary)]">
+                        {div.label} турнир
+                    </span>
+                    <span className="text-[0.6rem] text-[var(--color-text-muted)]">(завершён)</span>
+                </div>
+                {top3.length > 0 && (
+                    <div className="text-[0.6rem] text-[var(--color-text-muted)] space-y-0.5">
+                        {top3.map(p => (
+                            <p key={p.id}>
+                                {p.snapshotStats?.place === 1 ? '🥇' : p.snapshotStats?.place === 2 ? '🥈' : '🥉'}{' '}
+                                {p.username}
+                            </p>
+                        ))}
+                    </div>
+                )}
+                {myPlace && (
+                    <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">
+                        Ваше место: {myPlace}-е
+                    </p>
+                )}
+            </div>
+        );
+    }
 
     // Этап 1: до начала регистрации
     if (now < tournament.registrationStart) {
@@ -169,6 +208,9 @@ export default function TournamentBanner() {
             <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
                 Участников: {tournament.participantCount} • Призовой фонд: {tournament.prizePool} серебра
             </p>
+            {tournament.myRegistration && (
+                <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">✓ Вы участвуете</p>
+            )}
         </div>
     );
 }
