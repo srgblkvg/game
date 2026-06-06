@@ -23,7 +23,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                 <Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1" />Задания{active.length>0 && <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-1">{active.length}/3</span>}
             </h3>
             {active.length===0 ? (
-                <p className="text-[0.65rem] text-[var(--color-text-muted)] italic cursor-pointer" onClick={()=>navigate('/tavern?tab=quests')}>Нет активных заданий</p>
+                <p className="text-[0.65rem] text-[var(--color-text-muted)] cursor-pointer" onClick={()=>navigate('/tavern?tab=quests')}>Нет активных заданий</p>
             ) : (
                 <div className="space-y-1.5">
                     {active.map((q: any) => {
