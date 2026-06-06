@@ -86,11 +86,11 @@ router.post('/bank/transfer', (req: any, res) => {
         return res.status(400).json({ error: 'Укажите номер счёта и сумму' });
     }
 
-    const sender = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    const sender = db.prepare('SELECT money, accountNumber FROM users WHERE id = ?').get(userId) as any;
     if (!sender) return res.status(404).json({ error: 'User not found' });
     if (sender.money < transferAmount) return res.status(400).json({ error: 'Недостаточно серебра' });
 
-    const target = db.prepare('SELECT id, username FROM users WHERE accountNumber = ?').get(accountNumber) as any;
+    const target = db.prepare('SELECT id, username, accountNumber FROM users WHERE accountNumber = ?').get(accountNumber) as any;
     if (!target) return res.status(400).json({ error: 'Счёт не найден' });
     if (target.id === userId) return res.status(400).json({ error: 'Нельзя перевести самому себе' });
 
@@ -99,8 +99,31 @@ router.post('/bank/transfer', (req: any, res) => {
     const receivedAmount = transferAmount - commission;
     db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(receivedAmount, target.id);
 
+    // Сохраняем в историю
+    db.prepare(`INSERT INTO transfers (fromUserId, toUserId, fromAccount, toAccount, toUsername, amount, commission, received)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(userId, target.id, sender.accountNumber, target.accountNumber, target.username, transferAmount, commission, receivedAmount);
+
     const updated = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
     res.json({ success: true, message: `Переведено ${receivedAmount} серебра игроку ${target.username} (комиссия ${commission})`, money: updated.money });
+});
+
+// История переводов
+router.get('/bank/transfers', (req: any, res) => {
+    const userId = req.userId;
+    const filter = (req.query.filter as string) || 'all'; // all | in | out
+    const limit = parseInt(req.query.limit as string) || 30;
+
+    let query = 'SELECT * FROM transfers WHERE ';
+    if (filter === 'in') query += 'toUserId = ?';
+    else if (filter === 'out') query += 'fromUserId = ?';
+    else query += '(fromUserId = ? OR toUserId = ?)';
+
+    query += ' ORDER BY id DESC LIMIT ?';
+    const params: any[] = filter === 'all' ? [userId, userId, limit] : [userId, limit];
+
+    const transfers = db.prepare(query).all(...params);
+    res.json(transfers);
 });
 
 export default router;

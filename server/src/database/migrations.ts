@@ -310,6 +310,22 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN accountNumber TEXT'); } catch {}
   try { db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_accountNumber ON users(accountNumber)'); } catch {}
 
+  // --- История переводов ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS transfers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fromUserId INTEGER NOT NULL,
+    toUserId INTEGER NOT NULL,
+    fromAccount TEXT NOT NULL,
+    toAccount TEXT NOT NULL,
+    toUsername TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    commission INTEGER DEFAULT 0,
+    received INTEGER NOT NULL,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (fromUserId) REFERENCES users(id),
+    FOREIGN KEY (toUserId) REFERENCES users(id)
+  )`); } catch {}
+
   // Генерируем счета существующим игрокам
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   function genCode(): string {
