@@ -48,6 +48,18 @@ function canJoinOfficial(t: any, userLevel: number): boolean {
     return userLevel >= min && userLevel <= max;
 }
 
+function formatTimer(seconds: number): string {
+    if (seconds <= 0) return '0 мин';
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const parts: string[] = [];
+    if (d > 0) parts.push(d + ' дн');
+    if (h > 0) parts.push(h + ' ч');
+    if (m > 0) parts.push(m + ' мин');
+    return parts.join(' ') || '0 мин';
+}
+
 export default function TournamentPage() {
     const { user } = useAuth();
     const { setCharacter } = useGame();
@@ -149,15 +161,22 @@ export default function TournamentPage() {
                         {t.type === 'official' && <span className="text-xs text-[var(--color-text-muted)] ml-1">(офиц.)</span>}
                         {t.type === 'custom' && <span className="text-xs text-[var(--color-accent-purple)] ml-1">(игрок)</span>}
                     </h3>
-                    <span className="text-xs font-medium" style={{ color: statusColors[t.status] }}>{statusLabels[t.status]}</span>
+                    <div className="text-right">
+                        <span className="text-xs font-medium" style={{ color: statusColors[t.status] }}>{statusLabels[t.status]}</span>
+                        {t.status === 'registration' && (
+                            <p className="text-[0.65rem] text-[var(--color-accent-info)]">
+                                до старта: {formatTimer(Math.max(0, t.registrationEnd - Math.floor(Date.now() / 1000)))}
+                            </p>
+                        )}
+                    </div>
                 </div>
-                <div className="text-xs text-[var(--color-text-muted)] mb-2">
+                <div className="text-sm text-[var(--color-text-muted)] mb-2 space-y-0.5">
                     <p>Призовой фонд: {formatMoney(t.prizePool)}</p>
-                    {t.entryFee > 0 && <p>Вход: {formatMoney(t.entryFee)}</p>}
+                    {t.entryFee > 0 && <p>Стоимость входа: {formatMoney(t.entryFee)}</p>}
                     <p>Участников: {t.participantCount}/{t.maxPlayers || 8}</p>
                     {t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}
                     {t.participants.slice(0, 5).map((p: any) => (
-                        <span key={p.id} className="mr-2">{p.username}{p.goldenTicket ? ' 🎫' : ''}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 🥈' : p.snapshotStats?.place === 3 ? ' 🥉' : ''}</span>
+                        <span key={p.id} className="mr-2">{p.username}{p.goldenTicket ? ' 🎫' : ''}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 2-е' : p.snapshotStats?.place === 3 ? ' 3-е' : ''}</span>
                     ))}
                     {t.participantCount > 5 && <span>+ ещё {t.participantCount - 5}</span>}
                 </div>
