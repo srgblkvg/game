@@ -17,8 +17,12 @@ router.post('/battle', (req: any, res) => {
     const { opponentId } = parsed.data;
 
     const now = Math.floor(Date.now() / 1000);
-    const attacker = db.prepare('SELECT id, username, level, exp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, lastAttackTime, premiumUntil FROM users WHERE id = ?').get(userId) as any;
+    const attacker = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, lastAttackTime, premiumUntil FROM users WHERE id = ?').get(userId) as any;
     if (!attacker) return res.status(404).json({ error: 'Attacker not found' });
+
+    if ((attacker.currentHp ?? 0) <= 0) {
+        return res.status(400).json({ error: 'Недостаточно HP для атаки. Восстановите здоровье.' });
+    }
 
     const hasPremium = (attacker.premiumUntil || 0) > now;
     const attackCooldown = hasPremium ? 150 : 300; // премиум: 2.5 мин вместо 5
@@ -30,10 +34,10 @@ router.post('/battle', (req: any, res) => {
 
     let defender: any;
     if (opponentId) {
-        defender = db.prepare('SELECT id, username, level, exp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id = ?').get(opponentId);
+        defender = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id = ?').get(opponentId);
         if (!defender || defender.id == userId) return res.status(400).json({ error: 'Invalid opponent' });
     } else {
-        const others = db.prepare('SELECT id, username, level, exp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
+        const others = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
         if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены' });
         defender = others[Math.floor(Math.random() * others.length)];
     }
@@ -50,6 +54,7 @@ router.post('/battle', (req: any, res) => {
         equipment: JSON.parse(attacker.equipment || '{}'),
         level: attacker.level,
         money: attacker.money,
+        currentHp: attacker.currentHp ?? undefined,
         drinkBonuses: getDrinkBonuses(attacker),
     };
     const defenderData = {
@@ -59,6 +64,7 @@ router.post('/battle', (req: any, res) => {
         equipment: JSON.parse(defender.equipment || '{}'),
         level: defender.level,
         money: defender.money,
+        currentHp: defender.currentHp ?? undefined,
         drinkBonuses: getDrinkBonuses(defender),
     };
 
