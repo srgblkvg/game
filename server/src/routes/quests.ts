@@ -173,6 +173,16 @@ router.post('/tavern/quests/claim', (req: any, res) => {
     db.prepare('INSERT INTO quest_history (userId, questType, difficulty, typeName, rewardXp, rewardMoney) VALUES (?, ?, ?, ?, ?, ?)')
         .run(userId, quest.questType, quest.difficulty, QUEST_INFO[quest.questType as QuestType]?.name || quest.questType, quest.rewardXp, quest.rewardMoney);
 
+    // Генерируем новый квест того же типа со случайной сложностью
+    const diffs: DiffKey[] = ['easy', 'medium', 'hard'];
+    const newDiff = diffs[Math.floor(Math.random() * diffs.length)]!;
+    const d = DIFFICULTIES[newDiff];
+    const newReq = d.req[quest.questType as QuestType];
+    const rw = BASE_REWARDS[quest.questType as QuestType];
+    const today = new Date().toISOString().slice(0, 10);
+    db.prepare('INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(userId, quest.questType, newDiff, newReq, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(getSnapshot(userId)), today);
+
     const updated = db.prepare('SELECT money, exp FROM users WHERE id = ?').get(userId) as any;
     res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: quest.rewardMoney, money: updated.money, exp: updated.exp });
 });
