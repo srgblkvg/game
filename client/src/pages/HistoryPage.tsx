@@ -182,9 +182,9 @@ export default function HistoryPage() {
                                     </div>
                                 )}
                                 {isJob(entry) && (
-                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                        <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{entry.data.jobName}» завершена. Награда: {formatMoney(entry.data.reward)}{entry.data.premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{entry.data.premiumBonus} премиум)</span> : null}</span>
-                                        <div className="text-xs text-[var(--color-text-muted)]">{new Date(entry.data.finishedAt).toLocaleString()}</div>
+                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm flex items-center gap-2">
+                                        <span className="flex-1"><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{entry.data.jobName}» завершена. Награда: {formatMoney(entry.data.reward)}{entry.data.premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{entry.data.premiumBonus} премиум)</span> : null}</span>
+                                        <span className="text-xs text-[var(--color-text-muted)] shrink-0">{new Date(entry.data.finishedAt).toLocaleString()}</span>
                                     </div>
                                 )}
                                 {isTournament(entry) && (() => {
@@ -255,9 +255,9 @@ export default function HistoryPage() {
                         ))
                     ) : tab === 'jobs' ? (
                         paginatedData.map((j: any) => (
-                            <div key={j.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» завершена. Награда: {formatMoney(j.reward)}{j.premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{j.premiumBonus} премиум)</span> : null}</span>
-                                <div className="text-xs text-[var(--color-text-muted)]">{new Date(j.finishedAt).toLocaleString()}</div>
+                            <div key={j.id} className="border-b border-[var(--color-border-light)] py-2 text-sm flex items-center gap-2">
+                                <span className="flex-1"><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» завершена. Награда: {formatMoney(j.reward)}{j.premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{j.premiumBonus} премиум)</span> : null}</span>
+                                <span className="text-xs text-[var(--color-text-muted)] shrink-0">{new Date(j.finishedAt).toLocaleString()}</span>
                             </div>
                         ))
                     ) : tab === 'tournaments' ? (
