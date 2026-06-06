@@ -35,6 +35,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                                     <span className="font-medium">{q.typeName}</span>
                                     <span className="text-[0.55rem] text-[var(--color-text-muted)] ml-auto">{q.progress}/{q.requirement}</span>
                                 </div>
+                                <p className="text-[0.55rem] text-[var(--color-text-muted)] leading-tight">{q.description}</p>
                                 <div className="h-1 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
                                     <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all" style={{width:`${pct}%`}}/>
                                 </div>
