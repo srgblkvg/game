@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { getHeaders } from '../api/helpers';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TournamentInfo {
     id: number;
@@ -49,10 +50,12 @@ export default function TournamentBanner() {
     const [info, setInfo] = useState<{ tournament: TournamentInfo; userLevel: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const isGuest = user?.isGuest || false;
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token) { setLoading(false); return; }
+        if (!token || isGuest) { setLoading(false); return; }
 
         fetch('/api/tournament', { headers: getHeaders() })
             .then(r => r.json())
@@ -77,7 +80,26 @@ export default function TournamentBanner() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading || !info) return null;
+    if (loading || !info) {
+        if (isGuest) {
+            const div = DIVISIONS.copper;
+            const icon = DIVISION_ICONS.copper;
+            return (
+                <div className="bg-[var(--color-bg-card)] rounded-xl p-3 border border-[var(--color-border-default)] opacity-60">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Icon icon={icon} width="18" height="18" className="text-[var(--color-text-muted)]" />
+                        <span className="text-sm font-bold text-[var(--color-text-primary)]">
+                            {div.label} турнир
+                        </span>
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                        🔒 Турниры недоступны на гостевом аккаунте
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    }
 
     const { tournament, userLevel } = info;
     const div = DIVISIONS[tournament.division] || { name: tournament.division, label: tournament.division };
