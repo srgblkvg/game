@@ -31,6 +31,15 @@ router.get('/tournament-history', authMiddleware, (req: any, res) => {
     res.json(tournaments);
 });
 
+// История квестов
+router.get('/quest-history', authMiddleware, (req: any, res) => {
+    const userId = req.userId;
+    const limit = parseInt(req.query.limit as string) || 30;
+    res.json(db.prepare(
+        'SELECT * FROM quest_history WHERE userId = ? ORDER BY id DESC LIMIT ?'
+    ).all(userId, limit));
+});
+
 // Приём клиентских ошибок
 router.post('/log/error', (req: any, res) => {
     const { message, stack, url, line, col, userAgent } = req.body;

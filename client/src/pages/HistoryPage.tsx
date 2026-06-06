@@ -18,12 +18,13 @@ const LIMIT = 10;
 export default function HistoryPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'messages'>('all');
+    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages'>('all');
     const [battles, setBattles] = useState<any[]>([]);
     const [pveBattles, setPveBattles] = useState<any[]>([]);
     const [jobHistory, setJobHistory] = useState<any[]>([]);
     const [privateMessages, setPrivateMessages] = useState<any[]>([]);
     const [tournamentHistory, setTournamentHistory] = useState<any[]>([]);
+    const [questHistory, setQuestHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -33,7 +34,7 @@ export default function HistoryPage() {
         if (!user) return;
         setLoading(true);
         try {
-            const [b, jh, pm, pve, th] = await Promise.all([
+            const [b, jh, pm, pve, th, qh] = await Promise.all([
                 fetchBattles(100).catch(() => []),
                 fetchJobHistory().catch(() => []),
                 fetchAllPrivateMessagesNew()
@@ -41,12 +42,14 @@ export default function HistoryPage() {
                     .catch(() => []),
                 fetch(`${BASE_URL}/log/pve-battles?limit=100`, { headers: getHeaders() }).then(r => r.json()).catch(() => []),
                 fetch(`${BASE_URL}/log/tournament-history?limit=50`, { headers: getHeaders() }).then(r => r.json()).catch(() => []),
+                fetch(`${BASE_URL}/log/quest-history?limit=50`, { headers: getHeaders() }).then(r => r.json()).catch(() => []),
             ]);
             setBattles(Array.isArray(b) ? b : []);
             setJobHistory(Array.isArray(jh) ? jh : []);
             setPrivateMessages(Array.isArray(pm) ? pm : []);
             setPveBattles(Array.isArray(pve) ? pve : []);
             setTournamentHistory(Array.isArray(th) ? th : []);
+            setQuestHistory(Array.isArray(qh) ? qh : []);
         } catch (e) {
             console.error(e);
         } finally {
@@ -64,6 +67,7 @@ export default function HistoryPage() {
         ...pveBattles.map((b: any) => ({ id: `pve-${b.id}`, type: 'pve' as const, timestamp: new Date(b.createdAt).getTime(), data: b })),
         ...jobHistory.map((j: any) => ({ id: `job-${j.id}`, type: 'job' as const, timestamp: new Date(j.finishedAt).getTime(), data: j })),
         ...tournamentHistory.map((t: any) => ({ id: `tournament-${t.id}`, type: 'tournament' as const, timestamp: new Date(t.createdAt).getTime(), data: t })),
+        ...questHistory.map((q: any) => ({ id: `quest-${q.id}`, type: 'quest' as const, timestamp: new Date(q.createdAt + 'Z').getTime(), data: q })),
         ...privateMessages.map((m: any) => ({ id: `msg-${m.id}`, type: 'message' as const, timestamp: new Date(m.createdAt).getTime(), data: m })),
     ].sort((a, b) => b.timestamp - a.timestamp);
 
@@ -74,6 +78,7 @@ export default function HistoryPage() {
             case 'pve': return pveBattles;
             case 'jobs': return jobHistory;
             case 'tournaments': return tournamentHistory;
+            case 'quests': return questHistory;
             case 'messages': return privateMessages;
             default: return [];
         }
@@ -91,6 +96,7 @@ export default function HistoryPage() {
     const isPve = (e: any): e is { type: 'pve'; data: any } => e.type === 'pve';
     const isJob = (e: any): e is { type: 'job'; data: any } => e.type === 'job';
     const isTournament = (e: any): e is { type: 'tournament'; data: any } => e.type === 'tournament';
+    const isQuest = (e: any): e is { type: 'quest'; data: any } => e.type === 'quest';
     const isMessage = (e: any): e is { type: 'message'; data: any } => e.type === 'message';
 
     const tabs = [
@@ -99,6 +105,7 @@ export default function HistoryPage() {
         { key: 'pve', label: 'Охота' } as const,
         { key: 'jobs', label: 'Работы' } as const,
         { key: 'tournaments', label: 'Турниры' } as const,
+        { key: 'quests', label: 'Квесты' } as const,
         { key: 'messages', label: 'Сообщения' } as const,
     ];
 
@@ -214,6 +221,12 @@ export default function HistoryPage() {
                                         </div>
                                     );
                                 })()}
+                                {isQuest(entry) && (
+                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
+                                        <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{entry.data.typeName}» выполнен</span>
+                                        <div className="text-xs text-[var(--color-text-muted)]">Награда: +{entry.data.rewardXp} XP, {formatMoney(entry.data.rewardMoney)} · {new Date(entry.data.createdAt + 'Z').toLocaleString()}</div>
+                                    </div>
+                                )}
                                 {isMessage(entry) && (
                                     <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
                                         <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{entry.data.senderName}: {entry.data.content}</span>
@@ -274,6 +287,13 @@ export default function HistoryPage() {
                                 </div>
                             );
                         })
+                    ) : tab === 'quests' ? (
+                        paginatedData.map((q: any) => (
+                            <div key={q.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
+                                <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{q.typeName}» выполнен</span>
+                                <div className="text-xs text-[var(--color-text-muted)]">Награда: +{q.rewardXp} XP, {formatMoney(q.rewardMoney)} · {new Date(q.createdAt + 'Z').toLocaleString()}</div>
+                            </div>
+                        ))
                     ) : tab === 'messages' ? (
                         paginatedData.map((m: any) => (
                             <div key={m.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">

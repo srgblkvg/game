@@ -331,6 +331,19 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN auctionTrades INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN totalJobSeconds INTEGER DEFAULT 0'); } catch {}
 
+  // --- История выполненных квестов ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS quest_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    questType TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    typeName TEXT NOT NULL,
+    rewardXp INTEGER DEFAULT 0,
+    rewardMoney INTEGER DEFAULT 0,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
+
   // --- История переводов ---
   try { db.exec(`CREATE TABLE IF NOT EXISTS transfers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

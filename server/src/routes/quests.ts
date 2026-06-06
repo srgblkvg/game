@@ -169,6 +169,10 @@ router.post('/tavern/quests/claim', (req: any, res) => {
     db.prepare('UPDATE daily_quests SET status = ?, progress = ? WHERE id = ?')
         .run('claimed', quest.requirement, questId);
 
+    // Сохраняем в историю
+    db.prepare('INSERT INTO quest_history (userId, questType, difficulty, typeName, rewardXp, rewardMoney) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(userId, quest.questType, quest.difficulty, QUEST_INFO[quest.questType as QuestType]?.name || quest.questType, quest.rewardXp, quest.rewardMoney);
+
     const updated = db.prepare('SELECT money, exp FROM users WHERE id = ?').get(userId) as any;
     res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: quest.rewardMoney, money: updated.money, exp: updated.exp });
 });
