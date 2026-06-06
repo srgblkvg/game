@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../database';
 import { runBattle } from '../game/battle';
 import { getBaseStats, enrichEquipment, addMoney } from '../db/helpers';
+import { currentStats } from '../game/stats';
 
 const router = Router();
 
@@ -99,6 +100,7 @@ function loadPlayerForBattle(userId: number) {
 
     const { enriched } = enrichEquipment(db, equipment);
     const base = getBaseStats(u);
+    const stats = currentStats(base, enriched);
 
     return {
         id: u.id,
@@ -107,7 +109,7 @@ function loadPlayerForBattle(userId: number) {
         equipment: enriched,
         level: u.level,
         money: u.money || 0,
-        currentHp: u.currentHp,
+        currentHp: stats.hp, // всегда полное HP для турнирных боёв
     };
 }
 
