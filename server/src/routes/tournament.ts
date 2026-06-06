@@ -315,8 +315,8 @@ function autoAdvance(tournamentId: number) {
         return;
     }
 
-    // Если турнир завершён или отменён — создаём новый для этого дивизиона
-    if (t.status === 'completed' || t.status === 'cancelled') {
+    // Если турнир завершён или отменён — создаём новый для этого дивизиона (только official)
+    if ((t.status === 'completed' || t.status === 'cancelled') && t.type === 'official') {
         const existing = db.prepare(
             "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress')"
         ).get(t.division) as any;
@@ -333,13 +333,15 @@ function autoAdvance(tournamentId: number) {
 // Создание турнира (если нет активного)
 // ---------------------------------------------------------------------------
 
-function getOrCreateTournament() {
+function getOrCreateTournament(type?: string) {
     const now = Math.floor(Date.now() / 1000);
+    const typeFilter = type ? "AND type = ?" : "";
+    const params: any[] = type ? [type] : [];
 
-    // Ищем активные турниры по каждому дивизиону
+    // Ищем активные турниры по каждому дивизиону (только official)
     const activeByDivision: Record<string, any> = {};
     const activeTournaments = db.prepare(
-        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC"
+        `SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') AND type = 'official' ORDER BY id DESC`
     ).all() as any[];
 
     for (const t of activeTournaments) {
@@ -348,18 +350,19 @@ function getOrCreateTournament() {
         }
     }
 
-    // Для дивизионов без активного турнира — создаём новый с 30-мин окном
+    // Для дивизионов без активного турнира — создаём новый official с 30-мин окном
     for (const div of divisions) {
         if (!activeByDivision[div.name]) {
             db.prepare(
-                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
-            ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, now);
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, now, 'official');
         }
     }
 
-    return db.prepare(
-        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC"
-    ).all() as any[];
+    let query = "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress')";
+    if (type) query += " AND type = ?";
+    query += " ORDER BY id DESC";
+    return db.prepare(query).all(...params) as any[];
 }
 
 // ---------------------------------------------------------------------------
@@ -410,9 +413,10 @@ router.get('/tournament', (req: any, res) => {
         return res.json({ tournaments: result, total, page, totalPages: Math.ceil(total / limit), userLevel: user.level, tab: 'completed' });
     }
 
-    // Активные турниры = текущее поведение
+    // Активные турниры
     const tournaments = getOrCreateTournament();
 
+    // Автопродвижение
     const allForAdvance = db.prepare(
         "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress', 'completed') AND createdAt > ? ORDER BY id DESC"
     ).all(now - 86400) as any[];
@@ -420,9 +424,16 @@ router.get('/tournament', (req: any, res) => {
         autoAdvance(t.id);
     }
 
+    // Фильтр по типу: all (по умолчанию), official, custom
+    const typeFilter = (req.query.type as string) || 'all';
+    let typeCondition = '';
+    const typeParams: any[] = [];
+    if (typeFilter === 'official') { typeCondition = "AND type = 'official'"; }
+    else if (typeFilter === 'custom') { typeCondition = "AND type = 'custom'"; }
+
     const updated = db.prepare(
-        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC"
-    ).all() as any[];
+        `SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ${typeCondition} ORDER BY id DESC`
+    ).all(...typeParams) as any[];
 
     const allTournaments = [...updated];
 
@@ -461,7 +472,16 @@ router.get('/tournament', (req: any, res) => {
         };
     });
 
-    res.json({ tournaments: result, userLevel: user.level, tab: 'active' });
+    // Сортировка: сначала доступные игроку, затем по registrationEnd
+    result.sort((a: any, b: any) => {
+        const aCanJoin = user.level >= (a.minLevel || 0) && user.level <= (a.maxLevel || 999);
+        const bCanJoin = user.level >= (b.minLevel || 0) && user.level <= (b.maxLevel || 999);
+        if (aCanJoin && !bCanJoin) return -1;
+        if (!aCanJoin && bCanJoin) return 1;
+        return a.registrationEnd - b.registrationEnd;
+    });
+
+    res.json({ tournaments: result, userLevel: user.level, tab: 'active', typeFilter });
 });
 
 // Регистрация
@@ -472,15 +492,41 @@ router.post('/tournament/register', (req: any, res) => {
     const user = db.prepare('SELECT level, money FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const div = divisions.find(d => d.name === division);
-    if (!div) return res.status(400).json({ error: 'Неизвестный дивизион' });
-    if (user.level < div.minLevel || user.level > div.maxLevel) {
-        return res.status(400).json({ error: `Ваш уровень не подходит для дивизиона «${div.label}»` });
+    let tournament: any;
+    if (division) {
+        // Официальный турнир по дивизиону
+        const div = divisions.find(d => d.name === division);
+        if (!div) return res.status(400).json({ error: 'Неизвестный дивизион' });
+        if (user.level < div.minLevel || user.level > div.maxLevel) {
+            return res.status(400).json({ error: `Ваш уровень не подходит для дивизиона «${div.label}»` });
+        }
+        tournament = db.prepare(
+            "SELECT * FROM tournaments WHERE division = ? AND status = 'registration' AND type = 'official'"
+        ).get(division) as any;
+    } else {
+        // Кастомный турнир по ID
+        const tournamentId = req.body.tournamentId;
+        if (!tournamentId) return res.status(400).json({ error: 'Укажите tournamentId или division' });
+        tournament = db.prepare(
+            "SELECT * FROM tournaments WHERE id = ? AND status = 'registration' AND type = 'custom'"
+        ).get(tournamentId) as any;
+        if (!tournament) return res.status(400).json({ error: 'Турнир не найден или регистрация закрыта' });
+
+        // Проверка уровня
+        if (user.level < (tournament.minLevel || 1) || user.level > (tournament.maxLevel || 999)) {
+            return res.status(400).json({ error: `Ваш уровень не подходит (нужен ${tournament.minLevel}–${tournament.maxLevel})` });
+        }
+
+        // Вступительный взнос
+        if ((tournament.entryFee || 0) > 0) {
+            if (user.money < tournament.entryFee) {
+                return res.status(400).json({ error: `Недостаточно серебра для взноса (${tournament.entryFee})` });
+            }
+            db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(tournament.entryFee, userId);
+            db.prepare('UPDATE tournaments SET prizePool = prizePool + ? WHERE id = ?').run(tournament.entryFee, tournament.id);
+        }
     }
 
-    const tournament = db.prepare(
-        'SELECT * FROM tournaments WHERE division = ? AND status = ?'
-    ).get(division, 'registration') as any;
     if (!tournament) return res.status(400).json({ error: 'Регистрация закрыта' });
 
     const existing = db.prepare(
@@ -488,7 +534,14 @@ router.post('/tournament/register', (req: any, res) => {
     ).get(tournament.id, userId) as any;
     if (existing) return res.status(400).json({ error: 'Вы уже зарегистрированы' });
 
-    if (goldenTicket) {
+    // Проверка лимита игроков (8 для official, переменный для custom)
+    const maxPlayers = tournament.type === 'custom' ? (tournament.maxPlayers || 8) : MAX_PLAYERS;
+    const currentCount = (db.prepare(
+        'SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?'
+    ).get(tournament.id) as any).cnt;
+    if (currentCount >= maxPlayers) return res.status(400).json({ error: 'Турнир заполнен' });
+
+    if (goldenTicket && tournament.type === 'official') {
         if (user.money < 1000) return res.status(400).json({ error: 'Недостаточно монет для Золотого билета (1000)' });
         db.prepare('UPDATE users SET money = money - 1000 WHERE id = ?').run(userId);
         db.prepare('UPDATE tournaments SET prizePool = prizePool + 800 WHERE id = ?').run(tournament.id);
@@ -497,32 +550,63 @@ router.post('/tournament/register', (req: any, res) => {
     db.prepare('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)')
         .run(tournament.id, userId, goldenTicket ? 1 : 0);
 
-    // Инкремент счётчика участий в турнирах
     db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
 
-    // Проверка: если набралось 8 игроков — автостарт
+    // Автостарт при заполнении
     const count = (db.prepare(
         'SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?'
     ).get(tournament.id) as any).cnt;
-    if (count >= MAX_PLAYERS) {
+    if (count >= maxPlayers) {
         db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', tournament.id);
         generateBracket(tournament.id);
-        // Разрешаем все раунды сразу
         let tt = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournament.id) as any;
         while (tt && tt.status === 'in_progress') {
             const resolvedRound = resolveCurrentRound(tt.id);
             if (resolvedRound > 0) {
                 advanceWinners(tt.id, resolvedRound);
                 tt = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tt.id) as any;
-            } else {
-                break;
-            }
+            } else break;
         }
         res.json({ success: true, started: true });
         return;
     }
 
     res.json({ success: true });
+});
+
+// Создание самоорганизованного турнира
+router.post('/tournament/create-custom', (req: any, res) => {
+    const userId = req.userId;
+    const { prizePool, entryFee, registrationMinutes, maxPlayers, minLevel, maxLevel, name } = req.body;
+
+    if (!prizePool || prizePool < 100) return res.status(400).json({ error: 'Минимальный призовой фонд: 100 серебра' });
+    if (entryFee < 0) return res.status(400).json({ error: 'Вступительный взнос не может быть отрицательным' });
+    const regMins = Math.max(5, Math.min(120, registrationMinutes || 30));
+    const players = Math.max(2, Math.min(16, maxPlayers || 8));
+    const minLvl = Math.max(1, minLevel || 1);
+    const maxLvl = Math.min(999, maxLevel || 999);
+    if (minLvl > maxLvl) return res.status(400).json({ error: 'Минимальный уровень больше максимального' });
+
+    const user = db.prepare('SELECT level, money FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.money < prizePool) return res.status(400).json({ error: 'Недостаточно серебра для призового фонда' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const regEnd = now + regMins * 60;
+
+    // Списываем призовой фонд
+    db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(prizePool, userId);
+
+    const result = db.prepare(
+        'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(null, 'registration', now, regEnd, prizePool, now, 'custom', userId, entryFee, name || 'Турнир', minLvl, maxLvl);
+
+    // Авто-регистрация создателя (бесплатно)
+    db.prepare('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)')
+        .run(result.lastInsertRowid, userId, 0);
+    db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
+
+    res.json({ success: true, tournamentId: result.lastInsertRowid });
 });
 
 export default router;

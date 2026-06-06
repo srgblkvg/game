@@ -7,11 +7,17 @@ import { useAuth } from '../contexts/AuthContext';
 interface TournamentInfo {
     id: number;
     division: string;
+    type: string;
     status: string;
     registrationStart: number;
     registrationEnd: number;
     prizePool: number;
     participantCount: number;
+    entryFee?: number;
+    name?: string;
+    minLevel?: number;
+    maxLevel?: number;
+    maxPlayers?: number;
     myRegistration: { userId: number; goldenTicket: number; snapshotStats?: { place: number; prize: number } } | null;
     participants?: { id: number; username: string; snapshotStats?: { place: number; prize: number } }[];
 }
@@ -40,9 +46,22 @@ function formatTimer(seconds: number): string {
     return parts.join(' ') || '0 мин';
 }
 
-function isPlayerDivision(division: string, userLevel: number): boolean {
-    const [min, max] = DIVISION_LEVELS[division] || [0, 0];
-    return userLevel >= min && userLevel <= max;
+function canJoin(t: TournamentInfo, userLevel: number): boolean {
+    if (t.type === 'official') {
+        const [min, max] = DIVISION_LEVELS[t.division] || [0, 0];
+        return userLevel >= min && userLevel <= max;
+    }
+    return userLevel >= (t.minLevel || 1) && userLevel <= (t.maxLevel || 999);
+}
+
+function tournamentLabel(t: TournamentInfo): string {
+    if (t.type === 'custom') return t.name || 'Турнир';
+    return DIVISION_LABELS[t.division] || t.division;
+}
+
+function tournamentIcon(t: TournamentInfo): string {
+    if (t.type === 'custom') return '🎪';
+    return DIVISION_ICONS[t.division] || '🏆';
 }
 
 export default function TournamentBanner() {
@@ -80,16 +99,20 @@ export default function TournamentBanner() {
         );
     }
 
-    // Фильтруем: только дивизион игрока + активные (registration / in_progress)
     const now = Math.floor(Date.now() / 1000);
-    const active = tournaments
-        .filter(t => (t.status === 'registration' || t.status === 'in_progress') && isPlayerDivision(t.division, userLevel))
-        .sort((a, b) => a.registrationEnd - b.registrationEnd);
 
-    // Завершённые, где игрок участвовал
-    const myCompleted = tournaments.filter(
-        t => t.status === 'completed' && t.myRegistration
-    );
+    // Все активные + свои завершённые
+    const active = tournaments
+        .filter(t => t.status === 'registration' || t.status === 'in_progress')
+        .sort((a, b) => {
+            const aJoin = canJoin(a, userLevel);
+            const bJoin = canJoin(b, userLevel);
+            if (aJoin && !bJoin) return -1;
+            if (!aJoin && bJoin) return 1;
+            return a.registrationEnd - b.registrationEnd;
+        });
+
+    const myCompleted = tournaments.filter(t => t.status === 'completed' && t.myRegistration);
 
     if (active.length === 0 && myCompleted.length === 0) {
         return (
@@ -104,42 +127,32 @@ export default function TournamentBanner() {
 
     return (
         <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-3 min-w-[210px] overflow-hidden">
-            <h3
-                className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1"
-                onClick={() => navigate('/tournament')}
-            >
+            <h3 className="text-[var(--color-text-accent)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1" onClick={() => navigate('/tournament')}>
                 <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
             </h3>
 
             <div className="space-y-2">
-                {active.map(t => {
-                    const isMine = isPlayerDivision(t.division, userLevel);
+                {active.slice(0, 5).map(t => {
+                    const joinable = canJoin(t, userLevel);
                     const untilEnd = t.registrationEnd - now;
-                    const untilStart = t.registrationStart - now;
 
                     return (
-                        <div
-                            key={t.id}
-                            className="cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => navigate('/tournament')}
-                        >
+                        <div key={t.id} className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/tournament')}>
                             <div className="flex items-center gap-1.5">
-                                <span className="text-xs">{DIVISION_ICONS[t.division]}</span>
-                                <span className="text-xs font-medium text-[var(--color-accent-success)]">
-                                    {DIVISION_LABELS[t.division]}
+                                <span className="text-xs">{tournamentIcon(t)}</span>
+                                <span className={`text-xs font-medium ${joinable ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
+                                    {tournamentLabel(t)}
+                                    {t.type === 'custom' && <span className="text-[0.6rem] ml-0.5 text-[var(--color-accent-purple)]">игр.</span>}
                                 </span>
                                 <span className="text-[0.6rem] text-[var(--color-text-muted)] ml-auto">
-                                    {t.status === 'registration'
-                                        ? `⌛ ${formatTimer(Math.max(0, untilEnd))}`
-                                        : '⚔️ идёт'}
+                                    {t.status === 'registration' ? `⌛ ${formatTimer(Math.max(0, untilEnd))}` : '⚔️ идёт'}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
-                                <span>{t.participantCount}/8 уч.</span>
+                                <span>{t.participantCount}/{t.maxPlayers || 8} уч.</span>
                                 <span>{t.prizePool} 🥇</span>
-                                {t.myRegistration && (
-                                    <span className="text-[var(--color-accent-success)]">✓</span>
-                                )}
+                                {t.entryFee ? <span>вход {t.entryFee}</span> : null}
+                                {t.myRegistration && <span className="text-[var(--color-accent-success)]">✓</span>}
                             </div>
                         </div>
                     );
@@ -150,19 +163,9 @@ export default function TournamentBanner() {
                         {myCompleted.slice(0, 2).map(t => {
                             const myPlace = t.myRegistration?.snapshotStats?.place;
                             return (
-                                <div
-                                    key={t.id}
-                                    className="cursor-pointer hover:opacity-80 transition-opacity text-[0.6rem]"
-                                    onClick={() => navigate('/tournament')}
-                                >
-                                    <span className="text-[var(--color-text-muted)]">
-                                        {DIVISION_ICONS[t.division]} {DIVISION_LABELS[t.division]} — завершён
-                                    </span>
-                                    {myPlace && (
-                                        <span className="text-[var(--color-accent-success)] ml-1">
-                                            {myPlace}-е место
-                                        </span>
-                                    )}
+                                <div key={t.id} className="cursor-pointer hover:opacity-80 transition-opacity text-[0.6rem]" onClick={() => navigate('/tournament')}>
+                                    <span className="text-[var(--color-text-muted)]">{tournamentIcon(t)} {tournamentLabel(t)} — завершён</span>
+                                    {myPlace && <span className="text-[var(--color-accent-success)] ml-1">{myPlace}-е место</span>}
                                 </div>
                             );
                         })}

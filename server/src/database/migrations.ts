@@ -296,4 +296,12 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   // --- Скрытый Elo для турнирного посева ---
   try { db.exec('ALTER TABLE users ADD COLUMN tournamentElo INTEGER DEFAULT 1000'); } catch {}
+
+  // --- Самоорганизованные турниры ---
+  try { db.exec("ALTER TABLE tournaments ADD COLUMN type TEXT DEFAULT 'official'"); } catch {}
+  try { db.exec('ALTER TABLE tournaments ADD COLUMN creatorId INTEGER'); } catch {}
+  try { db.exec('ALTER TABLE tournaments ADD COLUMN entryFee INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE tournaments ADD COLUMN name TEXT'); } catch {}
+  try { db.exec('ALTER TABLE tournaments ADD COLUMN minLevel INTEGER DEFAULT 1'); } catch {}
+  try { db.exec('ALTER TABLE tournaments ADD COLUMN maxLevel INTEGER DEFAULT 999'); } catch {}
 }
