@@ -474,8 +474,12 @@ router.get('/tournament', (req: any, res) => {
 
     // Сортировка: сначала доступные игроку, затем по registrationEnd
     result.sort((a: any, b: any) => {
-        const aCanJoin = user.level >= (a.minLevel || 0) && user.level <= (a.maxLevel || 999);
-        const bCanJoin = user.level >= (b.minLevel || 0) && user.level <= (b.maxLevel || 999);
+        const aCanJoin = a.type === 'official'
+            ? (() => { const d = divisions.find(x => x.name === a.division); return d ? user.level >= d.minLevel && user.level <= d.maxLevel : false; })()
+            : (user.level >= (a.minLevel || 1) && user.level <= (a.maxLevel || 999));
+        const bCanJoin = b.type === 'official'
+            ? (() => { const d = divisions.find(x => x.name === b.division); return d ? user.level >= d.minLevel && user.level <= d.maxLevel : false; })()
+            : (user.level >= (b.minLevel || 1) && user.level <= (b.maxLevel || 999));
         if (aCanJoin && !bCanJoin) return -1;
         if (!aCanJoin && bCanJoin) return 1;
         return a.registrationEnd - b.registrationEnd;
