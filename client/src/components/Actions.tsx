@@ -43,6 +43,21 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
     const guestBlockedPaths = ['/auction', '/craft', '/bank'];
     const guestTooltip = 'На гостевом аккаунте доступ к этой функции заблокирован';
 
+    const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
+    useEffect(() => {
+        const update = () => {
+            const h = window.location.hash;
+            if (h.startsWith('#action-')) setHighlightedCard(h.replace('#action-', ''));
+            else setHighlightedCard(null);
+        };
+        update();
+        window.addEventListener('hashchange', update);
+        return () => window.removeEventListener('hashchange', update);
+    }, []);
+
+    const questToCard: Record<string, string> = { hunt: 'Охота', arena: 'Арена', job: 'Работы', craft: 'Крафт', auction: 'Аукцион' };
+    const highlightCard = highlightedCard ? questToCard[highlightedCard] : null;
+
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {cards.map((card, i) => {
@@ -59,6 +74,8 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                     ? `${Math.floor(cdSec / 60)}:${String(cdSec % 60).padStart(2, '0')}`
                     : isGuestBlocked ? 'Заблокировано' : card.buttonText;
 
+                const highlighted = highlightCard === card.title;
+
                 // Для арены — flip-card
                 if (isArena) {
                     return <ArenaFlipCard key={i} card={card} disabled={disabled} cdSec={cdSec} btnText={btnText}
@@ -67,7 +84,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
 
                 return (
                     <div key={i} className="relative group" title={isGuestBlocked ? guestTooltip : undefined}>
-                        <div className="relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden">
+                        <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                         <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ backgroundImage: card.bgClass }} />
                         <div className="relative z-10 w-full flex flex-col flex-1">
                             <h3 className="text-[0.8rem] font-bold mb-0.5 flex items-center justify-center gap-1">
