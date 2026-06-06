@@ -29,7 +29,8 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                     {active.map((q: any) => {
                         const pct = Math.round((q.progress/q.requirement)*100);
                         return (
-                            <div key={q.id} className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/tavern?tab=quests')}>
+                            <div key={q.id} className="cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => q.progress >= q.requirement ? navigate('/tavern?tab=quests') : onHighlight?.(q.questType)}>
                                 <div className="flex items-center gap-1 text-[0.65rem]">
                                     <span>{questIcons[q.questType]}</span>
                                     <span className="font-medium">{q.typeName}</span>
