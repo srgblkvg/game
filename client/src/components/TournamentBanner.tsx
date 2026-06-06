@@ -126,7 +126,7 @@ export default function TournamentBanner() {
             </h3>
 
             <div className="space-y-2">
-                {active.slice(0, 5).map(t => {
+                {active.slice(0, 3).map(t => {
                     const joinable = canJoin(t, userLevel);
                     const untilEnd = t.registrationEnd - now;
 
