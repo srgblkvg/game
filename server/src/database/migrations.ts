@@ -306,6 +306,24 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE tournaments ADD COLUMN maxLevel INTEGER DEFAULT 999'); } catch {}
   try { db.exec('ALTER TABLE tournaments ADD COLUMN basePool INTEGER DEFAULT 0'); } catch {}
 
+  // --- Банковские счета ---
+  try { db.exec('ALTER TABLE users ADD COLUMN accountNumber TEXT'); } catch {}
+  try { db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_accountNumber ON users(accountNumber)'); } catch {}
+
+  // Генерируем счета существующим игрокам
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  function genCode(): string {
+      let code = '';
+      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+  }
+  const usersWithout = db.prepare('SELECT id FROM users WHERE accountNumber IS NULL').all() as any[];
+  for (const u of usersWithout) {
+      let code: string;
+      do { code = genCode(); } while (db.prepare('SELECT id FROM users WHERE accountNumber = ?').get(code));
+      db.prepare('UPDATE users SET accountNumber = ? WHERE id = ?').run(code, u.id);
+  }
+
   // --- История PvE-боёв ---
   try { db.exec(`CREATE TABLE IF NOT EXISTS pve_battles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

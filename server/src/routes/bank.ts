@@ -10,7 +10,7 @@ router.use('/bank', requireFullAccess);
 // Получить состояние банка
 router.get('/bank', (req: any, res) => {
     const userId = req.userId;
-    const user = db.prepare('SELECT money, bank, lastBankVisit FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT money, bank, lastBankVisit, accountNumber FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
@@ -21,6 +21,7 @@ router.get('/bank', (req: any, res) => {
         bank: user.bank || 0,
         canVisit: cooldownRemaining === 0,
         cooldownRemaining,
+        accountNumber: user.accountNumber,
     });
 });
 
@@ -73,6 +74,31 @@ router.post('/bank/withdraw', (req: any, res) => {
 
     const updated = db.prepare('SELECT money, bank FROM users WHERE id = ?').get(userId) as any;
     res.json({ success: true, pocket: updated.money, bank: updated.bank, withdrawn: amount });
+});
+
+// Перевод по номеру счёта
+router.post('/bank/transfer', (req: any, res) => {
+    const userId = req.userId;
+    const { accountNumber, amount } = req.body;
+    const transferAmount = parseInt(amount);
+
+    if (!accountNumber || !transferAmount || transferAmount <= 0) {
+        return res.status(400).json({ error: 'Укажите номер счёта и сумму' });
+    }
+
+    const sender = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    if (!sender) return res.status(404).json({ error: 'User not found' });
+    if (sender.money < transferAmount) return res.status(400).json({ error: 'Недостаточно серебра' });
+
+    const target = db.prepare('SELECT id, username FROM users WHERE accountNumber = ?').get(accountNumber) as any;
+    if (!target) return res.status(400).json({ error: 'Счёт не найден' });
+    if (target.id === userId) return res.status(400).json({ error: 'Нельзя перевести самому себе' });
+
+    db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(transferAmount, userId);
+    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(transferAmount, target.id);
+
+    const updated = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    res.json({ success: true, message: `Переведено ${transferAmount} серебра игроку ${target.username}`, money: updated.money });
 });
 
 export default router;

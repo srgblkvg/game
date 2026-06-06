@@ -19,7 +19,7 @@ export function getItemDataStmt(db: DB) {
 // --- Данные пользователя ---
 
 export function getUserById(db: DB, userId: number) {
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+  return db.prepare('SELECT *, accountNumber FROM users WHERE id = ?').get(userId) as any;
 }
 
 export function getUserWithStats(db: DB, userId: number) {

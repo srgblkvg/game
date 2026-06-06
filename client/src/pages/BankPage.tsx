@@ -20,9 +20,13 @@ export default function BankPage() {
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [accountNumber, setAccountNumber] = useState('');
+
+    // Transfer
+    const [transferAccount, setTransferAccount] = useState('');
+    const [transferAmount, setTransferAmount] = useState('');
 
     useEffect(() => { if (!user) navigate('/login'); else loadBank(); }, [user]);
-    // Live cooldown countdown
     useEffect(() => {
         if (cooldown <= 0) return;
         const t = setInterval(() => setCooldown(prev => Math.max(0, prev - 1)), 1000);
@@ -37,6 +41,7 @@ export default function BankPage() {
             setBank(data.bank);
             setCanVisit(data.canVisit);
             setCooldown(data.cooldownRemaining);
+            setAccountNumber(data.accountNumber || '');
         } catch (e: any) { setError(e.message); }
     };
 
@@ -45,14 +50,11 @@ export default function BankPage() {
         if (!amt || amt <= 0) { setError('Укажите сумму'); return; }
         try {
             const res = await fetch(`${BASE_URL}/bank/deposit`, {
-                method: 'POST', headers: getHeaders(),
-                body: JSON.stringify({ amount: amt }),
+                method: 'POST', headers: getHeaders(), body: JSON.stringify({ amount: amt }),
             });
             const data = await res.json();
             if (!res.ok) { setError(data.error); return; }
-            setPocket(data.pocket);
-            setBank(data.bank);
-            setAmount('');
+            setPocket(data.pocket); setBank(data.bank); setAmount('');
             setMessage(`Положено ${formatMoney(data.deposited)} (комиссия ${formatMoney(data.commission)})`);
             setError('');
         } catch (e: any) { setError(e.message); }
@@ -63,15 +65,29 @@ export default function BankPage() {
         if (!amt || amt <= 0) { setError('Укажите сумму'); return; }
         try {
             const res = await fetch(`${BASE_URL}/bank/withdraw`, {
-                method: 'POST', headers: getHeaders(),
-                body: JSON.stringify({ amount: amt }),
+                method: 'POST', headers: getHeaders(), body: JSON.stringify({ amount: amt }),
             });
             const data = await res.json();
             if (!res.ok) { setError(data.error); return; }
-            setPocket(data.pocket);
-            setBank(data.bank);
-            setAmount('');
+            setPocket(data.pocket); setBank(data.bank); setAmount('');
             setMessage(`Снято ${formatMoney(data.withdrawn)}`);
+            setError('');
+        } catch (e: any) { setError(e.message); }
+    };
+
+    const handleTransfer = async () => {
+        const amt = parseInt(transferAmount);
+        if (!transferAccount.trim()) { setError('Укажите номер счёта'); return; }
+        if (!amt || amt <= 0) { setError('Укажите сумму'); return; }
+        try {
+            const res = await fetch(`${BASE_URL}/bank/transfer`, {
+                method: 'POST', headers: getHeaders(),
+                body: JSON.stringify({ accountNumber: transferAccount.trim().toUpperCase(), amount: amt }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setError(data.error); return; }
+            setPocket(data.money); setTransferAccount(''); setTransferAmount('');
+            setMessage(data.message);
             setError('');
         } catch (e: any) { setError(e.message); }
     };
@@ -100,6 +116,13 @@ export default function BankPage() {
                 </div>
             </Card>
 
+            {accountNumber && (
+                <Card className="mb-4 text-center">
+                    <p className="text-xs text-[var(--color-text-muted)]">Ваш номер счёта</p>
+                    <p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p>
+                </Card>
+            )}
+
             {!canVisit && cooldown > 0 && (
                 <p className="text-sm text-[var(--color-text-muted)] mb-4 text-center">
                     Следующий визит через {cooldownMin}:{String(cooldownSec).padStart(2, '0')}
@@ -107,24 +130,20 @@ export default function BankPage() {
             )}
 
             <Card className="mb-4">
-                <input
-                    type="number"
-                    placeholder="Сумма"
-                    value={amount}
-                    onChange={e => setAmount(e.target.value)}
-                    className={inputClass}
-                    min="1"
-                />
+                <input type="number" placeholder="Сумма" value={amount} onChange={e => setAmount(e.target.value)} className={inputClass} min="1" />
                 <div className="flex gap-3 mt-3">
-                    <Button variant="primary" fullWidth onClick={handleDeposit} disabled={!canVisit}>
-                        📥 Положить (2%)
-                    </Button>
-                    <Button variant="secondary" fullWidth onClick={handleWithdraw} disabled={!canVisit}>
-                        📤 Снять (0%)
-                    </Button>
+                    <Button variant="primary" fullWidth onClick={handleDeposit} disabled={!canVisit}>📥 Положить (2%)</Button>
+                    <Button variant="secondary" fullWidth onClick={handleWithdraw} disabled={!canVisit}>📤 Снять (0%)</Button>
                 </div>
                 {message && <p className="mt-2 text-sm text-[var(--color-accent-success)]">{message}</p>}
                 {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+            </Card>
+
+            <Card className="mb-4">
+                <h3 className="font-bold text-sm mb-2">Перевод по номеру счёта</h3>
+                <input type="text" placeholder="Номер счёта (6 символов)" value={transferAccount} onChange={e => setTransferAccount(e.target.value)} className={inputClass + ' mb-2'} maxLength={6} />
+                <input type="number" placeholder="Сумма" value={transferAmount} onChange={e => setTransferAmount(e.target.value)} className={inputClass} min="1" />
+                <Button variant="danger" fullWidth className="mt-3" onClick={handleTransfer}>💸 Перевести</Button>
             </Card>
 
             <Card>
@@ -132,7 +151,8 @@ export default function BankPage() {
                 <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
                     <li>• Вклад: комиссия 2%, снятие: бесплатно</li>
                     <li>• Один визит в 30 минут (все операции сразу)</li>
-                    <li>• Золото в банке защищено от PvP-грабежа</li>
+                    <li>• Серебро в банке защищено от PvP-грабежа</li>
+                    <li>• Перевод по номеру счёта — мгновенный, без комиссии</li>
                     <li>• Проценты не начисляются</li>
                 </ul>
             </Card>
