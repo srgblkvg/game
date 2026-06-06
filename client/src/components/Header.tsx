@@ -102,8 +102,8 @@ export default function Header() {
                         >
                             <span className="flex items-center gap-1">
                                 {hasNewBattles && <Icon icon="game-icons:bell" width="18" height="18" />}
-                                <Icon icon="game-icons:ringing-bell" width="18" height="18" />
-                                Уведомления
+                                <Icon icon="game-icons:notebook" width="18" height="18" />
+                                Сводка
                             </span>
                         </Button>
                         <a href="https://vk.com/club239320810" target="_blank" rel="noopener noreferrer"
