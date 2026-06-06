@@ -48,6 +48,9 @@ router.post('/bank/deposit', (req: any, res) => {
     db.prepare('UPDATE users SET money = money - ?, bank = bank + ?, lastBankVisit = ? WHERE id = ?')
         .run(amount, depositAmount, now, userId);
 
+    db.prepare('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES (?, ?, ?, ?, ?)')
+        .run(userId, 'deposit', amount, commission, depositAmount);
+
     const updated = db.prepare('SELECT money, bank FROM users WHERE id = ?').get(userId) as any;
     res.json({ success: true, pocket: updated.money, bank: updated.bank, commission, deposited: depositAmount });
 });
@@ -71,6 +74,9 @@ router.post('/bank/withdraw', (req: any, res) => {
 
     db.prepare('UPDATE users SET money = money + ?, bank = bank - ?, lastBankVisit = ? WHERE id = ?')
         .run(amount, amount, now, userId);
+
+    db.prepare('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES (?, ?, ?, ?, ?)')
+        .run(userId, 'withdraw', amount, 0, amount);
 
     const updated = db.prepare('SELECT money, bank FROM users WHERE id = ?').get(userId) as any;
     res.json({ success: true, pocket: updated.money, bank: updated.bank, withdrawn: amount });
@@ -124,6 +130,21 @@ router.get('/bank/transfers', (req: any, res) => {
 
     const transfers = db.prepare(query).all(...params);
     res.json(transfers);
+});
+
+// История банковских операций
+router.get('/bank/operations', (req: any, res) => {
+    const userId = req.userId;
+    const filter = (req.query.filter as string) || 'all';
+    const limit = parseInt(req.query.limit as string) || 30;
+
+    let query = 'SELECT * FROM bank_operations WHERE userId = ?';
+    if (filter === 'deposit') query += " AND type = 'deposit'";
+    else if (filter === 'withdraw') query += " AND type = 'withdraw'";
+    query += ' ORDER BY id DESC LIMIT ?';
+
+    const ops = db.prepare(query).all(userId, limit);
+    res.json(ops);
 });
 
 export default router;

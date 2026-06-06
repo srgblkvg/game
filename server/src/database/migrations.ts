@@ -326,6 +326,18 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (toUserId) REFERENCES users(id)
   )`); } catch {}
 
+  // --- История банковских операций ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS bank_operations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    commission INTEGER DEFAULT 0,
+    result INTEGER NOT NULL,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
+
   // Генерируем счета существующим игрокам
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   function genCode(): string {
