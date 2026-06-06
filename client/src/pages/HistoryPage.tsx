@@ -89,6 +89,40 @@ export default function HistoryPage() {
     const fmt = (d: any) => new Date(d).toLocaleString();
     const fmtTs = (ts: number) => new Date(ts*1000).toLocaleDateString();
 
+    const renderBattleRow = (b: any) => {
+        const win = b.winnerId === user.id;
+        return <EntryRow time={fmt(b.createdAt)} onClick={()=>setSelectedBattle(b)}>
+            <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{b.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{b.attackerId===user.id?b.defenderName:b.attackerName}</strong></span>
+            <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-red-500'}`}>{win?'Победа':'Поражение'}</span>
+            {b.moneyStolen>0&&<span className="text-[var(--color-text-accent)] ml-1">{win?'+':'-'}{formatMoney(b.moneyStolen)}</span>}
+        </EntryRow>;
+    };
+    const renderPveRow = (b: any) => <EntryRow time={fmt(b.createdAt)} onClick={()=>setSelectedBattle(b)}>
+        <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{b.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{b.mobLevel}</span></span>
+        <span className={`font-bold ml-2 ${b.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{b.playerWon?'Победа':'Поражение'}</span>
+        {b.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(b.goldGained)}</span>}
+        {b.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(b.goldLost)}</span>}
+    </EntryRow>;
+    const renderJobRow = (j: any) => <EntryRow time={fmt(j.finishedAt)}>
+        <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» — {formatMoney(j.reward)}{j.premiumBonus>0&&<span style={{color:'#f1c40f'}}> (+{j.premiumBonus} пр.)</span>}</span>
+    </EntryRow>;
+    const renderTournamentRow = (t: any) => {
+        const ss = t.snapshotStats?JSON.parse(t.snapshotStats):null;
+        const canc = t.status==='cancelled';
+        return <EntryRow time={fmtTs(t.createdAt)}>
+            <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{t.division==='custom'?t.name||'Турнир':t.division}»{canc?' отменён':' завершён'}</span>
+            {canc?<span className="text-[var(--color-text-muted)] ml-1">Не набралось игроков</span>:
+            ss?<span className="text-[var(--color-accent-success)] font-bold ml-1">{ss.place}-е место {ss.prize>0?formatMoney(ss.prize):'без приза'}</span>:
+            <span className="text-[var(--color-text-muted)] ml-1">Участие</span>}
+        </EntryRow>;
+    };
+    const renderQuestRow = (q: any) => <EntryRow time={fmt(q.createdAt+'Z')} onClick={()=>navigate('/tavern?tab=quests')}>
+        <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{q.typeName}» — {formatMoney(q.rewardMoney)}</span>
+    </EntryRow>;
+    const renderMessageRow = (m: any) => <EntryRow time={fmt(m.createdAt)}>
+        <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{m.senderName}: {m.content}</span>
+    </EntryRow>;
+
     const renderEntry = (entry: any) => {
         const { data, type } = entry;
         if (type === 'battle') {
@@ -145,7 +179,13 @@ export default function HistoryPage() {
             {loading?<p className="text-[var(--color-text-muted)]">Загрузка...</p>:
             <Card>
                 {paginatedData.length===0?<p className="text-[var(--color-text-muted)]">Нет записей</p>:
-                paginatedData.map(entry=><div key={entry.id}>{renderEntry(entry)}</div>)}
+                tab==='all'?paginatedData.map(entry=><div key={entry.id}>{renderEntry(entry)}</div>):
+                tab==='battles'?paginatedData.map((b:any)=><div key={b.id}>{renderBattleRow(b)}</div>):
+                tab==='pve'?paginatedData.map((b:any)=><div key={b.id}>{renderPveRow(b)}</div>):
+                tab==='jobs'?paginatedData.map((j:any)=><div key={j.id}>{renderJobRow(j)}</div>):
+                tab==='tournaments'?paginatedData.map((t:any)=><div key={t.id}>{renderTournamentRow(t)}</div>):
+                tab==='quests'?paginatedData.map((q:any)=><div key={q.id}>{renderQuestRow(q)}</div>):
+                paginatedData.map((m:any)=><div key={m.id}>{renderMessageRow(m)}</div>)}
                 {totalPages>1&&<div className="flex justify-center gap-4 mt-4 items-center">
                     <Button size="sm" disabled={page<=1} onClick={()=>setPage(page-1)}>← Назад</Button>
                     <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
