@@ -43,13 +43,12 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                         return (
                             <div
                                 key={q.id}
-                                className="bg-[var(--color-bg-input)] rounded-lg p-2 cursor-pointer hover:ring-1 hover:ring-[var(--color-accent-info)] transition-all"
+                                className="rounded-lg p-2 cursor-pointer hover:ring-1 hover:ring-[var(--color-accent-info)] transition-all"
                                 onClick={() => onHighlight?.(q.questType)}
                             >
                                 <div className="flex items-center gap-1 text-xs mb-1">
                                     <span>{questIcons[q.questType]}</span>
                                     <span className="font-medium text-xs">{q.typeName}</span>
-                                    <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-auto">{q.difficultyLabel}</span>
                                 </div>
                                 <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-1">{q.description}</p>
                                 <div className="flex items-center gap-2">
