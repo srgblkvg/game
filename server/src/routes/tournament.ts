@@ -35,11 +35,11 @@ function nextPowerOfTwo(n: number): number {
 function generateBracket(tournamentId: number) {
     const participants = db.prepare(`
         SELECT tp.*, u.username, u.level, u.money, u.baseS, u.baseA, u.baseD, u.baseM,
-               u.equipment, u.currentHp, u.statPoints
+               u.equipment, u.currentHp, u.statPoints, u.elo
         FROM tournament_participants tp
         JOIN users u ON tp.userId = u.id
         WHERE tp.tournamentId = ?
-        ORDER BY tp.goldenTicket DESC, tp.userId
+        ORDER BY tp.goldenTicket DESC, u.elo DESC
     `).all(tournamentId) as any[];
 
     if (participants.length < 2) {
