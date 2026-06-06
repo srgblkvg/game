@@ -28,6 +28,7 @@ import tournamentRoutes from './routes/tournament';
 import adminTournamentRoutes from './routes/adminTournament';
 import ordersRoutes from './routes/orders';
 import logRoutes from './routes/log';
+import questsRoutes from './routes/quests';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -65,6 +66,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', tavernRoutes);
   app.use('/api', auctionRoutes);
   app.use('/api', ordersRoutes);
+  app.use('/api', questsRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);

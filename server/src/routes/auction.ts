@@ -169,8 +169,8 @@ router.post('/auction/buyout', (req: any, res) => {
         inventory.push(itemData);
     }
 
-    db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?').run(lot.buyoutPrice, JSON.stringify(inventory), userId);
-    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(payout, lot.sellerId);
+    db.prepare('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?').run(lot.buyoutPrice, JSON.stringify(inventory), userId);
+    db.prepare('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?').run(payout, lot.sellerId);
     db.prepare('DELETE FROM auction_lots WHERE id = ?').run(lotId);
 
     res.json({ success: true });
@@ -234,8 +234,8 @@ router.post('/auction/buy-partial', (req: any, res) => {
     }
 
     // Списываем деньги покупателю и начисляем продавцу
-    db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?').run(cost, JSON.stringify(inventory), userId);
-    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(payout, lot.sellerId);
+    db.prepare('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?').run(cost, JSON.stringify(inventory), userId);
+    db.prepare('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?').run(payout, lot.sellerId);
 
     res.json({ success: true, cost, remaining: remainingCount });
 });

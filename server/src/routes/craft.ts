@@ -165,7 +165,7 @@ router.post('/craft/execute', (req: any, res) => {
             }
         }
 
-        db.prepare('UPDATE users SET inventory = ?, money = ? WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
+        db.prepare('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1 WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: 'Предмет создан!' });
     } else {
         db.prepare('UPDATE users SET inventory = ?, money = ? WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
@@ -256,12 +256,12 @@ router.post('/craft/upgrade', (req: any, res) => {
         else if (targetLevel === 10) ratingBonus = 50;
         if (ratingBonus > 0) {
             const newElo = Math.max(100, (user.elo || 1000) + ratingBonus);
-            db.prepare('UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ? WHERE id = ?')
+            db.prepare('UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ?, craftCount = craftCount + 1 WHERE id = ?')
                 .run(newMoney, JSON.stringify(newInventory), newElo, ratingBonus, userId);
             return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, eloAdded: ratingBonus, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` });
         }
 
-        db.prepare('UPDATE users SET inventory = ?, money = ? WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
+        db.prepare('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1 WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });
     } else {
         // Неудача: предмет разрушается, выдаём материал

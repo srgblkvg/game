@@ -310,6 +310,26 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN accountNumber TEXT'); } catch {}
   try { db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_accountNumber ON users(accountNumber)'); } catch {}
 
+  // --- Ежедневные квесты ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS daily_quests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    questType TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    requirement INTEGER NOT NULL,
+    progress INTEGER DEFAULT 0,
+    rewardXp INTEGER DEFAULT 0,
+    rewardMoney INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'available',
+    snapshot TEXT,
+    date TEXT NOT NULL,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
+
+  try { db.exec('ALTER TABLE users ADD COLUMN craftCount INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN auctionTrades INTEGER DEFAULT 0'); } catch {}
+
   // --- История переводов ---
   try { db.exec(`CREATE TABLE IF NOT EXISTS transfers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
