@@ -58,13 +58,15 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
     const questToCard: Record<string, string> = { hunt: 'Охота', arena: 'Арена', job: 'Работы', craft: 'Крафт', auction: 'Аукцион' };
     const highlightCard = highlightedCard ? questToCard[highlightedCard] : null;
 
-    // Прокрутка к подсвеченной карточке на мобильных
+    // Прокрутка к подсвеченной карточке на мобильных, авто-сброс через 3 сек
     useEffect(() => {
         if (!highlightCard) return;
         setTimeout(() => {
             const el = document.getElementById(`action-card-${highlightCard}`);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
+        const timer = setTimeout(() => { window.location.hash = ''; }, 3000);
+        return () => clearTimeout(timer);
     }, [highlightCard]);
 
     return (
