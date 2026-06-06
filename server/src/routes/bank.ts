@@ -83,27 +83,27 @@ router.post('/bank/transfer', (req: any, res) => {
         if (!target) throw new Error('Счёт не найден');
         if (target.id === userId) throw new Error('Нельзя перевести самому себе');
 
-        // Проверяем и списываем у отправителя
-        const sender = db.prepare('SELECT money, accountNumber FROM users WHERE id = ?').get(userId) as any;
+        // Проверяем и списываем с банка отправителя
+        const sender = db.prepare('SELECT bank, accountNumber FROM users WHERE id = ?').get(userId) as any;
         if (!sender) throw new Error('User not found');
-        if (sender.money < transferAmount) throw new Error('Недостаточно серебра');
+        if (sender.bank < transferAmount) throw new Error('Недостаточно серебра в банке');
 
         const commission = Math.ceil(transferAmount * 0.02);
         const receivedAmount = transferAmount - commission;
 
-        db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(transferAmount, userId);
-        db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(receivedAmount, target.id);
+        db.prepare('UPDATE users SET bank = bank - ? WHERE id = ?').run(transferAmount, userId);
+        db.prepare('UPDATE users SET bank = bank + ? WHERE id = ?').run(receivedAmount, target.id);
 
         db.prepare('INSERT INTO transfers (fromUserId, toUserId, fromAccount, toAccount, toUsername, amount, commission, received) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
             .run(userId, target.id, sender.accountNumber, target.accountNumber, target.username, transferAmount, commission, receivedAmount);
 
-        const updated = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+        const updated = db.prepare('SELECT bank FROM users WHERE id = ?').get(userId) as any;
         return { updated, target, commission, receivedAmount };
     });
 
     try {
         const { updated, target, commission, receivedAmount } = txn();
-        res.json({ success: true, message: `Переведено ${receivedAmount} серебра игроку ${target.username} (комиссия ${commission})`, money: updated.money });
+        res.json({ success: true, message: `Переведено ${receivedAmount} серебра игроку ${target.username} (комиссия ${commission})`, bank: updated.bank });
     } catch (e: any) {
         res.status(400).json({ error: e.message });
     }

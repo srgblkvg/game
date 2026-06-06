@@ -49,7 +49,7 @@ export default function BankPage() {
     };
     const handleTransfer = async () => {
         const amt = parseInt(transferAmount); if (!transferAccount.trim()) { setError('Укажите номер счёта'); return; } if (!amt||amt<=0) { setError('Укажите сумму'); return; }
-        try { const d = await api('/bank/transfer',{accountNumber:transferAccount.trim().toUpperCase(),amount:amt}); setPocket(d.money); setTransferAccount(''); setTransferAmount(''); setMessage(d.message); setError(''); loadTransfers(); } catch(e:any){setError(e.message)}
+        try { const d = await api('/bank/transfer',{accountNumber:transferAccount.trim().toUpperCase(),amount:amt}); setBank(d.bank); setTransferAccount(''); setTransferAmount(''); setMessage(d.message); setError(''); loadTransfers(); } catch(e:any){setError(e.message)}
     };
 
     const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>new Date(b.createdAt+'Z').getTime()-new Date(a.createdAt+'Z').getTime()).slice(0,20);
@@ -136,7 +136,7 @@ export default function BankPage() {
                         <div className="text-[var(--color-text-muted)]">{out?`Кому: ${t.toUsername}`:`От: счёт ${t.fromAccount}`}{t.commission>0&&out?`, ком. ${t.commission}`:''}</div>
                     </div>})}</div>}
                 </Card>
-                <Card><h3 className="font-bold text-sm mb-2">Правила</h3><ul className="text-xs text-[var(--color-text-muted)] space-y-1"><li>• Перевод с баланса (при себе)</li><li>• Комиссия 2%</li><li>• Мгновенное зачисление</li></ul></Card>
+                <Card><h3 className="font-bold text-sm mb-2">Правила</h3><ul className="text-xs text-[var(--color-text-muted)] space-y-1"><li>• Перевод с банковского счёта на счёт</li><li>• Комиссия 2%</li><li>• Мгновенное зачисление</li></ul></Card>
             </>}
         </div>
     );
