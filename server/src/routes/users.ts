@@ -38,7 +38,7 @@ router.get('/character/public/:userId', (req: any, res) => {
         wins: user.wins,
         pveTotalBattles: user.pveTotalBattles || 0,
         pveWins: user.pveWins || 0,
-        tournamentCount: db.prepare(
+        tournamentCount: (db.prepare(
             "SELECT COUNT(*) as cnt FROM tournament_participants tp JOIN tournaments t ON tp.tournamentId = t.id WHERE tp.userId = ? AND t.status = 'completed'"
         ).get(userId) as any).cnt || 0,
         tournamentWins: user.tournamentWins || 0,
