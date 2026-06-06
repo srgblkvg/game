@@ -222,7 +222,7 @@ export default function HistoryPage() {
                                     );
                                 })()}
                                 {isQuest(entry) && (
-                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
+                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded" onClick={() => navigate('/tavern?tab=quests')}>
                                         <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{entry.data.typeName}» выполнен</span>
                                         <div className="text-xs text-[var(--color-text-muted)]">Награда: +{entry.data.rewardXp} XP, {formatMoney(entry.data.rewardMoney)} · {new Date(entry.data.createdAt + 'Z').toLocaleString()}</div>
                                     </div>
@@ -289,7 +289,7 @@ export default function HistoryPage() {
                         })
                     ) : tab === 'quests' ? (
                         paginatedData.map((q: any) => (
-                            <div key={q.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
+                            <div key={q.id} className="border-b border-[var(--color-border-light)] py-2 text-sm cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded" onClick={() => navigate('/tavern?tab=quests')}>
                                 <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{q.typeName}» выполнен</span>
                                 <div className="text-xs text-[var(--color-text-muted)]">Награда: +{q.rewardXp} XP, {formatMoney(q.rewardMoney)} · {new Date(q.createdAt + 'Z').toLocaleString()}</div>
                             </div>
