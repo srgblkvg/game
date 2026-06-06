@@ -8,6 +8,7 @@ import AdminJobs from './AdminJobs';
 import AdminChat from './AdminChat';
 import AdminCraft from './AdminCraft';
 import AdminBattles from './AdminBattles';
+import AdminTournaments from './AdminTournaments';
 import Button from '../../components/ui/Button';
 import { inputClass } from '../../utils/formStyles';
 
@@ -16,6 +17,7 @@ const tabs = [
     { key: 'items', label: 'Предметы' },
     { key: 'jobs', label: 'Работы' },
     { key: 'battles', label: 'Бои' },
+    { key: 'tournaments', label: 'Турниры' },
     { key: 'chat', label: 'Чат' },
     { key: 'craft', label: 'Крафт' },
 ] as const;
@@ -112,6 +114,7 @@ export default function AdminPanel() {
             {tab === 'items' && <AdminItems />}
             {tab === 'jobs' && <AdminJobs />}
             {tab === 'battles' && <AdminBattles />}
+            {tab === 'tournaments' && <AdminTournaments />}
             {tab === 'chat' && <AdminChat />}
             {tab === 'craft' && <AdminCraft />}
         </div>

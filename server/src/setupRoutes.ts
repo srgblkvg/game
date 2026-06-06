@@ -25,6 +25,7 @@ import bankRoutes from './routes/bank';
 import tavernRoutes from './routes/tavern';
 import auctionRoutes from './routes/auction';
 import tournamentRoutes from './routes/tournament';
+import adminTournamentRoutes from './routes/adminTournament';
 import ordersRoutes from './routes/orders';
 import logRoutes from './routes/log';
 
@@ -43,6 +44,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/admin', authMiddleware, requireAdmin, adminJobsRoutes);
   app.use('/api/admin/chat', authMiddleware, requireAdmin, adminChatRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminBattleRoutes);
+  app.use('/api/admin', authMiddleware, requireAdmin, adminTournamentRoutes);
 
   // Игровые маршруты (только для игроков) + замедление гостей
   app.use('/api', authMiddleware, requirePlayer, guestCooldown);

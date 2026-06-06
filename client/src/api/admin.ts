@@ -293,3 +293,57 @@ export async function grantPremium(userId: number, days: number) {
     if (!res.ok) throw new Error(data.error || 'Ошибка выдачи премиума');
     return data;
 }
+
+// ==================== Турниры ====================
+export async function fetchAdminTournaments() {
+    const res = await fetch(`${BASE_URL}/admin/tournaments`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Ошибка загрузки турниров');
+    return res.json();
+}
+
+export async function createAdminTournament(data: any) {
+    const res = await fetch(`${BASE_URL}/admin/tournaments`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Ошибка создания турнира'); }
+    return res.json();
+}
+
+export async function updateAdminTournament(id: number, data: any) {
+    const res = await fetch(`${BASE_URL}/admin/tournaments/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Ошибка обновления турнира');
+    return res.json();
+}
+
+export async function deleteAdminTournament(id: number) {
+    const res = await fetch(`${BASE_URL}/admin/tournaments/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Ошибка удаления турнира');
+    return res.json();
+}
+
+export async function startAdminTournament(id: number) {
+    const res = await fetch(`${BASE_URL}/admin/tournaments/${id}/start`, {
+        method: 'POST',
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Ошибка запуска турнира');
+    return res.json();
+}
+
+export async function finishAdminTournament(id: number) {
+    const res = await fetch(`${BASE_URL}/admin/tournaments/${id}/finish`, {
+        method: 'POST',
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Ошибка завершения турнира');
+    return res.json();
+}
