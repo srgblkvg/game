@@ -95,10 +95,12 @@ router.post('/bank/transfer', (req: any, res) => {
     if (target.id === userId) return res.status(400).json({ error: 'Нельзя перевести самому себе' });
 
     db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(transferAmount, userId);
-    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(transferAmount, target.id);
+    const commission = Math.ceil(transferAmount * 0.02);
+    const receivedAmount = transferAmount - commission;
+    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(receivedAmount, target.id);
 
     const updated = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
-    res.json({ success: true, message: `Переведено ${transferAmount} серебра игроку ${target.username}`, money: updated.money });
+    res.json({ success: true, message: `Переведено ${receivedAmount} серебра игроку ${target.username} (комиссия ${commission})`, money: updated.money });
 });
 
 export default router;
