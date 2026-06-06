@@ -58,6 +58,15 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
     const questToCard: Record<string, string> = { hunt: 'Охота', arena: 'Арена', job: 'Работы', craft: 'Крафт', auction: 'Аукцион' };
     const highlightCard = highlightedCard ? questToCard[highlightedCard] : null;
 
+    // Прокрутка к подсвеченной карточке на мобильных
+    useEffect(() => {
+        if (!highlightCard) return;
+        setTimeout(() => {
+            const el = document.getElementById(`action-card-${highlightCard}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }, [highlightCard]);
+
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {cards.map((card, i) => {
@@ -79,11 +88,12 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                 // Для арены — flip-card
                 if (isArena) {
                     return <ArenaFlipCard key={i} card={card} disabled={disabled} cdSec={cdSec} btnText={btnText}
-                        arenaDifficulty={arenaDifficulty} setArenaDifficulty={setArenaDifficulty} navigate={navigate} />;
+                        arenaDifficulty={arenaDifficulty} setArenaDifficulty={setArenaDifficulty} navigate={navigate}
+                        highlighted={highlighted} />;
                 }
 
                 return (
-                    <div key={i} className="relative group" title={isGuestBlocked ? guestTooltip : undefined}>
+                    <div key={i} className="relative group" title={isGuestBlocked ? guestTooltip : undefined} id={`action-card-${card.title}`}>
                         <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                         <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ backgroundImage: card.bgClass }} />
                         <div className="relative z-10 w-full flex flex-col flex-1">
@@ -112,9 +122,10 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
     );
 }
 
-function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setArenaDifficulty, navigate }: {
+function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setArenaDifficulty, navigate, highlighted }: {
     card: ActionCard; disabled: boolean; cdSec: number; btnText: string;
     arenaDifficulty: string; setArenaDifficulty: (d: string) => void; navigate: (path: string) => void;
+    highlighted?: boolean;
 }) {
     const [flipped, setFlipped] = useState(false);
     const [modalMsg, setModalMsg] = useState('');
@@ -146,9 +157,9 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
     return (
         <>
         <div className="perspective-600">
-            <div className={`relative w-full transition-transform duration-400 ${flipped ? 'rotate-y-180' : ''}`} style={{ transformStyle: 'preserve-3d' }}>
+            <div className={`relative w-full transition-transform duration-400 ${flipped ? 'rotate-y-180' : ''}`} style={{ transformStyle: 'preserve-3d' }} id={`action-card-${card.title}`}>
                 {/* Front */}
-                <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center text-center overflow-hidden ${flipped ? 'pointer-events-none' : ''}`} style={{ backfaceVisibility: 'hidden' }}>
+                <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border flex flex-col items-center text-center overflow-hidden transition-all ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`} style={{ backfaceVisibility: 'hidden' }}>
                     <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ backgroundImage: card.bgClass }} />
                     <div className="relative z-10 w-full flex flex-col flex-1">
                         <h3 className="text-[0.8rem] font-bold mb-0.5 flex items-center justify-center gap-1">
