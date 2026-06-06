@@ -608,7 +608,7 @@ router.post('/tournament/create-custom', (req: any, res) => {
     try {
         result = db.prepare(
             'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        ).run(null, 'registration', now, regEnd, prizePool, now, 'custom', userId, entryFee, name, minLvl, maxLvl);
+        ).run('custom', 'registration', now, regEnd, prizePool, now, 'custom', userId, entryFee, name, minLvl, maxLvl);
     } catch (e: any) {
         return res.status(500).json({ error: 'Ошибка создания турнира: ' + e.message });
     }
