@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
                     {/* Дата регистрации */}
                     {profile.createdAt && (
-                        <h3 className=\"text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-3\">
+                        <h3 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-3">
                             📅 Регистрация: {new Date(profile.createdAt + 'Z').toLocaleDateString()}
                         </h3>
                     )}
