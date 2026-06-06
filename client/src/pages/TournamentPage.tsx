@@ -23,17 +23,12 @@ const divisionLabels: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-    registration: 'Регистрация',
-    in_progress: 'Идёт',
-    completed: 'Завершён',
-    cancelled: 'Отменён',
+    registration: 'Регистрация', in_progress: 'Идёт', completed: 'Завершён', cancelled: 'Отменён',
 };
 
 const statusColors: Record<string, string> = {
-    registration: 'var(--color-accent-success)',
-    in_progress: 'var(--color-accent-danger)',
-    completed: 'var(--color-text-muted)',
-    cancelled: 'var(--color-text-muted)',
+    registration: 'var(--color-accent-success)', in_progress: 'var(--color-accent-danger)',
+    completed: 'var(--color-text-muted)', cancelled: 'var(--color-text-muted)',
 };
 
 export default function TournamentPage() {
@@ -41,18 +36,23 @@ export default function TournamentPage() {
     const { setCharacter } = useGame();
     const navigate = useNavigate();
 
+    const [tab, setTab] = useState<'active' | 'completed'>('active');
     const [data, setData] = useState<any>(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [expandedLog, setExpandedLog] = useState<number | null>(null);
+    const [completedPage, setCompletedPage] = useState(1);
 
-    useEffect(() => { if (!user) navigate('/login'); else if (!user.isGuest) load(); }, [user]);
+    useEffect(() => { if (!user) navigate('/login'); else if (!user.isGuest) load(); }, [user, tab]);
 
     const isGuest = user?.isGuest || false;
 
     const load = async () => {
         try {
-            const res = await fetch(`${BASE_URL}/tournament`, { headers: getHeaders() });
+            const url = tab === 'completed'
+                ? `${BASE_URL}/tournament?tab=completed&page=${completedPage}`
+                : `${BASE_URL}/tournament?tab=active`;
+            const res = await fetch(url, { headers: getHeaders() });
             setData(await res.json());
         } catch (e: any) { setError(e.message); }
     };
@@ -67,9 +67,13 @@ export default function TournamentPage() {
             if (!res.ok) { setError(d.error); return; }
             setMessage('Зарегистрирован!');
             const fresh = await fetchCharacter(); setCharacter(fresh);
-            load();
+            setTab('active');
+            const r = await fetch(`${BASE_URL}/tournament?tab=active`, { headers: getHeaders() });
+            setData(await r.json());
         } catch (e: any) { setError(e.message); }
     };
+
+    useEffect(() => { if (tab === 'completed') load(); }, [completedPage]);
 
     if (!data) return <div className="p-4">Загрузка...</div>;
 
@@ -80,12 +84,8 @@ export default function TournamentPage() {
                 <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2" />Турнир «Кровавый Шпиль»</h1>
                 <Card className="text-center py-6">
                     <Icon icon="game-icons:lock" width="40" height="40" className="mx-auto mb-3 text-[var(--color-text-muted)]" />
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Турниры недоступны на гостевом аккаунте.
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                        Зарегистрируйтесь, чтобы участвовать в турнирах.
-                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]">Турниры недоступны на гостевом аккаунте.</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">Зарегистрируйтесь, чтобы участвовать в турнирах.</p>
                 </Card>
             </div>
         );
@@ -94,20 +94,30 @@ export default function TournamentPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton to="/" />
-            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2" />Турнир «Кровавый Шпиль»</h1>
-            <p className="text-xs text-[var(--color-text-muted)] italic mb-4">
+            <h1 className="text-xl font-bold mb-2"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2" />Турнир «Кровавый Шпиль»</h1>
+            <p className="text-xs text-[var(--color-text-muted)] italic mb-3">
                 «Раз в неделю ворота Арены закрываются. Наружу выходит только один.»
             </p>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-4">
+                <Button variant={tab === 'active' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('active'); setCompletedPage(1); }}>
+                    Активные
+                </Button>
+                <Button variant={tab === 'completed' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('completed'); setCompletedPage(1); }}>
+                    Завершённые
+                </Button>
+            </div>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
 
-            {data.tournaments.map((t: any) => {
+            {/* === АКТИВНЫЕ === */}
+            {tab === 'active' && data.tournaments.map((t: any) => {
                 const myReg = t.myRegistration;
                 const divisionLevels = t.division === 'copper' ? [1, 15] : t.division === 'steel' ? [16, 35] : t.division === 'mithril' ? [36, 60] : [61, 999];
                 const isMyDivision = data.userLevel >= divisionLevels[0] && data.userLevel <= divisionLevels[1];
 
-                // Группируем матчи по раундам
                 const matchesByRound: Record<number, any[]> = {};
                 if (t.matches) {
                     for (const m of t.matches) {
@@ -119,42 +129,26 @@ export default function TournamentPage() {
 
                 return (
                     <Card key={t.id} className="mb-3" style={{ borderColor: isMyDivision ? divisionColors[t.division] : undefined }}>
-                        {/* Заголовок */}
                         <div className="flex justify-between items-start mb-2">
                             <h3 className="font-bold" style={{ color: divisionColors[t.division] }}>
                                 {divisionIcons[t.division]} {divisionLabels[t.division]}
-                                <span className="text-xs text-[var(--color-text-muted)] ml-1">
-                                    (ур. {divisionLevels[0]}–{divisionLevels[1]})
-                                </span>
+                                <span className="text-xs text-[var(--color-text-muted)] ml-1">(ур. {divisionLevels[0]}–{divisionLevels[1]})</span>
                             </h3>
-                            <span className="text-xs font-medium" style={{ color: statusColors[t.status] }}>
-                                {statusLabels[t.status] || t.status}
-                            </span>
+                            <span className="text-xs font-medium" style={{ color: statusColors[t.status] }}>{statusLabels[t.status]}</span>
                         </div>
-
-                        {/* Инфо */}
                         <div className="text-xs text-[var(--color-text-muted)] mb-2">
                             <p>Призовой фонд: {formatMoney(t.prizePool)}</p>
                             <p>Участников: {t.participantCount}</p>
                             {t.participants.slice(0, 5).map((p: any) => (
-                                <span key={p.id} className="mr-2">
-                                    {p.username}
-                                    {p.goldenTicket ? ' 🎫' : ''}
-                                    {p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 🥈' : p.snapshotStats?.place === 3 ? ' 🥉' : ''}
-                                </span>
+                                <span key={p.id} className="mr-2">{p.username}{p.goldenTicket ? ' 🎫' : ''}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 🥈' : p.snapshotStats?.place === 3 ? ' 🥉' : ''}</span>
                             ))}
                             {t.participantCount > 5 && <span>+ ещё {t.participantCount - 5}</span>}
                         </div>
 
-                        {/* Регистрация */}
                         {t.status === 'registration' && isMyDivision && !myReg && (
                             <div className="flex gap-2">
-                                <Button variant="danger" size="xs" onClick={() => handleRegister(t.division)}>
-                                    Записаться (бесплатно)
-                                </Button>
-                                <Button variant="secondary" size="xs" onClick={() => handleRegister(t.division, true)}>
-                                    🎫 Золотой билет (1000)
-                                </Button>
+                                <Button variant="danger" size="xs" onClick={() => handleRegister(t.division)}>Записаться (бесплатно)</Button>
+                                <Button variant="secondary" size="xs" onClick={() => handleRegister(t.division, true)}>🎫 Золотой билет (1000)</Button>
                             </div>
                         )}
                         {myReg && (
@@ -164,64 +158,34 @@ export default function TournamentPage() {
                             </p>
                         )}
 
-                        {/* Сетка матчей */}
                         {rounds.length > 0 && (
                             <div className="mt-3 space-y-2">
                                 <h4 className="text-xs font-bold text-[var(--color-text-primary)]">Турнирная сетка</h4>
                                 {rounds.map(round => {
                                     const roundMatches = matchesByRound[round];
                                     const totalRounds = rounds.length;
-                                    const roundLabel = round === totalRounds ? '🏆 Финал' :
-                                        round === totalRounds - 1 ? 'Полуфинал' :
-                                        `Раунд ${round}`;
-
+                                    const roundLabel = round === totalRounds ? '🏆 Финал' : round === totalRounds - 1 ? 'Полуфинал' : `Раунд ${round}`;
                                     return (
                                         <div key={round}>
-                                            <p className="text-[0.6rem] font-bold text-[var(--color-text-muted)] uppercase mb-1">
-                                                {roundLabel}
-                                            </p>
+                                            <p className="text-[0.6rem] font-bold text-[var(--color-text-muted)] uppercase mb-1">{roundLabel}</p>
                                             <div className="space-y-1">
                                                 {roundMatches.map((m: any) => (
                                                     <div key={m.id}>
-                                                        <div
-                                                            className={`text-xs flex items-center gap-1 py-0.5 px-2 rounded ${
-                                                                m.winnerId ? 'bg-[var(--color-bg-primary)]' : 'bg-[var(--color-bg-card)]'
-                                                            }`}
-                                                        >
-                                                            <span className={m.winnerId === m.player1Id ? 'font-bold text-[var(--color-accent-success)]' : ''}>
-                                                                {m.player1Name || '—'}
-                                                            </span>
+                                                        <div className={`text-xs flex items-center gap-1 py-0.5 px-2 rounded ${m.winnerId ? 'bg-[var(--color-bg-primary)]' : 'bg-[var(--color-bg-card)]'}`}>
+                                                            <span className={m.winnerId === m.player1Id ? 'font-bold text-[var(--color-accent-success)]' : ''}>{m.player1Name || '—'}</span>
                                                             <span className="text-[var(--color-text-muted)]">vs</span>
-                                                            <span className={m.winnerId === m.player2Id ? 'font-bold text-[var(--color-accent-success)]' : ''}>
-                                                                {m.player2Name || '—'}
-                                                            </span>
+                                                            <span className={m.winnerId === m.player2Id ? 'font-bold text-[var(--color-accent-success)]' : ''}>{m.player2Name || '—'}</span>
                                                             {m.winnerId && (
-                                                                <span
-                                                                    className="ml-auto text-[0.6rem] text-[var(--color-accent-info)] cursor-pointer hover:underline"
-                                                                    onClick={() => setExpandedLog(expandedLog === m.id ? null : m.id)}
-                                                                >
+                                                                <span className="ml-auto text-[0.6rem] text-[var(--color-accent-info)] cursor-pointer hover:underline" onClick={() => setExpandedLog(expandedLog === m.id ? null : m.id)}>
                                                                     {expandedLog === m.id ? 'Скрыть' : 'Бой'}
                                                                 </span>
                                                             )}
-                                                            {!m.winnerId && m.player1Id && m.player2Id && (
-                                                                <span className="ml-auto text-[0.6rem] text-[var(--color-text-muted)]">⏳</span>
-                                                            )}
+                                                            {!m.winnerId && m.player1Id && m.player2Id && <span className="ml-auto text-[0.6rem] text-[var(--color-text-muted)]">⏳</span>}
                                                         </div>
                                                         {expandedLog === m.id && m.log && (
                                                             <div className="mt-1 p-2 bg-black/40 rounded text-[0.6rem] text-[var(--color-text-muted)] max-h-48 overflow-y-auto font-mono leading-relaxed">
                                                                 {m.log.map((step: any, i: number) => (
-                                                                    <div key={i} className={
-                                                                        step.type === 'end' ? 'text-[var(--color-accent-success)] font-bold' :
-                                                                        step.type === 'crit' ? 'text-yellow-400' :
-                                                                        step.type === 'damage' ? 'text-red-400' :
-                                                                        step.type === 'block' ? 'text-blue-400' :
-                                                                        step.type === 'fullBlock' ? 'text-cyan-400 font-bold' :
-                                                                        step.type === 'dodge' ? 'text-purple-400' :
-                                                                        step.type === 'stun' ? 'text-orange-400' :
-                                                                        step.type === 'counter' ? 'text-pink-400' :
-                                                                        step.type === 'money' ? 'text-yellow-300' :
-                                                                        ''
-                                                                    }>
+                                                                    <div key={i} className={step.type === 'end' ? 'text-[var(--color-accent-success)] font-bold' : step.type === 'crit' ? 'text-yellow-400' : step.type === 'damage' ? 'text-red-400' : step.type === 'block' ? 'text-blue-400' : step.type === 'fullBlock' ? 'text-cyan-400 font-bold' : step.type === 'dodge' ? 'text-purple-400' : step.type === 'stun' ? 'text-orange-400' : step.type === 'counter' ? 'text-pink-400' : step.type === 'money' ? 'text-yellow-300' : ''}>
                                                                         {step.message}
                                                                     </div>
                                                                 ))}
@@ -236,26 +200,65 @@ export default function TournamentPage() {
                             </div>
                         )}
 
-                        {/* Завершён — итоги */}
                         {t.status === 'completed' && (
                             <div className="mt-2 p-2 bg-[var(--color-bg-primary)] rounded text-xs">
                                 <p className="font-bold text-[var(--color-accent-success)]">Турнир завершён!</p>
-                                {t.participants
-                                    .filter((p: any) => p.snapshotStats?.place)
-                                    .sort((a: any, b: any) => a.snapshotStats.place - b.snapshotStats.place)
-                                    .map((p: any) => (
-                                        <p key={p.id} className="text-[var(--color-text-muted)]">
-                                            {p.snapshotStats.place === 1 ? '🥇' : p.snapshotStats.place === 2 ? '🥈' : '🥉'}{' '}
-                                            {p.username} — {formatMoney(p.snapshotStats.prize)}
-                                        </p>
-                                    ))}
+                                {t.participants.filter((p: any) => p.snapshotStats?.place).sort((a: any, b: any) => a.snapshotStats.place - b.snapshotStats.place).map((p: any) => (
+                                    <p key={p.id} className="text-[var(--color-text-muted)]">{p.snapshotStats.place === 1 ? '🥇' : p.snapshotStats.place === 2 ? '🥈' : '🥉'} {p.username} — {formatMoney(p.snapshotStats.prize)}</p>
+                                ))}
                             </div>
                         )}
                     </Card>
                 );
             })}
 
-            {data.tournaments.length === 0 && (
+            {/* === ЗАВЕРШЁННЫЕ === */}
+            {tab === 'completed' && (
+                <>
+                    {data.tournaments.map((t: any) => (
+                        <Card key={t.id} className="mb-3">
+                            <div className="flex justify-between items-start mb-1">
+                                <h3 className="font-bold text-sm" style={{ color: divisionColors[t.division] }}>
+                                    {divisionIcons[t.division]} {divisionLabels[t.division]}
+                                    <span className="text-xs text-[var(--color-text-muted)] ml-1">#{t.id}</span>
+                                </h3>
+                                <span className="text-xs text-[var(--color-text-muted)]">
+                                    {new Date(t.createdAt * 1000).toLocaleDateString('ru-RU')}
+                                </span>
+                            </div>
+                            <div className="text-xs text-[var(--color-text-muted)] mb-1">
+                                <span>Участников: {t.participantCount}</span>
+                                <span className="ml-2">Призовой фонд: {formatMoney(t.prizePool)}</span>
+                            </div>
+                            {t.top3 && t.top3.length > 0 && (
+                                <div className="text-xs">
+                                    {t.top3.map((p: any) => (
+                                        <span key={p.username + p.place} className="mr-3">
+                                            {p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : '🥉'} {p.username} — {formatMoney(p.prize)}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </Card>
+                    ))}
+
+                    {data.totalPages > 1 && (
+                        <div className="flex justify-center gap-4 mt-4 items-center">
+                            <Button size="sm" disabled={data.page <= 1} onClick={() => setCompletedPage(data.page - 1)}>← Назад</Button>
+                            <span className="text-sm text-[var(--color-text-secondary)]">стр. {data.page} из {data.totalPages}</span>
+                            <Button size="sm" disabled={data.page >= data.totalPages} onClick={() => setCompletedPage(data.page + 1)}>Вперёд →</Button>
+                        </div>
+                    )}
+
+                    {data.tournaments.length === 0 && (
+                        <Card className="text-center py-6">
+                            <p className="text-sm text-[var(--color-text-muted)]">Нет завершённых турниров</p>
+                        </Card>
+                    )}
+                </>
+            )}
+
+            {tab === 'active' && data.tournaments.length === 0 && (
                 <Card className="text-center py-6">
                     <p className="text-sm text-[var(--color-text-muted)]">Нет активных турниров</p>
                 </Card>

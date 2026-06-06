@@ -373,10 +373,46 @@ router.get('/tournament', (req: any, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
+    const tab = (req.query.tab as string) || 'active';
 
+    if (tab === 'completed') {
+        // Завершённые турниры с пагинацией
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = 20;
+        const offset = (page - 1) * limit;
+
+        const total = (db.prepare(
+            "SELECT COUNT(*) as cnt FROM tournaments WHERE status = 'completed'"
+        ).get() as any).cnt;
+
+        const completed = db.prepare(
+            "SELECT * FROM tournaments WHERE status = 'completed' ORDER BY id DESC LIMIT ? OFFSET ?"
+        ).all(limit, offset) as any[];
+
+        const result = completed.map((t: any) => {
+            const participants = db.prepare(
+                'SELECT u.username, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id WHERE tp.tournamentId = ?'
+            ).all(t.id) as any[];
+            return {
+                ...t,
+                participantCount: participants.length,
+                participants: participants.map((p: any) => ({
+                    id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
+                    snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
+                })),
+                top3: participants
+                    .filter((p: any) => p.snapshotStats)
+                    .map((p: any) => ({ ...JSON.parse(p.snapshotStats), username: p.username }))
+                    .sort((a: any, b: any) => a.place - b.place),
+            };
+        });
+
+        return res.json({ tournaments: result, total, page, totalPages: Math.ceil(total / limit), userLevel: user.level, tab: 'completed' });
+    }
+
+    // Активные турниры = текущее поведение
     const tournaments = getOrCreateTournament();
 
-    // Автопродвижение для всех турниров (включая completed — чтобы создать новые)
     const allForAdvance = db.prepare(
         "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress', 'completed') AND createdAt > ? ORDER BY id DESC"
     ).all(now - 86400) as any[];
@@ -384,17 +420,11 @@ router.get('/tournament', (req: any, res) => {
         autoAdvance(t.id);
     }
 
-    // Перезагружаем активные + недавно завершённые
     const updated = db.prepare(
         "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC"
     ).all() as any[];
 
-    const weekAgo = now - 7 * 86400;
-    const recentCompleted = db.prepare(
-        'SELECT * FROM tournaments WHERE status = ? AND createdAt > ? ORDER BY id DESC'
-    ).all('completed', weekAgo) as any[];
-
-    const allTournaments = [...updated, ...recentCompleted];
+    const allTournaments = [...updated];
 
     const result = allTournaments.map((t: any) => {
         const participants = db.prepare(
@@ -431,7 +461,7 @@ router.get('/tournament', (req: any, res) => {
         };
     });
 
-    res.json({ tournaments: result, userLevel: user.level });
+    res.json({ tournaments: result, userLevel: user.level, tab: 'active' });
 });
 
 // Регистрация
