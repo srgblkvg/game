@@ -329,6 +329,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   try { db.exec('ALTER TABLE users ADD COLUMN craftCount INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN auctionTrades INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN totalJobSeconds INTEGER DEFAULT 0'); } catch {}
 
   // --- История переводов ---
   try { db.exec(`CREATE TABLE IF NOT EXISTS transfers (

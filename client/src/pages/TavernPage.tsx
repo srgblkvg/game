@@ -90,14 +90,14 @@ export default function TavernPage() {
                     {quests.quests.map((q: any) => (
                         <Card key={q.id} className={q.status==='active'?'border-[var(--color-accent-info)]':''}>
                             <div className="flex justify-between items-start mb-1">
-                                <h3 className="font-bold text-sm">{q.typeName}</h3>
+                                <h3 className="font-bold text-sm">{q.typeIcon} {q.typeName}</h3>
                                 <span className="text-xs text-[var(--color-text-muted)]">{q.difficultyLabel}</span>
                             </div>
-                            <p className="text-xs text-[var(--color-text-muted)] mb-2">{q.requirement} шт.</p>
+                            <p className="text-xs mb-1">{q.description}</p>
                             <div className="flex items-center gap-2 text-xs mb-2">
-                                {q.status==='active' && <span className="text-[var(--color-accent-info)]">Прогресс: {Math.min(q.progress,q.requirement)}/{q.requirement}</span>}
+                                {q.status==='active' && <span className="text-[var(--color-accent-info)]">{q.progress}/{q.requirement}</span>}
                                 {q.status==='claimed' && <span className="text-[var(--color-accent-success)]">✓ Выполнено</span>}
-                                <span className="text-[var(--color-text-muted)]">+{q.rewardXp} XP • {formatMoney(q.rewardMoney)}</span>
+                                <span className="text-[var(--color-text-muted)]">Награда: +{q.rewardXp} XP, {formatMoney(q.rewardMoney)}</span>
                             </div>
                             <div className="flex gap-2">
                                 {q.status==='available' && quests.canTake && <Button variant="primary" size="xs" onClick={()=>handleTakeQuest(q.id)}>Взять</Button>}
