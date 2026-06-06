@@ -401,13 +401,19 @@ router.get('/tournament', (req: any, res) => {
         const limit = 20;
         const offset = (page - 1) * limit;
 
-        const total = (db.prepare(
-            "SELECT COUNT(*) as cnt FROM tournaments WHERE status = 'completed'"
-        ).get() as any).cnt;
+        const total = (db.prepare(`
+            SELECT COUNT(*) as cnt FROM tournaments t 
+            WHERE t.status = 'completed' 
+            AND (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) >= 2
+        `).get() as any).cnt;
 
-        const completed = db.prepare(
-            "SELECT * FROM tournaments WHERE status = 'completed' ORDER BY id DESC LIMIT ? OFFSET ?"
-        ).all(limit, offset) as any[];
+        const completed = db.prepare(`
+            SELECT t.*, (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) as participantCount
+            FROM tournaments t 
+            WHERE t.status = 'completed' 
+            AND (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) >= 2
+            ORDER BY t.id DESC LIMIT ? OFFSET ?
+        `).all(limit, offset) as any[];
 
         const result = completed.map((t: any) => {
             const participants = db.prepare(
