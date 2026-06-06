@@ -139,7 +139,6 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                         </h3>
                         <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                         <div className="mt-auto">
-                            {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
                             <Button variant={disabled ? 'secondary' : 'danger'} size="xs" fullWidth disabled={disabled}
                                 onClick={() => { if (!disabled) setFlipped(true); }}>
                                 {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
