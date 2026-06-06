@@ -102,7 +102,7 @@ export default function HistoryPage() {
     const renderPveRow = (b: any) => <EntryRow time={fmt(b.createdAt)} onClick={()=>setSelectedBattle(b)}>
         <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{b.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{b.mobLevel}</span></span>
         <span className={`font-bold ml-2 ${b.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{b.playerWon?'Победа':'Поражение'}</span>
-        {b.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{b.expGained} XP</span>}
+        {b.xpGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{b.xpGained} XP</span>}
         {b.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(b.goldGained)}</span>}
         {b.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(b.goldLost)}</span>}
     </EntryRow>;
