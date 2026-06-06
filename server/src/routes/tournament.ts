@@ -35,15 +35,14 @@ function nextPowerOfTwo(n: number): number {
 function generateBracket(tournamentId: number) {
     const participants = db.prepare(`
         SELECT tp.*, u.username, u.level, u.money, u.baseS, u.baseA, u.baseD, u.baseM,
-               u.equipment, u.currentHp, u.statPoints, u.elo
+               u.equipment, u.currentHp, u.statPoints, u.tournamentElo
         FROM tournament_participants tp
         JOIN users u ON tp.userId = u.id
         WHERE tp.tournamentId = ?
-        ORDER BY tp.goldenTicket DESC, u.elo DESC
+        ORDER BY u.tournamentElo ASC
     `).all(tournamentId) as any[];
 
     if (participants.length < 2) {
-        // Недостаточно участников — отменяем турнир
         db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('cancelled', tournamentId);
         return;
     }
@@ -52,7 +51,7 @@ function generateBracket(tournamentId: number) {
     const slots = nextPowerOfTwo(n);
     const byes = slots - n;
 
-    // Строим посев: первые N — реальные игроки, остальные — bye (null)
+    // Строим массив: реальные игроки + добивка null до степени 2
     const seeded: (typeof participants[0] | null)[] = [...participants];
     for (let i = 0; i < byes; i++) seeded.push(null);
 
@@ -63,18 +62,17 @@ function generateBracket(tournamentId: number) {
 
     const half = slots / 2;
     for (let i = 0; i < half; i++) {
-        const p1 = seeded[i];
-        const p2 = seeded[slots - 1 - i];
+        // Соседние пары: 1-2, 3-4, 5-6...
+        const p1 = seeded[i * 2];
+        const p2 = seeded[i * 2 + 1];
 
         const p1Id = p1 ? p1.userId : null;
         const p2Id = p2 ? p2.userId : null;
 
-        // Если оба null — странно, но пропускаем
         if (p1Id === null && p2Id === null) continue;
 
         insertMatch.run(tournamentId, p1Id, p2Id);
 
-        // Если один из игроков bye — сразу засчитываем победу второму
         if (p1Id === null && p2Id !== null) {
             const matchId = (db.prepare('SELECT last_insert_rowid() as id').get() as any).id;
             db.prepare('UPDATE tournament_matches SET winnerId = ? WHERE id = ?').run(p2Id, matchId);
@@ -175,11 +173,11 @@ function advanceWinners(tournamentId: number, finishedRound: number) {
         VALUES (?, ?, ?, ?, NULL)
     `);
 
-    // Стандартная пара: 1-й с последним, 2-й с предпоследним...
+    // Соседние пары: 1-2, 3-4...
     const n = winners.length;
-    const half = n / 2;
+    const half = Math.floor(n / 2);
     for (let i = 0; i < half; i++) {
-        insertMatch.run(tournamentId, nextRound, winners[i].winnerId, winners[n - 1 - i].winnerId);
+        insertMatch.run(tournamentId, nextRound, winners[i * 2].winnerId, winners[i * 2 + 1].winnerId);
     }
 }
 
@@ -264,6 +262,30 @@ function finishTournament(tournamentId: number) {
     }
 
     db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('completed', tournamentId);
+
+    // --- Обновление скрытого tournamentElo для посева ---
+    // Победитель +25, 2-е +15, 3-е +10, полуфиналисты +5, остальные 0
+    // Проигравшие в первом раунде получают небольшой минус
+    const allParts = db.prepare(
+        'SELECT userId FROM tournament_participants WHERE tournamentId = ?'
+    ).all(tournamentId) as any[];
+
+    for (const p of allParts) {
+        let delta = 0;
+        if (p.userId === winnerId) delta = 25;
+        else if (p.userId === secondPlaceId) delta = 15;
+        else if (p.userId === thirdPlaceId) delta = 10;
+        else {
+            // Проверяем, прошёл ли игрок дальше первого раунда
+            const wonInR1 = db.prepare(
+                'SELECT id FROM tournament_matches WHERE tournamentId = ? AND round = 1 AND winnerId = ?'
+            ).get(tournamentId, p.userId) as any;
+            if (wonInR1) delta = 3; // прошёл первый раунд
+            else delta = -3;        // вылетел в первом раунде
+        }
+        db.prepare('UPDATE users SET tournamentElo = MAX(100, tournamentElo + ?) WHERE id = ?')
+            .run(delta, p.userId);
+    }
 }
 
 // ---------------------------------------------------------------------------

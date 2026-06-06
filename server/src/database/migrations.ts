@@ -293,4 +293,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN totalPvpMoneyWon INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN totalPveMoneyLost INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN totalPvpMoneyLost INTEGER DEFAULT 0'); } catch {}
+
+  // --- Скрытый Elo для турнирного посева ---
+  try { db.exec('ALTER TABLE users ADD COLUMN tournamentElo INTEGER DEFAULT 1000'); } catch {}
 }
