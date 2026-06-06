@@ -31,289 +31,135 @@ export default function HistoryPage() {
     const [selectedBattle, setSelectedBattle] = useState<any>(null);
 
     const loadData = useCallback(async () => {
-        if (!user) return;
-        setLoading(true);
+        if (!user) return; setLoading(true);
         try {
             const [b, jh, pm, pve, th, qh] = await Promise.all([
-                fetchBattles(100).catch(() => []),
-                fetchJobHistory().catch(() => []),
-                fetchAllPrivateMessagesNew()
-                    .then((msgs: any[]) => msgs.filter((m: any) => m.targetId === user.id))
-                    .catch(() => []),
-                fetch(`${BASE_URL}/log/pve-battles?limit=100`, { headers: getHeaders() }).then(r => r.json()).catch(() => []),
-                fetch(`${BASE_URL}/log/tournament-history?limit=50`, { headers: getHeaders() }).then(r => r.json()).catch(() => []),
-                fetch(`${BASE_URL}/log/quest-history?limit=50`, { headers: getHeaders() }).then(r => r.json()).catch(() => []),
+                fetchBattles(100).catch(()=>[]), fetchJobHistory().catch(()=>[]),
+                fetchAllPrivateMessagesNew().then(msgs=>(msgs as any[]).filter(m=>m.targetId===user.id)).catch(()=>[]),
+                fetch(`${BASE_URL}/log/pve-battles?limit=100`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
+                fetch(`${BASE_URL}/log/tournament-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
+                fetch(`${BASE_URL}/log/quest-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
             ]);
-            setBattles(Array.isArray(b) ? b : []);
-            setJobHistory(Array.isArray(jh) ? jh : []);
-            setPrivateMessages(Array.isArray(pm) ? pm : []);
-            setPveBattles(Array.isArray(pve) ? pve : []);
-            setTournamentHistory(Array.isArray(th) ? th : []);
-            setQuestHistory(Array.isArray(qh) ? qh : []);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
+            setBattles(Array.isArray(b)?b:[]); setJobHistory(Array.isArray(jh)?jh:[]);
+            setPrivateMessages(Array.isArray(pm)?pm:[]); setPveBattles(Array.isArray(pve)?pve:[]);
+            setTournamentHistory(Array.isArray(th)?th:[]); setQuestHistory(Array.isArray(qh)?qh:[]);
+        } catch(e){console.error(e)} finally {setLoading(false)}
     }, [user]);
 
-    useEffect(() => {
-        if (!user) { navigate('/login'); return; }
-        loadData();
-    }, [user, loadData, navigate]);
+    useEffect(()=>{if(!user){navigate('/login');return}loadData()},[user,loadData,navigate]);
 
     const allEntries = [
-        ...battles.map((b: any) => ({ id: `battle-${b.id}`, type: 'battle' as const, timestamp: new Date(b.createdAt).getTime(), data: b })),
-        ...pveBattles.map((b: any) => ({ id: `pve-${b.id}`, type: 'pve' as const, timestamp: new Date(b.createdAt).getTime(), data: b })),
-        ...jobHistory.map((j: any) => ({ id: `job-${j.id}`, type: 'job' as const, timestamp: new Date(j.finishedAt).getTime(), data: j })),
-        ...tournamentHistory.map((t: any) => ({ id: `tournament-${t.id}`, type: 'tournament' as const, timestamp: new Date(t.createdAt).getTime(), data: t })),
-        ...questHistory.map((q: any) => ({ id: `quest-${q.id}`, type: 'quest' as const, timestamp: new Date(q.createdAt + 'Z').getTime(), data: q })),
-        ...privateMessages.map((m: any) => ({ id: `msg-${m.id}`, type: 'message' as const, timestamp: new Date(m.createdAt).getTime(), data: m })),
-    ].sort((a, b) => b.timestamp - a.timestamp);
+        ...battles.map(b=>({id:`b-${b.id}`,type:'battle',ts:new Date(b.createdAt).getTime(),data:b})),
+        ...pveBattles.map(b=>({id:`p-${b.id}`,type:'pve',ts:new Date(b.createdAt).getTime(),data:b})),
+        ...jobHistory.map(j=>({id:`j-${j.id}`,type:'job',ts:new Date(j.finishedAt).getTime(),data:j})),
+        ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:new Date(t.createdAt).getTime(),data:t})),
+        ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt+'Z').getTime(),data:q})),
+        ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
+    ].sort((a,b)=>b.ts-a.ts);
 
-    const currentData = (() => {
-        switch (tab) {
-            case 'all': return allEntries;
-            case 'battles': return battles;
-            case 'pve': return pveBattles;
-            case 'jobs': return jobHistory;
-            case 'tournaments': return tournamentHistory;
-            case 'quests': return questHistory;
-            case 'messages': return privateMessages;
-            default: return [];
-        }
-    })();
+    const currentData = (()=>{switch(tab){
+        case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
+        case 'jobs':return jobHistory;case 'tournaments':return tournamentHistory;case 'quests':return questHistory;
+        case 'messages':return privateMessages;default:return[];
+    }})();
 
     const totalItems = currentData.length;
-    const totalPagesCalc = Math.ceil(totalItems / LIMIT);
-    useEffect(() => { setPage(1); }, [tab]);
-    useEffect(() => { setTotalPages(totalPagesCalc || 1); }, [totalPagesCalc]);
-
-    const startIdx = (page - 1) * LIMIT;
-    const paginatedData = currentData.slice(startIdx, startIdx + LIMIT);
-
-    const isBattle = (e: any): e is { type: 'battle'; data: any } => e.type === 'battle';
-    const isPve = (e: any): e is { type: 'pve'; data: any } => e.type === 'pve';
-    const isJob = (e: any): e is { type: 'job'; data: any } => e.type === 'job';
-    const isTournament = (e: any): e is { type: 'tournament'; data: any } => e.type === 'tournament';
-    const isQuest = (e: any): e is { type: 'quest'; data: any } => e.type === 'quest';
-    const isMessage = (e: any): e is { type: 'message'; data: any } => e.type === 'message';
+    const totalPagesCalc = Math.ceil(totalItems/LIMIT);
+    useEffect(()=>{setPage(1)},[tab]);
+    useEffect(()=>{setTotalPages(totalPagesCalc||1)},[totalPagesCalc]);
+    const startIdx=(page-1)*LIMIT;
+    const paginatedData=currentData.slice(startIdx,startIdx+LIMIT);
 
     const tabs = [
-        { key: 'all', label: 'Все' } as const,
-        { key: 'battles', label: 'PvP' } as const,
-        { key: 'pve', label: 'Охота' } as const,
-        { key: 'jobs', label: 'Работы' } as const,
-        { key: 'tournaments', label: 'Турниры' } as const,
-        { key: 'quests', label: 'Квесты' } as const,
-        { key: 'messages', label: 'Сообщения' } as const,
-    ];
+        {key:'all',label:'Все'},{key:'battles',label:'PvP'},{key:'pve',label:'Охота'},
+        {key:'jobs',label:'Работы'},{key:'tournaments',label:'Турниры'},{key:'quests',label:'Квесты'},
+        {key:'messages',label:'Сообщения'},
+    ] as const;
 
-    if (!user) return null;
+    if(!user) return null;
 
-    const renderBattleEntry = (b: any) => (
-        <div className="border-b border-[var(--color-border-light)] py-2 text-sm cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded" onClick={() => setSelectedBattle(b)}>
-            <div className="flex items-center gap-2">
-                <strong>{b.attackerId === user.id ? <><Icon icon="game-icons:crossed-swords" width="16" height="16" className="inline mr-1" />Вы атаковали</> : <><Icon icon="game-icons:shield" width="16" height="16" className="inline mr-1" />На вас напал</>}</strong>
-                <span> игрок {b.attackerId === user.id ? b.defenderName : b.attackerName}</span>
-            </div>
-            <div className="flex items-center gap-3 mt-0.5">
-                <span className={`font-bold ${b.winnerId === user.id ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{b.winnerId === user.id ? 'Победа' : 'Поражение'}</span>
-                {b.moneyStolen > 0 && <span className="text-[var(--color-text-accent)] text-xs">{b.winnerId === user.id ? '+' : '-'}{formatMoney(b.moneyStolen)}</span>}
-                {b.expGained > 0 && b.winnerId === user.id && <span className="text-[var(--color-accent-purple)] text-xs">+{b.expGained} опыта</span>}
-                <span className="text-[var(--color-text-muted)] text-xs ml-auto">{new Date(b.createdAt).toLocaleString()}</span>
-            </div>
+    // Универсальная строка записи: контент слева, время справа
+    const EntryRow = ({ children, time, className='', onClick }: { children: React.ReactNode; time: string; className?: string; onClick?: ()=>void }) => (
+        <div className={`border-b border-[var(--color-border-light)] py-2 text-xs flex items-center gap-2 ${onClick?'cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded':''} ${className}`} onClick={onClick}>
+            <div className="flex-1 min-w-0">{children}</div>
+            <span className="text-[var(--color-text-muted)] shrink-0 ml-auto text-[0.65rem]">{time}</span>
         </div>
     );
 
-    const renderBattleModal = () => {
-        if (!selectedBattle) return null;
-        let steps: any[] = [];
-        try { steps = typeof selectedBattle.steps === 'string' ? JSON.parse(selectedBattle.steps) : (selectedBattle.steps || []); } catch { steps = []; }
+    const fmt = (d: any) => new Date(d).toLocaleString();
+    const fmtTs = (ts: number) => new Date(ts*1000).toLocaleDateString();
 
-        return (
-            <Modal open={!!selectedBattle} onClose={() => setSelectedBattle(null)}
-                title={`⚔ ${selectedBattle.attackerName || 'Вы'} vs ${selectedBattle.defenderName || selectedBattle.mobName || '?'}`}
-                width="min(900px, calc(100vw - 2rem))" borderColor="var(--color-border-default)">
-                <div className="bg-black rounded-lg p-3 max-h-[60vh] overflow-y-auto font-mono text-xs leading-relaxed">
-                    {renderBattleLog(steps)}
-                </div>
-                <div className="flex justify-center mt-4">
-                    <Button variant="secondary" size="sm" onClick={() => setSelectedBattle(null)}>Закрыть</Button>
-                </div>
-            </Modal>
-        );
+    const renderEntry = (entry: any) => {
+        const { data, type } = entry;
+        if (type === 'battle') {
+            const win = data.winnerId === user.id;
+            return <EntryRow time={fmt(data.createdAt)} onClick={()=>setSelectedBattle(data)}>
+                <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{data.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{data.attackerId===user.id?data.defenderName:data.attackerName}</strong></span>
+                <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-red-500'}`}>{win?'Победа':'Поражение'}</span>
+                {data.moneyStolen>0&&<span className="text-[var(--color-text-accent)] ml-1">{win?'+':'-'}{formatMoney(data.moneyStolen)}</span>}
+            </EntryRow>;
+        }
+        if (type === 'pve') {
+            return <EntryRow time={fmt(data.createdAt)} onClick={()=>setSelectedBattle(data)}>
+                <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{data.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{data.mobLevel}</span></span>
+                <span className={`font-bold ml-2 ${data.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{data.playerWon?'Победа':'Поражение'}</span>
+                {data.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(data.goldGained)}</span>}
+                {data.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(data.goldLost)}</span>}
+            </EntryRow>;
+        }
+        if (type === 'job') {
+            return <EntryRow time={fmt(data.finishedAt)}>
+                <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{data.jobName}» — {formatMoney(data.reward)}{data.premiumBonus>0&&<span style={{color:'#f1c40f'}}> (+{data.premiumBonus} пр.)</span>}</span>
+            </EntryRow>;
+        }
+        if (type === 'tournament') {
+            const ss = data.snapshotStats?JSON.parse(data.snapshotStats):null;
+            const canc = data.status==='cancelled';
+            return <EntryRow time={fmtTs(data.createdAt)}>
+                <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{data.division==='custom'?data.name||'Турнир':data.division}»{canc?' отменён':' завершён'}</span>
+                {canc?<span className="text-[var(--color-text-muted)] ml-1">Не набралось игроков</span>:
+                ss?<span className="text-[var(--color-accent-success)] font-bold ml-1">{ss.place}-е место {ss.prize>0?formatMoney(ss.prize):'без приза'}</span>:
+                <span className="text-[var(--color-text-muted)] ml-1">Участие</span>}
+            </EntryRow>;
+        }
+        if (type === 'quest') {
+            return <EntryRow time={fmt(data.createdAt+'Z')} onClick={()=>navigate('/tavern?tab=quests')}>
+                <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{data.typeName}» — {formatMoney(data.rewardMoney)}</span>
+            </EntryRow>;
+        }
+        if (type === 'message') {
+            return <EntryRow time={fmt(data.createdAt)}>
+                <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{data.senderName}: {data.content}</span>
+            </EntryRow>;
+        }
+        return null;
     };
 
     return (
         <div className="px-4 py-4">
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:ringing-bell" width="22" height="22" className="inline mr-2"/>Уведомления</h2>
-
             <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
-                {tabs.map((t) => (
-                    <Button key={t.key} variant={tab === t.key ? 'danger' : 'secondary'} size="sm" onClick={() => setTab(t.key)} className="whitespace-nowrap">{t.label}</Button>
-                ))}
+                {tabs.map(t=><Button key={t.key} variant={tab===t.key?'danger':'secondary'} size="sm" onClick={()=>setTab(t.key)} className="whitespace-nowrap">{t.label}</Button>)}
             </div>
-
-            {loading ? (
-                <p className="text-[var(--color-text-muted)]">Загрузка...</p>
-            ) : (
-                <Card>
-                    {paginatedData.length === 0 ? (
-                        <p className="text-[var(--color-text-muted)]">Нет записей</p>
-                    ) : tab === 'all' ? (
-                        paginatedData.map((entry) => (
-                            <div key={entry.id}>
-                                {isBattle(entry) && renderBattleEntry(entry.data)}
-                                {isPve(entry) && (
-                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded" onClick={() => setSelectedBattle(entry.data)}>
-                                        <div className="flex items-center gap-2">
-                                            <Icon icon="game-icons:death-skull" width="16" height="16" />
-                                            <strong>{entry.data.mobName}</strong>
-                                            <span className="text-[var(--color-text-muted)] text-xs">ур. {entry.data.mobLevel}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 mt-0.5">
-                                            <span className={`font-bold ${entry.data.playerWon ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{entry.data.playerWon ? 'Победа' : 'Поражение'}</span>
-                                            {entry.data.goldGained > 0 && <span className="text-[var(--color-text-accent)] text-xs">+{formatMoney(entry.data.goldGained)}</span>}
-                                            {entry.data.goldLost > 0 && <span className="text-red-500 text-xs">-{formatMoney(entry.data.goldLost)}</span>}
-                                            <span className="text-[var(--color-text-muted)] text-xs ml-auto">{new Date(entry.data.createdAt).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                )}
-                                {isJob(entry) && (
-                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm flex items-center gap-2">
-                                        <span className="flex-1"><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{entry.data.jobName}» завершена. Награда: {formatMoney(entry.data.reward)}{entry.data.premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{entry.data.premiumBonus} премиум)</span> : null}</span>
-                                        <span className="text-xs text-[var(--color-text-muted)] shrink-0">{new Date(entry.data.finishedAt).toLocaleString()}</span>
-                                    </div>
-                                )}
-                                {isTournament(entry) && (() => {
-                                    const ss = entry.data.snapshotStats ? JSON.parse(entry.data.snapshotStats) : null;
-                                    const cancelled = entry.data.status === 'cancelled';
-                                    const entryFee = entry.data.entryFee || 0;
-                                    return (
-                                        <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                            <span>
-                                                <Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>
-                                                Турнир «{entry.data.division === 'custom' ? (entry.data.name || 'Турнир') : entry.data.division}»
-                                                {cancelled ? ' отменён' : ' завершён'}
-                                            </span>
-                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-                                                {cancelled ? (
-                                                    <>
-                                                        <span className="text-[var(--color-text-muted)]">Не набралось игроков</span>
-                                                        {entryFee > 0 && <span className="text-[var(--color-accent-success)] text-xs">+{formatMoney(entryFee)} возврат взноса</span>}
-                                                    </>
-                                                ) : ss ? (
-                                                    <>
-                                                        <span className="text-[var(--color-accent-success)] font-bold">{ss.place}-е место</span>
-                                                        {ss.prize > 0 ? (
-                                                            <span className="text-[var(--color-accent-success)] text-xs">+{formatMoney(ss.prize)}</span>
-                                                        ) : (
-                                                            <span className="text-[var(--color-text-muted)] text-xs">без приза</span>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <span className="text-[var(--color-text-muted)]">Участие</span>
-                                                )}
-                                                <span className="text-[var(--color-text-muted)] text-xs ml-auto">{new Date(entry.data.createdAt * 1000).toLocaleDateString()}</span>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-                                {isQuest(entry) && (
-                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded" onClick={() => navigate('/tavern?tab=quests')}>
-                                        <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{entry.data.typeName}» выполнен</span>
-                                        <div className="text-xs text-[var(--color-text-muted)]">Награда: +{entry.data.rewardXp} XP, {formatMoney(entry.data.rewardMoney)} · {new Date(entry.data.createdAt + 'Z').toLocaleString()}</div>
-                                    </div>
-                                )}
-                                {isMessage(entry) && (
-                                    <div className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                        <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{entry.data.senderName}: {entry.data.content}</span>
-                                        <div className="text-xs text-[var(--color-text-muted)]">{new Date(entry.data.createdAt).toLocaleString()}</div>
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                    ) : tab === 'battles' ? (
-                        paginatedData.map((b: any) => <div key={b.id}>{renderBattleEntry(b)}</div>)
-                    ) : tab === 'pve' ? (
-                        paginatedData.map((b: any) => (
-                            <div key={b.id} className="border-b border-[var(--color-border-light)] py-2 text-sm cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded" onClick={() => setSelectedBattle(b)}>
-                                <div className="flex items-center gap-2">
-                                    <Icon icon="game-icons:death-skull" width="16" height="16" />
-                                    <strong>{b.mobName}</strong>
-                                    <span className="text-[var(--color-text-muted)] text-xs">ур. {b.mobLevel}</span>
-                                </div>
-                                <div className="flex items-center gap-3 mt-0.5">
-                                    <span className={`font-bold ${b.playerWon ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{b.playerWon ? 'Победа' : 'Поражение'}</span>
-                                    {b.goldGained > 0 && <span className="text-[var(--color-text-accent)] text-xs">+{formatMoney(b.goldGained)}</span>}
-                                    {b.goldLost > 0 && <span className="text-red-500 text-xs">-{formatMoney(b.goldLost)}</span>}
-                                    <span className="text-[var(--color-text-muted)] text-xs ml-auto">{new Date(b.createdAt).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        ))
-                    ) : tab === 'jobs' ? (
-                        paginatedData.map((j: any) => (
-                            <div key={j.id} className="border-b border-[var(--color-border-light)] py-2 text-sm flex items-center gap-2">
-                                <span className="flex-1"><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» завершена. Награда: {formatMoney(j.reward)}{j.premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{j.premiumBonus} премиум)</span> : null}</span>
-                                <span className="text-xs text-[var(--color-text-muted)] shrink-0">{new Date(j.finishedAt).toLocaleString()}</span>
-                            </div>
-                        ))
-                    ) : tab === 'tournaments' ? (
-                        paginatedData.map((t: any) => {
-                            const ss = t.snapshotStats ? JSON.parse(t.snapshotStats) : null;
-                            const cancelled = t.status === 'cancelled';
-                            const entryFee = t.entryFee || 0;
-                            return (
-                                <div key={t.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                    <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{t.division === 'custom' ? (t.name || 'Турнир') : t.division}»{cancelled ? ' отменён' : ' завершён'}</span>
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-                                        {cancelled ? (
-                                            <>
-                                                <span className="text-[var(--color-text-muted)]">Не набралось игроков</span>
-                                                {entryFee > 0 && <span className="text-[var(--color-accent-success)] text-xs">+{formatMoney(entryFee)} возврат взноса</span>}
-                                            </>
-                                        ) : ss ? (
-                                            <>
-                                                <span className="text-[var(--color-accent-success)] font-bold">{ss.place}-е место</span>
-                                                {ss.prize > 0 ? <span className="text-[var(--color-accent-success)] text-xs">+{formatMoney(ss.prize)}</span> : <span className="text-[var(--color-text-muted)] text-xs">без приза</span>}
-                                            </>
-                                        ) : (
-                                            <span className="text-[var(--color-text-muted)]">Участие</span>
-                                        )}
-                                        <span className="text-[var(--color-text-muted)] text-xs ml-auto">{new Date(t.createdAt * 1000).toLocaleDateString()}</span>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    ) : tab === 'quests' ? (
-                        paginatedData.map((q: any) => (
-                            <div key={q.id} className="border-b border-[var(--color-border-light)] py-2 text-sm cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded" onClick={() => navigate('/tavern?tab=quests')}>
-                                <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{q.typeName}» выполнен</span>
-                                <div className="text-xs text-[var(--color-text-muted)]">Награда: +{q.rewardXp} XP, {formatMoney(q.rewardMoney)} · {new Date(q.createdAt + 'Z').toLocaleString()}</div>
-                            </div>
-                        ))
-                    ) : tab === 'messages' ? (
-                        paginatedData.map((m: any) => (
-                            <div key={m.id} className="border-b border-[var(--color-border-light)] py-2 text-sm">
-                                <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{m.senderName}: {m.content}</span>
-                                <div className="text-xs text-[var(--color-text-muted)]">{new Date(m.createdAt).toLocaleString()}</div>
-                            </div>
-                        ))
-                    ) : null}
-
-                    {totalPages > 1 && (
-                        <div className="flex justify-center gap-4 mt-4 items-center">
-                            <Button size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Назад</Button>
-                            <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
-                            <Button size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Вперёд →</Button>
-                        </div>
-                    )}
-                </Card>
-            )}
-
-            {renderBattleModal()}
+            {loading?<p className="text-[var(--color-text-muted)]">Загрузка...</p>:
+            <Card>
+                {paginatedData.length===0?<p className="text-[var(--color-text-muted)]">Нет записей</p>:
+                paginatedData.map(entry=><div key={entry.id}>{renderEntry(entry)}</div>)}
+                {totalPages>1&&<div className="flex justify-center gap-4 mt-4 items-center">
+                    <Button size="sm" disabled={page<=1} onClick={()=>setPage(page-1)}>← Назад</Button>
+                    <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
+                    <Button size="sm" disabled={page>=totalPages} onClick={()=>setPage(page+1)}>Вперёд →</Button>
+                </div>}
+            </Card>}
+            {selectedBattle&&<Modal open={!!selectedBattle} onClose={()=>setSelectedBattle(null)}
+                title={`⚔ ${selectedBattle.attackerName||'Вы'} vs ${selectedBattle.defenderName||selectedBattle.mobName||'?'}`}
+                width="min(900px, calc(100vw - 2rem))" borderColor="var(--color-border-default)">
+                <div className="bg-black rounded-lg p-3 max-h-[60vh] overflow-y-auto font-mono text-xs leading-relaxed">
+                    {renderBattleLog(typeof selectedBattle.steps==='string'?JSON.parse(selectedBattle.steps):(selectedBattle.steps||[]))}
+                </div>
+                <div className="flex justify-center mt-4"><Button variant="secondary" size="sm" onClick={()=>setSelectedBattle(null)}>Закрыть</Button></div>
+            </Modal>}
         </div>
     );
 }
