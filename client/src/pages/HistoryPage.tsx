@@ -53,7 +53,7 @@ export default function HistoryPage() {
         ...pveBattles.map(b=>({id:`p-${b.id}`,type:'pve',ts:new Date(b.createdAt).getTime(),data:b})),
         ...jobHistory.map(j=>({id:`j-${j.id}`,type:'job',ts:new Date(j.finishedAt).getTime(),data:j})),
         ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:new Date(t.createdAt).getTime(),data:t})),
-        ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt+'Z').getTime(),data:q})),
+        ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt).getTime(),data:q})),
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
     ].sort((a,b)=>b.ts-a.ts);
 
