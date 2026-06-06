@@ -1,9 +1,37 @@
 import { Router } from 'express';
+import db from '../database';
 import logger from '../logger';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
-// Приём клиентских ошибок (window.onerror, React Error Boundary)
+// История PvE-боёв (требует авторизации)
+router.get('/pve-battles', authMiddleware, (req: any, res) => {
+    const userId = req.userId;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const battles = db.prepare(
+        'SELECT * FROM pve_battles WHERE userId = ? ORDER BY createdAt DESC LIMIT ?'
+    ).all(userId, limit);
+    res.json(battles);
+});
+
+// История турниров игрока
+router.get('/tournament-history', authMiddleware, (req: any, res) => {
+    const userId = req.userId;
+    const limit = parseInt(req.query.limit as string) || 50;
+
+    const tournaments = db.prepare(`
+        SELECT t.*, tp.snapshotStats
+        FROM tournament_participants tp
+        JOIN tournaments t ON tp.tournamentId = t.id
+        WHERE tp.userId = ? AND t.status = 'completed'
+        ORDER BY t.id DESC LIMIT ?
+    `).all(userId, limit);
+
+    res.json(tournaments);
+});
+
+// Приём клиентских ошибок
 router.post('/log/error', (req: any, res) => {
     const { message, stack, url, line, col, userAgent } = req.body;
     logger.error(`[CLIENT] ${message || 'Unknown error'} ${JSON.stringify({ url, line, col, ua: userAgent, userId: req.userId })}`);

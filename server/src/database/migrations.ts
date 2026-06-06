@@ -305,4 +305,21 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE tournaments ADD COLUMN minLevel INTEGER DEFAULT 1'); } catch {}
   try { db.exec('ALTER TABLE tournaments ADD COLUMN maxLevel INTEGER DEFAULT 999'); } catch {}
   try { db.exec('ALTER TABLE tournaments ADD COLUMN basePool INTEGER DEFAULT 0'); } catch {}
+
+  // --- История PvE-боёв ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS pve_battles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    mobId INTEGER NOT NULL,
+    mobName TEXT NOT NULL,
+    mobLevel INTEGER NOT NULL,
+    playerWon INTEGER NOT NULL,
+    steps TEXT,
+    xpGained INTEGER DEFAULT 0,
+    goldGained INTEGER DEFAULT 0,
+    goldLost INTEGER DEFAULT 0,
+    materialDropped TEXT,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
 }
