@@ -508,7 +508,11 @@ router.get('/tournament', (req: any, res) => {
         return a.registrationEnd - b.registrationEnd;
     });
 
-    res.json({ tournaments: result, userLevel: user.level, tab: 'active', typeFilter });
+    res.json({ tournaments: result, userLevel: user.level, tab: 'active', typeFilter,
+        warnings: db.prepare(
+            "SELECT id, division, type, registrationEnd FROM tournaments WHERE status = 'registration' AND registrationEnd > ? AND registrationEnd <= ?"
+        ).all(now, now + 300) as any[]
+    });
 });
 
 // Регистрация

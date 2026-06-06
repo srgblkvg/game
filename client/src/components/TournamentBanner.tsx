@@ -67,6 +67,7 @@ function tournamentIcon(t: TournamentInfo): string {
 export default function TournamentBanner() {
     const [tournaments, setTournaments] = useState<TournamentInfo[]>([]);
     const [userLevel, setUserLevel] = useState(1);
+    const [warnings, setWarnings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -81,6 +82,7 @@ export default function TournamentBanner() {
             .then((data: any) => {
                 setTournaments(data.tournaments || []);
                 setUserLevel(data.userLevel || 1);
+                setWarnings(data.warnings || []);
             })
             .catch(() => {})
             .finally(() => setLoading(false));
@@ -126,6 +128,15 @@ export default function TournamentBanner() {
             </h3>
 
             <div className="space-y-2">
+                {warnings.map((w: any) => {
+                    const label = w.type === 'custom' ? (w.name || 'Турнир') : DIVISION_LABELS[w.division] || w.division;
+                    const secLeft = w.registrationEnd - now;
+                    return (
+                        <div key={w.id} className="text-[0.6rem] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-1.5">
+                            ⏰ {label}: регистрация закроется через {formatTimer(Math.max(0, secLeft))}!
+                        </div>
+                    );
+                })}
                 {active.slice(0, 3).map(t => {
                     const joinable = canJoin(t, userLevel);
                     const untilEnd = t.registrationEnd - now;
