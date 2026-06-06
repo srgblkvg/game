@@ -331,6 +331,11 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE users ADD COLUMN auctionTrades INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN totalJobSeconds INTEGER DEFAULT 0'); } catch {}
 
+  // --- Статистика крафта ---
+  try { db.exec('ALTER TABLE users ADD COLUMN craftCreated INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN craftUpgraded INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN craftBroken INTEGER DEFAULT 0'); } catch {}
+
   // --- Унификация xpGained → expGained в pve_battles ---
   try { db.exec('ALTER TABLE pve_battles RENAME COLUMN xpGained TO expGained'); } catch {}
 

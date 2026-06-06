@@ -90,6 +90,22 @@ export default function ProfilePage() {
                         🔨 Работы
                     </h3>
                     <StatItem icon="game-icons:cash" label="Заработано" value={formatMoney(profile.totalJobMoney || 0)} />
+                    <StatItem icon="game-icons:hourglass" label="Потрачено времени" value={(() => { const s = profile.totalJobSeconds || 0; const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); return h>0 ? `${h} ч ${m} мин` : `${m} мин`; })()} />
+
+                    {/* Крафт */}
+                    <h3 className="text-xs font-bold text-[var(--color-accent-warning)] uppercase tracking-wider mt-3">
+                        ⚒️ Крафт
+                    </h3>
+                    <StatItem icon="game-icons:anvil" label="Создано" value={profile.craftCreated || 0} />
+                    <StatItem icon="game-icons:arrow-up" label="Улучшено" value={profile.craftUpgraded || 0} />
+                    <StatItem icon="game-icons:broken-shield" label="Сломано" value={profile.craftBroken || 0} />
+
+                    {/* Дата регистрации */}
+                    {profile.createdAt && (
+                        <h3 className=\"text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-3\">
+                            📅 Регистрация: {new Date(profile.createdAt + 'Z').toLocaleDateString()}
+                        </h3>
+                    )}
                 </div>
             </div>
 
