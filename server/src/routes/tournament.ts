@@ -43,6 +43,23 @@ function generateBracket(tournamentId: number) {
     `).all(tournamentId) as any[];
 
     if (participants.length < 2) {
+        // Отмена — возврат денег для custom турниров
+        const t = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
+        if (t && t.type === 'custom') {
+            // Возврат призового фонда создателю
+            if (t.prizePool > 0) {
+                db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.prizePool, t.creatorId);
+            }
+            // Возврат входных взносов всем участникам
+            if (t.entryFee > 0) {
+                const parts = db.prepare(
+                    'SELECT userId FROM tournament_participants WHERE tournamentId = ?'
+                ).all(tournamentId) as any[];
+                for (const p of parts) {
+                    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.entryFee, p.userId);
+                }
+            }
+        }
         db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('cancelled', tournamentId);
         return;
     }
@@ -527,7 +544,6 @@ router.post('/tournament/register', (req: any, res) => {
                 return res.status(400).json({ error: `Недостаточно серебра для взноса (${tournament.entryFee})` });
             }
             db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(tournament.entryFee, userId);
-            db.prepare('UPDATE tournaments SET prizePool = prizePool + ? WHERE id = ?').run(tournament.entryFee, tournament.id);
         }
     }
 
@@ -606,6 +622,12 @@ router.post('/tournament/create-custom', (req: any, res) => {
     if (prizePool > 0) {
         if (user.money < prizePool) return res.status(400).json({ error: 'Недостаточно серебра для призового фонда' });
         db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(prizePool, userId);
+    }
+
+    // Создатель тоже платит входной взнос (если есть)
+    if (entryFee > 0) {
+        if (user.money < entryFee) return res.status(400).json({ error: 'Недостаточно серебра для входного взноса' });
+        db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(entryFee, userId);
     }
 
     let result: any;
