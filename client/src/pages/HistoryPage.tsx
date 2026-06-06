@@ -120,7 +120,9 @@ export default function HistoryPage() {
         </EntryRow>;
     };
     const renderQuestRow = (q: any) => <EntryRow time={fmt(q.createdAt+'Z')} onClick={()=>navigate('/tavern?tab=quests')}>
-        <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{q.typeName}» — {formatMoney(q.rewardMoney)}</span>
+        <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{q.typeName}»</span>
+        {q.rewardXp>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{q.rewardXp} XP</span>}
+        <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(q.rewardMoney)}</span>
     </EntryRow>;
     const renderMessageRow = (m: any) => <EntryRow time={fmt(m.createdAt)}>
         <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{m.senderName}: {m.content}</span>
@@ -164,7 +166,9 @@ export default function HistoryPage() {
         }
         if (type === 'quest') {
             return <EntryRow time={fmt(data.createdAt+'Z')} onClick={()=>navigate('/tavern?tab=quests')}>
-                <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{data.typeName}» — {formatMoney(data.rewardMoney)}</span>
+                <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{data.typeName}»</span>
+                {data.rewardXp>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.rewardXp} XP</span>}
+                <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(data.rewardMoney)}</span>
             </EntryRow>;
         }
         if (type === 'message') {
