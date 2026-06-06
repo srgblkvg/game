@@ -46,12 +46,12 @@ function generateBracket(tournamentId: number) {
         // Отмена — возврат денег для custom турниров
         const t = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
         if (t && t.type === 'custom') {
-            // Возврат призового фонда создателю
-            if (t.prizePool > 0) {
-                db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.prizePool, t.creatorId);
+            // Возврат базового призового фонда создателю
+            if ((t.basePool || 0) > 0) {
+                db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.basePool, t.creatorId);
             }
             // Возврат входных взносов всем участникам
-            if (t.entryFee > 0) {
+            if ((t.entryFee || 0) > 0) {
                 const parts = db.prepare(
                     'SELECT userId FROM tournament_participants WHERE tournamentId = ?'
                 ).all(tournamentId) as any[];
@@ -544,6 +544,7 @@ router.post('/tournament/register', (req: any, res) => {
                 return res.status(400).json({ error: `Недостаточно серебра для взноса (${tournament.entryFee})` });
             }
             db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(tournament.entryFee, userId);
+            db.prepare('UPDATE tournaments SET prizePool = prizePool + ? WHERE id = ?').run(tournament.entryFee, tournament.id);
         }
     }
 
@@ -633,16 +634,16 @@ router.post('/tournament/create-custom', (req: any, res) => {
     let result: any;
     try {
         result = db.prepare(
-            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        ).run('custom', 'registration', now, regEnd, prizePool, now, 'custom', userId, entryFee, name, minLvl, maxLvl);
+            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).run('custom', 'registration', now, regEnd, prizePool + entryFee, now, 'custom', userId, entryFee, name, minLvl, maxLvl, prizePool);
     } catch (e: any) {
         return res.status(500).json({ error: 'Ошибка создания турнира: ' + e.message });
     }
 
+    // Авто-регистрация создателя
     db.prepare('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)')
         .run(result.lastInsertRowid, userId, 0);
     db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
-
     res.json({ success: true, tournamentId: result.lastInsertRowid });
 });
 

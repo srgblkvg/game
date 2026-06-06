@@ -304,4 +304,5 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE tournaments ADD COLUMN name TEXT'); } catch {}
   try { db.exec('ALTER TABLE tournaments ADD COLUMN minLevel INTEGER DEFAULT 1'); } catch {}
   try { db.exec('ALTER TABLE tournaments ADD COLUMN maxLevel INTEGER DEFAULT 999'); } catch {}
+  try { db.exec('ALTER TABLE tournaments ADD COLUMN basePool INTEGER DEFAULT 0'); } catch {}
 }
