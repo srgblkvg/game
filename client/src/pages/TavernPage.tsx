@@ -62,7 +62,7 @@ export default function TavernPage() {
         try { await api('/tavern/quests/take',{questId}); setMessage('Квест взят!'); setError(''); loadQuests(); } catch(e:any){setError(e.message)}
     };
     const handleClaimQuest = async (questId: number) => {
-        try { const d = await api('/tavern/quests/claim',{questId}); setMessage(`Награда: +${d.rewardXp} XP, +${formatMoney(d.rewardMoney)}`); setError(''); loadQuests(); load(); } catch(e:any){setError(e.message)}
+        try { const d = await api('/tavern/quests/claim',{questId}); setMessage(`Награда: +${d.rewardXp} XP, +${formatMoney(d.rewardMoney)}`); setError(''); showAcquire({name:'Квест выполнен!',rarity_id:3},1,`+${d.rewardXp} XP, ${formatMoney(d.rewardMoney)}`); loadQuests(); load(); } catch(e:any){setError(e.message)}
     };
 
     if (!tavern) return <div className="p-4">Загрузка...</div>;
