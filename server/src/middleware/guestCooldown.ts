@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 
 // В памяти: userId → timestamp последнего действия
 const guestLastAction = new Map<number, number>();
-const GUEST_COOLDOWN_MS = 5000; // 5 секунд между действиями
+const GUEST_COOLDOWN_MS = 0; // задержка отключена
 
 /**
  * Замедляет гостевые запросы — не чаще 1 действия в 5 секунд.

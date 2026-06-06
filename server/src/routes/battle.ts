@@ -17,7 +17,7 @@ router.post('/battle', (req: any, res) => {
     const { opponentId } = parsed.data;
 
     const now = Math.floor(Date.now() / 1000);
-    const attacker = db.prepare('SELECT id, username, level, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, lastAttackTime, premiumUntil FROM users WHERE id = ?').get(userId) as any;
+    const attacker = db.prepare('SELECT id, username, level, exp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, lastAttackTime, premiumUntil FROM users WHERE id = ?').get(userId) as any;
     if (!attacker) return res.status(404).json({ error: 'Attacker not found' });
 
     const hasPremium = (attacker.premiumUntil || 0) > now;
@@ -30,10 +30,10 @@ router.post('/battle', (req: any, res) => {
 
     let defender: any;
     if (opponentId) {
-        defender = db.prepare('SELECT id, username, level, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id = ?').get(opponentId);
+        defender = db.prepare('SELECT id, username, level, exp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id = ?').get(opponentId);
         if (!defender || defender.id == userId) return res.status(400).json({ error: 'Invalid opponent' });
     } else {
-        const others = db.prepare('SELECT id, username, level, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
+        const others = db.prepare('SELECT id, username, level, exp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
         if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены' });
         defender = others[Math.floor(Math.random() * others.length)];
     }
