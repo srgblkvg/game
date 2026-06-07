@@ -130,7 +130,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                 <span onClick={() => firstMsg.senderGuildId ? navigate(`/guild/${firstMsg.senderGuildId}`) : navigate('/guild/rating')} style={{
                                     fontSize: '0.6rem', color: '#2ecc71', cursor: 'pointer',
                                     padding: '0 4px', borderRadius: '3px',
-                                }}>[{firstMsg.senderGuild}]</span>
+                                }}>[{firstMsg.senderGuild.length > 8 ? firstMsg.senderGuild.slice(0, 8) + '…' : firstMsg.senderGuild}]</span>
                             )}
                             <span style={{ fontSize: '0.62rem', color: '#555' }}>
                                 {formatTime(firstMsg.createdAt)}

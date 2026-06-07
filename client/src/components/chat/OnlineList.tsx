@@ -46,7 +46,7 @@ export default function OnlineList({ users, currentUserId, privateChatWith, onUs
                             {truncate(u.username)}
                             {isMe && ' (Вы)'}
                             {' '}[<span style={{ color: '#fff' }}>{u.level}</span>]
-                            {u.guildName && <span style={{ fontSize: '0.65rem', color: '#2ecc71', marginLeft: '4px' }}>[{u.guildName}]</span>}
+                            {u.guildName && <span style={{ fontSize: '0.65rem', color: '#2ecc71', marginLeft: '4px' }}>[{u.guildName.length > 8 ? u.guildName.slice(0, 8) + '…' : u.guildName}]</span>}
                         </li>
                     );
                 })}
