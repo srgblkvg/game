@@ -98,14 +98,6 @@ export default function ChatPanel() {
         });
     }, [updateServerTabs]);
 
-    // Загрузка последних сообщений общего чата
-    useEffect(() => {
-        if (!auth.token || user?.role !== 'player') return;
-        fetchRecentMessages(50)
-            .then(data => addMessages(data))
-            .catch(console.error);
-    }, [auth.token, user?.role]);
-
     // Загрузка инфы о гильдии
     useEffect(() => {
         if (user?.role !== 'player') return;
@@ -120,23 +112,7 @@ export default function ChatPanel() {
             .catch(() => {});
     }, [user?.role, character?.guildId]);
 
-    useEffect(() => {
-        if (privateChatWith === null && !guildChatActive) return;
-        // Гильд-чат: не грузим историю, сообщения приходят через WS и кешируются в localStorage
-        if (guildChatActive) return;
-        if (privateChatWith === null) return;
-        fetchPrivateMessages(privateChatWith)
-            .then((data: ChatMessage[]) => {
-                if (data.length > 0) {
-                    const last10 = data.slice(-10);
-                    last10.sort((a: ChatMessage, b: ChatMessage) =>
-                        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                    );
-                    addMessages(last10);
-                }
-            })
-            .catch(console.error);
-    }, [privateChatWith, guildChatActive, guildId, character, addMessages]);
+    // Гильд-чат: не грузим историю, сообщения приходят через WS и кешируются в localStorage
 
     const handleSend = useCallback((text: string) => {
         // Удаляем @ перед именами, которых нет в онлайне
