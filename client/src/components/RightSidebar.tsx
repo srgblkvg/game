@@ -25,7 +25,7 @@ export default function RightSidebar() {
 
             {/* Панель */}
             {open && (
-                <div className="fixed right-0 top-0 z-20 h-full w-[240px] bg-[var(--color-bg-primary)] border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-20 shadow-2xl">
+                <div className="fixed right-0 top-0 z-20 h-full w-[240px] bg-[var(--color-bg-primary)] border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-24 pb-16 shadow-2xl">
                     <div className="flex flex-col gap-4">
                         <QuestsBlock onHighlight={handleHighlight} />
                         <TournamentBanner />
