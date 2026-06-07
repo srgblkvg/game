@@ -412,5 +412,5 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- Системный пользователь для автосообщений (турниры, чат) ---
-  db.prepare('INSERT OR IGNORE INTO users (id, username, currentHp) VALUES (?, ?, ?)').run(0, 'system', 100);
+  db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }
