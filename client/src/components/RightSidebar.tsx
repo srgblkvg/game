@@ -8,14 +8,8 @@ export default function RightSidebar() {
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
-        if (open) {
-            document.body.style.overflow = 'hidden';
-            document.body.style.paddingRight = '240px';
-        } else {
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }
-        return () => { document.body.style.overflow = ''; document.body.style.paddingRight = ''; };
+        document.body.style.overflow = open ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
     }, [open]);
 
     const handleHighlight = (type: string | null) => {
@@ -41,7 +35,8 @@ export default function RightSidebar() {
 
             {/* Панель */}
             <div
-                className={`fixed right-0 top-0 z-20 h-full w-[240px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-24 pb-16 shadow-2xl transition-transform duration-400 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed right-0 top-[80px] z-20 w-[240px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] overflow-y-auto p-3 shadow-2xl transition-transform duration-400 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+                style={{ height: 'calc(100vh - 80px)' }}
             >
                 <div className="flex flex-col gap-4">
                     <QuestsBlock onHighlight={handleHighlight} />
