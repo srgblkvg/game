@@ -210,6 +210,42 @@ router.post('/guild/leave', (req: any, res) => {
     res.json({ success: true });
 });
 
+// Исключить участника (лидер/офицер)
+router.post('/guild/kick', (req: any, res) => {
+    const userId = req.userId;
+    const { targetId } = req.body;
+    if (!targetId) return res.status(400).json({ error: 'Укажите targetId' });
+
+    const actor = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!actor || (actor.rank !== 'leader' && actor.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
+
+    const target = db.prepare('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?').get(actor.guildId, targetId) as any;
+    if (!target) return res.status(400).json({ error: 'Игрок не в гильдии' });
+    if (target.rank === 'leader') return res.status(400).json({ error: 'Нельзя исключить лидера' });
+    if (actor.rank === 'officer' && target.rank === 'officer') return res.status(400).json({ error: 'Офицер не может исключить другого офицера' });
+
+    db.prepare('DELETE FROM guild_members WHERE guildId = ? AND userId = ?').run(actor.guildId, targetId);
+    db.prepare('UPDATE users SET guildId = NULL WHERE id = ?').run(targetId);
+
+    res.json({ success: true });
+});
+
+// Заявки на вступление (для лидера/офицеров)
+router.get('/guild/requests', (req: any, res) => {
+    const userId = req.userId;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
+
+    const requests = db.prepare(`
+        SELECT gi.*, u.username
+        FROM guild_invites gi
+        JOIN users u ON gi.userId = u.id
+        WHERE gi.guildId = ? AND gi.status = 'pending' AND gi.invitedBy = 0
+        ORDER BY gi.createdAt DESC
+    `).all(member.guildId);
+    res.json(requests);
+});
+
 // Список гильдий
 router.get('/guild/list', (req: any, res) => {
     const guilds = db.prepare(`

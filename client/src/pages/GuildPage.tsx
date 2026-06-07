@@ -17,6 +17,7 @@ export default function GuildPage() {
     const [guild, setGuild] = useState<any>(null);
     const [members, setMembers] = useState<any[]>([]);
     const [guildList, setGuildList] = useState<any[]>([]);
+    const [requests, setRequests] = useState<any[]>([]);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
 
@@ -44,7 +45,13 @@ export default function GuildPage() {
                 fetch(`${BASE_URL}/guild/my`, { headers: getHeaders() }).then(r => r.json()),
                 fetch(`${BASE_URL}/guild/list`, { headers: getHeaders() }).then(r => r.json()),
             ]);
-            if (data.guild) { setGuild(data.guild); setMembers(data.members); }
+            if (data.guild) {
+                setGuild(data.guild); setMembers(data.members);
+                if (data.guild.myRank === 'leader' || data.guild.myRank === 'officer') {
+                    fetch(`${BASE_URL}/guild/requests`, { headers: getHeaders() })
+                        .then(r => r.json()).then(setRequests).catch(() => {});
+                }
+            }
             else { setGuild(null); setMembers([]); }
             setGuildList(list);
         } catch (e: any) { setError(e.message); }
@@ -92,6 +99,23 @@ export default function GuildPage() {
         } catch (e: any) { setError(e.message); }
     };
 
+    const handleRequest = async (requestId: number, accept: boolean) => {
+        try {
+            await api('/guild/handle-request', { requestId, accept });
+            setMessage(accept ? 'Заявка принята!' : 'Заявка отклонена');
+            load();
+        } catch (e: any) { setError(e.message); }
+    };
+
+    const handleKick = async (targetId: number, username: string) => {
+        if (!confirm(`Исключить ${username} из гильдии?`)) return;
+        try {
+            await api('/guild/kick', { targetId });
+            setMessage(`${username} исключён`);
+            load();
+        } catch (e: any) { setError(e.message); }
+    };
+
     const clearMessages = () => { setMessage(''); setError(''); };
 
     if (!user) return null;
@@ -134,11 +158,37 @@ export default function GuildPage() {
                         </Card>
                     )}
 
+                    {/* Заявки (лидер/офицер) */}
+                    {(guild.myRank === 'leader' || guild.myRank === 'officer') && requests.length > 0 && (
+                        <Card className="mb-4">
+                            <h3 className="font-bold text-sm mb-2">Заявки на вступление ({requests.length})</h3>
+                            <div className="space-y-2">
+                                {requests.map((r: any) => (
+                                    <div key={r.id} className="flex items-center gap-2 text-xs">
+                                        <span className="text-[var(--color-accent-info)] cursor-pointer hover:underline"
+                                            onClick={() => navigate(`/profile/${r.userId}`)}>
+                                            {r.username}
+                                        </span>
+                                        <div className="flex gap-1 ml-auto">
+                                            <Button variant="success" size="xs" onClick={() => handleRequest(r.id, true)}>Принять</Button>
+                                            <Button variant="danger" size="xs" onClick={() => handleRequest(r.id, false)}>Отклонить</Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    )}
+
                     {/* Участники */}
                     <Card>
                         <h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3>
                         <div className="space-y-1">
-                            {members.map((m: any) => (
+                            {members.map((m: any) => {
+                                const canKick = (guild.myRank === 'leader' || guild.myRank === 'officer')
+                                    && m.userId !== user.id
+                                    && m.rank !== 'leader'
+                                    && !(guild.myRank === 'officer' && m.rank === 'officer');
+                                return (
                                 <div key={m.userId} className="flex items-center gap-2 text-xs py-1 border-b border-[var(--color-border-light)]">
                                     <span className="w-6 text-center">
                                         {m.rank === 'leader' ? '👑' : m.rank === 'officer' ? '🛡️' : '⚔️'}
@@ -148,8 +198,13 @@ export default function GuildPage() {
                                         {m.username}
                                     </span>
                                     <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level}</span>
+                                    {canKick && (
+                                        <button onClick={() => handleKick(m.userId, m.username)}
+                                            className="text-red-500 hover:text-red-400 text-xs ml-1">✕</button>
+                                    )}
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </Card>
                 </>
