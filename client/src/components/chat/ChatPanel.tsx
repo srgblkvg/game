@@ -6,6 +6,7 @@ import { useGame } from '../../contexts/GameContext';
 import { useGlobalChat } from '../../contexts/ChatContext';
 import { fetchRecentMessages, fetchPrivateMessages, findUserByUsername } from '../../api/chat';
 import { fetchUsersByIds, saveOpenTabs } from '../../api/character';
+import { getHeaders, BASE_URL } from '../../api/helpers';
 import ChatTabs from './ChatTabs';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
@@ -32,6 +33,9 @@ export default function ChatPanel() {
     const [pendingMention, setPendingMention] = useState<string | null>(null);
 
     const [openPrivateTabs, setOpenPrivateTabs] = useState<Map<number, string>>(new Map());
+    const [guildChatActive, setGuildChatActive] = useState(false);
+    const [guildId, setGuildId] = useState<number | null>(null);
+    const [guildName, setGuildName] = useState<string | null>(null);
 
     const panelRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +105,29 @@ export default function ChatPanel() {
             .catch(console.error);
     }, [auth.token, user?.role]);
 
+    // Загрузка инфы о гильдии
     useEffect(() => {
+        if (user?.role !== 'player') return;
+        fetch(`${BASE_URL}/guild/my`, { headers: getHeaders() })
+            .then(r => r.json())
+            .then(data => {
+                if (data.guild) {
+                    setGuildId(data.guild.id);
+                    setGuildName(data.guild.name);
+                }
+            })
+            .catch(() => {});
+    }, [user?.role]);
+
+    useEffect(() => {
+        if (privateChatWith === null && !guildChatActive) return;
+        if (guildChatActive && guildId) {
+            fetch(`${BASE_URL}/guild/chat`, { headers: getHeaders() })
+                .then(r => r.json())
+                .then((data: ChatMessage[]) => { if (data.length > 0) addMessages(data); })
+                .catch(console.error);
+            return;
+        }
         if (privateChatWith === null) return;
         fetchPrivateMessages(privateChatWith)
             .then((data: ChatMessage[]) => {
@@ -146,7 +172,14 @@ export default function ChatPanel() {
         }
 
         if (privateChatWith === null) {
-            sendPublic(cleanedText);
+            if (guildChatActive && guildId) {
+                fetch(`${BASE_URL}/guild/chat`, {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({ content: cleanedText }),
+                }).catch(console.error);
+            } else {
+                sendPublic(cleanedText);
+            }
         } else {
             sendPrivate(privateChatWith, cleanedText);
         }
@@ -248,12 +281,15 @@ export default function ChatPanel() {
     }, [currentUsername, handleNickClick]);
 
     const displayedMessages = useMemo(() => messages.filter(msg => {
+        if (guildChatActive && guildId) {
+            return msg.targetId === -guildId;
+        }
         if (privateChatWith === null) {
             return msg.targetId === null || msg.senderId === userId || msg.targetId === userId;
         }
         return (msg.senderId === userId && msg.targetId === privateChatWith) ||
             (msg.senderId === privateChatWith && msg.targetId === userId);
-    }), [messages, privateChatWith, userId]);
+    }), [messages, privateChatWith, userId, guildChatActive, guildId]);
 
     const openPrivateTabsArray = useMemo(() =>
         Array.from(openPrivateTabs.entries()).map(([id, name]) => ({ id, name })),
@@ -272,7 +308,7 @@ export default function ChatPanel() {
                 borderBottom: '1px solid #444', display: 'flex',
                 justifyContent: 'space-between', alignItems: 'center',
             }}>
-                <span><Icon icon="game-icons:chat-bubble" width="18" height="18" className="inline mr-1" />Чат ({onlineUsers.length}) {privateChatWith && `– личные с ${openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}`}</span>
+                <span><Icon icon="game-icons:chat-bubble" width="18" height="18" className="inline mr-1" />Чат ({onlineUsers.length}) {guildChatActive && guildName && `– гильдия ${guildName}`} {privateChatWith && !guildChatActive && `– личные с ${openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}`}</span>
                 <span>{isPanelOpen ? '▼' : '▲'}</span>
             </div>
 
@@ -282,8 +318,11 @@ export default function ChatPanel() {
                         <ChatTabs
                             privateChatWith={privateChatWith}
                             openPrivateTabs={openPrivateTabsArray}
-                            onSelectPublic={() => setPrivateChatWith(null)}
-                            onSelectPrivate={(id) => setPrivateChatWith(id)}
+                            guildChatActive={guildChatActive}
+                            guildName={guildName || undefined}
+                            onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); }}
+                            onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); }}
+                            onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); }}
                             onCloseTab={(e, id) => {
                                 e.stopPropagation();
                                 removeTab(id);
@@ -292,7 +331,9 @@ export default function ChatPanel() {
                         />
 
                         <div style={{ padding: '0.3rem 0.5rem', background: '#2a2a3e', flexShrink: 0 }}>
-                            {privateChatWith !== null
+                            {guildChatActive && guildName
+                                ? <span style={{ color: '#f1c40f' }}>🏚️ Гильдия «{guildName}»</span>
+                                : privateChatWith !== null
                                 ? <span>Личные сообщения с {openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}</span>
                                 : <span>Общий чат</span>}
                         </div>
@@ -305,7 +346,7 @@ export default function ChatPanel() {
                         />
 
                         <ChatInput
-                            isPrivate={privateChatWith !== null}
+                            isPrivate={privateChatWith !== null || guildChatActive}
                             onlineUsers={onlineUsers}
                             currentUserId={userId}
                             onSend={handleSend}
