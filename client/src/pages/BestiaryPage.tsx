@@ -20,6 +20,9 @@ const rarityColors: Record<number, string> = {
 const rarityNames: Record<number, string> = {
   0: 'Хлам', 1: 'Обычный', 2: 'Необычный', 3: 'Редкий', 4: 'Эпический', 5: 'Легендарный', 6: 'Мифический',
 };
+const rarityTextColors: Record<number, string> = {
+  0: 'text-[#6b6b6b]', 1: 'text-[#a0a0a0]', 2: 'text-[#4a9b4a]', 3: 'text-[#4a7ac0]', 4: 'text-[#a040c0]', 5: 'text-[#d4a020]', 6: 'text-[#e03030]',
+};
 
 export default function BestiaryPage() {
   const { user } = useAuth();
@@ -323,7 +326,7 @@ export default function BestiaryPage() {
 
       {phase === 'floors' ? (
         <>
-          <h1 className="text-xl font-bold mb-4" style={{color:'red'}}>
+          <h1 className="text-xl font-bold mb-4 text-red-500">
             <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
           </h1>
           {cooldownRemaining > 0 && (
@@ -347,8 +350,8 @@ export default function BestiaryPage() {
                     <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
                     <p className="font-bold text-[var(--color-text-secondary)]">Награда:</p>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                      <span style={{ color: '#f1c40f' }}>◆ {info.goldMin}–{info.goldMax} серебра</span>
-                      <span style={{ color: '#2ecc71' }}>◆ ~{info.avgXp} XP</span>
+                      <span className="text-[#f1c40f]">◆ {info.goldMin}–{info.goldMax} серебра</span>
+                      <span className="text-[#2ecc71]">◆ ~{info.avgXp} XP</span>
                     </div>
                     {info.lootImages.length > 0 && (
                       <div>
@@ -373,8 +376,7 @@ export default function BestiaryPage() {
                               >
                                 <img src={l.image} alt={l.name} className="w-6 h-6 object-contain rounded" />
                                 <span
-                                  className="absolute bottom-0 right-0 text-[8px] text-white px-0.5 rounded-sm leading-none"
-                                  style={{ background: 'rgba(0,0,0,0.65)' }}
+                                  className="absolute bottom-0 right-0 text-[8px] text-white px-0.5 rounded-sm leading-none bg-black/65"
                                 >
                                   {(l.chance * 100).toFixed(0)}%
                                 </span>
@@ -476,10 +478,10 @@ export default function BestiaryPage() {
               {battleResult.playerWon && (
                 <div className="text-sm space-y-1 mb-3">
                   {battleResult.xpGained > 0 && <p>Опыт: +{battleResult.xpGained}</p>}
-                  {battleResult.goldGained > 0 && <p>Золото: +{formatMoney(battleResult.goldGained)}{battleResult.premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{battleResult.premiumBonus} премиум)</span> : null}</p>}
+                  {battleResult.goldGained > 0 && <p>Золото: +{formatMoney(battleResult.goldGained)}{battleResult.premiumBonus > 0 ? <span className="text-[#f1c40f]"> (+{battleResult.premiumBonus} премиум)</span> : null}</p>}
                   {battleResult.levelsGained > 0 && <p className="text-[var(--color-accent-purple)]">Уровень +{battleResult.levelsGained}</p>}
                   {battleResult.materialDropped && (
-                    <p style={{ color: rarityColors[battleResult.materialDropped.rarity_id] || '#aaa' }}>Добыто: {battleResult.materialDropped.name}</p>
+                    <p className={rarityTextColors[battleResult.materialDropped.rarity_id] || 'text-[#aaa]'}>Добыто: {battleResult.materialDropped.name}</p>
                   )}
                 </div>
               )}

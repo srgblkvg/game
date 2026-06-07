@@ -11,10 +11,6 @@ import { inputClass } from '../utils/formStyles';
 import GuildTag from '../components/GuildTag';
 import Card from '../components/ui/Card';
 
-const divisionColors: Record<string, string> = {
-    copper: '#b8703a', steel: '#909090', mithril: '#40b0d0', adamant: '#e03030',
-};
-
 const divisionIcons: Record<string, string> = {
     copper: '🥉', steel: '🥈', mithril: '🥇', adamant: '👑',
 };
@@ -27,9 +23,17 @@ const statusLabels: Record<string, string> = {
     registration: 'Регистрация', in_progress: 'Идёт', completed: 'Завершён', cancelled: 'Отменён',
 };
 
-const statusColors: Record<string, string> = {
-    registration: 'var(--color-accent-success)', in_progress: 'var(--color-accent-danger)',
-    completed: 'var(--color-text-muted)', cancelled: 'var(--color-text-muted)',
+const divisionBorderClasses: Record<string, string> = {
+    copper: 'border-[#b8703a]', steel: 'border-[#909090]', mithril: 'border-[#40b0d0]', adamant: 'border-[#e03030]',
+};
+
+const divisionTextClasses: Record<string, string> = {
+    copper: 'text-[#b8703a]', steel: 'text-[#909090]', mithril: 'text-[#40b0d0]', adamant: 'text-[#e03030]',
+};
+
+const statusTextClasses: Record<string, string> = {
+    registration: 'text-[var(--color-accent-success)]', in_progress: 'text-[var(--color-accent-danger)]',
+    completed: 'text-[var(--color-text-muted)]', cancelled: 'text-[var(--color-text-muted)]',
 };
 
 function tournamentLabel(t: any): string {
@@ -153,15 +157,15 @@ export default function TournamentPage() {
         const rounds = Object.keys(matchesByRound).map(Number).sort((a, b) => a - b);
 
         return (
-            <Card key={t.id} className="mb-3" style={{ borderColor: joinable ? (t.type === 'custom' ? '#a0a0ff' : divisionColors[t.division]) : undefined }}>
+            <Card key={t.id} className={`mb-3 ${joinable ? (t.type === 'custom' ? 'border-[#a0a0ff]' : divisionBorderClasses[t.division] || '') : ''}`}>
                 <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-sm" style={{ color: t.type === 'custom' ? '#a0a0ff' : divisionColors[t.division] }}>
+                    <h3 className={`font-bold text-sm ${t.type === 'custom' ? 'text-[#a0a0ff]' : divisionTextClasses[t.division] || ''}`}>
                         {tournamentIcon(t)} {tournamentLabel(t)}
                         {t.type === 'official' && <span className="text-xs text-[var(--color-text-muted)] ml-1">(офиц.)</span>}
                         {t.type === 'custom' && <span className="text-xs text-[var(--color-accent-purple)] ml-1">(игрок)</span>}
                     </h3>
                     <div className="text-right">
-                        <span className="text-xs font-medium" style={{ color: statusColors[t.status] }}>{statusLabels[t.status]}</span>
+                        <span className={`text-xs font-medium ${statusTextClasses[t.status] || ''}`}>{statusLabels[t.status]}</span>
                         {t.status === 'registration' && (
                             <p className="text-[0.65rem] text-[var(--color-accent-info)]">
                                 до старта: {formatTimer(Math.max(0, t.registrationEnd - Math.floor(Date.now() / 1000)))}
@@ -319,7 +323,7 @@ export default function TournamentPage() {
                     {data.tournaments.map((t: any) => (
                         <Card key={t.id} className="mb-3">
                             <div className="flex justify-between items-start mb-1">
-                                <h3 className="font-bold text-sm" style={{ color: divisionColors[t.division] || '#a0a0ff' }}>
+                                <h3 className={`font-bold text-sm ${divisionTextClasses[t.division] || 'text-[#a0a0ff]'}`}>
                                     {tournamentIcon(t)} {tournamentLabel(t)}
                                     {t.type === 'custom' && <span className="text-xs text-[var(--color-accent-purple)] ml-1">игрок</span>}
                                 </h3>
