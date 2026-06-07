@@ -94,8 +94,8 @@ export default function HistoryPage() {
         return <EntryRow time={fmt(b.createdAt)} onClick={()=>setSelectedBattle(b)}>
             <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{b.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{b.attackerId===user.id?b.defenderName:b.attackerName}</strong></span>
             <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-red-500'}`}>{win?'Победа':'Поражение'}</span>
-            {b.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{b.expGained} XP</span>}
-            {b.expLost>0&&<span className="text-red-400 ml-1"> -{b.expLost} XP</span>}
+            {win && b.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{b.expGained} XP</span>}
+            {!win && b.expLost>0&&<span className="text-red-400 ml-1"> -{b.expLost} XP</span>}
             {b.moneyStolen>0&&<span className="text-[var(--color-text-accent)] ml-1"> {win?'+':'-'}{formatMoney(b.moneyStolen)}</span>}
         </EntryRow>;
     };
@@ -135,8 +135,8 @@ export default function HistoryPage() {
             return <EntryRow time={fmt(data.createdAt)} onClick={()=>setSelectedBattle(data)}>
                 <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{data.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{data.attackerId===user.id?data.defenderName:data.attackerName}</strong></span>
                 <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-red-500'}`}>{win?'Победа':'Поражение'}</span>
-                {data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{data.expGained} XP</span>}
-                {data.expLost>0&&<span className="text-red-400 ml-1"> -{data.expLost} XP</span>}
+                {win && data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{data.expGained} XP</span>}
+                {!win && data.expLost>0&&<span className="text-red-400 ml-1"> -{data.expLost} XP</span>}
                 {data.moneyStolen>0&&<span className="text-[var(--color-text-accent)] ml-1"> {win?'+':'-'}{formatMoney(data.moneyStolen)}</span>}
             </EntryRow>;
         }
