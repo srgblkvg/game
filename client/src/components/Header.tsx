@@ -26,33 +26,38 @@ const breadcrumbMap: Record<string, string> = {
 };
 
 function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: string) => void }) {
-    if (pathname === '/') return null;
     const segments = pathname.split('/').filter(Boolean);
     const items = [{ label: 'Главная', path: '/' }];
     for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
-        if (/^\d+$/.test(seg)) continue; // skip numeric IDs
+        if (/^\d+$/.test(seg)) continue;
         const label = breadcrumbMap[seg] || seg;
         const path = '/' + segments.slice(0, i + 1).join('/');
         items.push({ label, path });
     }
+    const isHome = items.length === 1;
     return (
-        <div className="flex items-center gap-1 text-xs overflow-x-auto whitespace-nowrap">
-            {items.map((item, i) => (
-                <span key={i} className="flex items-center gap-1">
-                    {i > 0 && <span className="text-[var(--color-text-muted)]">›</span>}
-                    {i === items.length - 1 ? (
-                        <span className="text-[var(--color-text-primary)] font-medium">{item.label}</span>
-                    ) : (
-                        <button
-                            onClick={() => navigate(item.path)}
-                            className="text-[var(--color-accent-info)] hover:underline"
-                        >
-                            {item.label}
-                        </button>
-                    )}
-                </span>
-            ))}
+        <div className="px-3 py-1.5 flex items-center gap-1.5 text-xs overflow-x-auto whitespace-nowrap bg-[var(--color-bg-primary)] border-t border-[var(--color-border-light)]">
+            {items.map((item, i) => {
+                const isLast = i === items.length - 1;
+                return (
+                    <span key={i} className="flex items-center gap-1.5">
+                        {i > 0 && <span className="text-[var(--color-text-muted)] select-none">›</span>}
+                        {isLast ? (
+                            <span className={`font-semibold px-1.5 py-0.5 rounded ${isHome ? 'text-white' : 'text-[var(--color-text-primary)] bg-[var(--color-bg-secondary)]'}`}>
+                                {item.label}
+                            </span>
+                        ) : (
+                            <button
+                                onClick={() => navigate(item.path)}
+                                className="text-[var(--color-accent-info)] hover:text-white hover:underline transition-colors px-1"
+                            >
+                                {item.label}
+                            </button>
+                        )}
+                    </span>
+                );
+            })}
         </div>
     );
 }
