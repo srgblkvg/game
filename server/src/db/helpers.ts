@@ -24,7 +24,7 @@ export function getUserById(db: DB, userId: number) {
 
 export function getUserWithStats(db: DB, userId: number) {
   return db.prepare(
-    'SELECT id, username, level, money, exp, totalBattles, wins, inventory, equipment, currentHp, lastHpUpdate, lastAttackTime, protectionUntil, inventorySlots, activeJob, chatBannedUntil, openPrivateTabs, gender, statPoints, baseS, baseA, baseD, baseM FROM users WHERE id = ?'
+    'SELECT u.id, u.username, u.level, u.money, u.exp, u.totalBattles, u.wins, u.inventory, u.equipment, u.currentHp, u.lastHpUpdate, u.lastAttackTime, u.protectionUntil, u.inventorySlots, u.activeJob, u.chatBannedUntil, u.openPrivateTabs, u.gender, u.statPoints, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?'
   ).get(userId) as any;
 }
 
