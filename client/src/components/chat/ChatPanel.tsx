@@ -201,7 +201,7 @@ export default function ChatPanel() {
         } else {
             sendPrivate(privateChatWith, cleanedText);
         }
-    }, [privateChatWith, onlineUsers, sendPublic, sendPrivate]);
+    }, [privateChatWith, guildChatActive, guildId, character, onlineUsers, sendPublic, sendPrivate, setChatError, addMessages]);
 
     const handleNickClick = useCallback((e: React.MouseEvent, nick: string, isSelf: boolean) => {
         if (isSelf) return;
