@@ -29,13 +29,13 @@ export default function RightSidebar() {
 
             {/* Оверлей */}
             <div
-                className={`fixed inset-0 right-[300px] z-15 bg-black/20 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 right-[340px] z-15 bg-black/20 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={() => setOpen(false)}
             />
 
             {/* Панель */}
             <div
-                className={`fixed right-0 top-[80px] z-20 w-[300px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-5 pb-10 shadow-2xl transition-transform duration-200 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed right-0 top-[80px] z-20 w-[340px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-5 pb-10 shadow-2xl transition-transform duration-200 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
                 style={{ height: 'calc(100vh - 80px - 40px)' }}
             >
                 <div className="flex flex-col gap-4">
