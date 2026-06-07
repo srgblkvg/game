@@ -6,6 +6,57 @@ import { useGame } from '../contexts/GameContext';
 import { fetchBattles, fetchCharacter } from '../api';
 import Button from './ui/Button';
 
+const breadcrumbMap: Record<string, string> = {
+    arena: 'Арена',
+    bestiary: 'Охота',
+    tavern: 'Трактир',
+    shop: 'Магазин',
+    bank: 'Банк',
+    craft: 'Крафт',
+    auction: 'Аукцион',
+    jobs: 'Работы',
+    history: 'Сводка',
+    rating: 'Рейтинг',
+    profile: 'Профиль',
+    tournament: 'Турниры',
+    account: 'Аккаунт',
+    adminpanel: 'Админ-панель',
+    premium: 'Премиум',
+    orders: 'Заказы',
+};
+
+function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: string) => void }) {
+    if (pathname === '/') return null;
+    const segments = pathname.split('/').filter(Boolean);
+    const items = [{ label: 'Главная', path: '/' }];
+    for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        if (/^\d+$/.test(seg)) continue; // skip numeric IDs
+        const label = breadcrumbMap[seg] || seg;
+        const path = '/' + segments.slice(0, i + 1).join('/');
+        items.push({ label, path });
+    }
+    return (
+        <div className="flex items-center gap-1 text-xs overflow-x-auto whitespace-nowrap">
+            {items.map((item, i) => (
+                <span key={i} className="flex items-center gap-1">
+                    {i > 0 && <span className="text-[var(--color-text-muted)]">›</span>}
+                    {i === items.length - 1 ? (
+                        <span className="text-[var(--color-text-primary)] font-medium">{item.label}</span>
+                    ) : (
+                        <button
+                            onClick={() => navigate(item.path)}
+                            className="text-[var(--color-accent-info)] hover:underline"
+                        >
+                            {item.label}
+                        </button>
+                    )}
+                </span>
+            ))}
+        </div>
+    );
+}
+
 export default function Header() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
@@ -68,66 +119,64 @@ export default function Header() {
     };
 
     return (
-        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)] flex-wrap sticky top-0 z-10">
-            {location.pathname !== '/' && (
-                <Button variant="secondary" size="xs" onClick={() => navigate(-1)}>
-                    ← Назад
-                </Button>
-            )}
-            {user.role === 'player' && character && (
-                <span className="text-white text-sm font-bold">
-                    Серебро: {character.money.toLocaleString()}
-                </span>
-            )}
-            {user.role === 'player' && (
-                protectionSec > 0 ? (
-                    <span className="text-[var(--color-accent-info)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1" style={{ background: 'rgba(52, 152, 219, 0.15)' }}>
-                        <Icon icon="game-icons:shield" width="18" height="18" />
-                        {formatTime(protectionSec)}
+        <div className="sticky top-0 z-10 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+            <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
+                {user.role === 'player' && character && (
+                    <span className="text-white text-sm font-bold">
+                        Серебро: {character.money.toLocaleString()}
                     </span>
-                ) : (
-                    <span className="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
-                        <Icon icon="game-icons:shield-disabled" width="18" height="18" />
-                        нет защиты
-                    </span>
-                )
-            )}
-            <div className="flex gap-2 ml-auto">
+                )}
                 {user.role === 'player' && (
-                    <>
-                        <Button size="xs" onClick={() => navigate('/account')}>
-                            <span className="flex items-center gap-1">
-                                <Icon icon="game-icons:person" width="18" height="18" />
-                                Аккаунт
-                            </span>
-                        </Button>
-                        <Button
-                            size="xs"
-                            onClick={handleHistoryClick}
-                            className={hasNewBattles ? 'blink' : ''}
-                        >
-                            <span className="flex items-center gap-1">
-                                {hasNewBattles && <Icon icon="game-icons:bell" width="18" height="18" />}
-                                <Icon icon="game-icons:notebook" width="18" height="18" />
-                                Сводка
-                            </span>
-                        </Button>
-                        <a href="https://vk.com/club239320810" target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center px-2 py-1 rounded text-xs font-semibold bg-[#0077FF] text-white hover:bg-[#0066DD] transition-colors"
-                            title="Сообщество VK">
-                            <Icon icon="mdi:vk" width="20" height="20" />
-                        </a>
-                    </>
-                )}
-                {user.role === 'admin' && (
-                    <Button variant="danger" size="sm" onClick={() => navigate('/adminpanel')}>
-                        <span className="flex items-center gap-1">
+                    protectionSec > 0 ? (
+                        <span className="text-[var(--color-accent-info)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1" style={{ background: 'rgba(52, 152, 219, 0.15)' }}>
                             <Icon icon="game-icons:shield" width="18" height="18" />
-                            Панель администратора
+                            {formatTime(protectionSec)}
                         </span>
-                    </Button>
+                    ) : (
+                        <span className="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
+                            <Icon icon="game-icons:shield-disabled" width="18" height="18" />
+                            нет защиты
+                        </span>
+                    )
                 )}
+                <div className="flex gap-2 ml-auto">
+                    {user.role === 'player' && (
+                        <>
+                            <Button size="xs" onClick={() => navigate('/account')}>
+                                <span className="flex items-center gap-1">
+                                    <Icon icon="game-icons:person" width="18" height="18" />
+                                    Аккаунт
+                                </span>
+                            </Button>
+                            <Button
+                                size="xs"
+                                onClick={handleHistoryClick}
+                                className={hasNewBattles ? 'blink' : ''}
+                            >
+                                <span className="flex items-center gap-1">
+                                    {hasNewBattles && <Icon icon="game-icons:bell" width="18" height="18" />}
+                                    <Icon icon="game-icons:notebook" width="18" height="18" />
+                                    Сводка
+                                </span>
+                            </Button>
+                            <a href="https://vk.com/club239320810" target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center px-2 py-1 rounded text-xs font-semibold bg-[#0077FF] text-white hover:bg-[#0066DD] transition-colors"
+                                title="Сообщество VK">
+                                <Icon icon="mdi:vk" width="20" height="20" />
+                            </a>
+                        </>
+                    )}
+                    {user.role === 'admin' && (
+                        <Button variant="danger" size="sm" onClick={() => navigate('/adminpanel')}>
+                            <span className="flex items-center gap-1">
+                                <Icon icon="game-icons:shield" width="18" height="18" />
+                                Панель администратора
+                            </span>
+                        </Button>
+                    )}
+                </div>
             </div>
+            <Breadcrumbs pathname={location.pathname} navigate={navigate} />
         </div>
     );
 }
