@@ -41,7 +41,20 @@ export function useGlobalChat() {
 export function ChatProvider({ children }: { children: React.ReactNode }) {
     const { token } = useAuth();
 
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>(() => {
+        try {
+            const cached = localStorage.getItem('chat_messages');
+            return cached ? JSON.parse(cached) : [];
+        } catch { return []; }
+    });
+
+    // Кешируем гильд-сообщения в localStorage
+    useEffect(() => {
+        const guildMsgs = messages.filter((m: ChatMessage) => m.targetId !== null && m.targetId < 0);
+        if (guildMsgs.length > 0) {
+            try { localStorage.setItem('chat_messages', JSON.stringify(guildMsgs.slice(-50))); } catch {}
+        }
+    }, [messages]);
     const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
     const [bannedUntil, setBannedUntil] = useState<number | null>(null);
     const [chatError, setChatError] = useState<string | null>(null);
