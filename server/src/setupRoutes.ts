@@ -36,6 +36,11 @@ export function setupRoutes(app: Express) {
   app.use('/api', adminAuthRoutes);
   app.use('/api/oauth', oauthRoutes);
 
+  // Серверное время (публичный)
+  app.get('/api/time', (_req: any, res) => {
+    res.json({ now: Math.floor(Date.now() / 1000) });
+  });
+
   // Приём клиентских ошибок (можно без авторизации — логируем всё)
   app.use('/api/log', logRoutes);
 
@@ -67,11 +72,6 @@ export function setupRoutes(app: Express) {
   app.use('/api', auctionRoutes);
   app.use('/api', ordersRoutes);
   app.use('/api', questsRoutes);
-
-  // Серверное время
-  app.get('/api/time', (_req: any, res) => {
-    res.json({ now: Math.floor(Date.now() / 1000) });
-  });
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);
