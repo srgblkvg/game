@@ -40,7 +40,7 @@ export default function RatingBlock() {
                         {guilds.map((g, i) => (
                             <li key={g.id} className="flex py-1 border-b border-[var(--color-border-light)] text-sm">
                                 <span
-                                    onClick={() => navigate('/guild')}
+                                    onClick={() => navigate(`/guild/${g.id}`)}
                                     className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors flex-1 truncate"
                                 >
                                     {i + 1}. {g.name}

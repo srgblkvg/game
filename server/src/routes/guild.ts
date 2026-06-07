@@ -63,6 +63,21 @@ router.get('/guild/my', (req: any, res) => {
     });
 });
 
+// Публичная информация о гильдии
+router.get('/guild/:id', (req: any, res) => {
+    const guildId = parseInt(req.params.id);
+    const guild = db.prepare('SELECT g.*, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?').get(guildId) as any;
+    if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
+
+    const members = db.prepare(
+        'SELECT gm.userId, gm.rank, gm.joinedAt, u.username, u.level FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC'
+    ).all(guildId);
+
+    const memberCount = members.length;
+
+    res.json({ guild: { ...guild, memberCount }, members });
+});
+
 // Вступить в открытую гильдию
 router.post('/guild/join/:id', (req: any, res) => {
     const userId = req.userId;
