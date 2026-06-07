@@ -50,6 +50,8 @@ export default function ProfilePage() {
                         equipment: profile.equipment,
                         stats: profile.stats,
                         gender: profile.gender || 'male',
+                        guildName: profile.guildName,
+                        guildId: profile.guildId,
                     }}
                     side="left"
                     showHealth={false}

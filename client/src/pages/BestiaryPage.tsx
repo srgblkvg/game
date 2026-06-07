@@ -415,6 +415,8 @@ export default function BestiaryPage() {
                 currentHp: playerHp,
                 maxHp: playerMaxHp,
                 gender: character.gender || 'male',
+                guildName: (character as any).guildName,
+                guildId: (character as any).guildId,
               }}
               side="left"
               showHealth={battleActive}

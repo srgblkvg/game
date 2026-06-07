@@ -81,6 +81,8 @@ export default function ArenaPage() {
             stats: calculateStats(character, (character as any).drinkBonuses),
             currentHp: hpLeft, maxHp: maxHpLeft,
             gender: character.gender || 'male',
+            guildName: (character as any).guildName,
+            guildId: (character as any).guildId,
           }}
           side="left"
           showHealth={isBattleActive}
@@ -98,6 +100,8 @@ export default function ArenaPage() {
               stats: opponent.stats,
               currentHp: hpRight, maxHp: maxHpRight,
               gender: opponent.gender || 'male',
+              guildName: opponent.guildName,
+              guildId: opponent.guildId,
             }}
             side="right"
             showHealth={isBattleActive}
