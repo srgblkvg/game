@@ -5,6 +5,7 @@ import { getBaseStats } from '../db/helpers';
 import { runBattle } from '../game/battle';
 import { calcElo } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
+import { applyHpRegen } from '../game/hpRegen';
 import { battleSchema } from '../validation';
 
 const router = Router();
@@ -30,10 +31,10 @@ router.post('/battle', (req: any, res) => {
 
     let defender: any;
     if (opponentId) {
-        defender = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id = ?').get(opponentId);
+        defender = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil, roomType, roomUntil, lastHpUpdate FROM users WHERE id = ?').get(opponentId);
         if (!defender || defender.id == userId) return res.status(400).json({ error: 'Invalid opponent' });
     } else {
-        const others = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
+        const others = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil, roomType, roomUntil, lastHpUpdate FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
         if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены' });
         defender = others[Math.floor(Math.random() * others.length)];
     }
@@ -42,6 +43,17 @@ router.post('/battle', (req: any, res) => {
         const remaining = defender.protectionUntil - now;
         return res.status(400).json({ error: `Игрок ${defender.username} защищён ещё ${Math.floor(remaining / 60)} мин` });
     }
+
+    // Актуализируем HP защитника (офлайн-реген)
+    const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}')).hp;
+    const defenderCurrentHp = applyHpRegen({
+        id: defender.id,
+        currentHp: defender.currentHp,
+        maxHp: defenderMaxHp,
+        lastHpUpdate: defender.lastHpUpdate || 0,
+        roomType: defender.roomType,
+        roomUntil: defender.roomUntil,
+    });
 
     const attackerData = {
         id: attacker.id,
@@ -60,7 +72,7 @@ router.post('/battle', (req: any, res) => {
         equipment: JSON.parse(defender.equipment || '{}'),
         level: defender.level,
         money: defender.money,
-        currentHp: defender.currentHp ?? undefined,
+        currentHp: defenderCurrentHp,
         drinkBonuses: getDrinkBonuses(defender),
     };
 
