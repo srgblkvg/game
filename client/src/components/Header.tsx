@@ -72,18 +72,14 @@ export default function Header() {
     const [hasNewBattles, setHasNewBattles] = useState(false);
     const [protectionSec, setProtectionSec] = useState(0);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [serverTime, setServerTime] = useState<number | null>(null);
+    const [serverTime, setServerTime] = useState<number>(Math.floor(Date.now() / 1000));
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Синхронизация серверного времени
+    // Часы (локальное время)
     useEffect(() => {
-        fetch('/api/time').then(r => r.json()).then(d => setServerTime(d.now)).catch(() => {});
-    }, []);
-    useEffect(() => {
-        if (serverTime === null) return;
-        const t = setInterval(() => setServerTime(s => (s ?? 0) + 1), 1000);
+        const t = setInterval(() => setServerTime(Math.floor(Date.now() / 1000)), 1000);
         return () => clearInterval(t);
-    }, [serverTime !== null]);
+    }, []);
 
     // Закрытие меню по клику вне
     useEffect(() => {
