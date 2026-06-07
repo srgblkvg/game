@@ -128,7 +128,6 @@ export default function TournamentPage() {
     if (isGuest) {
         return (
             <div className="max-w-3xl mx-auto px-4 py-4">
-                <BackButton to="/" />
                 <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2" />Турнир «Кровавый Шпиль»</h1>
                 <Card className="text-center py-6">
                     <Icon icon="game-icons:lock" width="40" height="40" className="mx-auto mb-3 text-[var(--color-text-muted)]" />
@@ -243,7 +242,6 @@ export default function TournamentPage() {
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
-            <BackButton to="/" />
             <h1 className="text-xl font-bold mb-2"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2" />Турнир «Кровавый Шпиль»</h1>
             <p className="text-xs text-[var(--color-text-muted)] italic mb-3">«Ворота Арены открыты. Выходит только сильнейший.»</p>
 
