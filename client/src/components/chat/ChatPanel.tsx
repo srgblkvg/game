@@ -122,11 +122,14 @@ export default function ChatPanel() {
 
     useEffect(() => {
         if (privateChatWith === null && !guildChatActive) return;
-        if (guildChatActive && guildId) {
-            fetch(`${BASE_URL}/guild/chat`, { headers: getHeaders() })
-                .then(r => r.json())
-                .then((data: ChatMessage[]) => { if (data.length > 0) addMessages(data); })
-                .catch(console.error);
+        if (guildChatActive) {
+            const gid = guildId || (character as any)?.guildId;
+            if (gid) {
+                fetch(`${BASE_URL}/guild/chat`, { headers: getHeaders() })
+                    .then(r => r.json())
+                    .then((data: ChatMessage[]) => { if (data.length > 0) addMessages(data); })
+                    .catch(console.error);
+            }
             return;
         }
         if (privateChatWith === null) return;
