@@ -118,7 +118,7 @@ export default function ChatPanel() {
                 }
             })
             .catch(() => {});
-    }, [user?.role]);
+    }, [user?.role, character?.guildId]);
 
     useEffect(() => {
         if (privateChatWith === null && !guildChatActive) return;

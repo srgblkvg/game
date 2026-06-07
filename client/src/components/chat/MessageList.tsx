@@ -88,7 +88,8 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
             {groups.map((group, gi) => {
                 const firstMsg = group[0];
                 const isOwn = firstMsg.senderId === currentUserId;
-                const isPrivate = firstMsg.targetId !== null;
+                const isPrivate = firstMsg.targetId !== null && firstMsg.targetId > 0;
+                const isGuild = firstMsg.targetId !== null && firstMsg.targetId < 0;
 
                 return (
                     <div
@@ -114,7 +115,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                             <span
                                 style={{
                                     fontSize: '0.72rem',
-                                    color: isPrivate ? '#c084fc' : '#aaa',
+                                    color: isGuild ? '#2ecc71' : isPrivate ? '#c084fc' : '#aaa',
                                     fontWeight: 600,
                                     cursor: isOwn ? 'default' : 'pointer',
                                     userSelect: 'none',
@@ -185,10 +186,12 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                             borderRadius: isOwn ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
                                             background: isOwn
                                                 ? 'linear-gradient(135deg, #3b5998, #4a6fa5)'
-                                                : isPrivate
+                                                : isGuild
+                                                  ? '#1a3a1a'
+                                                  : isPrivate
                                                   ? '#2d1f3d'
                                                   : '#2a2a3e',
-                                            color: isPrivate ? '#c084fc' : '#eaeaea',
+                                            color: isGuild ? '#2ecc71' : isPrivate ? '#c084fc' : '#eaeaea',
                                             fontSize: '0.85rem',
                                             lineHeight: '1.4',
                                             wordBreak: 'break-word',
