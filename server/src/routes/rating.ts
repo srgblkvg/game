@@ -25,10 +25,11 @@ router.get('/rating', (req: any, res) => {
 
     const total = (db.prepare('SELECT COUNT(*) as cnt FROM users WHERE id > 0').get() as any).cnt;
     const users = db.prepare(`
-        SELECT id, username, level, elo, seasonWins, seasonLosses
-        FROM users
-        WHERE id > 0
-        ORDER BY elo DESC
+        SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, g.name as guildName, u.guildId
+        FROM users u
+        LEFT JOIN guilds g ON u.guildId = g.id
+        WHERE u.id > 0
+        ORDER BY u.elo DESC
         LIMIT ? OFFSET ?
     `).all(limit, offset) as any[];
 

@@ -18,7 +18,7 @@ router.post('/battle', (req: any, res) => {
     const { opponentId } = parsed.data;
 
     const now = Math.floor(Date.now() / 1000);
-    const attacker = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, lastAttackTime, premiumUntil FROM users WHERE id = ?').get(userId) as any;
+    const attacker = db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.lastAttackTime, u.premiumUntil, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
     if (!attacker) return res.status(404).json({ error: 'Attacker not found' });
 
     const hasPremium = (attacker.premiumUntil || 0) > now;
@@ -31,10 +31,10 @@ router.post('/battle', (req: any, res) => {
 
     let defender: any;
     if (opponentId) {
-        defender = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil, roomType, roomUntil, lastHpUpdate FROM users WHERE id = ?').get(opponentId);
+        defender = db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(opponentId);
         if (!defender || defender.id == userId) return res.status(400).json({ error: 'Invalid opponent' });
     } else {
-        const others = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil, roomType, roomUntil, lastHpUpdate FROM users WHERE id != ? AND id > 0 AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
+        const others = db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)').all(userId, now) as any[];
         if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены' });
         defender = others[Math.floor(Math.random() * others.length)];
     }
@@ -159,11 +159,13 @@ router.get('/battles', (req: any, res) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const battles = db.prepare(`
     SELECT b.*, 
-      a.username as attackerName, 
-      d.username as defenderName
+      a.username as attackerName, ag.name as attackerGuild,
+      d.username as defenderName, dg.name as defenderGuild
     FROM battles b
     JOIN users a ON b.attackerId = a.id
     JOIN users d ON b.defenderId = d.id
+    LEFT JOIN guilds ag ON a.guildId = ag.id
+    LEFT JOIN guilds dg ON d.guildId = dg.id
     WHERE b.attackerId = ? OR b.defenderId = ?
     ORDER BY b.createdAt DESC
     LIMIT ?
