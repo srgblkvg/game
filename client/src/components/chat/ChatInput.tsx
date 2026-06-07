@@ -120,7 +120,7 @@ export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSen
         <div style={{ padding: '0.5rem', background: '#2a2a3e' }}>
             {isBanned && (
                 <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.3rem', textAlign: 'center' }}>
-                    Вы заблокированы в чате до {new Date(bannedUntil! * 1000).toLocaleString()}
+                    Вы заблокированы в чате до {new Date(bannedUntil! * 1000).toLocaleString('ru-RU', { timeZone: 'UTC' })}
                 </div>
             )}
             {chatError && !isBanned && (
