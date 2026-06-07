@@ -51,7 +51,7 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
                         ) : (
                             <button
                                 onClick={() => navigate(item.path)}
-                                className="text-[var(--color-accent-info)] hover:text-white hover:underline transition-colors px-1"
+                                className="text-[var(--color-accent-info)] hover:text-white hover:underline transition-colors px-1 cursor-pointer"
                             >
                                 {item.label}
                             </button>
@@ -171,7 +171,7 @@ export default function Header() {
                         <div ref={menuRef} className="relative">
                             <button
                                 onClick={() => setMenuOpen(!menuOpen)}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors relative"
+                                className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors relative cursor-pointer"
                                 title="Настройки"
                             >
                                 <Icon icon="mdi:cog" width="20" height="20" className="text-[var(--color-text-muted)]" />
