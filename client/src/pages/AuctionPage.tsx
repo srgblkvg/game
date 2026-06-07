@@ -162,7 +162,7 @@ export default function AuctionPage() {
     // Long press for mobile tooltips
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
-    const isTouching = useRef(false);
+    const supportsHover = useRef(window.matchMedia('(hover: hover)').matches);
 
     // Hide tooltip on click outside
     useEffect(() => {
@@ -181,20 +181,19 @@ export default function AuctionPage() {
     }, [tooltip]);
 
     const showTooltip = (e: React.MouseEvent, item: any) => {
-        if (isTouching.current) return;
+        if (!supportsHover.current) return;
         setTooltip({ item, x: e.clientX, y: e.clientY });
     };
     const moveTooltip = (e: React.MouseEvent) => {
-        if (isTouching.current) return;
+        if (!supportsHover.current) return;
         if (tooltip) setTooltip({ ...tooltip, x: e.clientX, y: e.clientY });
     };
     const hideTooltip = () => {
-        if (isTouching.current) return;
+        if (!supportsHover.current) return;
         setTooltip(null);
     };
 
     const handleTouchStart = useCallback((e: React.TouchEvent, item: any) => {
-        isTouching.current = true;
         longPressTimer.current = setTimeout(() => {
             const touch = e.changedTouches[0] || e.touches[0];
             if (touch) setTooltip({ item, x: touch.clientX, y: touch.clientY });
@@ -202,7 +201,6 @@ export default function AuctionPage() {
     }, []);
     const handleTouchEnd = useCallback(() => {
         if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-        setTimeout(() => { isTouching.current = false; }, 300);
     }, []);
 
     return (
