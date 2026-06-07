@@ -28,7 +28,18 @@ export default function GuildPage() {
     const [createJoinType, setCreateJoinType] = useState<'open' | 'request' | 'invite'>('open');
 
     // Invite
-    const [inviteTarget, setInviteTarget] = useState('');
+    const [inviteName, setInviteName] = useState('');
+    const [inviteSuggestions, setInviteSuggestions] = useState<any[]>([]);
+    const [inviteTargetId, setInviteTargetId] = useState<number | null>(null);
+
+    const searchUsers = async (q: string) => {
+        if (q.length < 2) { setInviteSuggestions([]); return; }
+        try {
+            const r = await fetch(`${BASE_URL}/users/search?q=${encodeURIComponent(q)}`, { headers: getHeaders() });
+            const data = await r.json();
+            setInviteSuggestions(data || []);
+        } catch { setInviteSuggestions([]); }
+    };
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
 
@@ -82,10 +93,13 @@ export default function GuildPage() {
     };
 
     const handleInvite = async () => {
+        if (!inviteTargetId) { setError('Выберите игрока из списка'); return; }
         try {
-            await api('/guild/invite', { targetId: parseInt(inviteTarget) });
+            await api('/guild/invite', { targetId: inviteTargetId });
             setMessage('Приглашение отправлено!');
-            setInviteTarget('');
+            setInviteName('');
+            setInviteTargetId(null);
+            setInviteSuggestions([]);
         } catch (e: any) { setError(e.message); }
     };
 
@@ -158,10 +172,25 @@ export default function GuildPage() {
                     {(guild.myRank === 'leader' || guild.myRank === 'officer') && (
                         <Card className="mb-4">
                             <h3 className="font-bold text-sm mb-2">Пригласить игрока</h3>
-                            <div className="flex gap-2">
-                                <input type="number" placeholder="ID игрока" value={inviteTarget}
-                                    onChange={e => setInviteTarget(e.target.value)} className={inputClass} />
-                                <Button variant="primary" size="xs" onClick={handleInvite}>Пригласить</Button>
+                            <div className="relative">
+                                <div className="flex gap-2">
+                                    <input type="text" placeholder="Имя игрока" value={inviteName}
+                                        onChange={e => { setInviteName(e.target.value); searchUsers(e.target.value); setInviteTargetId(null); }}
+                                        className={inputClass} />
+                                    <Button variant="primary" size="xs" onClick={handleInvite}>Пригласить</Button>
+                                </div>
+                                {inviteSuggestions.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl max-h-40 overflow-y-auto">
+                                        {inviteSuggestions.map((u: any) => (
+                                            <div key={u.id}
+                                                onClick={() => { setInviteName(u.username); setInviteTargetId(u.id); setInviteSuggestions([]); }}
+                                                className="px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] cursor-pointer flex items-center gap-2">
+                                                <span className="text-[var(--color-text-primary)]">{u.username}</span>
+                                                <span className="text-[var(--color-text-muted)] ml-auto">ур.{u.level}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </Card>
                     )}
@@ -210,21 +239,21 @@ export default function GuildPage() {
                                         <span className="text-[var(--color-text-muted)] text-[0.6rem]">
                                             {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
                                         </span>
-                                        <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level}</span>
+                                        <span className="text-[var(--color-text-muted)]">ур.{m.level}</span>
+                                        {(canManage || canKick) && (
+                                            <div className="flex gap-1 ml-auto">
+                                                {canManage && (
+                                                    <Button variant="secondary" size="xs"
+                                                        onClick={() => handleRole(m.userId, m.username, m.rank === 'officer' ? 'member' : 'officer')}>
+                                                        {m.rank === 'officer' ? 'Разжаловать' : 'Офицер'}
+                                                    </Button>
+                                                )}
+                                                {canKick && (
+                                                    <Button variant="danger" size="xs" onClick={() => handleKick(m.userId, m.username)}>Исключить</Button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                    {(canManage || canKick) && (
-                                        <div className="flex gap-1 mt-1 ml-8">
-                                            {canManage && (
-                                                <Button variant="secondary" size="xs"
-                                                    onClick={() => handleRole(m.userId, m.username, m.rank === 'officer' ? 'member' : 'officer')}>
-                                                    {m.rank === 'officer' ? 'Разжаловать' : 'Офицер'}
-                                                </Button>
-                                            )}
-                                            {canKick && (
-                                                <Button variant="danger" size="xs" onClick={() => handleKick(m.userId, m.username)}>Исключить</Button>
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
                                 );
                             })}

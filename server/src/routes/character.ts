@@ -170,4 +170,14 @@ router.get('/users/find', (req: any, res) => {
     res.json(user);
 });
 
+// Поиск пользователей по части имени
+router.get('/users/search', (req: any, res) => {
+    const q = req.query.q as string;
+    if (!q || q.length < 2) return res.json([]);
+    const users = db.prepare(
+        'SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10'
+    ).all(`%${q}%`);
+    res.json(users);
+});
+
 export default router;
