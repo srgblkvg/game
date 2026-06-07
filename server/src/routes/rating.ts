@@ -23,10 +23,11 @@ router.get('/rating', (req: any, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
 
-    const total = (db.prepare('SELECT COUNT(*) as cnt FROM users').get() as any).cnt;
+    const total = (db.prepare('SELECT COUNT(*) as cnt FROM users WHERE id > 0').get() as any).cnt;
     const users = db.prepare(`
         SELECT id, username, level, elo, seasonWins, seasonLosses
         FROM users
+        WHERE id > 0
         ORDER BY elo DESC
         LIMIT ? OFFSET ?
     `).all(limit, offset) as any[];

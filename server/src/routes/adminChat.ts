@@ -69,4 +69,12 @@ router.post('/unban', (req: any, res) => {
     res.json({ success: true });
 });
 
+// Системное сообщение в чат (от system id=0)
+router.post('/system-message', (req: any, res) => {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'content обязателен' });
+    db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)').run(0, null, content);
+    res.json({ success: true });
+});
+
 export default router;

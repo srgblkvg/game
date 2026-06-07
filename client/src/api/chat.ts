@@ -100,3 +100,13 @@ export async function unbanChatUser(userId: number) {
     if (!res.ok) throw new Error('Ошибка снятия бана');
     return res.json();
 }
+
+export async function sendSystemMessage(content: string) {
+    const res = await fetch(`${BASE_URL}/admin/chat/system-message`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ content }),
+    });
+    if (!res.ok) throw new Error('Ошибка отправки сообщения');
+    return res.json();
+}

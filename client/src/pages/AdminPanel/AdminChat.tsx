@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     fetchAdminMessages, deleteChatMessage, deleteAllChatMessages,
-    banChatUser, fetchBannedUsers, unbanChatUser,
+    banChatUser, fetchBannedUsers, unbanChatUser, sendSystemMessage,
 } from '../../api/chat';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -14,6 +14,7 @@ export default function AdminChat() {
     const [deleteId, setDeleteId] = useState('');
     const [banUserId, setBanUserId] = useState('');
     const [banMinutes, setBanMinutes] = useState('60');
+    const [systemText, setSystemText] = useState('');
 
     const loadData = async () => {
         try {
@@ -41,6 +42,11 @@ export default function AdminChat() {
 
     const handleUnban = async (userId: number) => {
         try { await unbanChatUser(userId); setMessage(`Игрок ${userId} разбанен`); loadData(); }
+        catch (e: any) { setMessage(e.message); }
+    };
+
+    const handleSystemMessage = async () => {
+        try { await sendSystemMessage(systemText); setMessage('Системное сообщение отправлено'); setSystemText(''); loadData(); }
         catch (e: any) { setMessage(e.message); }
     };
 
@@ -80,6 +86,16 @@ export default function AdminChat() {
                         </tbody>
                     </table>
                 )}
+            </Card>
+
+            <Card className="mb-4">
+                <h4 className="font-bold mb-2">Системное сообщение</h4>
+                <div className="flex gap-2">
+                    <input type="text" placeholder="Текст сообщения в чат" value={systemText}
+                        onChange={e => setSystemText(e.target.value)} className={inputClass}
+                        onKeyDown={e => e.key === 'Enter' && handleSystemMessage()} />
+                    <Button size="sm" style={{ background: '#8e44ad' }} onClick={handleSystemMessage}>Отправить</Button>
+                </div>
             </Card>
 
             <Card className="mb-4">
