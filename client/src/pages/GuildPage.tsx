@@ -198,26 +198,32 @@ export default function GuildPage() {
                                     && !(guild.myRank === 'officer' && m.rank === 'officer');
                                 const canManage = guild.myRank === 'leader' && m.userId !== user.id && m.rank !== 'leader';
                                 return (
-                                <div key={m.userId} className="flex items-center gap-2 text-xs py-1 border-b border-[var(--color-border-light)]">
-                                    <span className="w-6 text-center">
-                                        {m.rank === 'leader' ? '👑' : m.rank === 'officer' ? '🛡️' : '⚔️'}
-                                    </span>
-                                    <span className="text-[var(--color-accent-info)] cursor-pointer hover:underline"
-                                        onClick={() => navigate(`/profile/${m.userId}`)}>
-                                        {m.username}
-                                    </span>
-                                    <span className="text-[var(--color-text-muted)] text-[0.6rem] ml-1">
-                                        {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
-                                    </span>
-                                    <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level}</span>
-                                    {canManage && (
-                                        <Button variant="secondary" size="xs"
-                                            onClick={() => handleRole(m.userId, m.username, m.rank === 'officer' ? 'member' : 'officer')}>
-                                            {m.rank === 'officer' ? 'Разжаловать' : 'Офицер'}
-                                        </Button>
-                                    )}
-                                    {canKick && (
-                                        <Button variant="danger" size="xs" onClick={() => handleKick(m.userId, m.username)}>Исключить</Button>
+                                <div key={m.userId} className="py-1 border-b border-[var(--color-border-light)]">
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <span className="w-6 text-center">
+                                            {m.rank === 'leader' ? '👑' : m.rank === 'officer' ? '🛡️' : '⚔️'}
+                                        </span>
+                                        <span className="text-[var(--color-accent-info)] cursor-pointer hover:underline"
+                                            onClick={() => navigate(`/profile/${m.userId}`)}>
+                                            {m.username}
+                                        </span>
+                                        <span className="text-[var(--color-text-muted)] text-[0.6rem]">
+                                            {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
+                                        </span>
+                                        <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level}</span>
+                                    </div>
+                                    {(canManage || canKick) && (
+                                        <div className="flex gap-1 mt-1 ml-8">
+                                            {canManage && (
+                                                <Button variant="secondary" size="xs"
+                                                    onClick={() => handleRole(m.userId, m.username, m.rank === 'officer' ? 'member' : 'officer')}>
+                                                    {m.rank === 'officer' ? 'Разжаловать' : 'Офицер'}
+                                                </Button>
+                                            )}
+                                            {canKick && (
+                                                <Button variant="danger" size="xs" onClick={() => handleKick(m.userId, m.username)}>Исключить</Button>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                                 );
