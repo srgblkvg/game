@@ -67,7 +67,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }, 100);
-        const timer = setTimeout(() => { window.location.hash = ''; }, 3000);
+        const timer = setTimeout(() => { setHighlightedCard(null); history.replaceState(null, '', window.location.pathname + window.location.search); }, 3000);
         return () => clearTimeout(timer);
     }, [highlightCard]);
 
