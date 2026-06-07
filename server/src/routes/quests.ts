@@ -133,8 +133,8 @@ router.post('/tavern/quests/take', (req: any, res) => {
     if (quest.status !== 'available') return res.status(400).json({ error: 'Квест недоступен' });
 
     const activeCount = (db.prepare(
-        "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND status = 'active'"
-    ).get(userId) as any).cnt;
+        "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND status = 'active' AND date = ?"
+    ).get(userId, new Date().toISOString().slice(0, 10)) as any).cnt;
     if (activeCount >= 3) return res.status(400).json({ error: 'Можно взять максимум 3 квеста одновременно' });
 
     const completedToday = (db.prepare(
