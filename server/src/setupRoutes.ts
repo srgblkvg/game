@@ -68,6 +68,11 @@ export function setupRoutes(app: Express) {
   app.use('/api', ordersRoutes);
   app.use('/api', questsRoutes);
 
+  // Серверное время
+  app.get('/api/time', (_req: any, res) => {
+    res.json({ now: Math.floor(Date.now() / 1000) });
+  });
+
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);
   app.use('/api', tournamentRoutes);

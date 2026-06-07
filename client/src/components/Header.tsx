@@ -72,7 +72,18 @@ export default function Header() {
     const [hasNewBattles, setHasNewBattles] = useState(false);
     const [protectionSec, setProtectionSec] = useState(0);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [serverTime, setServerTime] = useState<number | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Синхронизация серверного времени
+    useEffect(() => {
+        fetch('/api/time').then(r => r.json()).then(d => setServerTime(d.now)).catch(() => {});
+    }, []);
+    useEffect(() => {
+        if (serverTime === null) return;
+        const t = setInterval(() => setServerTime(s => (s ?? 0) + 1), 1000);
+        return () => clearInterval(t);
+    }, [serverTime !== null]);
 
     // Закрытие меню по клику вне
     useEffect(() => {
@@ -167,6 +178,11 @@ export default function Header() {
                     )
                 )}
                 <div className="flex gap-2 ml-auto items-center">
+                    {user.role === 'player' && serverTime !== null && (
+                        <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+                            {new Date(serverTime * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    )}
                     {user.role === 'player' && (
                         <div ref={menuRef} className="relative">
                             <button
