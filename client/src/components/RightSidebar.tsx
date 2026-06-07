@@ -37,11 +37,11 @@ export default function RightSidebar() {
             {open && (
                 <>
                     <div
-                        className={`fixed inset-0 z-15 bg-black/30 transition-opacity duration-200 ${animating ? (open ? 'opacity-100' : 'opacity-0') : ''}`}
+                        className={`fixed inset-0 z-15 bg-black/20 transition-opacity duration-300 ${animating ? (open ? 'opacity-100' : 'opacity-0') : ''}`}
                         onClick={handleToggle}
                     />
                     <div
-                        className={`fixed right-0 top-0 z-20 h-full w-[240px] bg-[var(--color-bg-primary)]/80 backdrop-blur-xl border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-24 pb-16 shadow-2xl transition-transform duration-200 ${animating && !open ? 'translate-x-full' : 'translate-x-0'}`}
+                        className={`fixed right-0 top-0 z-20 h-full w-[240px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-24 pb-16 shadow-2xl transition-transform duration-300 ease-in-out ${animating && !open ? 'translate-x-full' : 'translate-x-0'}`}
                         style={{ transform: open ? 'translateX(0)' : 'translateX(100%)' }}
                     >
                         <div className="flex flex-col gap-4">
