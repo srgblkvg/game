@@ -63,6 +63,19 @@ router.get('/guild/my', (req: any, res) => {
     });
 });
 
+// Список гильдий (должен быть до /guild/:id)
+router.get('/guild/list', (req: any, res) => {
+    const guilds = db.prepare(`
+        SELECT g.*, u.username as leaderName,
+            (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount
+        FROM guilds g
+        JOIN users u ON g.leaderId = u.id
+        ORDER BY g.level DESC, g.exp DESC
+        LIMIT 50
+    `).all();
+    res.json(guilds);
+});
+
 // Публичная информация о гильдии
 router.get('/guild/:id', (req: any, res) => {
     const guildId = parseInt(req.params.id);
@@ -324,19 +337,6 @@ router.get('/guild/requests', (req: any, res) => {
         ORDER BY gi.createdAt DESC
     `).all(member.guildId);
     res.json(requests);
-});
-
-// Список гильдий
-router.get('/guild/list', (req: any, res) => {
-    const guilds = db.prepare(`
-        SELECT g.*, u.username as leaderName,
-            (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount
-        FROM guilds g
-        JOIN users u ON g.leaderId = u.id
-        ORDER BY g.level DESC, g.exp DESC
-        LIMIT 50
-    `).all();
-    res.json(guilds);
 });
 
 // Мои приглашения
