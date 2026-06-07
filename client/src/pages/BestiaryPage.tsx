@@ -6,7 +6,6 @@ import { fetchCharacter } from '../api/character';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useAcquire } from '../contexts/AcquireContext';
-import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { renderBattleLog } from '../utils/battleLog';
@@ -321,7 +320,6 @@ export default function BestiaryPage() {
 
   return (
     <div className="px-4 py-4 max-w-4xl mx-auto">
-      <BackButton to="/" />
 
       {phase === 'floors' ? (
         <>

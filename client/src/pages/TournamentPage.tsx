@@ -5,7 +5,6 @@ import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
-import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';

@@ -4,7 +4,6 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import CharacterCard from '../components/CharacterCard';
 import { fetchPublicProfile } from '../api/character';
-import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import { formatMoney } from '../utils/money';
 
@@ -41,7 +40,6 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-4">
-            <BackButton />
             <h2 className="text-xl font-bold mb-4">Профиль игрока</h2>
 
             <div className="flex flex-wrap justify-center gap-8 mt-4">

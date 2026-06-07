@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
-import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
@@ -60,7 +59,7 @@ export default function BankPage() {
     if (isGuest) {
         return (
             <div className="max-w-md mx-auto px-4 py-4">
-                <BackButton to="/" /><h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
+<h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
                 <Card className="text-center py-6"><Icon icon="game-icons:lock" width="40" height="40" className="mx-auto mb-3 text-[var(--color-text-muted)]" /><p className="text-sm text-[var(--color-text-muted)]">Банк недоступен на гостевом аккаунте.</p></Card>
             </div>
         );
@@ -68,7 +67,6 @@ export default function BankPage() {
 
     return (
         <div className="max-w-md mx-auto px-4 py-4">
-            <BackButton to="/" />
             <h1 className="text-xl font-bold mb-2"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
             <Card className="mb-3"><div className="grid grid-cols-2 gap-4 text-center"><div><p className="text-xs text-[var(--color-text-muted)]">При себе</p><p className="text-lg font-bold">{formatMoney(pocket)}</p></div><div><p className="text-xs text-[var(--color-text-muted)]">В банке</p><p className="text-lg font-bold">{formatMoney(bank)}</p></div></div></Card>
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}

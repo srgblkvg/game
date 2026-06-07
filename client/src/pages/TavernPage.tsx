@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useAcquire } from '../contexts/AcquireContext';
 import { fetchCharacter } from '../api/character';
-import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
@@ -70,7 +69,6 @@ export default function TavernPage() {
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-4">
-            <BackButton to="/" />
             <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:drink-me" width="22" height="22" className="inline mr-2" />Трактир «Гнилая Кровь»</h1>
             <Card className="mb-4"><div className="flex justify-between items-center"><div><p className="text-xs text-[var(--color-text-muted)]">HP: {tavern.currentHp}/{character?.stats?.hp || tavern.maxHp}</p><p className="text-xs text-[var(--color-text-muted)]">{tavern.money != null ? formatMoney(tavern.money) : '...'}</p></div><div className="text-xs text-right">{tavern.room && tavern.room.until > now && <p className="text-[var(--color-accent-success)]">Комната: {tavern.room.type==='chamber'?'Покой':tavern.room.type==='bed'?'Койка':'Чулан'} ({formatTime(tavern.room.until-now)})</p>}{tavern.drink && tavern.drink.until > now && <p className="text-[var(--color-accent-purple)]">Напиток: {tavern.drinks.find((d:any)=>d.key===tavern.drink.type)?.name} ({formatTime(tavern.drink.until-now)})</p>}</div></div></Card>
 

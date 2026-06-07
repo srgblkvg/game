@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useAcquire } from '../contexts/AcquireContext';
 import { fetchCharacter } from '../api/character';
-import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
@@ -157,7 +156,6 @@ export default function AuctionPage() {
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
-            <BackButton to="/" />
             <h1 className="text-xl font-bold mb-1"><Icon icon="game-icons:auction" width="22" height="22" className="inline mr-2" />Аукцион</h1>
             <p className="text-xs text-[var(--color-text-muted)] mb-4">Торговая площадка Мёртвых земель — покупайте и продавайте предметы между игроками</p>
 

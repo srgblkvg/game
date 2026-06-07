@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { startRandomJob, fetchCharacter } from '../api';
 import { formatMoney } from '../utils/money';
-import BackButton from '../components/ui/BackButton';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
@@ -112,7 +111,6 @@ export default function JobsPage() {
 
     return (
         <div className="px-4 py-4 max-w-md mx-auto">
-            <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:swap-bag" width="22" height="22" className="inline mr-2"/>Работы</h2>
 
             <p className="text-sm text-[var(--color-text-muted)] mb-4 text-center">

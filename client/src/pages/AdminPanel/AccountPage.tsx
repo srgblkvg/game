@@ -4,7 +4,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
 import { fetchCharacter } from '../../api/character';
 import { changeUsername, changePassword, changeGender, deleteAccount, registerGuest, resendCode } from '../../api';
-import BackButton from '../../components/ui/BackButton';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { inputClass } from '../../utils/formStyles';
@@ -122,7 +121,6 @@ export default function AccountPage() {
 
     return (
         <div className="max-w-lg mx-auto px-4 py-4">
-            <BackButton />
             <h2 className="text-xl font-bold mb-4">Аккаунт</h2>
             <p className="mb-4">Текущее имя: <strong>{character?.username || user.username}</strong></p>
 

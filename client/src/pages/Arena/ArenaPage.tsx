@@ -6,7 +6,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useBattleLogic } from '../../hooks/useBattleLogic';
 import { calculateStats } from '../../utils/stats';
 import CharacterCard from '../../components/CharacterCard';
-import BackButton from '../../components/ui/BackButton';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { formatMoney } from '../../utils/money';
@@ -70,7 +69,6 @@ export default function ArenaPage() {
 
   return (
     <div className="px-4 py-4 min-h-screen">
-      <BackButton to="/" />
       <h1 className="text-center text-xl font-bold mb-4"><Icon icon='game-icons:crossed-swords' width="22" height="22" className="inline mr-2"/>Арена</h1>
 
       {/* Карточки бойцов */}

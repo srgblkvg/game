@@ -8,7 +8,6 @@ import { fetchShopItems, buyItem } from '../api';
 import { formatMoney } from '../utils/money';
 import { getRarityColor } from '../utils/itemUtils';
 import ItemStats from '../components/ItemStats';
-import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
@@ -98,7 +97,6 @@ export default function ShopPage() {
 
     return (
         <div className="px-4 py-4">
-            <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:buy-card" width="22" height="22" className="inline mr-2"/>Магазин</h2>
 
             {message && <p className="mb-3 text-[var(--color-accent-success)] text-sm">{message}</p>}

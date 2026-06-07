@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
@@ -10,6 +10,7 @@ export default function Header() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
+    const location = useLocation();
     const [hasNewBattles, setHasNewBattles] = useState(false);
     const [protectionSec, setProtectionSec] = useState(0);
 
@@ -68,6 +69,11 @@ export default function Header() {
 
     return (
         <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)] flex-wrap sticky top-0 z-10">
+            {location.pathname !== '/' && (
+                <Button variant="secondary" size="xs" onClick={() => navigate(-1)}>
+                    ← Назад
+                </Button>
+            )}
             {user.role === 'player' && character && (
                 <span className="text-white text-sm font-bold">
                     Серебро: {character.money.toLocaleString()}
