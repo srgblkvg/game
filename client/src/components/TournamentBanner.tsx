@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { getHeaders } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
+import { formatMoney } from '../utils/money';
 
 interface TournamentInfo {
     id: number;
@@ -155,7 +156,7 @@ export default function TournamentBanner() {
                             </div>
                             <div className="flex items-center gap-2 text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
                                 <span>{t.participantCount}/{t.maxPlayers || 8} уч.</span>
-                                <span>{t.prizePool} 🥇</span>
+                                <span>Призовой фонд: {formatMoney(t.prizePool)}</span>
                                 {t.entryFee ? <span>вход {t.entryFee}</span> : null}
                                 {t.myRegistration && <span className="text-[var(--color-accent-success)]">✓</span>}
                             </div>
