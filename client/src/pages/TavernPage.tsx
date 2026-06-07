@@ -82,7 +82,7 @@ export default function TavernPage() {
 
             {tab==='quests' && quests && <>
                 <p className="text-xs text-[var(--color-text-muted)] mb-3">
-                    Доступно: {quests.activeCount}/3 • Выполнено сегодня: {quests.completedToday}/{quests.dailyLimit}
+                    Активно: {quests.activeCount}/3 • Выполнено сегодня: {quests.completedToday}/{quests.dailyLimit}
                 </p>
                 <div className="space-y-3">
                     {quests.quests.map((q: any) => (
