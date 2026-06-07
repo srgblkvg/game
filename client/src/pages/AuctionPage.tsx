@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
@@ -163,6 +163,19 @@ export default function AuctionPage() {
     const moveTooltip = (e: React.MouseEvent) => { if (tooltip) setTooltip({ ...tooltip, x: e.clientX, y: e.clientY }); };
     const hideTooltip = () => setTooltip(null);
 
+    // Long press for mobile tooltips
+    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const handleTouchStart = useCallback((e: React.TouchEvent, item: any) => {
+        longPressTimer.current = setTimeout(() => {
+            const touch = e.changedTouches[0] || e.touches[0];
+            if (touch) setTooltip({ item, x: touch.clientX, y: touch.clientY });
+        }, 500);
+    }, []);
+    const handleTouchEnd = useCallback(() => {
+        if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+        setTooltip(null);
+    }, []);
+
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <h1 className="text-xl font-bold mb-1"><Icon icon="game-icons:auction" width="22" height="22" className="inline mr-2" />Аукцион</h1>
@@ -203,6 +216,8 @@ export default function AuctionPage() {
                                             onMouseEnter={e => showTooltip(e, item)}
                                             onMouseMove={moveTooltip}
                                             onMouseLeave={hideTooltip}
+                                            onTouchStart={e => handleTouchStart(e, item)}
+                                            onTouchEnd={handleTouchEnd}
                                             className={`relative flex flex-col items-center p-2 rounded-lg border cursor-pointer transition-all ${
                                                 isSelected
                                                     ? 'border-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10 ring-1 ring-[var(--color-accent-info)]'
@@ -240,6 +255,8 @@ export default function AuctionPage() {
                             onMouseEnter={e => showTooltip(e, selectedItem)}
                             onMouseMove={moveTooltip}
                             onMouseLeave={hideTooltip}
+                            onTouchStart={e => handleTouchStart(e, selectedItem)}
+                            onTouchEnd={handleTouchEnd}
                         >
                             <img
                                 src={getItemImage(selectedItem) || '/items/default.webp'}
@@ -344,6 +361,8 @@ export default function AuctionPage() {
                                 onMouseEnter={e => showTooltip(e, item)}
                                 onMouseMove={moveTooltip}
                                 onMouseLeave={hideTooltip}
+                                onTouchStart={e => handleTouchStart(e, item)}
+                                onTouchEnd={handleTouchEnd}
                                 className="cursor-default flex gap-3"
                             >
                                 <img
