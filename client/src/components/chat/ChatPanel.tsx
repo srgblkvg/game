@@ -348,7 +348,9 @@ export default function ChatPanel() {
         }
         return (msg.senderId === userId && msg.targetId === privateChatWith) ||
             (msg.senderId === privateChatWith && msg.targetId === userId);
-    }), [messages, privateChatWith, userId, guildChatActive, guildId]);
+    }).sort((a: ChatMessage, b: ChatMessage) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    ), [messages, privateChatWith, userId, guildChatActive, guildId]);
 
     const openPrivateTabsArray = useMemo(() =>
         Array.from(openPrivateTabs.entries()).map(([id, name]) => ({ id, name })),
