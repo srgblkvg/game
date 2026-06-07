@@ -161,4 +161,13 @@ router.post('/character/save-tabs', (req: any, res) => {
     res.json({ success: true });
 });
 
+// Поиск пользователя по нику (для перехода из чата в профиль)
+router.get('/users/find', (req: any, res) => {
+    const username = req.query.username as string;
+    if (!username) return res.status(400).json({ error: 'Укажите username' });
+    const user = db.prepare('SELECT id, username FROM users WHERE username = ?').get(username) as any;
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    res.json(user);
+});
+
 export default router;
