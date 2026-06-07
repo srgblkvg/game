@@ -13,6 +13,7 @@ interface CharacterCardProps {
   char: CharacterCardData;
   side?: 'left' | 'right';
   showHealth?: boolean;
+  hideNoGuild?: boolean;
   showExp?: boolean;
   showRegenHint?: boolean;
   regenRate?: number;
@@ -29,7 +30,7 @@ export default function CharacterCard({
   char, side = 'left', showHealth = true,
   showExp = true, showRegenHint = true, regenRate = 1, readOnly = false,
   onEquip, availableItems, selectedItemId, highlightedSlots,
-  compact = false, isMob = false,
+  compact = false, isMob = false, hideNoGuild = false,
 }: CharacterCardProps) {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
@@ -130,7 +131,7 @@ export default function CharacterCard({
       {/* Имя и уровень */}
       <div style={{ width: '100%', textAlign: 'center', marginBottom: '0.5rem' }}>
         <h2 style={{ margin: 0, fontSize: fontSizeName, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{truncate(char.username)}</h2>
-        <GuildTag guildName={(char as any).guildName} guildId={(char as any).guildId} />
+        <GuildTag guildName={(char as any).guildName} guildId={(char as any).guildId} hideNoGuild={hideNoGuild} />
         <div className="flex items-center justify-center gap-2 mt-1">
           <span style={{ fontSize: isVerySmall ? '0.65rem' : isMobile ? '0.75rem' : '0.85rem' }}>Ур. {char.level}</span>
           {showExpBar && (

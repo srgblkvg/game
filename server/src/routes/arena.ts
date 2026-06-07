@@ -77,6 +77,8 @@ router.get('/arena/opponent', (req: any, res) => {
         stats,
         playerMoney: user.money,
         gender: opponent.gender || 'male',
+        guildName: opponent.guildName || null,
+        guildId: opponent.guildId || null,
     });
 });
 

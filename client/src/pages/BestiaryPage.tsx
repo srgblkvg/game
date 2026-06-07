@@ -443,6 +443,7 @@ export default function BestiaryPage() {
                 readOnly
                 compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : true}
                 isMob
+                hideNoGuild
               />
             )}
           </div>

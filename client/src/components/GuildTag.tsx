@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 
-export default function GuildTag({ guildName, guildId }: { guildName?: string | null; guildId?: number | null }) {
+export default function GuildTag({ guildName, guildId, hideNoGuild }: { guildName?: string | null; guildId?: number | null; hideNoGuild?: boolean }) {
     const navigate = useNavigate();
-    if (!guildName) return <span className="text-[0.6rem] text-[var(--color-text-muted)]">[Без гильдии]</span>;
+    if (!guildName) return hideNoGuild ? null : <span className="text-[0.6rem] text-[var(--color-text-muted)]">[Без гильдии]</span>;
     return (
         <span
             onClick={(e) => { e.stopPropagation(); if (guildId) navigate(`/guild/${guildId}`); }}
