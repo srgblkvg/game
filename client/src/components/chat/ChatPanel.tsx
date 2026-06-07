@@ -340,7 +340,8 @@ export default function ChatPanel() {
             return msg.targetId === -guildId;
         }
         if (privateChatWith === null) {
-            return msg.targetId === null || msg.senderId === userId || msg.targetId === userId;
+            return (msg.targetId === null || msg.targetId > 0)
+                && !(msg.targetId !== null && msg.targetId < 0);
         }
         return (msg.senderId === userId && msg.targetId === privateChatWith) ||
             (msg.senderId === privateChatWith && msg.targetId === userId);
