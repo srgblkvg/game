@@ -52,7 +52,7 @@ export default function AccountPage() {
         try {
             setGuestLoading(true);
             // Отправляем код на почту (обновляет emailCode у существующего гостя)
-            await resendCode(guestEmail);
+            await resendCode(guestEmail, localStorage.getItem('token') || undefined);
             setGuestStep('code');
         } catch (e: any) { setGuestMsg(e.message); }
         finally { setGuestLoading(false); }
@@ -62,7 +62,7 @@ export default function AccountPage() {
         setGuestResendMsg('');
         try {
             setGuestLoading(true);
-            await resendCode(guestEmail);
+            await resendCode(guestEmail, localStorage.getItem('token') || undefined);
             setGuestResendMsg('Код отправлен повторно');
         } catch (e: any) { setGuestResendMsg(e.message); }
         finally { setGuestLoading(false); }

@@ -77,6 +77,34 @@ router.post('/resend-code', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email обязателен' });
 
     const now = Math.floor(Date.now() / 1000);
+
+    // Если запрос от гостя (авторизован) — записываем email и код на его же запись
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+        try {
+            const token = authHeader.split(' ')[1];
+            const decoded: any = jwt.verify(token, JWT_SECRET);
+            if (decoded.isGuest && decoded.userId) {
+                const guestUser: any = db.prepare('SELECT id FROM users WHERE id = ?').get(decoded.userId);
+                if (guestUser) {
+                    // Проверяем, не занят ли email другим пользователем
+                    const emailTaken = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, decoded.userId);
+                    if (emailTaken) return res.status(400).json({ error: 'Этот email уже используется' });
+
+                    const code = generateCode();
+                    const codeExpires = now + 600;
+                    db.prepare('UPDATE users SET email = ?, emailCode = ?, emailCodeExpires = ? WHERE id = ?').run(email, code, codeExpires, decoded.userId);
+
+                    const sent = await sendVerificationCode(email, code);
+                    if (!sent) return res.status(500).json({ error: 'Не удалось отправить код. Попробуйте позже.' });
+
+                    return res.json({ message: 'Код отправлен на почту' });
+                }
+            }
+        } catch { /* токен невалидный или не гостевой — идём по обычному пути */ }
+    }
+
+    // Обычный путь — поиск по email
     const user: any = db.prepare('SELECT id, emailVerified FROM users WHERE email = ?').get(email);
     if (!user) return res.status(400).json({ error: 'Email не найден' });
     if (user.emailVerified) return res.status(400).json({ error: 'Email уже подтверждён' });

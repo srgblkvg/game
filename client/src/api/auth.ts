@@ -26,10 +26,12 @@ export async function verifyEmail(email: string, code: string) {
     return data;
 }
 
-export async function resendCode(email: string) {
+export async function resendCode(email: string, token?: string) {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(`${BASE_URL}/resend-code`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ email }),
     });
     const data = await res.json();
