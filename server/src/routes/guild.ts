@@ -117,9 +117,19 @@ router.post('/guild/invite', (req: any, res) => {
     if (target.guildId) return res.status(400).json({ error: 'Игрок уже в гильдии' });
 
     const existing = db.prepare(
-        "SELECT id FROM guild_invites WHERE guildId = ? AND userId = ? AND status = 'pending'"
-    ).get(member.guildId, targetId);
-    if (existing) return res.status(400).json({ error: 'Приглашение уже отправлено' });
+        "SELECT id, createdAt FROM guild_invites WHERE guildId = ? AND userId = ? AND status = 'pending'"
+    ).get(member.guildId, targetId) as any;
+    if (existing) {
+        const now = Math.floor(Date.now() / 1000);
+        const inviteTime = Math.floor(new Date(existing.createdAt + 'Z').getTime() / 1000);
+        const elapsed = now - inviteTime;
+        if (elapsed < 3600) {
+            const remaining = Math.ceil((3600 - elapsed) / 60);
+            return res.status(400).json({ error: `Приглашение уже отправлено. Повторно можно через ${remaining} мин` });
+        }
+        // Старое приглашение — отменяем
+        db.prepare("UPDATE guild_invites SET status = 'declined' WHERE id = ?").run(existing.id);
+    }
 
     const guild = db.prepare('SELECT name FROM guilds WHERE id = ?').get(member.guildId) as any;
 
