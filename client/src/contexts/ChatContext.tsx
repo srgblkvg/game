@@ -48,12 +48,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         } catch { return []; }
     });
 
-    // Кешируем гильд-сообщения в localStorage
+    // Кешируем сообщения в localStorage (все типы)
     useEffect(() => {
-        const guildMsgs = messages.filter((m: ChatMessage) => m.targetId !== null && m.targetId < 0);
-        if (guildMsgs.length > 0) {
-            try { localStorage.setItem('chat_messages', JSON.stringify(guildMsgs.slice(-50))); } catch {}
-        }
+        try { localStorage.setItem('chat_messages', JSON.stringify(messages.slice(-100))); } catch {}
     }, [messages]);
     const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
     const [bannedUntil, setBannedUntil] = useState<number | null>(null);
