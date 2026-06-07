@@ -35,8 +35,8 @@ export default function RightSidebar() {
 
             {/* Панель */}
             <div
-                className={`fixed right-0 top-[80px] z-20 w-[240px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] overflow-y-auto p-3 shadow-2xl transition-transform duration-400 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
-                style={{ height: 'calc(100vh - 80px)' }}
+                className={`fixed right-0 top-[80px] z-20 w-[240px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-4 pb-20 shadow-2xl transition-transform duration-400 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+                style={{ height: 'calc(100vh - 80px - 40px)' }}
             >
                 <div className="flex flex-col gap-4">
                     <QuestsBlock onHighlight={handleHighlight} />
