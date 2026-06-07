@@ -24,6 +24,7 @@ const breadcrumbMap: Record<string, string> = {
     adminpanel: 'Админ-панель',
     premium: 'Премиум',
     orders: 'Заказы',
+    guild: 'Гильдия',
 };
 
 function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: string) => void }) {

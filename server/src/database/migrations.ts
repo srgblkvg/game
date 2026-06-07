@@ -411,6 +411,40 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (userId) REFERENCES users(id)
   )`); } catch {}
 
+  // --- Гильдии ---
+  try { db.exec('ALTER TABLE users ADD COLUMN guildId INTEGER DEFAULT NULL REFERENCES guilds(id)'); } catch {}
+  try { db.exec(`CREATE TABLE IF NOT EXISTS guilds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    leaderId INTEGER NOT NULL,
+    joinType TEXT NOT NULL DEFAULT 'open' CHECK(joinType IN ('open','request','invite')),
+    level INTEGER DEFAULT 1,
+    exp INTEGER DEFAULT 0,
+    treasury INTEGER DEFAULT 0,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (leaderId) REFERENCES users(id)
+  )`); } catch {}
+  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_members (
+    guildId INTEGER NOT NULL,
+    userId INTEGER NOT NULL UNIQUE,
+    rank TEXT NOT NULL DEFAULT 'member' CHECK(rank IN ('leader','officer','member')),
+    joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (guildId) REFERENCES guilds(id),
+    FOREIGN KEY (userId) REFERENCES users(id),
+    PRIMARY KEY (guildId, userId)
+  )`); } catch {}
+  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guildId INTEGER NOT NULL,
+    userId INTEGER NOT NULL,
+    invitedBy INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined')),
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (guildId) REFERENCES guilds(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }

@@ -30,6 +30,7 @@ const castleCards: ActionCard[] = [
     { icon: 'game-icons:anvil', title: 'Крафт', subtitle: 'Улучшения', cost: 0, path: '/craft', buttonText: 'Перейти', bgClass: 'url(/action_craft.webp)', variant: 'danger' },
     { icon: 'game-icons:auction', title: 'Аукцион', subtitle: 'Торги', cost: 0, path: '/auction', buttonText: 'Перейти', bgClass: 'url(/action_shop.webp)', variant: 'danger' },
     { icon: 'game-icons:drink-me', title: 'Трактир', subtitle: 'Лечение и квесты', cost: 0, path: '/tavern', buttonText: 'Перейти', bgClass: 'url(/action_adventures.webp)', variant: 'danger' },
+    { icon: 'game-icons:castle', title: 'Гильдия', subtitle: 'Объединения', cost: 0, path: '/guild', buttonText: 'Перейти', bgClass: 'url(/action_shop.webp)', variant: 'danger' },
 ];
 
 const diffLabels: Record<string, string> = { easy: 'Лёгкий', equal: 'Равный', hard: 'Сложный' };
