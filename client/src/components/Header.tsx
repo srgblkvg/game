@@ -27,7 +27,7 @@ const breadcrumbMap: Record<string, string> = {
 
 function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: string) => void }) {
     const segments = pathname.split('/').filter(Boolean);
-    const items = [{ label: 'Главная', path: '/' }];
+    const items = [{ label: 'Персонаж', path: '/' }];
     for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
         if (/^\d+$/.test(seg)) continue;
