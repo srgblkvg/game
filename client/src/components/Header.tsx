@@ -174,7 +174,7 @@ export default function Header() {
                                 className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors relative"
                                 title="Настройки"
                             >
-                                <Icon icon="game-icons:gear" width="20" height="20" className="text-[var(--color-text-muted)]" />
+                                <Icon icon="mdi:cog" width="20" height="20" className="text-[var(--color-text-muted)]" />
                                 {hasNewBattles && (
                                     <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
                                 )}
