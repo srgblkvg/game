@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchRating } from '../api/character';
 import Card from '../components/ui/Card';
+import GuildTag from '../components/GuildTag';
 import Button from '../components/ui/Button';
 
 const LIMIT = 20;
@@ -124,6 +125,7 @@ export default function RatingPage() {
                                         >
                                             {i + 1 + (page - 1) * LIMIT}. {p.username}
                                         </span>
+                                        <GuildTag guildName={p.guildName} guildId={p.guildId} />
                                     </td>
                                     <td className="p-1.5 text-center" style={{ color: p.rank?.color }}>
                                         {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}

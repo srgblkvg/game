@@ -17,6 +17,7 @@ interface OnlineUser {
   id: number;
   username: string;
   level: number;
+  guildName?: string | null;
 }
 
 const clients = new Map<number, WebSocket>();
@@ -131,7 +132,7 @@ export function setupWebSocket(server: any) {
     }
 
     clients.set(userId, ws);
-    const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level };
+    const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, guildName: user.guildName || null };
     onlineUsers.set(userId, onlineUser);
     auditWsConnect(user.username, user.id);
 

@@ -2,6 +2,7 @@ export interface OnlineUser {
     id: number;
     username: string;
     level: number;
+    guildName?: string | null;
 }
 
 export interface ChatMessage {
