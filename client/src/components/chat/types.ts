@@ -5,11 +5,12 @@ export interface OnlineUser {
     guildName?: string | null;
 }
 
-export interface ChatMessage {
+interface ChatMessage {
     id: number;
     senderId: number;
     senderName: string;
     senderGuild?: string | null;
+    senderGuildId?: number | null;
     targetId: number | null;
     content: string;
     createdAt: string;

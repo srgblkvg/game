@@ -127,7 +127,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                 {truncate(firstMsg.senderName)}
                             </span>
                             {firstMsg.senderGuild && (
-                                <span onClick={() => navigate(`/guild/rating`)} style={{
+                                <span onClick={() => firstMsg.senderGuildId ? navigate(`/guild/${firstMsg.senderGuildId}`) : navigate('/guild/rating')} style={{
                                     fontSize: '0.6rem', color: '#2ecc71', cursor: 'pointer',
                                     padding: '0 4px', borderRadius: '3px',
                                 }}>[{firstMsg.senderGuild}]</span>
