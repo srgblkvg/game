@@ -91,7 +91,7 @@ export default function TavernPage() {
                 </p>
                 <div className="space-y-3">
                     {quests.quests.map((q: any) => (
-                        <Card key={q.id} className={q.status==='active'?'border-[var(--color-accent-info)]': q.status==='claimed'?'border-[var(--color-accent-success)] opacity-70':''}>
+                        <Card key={q.id} className={q.status==='active'?'border-[var(--color-accent-info)]':''}>
                             <div className="flex justify-between items-start mb-1">
                                 <h3 className="font-bold text-sm">{q.typeIcon} {q.typeName}</h3>
                                 <span className="text-xs text-[var(--color-text-muted)]">{q.difficultyLabel}</span>

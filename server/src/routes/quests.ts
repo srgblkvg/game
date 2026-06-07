@@ -129,7 +129,7 @@ router.get('/tavern/quests', (req: any, res) => {
     const canTake = activeCount < 3 && completedToday < 5;
 
     res.json({
-        quests: quests.map((q: any) => {
+        quests: quests.filter((q: any) => q.status !== 'claimed').map((q: any) => {
             const qt = q.questType as QuestType;
             const info = QUEST_INFO[qt];
             return {
