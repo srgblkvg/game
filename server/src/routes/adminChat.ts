@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import db from '../database';
+import { broadcast } from '../websocket';
 
 const router = Router();
 
@@ -73,7 +74,16 @@ router.post('/unban', (req: any, res) => {
 router.post('/system-message', (req: any, res) => {
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'content обязателен' });
-    db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)').run(0, null, content);
+    const info = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)').run(0, null, content);
+    const msg = {
+        id: info.lastInsertRowid,
+        senderId: 0,
+        senderName: 'system',
+        targetId: null,
+        content,
+        createdAt: new Date().toISOString(),
+    };
+    broadcast('message', { message: msg });
     res.json({ success: true });
 });
 

@@ -32,6 +32,8 @@ function broadcast(type: string, data: any, exceptUserId?: number) {
   });
 }
 
+export { broadcast };
+
 function sendToUser(userId: number, payload: object) {
   const ws = clients.get(userId);
   if (ws && ws.readyState === WebSocket.OPEN) {
