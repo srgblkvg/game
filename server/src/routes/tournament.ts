@@ -325,15 +325,14 @@ function autoAdvance(tournamentId: number) {
 
     // Предупреждение за 5 минут — системное сообщение в чат (один раз)
     if (t.status === 'registration' && now >= t.registrationEnd - 300 && now < t.registrationEnd) {
-        const key = `tour_warn_${tournamentId}`;
-        const already = db.prepare("SELECT id FROM chat_messages WHERE content LIKE ? AND createdAt > datetime('now', '-5 minutes')").get(`%${key}%`);
+        const already = db.prepare("SELECT id FROM chat_messages WHERE senderId = 0 AND content LIKE '%регистрация закроется через%' AND createdAt > datetime('now', '-5 minutes')").get();
         if (!already) {
             const label = t.type === 'custom' ? (t.name || 'Турнир') : (divisions.find(d => d.name === t.division)?.label || t.division);
             const secLeft = t.registrationEnd - now;
             const minLeft = Math.floor(secLeft / 60);
             const participants = (db.prepare('SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?').get(tournamentId) as any).cnt;
             db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)')
-                .run(0, null, `Турнир «${label}» — регистрация закроется через ${minLeft} мин! (${participants}/${MAX_PLAYERS} уч.) [${key}]`);
+                .run(0, null, `Турнир «${label}» — регистрация закроется через ${minLeft} мин! (${participants}/${MAX_PLAYERS} уч.)`);
         }
     }
 

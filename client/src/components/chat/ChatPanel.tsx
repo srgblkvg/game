@@ -279,7 +279,7 @@ export default function ChatPanel() {
                 msg.item = { ...msg.item, used: true };
             } catch(e) { console.error(e); }
         };
-        const isGuildInvite = msg.item?.type === 'guild_invite' && !msg.item?.used;
+        const isGuildInvite = msg.item?.type === 'guild_invite' && !character?.guildId && !msg.item?.used;
         return (
             <div>
                 <div>
