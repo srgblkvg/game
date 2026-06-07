@@ -230,6 +230,24 @@ router.post('/guild/kick', (req: any, res) => {
     res.json({ success: true });
 });
 
+// Сменить роль участника (только лидер)
+router.post('/guild/role', (req: any, res) => {
+    const userId = req.userId;
+    const { targetId, rank } = req.body;
+    if (!targetId || !rank) return res.status(400).json({ error: 'Укажите targetId и rank' });
+    if (!['officer', 'member'].includes(rank)) return res.status(400).json({ error: 'Неверный ранг' });
+
+    const actor = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!actor || actor.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может менять роли' });
+
+    const target = db.prepare('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?').get(actor.guildId, targetId) as any;
+    if (!target) return res.status(400).json({ error: 'Игрок не в гильдии' });
+    if (target.rank === 'leader') return res.status(400).json({ error: 'Нельзя изменить роль лидера' });
+
+    db.prepare('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?').run(rank, actor.guildId, targetId);
+    res.json({ success: true });
+});
+
 // Заявки на вступление (для лидера/офицеров)
 router.get('/guild/requests', (req: any, res) => {
     const userId = req.userId;

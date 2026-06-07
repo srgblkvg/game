@@ -116,6 +116,14 @@ export default function GuildPage() {
         } catch (e: any) { setError(e.message); }
     };
 
+    const handleRole = async (targetId: number, username: string, rank: string) => {
+        try {
+            await api('/guild/role', { targetId, rank });
+            setMessage(`${username} → ${rank === 'officer' ? 'офицер' : 'боец'}`);
+            load();
+        } catch (e: any) { setError(e.message); }
+    };
+
     const clearMessages = () => { setMessage(''); setError(''); };
 
     if (!user) return null;
@@ -188,6 +196,7 @@ export default function GuildPage() {
                                     && m.userId !== user.id
                                     && m.rank !== 'leader'
                                     && !(guild.myRank === 'officer' && m.rank === 'officer');
+                                const canManage = guild.myRank === 'leader' && m.userId !== user.id && m.rank !== 'leader';
                                 return (
                                 <div key={m.userId} className="flex items-center gap-2 text-xs py-1 border-b border-[var(--color-border-light)]">
                                     <span className="w-6 text-center">
@@ -197,10 +206,18 @@ export default function GuildPage() {
                                         onClick={() => navigate(`/profile/${m.userId}`)}>
                                         {m.username}
                                     </span>
+                                    <span className="text-[var(--color-text-muted)] text-[0.6rem] ml-1">
+                                        {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
+                                    </span>
                                     <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level}</span>
+                                    {canManage && (
+                                        <Button variant="secondary" size="xs"
+                                            onClick={() => handleRole(m.userId, m.username, m.rank === 'officer' ? 'member' : 'officer')}>
+                                            {m.rank === 'officer' ? 'Разжаловать' : 'Офицер'}
+                                        </Button>
+                                    )}
                                     {canKick && (
-                                        <button onClick={() => handleKick(m.userId, m.username)}
-                                            className="text-red-500 hover:text-red-400 text-xs ml-1">✕</button>
+                                        <Button variant="danger" size="xs" onClick={() => handleKick(m.userId, m.username)}>Исключить</Button>
                                     )}
                                 </div>
                                 );
