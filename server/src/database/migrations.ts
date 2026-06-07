@@ -410,4 +410,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (userId) REFERENCES users(id)
   )`); } catch {}
+
+  // --- Системный пользователь для автосообщений (турниры, чат) ---
+  db.exec(\"INSERT OR IGNORE INTO users (id, username, currentHp) VALUES (0, 'system', 100)\");
 }
