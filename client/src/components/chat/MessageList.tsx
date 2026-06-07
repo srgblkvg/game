@@ -78,14 +78,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
     return (
         <div
             ref={containerRef}
-            style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '0.6rem 0.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '2px',
-            }}
+            className="flex-1 overflow-y-auto px-[0.5rem] py-[0.6rem] flex flex-col gap-[2px]"
         >
             {groups.map((group, gi) => {
                 const firstMsg = group[0];
@@ -96,81 +89,52 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                 return (
                     <div
                         key={gi}
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: isOwn ? 'flex-end' : 'flex-start',
-                            marginBottom: '6px',
-                        }}
+                        className={`flex flex-col mb-1.5 ${isOwn ? 'items-end' : 'items-start'}`}
                     >
                         {/* Nickname row */}
                         <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                marginBottom: '2px',
-                                paddingLeft: isOwn ? '0' : '12px',
-                                paddingRight: isOwn ? '12px' : '0',
-                            }}
+                            className={`flex items-center gap-1 mb-0.5 ${isOwn ? 'pr-3' : 'pl-3'}`}
                         >
                             <span
-                                style={{
-                                    fontSize: '0.72rem',
-                                    color: isGuild ? '#2ecc71' : isPrivate ? '#c084fc' : '#aaa',
-                                    fontWeight: 600,
-                                    cursor: isOwn ? 'default' : 'pointer',
-                                    userSelect: 'none',
-                                }}
+                                className={`text-[0.72rem] font-semibold select-none ${
+                                    isGuild ? 'text-[#2ecc71]' : isPrivate ? 'text-[#c084fc]' : 'text-[#aaa]'
+                                } ${isOwn ? 'cursor-default' : 'cursor-pointer'}`}
                                 onClick={isOwn ? undefined : (e) => onNickClick(e, firstMsg.senderName, false)}
                             >
                                 {truncate(firstMsg.senderName)}
                             </span>
                             {firstMsg.senderGuild && (
-                                <span onClick={() => firstMsg.senderGuildId ? navigate(`/guild/${firstMsg.senderGuildId}`) : navigate('/guild/rating')} style={{
-                                    fontSize: '0.6rem', color: '#2ecc71', cursor: 'pointer',
-                                    padding: '0 4px', borderRadius: '3px',
-                                }}>[{firstMsg.senderGuild.length > 8 ? firstMsg.senderGuild.slice(0, 8) + '…' : firstMsg.senderGuild}]</span>
+                                <span
+                                    onClick={() =>
+                                        firstMsg.senderGuildId
+                                            ? navigate(`/guild/${firstMsg.senderGuildId}`)
+                                            : navigate('/guild/rating')
+                                    }
+                                    className="text-[0.6rem] text-[#2ecc71] cursor-pointer px-1 rounded-[3px]"
+                                >
+                                    [{firstMsg.senderGuild.length > 8 ? firstMsg.senderGuild.slice(0, 8) + '\u2026' : firstMsg.senderGuild}]
+                                </span>
                             )}
-                            <span style={{ fontSize: '0.62rem', color: '#555' }}>
+                            <span className="text-[0.62rem] text-[#555]">
                                 {formatTime(firstMsg.createdAt)}
                             </span>
                         </div>
 
                         {/* Bubble(s) */}
                         <div
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: isOwn ? 'flex-end' : 'flex-start',
-                                gap: '2px',
-                                maxWidth: '85%',
-                            }}
+                            className={`flex flex-col gap-[2px] max-w-[85%] ${isOwn ? 'items-end' : 'items-start'}`}
                         >
                             {group.map((msg) =>
                                 msg.item && msg.item.type !== 'guild_invite' ? (
                                     /* Item link bubble */
                                     <div
                                         key={msg.id}
-                                        style={{
-                                            padding: '6px 10px',
-                                            borderRadius: isOwn ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                                            background: isOwn
-                                                ? 'linear-gradient(135deg, #3b5998, #4a6fa5)'
-                                                : isPrivate
-                                                  ? '#2d1f3d'
-                                                  : '#2a2a3e',
-                                            color: getRarityColor(msg.itemRarity ?? 0),
-                                            fontWeight: 'bold',
-                                            cursor: 'pointer',
-                                            fontSize: '0.82rem',
-                                            wordBreak: 'break-word',
-                                            overflowWrap: 'break-word',
-                                            boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                                            border: isOwn
-                                                ? '1px solid rgba(255,255,255,0.08)'
-                                                : '1px solid rgba(255,255,255,0.04)',
-                                        }}
+                                        style={{ color: getRarityColor(msg.itemRarity ?? 0) }}
+                                        className={`px-[10px] py-[6px] font-bold cursor-pointer text-[0.82rem] break-words shadow-[0_1px_2px_rgba(0,0,0,0.3)] ${
+                                            isOwn
+                                                ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] border border-[rgba(255,255,255,0.08)]'
+                                                : `rounded-[12px_12px_12px_4px] ${isPrivate ? 'bg-[#2d1f3d]' : 'bg-[#2a2a3e]'} border border-[rgba(255,255,255,0.04)]`
+                                        }`}
                                         onMouseEnter={(e) =>
                                             setTooltipData({ item: msg.item, x: e.clientX, y: e.clientY })
                                         }
@@ -189,26 +153,17 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                     /* Text bubble */
                                     <div
                                         key={msg.id}
-                                        style={{
-                                            padding: '7px 12px',
-                                            borderRadius: isOwn ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                                            background: isOwn
-                                                ? 'linear-gradient(135deg, #3b5998, #4a6fa5)'
-                                                : isGuild
-                                                  ? '#1a3a1a'
-                                                  : isPrivate
-                                                  ? '#2d1f3d'
-                                                  : '#2a2a3e',
-                                            color: isGuild ? '#2ecc71' : isPrivate ? '#c084fc' : '#eaeaea',
-                                            fontSize: '0.85rem',
-                                            lineHeight: '1.4',
-                                            wordBreak: 'break-word',
-                                            overflowWrap: 'break-word',
-                                            boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
-                                            border: isOwn
-                                                ? '1px solid rgba(255,255,255,0.08)'
-                                                : '1px solid rgba(255,255,255,0.04)',
-                                        }}
+                                        className={`px-3 py-[7px] break-words shadow-[0_1px_3px_rgba(0,0,0,0.35)] text-[0.85rem] leading-[1.4] ${
+                                            isOwn
+                                                ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] text-[#eaeaea] border border-[rgba(255,255,255,0.08)]'
+                                                : `rounded-[12px_12px_12px_4px] border border-[rgba(255,255,255,0.04)] ${
+                                                    isGuild
+                                                        ? 'bg-[#1a3a1a] text-[#2ecc71]'
+                                                        : isPrivate
+                                                            ? 'bg-[#2d1f3d] text-[#c084fc]'
+                                                            : 'bg-[#2a2a3e] text-[#eaeaea]'
+                                                }`
+                                        }`}
                                     >
                                         {renderContent ? renderContent(msg) : msg.content}
                                     </div>

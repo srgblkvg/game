@@ -305,12 +305,11 @@ export default function ChatPanel() {
                             const name = part.slice(1);
                             const isSelfMention = name.toLowerCase() === currentUsername.toLowerCase();
                             return (
-                                <span key={i} style={{
-                                    color: '#f1c40f', cursor: isSelfMention ? 'default' : 'pointer',
-                                    textDecoration: isSelfMention ? 'none' : 'underline',
-                                    opacity: isSelfMention ? 0.7 : 1,
-                                }}
-                                onClick={isSelfMention ? undefined : (e) => handleNickClick(e, name, false)}>
+                                <span
+                                    key={i}
+                                    className={`text-[#f1c40f] ${isSelfMention ? 'cursor-default opacity-70' : 'cursor-pointer underline'}`}
+                                    onClick={isSelfMention ? undefined : (e) => handleNickClick(e, name, false)}
+                                >
                                     {part}
                                 </span>
                             );
@@ -319,15 +318,19 @@ export default function ChatPanel() {
                     })}
                 </div>
                 {isGuildInvite && msg.item && (
-                    <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
-                        <button onClick={acceptInvite} style={{
-                            padding: '2px 10px', fontSize: '0.75rem', background: '#27ae60',
-                            color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer',
-                        }}>Принять</button>
-                        <button onClick={declineInvite} style={{
-                            padding: '2px 10px', fontSize: '0.75rem', background: '#e74c3c',
-                            color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer',
-                        }}>Отклонить</button>
+                    <div className="mt-1.5 flex gap-1.5">
+                        <button
+                            onClick={acceptInvite}
+                            className="px-2.5 py-0.5 text-xs bg-[#27ae60] text-white border-none rounded cursor-pointer"
+                        >
+                            Принять
+                        </button>
+                        <button
+                            onClick={declineInvite}
+                            className="px-2.5 py-0.5 text-xs bg-[#e74c3c] text-white border-none rounded cursor-pointer"
+                        >
+                            Отклонить
+                        </button>
                     </div>
                 )}
             </div>
@@ -352,31 +355,27 @@ export default function ChatPanel() {
         [openPrivateTabs]);
 
     return (
-        <div ref={panelRef} className="chat-panel" style={{
-            position: 'fixed', bottom: 0, left: 0, width: '100%',
-            height: isPanelOpen ? 'min(300px, 50vh)' : '40px', transition: 'height 0.3s',
-            background: 'rgba(30, 30, 48, 0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: '2px solid #555',
-            display: visible ? 'flex' : 'none',
-            flexDirection: 'column', zIndex: 1000,
-        }}>
-            <div onClick={() => setIsPanelOpen(!isPanelOpen)} style={{
-                cursor: 'pointer', padding: '0.5rem', background: 'rgba(42, 42, 62, 0.9)',
-                borderBottom: '1px solid #444', display: 'flex',
-                justifyContent: 'space-between', alignItems: 'center',
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div
+            ref={panelRef}
+            className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] transition-[height] duration-300 bg-[rgba(30,30,48,0.85)] backdrop-blur-[12px] border-t-2 border-[#555] ${visible ? 'flex' : 'hidden'} ${isPanelOpen ? 'h-[min(300px,50vh)]' : 'h-10'}`}
+        >
+            <div
+                onClick={() => setIsPanelOpen(!isPanelOpen)}
+                className="cursor-pointer p-2 bg-[rgba(42,42,62,0.9)] border-b border-[#444] flex justify-between items-center"
+            >
+                <div className="flex items-center gap-1.5">
                     <Icon icon="game-icons:chat-bubble" width="18" height="18" className="inline" />
                     Чат ({onlineUsers.length})
                     {!isPanelOpen && (
                         <>
                             {unreadGeneral > 0 && (
-                                <span className="chat-blink" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fff', display: 'inline-block' }} />
+                                <span className="chat-blink w-2.5 h-2.5 rounded-full bg-white inline-block" />
                             )}
                             {unreadGuild > 0 && (
-                                <span className="chat-blink" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2ecc71', display: 'inline-block' }} />
+                                <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[#2ecc71] inline-block" />
                             )}
                             {Array.from(unreadPrivate.entries()).filter(([,c]) => c > 0).length > 0 && (
-                                <span className="chat-blink" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#c084fc', display: 'inline-block' }} />
+                                <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[#c084fc] inline-block" />
                             )}
                         </>
                     )}
@@ -385,8 +384,8 @@ export default function ChatPanel() {
             </div>
 
             {isPanelOpen && (
-                <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div className="flex-1 flex min-h-0">
+                    <div className="flex-1 flex flex-col min-w-0">
                         <ChatTabs
                             privateChatWith={privateChatWith}
                             openPrivateTabs={openPrivateTabsArray}
@@ -405,9 +404,9 @@ export default function ChatPanel() {
                             }}
                         />
 
-                        <div style={{ padding: '0.3rem 0.5rem', background: '#2a2a3e', flexShrink: 0 }}>
+                        <div className="py-[0.3rem] px-2 bg-[#2a2a3e] shrink-0">
                             {guildChatActive && guildName
-                                ? <span style={{ color: '#2ecc71' }}>🏚️ Гильдия «{guildName}»</span>
+                                ? <span className="text-[#2ecc71]">🏚️ Гильдия «{guildName}»</span>
                                 : privateChatWith !== null
                                 ? <span>Личные сообщения с {openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}</span>
                                 : <span>Общий чат</span>}

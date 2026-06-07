@@ -118,18 +118,18 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
     };
 
     return (
-        <div style={{ padding: '0.5rem', background: '#2a2a3e' }}>
+        <div className="p-2 bg-[#2a2a3e]">
             {isBanned && (
-                <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.3rem', textAlign: 'center' }}>
+                <div className="text-[#e74c3c] text-[0.8rem] mb-1 text-center">
                     Вы заблокированы в чате до {new Date(bannedUntil! * 1000).toLocaleString('ru-RU', { timeZone: 'UTC' })}
                 </div>
             )}
             {chatError && !isBanned && (
-                <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.3rem', textAlign: 'center' }}>
+                <div className="text-[#e74c3c] text-[0.8rem] mb-1 text-center">
                     {chatError}
                 </div>
             )}
-            <div style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
+            <div className="flex gap-2 relative">
                 <input
                     ref={inputRef}
                     type="text"
@@ -138,21 +138,9 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
                     onKeyDown={handleKeyDown}
                     disabled={isDisabled}
                     placeholder={isDisabled ? disabledPlaceholder : (isGuild ? 'Гильдия...' : isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w ник текст для ЛС)')}
-                    style={{
-                        flex: 1,
-                        padding: '0.3rem',
-                        background: isDisabled ? '#222' : '#333',
-                        border: '1px solid #555',
-                        borderRadius: '4px',
-                        color: isDisabled ? '#888' : '#fff',
-                        cursor: isDisabled ? 'not-allowed' : 'text',
-                    }}
+                    className={`flex-1 p-1 border border-[#555] rounded ${isDisabled ? 'bg-[#222] text-[#888] cursor-not-allowed' : 'bg-[#333] text-white cursor-text'}`}
                 />
-                <button onClick={handleSendClick} disabled={isDisabled} style={{
-                    background: isDisabled ? '#555' : '#e63946',
-                    border: 'none', color: isDisabled ? '#888' : '#fff',
-                    padding: '0.3rem 0.8rem', borderRadius: '4px', cursor: isDisabled ? 'not-allowed' : 'pointer',
-                }}>➤</button>
+                <button onClick={handleSendClick} disabled={isDisabled} className={`border-none rounded py-1 px-3 ${isDisabled ? 'bg-[#555] text-[#888] cursor-not-allowed' : 'bg-[#e63946] text-white cursor-pointer'}`}>➤</button>
                 {autocomplete && (
                     <Autocomplete
                         items={autocomplete.items}

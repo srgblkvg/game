@@ -76,18 +76,17 @@ export default function RatingBlock() {
                             <li key={p.id} className="flex py-1 border-b border-[var(--color-border-light)] text-sm items-center">
                                 <span
                                     onClick={(e) => { e.stopPropagation(); navigate(`/profile/${p.id}`); }}
-                                    className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors truncate"
-                                    style={{ width: `${4 / 11 * 100}%` }}
+                                    className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors truncate w-[36.364%]"
                                 >
                                     {i + 1}. {p.username}
                                 </span>
-                                <span style={{ width: `${4 / 11 * 100}%` }}>
+                                <span className="w-[36.364%]">
                                     <GuildTag guildName={p.guildName} guildId={p.guildId} />
                                 </span>
-                                <span className="text-xs text-center truncate" style={{ width: `${2 / 11 * 100}%`, color: p.rank?.color }}>
+                                <span className="text-xs text-center truncate w-[18.182%]" style={{ color: p.rank?.color }}>
                                     {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}
                                 </span>
-                                <span className="font-bold text-xs text-right" style={{ width: `${1 / 11 * 100}%`, color: p.rank?.color }}>{p.elo}</span>
+                                <span className="font-bold text-xs text-right w-[9.091%]" style={{ color: p.rank?.color }}>{p.elo}</span>
                             </li>
                         ))}
                     </ul>

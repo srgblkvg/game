@@ -19,30 +19,18 @@ export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatAc
   const isPublic = privateChatWith === null && !guildChatActive;
 
   return (
-    <div style={{ display: 'flex', background: '#1e1e30', borderBottom: '1px solid #444', overflowX: 'auto' }}>
-      <div onClick={onSelectPublic} style={{
-        padding: '0.3rem 0.6rem', cursor: 'pointer',
-        background: isPublic ? '#333' : 'transparent',
-        borderRight: '1px solid #444', whiteSpace: 'nowrap',
-        fontWeight: isPublic ? 'bold' : 'normal', color: '#eee',
-        display: 'flex', alignItems: 'center', gap: '4px',
-      }}>
+    <div className="flex bg-[#1e1e30] border-b border-[#444] overflow-x-auto">
+      <div onClick={onSelectPublic} className={`px-[0.6rem] py-[0.3rem] cursor-pointer border-r border-[#444] whitespace-nowrap text-[#eee] flex items-center gap-1 ${isPublic ? 'bg-[#333] font-bold' : 'bg-transparent font-normal'}`}>
         Общий
         {unreadGeneral > 0 && !isPublic && (
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff', display: 'inline-block' }} />
+          <span className="w-2 h-2 rounded-full bg-white inline-block" />
         )}
       </div>
       {guildName && (
-        <div onClick={onSelectGuild} style={{
-          padding: '0.3rem 0.6rem', cursor: 'pointer',
-          background: guildChatActive ? '#1a3a1a' : 'transparent',
-          borderRight: '1px solid #444', whiteSpace: 'nowrap',
-          fontWeight: guildChatActive ? 'bold' : 'normal',
-          color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '4px',
-        }}>
+        <div onClick={onSelectGuild} className={`px-[0.6rem] py-[0.3rem] cursor-pointer border-r border-[#444] whitespace-nowrap text-[#2ecc71] flex items-center gap-1 ${guildChatActive ? 'bg-[#1a3a1a] font-bold' : 'bg-transparent font-normal'}`}>
           🏚️ {truncate(guildName)}
           {unreadGuild > 0 && !guildChatActive && (
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2ecc71', display: 'inline-block' }} />
+            <span className="w-2 h-2 rounded-full bg-[#2ecc71] inline-block" />
           )}
         </div>
       )}
@@ -50,20 +38,14 @@ export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatAc
         const isActive = privateChatWith === id;
         const pmUnread = unreadPrivate.get(id) || 0;
         return (
-          <div key={id} onClick={() => onSelectPrivate(id)} style={{
-            display: 'flex', alignItems: 'center', padding: '0.3rem 0.6rem',
-            cursor: 'pointer', background: isActive ? '#333' : 'transparent',
-            borderRight: '1px solid #444', whiteSpace: 'nowrap',
-            fontWeight: isActive ? 'bold' : 'normal', color: '#c084fc',
-            gap: '4px',
-          }}>
+          <div key={id} onClick={() => onSelectPrivate(id)} className={`flex items-center px-[0.6rem] py-[0.3rem] cursor-pointer border-r border-[#444] whitespace-nowrap text-[#c084fc] gap-1 ${isActive ? 'bg-[#333] font-bold' : 'bg-transparent font-normal'}`}>
             <span>{truncate(name)}</span>
             {pmUnread > 0 && !isActive && (
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#c084fc', display: 'inline-block' }} />
+              <span className="w-2 h-2 rounded-full bg-[#c084fc] inline-block" />
             )}
             <span
               onClick={(e) => onCloseTab(e, id)}
-              style={{ marginLeft: '6px', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: 1 }}
+              className="ml-1.5 font-bold text-[1.1rem] leading-none"
             >
               ×
             </span>
