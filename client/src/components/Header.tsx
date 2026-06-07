@@ -67,7 +67,7 @@ export default function Header() {
     };
 
     return (
-        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)] flex-wrap">
+        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)] flex-wrap sticky top-0 z-10">
             {user.role === 'player' && character && (
                 <span className="text-white text-sm font-bold">
                     Серебро: {character.money.toLocaleString()}
