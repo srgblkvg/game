@@ -1,6 +1,7 @@
 const silverColor = '#bdc3c7';
 
 export function MoneyDisplay({ money }: { money: number }) {
+    if (money == null) return null;
     return (
         <span style={{ fontWeight: 'bold' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', marginLeft: '2px', fontSize: '0.85rem', color: '#fff' }}>

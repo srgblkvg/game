@@ -19,7 +19,7 @@ router.get('/arena/opponent', (req: any, res) => {
 
     const now = Math.floor(Date.now() / 1000);
     let opponents = db.prepare(
-        'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)'
+        'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)'
     ).all(userId, now) as any[];
 
     // Фильтр по сложности
