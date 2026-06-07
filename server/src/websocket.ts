@@ -118,7 +118,7 @@ export function setupWebSocket(server: any) {
 
     // ---------- Игрок ----------
     const userId = decoded.userId;
-    const user = db.prepare('SELECT id, username, level, chatBannedUntil, isGuest FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT u.id, u.username, u.level, u.chatBannedUntil, u.isGuest, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
     if (!user) {
       ws.close(1008, 'User not found');
       return;
@@ -197,6 +197,7 @@ export function setupWebSocket(server: any) {
           id: info.lastInsertRowid,
           senderId: userId,
           senderName: user.username,
+          senderGuild: user.guildName || null,
           targetId: null,
           content: `[${itemName}]`,
           createdAt: new Date().toISOString(),
@@ -261,6 +262,7 @@ export function setupWebSocket(server: any) {
           id: info.lastInsertRowid,
           senderId: userId,
           senderName: user.username,
+          senderGuild: user.guildName || null,
           targetId: null,
           content: sanitizedContent,
           createdAt: new Date().toISOString(),
@@ -281,6 +283,7 @@ export function setupWebSocket(server: any) {
           id: info.lastInsertRowid,
           senderId: userId,
           senderName: user.username,
+          senderGuild: user.guildName || null,
           targetId,
           content: sanitizedContent,
           createdAt: new Date().toISOString(),

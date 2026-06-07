@@ -124,6 +124,12 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                             >
                                 {truncate(firstMsg.senderName)}
                             </span>
+                            {firstMsg.senderGuild && (
+                                <span style={{
+                                    fontSize: '0.6rem', color: '#2ecc71', cursor: 'pointer',
+                                    background: '#1a3a1a', padding: '0 4px', borderRadius: '3px',
+                                }}>[{firstMsg.senderGuild}]</span>
+                            )}
                             <span style={{ fontSize: '0.62rem', color: '#555' }}>
                                 {formatTime(firstMsg.createdAt)}
                             </span>

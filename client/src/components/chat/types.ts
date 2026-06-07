@@ -8,6 +8,7 @@ export interface ChatMessage {
     id: number;
     senderId: number;
     senderName: string;
+    senderGuild?: string | null;
     targetId: number | null;
     content: string;
     createdAt: string;
