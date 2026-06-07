@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../database';
 import { currentStats } from '../game/stats';
 import { getDrinkBonuses } from '../game/drinks';
+import { applyHpRegen } from '../game/hpRegen';
 import { getUserById, getBaseStats, enrichEquipment } from '../db/helpers';
 
 const router = Router();
@@ -108,27 +109,14 @@ router.get('/character/me', (req: any, res) => {
 
     const now = Math.floor(Date.now() / 1000);
     const maxHp = stats.hp;
-    let currentHp = user.currentHp;
-    const HP_REGEN_SECONDS = 10;
-
-    // Ускорение от комнаты
-    let regenRate = 1;
-    if (user.roomType && user.roomUntil > now) {
-        if (user.roomType === 'closet') regenRate = 3;
-        else if (user.roomType === 'bed') regenRate = 10;
-        else if (user.roomType === 'chamber') regenRate = 50;
-    }
-
-    const elapsed = now - (user.lastHpUpdate || now);
-    if (elapsed > 0 && currentHp < maxHp) {
-        const regenAmount = Math.floor(elapsed / HP_REGEN_SECONDS) * regenRate;
-        if (regenAmount > 0) currentHp = Math.min(maxHp, currentHp + regenAmount);
-    }
-    if (currentHp > maxHp) currentHp = maxHp;
-    if (currentHp !== user.currentHp) {
-        db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?')
-            .run(currentHp, now - (elapsed % HP_REGEN_SECONDS), userId);
-    }
+    const currentHp = applyHpRegen({
+        id: user.id,
+        currentHp: user.currentHp,
+        maxHp,
+        lastHpUpdate: user.lastHpUpdate || 0,
+        roomType: user.roomType,
+        roomUntil: user.roomUntil,
+    });
 
     const openPrivateTabs = JSON.parse(user.openPrivateTabs || '[]');
 
