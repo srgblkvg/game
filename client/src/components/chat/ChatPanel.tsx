@@ -267,6 +267,8 @@ export default function ChatPanel() {
                 });
                 const fresh = await fetchCharacter();
                 setCharacter(fresh);
+                // Убираем кнопки после принятия
+                msg.item = null;
             } catch(e) { console.error(e); }
         };
         const declineInvite = async () => {
@@ -275,6 +277,7 @@ export default function ChatPanel() {
                     method: 'POST', headers: getHeaders(),
                     body: JSON.stringify({ guildId: msg.item.guildId, accept: false }),
                 });
+                msg.item = null;
             } catch(e) { console.error(e); }
         };
         return (
