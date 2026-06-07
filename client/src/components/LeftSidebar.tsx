@@ -27,7 +27,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
   }
 
   return (
-    <div className="w-full sm:w-auto flex flex-col items-center sm:items-start">
+    <div className="w-full sm:w-[200px] sm:flex-shrink-0 flex flex-col items-center sm:items-start">
       <CharacterCard
         char={{
           username: character.username,
