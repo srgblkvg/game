@@ -258,7 +258,6 @@ export default function ChatPanel() {
 
     const renderMessageContent = useCallback((msg: ChatMessage) => {
         const parts = msg.content.split(/(@\w+)/g);
-        const isGuildInvite = msg.item?.type === 'guild_invite';
         const acceptInvite = async () => {
             try {
                 await fetch(`${BASE_URL}/guild/accept-invite`, {
