@@ -73,18 +73,21 @@ export default function RatingBlock() {
                     </h3>
                     <ul className="list-none p-0 m-0">
                         {players.map((p, i) => (
-                            <li key={p.id} className="flex py-1 border-b border-[var(--color-border-light)] text-sm">
+                            <li key={p.id} className="flex py-1 border-b border-[var(--color-border-light)] text-sm items-center">
                                 <span
                                     onClick={(e) => { e.stopPropagation(); navigate(`/profile/${p.id}`); }}
-                                    className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors flex-1 truncate"
+                                    className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors truncate"
+                                    style={{ width: `${4 / 11 * 100}%` }}
                                 >
                                     {i + 1}. {p.username}
                                 </span>
-                                <GuildTag guildName={p.guildName} guildId={p.guildId} />
-                                <span className="text-xs text-center w-2/6" style={{ color: p.rank?.color }}>
+                                <span style={{ width: `${4 / 11 * 100}%` }}>
+                                    <GuildTag guildName={p.guildName} guildId={p.guildId} />
+                                </span>
+                                <span className="text-xs text-center truncate" style={{ width: `${2 / 11 * 100}%`, color: p.rank?.color }}>
                                     {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}
                                 </span>
-                                <span className="font-bold text-xs w-1/6 text-right" style={{ color: p.rank?.color }}>{p.elo}</span>
+                                <span className="font-bold text-xs text-right" style={{ width: `${1 / 11 * 100}%`, color: p.rank?.color }}>{p.elo}</span>
                             </li>
                         ))}
                     </ul>
