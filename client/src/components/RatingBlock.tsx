@@ -14,7 +14,7 @@ export default function RatingBlock() {
     }, []);
 
     useEffect(() => {
-        fetch(`${BASE_URL}/orders`, { headers: getHeaders() })
+        fetch(`${BASE_URL}/guild/list`, { headers: getHeaders() })
             .then(res => res.json())
             .then(data => setGuilds((data || []).slice(0, 5)))
             .catch(console.error);
@@ -29,7 +29,7 @@ export default function RatingBlock() {
             <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[210px] overflow-hidden">
                 <h3
                     className="text-[var(--color-accent-success)] text-base font-bold mb-2 cursor-pointer flex items-center gap-1"
-                    onClick={() => navigate('/orders')}
+                    onClick={() => navigate('/guild')}
                 >
                     {castle} Рейтинг гильдий
                 </h3>
