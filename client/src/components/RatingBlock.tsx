@@ -46,7 +46,6 @@ export default function RatingBlock() {
                                 >
                                     {i + 1}. {g.name}
                                 </span>
-                                <GuildTag guildName={g.name} guildId={g.id} />
                                 <span className="text-xs text-[var(--color-text-muted)]">
                                     Ур.{g.level} · {g.memberCount} уч.
                                 </span>

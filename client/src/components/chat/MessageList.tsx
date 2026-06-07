@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ItemTooltip from '../ItemTooltip';
 import { getRarityColor } from '../../utils/itemUtils';
 import type { ChatMessage } from './types';
@@ -44,6 +45,7 @@ function groupMessages(messages: ChatMessage[]): ChatMessage[][] {
 }
 
 export default function MessageList({ messages, currentUserId, onNickClick, renderContent }: MessageListProps) {
+    const navigate = useNavigate();
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const prevMessageCount = useRef(messages.length);
@@ -125,9 +127,9 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                 {truncate(firstMsg.senderName)}
                             </span>
                             {firstMsg.senderGuild && (
-                                <span style={{
+                                <span onClick={() => navigate(`/guild/rating`)} style={{
                                     fontSize: '0.6rem', color: '#2ecc71', cursor: 'pointer',
-                                    background: '#1a3a1a', padding: '0 4px', borderRadius: '3px',
+                                    padding: '0 4px', borderRadius: '3px',
                                 }}>[{firstMsg.senderGuild}]</span>
                             )}
                             <span style={{ fontSize: '0.62rem', color: '#555' }}>
