@@ -17,15 +17,14 @@ export default function RightSidebar() {
             {/* Кнопка-триггер */}
             <button
                 onClick={() => setOpen(!open)}
-                className="fixed right-2 top-20 z-30 w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] shadow-lg"
+                className="fixed right-3 top-16 z-30 w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] shadow-lg"
                 title={open ? 'Скрыть панель' : 'Показать панель'}
             >
                 <Icon icon={open ? 'mdi:close' : 'mdi:menu'} width="16" height="16" />
             </button>
 
-            {/* Панель */}
             {open && (
-                <div className="fixed right-0 top-0 z-20 h-full w-[240px] bg-[var(--color-bg-primary)] border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-24 pb-16 shadow-2xl">
+                <div className="fixed right-0 top-0 z-20 h-full w-[240px] bg-[var(--color-bg-primary)]/90 backdrop-blur-md border-l border-[var(--color-border-default)] overflow-y-auto p-3 pt-24 pb-16 shadow-2xl">
                     <div className="flex flex-col gap-4">
                         <QuestsBlock onHighlight={handleHighlight} />
                         <TournamentBanner />
