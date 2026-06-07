@@ -24,7 +24,7 @@ export default function RightSidebar() {
 
             {/* Оверлей */}
             <div
-                className={`fixed inset-0 z-15 bg-black/20 transition-opacity duration-400 pointer-events-none ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`}
+                className={`fixed inset-0 z-25 bg-black/20 transition-opacity duration-400 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={() => setOpen(false)}
             />
 
