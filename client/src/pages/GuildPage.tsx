@@ -307,7 +307,8 @@ export default function GuildPage() {
                         <Card key={g.id} className="mb-2">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <h4 className="font-bold text-sm">🏚️ {g.name}</h4>
+                                    <h4 className="font-bold text-sm cursor-pointer hover:text-[var(--color-accent-info)] transition-colors"
+                                        onClick={() => navigate(`/guild/${g.id}`)}>🏚️ {g.name}</h4>
                                     <p className="text-xs text-[var(--color-text-muted)]">
                                         Ур.{g.level} • {g.memberCount} уч. • {g.leaderName}
                                     </p>
