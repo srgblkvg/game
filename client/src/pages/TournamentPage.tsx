@@ -272,7 +272,7 @@ export default function TournamentPage() {
                             <input className={inputClass} value={cf.name} onChange={e => setCf({ ...cf, name: e.target.value })} placeholder="Мой турнир" />
                         </div>
                         <div>
-                            <label className="text-[var(--color-text-muted)]">Призовой фонд (🥇)</label>
+                            <label className="text-[var(--color-text-muted)]">Призовой фонд</label>
                             <input className={inputClass} type="number" value={cf.prizePool} onChange={e => setCf({ ...cf, prizePool: Number(e.target.value) })} min={0} />
                         </div>
                         <div>
