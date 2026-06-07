@@ -8,8 +8,14 @@ export default function RightSidebar() {
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
-        document.body.style.overflow = open ? 'hidden' : '';
-        return () => { document.body.style.overflow = ''; };
+        if (open) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.paddingRight = '240px';
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+        return () => { document.body.style.overflow = ''; document.body.style.paddingRight = ''; };
     }, [open]);
 
     const handleHighlight = (type: string | null) => {
@@ -29,7 +35,7 @@ export default function RightSidebar() {
 
             {/* Оверлей */}
             <div
-                className={`fixed inset-0 z-25 bg-black/20 transition-opacity duration-400 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 right-[240px] z-15 bg-black/20 transition-opacity duration-400 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={() => setOpen(false)}
             />
 
