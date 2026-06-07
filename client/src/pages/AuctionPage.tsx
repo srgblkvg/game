@@ -165,6 +165,24 @@ export default function AuctionPage() {
 
     // Long press for mobile tooltips
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+
+    // Hide tooltip on click outside
+    useEffect(() => {
+        if (!tooltip) return;
+        const handler = (e: MouseEvent | TouchEvent) => {
+            if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+                setTooltip(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        document.addEventListener('touchstart', handler);
+        return () => {
+            document.removeEventListener('mousedown', handler);
+            document.removeEventListener('touchstart', handler);
+        };
+    }, [tooltip]);
+
     const handleTouchStart = useCallback((e: React.TouchEvent, item: any) => {
         longPressTimer.current = setTimeout(() => {
             const touch = e.changedTouches[0] || e.touches[0];
@@ -173,7 +191,6 @@ export default function AuctionPage() {
     }, []);
     const handleTouchEnd = useCallback(() => {
         if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-        setTooltip(null);
     }, []);
 
     return (
@@ -218,6 +235,7 @@ export default function AuctionPage() {
                                             onMouseLeave={hideTooltip}
                                             onTouchStart={e => handleTouchStart(e, item)}
                                             onTouchEnd={handleTouchEnd}
+                                            onContextMenu={e => e.preventDefault()}
                                             className={`relative flex flex-col items-center p-2 rounded-lg border cursor-pointer transition-all ${
                                                 isSelected
                                                     ? 'border-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10 ring-1 ring-[var(--color-accent-info)]'
@@ -257,6 +275,7 @@ export default function AuctionPage() {
                             onMouseLeave={hideTooltip}
                             onTouchStart={e => handleTouchStart(e, selectedItem)}
                             onTouchEnd={handleTouchEnd}
+                            onContextMenu={e => e.preventDefault()}
                         >
                             <img
                                 src={getItemImage(selectedItem) || '/items/default.webp'}
@@ -363,6 +382,7 @@ export default function AuctionPage() {
                                 onMouseLeave={hideTooltip}
                                 onTouchStart={e => handleTouchStart(e, item)}
                                 onTouchEnd={handleTouchEnd}
+                                onContextMenu={e => e.preventDefault()}
                                 className="cursor-default flex gap-3"
                             >
                                 <img
