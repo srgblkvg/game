@@ -3,13 +3,16 @@ interface ChatTabsProps {
   openPrivateTabs: { id: number; name: string }[];
   guildChatActive: boolean;
   guildName?: string;
+  unreadGeneral: number;
+  unreadPrivate: Map<number, number>;
+  unreadGuild: number;
   onSelectPublic: () => void;
   onSelectPrivate: (id: number) => void;
   onSelectGuild: () => void;
   onCloseTab: (e: React.MouseEvent, id: number) => void;
 }
 
-export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatActive, guildName, onSelectPublic, onSelectPrivate, onSelectGuild, onCloseTab }: ChatTabsProps) {
+export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatActive, guildName, unreadGeneral, unreadPrivate, unreadGuild, onSelectPublic, onSelectPrivate, onSelectGuild, onCloseTab }: ChatTabsProps) {
   const maxNickLength = 12;
   const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '...' : nick;
 
@@ -22,7 +25,13 @@ export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatAc
         background: isPublic ? '#333' : 'transparent',
         borderRight: '1px solid #444', whiteSpace: 'nowrap',
         fontWeight: isPublic ? 'bold' : 'normal', color: '#eee',
-      }}>Общий</div>
+        display: 'flex', alignItems: 'center', gap: '4px',
+      }}>
+        Общий
+        {unreadGeneral > 0 && !isPublic && (
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff', display: 'inline-block' }} />
+        )}
+      </div>
       {guildName && (
         <div onClick={onSelectGuild} style={{
           padding: '0.3rem 0.6rem', cursor: 'pointer',
@@ -32,18 +41,26 @@ export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatAc
           color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '4px',
         }}>
           🏚️ {truncate(guildName)}
+          {unreadGuild > 0 && !guildChatActive && (
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2ecc71', display: 'inline-block' }} />
+          )}
         </div>
       )}
       {openPrivateTabs.map(({ id, name }) => {
         const isActive = privateChatWith === id;
+        const pmUnread = unreadPrivate.get(id) || 0;
         return (
           <div key={id} onClick={() => onSelectPrivate(id)} style={{
             display: 'flex', alignItems: 'center', padding: '0.3rem 0.6rem',
             cursor: 'pointer', background: isActive ? '#333' : 'transparent',
             borderRight: '1px solid #444', whiteSpace: 'nowrap',
             fontWeight: isActive ? 'bold' : 'normal', color: '#c084fc',
+            gap: '4px',
           }}>
             <span>{truncate(name)}</span>
+            {pmUnread > 0 && !isActive && (
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#c084fc', display: 'inline-block' }} />
+            )}
             <span
               onClick={(e) => onCloseTab(e, id)}
               style={{ marginLeft: '6px', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: 1 }}

@@ -38,6 +38,29 @@ export default function ChatPanel() {
     const [guildId, setGuildId] = useState<number | null>(null);
     const [guildName, setGuildName] = useState<string | null>(null);
 
+    // Непрочитанные сообщения
+    const [unreadGeneral, setUnreadGeneral] = useState(0);
+    const [unreadPrivate, setUnreadPrivate] = useState<Map<number, number>>(new Map());
+    const [unreadGuild, setUnreadGuild] = useState(0);
+
+    // Отслеживаем новые сообщения
+    useEffect(() => {
+        if (messages.length === 0) return;
+        const last = messages[messages.length - 1];
+        if (last.senderId === userId) return; // свои не считаем
+        if (last.targetId === null && !guildChatActive && privateChatWith === null && !isPanelOpen) {
+            setUnreadGeneral(c => c + 1);
+        } else if (last.targetId !== null && last.targetId < 0 && !guildChatActive) {
+            setUnreadGuild(c => c + 1);
+        } else if (last.targetId !== null && last.targetId > 0 && privateChatWith !== last.targetId && last.targetId !== userId) {
+            setUnreadPrivate(prev => {
+                const next = new Map(prev);
+                next.set(last.targetId!, (next.get(last.targetId!) || 0) + 1);
+                return next;
+            });
+        }
+    }, [messages.length]);
+
     const panelRef = useRef<HTMLDivElement>(null);
 
     // Автоматическое скрытие чата при клике/тапе/скролле вне панели
@@ -337,7 +360,23 @@ export default function ChatPanel() {
                 borderBottom: '1px solid #444', display: 'flex',
                 justifyContent: 'space-between', alignItems: 'center',
             }}>
-                <span><Icon icon="game-icons:chat-bubble" width="18" height="18" className="inline mr-1" />Чат ({onlineUsers.length}) {guildChatActive && guildName && `– гильдия ${guildName}`} {privateChatWith && !guildChatActive && `– личные с ${openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}`}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Icon icon="game-icons:chat-bubble" width="18" height="18" className="inline" />
+                    Чат ({onlineUsers.length})
+                    {!isPanelOpen && (
+                        <>
+                            {unreadGeneral > 0 && (
+                                <span className="chat-blink" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fff', display: 'inline-block' }} />
+                            )}
+                            {unreadGuild > 0 && (
+                                <span className="chat-blink" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2ecc71', display: 'inline-block' }} />
+                            )}
+                            {Array.from(unreadPrivate.entries()).filter(([,c]) => c > 0).length > 0 && (
+                                <span className="chat-blink" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#c084fc', display: 'inline-block' }} />
+                            )}
+                        </>
+                    )}
+                </div>
                 <span>{isPanelOpen ? '▼' : '▲'}</span>
             </div>
 
@@ -349,9 +388,12 @@ export default function ChatPanel() {
                             openPrivateTabs={openPrivateTabsArray}
                             guildChatActive={guildChatActive}
                             guildName={guildName || undefined}
-                            onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); }}
-                            onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); }}
-                            onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); }}
+                            unreadGeneral={unreadGeneral}
+                            unreadPrivate={unreadPrivate}
+                            unreadGuild={unreadGuild}
+                            onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); setUnreadGeneral(0); }}
+                            onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); setUnreadPrivate(prev => { const n = new Map(prev); n.delete(id); return n; }); }}
+                            onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); setUnreadGuild(0); }}
                             onCloseTab={(e, id) => {
                                 e.stopPropagation();
                                 removeTab(id);
