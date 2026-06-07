@@ -31,6 +31,16 @@ const BASE_REWARDS: Record<QuestType, { xp: number; money: number }> = {
     job: { xp: 3, money: 20 }, craft: { xp: 3, money: 25 }, auction: { xp: 3, money: 50 },
 };
 
+function getToday(): string {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function getMidnightTS(): number {
+    const d = new Date();
+    d.setUTCHours(24, 0, 0, 0);
+    return Math.floor(d.getTime() / 1000);
+}
+
 function getSnapshot(userId: number): Record<string, number> {
     const u = db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
@@ -50,7 +60,7 @@ function getProgress(userId: number, snapshot: any, questType: QuestType): numbe
     ).get(userId) as any;
     const s = typeof snapshot === 'string' ? JSON.parse(snapshot) : snapshot;
     switch (questType) {
-        case 'hunt': return (u?.pveTotalBattles || 0) - (s.pve || 0);
+        case 'hunt': return (u?.pveWins || 0) - (s.pve || 0);
         case 'arena': return (u?.wins || 0) - (s.pvpWins || 0);
         case 'craft': return (u?.craftCount || 0) - (s.craft || 0);
         case 'auction': return (u?.auctionTrades || 0) - (s.auction || 0);
@@ -62,25 +72,42 @@ function getProgress(userId: number, snapshot: any, questType: QuestType): numbe
 // Получить/сгенерировать квесты
 router.get('/tavern/quests', (req: any, res) => {
     const userId = req.userId;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getToday();
 
     let quests = db.prepare(
         'SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id'
     ).all(userId, today) as any[];
 
     if (quests.length === 0) {
+        const now = getSnapshot(userId);
+
+        // Переносим активные квесты со вчера на сегодня
+        const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        const activeYesterday = db.prepare(
+            "SELECT * FROM daily_quests WHERE userId = ? AND date = ? AND status = 'active'"
+        ).all(userId, yesterday) as any[];
+
+        for (const aq of activeYesterday) {
+            db.prepare(
+                'UPDATE daily_quests SET date = ?, snapshot = ? WHERE id = ?'
+            ).run(today, JSON.stringify(now), aq.id);
+        }
+
+        // Генерируем недостающие available квесты
+        const existingTypes = new Set(activeYesterday.map((q: any) => q.questType));
         const stmt = db.prepare(
             'INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         for (const qt of QUEST_TYPES) {
+            if (existingTypes.has(qt)) continue;
             const diffs = Object.keys(DIFFICULTIES);
             const diff = diffs[Math.floor(Math.random() * diffs.length)] as DiffKey;
             const d = DIFFICULTIES[diff];
             const req = d.req[qt];
             const rw = BASE_REWARDS[qt];
-            const snapshot = JSON.stringify(getSnapshot(userId));
-            stmt.run(userId, qt, diff, req, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', snapshot, today);
+            stmt.run(userId, qt, diff, req, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(now), today);
         }
+
         quests = db.prepare(
             'SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id'
         ).all(userId, today) as any[];
@@ -119,6 +146,7 @@ router.get('/tavern/quests', (req: any, res) => {
         canTake,
         dailyLimit: 5,
         maxActive: 3,
+        resetAt: getMidnightTS(),
     });
 });
 
@@ -132,14 +160,15 @@ router.post('/tavern/quests/take', (req: any, res) => {
     if (!quest) return res.status(404).json({ error: 'Квест не найден' });
     if (quest.status !== 'available') return res.status(400).json({ error: 'Квест недоступен' });
 
+    const today = getToday();
     const activeCount = (db.prepare(
         "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND status = 'active' AND date = ?"
-    ).get(userId, new Date().toISOString().slice(0, 10)) as any).cnt;
+    ).get(userId, today) as any).cnt;
     if (activeCount >= 3) return res.status(400).json({ error: 'Можно взять максимум 3 квеста одновременно' });
 
     const completedToday = (db.prepare(
         "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND date = ? AND status = 'claimed'"
-    ).get(userId, new Date().toISOString().slice(0, 10)) as any).cnt;
+    ).get(userId, today) as any).cnt;
     if (completedToday >= 5) return res.status(400).json({ error: 'Дневной лимит выполнен' });
 
     const snapshot = JSON.stringify(getSnapshot(userId));
@@ -169,17 +198,16 @@ router.post('/tavern/quests/claim', (req: any, res) => {
     db.prepare('UPDATE daily_quests SET status = ?, progress = ? WHERE id = ?')
         .run('claimed', quest.requirement, questId);
 
-    // Сохраняем в историю
     db.prepare('INSERT INTO quest_history (userId, questType, difficulty, typeName, rewardXp, rewardMoney) VALUES (?, ?, ?, ?, ?, ?)')
         .run(userId, quest.questType, quest.difficulty, QUEST_INFO[quest.questType as QuestType]?.name || quest.questType, quest.rewardXp, quest.rewardMoney);
 
-    // Генерируем новый квест того же типа со случайной сложностью
-    const diffs: DiffKey[] = ['easy', 'medium', 'hard'];
-    const newDiff = diffs[Math.floor(Math.random() * diffs.length)]!;
+    // Выдаём новый квест того же типа со случайной сложностью
+    const today = getToday();
+    const diffs = Object.keys(DIFFICULTIES);
+    const newDiff = diffs[Math.floor(Math.random() * diffs.length)] as DiffKey;
     const d = DIFFICULTIES[newDiff];
     const newReq = d.req[quest.questType as QuestType];
     const rw = BASE_REWARDS[quest.questType as QuestType];
-    const today = new Date().toISOString().slice(0, 10);
     db.prepare('INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
         .run(userId, quest.questType, newDiff, newReq, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(getSnapshot(userId)), today);
 
