@@ -15,23 +15,30 @@ interface ActionsProps {
 
 interface ActionCard {
     icon: string; title: string; subtitle: string; cost: number;
-    path: string | null; buttonText: string; bgClass: string; variant: 'danger';
+    path: string | null; buttonText: string; bgPath: string; variant: 'danger';
 }
 
 const outsideCards: ActionCard[] = [
-    { icon: 'game-icons:death-skull', title: 'Охота', subtitle: 'Бестиарий (PvE)', cost: 0, path: '/bestiary', buttonText: 'Перейти', bgClass: 'url(/action_arena.webp)', variant: 'danger' },
-    { icon: 'game-icons:swap-bag', title: 'Работы', subtitle: 'Экспедиции', cost: 0, path: '/jobs', buttonText: 'Выбрать', bgClass: 'url(/action_adventures.webp)', variant: 'danger' },
-    { icon: 'game-icons:crossed-swords', title: 'Арена', subtitle: 'PvP бой', cost: 10, path: null, buttonText: 'В бой', bgClass: 'url(/action_arena.webp)', variant: 'danger' },
+    { icon: 'game-icons:death-skull', title: 'Охота', subtitle: 'Бестиарий (PvE)', cost: 0, path: '/bestiary', buttonText: 'Перейти', bgPath: '/action_arena.webp', variant: 'danger' },
+    { icon: 'game-icons:swap-bag', title: 'Работы', subtitle: 'Экспедиции', cost: 0, path: '/jobs', buttonText: 'Выбрать', bgPath: '/action_adventures.webp', variant: 'danger' },
+    { icon: 'game-icons:crossed-swords', title: 'Арена', subtitle: 'PvP бой', cost: 10, path: null, buttonText: 'В бой', bgPath: '/action_arena.webp', variant: 'danger' },
 ];
 
 const castleCards: ActionCard[] = [
-    { icon: 'game-icons:buy-card', title: 'Магазин', subtitle: 'Снаряжение', cost: 0, path: '/shop', buttonText: 'Перейти', bgClass: 'url(/action_shop.webp)', variant: 'danger' },
-    { icon: 'game-icons:bank', title: 'Банк', subtitle: 'Хранилище', cost: 0, path: '/bank', buttonText: 'Перейти', bgClass: 'url(/action_craft.webp)', variant: 'danger' },
-    { icon: 'game-icons:anvil', title: 'Крафт', subtitle: 'Улучшения', cost: 0, path: '/craft', buttonText: 'Перейти', bgClass: 'url(/action_craft.webp)', variant: 'danger' },
-    { icon: 'game-icons:auction', title: 'Аукцион', subtitle: 'Торги', cost: 0, path: '/auction', buttonText: 'Перейти', bgClass: 'url(/action_shop.webp)', variant: 'danger' },
-    { icon: 'game-icons:drink-me', title: 'Трактир', subtitle: 'Лечение и квесты', cost: 0, path: '/tavern', buttonText: 'Перейти', bgClass: 'url(/action_adventures.webp)', variant: 'danger' },
-    { icon: 'game-icons:castle', title: 'Гильдия', subtitle: 'Объединения', cost: 0, path: '/guild', buttonText: 'Перейти', bgClass: 'url(/action_shop.webp)', variant: 'danger' },
+    { icon: 'game-icons:buy-card', title: 'Магазин', subtitle: 'Снаряжение', cost: 0, path: '/shop', buttonText: 'Перейти', bgPath: '/action_shop.webp', variant: 'danger' },
+    { icon: 'game-icons:bank', title: 'Банк', subtitle: 'Хранилище', cost: 0, path: '/bank', buttonText: 'Перейти', bgPath: '/action_craft.webp', variant: 'danger' },
+    { icon: 'game-icons:anvil', title: 'Крафт', subtitle: 'Улучшения', cost: 0, path: '/craft', buttonText: 'Перейти', bgPath: '/action_craft.webp', variant: 'danger' },
+    { icon: 'game-icons:auction', title: 'Аукцион', subtitle: 'Торги', cost: 0, path: '/auction', buttonText: 'Перейти', bgPath: '/action_shop.webp', variant: 'danger' },
+    { icon: 'game-icons:drink-me', title: 'Трактир', subtitle: 'Лечение и квесты', cost: 0, path: '/tavern', buttonText: 'Перейти', bgPath: '/action_adventures.webp', variant: 'danger' },
+    { icon: 'game-icons:castle', title: 'Гильдия', subtitle: 'Объединения', cost: 0, path: '/guild', buttonText: 'Перейти', bgPath: '/action_shop.webp', variant: 'danger' },
 ];
+
+const bgClassLookup: Record<string, string> = {
+    '/action_arena.webp': 'bg-[url(/action_arena.webp)]',
+    '/action_adventures.webp': 'bg-[url(/action_adventures.webp)]',
+    '/action_shop.webp': 'bg-[url(/action_shop.webp)]',
+    '/action_craft.webp': 'bg-[url(/action_craft.webp)]',
+};
 
 const diffLabels: Record<string, string> = { easy: 'Лёгкий', equal: 'Равный', hard: 'Сложный' };
 const diffIcons: Record<string, string> = { easy: 'game-icons:broken-shield', equal: 'game-icons:crossed-swords', hard: 'game-icons:death-skull' };
@@ -100,7 +107,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                 return (
                     <div key={i} className="relative group" title={isGuestBlocked ? guestTooltip : undefined} id={`action-card-${card.title}`}>
                         <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
-                        <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: card.bgClass }} />
+                        <div className={`absolute inset-0 bg-cover bg-center opacity-20 ${bgClassLookup[card.bgPath]}`} />
                         <div className="relative w-full flex flex-col flex-1">
                             <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                                 <Icon icon={card.icon} width="14" height="14" />{card.title}
@@ -162,10 +169,10 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
     return (
         <>
         <div className="perspective-600">
-            <div className={`relative w-full transition-transform duration-400 ${flipped ? 'rotate-y-180' : ''}`} style={{ transformStyle: 'preserve-3d' }} id={`action-card-${card.title}`}>
+            <div className={`relative w-full transition-transform duration-400 [transform-style:preserve-3d] ${flipped ? 'rotate-y-180' : ''}`} id={`action-card-${card.title}`}>
                 {/* Front */}
-                <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`} style={{ backfaceVisibility: 'hidden' }}>
-                <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: card.bgClass }} />
+                <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all backface-hidden ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
+                <div className={`absolute inset-0 bg-cover bg-center opacity-20 ${bgClassLookup[card.bgPath]}`} />
                 <div className="relative w-full flex flex-col flex-1">
                     <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                         <Icon icon={card.icon} width="14" height="14" />{card.title}
@@ -181,7 +188,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                 </div>
 
                 {/* Back */}
-                <div className={`absolute inset-0 bg-[var(--color-bg-secondary)] rounded-xl p-3 border border-[var(--color-border-default)] flex flex-col items-center justify-center gap-2 ${!flipped ? 'pointer-events-none' : ''}`} style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                <div className={`absolute inset-0 bg-[var(--color-bg-secondary)] rounded-xl p-3 border border-[var(--color-border-default)] flex flex-col items-center justify-center gap-2 backface-hidden [transform:rotateY(180deg)] ${!flipped ? 'pointer-events-none' : ''}`}>
                     <p className="text-[0.65rem] text-[var(--color-text-muted)]">Сложность соперника:</p>
                     <select
                         value={arenaDifficulty}
@@ -196,7 +203,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                         <Button variant="danger" size="xs" fullWidth onClick={handleSearch}>
                             Поиск
                         </Button>
-                        <Button variant="secondary" size="xs" onClick={() => { setFlipped(false); }} style={{ minWidth: '24px' }}>
+                        <Button variant="secondary" size="xs" onClick={() => { setFlipped(false); }} className="min-w-[24px]">
                             ←
                         </Button>
                     </div>

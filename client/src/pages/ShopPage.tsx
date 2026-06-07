@@ -165,12 +165,8 @@ export default function ShopPage() {
                                             return (
                                                 <div
                                                     key={item.id}
-                                                    className="rounded-xl p-2 sm:p-3 flex flex-col"
-                                                    style={{
-                                                        border: `2px solid ${color}`,
-                                                        background: '#2a2a3e',
-                                                        boxShadow: '0 4px 12px rgba(0,0,0,0.8)',
-                                                    }}
+                                                    className="rounded-xl p-2 sm:p-3 flex flex-col border-2 border-solid bg-[#2a2a3e] shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                                                    style={{ borderColor: color }}
                                                 >
                                                     <div className="flex-1">
                                                         <ItemStats item={item} imageSize={40} />

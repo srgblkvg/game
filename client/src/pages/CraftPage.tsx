@@ -351,7 +351,7 @@ export default function CraftPage() {
                 {/* Крафт-блок */}
                 <div className="flex-shrink-0 w-full max-w-[256px] mx-auto bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-light)] rounded-xl p-4 flex flex-col gap-2">
                     {/* Сетка слотов */}
-                    <div className="grid grid-cols-3 gap-1 justify-center" style={{ gridTemplateColumns: 'repeat(3, 44px)', gridTemplateRows: 'repeat(3, 44px)' }}>
+                    <div className="grid grid-cols-[repeat(3,44px)] grid-rows-[repeat(3,44px)] gap-1 justify-center">
                         {craftSlots.map((item, index) => (
                             <div key={index}>
                                 {item && isCraftItem(item) ? (
@@ -386,7 +386,7 @@ export default function CraftPage() {
                     {/* Инфо о рецепте */}
                     {activeRecipe && (
                         <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
-                            <div>Вы можете создать: <strong style={{ color: activeRecipe.result?.rarity_color || '#fff' }}>{activeRecipe.result?.name}</strong></div>
+                            <div>Вы можете создать: <strong className="text-white">{activeRecipe.result?.name}</strong></div>
                             <div>Шанс создания: {activeRecipe.success_chance ?? 100}%</div>
                             <div>Стоимость: {formatMoney(activeRecipe.money_cost)}</div>
                         </div>
@@ -408,7 +408,7 @@ export default function CraftPage() {
                             {crafting ? 'Создание...' : 'Создать'}
                         </Button>
                         <Button variant={upgradeInfo ? 'primary' : 'secondary'} size="sm" fullWidth disabled={!upgradeInfo || crafting} onClick={handleUpgrade}
-                            style={{ background: upgradeInfo ? '#f39c12' : undefined }}>
+                            className={upgradeInfo ? 'bg-[#f39c12]' : ''}>
                             {crafting ? 'Улучшение...' : 'Улучшить'}
                         </Button>
                         <Button variant="danger" size="sm" fullWidth disabled={!hasItemsInSlots} onClick={async () => {
