@@ -355,12 +355,12 @@ export default function ChatPanel() {
         <div ref={panelRef} className="chat-panel" style={{
             position: 'fixed', bottom: 0, left: 0, width: '100%',
             height: isPanelOpen ? 'min(300px, 50vh)' : '40px', transition: 'height 0.3s',
-            background: '#1e1e30', borderTop: '2px solid #555',
+            background: 'rgba(30, 30, 48, 0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: '2px solid #555',
             display: visible ? 'flex' : 'none',
             flexDirection: 'column', zIndex: 1000,
         }}>
             <div onClick={() => setIsPanelOpen(!isPanelOpen)} style={{
-                cursor: 'pointer', padding: '0.5rem', background: '#2a2a3e',
+                cursor: 'pointer', padding: '0.5rem', background: 'rgba(42, 42, 62, 0.9)',
                 borderBottom: '1px solid #444', display: 'flex',
                 justifyContent: 'space-between', alignItems: 'center',
             }}>
