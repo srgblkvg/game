@@ -204,7 +204,7 @@ export function setupWebSocket(server: any) {
           content: `[${itemName}]`,
           createdAt: new Date().toISOString(),
           item: item,
-          itemRarity: item.rarity,
+          itemRarity: item.rarity_id ?? item.rarity,
         };
         broadcast('message', { message: msg });
         return;
