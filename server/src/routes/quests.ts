@@ -33,10 +33,10 @@ const BASE_REWARDS: Record<QuestType, { xp: number; money: number }> = {
 
 function getSnapshot(userId: number): Record<string, number> {
     const u = db.prepare(
-        'SELECT pveTotalBattles, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
+        'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
     return {
-        pve: u?.pveTotalBattles || 0,
+        pve: u?.pveWins || 0,
         pvpWins: u?.wins || 0,
         craft: u?.craftCount || 0,
         auction: u?.auctionTrades || 0,
@@ -46,7 +46,7 @@ function getSnapshot(userId: number): Record<string, number> {
 
 function getProgress(userId: number, snapshot: any, questType: QuestType): number {
     const u = db.prepare(
-        'SELECT pveTotalBattles, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
+        'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
     const s = typeof snapshot === 'string' ? JSON.parse(snapshot) : snapshot;
     switch (questType) {
