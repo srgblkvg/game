@@ -48,7 +48,7 @@ export default function ChatPanel() {
         if (messages.length === 0) return;
         const last = messages[messages.length - 1];
         if (last.senderId === userId) return; // свои не считаем
-        if (last.targetId === null && !isPanelOpen) {
+        if (last.targetId === null && (privateChatWith !== null || guildChatActive || !isPanelOpen)) {
             setUnreadGeneral(c => c + 1);
         } else if (last.targetId !== null && last.targetId < 0 && !guildChatActive) {
             setUnreadGuild(c => c + 1);
