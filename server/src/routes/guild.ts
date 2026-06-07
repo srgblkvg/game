@@ -76,6 +76,36 @@ router.get('/guild/list', (req: any, res) => {
     res.json(guilds);
 });
 
+// Заявки на вступление (для лидера/офицеров)
+router.get('/guild/requests', (req: any, res) => {
+    const userId = req.userId;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
+
+    const requests = db.prepare(`
+        SELECT gi.*, u.username
+        FROM guild_invites gi
+        JOIN users u ON gi.userId = u.id
+        WHERE gi.guildId = ? AND gi.status = 'pending' AND gi.invitedBy = 0
+        ORDER BY gi.createdAt DESC
+    `).all(member.guildId);
+    res.json(requests);
+});
+
+// Мои приглашения
+router.get('/guild/invites', (req: any, res) => {
+    const userId = req.userId;
+    const invites = db.prepare(`
+        SELECT gi.*, g.name as guildName, u.username as inviterName
+        FROM guild_invites gi
+        JOIN guilds g ON gi.guildId = g.id
+        LEFT JOIN users u ON gi.invitedBy = u.id
+        WHERE gi.userId = ? AND gi.status = 'pending'
+        ORDER BY gi.createdAt DESC
+    `).all(userId);
+    res.json(invites);
+});
+
 // Публичная информация о гильдии
 router.get('/guild/:id', (req: any, res) => {
     const guildId = parseInt(req.params.id);
@@ -321,36 +351,6 @@ router.post('/guild/cancel-invites', (req: any, res) => {
         "UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND status = 'pending'"
     ).run(member.guildId);
     res.json({ success: true, cancelled: info.changes });
-});
-
-// Заявки на вступление (для лидера/офицеров)
-router.get('/guild/requests', (req: any, res) => {
-    const userId = req.userId;
-    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
-    if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
-
-    const requests = db.prepare(`
-        SELECT gi.*, u.username
-        FROM guild_invites gi
-        JOIN users u ON gi.userId = u.id
-        WHERE gi.guildId = ? AND gi.status = 'pending' AND gi.invitedBy = 0
-        ORDER BY gi.createdAt DESC
-    `).all(member.guildId);
-    res.json(requests);
-});
-
-// Мои приглашения
-router.get('/guild/invites', (req: any, res) => {
-    const userId = req.userId;
-    const invites = db.prepare(`
-        SELECT gi.*, g.name as guildName, u.username as inviterName
-        FROM guild_invites gi
-        JOIN guilds g ON gi.guildId = g.id
-        LEFT JOIN users u ON gi.invitedBy = u.id
-        WHERE gi.userId = ? AND gi.status = 'pending'
-        ORDER BY gi.createdAt DESC
-    `).all(userId);
-    res.json(invites);
 });
 
 // --- Гильд-чат ---
