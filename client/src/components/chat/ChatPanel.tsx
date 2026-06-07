@@ -179,6 +179,8 @@ export default function ChatPanel() {
             fetch(`${BASE_URL}/guild/chat`, {
                 method: 'POST', headers: getHeaders(),
                 body: JSON.stringify({ content }),
+            }).then(r => r.json()).then(d => {
+                if (d.message) addMessages([d.message]);
             }).catch(console.error);
             return;
         }
@@ -188,6 +190,8 @@ export default function ChatPanel() {
                 fetch(`${BASE_URL}/guild/chat`, {
                     method: 'POST', headers: getHeaders(),
                     body: JSON.stringify({ content: cleanedText }),
+                }).then(r => r.json()).then(d => {
+                    if (d.message) addMessages([d.message]);
                 }).catch(console.error);
             } else {
                 sendPublic(cleanedText);
