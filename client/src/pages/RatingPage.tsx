@@ -111,7 +111,7 @@ export default function RatingPage() {
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
                                 <th className="text-left p-1.5 text-sm" style={{ width: '36%' }}>Ник</th>
-                                <th className="text-left p-1.5 text-sm" style={{ width: '36%' }}>Гильдия</th>
+                                <th className="text-left p-1.5 text-sm hidden sm:table-cell" style={{ width: '36%' }}>Гильдия</th>
                                 <th className="text-center p-1.5 text-sm" style={{ width: '19%' }}>Титул</th>
                                 <th className="text-right p-1.5 text-sm" style={{ width: '9%' }}>Очки</th>
                             </tr>
@@ -126,12 +126,14 @@ export default function RatingPage() {
                                         >
                                             {i + 1 + (page - 1) * LIMIT}. {p.username}
                                         </span>
+                                        <span className="sm:hidden"><GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                                     </td>
-                                    <td className="p-1.5">
+                                    <td className="p-1.5 hidden sm:table-cell">
                                         <GuildTag guildName={p.guildName} guildId={p.guildId} />
                                     </td>
                                     <td className="p-1.5 text-center" style={{ color: p.rank?.color }}>
-                                        {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}
+                                        <span className="sm:hidden">{p.rank?.icon}</span>
+                                        <span className="hidden sm:inline">{p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}</span>
                                     </td>
                                     <td className="text-right p-1.5 font-bold" style={{ color: p.rank?.color }}>
                                         {p.elo}
