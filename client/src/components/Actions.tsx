@@ -99,8 +99,8 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                 return (
                     <div key={i} className="relative group" title={isGuestBlocked ? guestTooltip : undefined} id={`action-card-${card.title}`}>
                         <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
-                        <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ backgroundImage: card.bgClass }} />
-                        <div className="relative z-10 w-full flex flex-col flex-1">
+                        <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: card.bgClass }} />
+                        <div className="relative w-full flex flex-col flex-1">
                             <h3 className="text-[0.8rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                                 <Icon icon={card.icon} width="14" height="14" />{card.title}
                             </h3>
@@ -164,8 +164,8 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
             <div className={`relative w-full transition-transform duration-400 ${flipped ? 'rotate-y-180' : ''}`} style={{ transformStyle: 'preserve-3d' }} id={`action-card-${card.title}`}>
                 {/* Front */}
                 <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border flex flex-col items-center text-center overflow-hidden transition-all ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`} style={{ backfaceVisibility: 'hidden' }}>
-                    <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ backgroundImage: card.bgClass }} />
-                    <div className="relative z-10 w-full flex flex-col flex-1">
+                    <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: card.bgClass }} />
+                    <div className="relative w-full flex flex-col flex-1">
                         <h3 className="text-[0.8rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                             <Icon icon={card.icon} width="14" height="14" />{card.title}
                         </h3>
