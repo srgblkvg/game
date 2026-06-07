@@ -50,20 +50,18 @@ export default function ChatPanel() {
         if (last.senderId === userId) return; // свои не считаем
         if (last.targetId === null && (privateChatWith !== null || guildChatActive || !isPanelOpen)) {
             setUnreadGeneral(c => c + 1);
-        } else if (last.targetId !== null && last.targetId < 0 && !guildChatActive) {
+        } else if (last.targetId !== null && last.targetId < 0 && (!guildChatActive || !isPanelOpen)) {
             setUnreadGuild(c => c + 1);
         } else if (last.targetId !== null && last.targetId > 0 && last.targetId === userId) {
-            // ЛС от другого игрока мне — создать вкладку если нет
             const fromId = last.senderId;
             const fromName = last.senderName;
-            if (privateChatWith !== fromId) {
+            if (!isPanelOpen || privateChatWith !== fromId) {
                 setUnreadPrivate(prev => {
                     const next = new Map(prev);
                     next.set(fromId, (next.get(fromId) || 0) + 1);
                     return next;
                 });
             }
-            // Авто-создание вкладки
             addTab(fromId, fromName);
         }
     }, [messages.length]);
