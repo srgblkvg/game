@@ -63,10 +63,10 @@ export default function GuildPage() {
     const handleJoin = async (guildId: number, joinType: string) => {
         try {
             if (joinType === 'open') {
-                await api(`/guild/join/${guildId}`);
+                await api(`/guild/join/${guildId}`, {});
                 setMessage('Вы вступили в гильдию!');
             } else if (joinType === 'request') {
-                await api(`/guild/request/${guildId}`);
+                await api(`/guild/request/${guildId}`, {});
                 setMessage('Заявка отправлена!');
             }
             const fresh = await fetchCharacter(); setCharacter(fresh);
@@ -85,7 +85,7 @@ export default function GuildPage() {
     const handleLeave = async () => {
         if (!confirm('Покинуть гильдию?')) return;
         try {
-            await api('/guild/leave');
+            await api('/guild/leave', {});
             setGuild(null); setMembers([]);
             const fresh = await fetchCharacter(); setCharacter(fresh);
             load();
