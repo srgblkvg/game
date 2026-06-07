@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import TournamentBanner from './TournamentBanner';
 import RatingBlock from './RatingBlock';
@@ -6,6 +6,11 @@ import QuestsBlock from './QuestsBlock';
 
 export default function RightSidebar() {
     const [open, setOpen] = useState(false);
+
+    useEffect(() => {
+        document.body.style.overflow = open ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [open]);
 
     const handleHighlight = (type: string | null) => {
         if (type) { window.location.hash = `action-${type}`; }
