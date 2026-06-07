@@ -185,16 +185,52 @@ export default function AuctionPage() {
                         {userLotCount >= maxSlots && ' (максимум)'}
                     </p>
 
-                    <select value={sellItemId} onChange={e => handleSelectItem(e.target.value)} className={inputClass}>
-                        <option value="">— Выберите предмет —</option>
-                        {character?.inventory
-                            .map((item: any) => {
-                                const cnt = (item.type === 'craft_item' || item.type === 'material') ? (item.count || 1) : 1;
-                                const label = cnt > 1 ? `${item.name} x${cnt} (${item.rarity_display || '?'})` : `${item.name} (${item.rarity_display || '?'})`;
-                                return <option key={item.id} value={item.id}>{label}</option>;
-                            })
-                        }
-                    </select>
+                    {/* Item selection grid */}
+                    <div className="mb-3">
+                        <label className="text-xs text-[var(--color-text-muted)] block mb-2">Выберите предмет для продажи:</label>
+                        {(!character?.inventory || character.inventory.length === 0) ? (
+                            <p className="text-xs text-[var(--color-text-muted)]">Нет предметов для продажи</p>
+                        ) : (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                {character.inventory.map((item: any) => {
+                                    const isSelected = String(item.id) === sellItemId;
+                                    const cnt = (item.type === 'craft_item' || item.type === 'material') ? (item.count || 1) : 1;
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => handleSelectItem(String(item.id))}
+                                            onMouseEnter={e => showTooltip(e, item)}
+                                            onMouseMove={moveTooltip}
+                                            onMouseLeave={hideTooltip}
+                                            className={`relative flex flex-col items-center p-2 rounded-lg border cursor-pointer transition-all ${
+                                                isSelected
+                                                    ? 'border-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10 ring-1 ring-[var(--color-accent-info)]'
+                                                    : 'border-[var(--color-border-default)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-hover)]'
+                                            }`}
+                                        >
+                                            <img
+                                                src={item.imageUrl || '/items/default.webp'}
+                                                alt={item.name}
+                                                className="w-8 h-8 object-contain mb-1"
+                                                onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }}
+                                            />
+                                            <span className="text-[0.6rem] text-[var(--color-text-primary)] text-center leading-tight line-clamp-2">
+                                                {item.name}
+                                            </span>
+                                            {cnt > 1 && (
+                                                <span className="text-[0.55rem] text-[var(--color-accent-info)] absolute top-0.5 right-1">
+                                                    x{cnt}
+                                                </span>
+                                            )}
+                                            <span className="text-[0.55rem] text-[var(--color-text-muted)]">
+                                                {item.rarity_display || ''}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Selected item preview */}
                     {selectedItem && (
@@ -307,8 +343,15 @@ export default function AuctionPage() {
                                 onMouseEnter={e => showTooltip(e, item)}
                                 onMouseMove={moveTooltip}
                                 onMouseLeave={hideTooltip}
-                                className="cursor-default"
+                                className="cursor-default flex gap-3"
                             >
+                                <img
+                                    src={item.imageUrl || '/items/default.webp'}
+                                    alt={item.name}
+                                    className="w-10 h-10 object-contain rounded shrink-0"
+                                    onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }}
+                                />
+                                <div>
                                 <h3 className="font-bold text-sm">
                                     {item.name}
                                     {isStack && <span className="text-xs text-[var(--color-accent-info)] ml-1">x{stackCount}</span>}
@@ -332,6 +375,7 @@ export default function AuctionPage() {
                                         ≈ {formatMoney(pricePerItem)} / шт
                                     </p>
                                 )}
+                            </div>
                             </div>
                             <div className="text-xs text-[var(--color-text-muted)]">{hoursLeft}ч</div>
                         </div>
