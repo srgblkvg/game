@@ -37,7 +37,8 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
     }
     const isHome = items.length === 1;
     return (
-        <div className="px-3 py-1.5 flex items-center gap-1.5 text-xs overflow-x-auto whitespace-nowrap bg-[var(--color-bg-primary)] border-t border-[var(--color-border-light)]">
+        <div className="px-3 py-1.5 bg-[var(--color-bg-primary)] border-t border-[var(--color-border-light)]">
+            <div className="flex items-center justify-center gap-1.5 text-xs overflow-x-auto whitespace-nowrap max-w-max mx-auto">
             {items.map((item, i) => {
                 const isLast = i === items.length - 1;
                 return (
@@ -58,6 +59,7 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
                     </span>
                 );
             })}
+        </div>
         </div>
     );
 }
