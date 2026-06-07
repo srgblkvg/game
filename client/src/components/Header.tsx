@@ -183,14 +183,14 @@ export default function Header() {
                                 <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl z-50 py-1">
                                     <button
                                         onClick={handleAccountClick}
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)]"
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
                                     >
                                         <Icon icon="game-icons:person" width="16" height="16" />
                                         Аккаунт
                                     </button>
                                     <button
                                         onClick={handleHistoryClick}
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)]"
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
                                     >
                                         {hasNewBattles && <Icon icon="game-icons:bell" width="16" height="16" className="text-red-400" />}
                                         <Icon icon="game-icons:notebook" width="16" height="16" />
@@ -201,7 +201,7 @@ export default function Header() {
                                         href="https://vk.com/club239320810"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] no-underline"
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] no-underline cursor-pointer"
                                         onClick={() => setMenuOpen(false)}
                                     >
                                         <Icon icon="mdi:vk" width="16" height="16" className="text-[#0077FF]" />
