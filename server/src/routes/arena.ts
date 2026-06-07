@@ -14,12 +14,12 @@ router.get('/arena/opponent', (req: any, res) => {
     const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
     const difficulty = (req.query.difficulty as string) || 'equal'; // easy | equal | hard
 
-    const user: any = db.prepare('SELECT id, username, level, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, inventorySlots, lastAttackTime FROM users WHERE id = ?').get(userId);
+    const user: any = db.prepare('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.inventorySlots, u.lastAttackTime, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
     let opponents = db.prepare(
-        'SELECT id, username, level, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
+        'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)'
     ).all(userId, now) as any[];
 
     // Фильтр по сложности
