@@ -5,7 +5,6 @@ import { getBaseStats } from '../db/helpers';
 import { runBattle } from '../game/battle';
 import { calcElo } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
-import { applyHpRegen } from '../game/hpRegen';
 import { battleSchema } from '../validation';
 
 const router = Router();
@@ -18,7 +17,7 @@ router.post('/battle', (req: any, res) => {
     const { opponentId } = parsed.data;
 
     const now = Math.floor(Date.now() / 1000);
-    const attacker = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, lastAttackTime, premiumUntil, roomType, roomUntil, lastHpUpdate FROM users WHERE id = ?').get(userId) as any;
+    const attacker = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, lastAttackTime, premiumUntil FROM users WHERE id = ?').get(userId) as any;
     if (!attacker) return res.status(404).json({ error: 'Attacker not found' });
 
     const hasPremium = (attacker.premiumUntil || 0) > now;
@@ -31,10 +30,10 @@ router.post('/battle', (req: any, res) => {
 
     let defender: any;
     if (opponentId) {
-        defender = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil, roomType, roomUntil, lastHpUpdate FROM users WHERE id = ?').get(opponentId);
+        defender = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id = ?').get(opponentId);
         if (!defender || defender.id == userId) return res.status(400).json({ error: 'Invalid opponent' });
     } else {
-        const others = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil, roomType, roomUntil, lastHpUpdate FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
+        const others = db.prepare('SELECT id, username, level, exp, currentHp, elo, seasonWins, seasonLosses, equipment, baseS, baseA, baseD, baseM, money, inventorySlots, protectionUntil FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)').all(userId, now) as any[];
         if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены' });
         defender = others[Math.floor(Math.random() * others.length)];
     }
@@ -44,18 +43,6 @@ router.post('/battle', (req: any, res) => {
         return res.status(400).json({ error: `Игрок ${defender.username} защищён ещё ${Math.floor(remaining / 60)} мин` });
     }
 
-    // Применяем офлайн-реген HP перед боем
-    const attackerMaxHp = currentStats(getBaseStats(attacker), JSON.parse(attacker.equipment || '{}')).hp;
-    const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}')).hp;
-    const regenAttackerHp = applyHpRegen({
-        id: attacker.id, currentHp: attacker.currentHp, maxHp: attackerMaxHp,
-        lastHpUpdate: attacker.lastHpUpdate || 0, roomType: attacker.roomType, roomUntil: attacker.roomUntil,
-    });
-    const regenDefenderHp = applyHpRegen({
-        id: defender.id, currentHp: defender.currentHp, maxHp: defenderMaxHp,
-        lastHpUpdate: defender.lastHpUpdate || 0, roomType: defender.roomType, roomUntil: defender.roomUntil,
-    });
-
     const attackerData = {
         id: attacker.id,
         name: attacker.username,
@@ -63,7 +50,7 @@ router.post('/battle', (req: any, res) => {
         equipment: JSON.parse(attacker.equipment || '{}'),
         level: attacker.level,
         money: attacker.money,
-        currentHp: regenAttackerHp,
+        currentHp: attacker.currentHp ?? undefined,
         drinkBonuses: getDrinkBonuses(attacker),
     };
     const defenderData = {
@@ -73,7 +60,7 @@ router.post('/battle', (req: any, res) => {
         equipment: JSON.parse(defender.equipment || '{}'),
         level: defender.level,
         money: defender.money,
-        currentHp: regenDefenderHp,
+        currentHp: defender.currentHp ?? undefined,
         drinkBonuses: getDrinkBonuses(defender),
     };
 
