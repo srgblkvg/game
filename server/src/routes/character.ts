@@ -122,6 +122,7 @@ router.get('/character/me', (req: any, res) => {
 
     res.json({
         id: user.id, username: user.username, level: user.level,
+        guildName: user.guildName || null,
         exp: user.exp, money: user.money, totalBattles: user.totalBattles,
         wins: user.wins, inventory, equipment: enrichedEquipment,
         baseStats: { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 },
