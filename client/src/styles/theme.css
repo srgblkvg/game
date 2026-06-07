@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html {
+  font-size: 17px;
+}
+
 @theme {
   /* Основная палитра */
   --color-bg-primary: #1a1a2e;
