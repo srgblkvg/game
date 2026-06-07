@@ -52,12 +52,19 @@ export default function ChatPanel() {
             setUnreadGeneral(c => c + 1);
         } else if (last.targetId !== null && last.targetId < 0 && !guildChatActive) {
             setUnreadGuild(c => c + 1);
-        } else if (last.targetId !== null && last.targetId > 0 && privateChatWith !== last.targetId && last.targetId !== userId) {
-            setUnreadPrivate(prev => {
-                const next = new Map(prev);
-                next.set(last.targetId!, (next.get(last.targetId!) || 0) + 1);
-                return next;
-            });
+        } else if (last.targetId !== null && last.targetId > 0 && last.targetId === userId) {
+            // ЛС от другого игрока мне — создать вкладку если нет
+            const fromId = last.senderId;
+            const fromName = last.senderName;
+            if (privateChatWith !== fromId) {
+                setUnreadPrivate(prev => {
+                    const next = new Map(prev);
+                    next.set(fromId, (next.get(fromId) || 0) + 1);
+                    return next;
+                });
+            }
+            // Авто-создание вкладки
+            addTab(fromId, fromName);
         }
     }, [messages.length]);
 
@@ -334,8 +341,7 @@ export default function ChatPanel() {
             return msg.targetId === -guildId;
         }
         if (privateChatWith === null) {
-            return msg.targetId === null
-                || (msg.targetId !== null && msg.targetId > 0 && (msg.senderId === userId || msg.targetId === userId));
+            return msg.targetId === null;
         }
         return (msg.senderId === userId && msg.targetId === privateChatWith) ||
             (msg.senderId === privateChatWith && msg.targetId === userId);
