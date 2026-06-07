@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -71,6 +71,20 @@ export default function Header() {
     const location = useLocation();
     const [hasNewBattles, setHasNewBattles] = useState(false);
     const [protectionSec, setProtectionSec] = useState(0);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Закрытие меню по клику вне
+    useEffect(() => {
+        if (!menuOpen) return;
+        const handler = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [menuOpen]);
 
     useEffect(() => {
         if (!user || user.role === 'admin') return;
@@ -114,7 +128,13 @@ export default function Header() {
     const handleHistoryClick = () => {
         localStorage.setItem('lastHistorySeen', Date.now().toString());
         setHasNewBattles(false);
+        setMenuOpen(false);
         navigate('/history');
+    };
+
+    const handleAccountClick = () => {
+        setMenuOpen(false);
+        navigate('/account');
     };
 
     if (!user) return null;
@@ -126,7 +146,7 @@ export default function Header() {
     };
 
     return (
-        <div className="sticky top-0 z-10 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+        <div className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
             <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
                 {user.role === 'player' && character && (
                     <span className="text-white text-sm font-bold">
@@ -146,32 +166,50 @@ export default function Header() {
                         </span>
                     )
                 )}
-                <div className="flex gap-2 ml-auto">
+                <div className="flex gap-2 ml-auto items-center">
                     {user.role === 'player' && (
-                        <>
-                            <Button size="xs" onClick={() => navigate('/account')}>
-                                <span className="flex items-center gap-1">
-                                    <Icon icon="game-icons:person" width="18" height="18" />
-                                    Аккаунт
-                                </span>
-                            </Button>
-                            <Button
-                                size="xs"
-                                onClick={handleHistoryClick}
-                                className={hasNewBattles ? 'blink' : ''}
+                        <div ref={menuRef} className="relative">
+                            <button
+                                onClick={() => setMenuOpen(!menuOpen)}
+                                className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors relative"
+                                title="Настройки"
                             >
-                                <span className="flex items-center gap-1">
-                                    {hasNewBattles && <Icon icon="game-icons:bell" width="18" height="18" />}
-                                    <Icon icon="game-icons:notebook" width="18" height="18" />
-                                    Сводка
-                                </span>
-                            </Button>
-                            <a href="https://vk.com/club239320810" target="_blank" rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center px-2 py-1 rounded text-xs font-semibold bg-[#0077FF] text-white hover:bg-[#0066DD] transition-colors"
-                                title="Сообщество VK">
-                                <Icon icon="mdi:vk" width="20" height="20" />
-                            </a>
-                        </>
+                                <Icon icon="game-icons:gear" width="20" height="20" className="text-[var(--color-text-muted)]" />
+                                {hasNewBattles && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
+                                )}
+                            </button>
+                            {menuOpen && (
+                                <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl z-50 py-1">
+                                    <button
+                                        onClick={handleAccountClick}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)]"
+                                    >
+                                        <Icon icon="game-icons:person" width="16" height="16" />
+                                        Аккаунт
+                                    </button>
+                                    <button
+                                        onClick={handleHistoryClick}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)]"
+                                    >
+                                        {hasNewBattles && <Icon icon="game-icons:bell" width="16" height="16" className="text-red-400" />}
+                                        <Icon icon="game-icons:notebook" width="16" height="16" />
+                                        Сводка
+                                        {hasNewBattles && <span className="ml-auto text-red-400">●</span>}
+                                    </button>
+                                    <a
+                                        href="https://vk.com/club239320810"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] no-underline"
+                                        onClick={() => setMenuOpen(false)}
+                                    >
+                                        <Icon icon="mdi:vk" width="16" height="16" className="text-[#0077FF]" />
+                                        Сообщество VK
+                                    </a>
+                                </div>
+                            )}
+                        </div>
                     )}
                     {user.role === 'admin' && (
                         <Button variant="danger" size="sm" onClick={() => navigate('/adminpanel')}>
