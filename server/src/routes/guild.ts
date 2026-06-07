@@ -352,7 +352,7 @@ router.get('/guild/chat', (req: any, res) => {
         JOIN users u ON m.senderId = u.id
         WHERE m.targetId = ?
         ORDER BY m.createdAt DESC
-        LIMIT 100
+        LIMIT 10
     `).all(-guildId);
     res.json(messages.reverse());
 });
