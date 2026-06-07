@@ -268,22 +268,6 @@ export default function GuildPage() {
                             })}
                         </div>
                     </Card>
-
-                    {/* Список всех гильдий */}
-                    <h3 className="font-bold text-sm mt-4 mb-2">Все гильдии</h3>
-                    {guildList.map((g: any) => (
-                        <Card key={g.id} className="mb-2">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <h4 className="font-bold text-sm cursor-pointer hover:text-[var(--color-accent-info)] transition-colors"
-                                        onClick={() => navigate(`/guild/${g.id}`)}>🏚️ {g.name}</h4>
-                                    <p className="text-xs text-[var(--color-text-muted)]">
-                                        Ур.{g.level} • {g.memberCount} уч. • {g.leaderName}
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
                 </>
             ) : (
                 // --- Не в гильдии ---
