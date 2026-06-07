@@ -464,7 +464,11 @@ export default function AuctionPage() {
                 );
             })}
 
-            {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />}
+            {tooltip && (
+                <div ref={tooltipRef}>
+                    <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />
+                </div>
+            )}
         </div>
     );
 }
