@@ -139,7 +139,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                             }}
                         >
                             {group.map((msg) =>
-                                msg.item ? (
+                                msg.item && msg.item.type !== 'guild_invite' ? (
                                     /* Item link bubble */
                                     <div
                                         key={msg.id}
