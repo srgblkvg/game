@@ -124,20 +124,18 @@ export default function CharacterCard({
 
   // --- Render ---
   return (
-    <div className={`fighter-card ${side} flex-shrink-0`} style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      width: cardWidth, minWidth: cardWidth, margin: cardMargin, color: '#eee',
-    }}>
+    <div className={`fighter-card ${side} flex-shrink-0 flex flex-col items-center text-[#eee]`}
+      style={{ width: cardWidth, minWidth: cardWidth, margin: cardMargin }}>
       {/* Имя и уровень */}
-      <div style={{ width: '100%', textAlign: 'center', marginBottom: '0.5rem' }}>
-        <h2 style={{ margin: '0 0 -2px 0', fontSize: fontSizeName, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{truncate(char.username)}</h2>
+      <div className="w-full text-center mb-2">
+        <h2 className="overflow-hidden text-ellipsis whitespace-nowrap max-w-full" style={{ margin: '0 0 -2px 0', fontSize: fontSizeName }}>{truncate(char.username)}</h2>
         <GuildTag guildName={(char as any).guildName} guildId={(char as any).guildId} hideNoGuild={hideNoGuild} />
         <div className="flex items-center justify-center gap-2 mt-1">
           <span style={{ fontSize: isVerySmall ? '0.65rem' : isMobile ? '0.75rem' : '0.85rem' }}>Ур. {char.level}</span>
           {showExpBar && (
-            <div style={{ width: '100px', height: '14px', background: '#222', borderRadius: '4px', overflow: 'hidden', border: '1px solid #555', position: 'relative' }}>
-              <div style={{ width: `${expPercent}%`, height: '100%', background: '#9b59b6', transition: 'width 0.3s' }} />
-              <span className="absolute inset-0 flex items-center justify-center text-white text-[0.55rem]" style={{ textShadow: '0 0 2px #000' }}>
+            <div className="w-[100px] h-[14px] bg-[#222] rounded overflow-hidden border border-[#555] relative">
+              <div className="h-full bg-[#9b59b6] transition-[width] duration-300" style={{ width: `${expPercent}%` }} />
+              <span className="absolute inset-0 flex items-center justify-center text-white text-[0.55rem] [text-shadow:0_0_2px_#000]">
                 {expValue}/{expNeeded}
               </span>
             </div>
@@ -146,18 +144,14 @@ export default function CharacterCard({
       </div>
 
       {/* Фрейм с фоном и слотами */}
-      <div id={cardId} style={{
-        border: '2px solid #555', borderRadius: '12px', padding: '0.8rem',
-        width: '100%', background: '#2a2a3e', position: 'relative', height: frameHeight,
-      }}>
+      <div id={cardId} className="border-2 border-[#555] rounded-xl p-[0.8rem] w-full bg-[#2a2a3e] relative"
+        style={{ height: frameHeight }}>
         <div className="absolute inset-0 overflow-hidden rounded-[10px]">
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundImage: bgImage, backgroundSize: 'cover', backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            transform: side === 'right' ? 'scaleX(-1)' : 'none',
-            zIndex: 0,
-          }} />
+          <div className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
+            style={{
+              backgroundImage: bgImage,
+              transform: side === 'right' ? 'scaleX(-1)' : 'none',
+            }} />
         </div>
 
         <StatsOverlay stats={stats} compact={compact} />
@@ -195,8 +189,8 @@ export default function CharacterCard({
 
       {/* Выбор предмета для слота */}
       {!readOnly && selectedSlot && (
-        <div style={{ marginTop: '1rem', background: '#1e1e30', padding: '0.5rem', borderRadius: '8px', border: '1px solid #555', width: '100%' }}>
-          <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>Выберите предмет для {slotNames[selectedSlot]}:</div>
+        <div className="mt-4 bg-[#1e1e30] p-2 rounded-lg border border-[#555] w-full">
+          <div className="mb-2 text-[0.9rem]">Выберите предмет для {slotNames[selectedSlot]}:</div>
           {getFilteredItems().map((item: any) => (
             <div key={item.id} onClick={() => handleEquipSelect(item.id)}
               className="p-1.5 bg-[#333] mb-0.5 cursor-pointer rounded text-white text-xs">
