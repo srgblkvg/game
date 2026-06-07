@@ -5,6 +5,7 @@ import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useAcquire } from '../contexts/AcquireContext';
+import { useServerTime } from '../contexts/ServerTimeContext';
 import { fetchCharacter } from '../api/character';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -24,6 +25,7 @@ export default function TavernPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { showAcquire } = useAcquire();
+    const { now } = useServerTime();
 
     const [tavern, setTavern] = useState<any>(null);
     const [message, setMessage] = useState('');
@@ -31,11 +33,9 @@ export default function TavernPage() {
     const [tab, setTab] = useState<'heal' | 'room' | 'drink' | 'quests'>(() => {
         const t = searchParams.get('tab'); if (t === 'room' || t === 'drink' || t === 'quests') return t; return 'heal';
     });
-    const [now, setNow] = useState(Math.floor(Date.now() / 1000));
     const [quests, setQuests] = useState<any>(null);
 
     useEffect(() => { if (!user) navigate('/login'); else { load(); loadQuests(); } }, [user]);
-    useEffect(() => { const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000); return () => clearInterval(t); }, []);
 
     const load = async () => {
         try { const r = await fetch(`${BASE_URL}/tavern`,{headers:getHeaders()}); setTavern(await r.json()); setCharacter(await fetchCharacter()); } catch(e:any){setError(e.message)}

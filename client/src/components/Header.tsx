@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
+import { useServerTime } from '../contexts/ServerTimeContext';
 import { fetchBattles, fetchCharacter } from '../api';
 import Button from './ui/Button';
 
@@ -67,19 +68,13 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
 export default function Header() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
+    const { now: serverNow } = useServerTime();
     const navigate = useNavigate();
     const location = useLocation();
     const [hasNewBattles, setHasNewBattles] = useState(false);
     const [protectionSec, setProtectionSec] = useState(0);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [serverTime, setServerTime] = useState<number>(Math.floor(Date.now() / 1000));
     const menuRef = useRef<HTMLDivElement>(null);
-
-    // Часы (локальное время)
-    useEffect(() => {
-        const t = setInterval(() => setServerTime(Math.floor(Date.now() / 1000)), 1000);
-        return () => clearInterval(t);
-    }, []);
 
     // Закрытие меню по клику вне
     useEffect(() => {
@@ -174,9 +169,9 @@ export default function Header() {
                     )
                 )}
                 <div className="flex gap-2 ml-auto items-center">
-                    {user.role === 'player' && serverTime !== null && (
+                    {user.role === 'player' && (
                         <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
-                            {new Date(serverTime * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(serverNow * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
                         </span>
                     )}
                     {user.role === 'player' && (

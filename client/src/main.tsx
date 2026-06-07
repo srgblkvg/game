@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { AcquireProvider } from './contexts/AcquireContext';
+import { ServerTimeProvider } from './contexts/ServerTimeContext';
 import './styles/cormorant.css';
 import './styles/theme.css';
 
@@ -47,7 +48,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <GameProvider>
         <ChatProvider>
           <AcquireProvider>
-            <App />
+            <ServerTimeProvider>
+              <App />
+            </ServerTimeProvider>
           </AcquireProvider>
         </ChatProvider>
       </GameProvider>
