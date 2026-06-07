@@ -8,6 +8,7 @@ import { useAcquire } from '../contexts/AcquireContext';
 import { fetchCharacter } from '../api/character';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import ItemTooltip from '../components/ItemTooltip';
 import { inputClass } from '../utils/formStyles';
 import { formatMoney } from '../utils/money';
 
@@ -42,6 +43,9 @@ export default function AuctionPage() {
     const [bidAmount, setBidAmount] = useState<Record<number, string>>({});
     // Partial buy quantity
     const [partialQty, setPartialQty] = useState<Record<number, number>>({});
+
+    // Tooltip
+    const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
 
@@ -154,6 +158,10 @@ export default function AuctionPage() {
     const isMaterial = selectedItem?.type === 'craft_item' || selectedItem?.type === 'material';
     const maxItemCount = isMaterial ? (selectedItem?.count || 1) : 1;
 
+    const showTooltip = (e: React.MouseEvent, item: any) => setTooltip({ item, x: e.clientX, y: e.clientY });
+    const moveTooltip = (e: React.MouseEvent) => { if (tooltip) setTooltip({ ...tooltip, x: e.clientX, y: e.clientY }); };
+    const hideTooltip = () => setTooltip(null);
+
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <h1 className="text-xl font-bold mb-1"><Icon icon="game-icons:auction" width="22" height="22" className="inline mr-2" />Аукцион</h1>
@@ -187,6 +195,25 @@ export default function AuctionPage() {
                             })
                         }
                     </select>
+
+                    {/* Selected item preview */}
+                    {selectedItem && (
+                        <div
+                            className="mt-2 flex items-center gap-2 p-2 rounded bg-[var(--color-bg-primary)] cursor-default"
+                            onMouseEnter={e => showTooltip(e, selectedItem)}
+                            onMouseMove={moveTooltip}
+                            onMouseLeave={hideTooltip}
+                        >
+                            <img
+                                src={selectedItem.imageUrl || '/items/default.webp'}
+                                alt={selectedItem.name}
+                                className="w-8 h-8 object-contain rounded"
+                                onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }}
+                            />
+                            <span className="text-xs text-[var(--color-text-primary)]">{selectedItem.name}</span>
+                            <span className="text-xs text-[var(--color-text-muted)]">{selectedItem.rarity_display}</span>
+                        </div>
+                    )}
 
                     {/* Count selector for stackable items */}
                     {isMaterial && maxItemCount > 1 && (
@@ -276,7 +303,12 @@ export default function AuctionPage() {
                 return (
                     <Card key={lot.id} className="mb-3">
                         <div className="flex justify-between items-start">
-                            <div>
+                            <div
+                                onMouseEnter={e => showTooltip(e, item)}
+                                onMouseMove={moveTooltip}
+                                onMouseLeave={hideTooltip}
+                                className="cursor-default"
+                            >
                                 <h3 className="font-bold text-sm">
                                     {item.name}
                                     {isStack && <span className="text-xs text-[var(--color-accent-info)] ml-1">x{stackCount}</span>}
@@ -337,6 +369,8 @@ export default function AuctionPage() {
                     </Card>
                 );
             })}
+
+            {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />}
         </div>
     );
 }
