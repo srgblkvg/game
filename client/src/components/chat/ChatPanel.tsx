@@ -259,6 +259,24 @@ export default function ChatPanel() {
     const renderMessageContent = useCallback((msg: ChatMessage) => {
         const parts = msg.content.split(/(@\w+)/g);
         const isGuildInvite = msg.item?.type === 'guild_invite';
+        const acceptInvite = async () => {
+            try {
+                await fetch(`${BASE_URL}/guild/accept-invite`, {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({ guildId: msg.item.guildId, accept: true }),
+                });
+                const fresh = await fetchCharacter();
+                setCharacter(fresh);
+            } catch(e) { console.error(e); }
+        };
+        const declineInvite = async () => {
+            try {
+                await fetch(`${BASE_URL}/guild/accept-invite`, {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({ guildId: msg.item.guildId, accept: false }),
+                });
+            } catch(e) { console.error(e); }
+        };
         return (
             <div>
                 <div>
@@ -267,16 +285,12 @@ export default function ChatPanel() {
                             const name = part.slice(1);
                             const isSelfMention = name.toLowerCase() === currentUsername.toLowerCase();
                             return (
-                                <span
-                                    key={i}
-                                    style={{
-                                        color: '#f1c40f',
-                                        cursor: isSelfMention ? 'default' : 'pointer',
-                                        textDecoration: isSelfMention ? 'none' : 'underline',
-                                        opacity: isSelfMention ? 0.7 : 1,
-                                    }}
-                                    onClick={isSelfMention ? undefined : (e) => handleNickClick(e, name, false)}
-                                >
+                                <span key={i} style={{
+                                    color: '#f1c40f', cursor: isSelfMention ? 'default' : 'pointer',
+                                    textDecoration: isSelfMention ? 'none' : 'underline',
+                                    opacity: isSelfMention ? 0.7 : 1,
+                                }}
+                                onClick={isSelfMention ? undefined : (e) => handleNickClick(e, name, false)}>
                                     {part}
                                 </span>
                             );
@@ -286,43 +300,19 @@ export default function ChatPanel() {
                 </div>
                 {isGuildInvite && msg.item && (
                     <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await fetch(`${BASE_URL}/guild/accept-invite`, {
-                                        method: 'POST', headers: getHeaders(),
-                                        body: JSON.stringify({ guildId: msg.item.guildId, accept: true }),
-                                    });
-                                    const fresh = await fetchCharacter();
-                                    setCharacter(fresh);
-                                } catch(e) { console.error(e); }
-                            }}
-                            style={{
-                                padding: '2px 10px', fontSize: '0.75rem',
-                                background: '#27ae60', color: 'white',
-                                border: 'none', borderRadius: '4px', cursor: 'pointer',
-                            }}
-                        >Принять</button>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await fetch(`${BASE_URL}/guild/accept-invite`, {
-                                        method: 'POST', headers: getHeaders(),
-                                        body: JSON.stringify({ guildId: msg.item.guildId, accept: false }),
-                                    });
-                                } catch(e) { console.error(e); }
-                            }}
-                            style={{
-                                padding: '2px 10px', fontSize: '0.75rem',
-                                background: '#e74c3c', color: 'white',
-                                border: 'none', borderRadius: '4px', cursor: 'pointer',
-                            }}
-                        >Отклонить</button>
+                        <button onClick={acceptInvite} style={{
+                            padding: '2px 10px', fontSize: '0.75rem', background: '#27ae60',
+                            color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                        }}>Принять</button>
+                        <button onClick={declineInvite} style={{
+                            padding: '2px 10px', fontSize: '0.75rem', background: '#e74c3c',
+                            color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                        }}>Отклонить</button>
                     </div>
                 )}
             </div>
         );
-    }, [currentUsername, handleNickClick]);
+    }, [currentUsername, handleNickClick, setCharacter]);
 
     const displayedMessages = useMemo(() => messages.filter(msg => {
         if (guildChatActive && guildId) {
