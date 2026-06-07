@@ -283,6 +283,18 @@ router.post('/guild/role', (req: any, res) => {
     res.json({ success: true });
 });
 
+// Отменить все отправленные приглашения (лидер/офицер)
+router.post('/guild/cancel-invites', (req: any, res) => {
+    const userId = req.userId;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
+
+    const info = db.prepare(
+        "UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND status = 'pending'"
+    ).run(member.guildId);
+    res.json({ success: true, cancelled: info.changes });
+});
+
 // Заявки на вступление (для лидера/офицеров)
 router.get('/guild/requests', (req: any, res) => {
     const userId = req.userId;

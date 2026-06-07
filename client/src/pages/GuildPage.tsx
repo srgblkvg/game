@@ -138,6 +138,14 @@ export default function GuildPage() {
         } catch (e: any) { setError(e.message); }
     };
 
+    const handleCancelInvites = async () => {
+        try {
+            const d = await api('/guild/cancel-invites', {});
+            setMessage(`Отменено приглашений: ${d.cancelled}`);
+            load();
+        } catch (e: any) { setError(e.message); }
+    };
+
     const clearMessages = () => { setMessage(''); setError(''); };
 
     if (!user) return null;
@@ -192,6 +200,7 @@ export default function GuildPage() {
                                     </div>
                                 )}
                             </div>
+                            <Button variant="secondary" size="xs" onClick={handleCancelInvites} className="mt-2">Отменить все приглашения</Button>
                         </Card>
                     )}
 
