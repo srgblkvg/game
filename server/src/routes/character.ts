@@ -133,6 +133,7 @@ router.get('/character/me', (req: any, res) => {
         inventorySlots: user.inventorySlots || 10,
         activeJob: jobData, role: user.role || 'player',
         bank: user.bank || 0,
+        guildId: user.guildId || null,
         lastBankVisit: user.lastBankVisit || 0,
         room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
         drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
