@@ -4,6 +4,7 @@ import type { OnlineUser } from './types';
 
 interface ChatInputProps {
     isPrivate: boolean;
+    isGuild?: boolean;
     onlineUsers: OnlineUser[];
     currentUserId: number;
     onSend: (text: string) => void;
@@ -14,7 +15,7 @@ interface ChatInputProps {
     isGuest?: boolean;
 }
 
-export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSend, bannedUntil, chatError, pendingMention, onClearPending, isGuest }: ChatInputProps) {
+export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUserId, onSend, bannedUntil, chatError, pendingMention, onClearPending, isGuest }: ChatInputProps) {
     const [input, setInput] = useState('');
     const [autocomplete, setAutocomplete] = useState<{ items: { id: number; name: string }[]; selectedIndex: number } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +137,7 @@ export default function ChatInput({ isPrivate, onlineUsers, currentUserId, onSen
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
                     disabled={isDisabled}
-                    placeholder={isDisabled ? disabledPlaceholder : (isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w ник текст для ЛС)')}
+                    placeholder={isDisabled ? disabledPlaceholder : (isGuild ? 'Гильдия...' : isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w ник текст для ЛС)')}
                     style={{
                         flex: 1,
                         padding: '0.3rem',

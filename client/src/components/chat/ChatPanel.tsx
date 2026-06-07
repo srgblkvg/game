@@ -175,7 +175,8 @@ export default function ChatPanel() {
         // /g — гильд-чат
         if (cleanedText.startsWith('/g ')) {
             const content = cleanedText.slice(3).trim();
-            if (!content || !guildId) return;
+            const gid = guildId || (character as any)?.guildId;
+            if (!content || !gid) return;
             fetch(`${BASE_URL}/guild/chat`, {
                 method: 'POST', headers: getHeaders(),
                 body: JSON.stringify({ content }),
@@ -186,7 +187,8 @@ export default function ChatPanel() {
         }
 
         if (privateChatWith === null) {
-            if (guildChatActive && guildId) {
+            if (guildChatActive && (guildId || (character as any)?.guildId)) {
+                const gid = guildId || (character as any)?.guildId;
                 fetch(`${BASE_URL}/guild/chat`, {
                     method: 'POST', headers: getHeaders(),
                     body: JSON.stringify({ content: cleanedText }),
@@ -384,7 +386,7 @@ export default function ChatPanel() {
 
                         <div style={{ padding: '0.3rem 0.5rem', background: '#2a2a3e', flexShrink: 0 }}>
                             {guildChatActive && guildName
-                                ? <span style={{ color: '#f1c40f' }}>🏚️ Гильдия «{guildName}»</span>
+                                ? <span style={{ color: '#2ecc71' }}>🏚️ Гильдия «{guildName}»</span>
                                 : privateChatWith !== null
                                 ? <span>Личные сообщения с {openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}</span>
                                 : <span>Общий чат</span>}
@@ -398,7 +400,8 @@ export default function ChatPanel() {
                         />
 
                         <ChatInput
-                            isPrivate={privateChatWith !== null || guildChatActive}
+                            isPrivate={privateChatWith !== null}
+                            isGuild={guildChatActive}
                             onlineUsers={onlineUsers}
                             currentUserId={userId}
                             onSend={handleSend}
