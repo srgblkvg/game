@@ -110,9 +110,10 @@ export default function RatingPage() {
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
-                                <th className="text-left p-1.5 text-sm w-3/6">Ник</th>
-                                <th className="text-center p-1.5 text-sm w-2/6">Титул</th>
-                                <th className="text-right p-1.5 text-sm w-1/6">Очки</th>
+                                <th className="text-left p-1.5 text-sm" style={{ width: '36%' }}>Ник</th>
+                                <th className="text-left p-1.5 text-sm" style={{ width: '36%' }}>Гильдия</th>
+                                <th className="text-center p-1.5 text-sm" style={{ width: '19%' }}>Титул</th>
+                                <th className="text-right p-1.5 text-sm" style={{ width: '9%' }}>Очки</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -125,6 +126,8 @@ export default function RatingPage() {
                                         >
                                             {i + 1 + (page - 1) * LIMIT}. {p.username}
                                         </span>
+                                    </td>
+                                    <td className="p-1.5">
                                         <GuildTag guildName={p.guildName} guildId={p.guildId} />
                                     </td>
                                     <td className="p-1.5 text-center" style={{ color: p.rank?.color }}>
