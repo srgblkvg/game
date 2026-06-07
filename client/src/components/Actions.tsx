@@ -99,13 +99,13 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
 
                 return (
                     <div key={i} className="relative group" title={isGuestBlocked ? guestTooltip : undefined} id={`action-card-${card.title}`}>
-                        <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
+                        <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                         <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: card.bgClass }} />
                         <div className="relative w-full flex flex-col flex-1">
-                            <h3 className="text-[0.8rem] font-bold mb-0.5 flex items-center justify-center gap-1">
+                            <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                                 <Icon icon={card.icon} width="14" height="14" />{card.title}
                             </h3>
-                            <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                            <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                             <div className="mt-auto">
                                 {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="xs" fullWidth disabled={disabled}
@@ -164,13 +164,13 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
         <div className="perspective-600">
             <div className={`relative w-full transition-transform duration-400 ${flipped ? 'rotate-y-180' : ''}`} style={{ transformStyle: 'preserve-3d' }} id={`action-card-${card.title}`}>
                 {/* Front */}
-                <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-2 border flex flex-col items-center text-center overflow-hidden transition-all ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`} style={{ backfaceVisibility: 'hidden' }}>
-                    <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: card.bgClass }} />
-                    <div className="relative w-full flex flex-col flex-1">
-                        <h3 className="text-[0.8rem] font-bold mb-0.5 flex items-center justify-center gap-1">
-                            <Icon icon={card.icon} width="14" height="14" />{card.title}
-                        </h3>
-                        <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`} style={{ backfaceVisibility: 'hidden' }}>
+                <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: card.bgClass }} />
+                <div className="relative w-full flex flex-col flex-1">
+                    <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
+                        <Icon icon={card.icon} width="14" height="14" />{card.title}
+                    </h3>
+                    <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                         <div className="mt-auto">
                             <Button variant={disabled ? 'secondary' : 'danger'} size="xs" fullWidth disabled={disabled}
                                 onClick={() => { if (!disabled) setFlipped(true); }}>
@@ -181,7 +181,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                 </div>
 
                 {/* Back */}
-                <div className={`absolute inset-0 bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)] flex flex-col items-center justify-center gap-2 ${!flipped ? 'pointer-events-none' : ''}`} style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                <div className={`absolute inset-0 bg-[var(--color-bg-secondary)] rounded-xl p-3 border border-[var(--color-border-default)] flex flex-col items-center justify-center gap-2 ${!flipped ? 'pointer-events-none' : ''}`} style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                     <p className="text-[0.65rem] text-[var(--color-text-muted)]">Сложность соперника:</p>
                     <select
                         value={arenaDifficulty}
