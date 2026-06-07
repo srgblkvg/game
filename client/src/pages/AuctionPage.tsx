@@ -159,10 +159,6 @@ export default function AuctionPage() {
     const isMaterial = selectedItem?.type === 'craft_item' || selectedItem?.type === 'material';
     const maxItemCount = isMaterial ? (selectedItem?.count || 1) : 1;
 
-    const showTooltip = (e: React.MouseEvent, item: any) => setTooltip({ item, x: e.clientX, y: e.clientY });
-    const moveTooltip = (e: React.MouseEvent) => { if (tooltip) setTooltip({ ...tooltip, x: e.clientX, y: e.clientY }); };
-    const hideTooltip = () => setTooltip(null);
-
     // Long press for mobile tooltips
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
