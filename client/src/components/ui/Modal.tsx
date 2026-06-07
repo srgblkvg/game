@@ -21,26 +21,24 @@ export default function Modal({
 }: ModalProps) {
   if (!open) return null;
 
-  const style: Record<string, string> = {
-    border: `2px solid ${borderColor}`,
-    padding: '1.5rem',
+  const dynamicStyle: React.CSSProperties = {
+    '--modal-border': borderColor,
   };
   if (width) {
-    style.width = width;
-    style.maxWidth = width;
+    dynamicStyle.width = width;
+    dynamicStyle.maxWidth = width;
   } else if (maxWidth) {
-    style.maxWidth = maxWidth;
+    dynamicStyle.maxWidth = maxWidth;
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.7)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
       onClick={onClose}
     >
       <div
-        className="bg-[var(--color-bg-modal)] rounded-xl text-[var(--color-text-primary)] shadow-lg mx-4 relative"
-        style={style}
+        className="bg-[var(--color-bg-modal)] rounded-xl text-[var(--color-text-primary)] shadow-lg mx-4 relative border-2 border-[var(--modal-border)] p-6"
+        style={dynamicStyle}
         onClick={e => e.stopPropagation()}
       >
         <button

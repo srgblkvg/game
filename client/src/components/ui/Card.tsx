@@ -26,13 +26,13 @@ export default function Card({
       className={[
         'bg-[var(--color-bg-card)] rounded-xl',
         paddingClasses[padding],
-        borderColor ? 'border-2' : 'border border-[var(--color-border-light)]',
+        borderColor ? 'border-2 border-[var(--card-border)]' : 'border border-[var(--color-border-light)]',
         className,
       ].filter(Boolean).join(' ')}
       style={{
-        ...(borderColor ? { borderColor } : {}),
+        ...(borderColor ? { '--card-border': borderColor } : {}),
         ...style,
-      }}
+      } as React.CSSProperties}
       {...props}
     >
       {children}

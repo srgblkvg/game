@@ -58,12 +58,12 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
         )}
         <div className="font-bold text-xs leading-tight break-words min-w-0" style={{ color }}>
           {item.name}
-          {upgradeLevel > 0 && <span style={{ color: '#f39c12' }}> +{upgradeLevel}</span>}
+          {upgradeLevel > 0 && <span className="text-[#f39c12]"> +{upgradeLevel}</span>}
         </div>
       </div>
 
       {/* Редкость */}
-      <div className="text-xs mb-2 text-center" style={{ color: '#aaa' }}>
+      <div className="text-xs mb-2 text-center text-[#aaa]">
         Редкость: {item.rarity_display || 'Обычный'}
       </div>
 
@@ -74,9 +74,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
             <div
               key={i}
               className="flex justify-between py-0.5 px-1"
-              style={{
-                background: i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
-              }}
+              style={i % 2 === 0 ? { background: 'rgba(255,255,255,0.03)' } : undefined}
             >
               <span>{name}</span>
               <span className="font-bold text-white">+{val}</span>
@@ -94,9 +92,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
             <div
               key={i}
               className="flex justify-between py-0.5 px-1"
-              style={{
-                background: i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
-              }}
+              style={i % 2 === 0 ? { background: 'rgba(255,255,255,0.03)' } : undefined}
             >
               <span>{name}</span>
               <span className="font-bold text-white">{val}</span>
@@ -107,7 +103,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
 
       {/* Уровень улучшения */}
       {!resource && upgradeLevel > 0 && (
-        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center" style={{ color: '#f39c12' }}>
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center text-[#f39c12]">
           Улучшение +{upgradeLevel} (+{upgradeLevel * 5}% к характеристикам)
         </div>
       )}

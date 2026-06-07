@@ -35,23 +35,8 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
   return (
     <div
       ref={tooltipRef}
-      style={{
-        position: 'fixed',
-        left: adjustedPos.left,
-        top: adjustedPos.top,
-        background: '#1e1e30',
-        border: `1px solid ${color}`,
-        borderRadius: '8px',
-        padding: '0.7rem',
-        zIndex: 9999,
-        color: '#eee',
-        fontSize: '0.8rem',
-        maxWidth: '220px',
-        pointerEvents: 'none',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.8)',
-        opacity: adjustedPos.opacity,
-        transition: 'opacity 0.15s',
-      }}
+      className="fixed bg-[#1e1e30] rounded-lg p-[0.7rem] z-[9999] text-[#eee] text-xs max-w-[220px] pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.8)] transition-opacity duration-150 border border-solid"
+      style={{ left: adjustedPos.left, top: adjustedPos.top, opacity: adjustedPos.opacity, borderColor: color }}
     >
       <ItemStats item={item} imageSize={36} />
     </div>

@@ -46,17 +46,17 @@ export default function EquipmentSlots(props: EquipmentSlotsProps) {
   return (
     <>
       {/* Левая колонка */}
-      <div style={{ position: 'absolute', left: '4px', top: '10px', display: 'flex', flexDirection: 'column', gap: props.slotGap, zIndex: 1 }}>
+      <div style={{ gap: props.slotGap }} className="absolute left-1 top-2.5 flex flex-col z-[1]">
         {LEFT_SLOTS.map(slotId => renderSlot(slotId))}
       </div>
 
       {/* Правая колонка */}
-      <div style={{ position: 'absolute', right: '4px', top: '10px', display: 'flex', flexDirection: 'column', gap: props.slotGap, zIndex: 1 }}>
+      <div style={{ gap: props.slotGap }} className="absolute right-1 top-2.5 flex flex-col z-[1]">
         {RIGHT_SLOTS.map(slotId => renderSlot(slotId))}
       </div>
 
       {/* Оружие (снизу по центру) */}
-      <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: props.slotGap, zIndex: 1 }}>
+      <div style={{ gap: props.slotGap }} className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex z-[1]">
         {WEAPON_SLOTS.map(slotId =>
           renderSlot(slotId, slotId === 'shield' && props.isWeapon2Blocked)
         )}

@@ -20,16 +20,19 @@ export default function HealthBar({ currentHp, maxHp, compact, showRegenHint, re
     return `${sec} сек`;
   };
 
+  const labelFontSize = isVerySmall ? 'text-[0.65rem]' : isMobile ? 'text-xs' : 'text-[0.85rem]';
+  const hintFontSize = isVerySmall ? 'text-[0.55rem]' : isMobile ? 'text-[0.6rem]' : 'text-[0.7rem]';
+
   return (
-    <div style={{ width: '100%', marginTop: '0.5rem', textAlign: 'center' }}>
-      <div style={{ fontSize: isVerySmall ? '0.65rem' : isMobile ? '0.75rem' : '0.85rem', marginBottom: '3px' }}>
+    <div className="w-full mt-2 text-center">
+      <div className={`${labelFontSize} mb-[3px]`}>
         Здоровье: {currentHp}/{maxHp}
       </div>
-      <div style={{ height: '14px', background: '#333', borderRadius: '4px', overflow: 'hidden', border: '1px solid #555' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: '#e74c3c', transition: 'width 0.4s ease' }} />
+      <div className="h-[14px] bg-[#333] rounded overflow-hidden border border-[#555]">
+        <div style={{ width: `${pct}%` }} className="h-full bg-[#e74c3c] transition-[width] duration-400 ease-in-out" />
       </div>
       {showRegenHint && currentHp < maxHp && (
-        <div style={{ fontSize: isVerySmall ? '0.55rem' : isMobile ? '0.6rem' : '0.7rem', color: '#888', marginTop: '2px' }}>
+        <div className={`${hintFontSize} text-[#888] mt-[2px]`}>
           +{regenRate} HP / 10 сек &mdash; полное через {formatRegenTime()}
         </div>
       )}

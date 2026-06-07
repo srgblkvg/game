@@ -55,18 +55,12 @@ export default function SlotBase({
         backgroundColor: title ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.6)',
       };
 
-  const baseStyle: React.CSSProperties = {
-    width: '44px', height: '44px',
-    borderRadius: '4px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    position: 'relative',
-    fontWeight: 'bold', color: '#fff',
-    textShadow: '0 0 2px #000',
-    fontSize: '0.65rem',
-    cursor: item ? 'pointer' : 'default',
+  const slotClassName = `w-[44px] h-[44px] rounded flex items-center justify-center relative font-bold text-white text-[0.65rem] ${item ? 'cursor-pointer' : 'cursor-default'}`;
+  const slotStyle: React.CSSProperties = {
     ...bgStyle,
     ...style,
     ...customStyle,
+    textShadow: '0 0 2px #000',
   };
 
   const iconName = title ? EQUIPMENT_ICONS[title] : null;
@@ -85,20 +79,15 @@ export default function SlotBase({
       onTouchEnd={onTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
       title={title}
-      style={baseStyle}
+      className={slotClassName}
+      style={slotStyle}
     >
       {children}
       {!item && (
         iconName ? (
-          <Icon icon={iconName} width="24" height="24" style={{ opacity: 0.5 }} />
+          <Icon icon={iconName} width="24" height="24" className="opacity-50" />
         ) : (
-          <span style={{
-            color: 'rgba(255,255,255,0.35)',
-            fontSize: '0.55rem',
-            textAlign: 'center',
-            lineHeight: 1.1,
-            pointerEvents: 'none',
-          }}>Пусто</span>
+          <span className="text-white/35 text-[0.55rem] text-center leading-[1.1] pointer-events-none">Пусто</span>
         )
       )}
     </div>

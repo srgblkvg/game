@@ -19,13 +19,7 @@ export default function StatsOverlay({ stats, compact }: StatsOverlayProps) {
   const fontSize = isVerySmall ? '0.65rem' : isMobile ? '0.65rem' : '0.8rem';
   const padding = isVerySmall ? '0.15rem 0.2rem' : isMobile ? '0.2rem 0.3rem' : '0.4rem 0.6rem';
 
-  const tdStyle = {
-    textAlign: 'left' as const,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    paddingRight: '2px',
-  };
+  const tdStyle = 'text-left overflow-hidden text-ellipsis whitespace-nowrap pr-[2px]';
 
   const rows = [
     ['Сила', stats.s],
@@ -35,22 +29,18 @@ export default function StatsOverlay({ stats, compact }: StatsOverlayProps) {
   ];
 
   return (
-    <div style={{
-      position: 'absolute', top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)',
-      background: 'rgba(0,0,0,0.7)',
-      padding, borderRadius: '8px',
-      zIndex: 1, color: '#eee',
-      fontSize, lineHeight: '1.2',
-    }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <div
+      style={{ padding, fontSize }}
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/70 rounded-lg z-[1] text-[#eee] leading-[1.2]"
+    >
+      <table className="w-full border-collapse">
         <tbody>
           {rows.map(([label, value]) => (
             <tr key={label}>
-              <td style={tdStyle}>
+              <td className={tdStyle}>
                 <Icon icon={STAT_ICONS[label]} width={iconSize} height={iconSize} className="inline mr-0.5" />
               </td>
-              <td style={{ textAlign: 'right', paddingLeft: '2px' }}>{value}</td>
+              <td className="text-right pl-[2px]">{value}</td>
             </tr>
           ))}
         </tbody>
