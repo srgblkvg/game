@@ -172,6 +172,17 @@ export default function ChatPanel() {
             return;
         }
 
+        // /g — гильд-чат
+        if (cleanedText.startsWith('/g ')) {
+            const content = cleanedText.slice(3).trim();
+            if (!content || !guildId) return;
+            fetch(`${BASE_URL}/guild/chat`, {
+                method: 'POST', headers: getHeaders(),
+                body: JSON.stringify({ content }),
+            }).catch(console.error);
+            return;
+        }
+
         if (privateChatWith === null) {
             if (guildChatActive && guildId) {
                 fetch(`${BASE_URL}/guild/chat`, {

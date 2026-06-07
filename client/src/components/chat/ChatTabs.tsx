@@ -26,10 +26,10 @@ export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatAc
       {guildName && (
         <div onClick={onSelectGuild} style={{
           padding: '0.3rem 0.6rem', cursor: 'pointer',
-          background: guildChatActive ? '#333' : 'transparent',
+          background: guildChatActive ? '#1a3a1a' : 'transparent',
           borderRight: '1px solid #444', whiteSpace: 'nowrap',
           fontWeight: guildChatActive ? 'bold' : 'normal',
-          color: '#f1c40f', display: 'flex', alignItems: 'center', gap: '4px',
+          color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '4px',
         }}>
           🏚️ {truncate(guildName)}
         </div>
