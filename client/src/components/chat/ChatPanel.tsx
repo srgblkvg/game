@@ -144,7 +144,7 @@ export default function ChatPanel() {
                 }
             })
             .catch(console.error);
-    }, [privateChatWith, addMessages]);
+    }, [privateChatWith, guildChatActive, guildId, character, addMessages]);
 
     const handleSend = useCallback((text: string) => {
         // Удаляем @ перед именами, которых нет в онлайне
