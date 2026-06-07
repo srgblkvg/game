@@ -139,7 +139,32 @@ router.post('/guild/invite', (req: any, res) => {
     res.json({ success: true });
 });
 
-// Принять / отклонить приглашение
+// Принять / отклонить приглашение (по guildId)
+router.post('/guild/accept-invite', (req: any, res) => {
+    const userId = req.userId;
+    const { guildId, accept } = req.body;
+    if (!guildId) return res.status(400).json({ error: 'Укажите guildId' });
+
+    const invite = db.prepare(
+        "SELECT * FROM guild_invites WHERE guildId = ? AND userId = ? AND status = 'pending' ORDER BY id DESC LIMIT 1"
+    ).get(guildId, userId) as any;
+    if (!invite) return res.status(404).json({ error: 'Приглашение не найдено' });
+
+    if (accept) {
+        const alreadyInGuild = db.prepare('SELECT guildId FROM users WHERE id = ?').get(userId) as any;
+        if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
+
+        db.prepare('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)').run(guildId, userId, 'member');
+        db.prepare('UPDATE users SET guildId = ? WHERE id = ?').run(guildId, userId);
+        db.prepare("UPDATE guild_invites SET status = 'accepted' WHERE guildId = ? AND userId = ? AND status = 'pending'").run(guildId, userId);
+    } else {
+        db.prepare("UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND userId = ? AND status = 'pending'").run(guildId, userId);
+    }
+
+    res.json({ success: true });
+});
+
+// Принять / отклонить приглашение (по ID)
 router.post('/guild/invite/:id', (req: any, res) => {
     const userId = req.userId;
     const inviteId = parseInt(req.params.id);

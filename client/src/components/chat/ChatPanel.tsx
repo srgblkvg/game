@@ -6,6 +6,7 @@ import { useGame } from '../../contexts/GameContext';
 import { useGlobalChat } from '../../contexts/ChatContext';
 import { fetchRecentMessages, fetchPrivateMessages, findUserByUsername } from '../../api/chat';
 import { fetchUsersByIds, saveOpenTabs } from '../../api/character';
+import { fetchCharacter } from '../../api/character';
 import { getHeaders, BASE_URL } from '../../api/helpers';
 import ChatTabs from './ChatTabs';
 import MessageList from './MessageList';
@@ -257,27 +258,70 @@ export default function ChatPanel() {
 
     const renderMessageContent = useCallback((msg: ChatMessage) => {
         const parts = msg.content.split(/(@\w+)/g);
-        return parts.map((part, i) => {
-            if (part.startsWith('@')) {
-                const name = part.slice(1);
-                const isSelfMention = name.toLowerCase() === currentUsername.toLowerCase();
-                return (
-                    <span
-                        key={i}
-                        style={{
-                            color: '#f1c40f',
-                            cursor: isSelfMention ? 'default' : 'pointer',
-                            textDecoration: isSelfMention ? 'none' : 'underline',
-                            opacity: isSelfMention ? 0.7 : 1,
-                        }}
-                        onClick={isSelfMention ? undefined : (e) => handleNickClick(e, name, false)}
-                    >
-                        {part}
-                    </span>
-                );
-            }
-            return part;
-        });
+        const isGuildInvite = msg.item?.type === 'guild_invite';
+        return (
+            <div>
+                <div>
+                    {parts.map((part, i) => {
+                        if (part.startsWith('@')) {
+                            const name = part.slice(1);
+                            const isSelfMention = name.toLowerCase() === currentUsername.toLowerCase();
+                            return (
+                                <span
+                                    key={i}
+                                    style={{
+                                        color: '#f1c40f',
+                                        cursor: isSelfMention ? 'default' : 'pointer',
+                                        textDecoration: isSelfMention ? 'none' : 'underline',
+                                        opacity: isSelfMention ? 0.7 : 1,
+                                    }}
+                                    onClick={isSelfMention ? undefined : (e) => handleNickClick(e, name, false)}
+                                >
+                                    {part}
+                                </span>
+                            );
+                        }
+                        return part;
+                    })}
+                </div>
+                {isGuildInvite && msg.item && (
+                    <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await fetch(`${BASE_URL}/guild/accept-invite`, {
+                                        method: 'POST', headers: getHeaders(),
+                                        body: JSON.stringify({ guildId: msg.item.guildId, accept: true }),
+                                    });
+                                    const fresh = await fetchCharacter();
+                                    setCharacter(fresh);
+                                } catch(e) { console.error(e); }
+                            }}
+                            style={{
+                                padding: '2px 10px', fontSize: '0.75rem',
+                                background: '#27ae60', color: 'white',
+                                border: 'none', borderRadius: '4px', cursor: 'pointer',
+                            }}
+                        >Принять</button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await fetch(`${BASE_URL}/guild/accept-invite`, {
+                                        method: 'POST', headers: getHeaders(),
+                                        body: JSON.stringify({ guildId: msg.item.guildId, accept: false }),
+                                    });
+                                } catch(e) { console.error(e); }
+                            }}
+                            style={{
+                                padding: '2px 10px', fontSize: '0.75rem',
+                                background: '#e74c3c', color: 'white',
+                                border: 'none', borderRadius: '4px', cursor: 'pointer',
+                            }}
+                        >Отклонить</button>
+                    </div>
+                )}
+            </div>
+        );
     }, [currentUsername, handleNickClick]);
 
     const displayedMessages = useMemo(() => messages.filter(msg => {
