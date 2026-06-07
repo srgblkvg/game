@@ -11,6 +11,7 @@ import Card from '../components/ui/Card';
 import ItemTooltip from '../components/ItemTooltip';
 import { inputClass } from '../utils/formStyles';
 import { formatMoney } from '../utils/money';
+import { getItemImage } from '../utils/itemUtils';
 
 // Мин. цены по редкости (копия серверного priceFloor)
 const PRICE_FLOOR: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
@@ -209,7 +210,7 @@ export default function AuctionPage() {
                                             }`}
                                         >
                                             <img
-                                                src={item.imageUrl || '/items/default.webp'}
+                                                src={getItemImage(item) || '/items/default.webp'}
                                                 alt={item.name}
                                                 className="w-8 h-8 object-contain mb-1"
                                                 onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }}
@@ -241,7 +242,7 @@ export default function AuctionPage() {
                             onMouseLeave={hideTooltip}
                         >
                             <img
-                                src={selectedItem.imageUrl || '/items/default.webp'}
+                                src={getItemImage(selectedItem) || '/items/default.webp'}
                                 alt={selectedItem.name}
                                 className="w-8 h-8 object-contain rounded"
                                 onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }}
@@ -346,7 +347,7 @@ export default function AuctionPage() {
                                 className="cursor-default flex gap-3"
                             >
                                 <img
-                                    src={item.imageUrl || '/items/default.webp'}
+                                    src={getItemImage(item) || '/items/default.webp'}
                                     alt={item.name}
                                     className="w-10 h-10 object-contain rounded shrink-0"
                                     onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }}
