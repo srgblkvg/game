@@ -9,6 +9,7 @@ import { getHeaders, BASE_URL } from '../api/helpers';
 import { formatMoney } from '../utils/money';
 import { renderBattleLog } from '../utils/battleLog';
 import Button from '../components/ui/Button';
+import GuildTag from '../components/GuildTag';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 
@@ -91,7 +92,7 @@ export default function HistoryPage() {
     const renderBattleRow = (b: any) => {
         const win = b.winnerId === user.id;
         return <EntryRow time={fmt(b.createdAt)} onClick={()=>setSelectedBattle(b)}>
-            <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{b.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{b.attackerId===user.id?b.defenderName:b.attackerName}</strong></span>
+            <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{b.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{b.attackerId===user.id?b.defenderName:b.attackerName}</strong> <GuildTag guildName={b.attackerId===user.id?b.defenderGuild:b.attackerGuild} guildId={b.attackerId===user.id?b.defenderGuildId:b.attackerGuildId} /></span>
             <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-red-500'}`}>{win?'Победа':'Поражение'}</span>
             {win && b.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{b.expGained} XP</span>}
             {!win && b.expLost>0&&<span className="text-red-400 ml-1"> -{b.expLost} XP</span>}
@@ -132,7 +133,7 @@ export default function HistoryPage() {
         if (type === 'battle') {
             const win = data.winnerId === user.id;
             return <EntryRow time={fmt(data.createdAt)} onClick={()=>setSelectedBattle(data)}>
-                <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{data.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{data.attackerId===user.id?data.defenderName:data.attackerName}</strong></span>
+                <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{data.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{data.attackerId===user.id?data.defenderName:data.attackerName}</strong> <GuildTag guildName={data.attackerId===user.id?data.defenderGuild:data.attackerGuild} guildId={data.attackerId===user.id?data.defenderGuildId:data.attackerGuildId} /></span>
                 <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-red-500'}`}>{win?'Победа':'Поражение'}</span>
                 {win && data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{data.expGained} XP</span>}
                 {!win && data.expLost>0&&<span className="text-red-400 ml-1"> -{data.expLost} XP</span>}

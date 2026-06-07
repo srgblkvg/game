@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { fetchRating } from '../api/character';
 import { getHeaders, BASE_URL } from '../api/helpers';
+import GuildTag from './GuildTag';
 
 export default function RatingBlock() {
     const [players, setPlayers] = useState<any[]>([]);
@@ -45,6 +46,7 @@ export default function RatingBlock() {
                                 >
                                     {i + 1}. {g.name}
                                 </span>
+                                <GuildTag guildName={g.name} guildId={g.id} />
                                 <span className="text-xs text-[var(--color-text-muted)]">
                                     Ур.{g.level} · {g.memberCount} уч.
                                 </span>
@@ -79,6 +81,7 @@ export default function RatingBlock() {
                                 >
                                     {i + 1}. {p.username}
                                 </span>
+                                <GuildTag guildName={p.guildName} guildId={p.guildId} />
                                 <span className="text-xs text-center w-2/6" style={{ color: p.rank?.color }}>
                                     {p.rank ? `${p.rank.icon} ${p.rank.name}` : '—'}
                                 </span>

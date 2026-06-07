@@ -159,8 +159,8 @@ router.get('/battles', (req: any, res) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const battles = db.prepare(`
     SELECT b.*, 
-      a.username as attackerName, ag.name as attackerGuild,
-      d.username as defenderName, dg.name as defenderGuild
+      a.username as attackerName, ag.name as attackerGuild, a.guildId as attackerGuildId,
+      d.username as defenderName, dg.name as defenderGuild, d.guildId as defenderGuildId
     FROM battles b
     JOIN users a ON b.attackerId = a.id
     JOIN users d ON b.defenderId = d.id
