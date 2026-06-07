@@ -6,9 +6,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
 import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
 import { inputClass } from '../utils/formStyles';
+import GuildTag from '../components/GuildTag';
+import Card from '../components/ui/Card';
 
 const divisionColors: Record<string, string> = {
     copper: '#b8703a', steel: '#909090', mithril: '#40b0d0', adamant: '#e03030',
@@ -174,7 +175,7 @@ export default function TournamentPage() {
                     <p>Участников: {t.participantCount}/{t.maxPlayers || 8}</p>
                     {t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}
                     {t.participants.slice(0, 5).map((p: any) => (
-                        <span key={p.id} className="mr-2">{p.username}{p.goldenTicket ? ' 🎫' : ''}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 2-е' : p.snapshotStats?.place === 3 ? ' 3-е' : ''}</span>
+                        <span key={p.id} className="mr-2">{p.username}{p.goldenTicket ? ' 🎫' : ''}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 2-е' : p.snapshotStats?.place === 3 ? ' 3-е' : ''} <GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                     ))}
                     {t.participantCount > 5 && <span>+ ещё {t.participantCount - 5}</span>}
                 </div>
@@ -332,7 +333,7 @@ export default function TournamentPage() {
                                 <div className="text-xs">
                                     {t.top3.map((p: any) => (
                                         <span key={p.username + p.place} className="mr-3">
-                                            {p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : '🥉'} {p.username} — {formatMoney(p.prize)}
+                                            {p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : '🥉'} {p.username} — {formatMoney(p.prize)} <GuildTag guildName={p.guildName} guildId={p.guildId} />
                                         </span>
                                     ))}
                                 </div>

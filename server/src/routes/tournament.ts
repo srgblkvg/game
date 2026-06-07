@@ -430,7 +430,7 @@ router.get('/tournament', (req: any, res) => {
 
         const result = completed.map((t: any) => {
             const participants = db.prepare(
-                'SELECT u.username, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id WHERE tp.tournamentId = ?'
+                'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?'
             ).all(t.id) as any[];
             return {
                 ...t,
@@ -475,7 +475,7 @@ router.get('/tournament', (req: any, res) => {
 
     const result = allTournaments.map((t: any) => {
         const participants = db.prepare(
-            'SELECT u.username, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id WHERE tp.tournamentId = ?'
+            'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?'
         ).all(t.id) as any[];
         const myReg = participants.find((p: any) => p.userId === userId);
         const matches = db.prepare(

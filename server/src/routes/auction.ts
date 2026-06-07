@@ -30,8 +30,9 @@ router.get('/auction', (req: any, res) => {
     db.prepare('DELETE FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL').run(now);
 
     const lots = db.prepare(`
-        SELECT l.*, u.username as sellerName FROM auction_lots l
+        SELECT l.*, u.username as sellerName, g.name as sellerGuild, u.guildId as sellerGuildId FROM auction_lots l
         JOIN users u ON l.sellerId = u.id
+        LEFT JOIN guilds g ON u.guildId = g.id
         WHERE l.endsAt > ? ORDER BY l.endsAt ASC
     `).all(now) as any[];
 
