@@ -18,7 +18,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
     const active = (quests.quests || []).filter((q: any) => q.status === 'active');
 
     return (
-        <div className="bg-[var(--color-bg-secondary)] rounded-xl p-2 border border-[var(--color-border-default)]">
+        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl p-4 min-w-[210px] overflow-hidden">
             <h3 className="text-xs font-bold mb-1.5 cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>{onHighlight?.(null);navigate('/tavern?tab=quests');}}>
                 <Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1" />Задания{active.length>0 && <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-1">{active.length}/3</span>}
             </h3>
