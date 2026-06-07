@@ -189,6 +189,7 @@ export default function ChatPanel() {
         if (privateChatWith === null) {
             if (guildChatActive && (guildId || (character as any)?.guildId)) {
                 const gid = guildId || (character as any)?.guildId;
+                console.log('[guild-chat] sending to guild', gid, cleanedText);
                 fetch(`${BASE_URL}/guild/chat`, {
                     method: 'POST', headers: getHeaders(),
                     body: JSON.stringify({ content: cleanedText }),
