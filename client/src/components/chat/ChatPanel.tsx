@@ -17,7 +17,7 @@ import type { ChatMessage } from './types';
 
 export default function ChatPanel() {
     const { user } = useAuth();
-    const { character } = useGame();
+    const { character, setCharacter } = useGame();
     const auth = useAuth();
     const navigate = useNavigate();
     const userId = user?.id!;
