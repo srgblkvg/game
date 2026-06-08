@@ -36,6 +36,16 @@ export default function ChatPanel() {
     useEffect(() => { chatHeightRef.current = chatHeight; }, [chatHeight]);
     const [dragging, setDragging] = useState(false);
 
+    // Блокировка скролла body при открытом чате
+    useEffect(() => {
+        if (isPanelOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isPanelOpen]);
+
     const { messages, onlineUsers, addMessages, sendPublic, sendPrivate, bannedUntil, chatError, setChatError } = useGlobalChat();
 
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; username: string } | null>(null);
