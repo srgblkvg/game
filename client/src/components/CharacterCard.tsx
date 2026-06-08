@@ -129,7 +129,7 @@ export default function CharacterCard({
       {/* Имя и уровень */}
       <div className="w-full text-center mb-2">
         <h2 className="overflow-hidden text-ellipsis whitespace-nowrap max-w-full" style={{ margin: '0 0 -4px 0', fontSize: fontSizeName, lineHeight: '1.1' }}>{truncate(char.username)}</h2>
-        <div className="min-h-[0.85rem]">
+        <div className="h-[0.75rem]">
           <GuildTag guildName={(char as any).guildName} guildId={(char as any).guildId} hideNoGuild={hideNoGuild} />
         </div>
         <div className="flex items-center justify-center gap-2 mt-1">
