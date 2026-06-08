@@ -85,7 +85,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
     return (
         <div
             ref={containerRef}
-            className="flex-1 overflow-y-auto px-[0.5rem] py-[0.6rem] flex flex-col gap-[2px]"
+            className="flex-1 overflow-y-auto overflow-x-auto px-[0.5rem] py-[0.6rem] flex flex-col gap-[2px] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#555] [&::-webkit-scrollbar-thumb]:rounded"
         >
             {groups.map((group, gi) => {
                 const firstMsg = group[0];

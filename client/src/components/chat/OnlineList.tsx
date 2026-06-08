@@ -76,7 +76,7 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
                     className={`flex-1 py-1 text-[0.7rem] cursor-pointer border-l border-[#444] ${filter === 'guild' ? 'bg-[#2a2a3e] text-[#2ecc71]' : 'bg-transparent text-[var(--color-text-muted)]'}`}
                 >Гильдия{guildCount > 0 ? ` (${guildCount})` : ''}</button>
             </div>
-            <ul className="list-none p-0 m-0 overflow-y-auto">
+            <ul className="list-none p-0 m-0 overflow-y-auto overflow-x-auto [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-[#555] [&::-webkit-scrollbar-thumb]:rounded">
                 {filtered.map((u, i) => {
                     const isMe = u.id === currentUserId;
                     const isGuildMate = guildMemberIds.has(u.id);
