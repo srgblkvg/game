@@ -439,10 +439,12 @@ export default function ChatPanel() {
                                 <button
                                     onClick={() => setOnlineOpen(!onlineOpen)}
                                     className="text-[0.7rem] text-[#2ecc71] hover:text-[#3ee68c] cursor-pointer px-1.5 py-1 bg-[#111] border border-[#333] rounded leading-tight"
-                                    style={{ writingMode: 'vertical-lr' }}
+                                    style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                                     title={onlineOpen ? 'Скрыть список' : 'Показать список'}
                                 >
-                                    Онлайн: {onlineUsers.length} {onlineOpen ? '▼' : '▶'}
+                                    <span style={{ display: 'inline-block', transform: 'rotate(180deg)' }}>
+                                        Онлайн: {onlineUsers.length} {onlineOpen ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             </div>
 
