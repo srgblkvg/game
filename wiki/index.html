@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MMO Arena — Гайд для игрока</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --bg2: #16213e;
+    --bg3: #0f3460;
+    --text: #eee;
+    --muted: #aaa;
+    --accent: #e94560;
+    --green: #2ecc71;
+    --gold: #f1c40f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 18px;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+  }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 2.5rem; font-size: 1rem; }
+  h2 {
+    color: var(--accent);
+    font-size: 1.4rem;
+    margin: 2.5rem 0 0.8rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 2px solid var(--bg3);
+  }
+  h3 {
+    color: var(--green);
+    font-size: 1.1rem;
+    margin: 1.5rem 0 0.5rem;
+  }
+  p { margin-bottom: 0.7rem; }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.3rem; }
+  code {
+    background: var(--bg3);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: var(--gold);
+  }
+  .section {
+    background: var(--bg2);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+  }
+  .section h3 { margin-top: 0; }
+  .tip {
+    background: #1a3a2a;
+    border-left: 4px solid var(--green);
+    padding: 1rem 1.2rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+  }
+  .tip strong { color: var(--green); }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .card {
+    background: var(--bg);
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .card .emoji { font-size: 1.5rem; margin-bottom: 0.3rem; }
+  .card h4 { font-size: 1rem; color: var(--green); margin-bottom: 0.2rem; }
+  .card .desc { font-size: 0.85rem; color: var(--muted); }
+  .back-link {
+    display: inline-block;
+    margin-top: 2rem;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  .back-link:hover { text-decoration: underline; }
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    .container { padding: 1.2rem 1rem 3rem; }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>⚔️ MMO Arena</h1>
+<p class="subtitle">Гайд для нового игрока</p>
+
+<div class="tip">
+  <strong>💡 Совет:</strong> Начните с Охоты — это безопасный способ получить первый опыт и серебро. Затем купите снаряжение в Магазине и выполняйте квесты.
+</div>
+
+<h2>🚀 Начало игры</h2>
+<p>Вы попадаете на главную страницу с <strong>карточкой персонажа</strong>. У вас есть ник, уровень, опыт и четыре базовые характеристики: <strong>Сила</strong>, <strong>Атака</strong>, <strong>Защита</strong> и <strong>Мастерство</strong>.</p>
+<p>Гостевые аккаунты имеют ограниченный доступ. Чтобы разблокировать все возможности — зарегистрируйтесь через раздел <strong>Аккаунт</strong> (шестерёнка в хедере → Аккаунт).</p>
+
+<h2>🏠 Домашняя страница</h2>
+
+<h3>Карточка персонажа</h3>
+<p>Показывает ваш ник, уровень, гильдию, здоровье и снаряжение. Предметы можно экипировать кликом по слотам.</p>
+
+<h3>🌍 МИР — действия за стенами</h3>
+<div class="card-grid">
+  <div class="card">
+    <div class="emoji">💀</div>
+    <h4>Охота (Бестиарий)</h4>
+    <div class="desc">PvE-бои с монстрами. Выбирайте этаж, сражайтесь, получайте опыт и серебро.</div>
+  </div>
+  <div class="card">
+    <div class="emoji">🎒</div>
+    <h4>Работы</h4>
+    <div class="desc">Отправляйте персонажа в экспедиции за серебром. Доход зависит от типа работы.</div>
+  </div>
+  <div class="card">
+    <div class="emoji">⚔️</div>
+    <h4>Арена</h4>
+    <div class="desc">PvP-бои с другими игроками. Победа приносит опыт и серебро.</div>
+  </div>
+</div>
+
+<h3>🏰 Площадь — городские заведения</h3>
+<div class="card-grid">
+  <div class="card">
+    <div class="emoji">🛒</div>
+    <h4>Магазин</h4>
+    <div class="desc">Покупка случайных предметов снаряжения. Редкости: обычные → редкие → эпические → легендарные.</div>
+  </div>
+  <div class="card">
+    <div class="emoji">🏦</div>
+    <h4>Банк</h4>
+    <div class="desc">Хранилище серебра. Переводы между игроками (комиссия 2%).</div>
+  </div>
+  <div class="card">
+    <div class="emoji">🔨</div>
+    <h4>Крафт</h4>
+    <div class="desc">Создание и улучшение предметов. Комбинируйте 3 одинаковых → предмет выше уровнем.</div>
+  </div>
+  <div class="card">
+    <div class="emoji">🏷️</div>
+    <h4>Аукцион</h4>
+    <div class="desc">Торговля между игроками. Выставляйте лоты или покупайте чужие предметы.</div>
+  </div>
+  <div class="card">
+    <div class="emoji">🍺</div>
+    <h4>Трактир</h4>
+    <div class="desc">Лечение и напитки с баффами. Здесь же находятся ежедневные квесты.</div>
+  </div>
+  <div class="card">
+    <div class="emoji">🏰</div>
+    <h4>Гильдия</h4>
+    <div class="desc">Объединения игроков. Совместный чат, рейтинг гильдий, приглашения.</div>
+  </div>
+</div>
+
+<h3>📋 Правая панель</h3>
+<div class="section">
+  <p><strong>📜 Квесты</strong> — ежедневные задания 5 типов × 3 сложности. До 3 активных, до 5 в день. Прогресс сохраняется между днями, сброс в полночь UTC.</p>
+  <p><strong>🏆 Турниры</strong> — расписание с призовым фондом.</p>
+  <p><strong>📊 Рейтинг</strong> — топ игроков по очкам.</p>
+</div>
+
+<h2>💬 Чат</h2>
+<p>Панель чата внизу экрана. Нажмите на неё, чтобы развернуть.</p>
+
+<h3>Вкладки</h3>
+<ul>
+  <li><strong>Общий</strong> — публичный чат для всех игроков</li>
+  <li><strong>🏚️ Гильдия</strong> — чат вашей гильдии</li>
+  <li><strong>Личные сообщения</strong> — приватный чат с игроком</li>
+</ul>
+
+<h3>Команды</h3>
+<ul>
+  <li><code>@ник</code> — упоминание игрока (жёлтая подсветка)</li>
+  <li><code>/w ник сообщение</code> — личное сообщение</li>
+  <li><code>/g сообщение</code> — сообщение в гильд-чат</li>
+  <li><strong>Shift+клик</strong> по предмету — ссылка на предмет в чат</li>
+</ul>
+
+<h3>Список игроков</h3>
+<p>В правой колонке чата. Фильтры: <strong>Все</strong> и <strong>Гильдия</strong>. Зелёные ники — согильдийцы, белые — остальные игроки.</p>
+<p>Клик по нику открывает меню: <strong>Личное сообщение</strong> или <strong>Профиль</strong>.</p>
+
+<h3>Настройка размеров</h3>
+<ul>
+  <li>Значок <strong>⠿</strong> на хедере чата — тянет вверх/вниз для изменения высоты</li>
+  <li>Значок <strong>⠿</strong> слева от списка — тянет для изменения ширины</li>
+  <li>Размеры сохраняются автоматически</li>
+</ul>
+
+<h2>⚔️ Боевая система</h2>
+<div class="section">
+  <p><strong>PvE (Охота):</strong> выбор этажа → поиск моба → бой. Кулдаун между боями. Награда: опыт + серебро.</p>
+  <p><strong>PvP (Арена):</strong> поиск соперника → бой. Кулдаун дольше. Победитель получает опыт + серебро, проигравший — только опыт.</p>
+  <p><strong>🛡️ Защита:</strong> после поражения в PvP даётся временная защита от нападений.</p>
+</div>
+
+<h2>📈 Развитие</h2>
+<div class="section">
+  <p><strong>Характеристики:</strong> Сила, Атака, Защита, Мастерство. Очки распределяются при повышении уровня.</p>
+  <p><strong>Снаряжение:</strong> 6 слотов (оружие, щит, кольца, броня). Редкость влияет на бонусы.</p>
+  <p><strong>Опыт:</strong> даётся за PvE, PvP и турниры.</p>
+  <p><strong>⭐ Премиум:</strong> +30% серебра с PvE/работ, ускоренный кулдаун. Выдаётся администратором.</p>
+</div>
+
+<h2>🏰 Гильдии</h2>
+<p>Вступите через список гильдий или примите приглашение (приходит в личные сообщения).</p>
+<p>Лидеры и офицеры могут приглашать игроков, исключать участников и назначать офицеров.</p>
+
+<h2>🔝 Навигация</h2>
+<div class="section">
+  <p><strong>Серебро</strong> — баланс | <strong>🛡️</strong> — защита | <strong>🕐</strong> — время UTC | <strong>📓 Сводка</strong> — история боёв | <strong>⚙</strong> — настройки</p>
+  <p>Красная точка на сводке мигает при новых событиях (бои или личные сообщения).</p>
+  <p>Хлебные крошки под хедером — быстрая навигация по разделам.</p>
+</div>
+
+<div class="tip">
+  <strong>🎯 Советы:</strong>
+  <ol>
+    <li>Начните с Охоты — безопасный способ получить опыт</li>
+    <li>Купите первое снаряжение в Магазине</li>
+    <li>Выполняйте квесты — хороший источник серебра</li>
+    <li>Вступите в гильдию — союзники и гильд-чат</li>
+    <li>Храните серебро в Банке</li>
+    <li>Следите за кулдаунами после боёв</li>
+    <li>Лечитесь в Трактире между боями</li>
+  </ol>
+</div>
+
+<a href="https://mmoarena.ru" class="back-link">← Вернуться в игру</a>
+
+</div>
+</body>
+</html>

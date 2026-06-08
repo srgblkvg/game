@@ -228,6 +228,15 @@ export default function Header() {
                                         Аккаунт
                                     </button>
                                     <a
+                                        href="/wiki/"
+                                        target="_blank"
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] no-underline cursor-pointer"
+                                        onClick={() => setMenuOpen(false)}
+                                    >
+                                        <Icon icon="game-icons:open-book" width="16" height="16" className="text-[#2ecc71]" />
+                                        Wiki
+                                    </a>
+                                    <a
                                         href="https://vk.com/club239320810"
                                         target="_blank"
                                         rel="noopener noreferrer"
