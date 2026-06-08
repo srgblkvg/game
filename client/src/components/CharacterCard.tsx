@@ -69,9 +69,11 @@ export default function CharacterCard({
   const cardId = `fighter-${side}`;
   const bgImage = isMob
     ? 'none'
-    : (char.gender === 'female'
-      ? 'url(/character_woman.webp)'
-      : 'url(/character_man.webp)');
+    : ((char as any).avatar
+      ? `url(${(char as any).avatar})`
+      : (char.gender === 'female'
+        ? 'url(/character_woman.webp)'
+        : 'url(/character_man.webp)'));
 
   // --- Handlers ---
   const handleDrop = (slotId: string, e: React.DragEvent) => {

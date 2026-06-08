@@ -142,4 +142,38 @@ router.post('/account/register-guest', (req: any, res) => {
     res.json({ success: true, token, username });
 });
 
+// Загрузка аватара (base64)
+import fs from 'fs';
+import path from 'path';
+
+const UPLOADS_DIR = path.resolve(__dirname, '../../uploads/avatars');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+router.post('/account/avatar', (req: any, res) => {
+    const userId = req.userId;
+    const { avatar } = req.body; // data:image/webp;base64,...
+    if (!avatar || typeof avatar !== 'string') return res.status(400).json({ error: 'Нет изображения' });
+
+    const match = avatar.match(/^data:image\/(webp|png|jpeg|jpg);base64,(.+)$/);
+    if (!match) return res.status(400).json({ error: 'Формат не поддерживается. Допустимы: webp, png, jpeg' });
+
+    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+    const data = match[2];
+    const buffer = Buffer.from(data, 'base64');
+    if (buffer.length > 512 * 1024) return res.status(400).json({ error: 'Изображение слишком большое (макс. 512 КБ)' });
+
+    const filename = `${userId}.${ext}`;
+    fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
+
+    const avatarPath = `/uploads/avatars/${filename}`;
+    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarPath, userId);
+    res.json({ success: true, avatar: avatarPath });
+});
+
+router.get('/account/avatar/:userId', (req: any, res) => {
+    const user = db.prepare('SELECT avatar FROM users WHERE id = ?').get(parseInt(req.params.userId)) as any;
+    if (!user?.avatar) return res.status(404).json({ error: 'Нет аватара' });
+    res.json({ avatar: user.avatar });
+});
+
 export default router;

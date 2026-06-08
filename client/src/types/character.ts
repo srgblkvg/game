@@ -32,4 +32,5 @@ export interface CharacterCardData {
   equipment: Record<string, any>;
   stats?: { s: number; a: number; d: number; m: number; hp?: number };
   gender?: string;
+  avatar?: string | null;
 }

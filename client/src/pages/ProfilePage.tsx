@@ -52,6 +52,7 @@ export default function ProfilePage() {
                         gender: profile.gender || 'male',
                         guildName: profile.guildName,
                         guildId: profile.guildId,
+                        avatar: profile.avatar || null,
                     }}
                     side="left"
                     showHealth={false}

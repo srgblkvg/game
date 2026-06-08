@@ -83,6 +83,7 @@ export default function ArenaPage() {
             gender: character.gender || 'male',
             guildName: (character as any).guildName,
             guildId: (character as any).guildId,
+            avatar: (character as any).avatar || null,
           }}
           side="left"
           showHealth={isBattleActive}
@@ -102,6 +103,7 @@ export default function ArenaPage() {
               gender: opponent.gender || 'male',
               guildName: opponent.guildName,
               guildId: opponent.guildId,
+              avatar: opponent.avatar || null,
             }}
             side="right"
             showHealth={isBattleActive}

@@ -419,6 +419,7 @@ export default function BestiaryPage() {
                 gender: character.gender || 'male',
                 guildName: (character as any).guildName,
                 guildId: (character as any).guildId,
+                avatar: (character as any).avatar || null,
               }}
               side="left"
               showHealth={battleActive}

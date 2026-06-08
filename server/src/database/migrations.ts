@@ -184,6 +184,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // Гостевые аккаунты
   try { db.exec('ALTER TABLE users ADD COLUMN isGuest INTEGER DEFAULT 0'); } catch {}
 
+  // Аватар пользователя
+  try { db.exec('ALTER TABLE users ADD COLUMN avatar TEXT'); } catch {}
+
   // Индексы для новых колонок (после миграций)
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_is_guest ON users(isGuest)'); } catch {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_active_job ON users(activeJob)'); } catch {}
