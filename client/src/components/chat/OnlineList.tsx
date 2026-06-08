@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { OnlineUser } from './types';
 
 interface OnlineListProps {
@@ -11,6 +11,34 @@ interface OnlineListProps {
 
 export default function OnlineList({ users, currentUserId, privateChatWith, guildMemberIds, onUserClick }: OnlineListProps) {
     const [filter, setFilter] = useState<'all' | 'guild'>('all');
+    const [width, setWidth] = useState(() => {
+        const saved = localStorage.getItem('onlineListWidth');
+        return saved ? parseInt(saved) : 160;
+    });
+    const widthRef = useRef(width);
+    useEffect(() => { widthRef.current = width; }, [width]);
+
+    const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+        const startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const startW = widthRef.current;
+        const onMove = (ev: MouseEvent | TouchEvent) => {
+            const x = 'touches' in ev ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
+            const delta = startX - x;
+            const w = Math.max(100, Math.min(400, startW + delta));
+            setWidth(Math.round(w));
+        };
+        const onEnd = () => {
+            localStorage.setItem('onlineListWidth', String(widthRef.current));
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onEnd);
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('touchend', onEnd);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+    }, []);
 
     const sorted = users.slice().sort((a, b) => {
         if (a.id === currentUserId) return -1;
@@ -28,8 +56,15 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
     const guildCount = sorted.filter(u => guildMemberIds.has(u.id)).length;
 
     return (
-        <div className="online-panel border-l border-[#444] overflow-y-auto pb-4 bg-[#16162a] max-h-full flex flex-col">
-            <div className="flex shrink-0 border-b border-[#444]">
+        <div className="online-panel bg-[#16162a] max-h-full flex flex-col shrink-0 relative" style={{ width }}>
+            {/* Drag handle on left border */}
+            <div
+                onMouseDown={handleResizeStart}
+                onTouchStart={handleResizeStart}
+                className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-[#555] z-10 select-none"
+                title="Тяни для изменения ширины"
+            />
+            <div className="flex shrink-0 border-b border-l border-[#444]">
                 <button
                     onClick={() => setFilter('all')}
                     className={`flex-1 py-1 text-[0.7rem] cursor-pointer ${filter === 'all' ? 'bg-[#2a2a3e] text-white' : 'bg-transparent text-[var(--color-text-muted)]'}`}
