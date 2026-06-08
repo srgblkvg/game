@@ -61,9 +61,11 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
             <div
                 onMouseDown={handleResizeStart}
                 onTouchStart={handleResizeStart}
-                className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-[#555] z-10 select-none"
+                className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-[#555] z-10 select-none flex items-center justify-center group"
                 title="Тяни для изменения ширины"
-            />
+            >
+                <span className="text-[0.55rem] text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]" style={{ writingMode: 'vertical-rl' }}>⠿</span>
+            </div>
             <div className="flex shrink-0 border-b border-l border-[#444]">
                 <button
                     onClick={() => setFilter('all')}
