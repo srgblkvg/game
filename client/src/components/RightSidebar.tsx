@@ -21,7 +21,7 @@ export default function RightSidebar() {
         <>
             <button
                 onClick={() => setOpen(!open)}
-                className="fixed right-3 top-16 z-50 w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] shadow-lg cursor-pointer"
+                className="fixed right-3 top-16 z-[45] w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] shadow-lg cursor-pointer"
                 title={open ? 'Скрыть панель' : 'Показать панель'}
             >
                 <Icon icon={open ? 'mdi:close' : 'mdi:menu'} width="16" height="16" />

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
@@ -76,12 +77,14 @@ export default function Header() {
     const [protectionSec, setProtectionSec] = useState(0);
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const popupRef = useRef<HTMLDivElement>(null);
 
     // Закрытие меню по клику вне
     useEffect(() => {
         if (!menuOpen) return;
         const handler = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (menuRef.current && !menuRef.current.contains(target) && popupRef.current && !popupRef.current.contains(target)) {
                 setMenuOpen(false);
             }
         };
@@ -149,7 +152,7 @@ export default function Header() {
     };
 
     return (
-        <div className="sticky top-0 z-[55] bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+        <div className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
             <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
                 {user.role === 'player' && character && (
                     <span className="text-white text-sm font-bold">
@@ -187,8 +190,8 @@ export default function Header() {
                                     <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
                                 )}
                             </button>
-                            {menuOpen && (
-                                <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl z-[60] py-1">
+                            {menuOpen && createPortal(
+                                <div ref={popupRef} className="fixed right-3 top-11 mt-1 w-44 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl z-[70] py-1">
                                     <button
                                         onClick={handleAccountClick}
                                         className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
@@ -215,7 +218,8 @@ export default function Header() {
                                         <Icon icon="mdi:vk" width="16" height="16" className="text-[#0077FF]" />
                                         Сообщество VK
                                     </a>
-                                </div>
+                                </div>,
+                                document.body
                             )}
                         </div>
                     )}
