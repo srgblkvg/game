@@ -149,7 +149,7 @@ export default function Header() {
     };
 
     return (
-        <div className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+        <div className="sticky top-0 z-[55] bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
             <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
                 {user.role === 'player' && character && (
                     <span className="text-white text-sm font-bold">
@@ -188,7 +188,7 @@ export default function Header() {
                                 )}
                             </button>
                             {menuOpen && (
-                                <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl z-50 py-1">
+                                <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl z-[60] py-1">
                                     <button
                                         onClick={handleAccountClick}
                                         className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"

@@ -83,6 +83,7 @@ router.post('/resend-code', async (req, res) => {
     if (authHeader?.startsWith('Bearer ')) {
         try {
             const token = authHeader.split(' ')[1];
+            if (!token) return res.status(400).json({ error: 'Невалидный токен' });
             const decoded: any = jwt.verify(token, JWT_SECRET);
             if (decoded.isGuest && decoded.userId) {
                 const guestUser: any = db.prepare('SELECT id FROM users WHERE id = ?').get(decoded.userId);
