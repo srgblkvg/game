@@ -9,6 +9,7 @@ interface MessageListProps {
     currentUserId: number;
     onNickClick: (e: React.MouseEvent, nick: string, isSelf: boolean) => void;
     renderContent?: (msg: ChatMessage) => React.ReactNode;
+    scrollKey?: number;
 }
 
 function formatTime(dateStr: string): string {
@@ -44,12 +45,18 @@ function groupMessages(messages: ChatMessage[]): ChatMessage[][] {
     return groups;
 }
 
-export default function MessageList({ messages, currentUserId, onNickClick, renderContent }: MessageListProps) {
+export default function MessageList({ messages, currentUserId, onNickClick, renderContent, scrollKey }: MessageListProps) {
     const navigate = useNavigate();
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const prevMessageCount = useRef(messages.length);
     const initialLoad = useRef(true);
+
+    // Сброс при смене вкладки
+    useEffect(() => {
+        initialLoad.current = true;
+        prevMessageCount.current = 0;
+    }, [scrollKey]);
 
     useLayoutEffect(() => {
         if (!containerRef.current) return;

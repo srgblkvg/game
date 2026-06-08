@@ -491,6 +491,7 @@ export default function ChatPanel() {
                                 currentUserId={userId}
                                 onNickClick={handleNickClick}
                                 renderContent={renderMessageContent}
+                                scrollKey={guildChatActive ? -1 : (privateChatWith ?? 0)}
                             />
                         </div>
 
