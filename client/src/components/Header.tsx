@@ -179,6 +179,18 @@ export default function Header() {
                         </span>
                     )}
                     {user.role === 'player' && (
+                        <button
+                            onClick={handleHistoryClick}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors relative cursor-pointer"
+                            title="Сводка"
+                        >
+                            <Icon icon="game-icons:notebook" width="20" height="20" className="text-[var(--color-text-muted)]" />
+                            {hasNewBattles && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
+                            )}
+                        </button>
+                    )}
+                    {user.role === 'player' && (
                         <div ref={menuRef} className="relative">
                             <button
                                 onClick={() => setMenuOpen(!menuOpen)}
@@ -186,9 +198,6 @@ export default function Header() {
                                 title="Настройки"
                             >
                                 <Icon icon="mdi:cog" width="20" height="20" className="text-[var(--color-text-muted)]" />
-                                {hasNewBattles && (
-                                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
-                                )}
                             </button>
                             {menuOpen && createPortal(
                                 <div ref={popupRef} className="fixed right-3 top-11 mt-1 w-44 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl z-[70] py-1">
@@ -198,15 +207,6 @@ export default function Header() {
                                     >
                                         <Icon icon="game-icons:person" width="16" height="16" />
                                         Аккаунт
-                                    </button>
-                                    <button
-                                        onClick={handleHistoryClick}
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
-                                    >
-                                        {hasNewBattles && <Icon icon="game-icons:bell" width="16" height="16" className="text-red-400" />}
-                                        <Icon icon="game-icons:notebook" width="16" height="16" />
-                                        Сводка
-                                        {hasNewBattles && <span className="ml-auto text-red-400">●</span>}
                                     </button>
                                     <a
                                         href="https://vk.com/club239320810"
