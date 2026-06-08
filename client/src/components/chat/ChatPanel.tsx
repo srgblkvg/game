@@ -28,6 +28,13 @@ export default function ChatPanel() {
     const [privateChatWith, setPrivateChatWith] = useState<number | null>(null);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [onlineOpen, setOnlineOpen] = useState(false);
+    const [chatHeight, setChatHeight] = useState(() => {
+        const saved = localStorage.getItem('chatHeight');
+        return saved ? parseInt(saved) : 300;
+    });
+    const chatHeightRef = useRef(chatHeight);
+    useEffect(() => { chatHeightRef.current = chatHeight; }, [chatHeight]);
+    const [dragging, setDragging] = useState(false);
 
     const { messages, onlineUsers, addMessages, sendPublic, sendPrivate, bannedUntil, chatError, setChatError } = useGlobalChat();
 
@@ -377,10 +384,37 @@ export default function ChatPanel() {
         Array.from(openPrivateTabs.entries()).map(([id, name]) => ({ id, name })),
         [openPrivateTabs]);
 
+    const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+        e.preventDefault();
+        const startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        const startH = chatHeight;
+        setDragging(true);
+
+        const onMove = (ev: MouseEvent | TouchEvent) => {
+            const y = 'touches' in ev ? (ev as TouchEvent).touches[0].clientY : (ev as MouseEvent).clientY;
+            const delta = startY - y;
+            const h = Math.max(120, Math.min(window.innerHeight * 0.85, startH + delta));
+            setChatHeight(Math.round(h));
+        };
+        const onEnd = () => {
+            setDragging(false);
+            localStorage.setItem('chatHeight', String(chatHeightRef.current));
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onEnd);
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('touchend', onEnd);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+    }, [chatHeight]);
+
     return (
         <div
             ref={panelRef}
-            className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] transition-[height] duration-300 bg-[rgba(30,30,48,0.85)] backdrop-blur-[12px] border-t-2 border-[#555] ${visible ? 'flex' : 'hidden'} ${isPanelOpen ? 'h-[min(300px,50vh)]' : 'h-10'}`}
+            className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] bg-[rgba(30,30,48,0.85)] backdrop-blur-[12px] border-t-2 border-[#555] ${visible ? 'flex' : 'hidden'} ${dragging ? '' : 'transition-[height] duration-150'}`}
+            style={{ height: isPanelOpen ? chatHeight : 40 }}
         >
             <div
                 onClick={() => setIsPanelOpen(!isPanelOpen)}
@@ -403,7 +437,17 @@ export default function ChatPanel() {
                         </>
                     )}
                 </div>
-                <span>{isPanelOpen ? '▼' : '▲'}</span>
+                <div className="flex items-center gap-2">
+                    {isPanelOpen && (
+                        <span
+                            onMouseDown={handleDragStart}
+                            onTouchStart={handleDragStart}
+                            className="cursor-ns-resize text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] select-none px-1"
+                            title="Тяни для изменения высоты"
+                        >⠿</span>
+                    )}
+                    <span>{isPanelOpen ? '▼' : '▲'}</span>
+                </div>
             </div>
 
             {isPanelOpen && (
