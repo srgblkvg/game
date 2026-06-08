@@ -428,24 +428,12 @@ export default function ChatPanel() {
                                 }}
                             />
 
-                            <div className="py-[0.3rem] px-2 bg-[#2a2a3e] shrink-0 flex justify-between items-center">
-                                <span>
-                                    {guildChatActive && guildName
-                                        ? <span className="text-[#2ecc71]">🏚️ Гильдия «{guildName}»</span>
-                                        : privateChatWith !== null
-                                        ? <span>Личные сообщения с {openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}</span>
-                                        : <span>Общий чат</span>}
-                                </span>
-                                <button
-                                    onClick={() => setOnlineOpen(!onlineOpen)}
-                                    className="text-[0.7rem] text-[#2ecc71] hover:text-[#3ee68c] cursor-pointer px-1.5 py-1 bg-[#111] border border-[#333] rounded leading-tight"
-                                    style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-                                    title={onlineOpen ? 'Скрыть список' : 'Показать список'}
-                                >
-                                    <span style={{ display: 'inline-block', transform: 'rotate(180deg)' }}>
-                                        Онлайн: {onlineUsers.length} {onlineOpen ? '▼' : '▶'}
-                                    </span>
-                                </button>
+                            <div className="py-[0.3rem] px-2 bg-[#2a2a3e] shrink-0">
+                                {guildChatActive && guildName
+                                    ? <span className="text-[#2ecc71]">🏚️ Гильдия «{guildName}»</span>
+                                    : privateChatWith !== null
+                                    ? <span>Личные сообщения с {openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}</span>
+                                    : <span>Общий чат</span>}
                             </div>
 
                             <MessageList
@@ -454,6 +442,17 @@ export default function ChatPanel() {
                                 onNickClick={handleNickClick}
                                 renderContent={renderMessageContent}
                             />
+                        </div>
+
+                        {/* Вертикальный переключатель онлайна */}
+                        <div
+                            onClick={() => setOnlineOpen(!onlineOpen)}
+                            className="flex flex-col-reverse items-center cursor-pointer bg-[#111] border-l border-[#333] px-1 py-2 shrink-0 select-none hover:bg-[#1a1a1a]"
+                            title={onlineOpen ? 'Скрыть список' : 'Показать список'}
+                        >
+                            {[...`${onlineOpen ? '▼' : '▶'} ${onlineUsers.length} :нйалнО`].map((ch, i) => (
+                                <span key={i} className="text-[0.65rem] text-[#2ecc71] leading-[1.15]">{ch}</span>
+                            ))}
                         </div>
 
                         {onlineOpen && (
