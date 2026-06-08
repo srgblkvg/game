@@ -56,7 +56,14 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
     const guildCount = sorted.filter(u => guildMemberIds.has(u.id)).length;
 
     return (
-        <div className="online-panel bg-[#16162a] max-h-full flex flex-col shrink-0" style={{ width }}>
+        <div className="online-panel bg-[#16162a] max-h-full flex flex-col shrink-0 relative" style={{ width }}>
+            {/* Невидимый хендл драга */}
+            <div
+                onMouseDown={handleResizeStart}
+                onTouchStart={handleResizeStart}
+                className="absolute left-0 top-0 bottom-0 w-[6px] cursor-col-resize z-10 select-none"
+                title="Тяни для изменения ширины"
+            />
             <div className="flex shrink-0 border-b border-l border-[#444]">
                 <button
                     onClick={() => setFilter('all')}
@@ -66,12 +73,6 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
                     onClick={() => setFilter('guild')}
                     className={`flex-1 py-1 text-[0.7rem] cursor-pointer border-l border-[#444] ${filter === 'guild' ? 'bg-[#2a2a3e] text-[#2ecc71]' : 'bg-transparent text-[var(--color-text-muted)]'}`}
                 >Гильдия{guildCount > 0 ? ` (${guildCount})` : ''}</button>
-                <span
-                    onMouseDown={handleResizeStart}
-                    onTouchStart={handleResizeStart}
-                    className="cursor-col-resize text-[#555] hover:text-[#aaa] select-none px-1 flex items-center border-l border-[#444]"
-                    title="Тяни для изменения ширины"
-                >⠿</span>
             </div>
             <ul className="list-none p-0 m-0 overflow-y-auto">
                 {filtered.map((u, i) => {
