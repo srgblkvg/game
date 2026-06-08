@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter, enterArena, equipItem } from '../api';
@@ -63,8 +62,8 @@ export default function HomePage() {
     <div className="px-4 py-4">
       {character.money === 0 && (!character.inventory || character.inventory.length === 0) && (
         <div className="mb-4 p-3 bg-[rgba(52,152,219,0.1)] border border-[rgba(52,152,219,0.3)] rounded-lg text-sm text-[var(--color-text-secondary)] text-center">
-          💡 Начните с <b><Icon icon="game-icons:swap-bag" width="16" height="16" className="inline" /> Приключений</b> — заработайте серебро и купите снаряжение в <b><Icon icon="game-icons:buy-card" width="16" height="16" className="inline" /> Магазине</b>
-          <br /><a href="/wiki/" target="_blank" className="text-[var(--color-accent-info)] underline">📖 Гайд для новичков</a>
+          👋 Добро пожаловать в MMO Arena!<br />
+          Рекомендуем ознакомиться с <a href="/wiki/" target="_blank" className="text-[var(--color-accent-info)] underline font-bold">📖 гайдом для новичков</a> — там всё про охоту, арену, гильдии, крафт и чат.
         </div>
       )}
       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-6 justify-center items-center sm:items-start">
