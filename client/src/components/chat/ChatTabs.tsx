@@ -19,7 +19,7 @@ export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatAc
   const isPublic = privateChatWith === null && !guildChatActive;
 
   return (
-    <div className="flex bg-[#1e1e30] border-b border-[#444] overflow-x-auto">
+    <div className="flex bg-[#1e1e30] border-b border-[#444] overflow-x-auto [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-[#555] [&::-webkit-scrollbar-thumb]:rounded">
       <div onClick={onSelectPublic} className={`px-[0.6rem] py-[0.3rem] cursor-pointer border-r border-[#444] whitespace-nowrap text-[#eee] flex items-center gap-1 ${isPublic ? 'bg-[#333] font-bold' : 'bg-transparent font-normal'}`}>
         Общий
         {unreadGeneral > 0 && !isPublic && (

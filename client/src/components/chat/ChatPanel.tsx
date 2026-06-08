@@ -442,8 +442,8 @@ export default function ChatPanel() {
                             className="flex items-center cursor-pointer bg-[#111] border-l border-[#333] px-1.5 py-2 shrink-0 select-none hover:bg-[#1a1a1a]"
                             title={onlineOpen ? 'Скрыть список' : 'Показать список'}
                         >
-                            <span className="text-[0.65rem] text-[#2ecc71] leading-[1.15]" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                                Онлайн: {onlineUsers.length} {onlineOpen ? '▼' : '▶'}
+                            <span className="text-[0.75rem] text-[#2ecc71] leading-[1.15]" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                                Онлайн: {onlineUsers.length} {onlineOpen ? '◀' : '▶'}
                             </span>
                         </div>
 
