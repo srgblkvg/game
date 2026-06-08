@@ -1,27 +1,48 @@
+import { useState } from 'react';
 import type { OnlineUser } from './types';
 
 interface OnlineListProps {
     users: OnlineUser[];
     currentUserId: number;
     privateChatWith: number | null;
+    guildMemberIds: Set<number>;
     onUserClick: (e: React.MouseEvent, username: string, isSelf: boolean) => void;
 }
 
-export default function OnlineList({ users, currentUserId, privateChatWith, onUserClick }: OnlineListProps) {
+export default function OnlineList({ users, currentUserId, privateChatWith, guildMemberIds, onUserClick }: OnlineListProps) {
+    const [filter, setFilter] = useState<'all' | 'guild'>('all');
+
     const sorted = users.slice().sort((a, b) => {
         if (a.id === currentUserId) return -1;
         if (b.id === currentUserId) return 1;
         return 0;
     });
 
+    const filtered = filter === 'guild'
+        ? sorted.filter(u => u.id === currentUserId || guildMemberIds.has(u.id))
+        : sorted;
+
     const maxNickLength = 12;
-    const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '…' : nick;
+    const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '\u2026' : nick;
+
+    const guildCount = sorted.filter(u => guildMemberIds.has(u.id)).length;
 
     return (
-        <div className="online-panel border-l border-[#444] overflow-y-auto p-2 pb-4 bg-[#16162a] max-h-full">
-            <ul className="list-none p-0 m-0">
-                {sorted.map((u, i) => {
+        <div className="online-panel border-l border-[#444] overflow-y-auto pb-4 bg-[#16162a] max-h-full flex flex-col">
+            <div className="flex shrink-0 border-b border-[#444]">
+                <button
+                    onClick={() => setFilter('all')}
+                    className={`flex-1 py-1 text-[0.7rem] cursor-pointer ${filter === 'all' ? 'bg-[#2a2a3e] text-white' : 'bg-transparent text-[var(--color-text-muted)]'}`}
+                >Все</button>
+                <button
+                    onClick={() => setFilter('guild')}
+                    className={`flex-1 py-1 text-[0.7rem] cursor-pointer border-l border-[#444] ${filter === 'guild' ? 'bg-[#2a2a3e] text-[#2ecc71]' : 'bg-transparent text-[var(--color-text-muted)]'}`}
+                >Гильдия{guildCount > 0 ? ` (${guildCount})` : ''}</button>
+            </div>
+            <ul className="list-none p-0 m-0 overflow-y-auto">
+                {filtered.map((u, i) => {
                     const isMe = u.id === currentUserId;
+                    const isGuildMate = guildMemberIds.has(u.id);
                     return (
                         <li
                             key={u.id}
@@ -31,13 +52,15 @@ export default function OnlineList({ users, currentUserId, privateChatWith, onUs
                                     ? 'cursor-default text-[#f1c40f] font-normal'
                                     : privateChatWith === u.id
                                         ? 'cursor-pointer text-[#f1c40f] font-bold'
-                                        : 'cursor-pointer text-[#2ecc71] font-normal'
+                                        : isGuildMate
+                                            ? 'cursor-pointer text-[#2ecc71] font-normal'
+                                            : 'cursor-pointer text-white font-normal'
                             }`}
                         >
                             {truncate(u.username)}
                             {isMe && ' (Вы)'}
                             {' '}[<span className="text-white">{u.level}</span>]
-                            {u.guildName && <span className="text-[0.65rem] text-[#2ecc71] ml-1">[{u.guildName.length > 8 ? u.guildName.slice(0, 8) + '…' : u.guildName}]</span>}
+                            {u.guildName && <span className="text-[0.65rem] text-[#2ecc71] ml-1">[{u.guildName.length > 8 ? u.guildName.slice(0, 8) + '\u2026' : u.guildName}]</span>}
                         </li>
                     );
                 })}

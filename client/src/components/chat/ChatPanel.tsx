@@ -55,6 +55,7 @@ export default function ChatPanel() {
     const [guildChatActive, setGuildChatActive] = useState(false);
     const [guildId, setGuildId] = useState<number | null>(null);
     const [guildName, setGuildName] = useState<string | null>(null);
+    const [guildMemberIds, setGuildMemberIds] = useState<Set<number>>(new Set());
 
     // Непрочитанные сообщения
     const [unreadGeneral, setUnreadGeneral] = useState(0);
@@ -153,6 +154,7 @@ export default function ChatPanel() {
                 if (data.guild) {
                     setGuildId(data.guild.id);
                     setGuildName(data.guild.name);
+                    setGuildMemberIds(new Set((data.members || []).map((m: any) => m.userId)));
                 }
             })
             .catch(() => {});
@@ -511,6 +513,7 @@ export default function ChatPanel() {
                                 users={onlineUsers}
                                 currentUserId={userId}
                                 privateChatWith={privateChatWith}
+                                guildMemberIds={guildMemberIds}
                                 onUserClick={handleNickClick}
                             />
                         )}
