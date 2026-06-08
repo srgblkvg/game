@@ -385,7 +385,6 @@ export default function ChatPanel() {
         [openPrivateTabs]);
 
     const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-        e.preventDefault();
         const startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
         const startH = chatHeight;
         setDragging(true);
