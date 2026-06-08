@@ -57,13 +57,15 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
 
     return (
         <div className="online-panel bg-[#16162a] max-h-full flex flex-col shrink-0 relative" style={{ width }}>
-            {/* Невидимый хендл драга */}
+            {/* Хендл драга ширины */}
             <div
                 onMouseDown={handleResizeStart}
                 onTouchStart={handleResizeStart}
-                className="absolute left-0 top-0 bottom-0 w-[6px] cursor-col-resize z-10 select-none"
+                className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:w-[8px] hover:bg-[#555] z-10 select-none flex items-center justify-center group transition-all"
                 title="Тяни для изменения ширины"
-            />
+            >
+                <span className="text-[0.65rem] text-[#666] group-hover:text-[#ccc] opacity-60 group-hover:opacity-100" style={{ writingMode: 'vertical-rl' }}>⠿</span>
+            </div>
             <div className="flex shrink-0 border-b border-l border-[#444]">
                 <button
                     onClick={() => setFilter('all')}
