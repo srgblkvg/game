@@ -447,12 +447,12 @@ export default function ChatPanel() {
                         {/* Вертикальный переключатель онлайна */}
                         <div
                             onClick={() => setOnlineOpen(!onlineOpen)}
-                            className="flex flex-col-reverse items-center cursor-pointer bg-[#111] border-l border-[#333] px-1 py-2 shrink-0 select-none hover:bg-[#1a1a1a]"
+                            className="flex items-center cursor-pointer bg-[#111] border-l border-[#333] px-1.5 py-2 shrink-0 select-none hover:bg-[#1a1a1a]"
                             title={onlineOpen ? 'Скрыть список' : 'Показать список'}
                         >
-                            {[...`${onlineOpen ? '▼' : '▶'} ${onlineUsers.length} :нйалнО`].map((ch, i) => (
-                                <span key={i} className="text-[0.65rem] text-[#2ecc71] leading-[1.15]">{ch}</span>
-                            ))}
+                            <span className="text-[0.65rem] text-[#2ecc71] leading-[1.15]" style={{ writingMode: 'vertical-rl' }}>
+                                {[...`${onlineOpen ? '▼' : '▶'} ${onlineUsers.length} :нйалнО`].reverse().join('')}
+                            </span>
                         </div>
 
                         {onlineOpen && (
