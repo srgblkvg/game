@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useServerTime } from '../contexts/ServerTimeContext';
+import { useGlobalChat } from '../contexts/ChatContext';
 import { fetchBattles, fetchCharacter } from '../api';
 import Button from './ui/Button';
 
@@ -71,9 +72,11 @@ export default function Header() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const { now: serverNow } = useServerTime();
+    const { messages } = useGlobalChat();
     const navigate = useNavigate();
     const location = useLocation();
     const [hasNewBattles, setHasNewBattles] = useState(false);
+    const [hasUnreadPM, setHasUnreadPM] = useState(false);
     const [protectionSec, setProtectionSec] = useState(0);
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -131,9 +134,25 @@ export default function Header() {
         return () => clearInterval(timer);
     }, [character, user]);
 
+    // Отслеживание новых личных сообщений
+    const userId = user?.id;
+    useEffect(() => {
+        if (!userId || messages.length === 0) return;
+        const lastPMSeen = parseInt(localStorage.getItem('lastPMSeen') || '0');
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg.targetId === userId && lastMsg.senderId !== userId) {
+            const msgTime = new Date(lastMsg.createdAt).getTime();
+            if (msgTime > lastPMSeen) {
+                setHasUnreadPM(true);
+            }
+        }
+    }, [messages.length, userId]);
+
     const handleHistoryClick = () => {
         localStorage.setItem('lastHistorySeen', Date.now().toString());
+        localStorage.setItem('lastPMSeen', Date.now().toString());
         setHasNewBattles(false);
+        setHasUnreadPM(false);
         setMenuOpen(false);
         navigate('/history');
     };
@@ -185,7 +204,7 @@ export default function Header() {
                             title="Сводка"
                         >
                             <Icon icon="game-icons:notebook" width="20" height="20" className="text-[var(--color-text-muted)]" />
-                            {hasNewBattles && (
+                            {(hasNewBattles || hasUnreadPM) && (
                                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
                             )}
                         </button>
