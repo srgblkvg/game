@@ -428,14 +428,6 @@ export default function ChatPanel() {
                                 }}
                             />
 
-                            <div className="py-[0.3rem] px-2 bg-[#2a2a3e] shrink-0">
-                                {guildChatActive && guildName
-                                    ? <span className="text-[#2ecc71]">🏚️ Гильдия «{guildName}»</span>
-                                    : privateChatWith !== null
-                                    ? <span>Личные сообщения с {openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}</span>
-                                    : <span>Общий чат</span>}
-                            </div>
-
                             <MessageList
                                 messages={displayedMessages}
                                 currentUserId={userId}
@@ -450,8 +442,8 @@ export default function ChatPanel() {
                             className="flex items-center cursor-pointer bg-[#111] border-l border-[#333] px-1.5 py-2 shrink-0 select-none hover:bg-[#1a1a1a]"
                             title={onlineOpen ? 'Скрыть список' : 'Показать список'}
                         >
-                            <span className="text-[0.65rem] text-[#2ecc71] leading-[1.15]" style={{ writingMode: 'vertical-rl' }}>
-                                {[...`${onlineOpen ? '▼' : '▶'} ${onlineUsers.length} :нйалнО`].reverse().join('')}
+                            <span className="text-[0.65rem] text-[#2ecc71] leading-[1.15]" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                                Онлайн: {onlineUsers.length} {onlineOpen ? '▼' : '▶'}
                             </span>
                         </div>
 
