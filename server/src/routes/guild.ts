@@ -106,6 +106,58 @@ router.get('/guild/invites', (req: any, res) => {
     res.json(invites);
 });
 
+// --- Гильд-чат ---
+router.get('/guild/chat', (req: any, res) => {
+    const userId = req.userId;
+    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
+
+    const guildId = member.guildId;
+    const messages = db.prepare(`
+        SELECT m.*, u.username as senderName
+        FROM chat_messages m
+        JOIN users u ON m.senderId = u.id
+        WHERE m.targetId = ?
+        ORDER BY m.createdAt DESC
+        LIMIT 10
+    `).all(-guildId);
+    res.json(messages.reverse());
+});
+
+router.post('/guild/chat', (req: any, res) => {
+    const userId = req.userId;
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'Пустое сообщение' });
+
+    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
+
+    const guildId = member.guildId;
+    const sender = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
+    const info = db.prepare(
+        'INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)'
+    ).run(userId, -guildId, content);
+
+    const msg = {
+        id: info.lastInsertRowid,
+        senderId: userId,
+        senderName: sender.username,
+        targetId: -guildId,
+        content,
+        createdAt: new Date().toISOString(),
+    };
+
+    // Рассылаем всем членам гильдии
+    const members = db.prepare('SELECT userId FROM guild_members WHERE guildId = ?').all(guildId) as any[];
+    const { broadcast } = require('../websocket');
+    members.forEach((m: any) => {
+        broadcast('message', { message: msg }, m.userId === userId ? undefined : undefined);
+    });
+    broadcast('message', { message: msg }, userId);
+
+    res.json({ success: true, message: msg });
+});
+
 // Публичная информация о гильдии
 router.get('/guild/:id', (req: any, res) => {
     const guildId = parseInt(req.params.id);
@@ -351,61 +403,6 @@ router.post('/guild/cancel-invites', (req: any, res) => {
         "UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND status = 'pending'"
     ).run(member.guildId);
     res.json({ success: true, cancelled: info.changes });
-});
-
-// --- Гильд-чат ---
-// Получить сообщения гильдии
-router.get('/guild/chat', (req: any, res) => {
-    const userId = req.userId;
-    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
-    if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
-
-    const guildId = member.guildId;
-    const messages = db.prepare(`
-        SELECT m.*, u.username as senderName
-        FROM chat_messages m
-        JOIN users u ON m.senderId = u.id
-        WHERE m.targetId = ?
-        ORDER BY m.createdAt DESC
-        LIMIT 10
-    `).all(-guildId);
-    res.json(messages.reverse());
-});
-
-// Отправить сообщение в гильд-чат
-router.post('/guild/chat', (req: any, res) => {
-    const userId = req.userId;
-    const { content } = req.body;
-    if (!content) return res.status(400).json({ error: 'Пустое сообщение' });
-
-    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
-    if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
-
-    const guildId = member.guildId;
-    const sender = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
-    const info = db.prepare(
-        'INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)'
-    ).run(userId, -guildId, content);
-
-    const msg = {
-        id: info.lastInsertRowid,
-        senderId: userId,
-        senderName: sender.username,
-        targetId: -guildId,
-        content,
-        createdAt: new Date().toISOString(),
-    };
-
-    // Рассылаем всем членам гильдии
-    const members = db.prepare('SELECT userId FROM guild_members WHERE guildId = ?').all(guildId) as any[];
-    const { broadcast } = require('../websocket');
-    members.forEach((m: any) => {
-        broadcast('message', { message: msg }, m.userId === userId ? undefined : undefined);
-    });
-    // Всем членам (кроме отправителя)
-    broadcast('message', { message: msg }, userId);
-
-    res.json({ success: true, message: msg });
 });
 
 export default router;
