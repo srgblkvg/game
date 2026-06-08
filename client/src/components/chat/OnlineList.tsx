@@ -18,7 +18,10 @@ export default function OnlineList({ users, currentUserId, privateChatWith, onUs
     const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '…' : nick;
 
     return (
-        <div className="online-panel overflow-y-auto p-2 pb-4 bg-[#16162a] max-h-[200px]">
+        <div className="online-panel border-l border-[#444] overflow-y-auto p-2 pb-4 bg-[#16162a] max-h-full">
+            <h4 className="mb-2 text-[0.85rem] text-[#2ecc71]">
+                Онлайн ({users.length})
+            </h4>
             <ul className="list-none p-0 m-0">
                 {sorted.map(u => {
                     const isMe = u.id === currentUserId;
