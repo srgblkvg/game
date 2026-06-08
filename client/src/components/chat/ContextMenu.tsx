@@ -7,13 +7,12 @@ interface ContextMenuProps {
     y: number;
     username: string;
     userId?: number;
-    onReply: () => void;
     onWhisper: () => void;
     onProfile: () => void;
     onClose: () => void;
 }
 
-export default function ContextMenu({ x, y, onReply, onWhisper, onProfile, onClose }: ContextMenuProps) {
+export default function ContextMenu({ x, y, onWhisper, onProfile, onClose }: ContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState({ left: x, top: y });
 
@@ -69,15 +68,9 @@ export default function ContextMenu({ x, y, onReply, onWhisper, onProfile, onClo
         >
             <div onClick={(e) => {
                 e.stopPropagation();
-                onReply();
-            }} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>
-                Ответить в общий
-            </div>
-            <div onClick={(e) => {
-                e.stopPropagation();
                 onWhisper();
             }} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}>
-                ЛС
+                Личное сообщение
             </div>
             <div onClick={onProfile} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}><Icon icon='game-icons:person' width='14' height='14' className="inline mr-1"/>Профиль</div>
         </div>,

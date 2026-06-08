@@ -537,7 +537,6 @@ export default function ChatPanel() {
             {contextMenu && (
                 <ContextMenu
                     x={contextMenu.x} y={contextMenu.y} username={contextMenu.username}
-                    onReply={handleReplyPublic}
                     onWhisper={handleWhisper}
                     onProfile={handleProfile}
                     onClose={closeContextMenu}
