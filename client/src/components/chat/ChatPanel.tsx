@@ -407,72 +407,74 @@ export default function ChatPanel() {
             </div>
 
             {isPanelOpen && (
-                <div className="flex-1 flex min-h-0">
-                    <div className="flex-1 flex flex-col min-w-0">
-                        <ChatTabs
-                            privateChatWith={privateChatWith}
-                            openPrivateTabs={openPrivateTabsArray}
-                            guildChatActive={guildChatActive}
-                            guildName={guildName || undefined}
-                            unreadGeneral={unreadGeneral}
-                            unreadPrivate={unreadPrivate}
-                            unreadGuild={unreadGuild}
-                            onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); setUnreadGeneral(0); }}
-                            onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); setUnreadPrivate(prev => { const n = new Map(prev); n.delete(id); return n; }); }}
-                            onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); setUnreadGuild(0); }}
-                            onCloseTab={(e, id) => {
-                                e.stopPropagation();
-                                removeTab(id);
-                                if (privateChatWith === id) setPrivateChatWith(null);
-                            }}
-                        />
+                <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 flex min-h-0">
+                        <div className="flex-1 flex flex-col min-w-0">
+                            <ChatTabs
+                                privateChatWith={privateChatWith}
+                                openPrivateTabs={openPrivateTabsArray}
+                                guildChatActive={guildChatActive}
+                                guildName={guildName || undefined}
+                                unreadGeneral={unreadGeneral}
+                                unreadPrivate={unreadPrivate}
+                                unreadGuild={unreadGuild}
+                                onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); setUnreadGeneral(0); }}
+                                onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); setUnreadPrivate(prev => { const n = new Map(prev); n.delete(id); return n; }); }}
+                                onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); setUnreadGuild(0); }}
+                                onCloseTab={(e, id) => {
+                                    e.stopPropagation();
+                                    removeTab(id);
+                                    if (privateChatWith === id) setPrivateChatWith(null);
+                                }}
+                            />
 
-                        <div className="py-[0.3rem] px-2 bg-[#2a2a3e] shrink-0 flex justify-between items-center">
-                            <span>
-                                {guildChatActive && guildName
-                                    ? <span className="text-[#2ecc71]">🏚️ Гильдия «{guildName}»</span>
-                                    : privateChatWith !== null
-                                    ? <span>Личные сообщения с {openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}</span>
-                                    : <span>Общий чат</span>}
-                            </span>
-                            <button
-                                onClick={() => setOnlineOpen(!onlineOpen)}
-                                className="text-[0.75rem] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] cursor-pointer px-1"
-                                title={onlineOpen ? 'Скрыть список' : 'Показать список'}
-                            >
-                                {onlineOpen ? '◀' : '▶'} {onlineUsers.length}
-                            </button>
+                            <div className="py-[0.3rem] px-2 bg-[#2a2a3e] shrink-0 flex justify-between items-center">
+                                <span>
+                                    {guildChatActive && guildName
+                                        ? <span className="text-[#2ecc71]">🏚️ Гильдия «{guildName}»</span>
+                                        : privateChatWith !== null
+                                        ? <span>Личные сообщения с {openPrivateTabs.get(privateChatWith) || 'ID:' + privateChatWith}</span>
+                                        : <span>Общий чат</span>}
+                                </span>
+                                <button
+                                    onClick={() => setOnlineOpen(!onlineOpen)}
+                                    className="text-[0.75rem] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] cursor-pointer px-1"
+                                    title={onlineOpen ? 'Скрыть список' : 'Показать список'}
+                                >
+                                    {onlineOpen ? '◀' : '▶'} {onlineUsers.length}
+                                </button>
+                            </div>
+
+                            <MessageList
+                                messages={displayedMessages}
+                                currentUserId={userId}
+                                onNickClick={handleNickClick}
+                                renderContent={renderMessageContent}
+                            />
                         </div>
 
-                        <MessageList
-                            messages={displayedMessages}
-                            currentUserId={userId}
-                            onNickClick={handleNickClick}
-                            renderContent={renderMessageContent}
-                        />
-
-                        <ChatInput
-                            isPrivate={privateChatWith !== null}
-                            isGuild={guildChatActive}
-                            onlineUsers={onlineUsers}
-                            currentUserId={userId}
-                            onSend={handleSend}
-                            bannedUntil={bannedUntil}
-                            chatError={chatError}
-                            pendingMention={pendingMention}
-                            isGuest={user?.isGuest}
-                            onClearPending={handleClearPending}
-                        />
+                        {onlineOpen && (
+                            <OnlineList
+                                users={onlineUsers}
+                                currentUserId={userId}
+                                privateChatWith={privateChatWith}
+                                onUserClick={handleNickClick}
+                            />
+                        )}
                     </div>
 
-                    {onlineOpen && (
-                        <OnlineList
-                            users={onlineUsers}
-                            currentUserId={userId}
-                            privateChatWith={privateChatWith}
-                            onUserClick={handleNickClick}
-                        />
-                    )}
+                    <ChatInput
+                        isPrivate={privateChatWith !== null}
+                        isGuild={guildChatActive}
+                        onlineUsers={onlineUsers}
+                        currentUserId={userId}
+                        onSend={handleSend}
+                        bannedUntil={bannedUntil}
+                        chatError={chatError}
+                        pendingMention={pendingMention}
+                        isGuest={user?.isGuest}
+                        onClearPending={handleClearPending}
+                    />
                 </div>
             )}
 
