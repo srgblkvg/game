@@ -410,11 +410,16 @@ export default function ChatPanel() {
     }, [chatHeight]);
 
     return (
-        <div
-            ref={panelRef}
-            className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] bg-[rgba(30,30,48,0.85)] backdrop-blur-[12px] border-t-2 border-[#555] ${visible ? 'flex' : 'hidden'} ${dragging ? '' : 'transition-[height] duration-150'}`}
-            style={{ height: isPanelOpen ? chatHeight : 40 }}
-        >
+        <>
+            {/* Оверлей за чатом */}
+            {isPanelOpen && (
+                <div className="fixed inset-0 z-[999] bg-black/40" onClick={() => setIsPanelOpen(false)} />
+            )}
+            <div
+                ref={panelRef}
+                className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] bg-[rgba(30,30,48,0.85)] backdrop-blur-[12px] border-t-2 border-[#555] ${visible ? 'flex' : 'hidden'} ${dragging ? '' : 'transition-[height] duration-150'}`}
+                style={{ height: isPanelOpen ? chatHeight : 40 }}
+            >
             <div
                 onClick={() => setIsPanelOpen(!isPanelOpen)}
                 className="cursor-pointer p-2 bg-[rgba(42,42,62,0.9)] border-b border-[#444] flex justify-between items-center"
@@ -525,5 +530,6 @@ export default function ChatPanel() {
                 />
             )}
         </div>
+        </>
     );
 }
