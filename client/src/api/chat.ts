@@ -1,13 +1,13 @@
 import { BASE_URL, getHeaders } from './helpers';
 
-export async function fetchRecentMessages(limit = 20) {
+export async function fetchRecentMessages(limit = 10) {
     const res = await fetch(`${BASE_URL}/chat/recent?limit=${limit}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Ошибка загрузки последних сообщений');
     return res.json();
 }
 
-export async function fetchPrivateMessages(userId: number) {
-    const res = await fetch(`${BASE_URL}/chat/private/${userId}`, { headers: getHeaders() });
+export async function fetchPrivateMessages(userId: number, limit = 10) {
+    const res = await fetch(`${BASE_URL}/chat/private/${userId}?limit=${limit}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Ошибка загрузки личных сообщений');
     return res.json();
 }

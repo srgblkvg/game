@@ -140,7 +140,29 @@ export default function ChatPanel() {
             .catch(() => {});
     }, [user?.role, character?.guildId]);
 
-    // Гильд-чат: не грузим историю, сообщения приходят через WS и кешируются в localStorage
+    // Загрузка 10 последних сообщений при переключении вкладок
+    useEffect(() => {
+        if (!visible) return;
+        if (privateChatWith !== null || guildChatActive) return;
+        fetchRecentMessages(10)
+            .then((msgs: ChatMessage[]) => addMessages(msgs))
+            .catch(console.error);
+    }, [visible, privateChatWith, guildChatActive, addMessages]);
+
+    useEffect(() => {
+        if (!visible || privateChatWith === null) return;
+        fetchPrivateMessages(privateChatWith, 10)
+            .then((msgs: ChatMessage[]) => addMessages(msgs))
+            .catch(console.error);
+    }, [visible, privateChatWith, addMessages]);
+
+    useEffect(() => {
+        if (!visible || !guildChatActive || !guildId) return;
+        fetch(`${BASE_URL}/guild/chat`, { headers: getHeaders() })
+            .then(r => r.json())
+            .then((msgs: ChatMessage[]) => addMessages(Array.isArray(msgs) ? msgs : []))
+            .catch(console.error);
+    }, [visible, guildChatActive, guildId, addMessages]);
 
     const handleSend = useCallback((text: string) => {
         // Удаляем @ перед именами, которых нет в онлайне
