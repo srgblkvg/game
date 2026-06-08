@@ -19,17 +19,14 @@ export default function OnlineList({ users, currentUserId, privateChatWith, onUs
 
     return (
         <div className="online-panel border-l border-[#444] overflow-y-auto p-2 pb-4 bg-[#16162a] max-h-full">
-            <h4 className="mb-2 text-[0.85rem] text-[#2ecc71]">
-                Онлайн ({users.length})
-            </h4>
             <ul className="list-none p-0 m-0">
-                {sorted.map(u => {
+                {sorted.map((u, i) => {
                     const isMe = u.id === currentUserId;
                     return (
                         <li
                             key={u.id}
                             onClick={isMe ? undefined : (e) => onUserClick(e, u.username, false)}
-                            className={`py-[0.2rem] text-[0.8rem] whitespace-nowrap ${
+                            className={`py-[0.2rem] px-1 text-[0.8rem] whitespace-nowrap ${i % 2 === 1 ? 'bg-[#1e1e38]' : ''} ${
                                 isMe
                                     ? 'cursor-default text-[#f1c40f] font-normal'
                                     : privateChatWith === u.id
