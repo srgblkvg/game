@@ -1,5 +1,6 @@
 import { Icon } from "@iconify/react";
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ContextMenuProps {
     x: number;
@@ -48,7 +49,7 @@ export default function ContextMenu({ x, y, onReply, onWhisper, onProfile, onClo
         return () => document.removeEventListener('click', handleClick);
     }, [onClose]);
 
-    return (
+    return createPortal(
         <div
             ref={menuRef}
             style={{
@@ -79,6 +80,7 @@ export default function ContextMenu({ x, y, onReply, onWhisper, onProfile, onClo
                 ЛС
             </div>
             <div onClick={onProfile} style={{ padding: '0.3rem 0.8rem', cursor: 'pointer' }}><Icon icon='game-icons:person' width='14' height='14' className="inline mr-1"/>Профиль</div>
-        </div>
+        </div>,
+        document.body
     );
 }
