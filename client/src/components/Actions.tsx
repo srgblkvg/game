@@ -43,13 +43,11 @@ const bgClassLookup: Record<string, string> = {
 const diffLabels: Record<string, string> = { easy: 'Лёгкий', equal: 'Равный', hard: 'Сложный' };
 const diffIcons: Record<string, string> = { easy: 'game-icons:broken-shield', equal: 'game-icons:crossed-swords', hard: 'game-icons:death-skull' };
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, navigate, isGuest }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, navigate }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
-    onArenaClick: () => void; navigate: (path: string) => void; isGuest: boolean;
+    onArenaClick: () => void; navigate: (path: string) => void;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
-    const guestBlockedPaths = ['/auction', '/craft', '/bank'];
-    const guestTooltip = 'На гостевом аккаунте доступ к этой функции заблокирован';
 
     const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
     useEffect(() => {
@@ -85,15 +83,14 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                 const isArena = card.path === null;
                 const isHunt = card.path === '/bestiary';
                 const isBank = card.path === '/bank';
-                const isGuestBlocked = isGuest && card.path && guestBlockedPaths.includes(card.path);
                 const huntDisabled = isHunt && pveCooldownSec > 0;
                 const arenaDisabled = isArena && !canAttack;
                 const bankDisabled = isBank && bankCooldownSec > 0;
-                const disabled = arenaDisabled || huntDisabled || bankDisabled || isGuestBlocked;
+                const disabled = arenaDisabled || huntDisabled || bankDisabled;
                 const cdSec = isArena ? attackCooldownSec : isHunt ? pveCooldownSec : isBank ? bankCooldownSec : 0;
                 const btnText = disabled && cdSec > 0
                     ? `${Math.floor(cdSec / 60)}:${String(cdSec % 60).padStart(2, '0')}`
-                    : isGuestBlocked ? 'Заблокировано' : card.buttonText;
+                    : card.buttonText;
 
                 const highlighted = highlightCard === card.title;
 
@@ -105,7 +102,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                 }
 
                 return (
-                    <div key={i} className="relative group" title={isGuestBlocked ? guestTooltip : undefined} id={`action-card-${card.title}`}>
+                    <div key={i} className="relative group" id={`action-card-${card.title}`}>
                         <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                         <div className={`absolute inset-0 bg-cover bg-center opacity-20 ${bgClassLookup[card.bgPath]}`} />
                         <div className="relative w-full flex flex-col flex-1">
@@ -122,11 +119,6 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             </div>
                         </div>
                     </div>
-                    {isGuestBlocked && (
-                        <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <span className="text-white text-[0.6rem] bg-black/70 px-2 py-1 rounded text-center max-w-[90%]">{guestTooltip}</span>
-                        </div>
-                    )}
                     </div>
                 );
             })}
@@ -233,13 +225,13 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                     <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 МИР
                 </h2>
-                <CardGrid cards={outsideCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} isGuest={isGuest} />
+                <CardGrid cards={outsideCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
             </div>
             <div className="border-t border-[var(--color-border-light)] pt-4">
                 <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                     <Icon icon="game-icons:castle" width="14" height="14" />🏰 Площадь
                 </h2>
-                <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} isGuest={isGuest} />
+                <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
             </div>
         </div>
     );
