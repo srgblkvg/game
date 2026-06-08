@@ -124,6 +124,47 @@ export default function AccountPage() {
             <h2 className="text-xl font-bold mb-4">Аккаунт</h2>
             <p className="mb-4">Текущее имя: <strong>{character?.username || user.username}</strong></p>
 
+            {/* Аватар */}
+            {user.role === 'player' && (
+                <Card className="mb-4">
+                    <h3 className="font-bold mb-2">🖼️ Аватар</h3>
+                    <p className="text-sm text-[var(--color-text-muted)] mb-2">Загрузите изображение для карточки персонажа (WebP, PNG, JPEG, до 512 КБ)</p>
+                    <input
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/webp,image/png,image/jpeg"
+                        className="hidden"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 512 * 1024) { alert('Файл слишком большой (макс. 512 КБ)'); return; }
+                            const reader = new FileReader();
+                            reader.onload = async () => {
+                                try {
+                                    const res = await fetch('/api/account/avatar', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+                                        body: JSON.stringify({ avatar: reader.result }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                        alert('Аватар обновлён!');
+                                        const fresh = await fetchCharacter();
+                                        setCharacter(fresh);
+                                    } else {
+                                        alert(data.error || 'Ошибка');
+                                    }
+                                } catch { alert('Ошибка загрузки'); }
+                            };
+                            reader.readAsDataURL(file);
+                        }}
+                    />
+                    <Button variant="secondary" size="sm" onClick={() => (document.getElementById('avatar-upload') as HTMLInputElement)?.click()}>
+                        Выбрать файл
+                    </Button>
+                </Card>
+            )}
+
             {/* Гостевая регистрация */}
             {user.isGuest && (
                 <Card className="mb-4">
@@ -294,41 +335,6 @@ export default function AccountPage() {
                             </div>
                         </form>
                         {deleteMsg && <p className="mt-2 text-sm text-red-500">{deleteMsg}</p>}
-                    </Card>
-                )}
-                {user.role === 'player' && (
-                    <Card>
-                        <h3 className="font-bold mb-2">🖼️ Аватар</h3>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-2">Загрузите изображение для карточки персонажа (WebP, PNG, JPEG, до 512 КБ)</p>
-                        <input
-                            type="file"
-                            accept="image/webp,image/png,image/jpeg"
-                            onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                if (file.size > 512 * 1024) { alert('Файл слишком большой (макс. 512 КБ)'); return; }
-                                const reader = new FileReader();
-                                reader.onload = async () => {
-                                    try {
-                                        const res = await fetch('/api/account/avatar', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-                                            body: JSON.stringify({ avatar: reader.result }),
-                                        });
-                                        const data = await res.json();
-                                        if (data.success) {
-                                            alert('Аватар обновлён!');
-                                            const fresh = await fetchCharacter();
-                                            setCharacter(fresh);
-                                        } else {
-                                            alert(data.error || 'Ошибка');
-                                        }
-                                    } catch { alert('Ошибка загрузки'); }
-                                };
-                                reader.readAsDataURL(file);
-                            }}
-                            className="text-sm"
-                        />
                     </Card>
                 )}
             </div>
