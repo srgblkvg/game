@@ -2,6 +2,12 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../env';
 import { isTokenRevoked } from '../tokenBlacklist';
 
+// Временное отключение гостевых ограничений (тестирование)
+let guestRestrictionsDisabled = false;
+export function isGuestRestrictionsDisabled() { return guestRestrictionsDisabled; }
+export function setGuestRestrictionsDisabled(v: boolean) { guestRestrictionsDisabled = v; }
+export function toggleGuestRestrictions(): boolean { guestRestrictionsDisabled = !guestRestrictionsDisabled; return guestRestrictionsDisabled; }
+
 export function authMiddleware(req: any, res: any, next: any) {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Не авторизован' });
@@ -32,6 +38,7 @@ export function requirePlayer(req: any, res: any, next: any) {
 }
 
 export function requireFullAccess(req: any, res: any, next: any) {
+    if (guestRestrictionsDisabled) return next();
     if (req.isGuest) return res.status(403).json({ error: 'На гостевом аккаунте доступ к этой функции заблокирован' });
     next();
 }

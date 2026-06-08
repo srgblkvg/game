@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { isGuestRestrictionsDisabled } from './auth';
 
 // В памяти: userId → timestamp последнего действия
 const guestLastAction = new Map<number, number>();
@@ -8,6 +9,7 @@ const GUEST_COOLDOWN_MS = 0; // задержка отключена
  * Замедляет гостевые запросы — не чаще 1 действия в 5 секунд.
  */
 export function guestCooldown(req: any, res: Response, next: NextFunction) {
+    if (isGuestRestrictionsDisabled()) return next();
     if (!req.isGuest) return next();
 
     const userId = req.userId;

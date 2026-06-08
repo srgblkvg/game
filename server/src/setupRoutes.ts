@@ -53,6 +53,13 @@ export function setupRoutes(app: Express) {
   app.use('/api/admin', authMiddleware, requireAdmin, adminBattleRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminTournamentRoutes);
 
+  // Тоггл гостевых ограничений
+  app.post('/api/admin/toggle-guest', authMiddleware, requireAdmin, (req, res) => {
+    const { toggleGuestRestrictions } = require('./middleware/auth');
+    const disabled = toggleGuestRestrictions();
+    res.json({ guestRestrictionsDisabled: disabled });
+  });
+
   // Игровые маршруты (только для игроков) + замедление гостей
   app.use('/api', authMiddleware, requirePlayer, guestCooldown);
   app.use('/api', characterRoutes);

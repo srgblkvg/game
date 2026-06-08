@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import xss from 'xss';
 import db from './database';
 import { wsPublicMessageSchema, wsPrivateMessageSchema, wsItemLinkSchema } from './validation';
+import { isGuestRestrictionsDisabled } from './middleware/auth';
 import { auditWsConnect, auditWsDisconnect } from './audit';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -168,7 +169,7 @@ export function setupWebSocket(server: any) {
       }
 
       // Гостям чат запрещён
-      if (user.isGuest) {
+      if (user.isGuest && !isGuestRestrictionsDisabled()) {
         sendToUser(userId, {
           type: 'error',
           message: 'Гостевой аккаунт не может писать в чат. Зарегистрируйтесь в разделе Аккаунт.',

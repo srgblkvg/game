@@ -21,7 +21,7 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
     const inputRef = useRef<HTMLInputElement>(null);
 
     const isBanned = bannedUntil !== null && bannedUntil > Date.now() / 1000;
-    const isDisabled = isBanned || isGuest;
+    const isDisabled = isBanned;
     const disabledPlaceholder = isGuest ? 'Чат недоступен для гостей' : 'Чат заблокирован';
 
     useEffect(() => {
