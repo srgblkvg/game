@@ -133,7 +133,7 @@ export default function TournamentBanner() {
                     const label = w.type === 'custom' ? (w.name || 'Турнир') : DIVISION_LABELS[w.division] || w.division;
                     const secLeft = w.registrationEnd - now;
                     return (
-                        <div key={w.id} className="text-[0.6rem] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-1.5">
+                        <div key={w.id} className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-1.5">
                             ⏰ {label}: регистрация закроется через {formatTimer(Math.max(0, secLeft))}!
                         </div>
                     );
@@ -148,13 +148,13 @@ export default function TournamentBanner() {
                                 <span className="text-xs">{tournamentIcon(t)}</span>
                                 <span className={`text-xs font-medium ${joinable ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
                                     {tournamentLabel(t)}
-                                    {t.type === 'custom' && <span className="text-[0.6rem] ml-0.5 text-[var(--color-accent-purple)]">игр.</span>}
+                                    {t.type === 'custom' && <span className="text-xs ml-0.5 text-[var(--color-accent-purple)]">игр.</span>}
                                 </span>
-                                <span className="text-[0.6rem] text-[var(--color-text-muted)] ml-auto">
+                                <span className="text-xs text-[var(--color-text-muted)] ml-auto">
                                     {t.status === 'registration' ? `⌛ ${formatTimer(Math.max(0, untilEnd))}` : '⚔️ идёт'}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-2 text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
+                            <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] mt-0.5">
                                 <span>{t.participantCount}/{t.maxPlayers || 8} уч.</span>
                                 <span>Призовой фонд: {formatMoney(t.prizePool)}</span>
                                 {t.entryFee ? <span>вход {t.entryFee}</span> : null}
@@ -169,7 +169,7 @@ export default function TournamentBanner() {
                         {myCompleted.slice(0, 2).map(t => {
                             const myPlace = t.myRegistration?.snapshotStats?.place;
                             return (
-                                <div key={t.id} className="cursor-pointer hover:opacity-80 transition-opacity text-[0.6rem]" onClick={() => navigate('/tournament')}>
+                                <div key={t.id} className="cursor-pointer hover:opacity-80 transition-opacity text-xs" onClick={() => navigate('/tournament')}>
                                     <span className="text-[var(--color-text-muted)]">{tournamentIcon(t)} {tournamentLabel(t)} — завершён</span>
                                     {myPlace && <span className="text-[var(--color-accent-success)] ml-1">{myPlace}-е место</span>}
                                 </div>

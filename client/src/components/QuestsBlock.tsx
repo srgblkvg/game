@@ -19,11 +19,11 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
 
     return (
         <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative">
-            <h3 className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-full text-xs font-bold cursor-pointer hover:text-[var(--color-accent-info)] whitespace-nowrap" onClick={()=>{onHighlight?.(null);navigate('/tavern?tab=quests');}}>
-                <Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1" />Задания{active.length>0 && <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-1">{active.length}/3</span>}
+            <h3 className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-full text-base font-bold cursor-pointer hover:text-[var(--color-accent-info)] whitespace-nowrap flex items-center gap-1" onClick={()=>{onHighlight?.(null);navigate('/tavern?tab=quests');}}>
+                <Icon icon="game-icons:notebook" width="18" height="18" />Задания{active.length>0 && <span className="text-xs text-[var(--color-text-muted)] ml-1">{active.length}/3</span>}
             </h3>
             {active.length===0 ? (
-                <p className="text-[0.65rem] text-[var(--color-text-muted)] cursor-pointer" onClick={()=>navigate('/tavern?tab=quests')}>Нет активных заданий</p>
+                <p className="text-xs text-[var(--color-text-muted)] cursor-pointer" onClick={()=>navigate('/tavern?tab=quests')}>Нет активных заданий</p>
             ) : (
                 <div className="space-y-1.5">
                     {active.map((q: any) => {
@@ -31,12 +31,12 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                         return (
                             <div key={q.id} className="cursor-pointer hover:opacity-80 transition-opacity"
                                 onClick={() => q.progress >= q.requirement ? navigate('/tavern?tab=quests') : onHighlight?.(q.questType)}>
-                                <div className="flex items-center gap-1 text-[0.65rem]">
+                                <div className="flex items-center gap-1 text-xs">
                                     <span>{questIcons[q.questType]}</span>
                                     <span className="font-medium">{q.typeName}</span>
-                                    <span className="text-[0.55rem] text-[var(--color-text-muted)] ml-auto">{q.progress}/{q.requirement}</span>
+                                    <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-auto">{q.progress}/{q.requirement}</span>
                                 </div>
-                                <p className="text-[0.55rem] text-[var(--color-text-muted)] leading-tight">{q.description}</p>
+                                <p className="text-[0.65rem] text-[var(--color-text-muted)] leading-tight">{q.description}</p>
                                 <div className="h-1 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
                                     <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all" style={{width:`${pct}%`}}/>
                                 </div>
