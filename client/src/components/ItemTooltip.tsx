@@ -1,5 +1,6 @@
 // client/src/components/ItemTooltip.tsx
 import React, { useRef, useState, useLayoutEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { getRarityColor } from '../utils/itemUtils';
 import ItemStats from './ItemStats';
 
@@ -8,8 +9,8 @@ interface ItemTooltipProps {
   position: { x: number; y: number };
 }
 
-const TOOLTIP_MARGIN = 8;   // gap from cursor
-const SCREEN_PADDING = 8;    // min distance from viewport edges
+const TOOLTIP_MARGIN = 8;
+const SCREEN_PADDING = 8;
 
 const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -19,33 +20,24 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
     const el = tooltipRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const { innerWidth, innerHeight } = window;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-    // Start: right of cursor, above cursor
     let left = position.x + TOOLTIP_MARGIN;
     let top = position.y - rect.height - TOOLTIP_MARGIN;
 
-    // If above goes off top edge, put below cursor
     if (top < SCREEN_PADDING) {
       top = position.y + TOOLTIP_MARGIN;
     }
-
-    // If below goes off bottom edge, clamp
-    if (top + rect.height > innerHeight - SCREEN_PADDING) {
-      top = innerHeight - rect.height - SCREEN_PADDING;
+    if (top + rect.height > vh - SCREEN_PADDING) {
+      top = vh - rect.height - SCREEN_PADDING;
     }
-
-    // If right goes off right edge, flip to left of cursor
-    if (left + rect.width > innerWidth - SCREEN_PADDING) {
+    if (left + rect.width > vw - SCREEN_PADDING) {
       left = position.x - rect.width - TOOLTIP_MARGIN;
     }
-
-    // If left goes off left edge, clamp
     if (left < SCREEN_PADDING) {
       left = SCREEN_PADDING;
     }
-
-    // Final clamp for top (in case clamp from bottom pushed it above)
     if (top < SCREEN_PADDING) {
       top = SCREEN_PADDING;
     }
@@ -53,7 +45,6 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
     setAdjustedPos({ left, top, opacity: 1 });
   }, [position, item]);
 
-  // useLayoutEffect — runs synchronously after DOM mutations, before paint
   useLayoutEffect(() => {
     computePosition();
   }, [computePosition]);
@@ -62,10 +53,10 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
 
   const color = getRarityColor(item);
 
-  return (
+  const tooltip = (
     <div
       ref={tooltipRef}
-      className="fixed bg-[#1e1e30] rounded-lg p-[0.7rem] z-[9999] text-[#eee] text-xs max-w-[220px] pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.8)] border border-solid"
+      className="fixed bg-[#1e1e30] rounded-lg p-[0.7rem] z-[99999] text-[#eee] text-xs max-w-[220px] pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.8)] border border-solid"
       style={{
         left: adjustedPos.left,
         top: adjustedPos.top,
@@ -77,6 +68,9 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
       <ItemStats item={item} imageSize={36} />
     </div>
   );
+
+  // Portal to document.body — bypasses any CSS containing blocks (backdrop-filter, transform, etc.)
+  return createPortal(tooltip, document.body);
 };
 
 export default ItemTooltip;
