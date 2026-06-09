@@ -27,7 +27,7 @@ export default function BankPage() {
     const [transfers, setTransfers] = useState<any[]>([]);
     const [operations, setOperations] = useState<any[]>([]);
 
-    useEffect(() => { if (!user) navigate('/login'); else if (!isGuest) { loadBank(); loadTransfers(); loadOperations(); } }, [user]);
+    useEffect(() => { if (!user) navigate('/login'); else { loadBank(); loadTransfers(); loadOperations(); } }, [user]);
 
     const loadBank = async () => { try { const r = await fetch(`${BASE_URL}/bank`,{headers:getHeaders()}); const d = await r.json(); setPocket(d.pocket); setBank(d.bank); setAccountNumber(d.accountNumber||''); } catch{} };
     const loadTransfers = async (f='all') => { try { setTransfers(await (await fetch(`${BASE_URL}/bank/transfers?filter=${f}&limit=20`,{headers:getHeaders()})).json()); } catch{} };
@@ -55,15 +55,6 @@ export default function BankPage() {
     };
 
     const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>new Date(b.createdAt+'Z').getTime()-new Date(a.createdAt+'Z').getTime()).slice(0,20);
-
-    if (isGuest) {
-        return (
-            <div className="max-w-md mx-auto px-4 py-4">
-<h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
-                <Card className="text-center py-6"><Icon icon="game-icons:lock" width="40" height="40" className="mx-auto mb-3 text-[var(--color-text-muted)]" /><p className="text-sm text-[var(--color-text-muted)]">Банк недоступен на гостевом аккаунте.</p></Card>
-            </div>
-        );
-    }
 
     return (
         <div className="max-w-md mx-auto px-4 py-4">
