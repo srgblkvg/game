@@ -98,7 +98,7 @@ export default function BestiaryPage() {
   }, []);
 
   const floorBgMap = new Map(floorsData.map((f: any) => [f.name, f.background]));
-  // Build floor list from mobs, but use floors table for order/background
+  // Build floor list in mob order (by level), with backgrounds from floors table
   const mobFloorNames: string[] = [];
   const seen = new Set<string>();
   for (const m of mobs) {
@@ -107,9 +107,7 @@ export default function BestiaryPage() {
       mobFloorNames.push(m.location);
     }
   }
-  // Merge: floors from DB first (with order), then any mob locations not in DB
-  const orderedFloors = floorsData.map((f: any) => f.name);
-  const floors = [...new Set([...orderedFloors, ...mobFloorNames])];
+  const floors = mobFloorNames;
 
   const getFloorInfo = (floor: string) => {
     const fm = mobs.filter((m: any) => m.location === floor).sort((a: any, b: any) => a.level - b.level);
