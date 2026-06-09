@@ -101,7 +101,7 @@ export default function JobsPage() {
     if (activeJob && remaining !== null && remaining > 0) {
         const bg = (activeJob as any).background;
         return (
-            <div className="relative text-center py-8 px-4 rounded-xl overflow-hidden border-2 border-[var(--color-border-default)] min-h-[200px] flex flex-col items-center justify-center"
+            <div className="relative text-center py-8 px-4 rounded-xl overflow-hidden border-2 border-[var(--color-border-default)] min-h-[200px] flex flex-col items-center justify-center mt-6 mx-4"
                 style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
                 {bg && <div className="absolute inset-0 bg-black/60" />}
                 <div className="relative z-10">
