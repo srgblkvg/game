@@ -30,12 +30,17 @@ import ordersRoutes from './routes/orders';
 import logRoutes from './routes/log';
 import questsRoutes from './routes/quests';
 import guildRoutes from './routes/guild';
+import adminGameRoutes from './routes/adminGame';
+import actionsRoutes from './routes/actions';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
   app.use('/api', authRoutes);
   app.use('/api', adminAuthRoutes);
   app.use('/api/oauth', oauthRoutes);
+
+  // Действия (публичный)
+  app.use('/api', actionsRoutes);
 
   // Серверное время (публичный)
   app.get('/api/time', (_req: any, res) => {
@@ -52,6 +57,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/admin/chat', authMiddleware, requireAdmin, adminChatRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminBattleRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminTournamentRoutes);
+  app.use('/api/admin', authMiddleware, requireAdmin, adminGameRoutes);
 
   // Тоггл гостевых ограничений
   app.post('/api/admin/toggle-guest', authMiddleware, requireAdmin, (req, res) => {

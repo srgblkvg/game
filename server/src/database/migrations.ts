@@ -458,6 +458,23 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // --- Фоновое изображение для работ ---
   try { db.exec('ALTER TABLE jobs ADD COLUMN background TEXT'); } catch {}
 
+  // --- Изображения и описания для мобов ---
+  try { db.exec('ALTER TABLE mobs ADD COLUMN background TEXT'); } catch {}
+  try { db.exec('ALTER TABLE mobs ADD COLUMN description TEXT'); } catch {}
+
+  // --- Таблица действий (action cards) ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS actions_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    section TEXT NOT NULL DEFAULT 'world',
+    title TEXT NOT NULL,
+    subtitle TEXT DEFAULT '',
+    icon TEXT DEFAULT 'game-icons:castle',
+    bg_image TEXT,
+    path TEXT,
+    cost INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0
+  )`); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }

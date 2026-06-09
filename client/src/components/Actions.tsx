@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
 import { useAuth } from '../contexts/AuthContext';
+import { getHeaders } from '../api/helpers';
 
 interface ActionsProps {
     canAttack: boolean;
@@ -14,42 +15,62 @@ interface ActionsProps {
 }
 
 interface ActionCard {
+    id: number;
     icon: string; title: string; subtitle: string; cost: number;
-    path: string | null; buttonText: string; bgPath: string; variant: 'danger';
+    path: string | null; bg_image: string | null; section: string;
+    buttonText: string;
 }
 
-const outsideCards: ActionCard[] = [
-    { icon: 'game-icons:death-skull', title: 'Охота', subtitle: 'Бестиарий (PvE)', cost: 0, path: '/bestiary', buttonText: 'Перейти', bgPath: '/action_arena.webp', variant: 'danger' },
-    { icon: 'game-icons:swap-bag', title: 'Работы', subtitle: 'Экспедиции', cost: 0, path: '/jobs', buttonText: 'Выбрать', bgPath: '/action_adventures.webp', variant: 'danger' },
-    { icon: 'game-icons:crossed-swords', title: 'Арена', subtitle: 'PvP бой', cost: 10, path: null, buttonText: 'В бой', bgPath: '/action_arena.webp', variant: 'danger' },
-];
+export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick }: ActionsProps) {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const [cards, setCards] = useState<ActionCard[]>([]);
 
-const castleCards: ActionCard[] = [
-    { icon: 'game-icons:buy-card', title: 'Магазин', subtitle: 'Снаряжение', cost: 0, path: '/shop', buttonText: 'Перейти', bgPath: '/action_shop.webp', variant: 'danger' },
-    { icon: 'game-icons:bank', title: 'Банк', subtitle: 'Хранилище', cost: 0, path: '/bank', buttonText: 'Перейти', bgPath: '/action_craft.webp', variant: 'danger' },
-    { icon: 'game-icons:anvil', title: 'Крафт', subtitle: 'Улучшения', cost: 0, path: '/craft', buttonText: 'Перейти', bgPath: '/action_craft.webp', variant: 'danger' },
-    { icon: 'game-icons:auction', title: 'Аукцион', subtitle: 'Торги', cost: 0, path: '/auction', buttonText: 'Перейти', bgPath: '/action_shop.webp', variant: 'danger' },
-    { icon: 'game-icons:drink-me', title: 'Трактир', subtitle: 'Лечение и квесты', cost: 0, path: '/tavern', buttonText: 'Перейти', bgPath: '/action_adventures.webp', variant: 'danger' },
-    { icon: 'game-icons:castle', title: 'Гильдия', subtitle: 'Объединения', cost: 0, path: '/guild', buttonText: 'Перейти', bgPath: '/action_shop.webp', variant: 'danger' },
-];
+    useEffect(() => {
+        fetch('/api/actions', { headers: getHeaders() })
+            .then(r => r.json())
+            .then((data: any[]) => {
+                const mapped: ActionCard[] = (data || []).map(a => ({
+                    ...a,
+                    buttonText: a.cost > 0 ? `В бой` : 'Перейти',
+                }));
+                setCards(mapped);
+            })
+            .catch(() => {});
+    }, []);
 
-const bgClassLookup: Record<string, string> = {
-    '/action_arena.webp': 'bg-[url(/action_arena.webp)]',
-    '/action_adventures.webp': 'bg-[url(/action_adventures.webp)]',
-    '/action_shop.webp': 'bg-[url(/action_shop.webp)]',
-    '/action_craft.webp': 'bg-[url(/action_craft.webp)]',
-};
+    const worldCards = cards.filter(c => c.section === 'world');
+    const castleCards = cards.filter(c => c.section === 'castle');
 
-const diffLabels: Record<string, string> = { easy: 'Лёгкий', equal: 'Равный', hard: 'Сложный' };
-const diffIcons: Record<string, string> = { easy: 'game-icons:broken-shield', equal: 'game-icons:crossed-swords', hard: 'game-icons:death-skull' };
+    return (
+        <div className="mt-6 w-full max-w-2xl mx-auto space-y-4">
+            {worldCards.length > 0 && (
+                <div>
+                    <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 МИР
+                    </h2>
+                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} />
+                </div>
+            )}
+            {castleCards.length > 0 && (
+                <div className="border-t border-[var(--color-border-light)] pt-4">
+                    <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <Icon icon="game-icons:castle" width="14" height="14" />🏰 Площадь
+                    </h2>
+                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} />
+                </div>
+            )}
+        </div>
+    );
+}
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, navigate }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
-    onArenaClick: () => void; navigate: (path: string) => void;
+    navigate: (path: string) => void;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
-
     const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
+
     useEffect(() => {
         const update = () => {
             const h = window.location.hash;
@@ -64,7 +85,6 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
     const questToCard: Record<string, string> = { hunt: 'Охота', arena: 'Арена', job: 'Работы', craft: 'Крафт', auction: 'Аукцион' };
     const highlightCard = highlightedCard ? questToCard[highlightedCard] : null;
 
-    // Прокрутка к подсвеченной карточке только на мобильных, авто-сброс через 3 сек
     useEffect(() => {
         if (!highlightCard) return;
         setTimeout(() => {
@@ -80,9 +100,9 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {cards.map((card, i) => {
-                const isArena = card.path === null;
-                const isHunt = card.path === '/bestiary';
-                const isBank = card.path === '/bank';
+                const isArena = card.path === null || card.title === 'Арена';
+                const isHunt = card.path === '/bestiary' || card.title === 'Охота';
+                const isBank = card.path === '/bank' || card.title === 'Банк';
                 const huntDisabled = isHunt && pveCooldownSec > 0;
                 const arenaDisabled = isArena && !canAttack;
                 const bankDisabled = isBank && bankCooldownSec > 0;
@@ -94,17 +114,20 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
 
                 const highlighted = highlightCard === card.title;
 
-                // Для арены — flip-card
                 if (isArena) {
                     return <ArenaFlipCard key={i} card={card} disabled={disabled} cdSec={cdSec} btnText={btnText}
                         arenaDifficulty={arenaDifficulty} setArenaDifficulty={setArenaDifficulty} navigate={navigate}
                         highlighted={highlighted} />;
                 }
 
+                const bgStyle = card.bg_image
+                    ? { backgroundImage: `url(${card.bg_image})` }
+                    : {};
+
                 return (
                     <div key={i} className="relative group" id={`action-card-${card.title}`}>
                         <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
-                        <div className={`absolute inset-0 bg-cover bg-center opacity-20 ${bgClassLookup[card.bgPath]}`} />
+                        <div className="absolute inset-0 bg-cover bg-center opacity-20" style={bgStyle} />
                         <div className="relative w-full flex flex-col flex-1">
                             <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                                 <Icon icon={card.icon} width="14" height="14" />{card.title}
@@ -158,13 +181,14 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
         }
     };
 
+    const bgStyle = card.bg_image ? { backgroundImage: `url(${card.bg_image})` } : {};
+
     return (
         <>
         <div className="perspective-600">
             <div className={`relative w-full transition-transform duration-400 [transform-style:preserve-3d] ${flipped ? 'rotate-y-180' : ''}`} id={`action-card-${card.title}`}>
-                {/* Front */}
                 <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all backface-hidden ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
-                <div className={`absolute inset-0 bg-cover bg-center opacity-20 ${bgClassLookup[card.bgPath]}`} />
+                <div className="absolute inset-0 bg-cover bg-center opacity-20" style={bgStyle} />
                 <div className="relative w-full flex flex-col flex-1">
                     <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                         <Icon icon={card.icon} width="14" height="14" />{card.title}
@@ -178,32 +202,21 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                         </div>
                     </div>
                 </div>
-
-                {/* Back */}
                 <div className={`absolute inset-0 bg-[var(--color-bg-secondary)] rounded-xl p-3 border border-[var(--color-border-default)] flex flex-col items-center justify-center gap-2 backface-hidden [transform:rotateY(180deg)] ${!flipped ? 'pointer-events-none' : ''}`}>
                     <p className="text-[0.65rem] text-[var(--color-text-muted)]">Сложность соперника:</p>
-                    <select
-                        value={arenaDifficulty}
-                        onChange={e => setArenaDifficulty(e.target.value)}
-                        className="bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-light)] rounded px-2 py-1 text-xs w-full"
-                    >
+                    <select value={arenaDifficulty} onChange={e => setArenaDifficulty(e.target.value)}
+                        className="bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-light)] rounded px-2 py-1 text-xs w-full">
                         <option value="easy">Лёгкий (ниже ур.)</option>
                         <option value="equal">Равный</option>
                         <option value="hard">Сложный (выше ур.)</option>
                     </select>
                     <div className="flex gap-1 w-full">
-                        <Button variant="danger" size="xs" fullWidth onClick={handleSearch}>
-                            Поиск
-                        </Button>
-                        <Button variant="secondary" size="xs" onClick={() => { setFlipped(false); }} className="min-w-[24px]">
-                            ←
-                        </Button>
+                        <Button variant="danger" size="xs" fullWidth onClick={handleSearch}>Поиск</Button>
+                        <Button variant="secondary" size="xs" onClick={() => { setFlipped(false); }} className="min-w-[24px]">←</Button>
                     </div>
                 </div>
             </div>
         </div>
-
-        {/* Modal */}
         {modalMsg && (
             <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
                 <div className="bg-red-900/90 text-red-200 border border-red-500 rounded-lg px-6 py-3 shadow-2xl text-sm font-medium animate-pulse">
@@ -212,27 +225,5 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
             </div>
         )}
         </>
-    );
-}
-
-export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick }: ActionsProps) {
-    const navigate = useNavigate();
-    const { user } = useAuth();
-    const isGuest = user?.isGuest || false;
-    return (
-        <div className="mt-6 w-full max-w-2xl mx-auto space-y-4">
-            <div>
-                <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
-                    <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 МИР
-                </h2>
-                <CardGrid cards={outsideCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
-            </div>
-            <div className="border-t border-[var(--color-border-light)] pt-4">
-                <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
-                    <Icon icon="game-icons:castle" width="14" height="14" />🏰 Площадь
-                </h2>
-                <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} navigate={navigate} />
-            </div>
-        </div>
     );
 }
