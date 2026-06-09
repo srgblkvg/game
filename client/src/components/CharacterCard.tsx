@@ -67,13 +67,27 @@ export default function CharacterCard({
   const slotSize = isVerySmall ? '20px' : isMobile ? '26px' : undefined;
 
   const cardId = `fighter-${side}`;
-  const bgImage = isMob
-    ? 'none'
-    : ((char as any).avatar
-      ? `url(${(char as any).avatar})`
-      : (char.gender === 'female'
-        ? 'url(/character_woman.webp)'
-        : 'url(/character_man.webp)'));
+  const defaultAvatar = (char as any).gender === 'female'
+    ? '/character_woman.webp'
+    : '/character_man.webp';
+
+  const [resolvedAvatar, setResolvedAvatar] = useState<string | null>(null);
+
+  // Preload custom avatar — fall back to default on error
+  useEffect(() => {
+    const customUrl = (char as any).avatar;
+    if (!customUrl) {
+      setResolvedAvatar(defaultAvatar);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => setResolvedAvatar(customUrl);
+    img.onerror = () => setResolvedAvatar(defaultAvatar);
+    img.src = customUrl;
+    return () => { img.onload = null; img.onerror = null; };
+  }, [(char as any).avatar, defaultAvatar]);
+
+  const bgImage = isMob ? 'none' : `url(${resolvedAvatar || defaultAvatar})`;
 
   // --- Handlers ---
   const handleDrop = (slotId: string, e: React.DragEvent) => {
