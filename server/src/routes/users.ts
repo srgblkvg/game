@@ -21,7 +21,7 @@ router.get('/character/public/:userId', (req: any, res) => {
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
     const user: any = db.prepare(
-        'SELECT u.id, u.username, u.level, u.totalBattles, u.wins, u.equipment, u.currentHp, u.gender, u.baseS, u.baseA, u.baseD, u.baseM, u.pveTotalBattles, u.pveWins, u.tournamentCount, u.tournamentWins, u.totalJobMoney, u.totalPveMoneyWon, u.totalPvpMoneyWon, u.totalPveMoneyLost, u.totalPvpMoneyLost, u.totalJobSeconds, u.craftCreated, u.craftUpgraded, u.craftBroken, u.createdAt, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?'
+        'SELECT u.id, u.username, u.level, u.totalBattles, u.wins, u.equipment, u.currentHp, u.gender, u.avatar, u.baseS, u.baseA, u.baseD, u.baseM, u.pveTotalBattles, u.pveWins, u.tournamentCount, u.tournamentWins, u.totalJobMoney, u.totalPveMoneyWon, u.totalPvpMoneyWon, u.totalPveMoneyLost, u.totalPvpMoneyLost, u.totalJobSeconds, u.craftCreated, u.craftUpgraded, u.craftBroken, u.createdAt, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?'
     ).get(userId);
 
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -56,6 +56,7 @@ router.get('/character/public/:userId', (req: any, res) => {
         stats,
         currentHp: user.currentHp,
         gender: user.gender || 'male',
+        avatar: user.avatar || null,
         guildName: user.guildName || null,
         guildId: user.guildId || null,
     });

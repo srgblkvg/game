@@ -21,7 +21,7 @@ router.get('/arena/opponent', (req: any, res) => {
 
     // Если не смена — проверяем закреплённого соперника
     if (!change && user.arenaOpponentId) {
-        const saved = db.prepare('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.gender, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)').get(user.arenaOpponentId, now) as any;
+        const saved = db.prepare('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.gender, u.avatar, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)').get(user.arenaOpponentId, now) as any;
         if (saved) {
             // Проверяем, соответствует ли сохранённый соперник запрошенной сложности
             const matchesDifficulty =
@@ -40,6 +40,7 @@ router.get('/arena/opponent', (req: any, res) => {
                     equipment: savedEnriched, stats: savedStats,
                     playerMoney: user.money,
                     gender: saved.gender || 'male',
+                    avatar: saved.avatar || null,
                     guildName: saved.guildName || null, guildId: saved.guildId || null,
                 });
             }
@@ -55,7 +56,7 @@ router.get('/arena/opponent', (req: any, res) => {
 
     // Подбор соперников по сложности
     let opponents = db.prepare(
-        'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)'
+        'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.avatar, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)'
     ).all(userId, now) as any[];
 
     const diffLabel = difficulty === 'easy' ? 'ниже вашего' : difficulty === 'hard' ? 'выше вашего' : 'равным вашему';
@@ -108,6 +109,7 @@ router.get('/arena/opponent', (req: any, res) => {
         stats,
         playerMoney: user.money,
         gender: opponent.gender || 'male',
+        avatar: opponent.avatar || null,
         guildName: opponent.guildName || null,
         guildId: opponent.guildId || null,
     });
