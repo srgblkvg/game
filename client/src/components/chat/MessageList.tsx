@@ -83,106 +83,109 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
     const groups = useMemo(() => groupMessages(messages), [messages]);
 
     return (
-        <div
-            ref={containerRef}
-            className="flex-1 overflow-y-auto overflow-x-auto px-[0.5rem] py-[0.6rem] flex flex-col gap-[2px] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#555] [&::-webkit-scrollbar-thumb]:rounded"
-        >
-            {groups.map((group, gi) => {
-                const firstMsg = group[0];
-                const isOwn = firstMsg.senderId === currentUserId;
-                const isPrivate = firstMsg.targetId !== null && firstMsg.targetId > 0;
-                const isGuild = firstMsg.targetId !== null && firstMsg.targetId < 0;
+        <>
+            <div
+                ref={containerRef}
+                className="flex-1 overflow-y-auto overflow-x-auto px-[0.5rem] py-[0.6rem] flex flex-col gap-[2px] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#555] [&::-webkit-scrollbar-thumb]:rounded"
+            >
+                {groups.map((group, gi) => {
+                    const firstMsg = group[0];
+                    const isOwn = firstMsg.senderId === currentUserId;
+                    const isPrivate = firstMsg.targetId !== null && firstMsg.targetId > 0;
+                    const isGuild = firstMsg.targetId !== null && firstMsg.targetId < 0;
 
-                return (
-                    <div
-                        key={gi}
-                        className={`flex flex-col mb-1.5 ${isOwn ? 'items-end' : 'items-start'}`}
-                    >
-                        {/* Nickname row */}
+                    return (
                         <div
-                            className={`flex items-center gap-1 mb-0.5 ${isOwn ? 'pr-3' : 'pl-3'}`}
+                            key={gi}
+                            className={`flex flex-col mb-1.5 ${isOwn ? 'items-end' : 'items-start'}`}
                         >
-                            <span
-                                className={`text-[0.72rem] font-semibold select-none ${
-                                    isGuild ? 'text-[#2ecc71]' : isPrivate ? 'text-[#c084fc]' : 'text-[#aaa]'
-                                } ${isOwn ? 'cursor-default' : 'cursor-pointer'}`}
-                                onClick={isOwn ? undefined : (e) => onNickClick(e, firstMsg.senderName, false)}
+                            {/* Nickname row */}
+                            <div
+                                className={`flex items-center gap-1 mb-0.5 ${isOwn ? 'pr-3' : 'pl-3'}`}
                             >
-                                {truncate(firstMsg.senderName)}
-                            </span>
-                            {firstMsg.senderGuild && (
                                 <span
-                                    onClick={() =>
-                                        firstMsg.senderGuildId
-                                            ? navigate(`/guild/${firstMsg.senderGuildId}`)
-                                            : navigate('/guild/rating')
-                                    }
-                                    className="text-[0.6rem] text-[#2ecc71] cursor-pointer px-1 rounded-[3px]"
+                                    className={`text-[0.72rem] font-semibold select-none ${
+                                        isGuild ? 'text-[#2ecc71]' : isPrivate ? 'text-[#c084fc]' : 'text-[#aaa]'
+                                    } ${isOwn ? 'cursor-default' : 'cursor-pointer'}`}
+                                    onClick={isOwn ? undefined : (e) => onNickClick(e, firstMsg.senderName, false)}
                                 >
-                                    [{firstMsg.senderGuild.length > 8 ? firstMsg.senderGuild.slice(0, 8) + '\u2026' : firstMsg.senderGuild}]
+                                    {truncate(firstMsg.senderName)}
                                 </span>
-                            )}
-                            <span className="text-[0.62rem] text-[#555]">
-                                {formatTime(firstMsg.createdAt)}
-                            </span>
-                        </div>
-
-                        {/* Bubble(s) */}
-                        <div
-                            className={`flex flex-col gap-[2px] max-w-[85%] ${isOwn ? 'items-end' : 'items-start'}`}
-                        >
-                            {group.map((msg) =>
-                                msg.item && msg.item.type !== 'guild_invite' ? (
-                                    /* Item link bubble */
-                                    <div
-                                        key={msg.id}
-                                        style={{ color: getRarityColor(msg.itemRarity ?? 0) }}
-                                        className={`px-[10px] py-[6px] font-bold cursor-pointer text-[0.82rem] break-words shadow-[0_1px_2px_rgba(0,0,0,0.3)] ${
-                                            isOwn
-                                                ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] border border-[rgba(255,255,255,0.08)]'
-                                                : `rounded-[12px_12px_12px_4px] ${isPrivate ? 'bg-[#2d1f3d]' : 'bg-[#2a2a3e]'} border border-[rgba(255,255,255,0.04)]`
-                                        }`}
-                                        onMouseEnter={(e) =>
-                                            setTooltipData({ item: msg.item, x: e.clientX, y: e.clientY })
+                                {firstMsg.senderGuild && (
+                                    <span
+                                        onClick={() =>
+                                            firstMsg.senderGuildId
+                                                ? navigate(`/guild/${firstMsg.senderGuildId}`)
+                                                : navigate('/guild/rating')
                                         }
-                                        onMouseMove={(e) => {
-                                            if (tooltipData)
-                                                setTooltipData((prev) =>
-                                                    prev ? { ...prev, x: e.clientX, y: e.clientY } : null
-                                                );
-                                        }}
-                                        onMouseLeave={() => setTooltipData(null)}
+                                        className="text-[0.6rem] text-[#2ecc71] cursor-pointer px-1 rounded-[3px]"
                                     >
-                                        [{msg.item.name}
-                                        {msg.item.upgradeLevel > 0 ? ` +${msg.item.upgradeLevel}` : ''}]
-                                    </div>
-                                ) : (
-                                    /* Text bubble */
-                                    <div
-                                        key={msg.id}
-                                        className={`px-3 py-[7px] break-words shadow-[0_1px_3px_rgba(0,0,0,0.35)] text-[0.85rem] leading-[1.4] ${
-                                            isOwn
-                                                ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] text-[#eaeaea] border border-[rgba(255,255,255,0.08)]'
-                                                : `rounded-[12px_12px_12px_4px] border border-[rgba(255,255,255,0.04)] ${
-                                                    isGuild
-                                                        ? 'bg-[#1a3a1a] text-[#2ecc71]'
-                                                        : isPrivate
-                                                            ? 'bg-[#2d1f3d] text-[#c084fc]'
-                                                            : 'bg-[#2a2a3e] text-[#eaeaea]'
-                                                }`
-                                        }`}
-                                    >
-                                        {renderContent ? renderContent(msg) : msg.content}
-                                    </div>
-                                )
-                            )}
+                                        [{firstMsg.senderGuild.length > 8 ? firstMsg.senderGuild.slice(0, 8) + '\u2026' : firstMsg.senderGuild}]
+                                    </span>
+                                )}
+                                <span className="text-[0.62rem] text-[#555]">
+                                    {formatTime(firstMsg.createdAt)}
+                                </span>
+                            </div>
+
+                            {/* Bubble(s) */}
+                            <div
+                                className={`flex flex-col gap-[2px] max-w-[85%] ${isOwn ? 'items-end' : 'items-start'}`}
+                            >
+                                {group.map((msg) =>
+                                    msg.item && msg.item.type !== 'guild_invite' ? (
+                                        /* Item link bubble */
+                                        <div
+                                            key={msg.id}
+                                            style={{ color: getRarityColor(msg.itemRarity ?? 0) }}
+                                            className={`px-[10px] py-[6px] font-bold cursor-pointer text-[0.82rem] break-words shadow-[0_1px_2px_rgba(0,0,0,0.3)] ${
+                                                isOwn
+                                                    ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] border border-[rgba(255,255,255,0.08)]'
+                                                    : `rounded-[12px_12px_12px_4px] ${isPrivate ? 'bg-[#2d1f3d]' : 'bg-[#2a2a3e]'} border border-[rgba(255,255,255,0.04)]`
+                                            }`}
+                                            onMouseEnter={(e) =>
+                                                setTooltipData({ item: msg.item, x: e.clientX, y: e.clientY })
+                                            }
+                                            onMouseMove={(e) => {
+                                                if (tooltipData)
+                                                    setTooltipData((prev) =>
+                                                        prev ? { ...prev, x: e.clientX, y: e.clientY } : null
+                                                    );
+                                            }}
+                                            onMouseLeave={() => setTooltipData(null)}
+                                        >
+                                            [{msg.item.name}
+                                            {msg.item.upgradeLevel > 0 ? ` +${msg.item.upgradeLevel}` : ''}]
+                                        </div>
+                                    ) : (
+                                        /* Text bubble */
+                                        <div
+                                            key={msg.id}
+                                            className={`px-3 py-[7px] break-words shadow-[0_1px_3px_rgba(0,0,0,0.35)] text-[0.85rem] leading-[1.4] ${
+                                                isOwn
+                                                    ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] text-[#eaeaea] border border-[rgba(255,255,255,0.08)]'
+                                                    : `rounded-[12px_12px_12px_4px] border border-[rgba(255,255,255,0.04)] ${
+                                                        isGuild
+                                                            ? 'bg-[#1a3a1a] text-[#2ecc71]'
+                                                            : isPrivate
+                                                                ? 'bg-[#2d1f3d] text-[#c084fc]'
+                                                                : 'bg-[#2a2a3e] text-[#eaeaea]'
+                                                    }`
+                                            }`}
+                                        >
+                                            {renderContent ? renderContent(msg) : msg.content}
+                                        </div>
+                                    )
+                                )}
+                            </div>
                         </div>
-                    </div>
-                );
-            })}
+                    );
+                })}
+            </div>
+            {/* Tooltip rendered OUTSIDE scrollable container to avoid clipping */}
             {tooltipData && (
                 <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />
             )}
-        </div>
+        </>
     );
 }
