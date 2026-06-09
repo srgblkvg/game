@@ -168,14 +168,14 @@ export function setupWebSocket(server: any) {
         return;
       }
 
-      // Гостям чат запрещён
-      if (user.isGuest && !isGuestRestrictionsDisabled()) {
+      // Гостям чат запрещён — отключено
+      /* if (user.isGuest && !isGuestRestrictionsDisabled()) {
         sendToUser(userId, {
           type: 'error',
           message: 'Гостевой аккаунт не может писать в чат. Зарегистрируйтесь в разделе Аккаунт.',
         });
         return;
-      }
+      } */
 
       // Отправка предмета в чат
       if (data.type === 'itemLink') {
