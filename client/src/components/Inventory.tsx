@@ -161,7 +161,7 @@ export default function Inventory({
                                 if (item && !isCraftItem(item)) {
                                     if (e.shiftKey) {
                                         e.stopPropagation();
-                                        sendItemLink(item.id);
+                                        sendItemLink(item.id, item);
                                     } else if (onItemClick) {
                                         setTooltipData(null);
                                         onItemClick(item);
