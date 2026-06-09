@@ -91,14 +91,25 @@ export default function BestiaryPage() {
   };
 
   // API returns mobs in level order — just deduplicate, no sort needed
-  const floors: string[] = [];
+  const [floorsData, setFloorsData] = useState<any[]>([]);
+  useEffect(() => {
+    fetch('/api/floors', { headers: getHeaders() })
+      .then(r => r.json()).then(setFloorsData).catch(() => {});
+  }, []);
+
+  const floorBgMap = new Map(floorsData.map((f: any) => [f.name, f.background]));
+  // Build floor list from mobs, but use floors table for order/background
+  const mobFloorNames: string[] = [];
   const seen = new Set<string>();
   for (const m of mobs) {
     if (!seen.has(m.location)) {
       seen.add(m.location);
-      floors.push(m.location);
+      mobFloorNames.push(m.location);
     }
   }
+  // Merge: floors from DB first (with order), then any mob locations not in DB
+  const orderedFloors = floorsData.map((f: any) => f.name);
+  const floors = [...new Set([...orderedFloors, ...mobFloorNames])];
 
   const getFloorInfo = (floor: string) => {
     const fm = mobs.filter((m: any) => m.location === floor).sort((a: any, b: any) => a.level - b.level);
@@ -339,9 +350,13 @@ export default function BestiaryPage() {
             {floors.map((floor) => {
               const info = getFloorInfo(floor);
               const disabled = cooldownRemaining > 0;
+              const bg = floorBgMap.get(floor);
               return (
-                <Card key={floor} className={`cursor-pointer hover:border-[var(--color-accent-info)] transition-colors ${disabled ? 'opacity-50' : ''}`}
-                  onClick={() => !disabled && selectFloor(floor)}>
+                <Card key={floor} className={`cursor-pointer hover:border-[var(--color-accent-info)] transition-colors relative overflow-hidden ${disabled ? 'opacity-50' : ''}`}
+                  onClick={() => !disabled && selectFloor(floor)}
+                  style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+                  {bg && <div className="absolute inset-0 bg-black/70" />}
+                  <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <Icon icon="game-icons:castle-ruins" width="20" height="20" className="text-[var(--color-text-muted)]" />
                     <h3 className="font-bold text-sm">{floor}</h3>
@@ -394,6 +409,7 @@ export default function BestiaryPage() {
                       </Button>
                     </div>
                   )}
+                  </div>
                 </Card>
               );
             })}
