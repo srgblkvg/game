@@ -70,6 +70,15 @@ router.get('/jobs/history', (req: any, res) => {
     res.json(history);
 });
 
+// Отменить работу без награды
+router.post('/jobs/cancel', (req: any, res) => {
+    const userId = req.userId;
+    const user = db.prepare('SELECT activeJob FROM users WHERE id = ?').get(userId) as any;
+    if (!user || !user.activeJob) return res.status(400).json({ error: 'Нет активной работы' });
+    db.prepare('UPDATE users SET activeJob = NULL WHERE id = ?').run(userId);
+    res.json({ success: true });
+});
+
 // Административные
 router.get('/admin/jobs', (req: any, res) => {
     const jobs = db.prepare('SELECT * FROM jobs ORDER BY id').all();

@@ -7,6 +7,8 @@ import { startRandomJob, fetchCharacter } from '../api';
 import { formatMoney } from '../utils/money';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import { getHeaders } from '../api/helpers';
 
 const durations = [
     { label: '10 мин', value: 600, icon: 'game-icons:stopwatch' },
@@ -22,6 +24,8 @@ export default function JobsPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [remaining, setRemaining] = useState<number | null>(null);
+    const [showCancel, setShowCancel] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
     const prevActiveJob = useRef(character?.activeJob);
     const intervalRef = useRef<number | null>(null);
 
@@ -110,8 +114,24 @@ export default function JobsPage() {
                     <p className="text-[var(--color-text-secondary)]">Осталось: {formatTime(remaining)}</p>
                     <p className="text-[var(--color-text-accent)]">Награда: {formatMoney((activeJob as any).rewardMin || activeJob.reward)}–{formatMoney((activeJob as any).rewardMax || activeJob.reward)}{(activeJob as any).premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{(activeJob as any).premiumBonus} премиум)</span> : null}</p>
                     <p className="text-[var(--color-accent-purple)]">Опыт: +{activeJob.expReward || 0}</p>
+                    <Button variant="secondary" size="sm" className="mt-4" onClick={() => setShowCancel(true)}>Отменить работу</Button>
                 </div>
             </div>
+            <Modal open={showCancel} onClose={() => setShowCancel(false)} title="Отменить работу?" borderColor="var(--color-border-default)">
+                <p className="text-sm mb-4">Вы уверены? Награда и опыт <strong>не</strong> будут получены.</p>
+                <div className="flex gap-2 justify-center">
+                    <Button variant="danger" size="sm" disabled={cancelling} onClick={async () => {
+                        setCancelling(true);
+                        try {
+                            await fetch('/api/jobs/cancel', { method: 'POST', headers: getHeaders() });
+                            setCharacter({ ...character!, activeJob: null });
+                            setShowCancel(false);
+                            navigate('/');
+                        } catch { setCancelling(false); }
+                    }}>{cancelling ? '...' : 'Да, отменить'}</Button>
+                    <Button variant="secondary" size="sm" onClick={() => setShowCancel(false)}>Нет</Button>
+                </div>
+            </Modal>
         );
     }
 
