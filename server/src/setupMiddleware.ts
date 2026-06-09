@@ -17,7 +17,7 @@ export function setupMiddleware(app: Express) {
   }));
   app.use(cors());
   app.use(compression());
-  app.use(express.json({ limit: '1mb' }));
+  app.use(express.json({ limit: '5mb' }));
   app.use(cookieParser());
 
   // Rate limiting (можно отключить переменной DISABLE_RATE_LIMIT=true в .env)
