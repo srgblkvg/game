@@ -62,11 +62,65 @@ export default function ChatPanel() {
     const [unreadPrivate, setUnreadPrivate] = useState<Map<number, number>>(new Map());
     const [unreadGuild, setUnreadGuild] = useState(0);
 
-    // Отслеживаем новые сообщения
+    // --- Last-read tracking (persisted in localStorage) ---
+    const LS_GENERAL = 'chatLastReadGeneral';
+    const LS_GUILD = 'chatLastReadGuild';
+    const lsPrivate = (uid: number) => `chatLastReadPrivate_${uid}`;
+    const getLastRead = (key: string): number => parseInt(localStorage.getItem(key) || '0') || 0;
+    const saveLastRead = (key: string, id: number) => { if (id > getLastRead(key)) localStorage.setItem(key, String(id)); };
+
+    const markRead = useCallback((type: 'general' | 'guild' | number) => {
+        const filtered = type === 'general'
+            ? messages.filter(m => m.targetId === null)
+            : type === 'guild'
+                ? messages.filter(m => m.targetId !== null && m.targetId < 0)
+                : messages.filter(m => (m.senderId === userId && m.targetId === type) || (m.senderId === type && m.targetId === userId));
+        const maxId = filtered.length > 0 ? Math.max(...filtered.map(m => m.id)) : 0;
+        if (type === 'general') { saveLastRead(LS_GENERAL, maxId); setUnreadGeneral(0); }
+        else if (type === 'guild') { saveLastRead(LS_GUILD, maxId); setUnreadGuild(0); }
+        else { saveLastRead(lsPrivate(type), maxId); setUnreadPrivate(p => { const n = new Map(p); n.delete(type); return n; }); }
+    }, [messages, userId]);
+
+    // Mark current tab as read when panel closes
+    useEffect(() => {
+        if (!isPanelOpen && messages.length > 0) {
+            if (guildChatActive) markRead('guild');
+            else if (privateChatWith !== null) markRead(privateChatWith);
+            else markRead('general');
+        }
+    }, [isPanelOpen]);
+
+    const initialScanDone = useRef(false);
+    // Reset initial scan when chat is reopened (new session)
+    useEffect(() => { if (isPanelOpen) initialScanDone.current = false; }, [isPanelOpen]);
+
+    // Отслеживаем новые сообщения (с учётом lastReadId из localStorage)
     useEffect(() => {
         if (messages.length === 0) return;
+
+        if (!initialScanDone.current) {
+            // Первичная загрузка (после открытия чата / обновления страницы) — сканируем все
+            initialScanDone.current = true;
+            const lastReadGeneral = getLastRead(LS_GENERAL);
+            const lastReadGuild = getLastRead(LS_GUILD);
+            setUnreadGeneral(messages.filter(m => m.senderId !== userId && m.targetId === null && m.id > lastReadGeneral).length);
+            setUnreadGuild(messages.filter(m => m.senderId !== userId && m.targetId !== null && m.targetId < 0 && m.id > lastReadGuild).length);
+            const priv = new Map<number, number>();
+            for (const m of messages) {
+                if (m.senderId === userId) continue;
+                if (m.targetId !== null && m.targetId > 0 && m.targetId === userId) {
+                    const fromId = m.senderId;
+                    const lastRead = getLastRead(lsPrivate(fromId));
+                    if (m.id > lastRead) priv.set(fromId, (priv.get(fromId) || 0) + 1);
+                }
+            }
+            setUnreadPrivate(priv);
+            return;
+        }
+
+        // Инкрементально — только новое сообщение (вебсокет)
         const last = messages[messages.length - 1];
-        if (last.senderId === userId) return; // свои не считаем
+        if (last.senderId === userId) return;
         if (last.targetId === null && (privateChatWith !== null || guildChatActive || !isPanelOpen)) {
             setUnreadGeneral(c => c + 1);
         } else if (last.targetId !== null && last.targetId < 0 && (!guildChatActive || !isPanelOpen)) {
@@ -83,7 +137,7 @@ export default function ChatPanel() {
             }
             addTab(fromId, fromName);
         }
-    }, [messages.length]);
+    }, [messages.length, userId]);
 
     const panelRef = useRef<HTMLDivElement>(null);
 
@@ -478,9 +532,9 @@ export default function ChatPanel() {
                                 unreadGeneral={unreadGeneral}
                                 unreadPrivate={unreadPrivate}
                                 unreadGuild={unreadGuild}
-                                onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); setUnreadGeneral(0); }}
-                                onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); setUnreadPrivate(prev => { const n = new Map(prev); n.delete(id); return n; }); }}
-                                onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); setUnreadGuild(0); }}
+                                onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); markRead('general'); }}
+                                onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); markRead(id); }}
+                                onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); markRead('guild'); }}
                                 onCloseTab={(e, id) => {
                                     e.stopPropagation();
                                     removeTab(id);
