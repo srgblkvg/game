@@ -90,54 +90,33 @@ export default function ChatPanel() {
         }
     }, [isPanelOpen]);
 
-    const initialScanDone = useRef(false);
-    // Reset initial scan when chat is reopened (new session)
-    useEffect(() => { if (isPanelOpen) initialScanDone.current = false; }, [isPanelOpen]);
-
-    // Отслеживаем новые сообщения (с учётом lastReadId из localStorage)
+    // Всегда пересчитываем непрочитанные с нуля
+    const prevMsgCount = useRef(0);
     useEffect(() => {
         if (messages.length === 0) return;
-
-        if (!initialScanDone.current) {
-            // Первичная загрузка (после открытия чата / обновления страницы) — сканируем все
-            initialScanDone.current = true;
-            const lastReadGeneral = getLastRead(LS_GENERAL);
-            const lastReadGuild = getLastRead(LS_GUILD);
-            setUnreadGeneral(messages.filter(m => m.senderId !== userId && m.targetId === null && m.id > lastReadGeneral).length);
-            setUnreadGuild(messages.filter(m => m.senderId !== userId && m.targetId !== null && m.targetId < 0 && m.id > lastReadGuild).length);
-            const priv = new Map<number, number>();
-            for (const m of messages) {
-                if (m.senderId === userId) continue;
-                if (m.targetId !== null && m.targetId > 0 && m.targetId === userId) {
-                    const fromId = m.senderId;
-                    const lastRead = getLastRead(lsPrivate(fromId));
-                    if (m.id > lastRead) priv.set(fromId, (priv.get(fromId) || 0) + 1);
-                }
+        const lastReadGeneral = getLastRead(LS_GENERAL);
+        const lastReadGuild = getLastRead(LS_GUILD);
+        setUnreadGeneral(messages.filter(m => m.senderId !== userId && m.targetId === null && m.id > lastReadGeneral).length);
+        setUnreadGuild(messages.filter(m => m.senderId !== userId && m.targetId !== null && m.targetId < 0 && m.id > lastReadGuild).length);
+        const priv = new Map<number, number>();
+        // Only auto-open tabs for messages that just arrived (not historical)
+        const newMsgs = messages.slice(prevMsgCount.current);
+        prevMsgCount.current = messages.length;
+        for (const m of messages) {
+            if (m.senderId === userId) continue;
+            if (m.targetId !== null && m.targetId > 0 && m.targetId === userId) {
+                const lastRead = getLastRead(lsPrivate(m.senderId));
+                if (m.id > lastRead) priv.set(m.senderId, (priv.get(m.senderId) || 0) + 1);
             }
-            setUnreadPrivate(priv);
-            return;
         }
-
-        // Инкрементально — только новое сообщение (вебсокет)
-        const last = messages[messages.length - 1];
-        if (last.senderId === userId) return;
-        if (last.targetId === null && (privateChatWith !== null || guildChatActive || !isPanelOpen)) {
-            setUnreadGeneral(c => c + 1);
-        } else if (last.targetId !== null && last.targetId < 0 && (!guildChatActive || !isPanelOpen)) {
-            setUnreadGuild(c => c + 1);
-        } else if (last.targetId !== null && last.targetId > 0 && last.targetId === userId) {
-            const fromId = last.senderId;
-            const fromName = last.senderName;
-            if (!isPanelOpen || privateChatWith !== fromId) {
-                setUnreadPrivate(prev => {
-                    const next = new Map(prev);
-                    next.set(fromId, (next.get(fromId) || 0) + 1);
-                    return next;
-                });
+        // Auto-open tabs only for just-arrived private messages
+        for (const m of newMsgs) {
+            if (m.senderId !== userId && m.targetId !== null && m.targetId > 0 && m.targetId === userId) {
+                addTab(m.senderId, m.senderName);
             }
-            addTab(fromId, fromName);
         }
-    }, [messages.length, userId]);
+        setUnreadPrivate(priv);
+    }, [messages, userId]);
 
     const panelRef = useRef<HTMLDivElement>(null);
 
