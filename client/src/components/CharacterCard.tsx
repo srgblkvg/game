@@ -118,7 +118,7 @@ export default function CharacterCard({
     const cat = slotCategories[selectedSlot];
     return availableItems.filter((item: any) => {
       if (item.type === 'material' || item.type === 'craft_item') return false;
-      if (cat === 'ring') return item.slot === 'ring1' || item.slot === 'ring2';
+      if (cat === 'ring') return item.slot === 'ring1' || item.slot === 'ring2' || item.slot === 'ring';
       if (cat === 'weapon') return item.slot === 'weapon1' || item.slot === 'shield';
       return item.slot === selectedSlot;
     });
