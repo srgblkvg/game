@@ -45,6 +45,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     useEffect(() => { speedRef.current = speed; }, [speed]);
 
     const loadOpponent = async (change = false, difficulty: string = 'equal') => {
+        setLoading(true);
         try {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             const token = localStorage.getItem('token');
@@ -59,6 +60,13 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             const data = await res.json();
             if (!res.ok) {
                 setModalMessage(data.error || 'Ошибка загрузки соперника');
+                setOpponent(null); // сбрасываем, чтобы избежать показа невалидного соперника
+                return;
+            }
+            // Защита от неполных данных
+            if (!data || !data.id || !data.stats) {
+                setModalMessage('Некорректный ответ сервера');
+                setOpponent(null);
                 return;
             }
             setOpponent(data);
@@ -71,12 +79,19 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             if (change && data.playerMoney !== undefined) {
                 setCharacter({ ...character, money: data.playerMoney });
             }
+            // also update money on non-change (difficulty switch charges on server)
+            if (!change && data.playerMoney !== undefined && data.playerMoney !== character.money) {
+                setCharacter({ ...character, money: data.playerMoney });
+            }
             setBattleSteps([]);
             setBattleResult(null);
             setCurrentStep(-1);
             setAutoPlaying(false);
         } catch (e) {
             setModalMessage('Ошибка сети');
+            setOpponent(null);
+        } finally {
+            setLoading(false);
         }
     };
 

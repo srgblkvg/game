@@ -14,15 +14,50 @@ router.get('/arena/opponent', (req: any, res) => {
     const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
     const difficulty = (req.query.difficulty as string) || 'equal'; // easy | equal | hard
 
-    const user: any = db.prepare('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.inventorySlots, u.lastAttackTime, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId);
+    const user: any = db.prepare('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.inventorySlots, u.lastAttackTime, u.money, u.arenaOpponentId, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
+
+    // Если не смена — проверяем закреплённого соперника
+    if (!change && user.arenaOpponentId) {
+        const saved = db.prepare('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.gender, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)').get(user.arenaOpponentId, now) as any;
+        if (saved) {
+            // Проверяем, соответствует ли сохранённый соперник запрошенной сложности
+            const matchesDifficulty =
+                (difficulty === 'easy' && saved.level < user.level) ||
+                (difficulty === 'hard' && saved.level > user.level) ||
+                (difficulty === 'equal' && saved.level === user.level);
+
+            if (matchesDifficulty) {
+                // Возвращаем того же соперника — бесплатно
+                const savedBase = { s: saved.baseS ?? 5, a: saved.baseA ?? 5, d: saved.baseD ?? 5, m: saved.baseM ?? 5 };
+                const savedEquip = JSON.parse(saved.equipment || '{}');
+                const { enriched: savedEnriched } = enrichEquipment(db, savedEquip);
+                const savedStats = currentStats(savedBase, savedEnriched);
+                return res.json({
+                    id: saved.id, name: saved.username, level: saved.level,
+                    equipment: savedEnriched, stats: savedStats,
+                    playerMoney: user.money,
+                    gender: saved.gender || 'male',
+                    guildName: saved.guildName || null, guildId: saved.guildId || null,
+                });
+            }
+            // Сложность изменилась — сбрасываем сохранённого соперника, ниже подберём нового (с оплатой)
+            if (user.money < 10) {
+                return res.status(400).json({ error: 'Недостаточно монет для смены сложности (10 бронзы)' });
+            }
+            db.prepare('UPDATE users SET money = money - 10 WHERE id = ?').run(userId);
+            user.money -= 10;
+        }
+        // Соперник исчез (удалён/защита) — сбрасываем и подбираем нового ниже
+    }
+
+    // Подбор соперников по сложности
     let opponents = db.prepare(
         'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)'
     ).all(userId, now) as any[];
 
-    // Фильтр по сложности
     const diffLabel = difficulty === 'easy' ? 'ниже вашего' : difficulty === 'hard' ? 'выше вашего' : 'равным вашему';
     if (difficulty === 'easy') {
         opponents = opponents.filter((o: any) => o.level < user.level);
@@ -36,7 +71,7 @@ router.get('/arena/opponent', (req: any, res) => {
         return res.status(404).json({ error: `Нет соперников с уровнем ${diffLabel} (${user.level})` });
     }
 
-    if (excludeId !== undefined) {
+    if (excludeId !== undefined && !isNaN(excludeId)) {
         opponents = opponents.filter((o: any) => o.id !== excludeId);
     }
 
@@ -49,24 +84,20 @@ router.get('/arena/opponent', (req: any, res) => {
         }
         db.prepare('UPDATE users SET money = money - 10 WHERE id = ?').run(userId);
         user.money -= 10;
-    } else {
-        if (opponents.length === 0) {
-            return res.status(404).json({ error: 'Нет доступных соперников' });
-        }
+    }
+
+    if (opponents.length === 0) {
+        return res.status(404).json({ error: 'Нет доступных соперников' });
     }
 
     const opponent = opponents[Math.floor(Math.random() * opponents.length)];
-    const base = {
-        s: opponent.baseS ?? 5,
-        a: opponent.baseA ?? 5,
-        d: opponent.baseD ?? 5,
-        m: opponent.baseM ?? 5,
-    };
+
+    // Запоминаем выбранного соперника
+    db.prepare('UPDATE users SET arenaOpponentId = ? WHERE id = ?').run(opponent.id, userId);
+
+    const base = { s: opponent.baseS ?? 5, a: opponent.baseA ?? 5, d: opponent.baseD ?? 5, m: opponent.baseM ?? 5 };
     const equipment = JSON.parse(opponent.equipment || '{}');
-
-    // Обогащаем экипировку
     const { enriched: enrichedEquipment } = enrichEquipment(db, equipment);
-
     const stats = currentStats(base, enrichedEquipment);
 
     res.json({

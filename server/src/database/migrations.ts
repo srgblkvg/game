@@ -448,6 +448,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (userId) REFERENCES users(id)
   )`); } catch {}
 
+  // --- Арена: запоминание выданного соперника ---
+  try { db.exec('ALTER TABLE users ADD COLUMN arenaOpponentId INTEGER DEFAULT NULL'); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }
