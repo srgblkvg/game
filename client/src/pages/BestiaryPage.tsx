@@ -452,6 +452,7 @@ export default function BestiaryPage() {
                   currentHp: mobHp,
                   maxHp: mobMaxHp,
                   gender: 'male',
+                  avatar: selectedMob.background || null,
                 }}
                 side="right"
                 showHealth={battleActive}

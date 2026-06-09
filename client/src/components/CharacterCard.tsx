@@ -78,10 +78,8 @@ export default function CharacterCard({
   useEffect(() => { setAvatarFailed(false); }, [customUrl]);
 
   const bgImage = isMob
-    ? 'none'
-    : (customUrl && !avatarFailed
-        ? `url(${customUrl})`
-        : `url(${defaultAvatar})`);
+    ? (customUrl && !avatarFailed ? `url(${customUrl})` : 'none')
+    : (customUrl && !avatarFailed ? `url(${customUrl})` : `url(${defaultAvatar})`);
 
   // --- Handlers ---
   const handleDrop = (slotId: string, e: React.DragEvent) => {
