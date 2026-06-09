@@ -93,7 +93,7 @@ export default function TournamentBanner() {
 
     if (isGuest) {
         return (
-            <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-3 px-3 min-w-[210px] relative opacity-60">
+            <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative opacity-60">
                 <h3 className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-full text-[var(--color-text-accent)] text-base font-bold flex items-center gap-1 whitespace-nowrap">
                     <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
                 </h3>
@@ -113,7 +113,7 @@ export default function TournamentBanner() {
 
     if (active.length === 0 && myCompleted.length === 0) {
         return (
-            <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-3 px-3 min-w-[210px] relative">
+            <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative">
                 <h3 className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-full text-[var(--color-text-accent)] text-base font-bold flex items-center gap-1 whitespace-nowrap">
                     <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
                 </h3>
@@ -123,7 +123,7 @@ export default function TournamentBanner() {
     }
 
     return (
-        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-3 px-3 min-w-[210px] relative">
+        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative">
             <h3 className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-full text-[var(--color-text-accent)] text-base font-bold cursor-pointer hover:text-[var(--color-accent-info)] flex items-center gap-1 whitespace-nowrap" onClick={() => navigate('/tournament')}>
                 <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
             </h3>
