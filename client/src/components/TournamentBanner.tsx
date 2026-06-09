@@ -76,7 +76,7 @@ export default function TournamentBanner() {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token || isGuest) { setLoading(false); return; }
+        if (!token) { setLoading(false); return; }
 
         fetch('/api/tournament', { headers: getHeaders() })
             .then(r => r.json())
