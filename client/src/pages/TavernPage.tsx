@@ -82,7 +82,7 @@ export default function TavernPage() {
 
             {tab==='quests' && quests && <>
                 <p className="text-xs text-[var(--color-text-muted)] mb-3">
-                    Активно: {quests.activeCount}/3 • Доступно сегодня: {quests.activeCount + quests.completedToday}/{quests.dailyLimit}
+                    Активно: {quests.activeCount}/3 • Доступно сегодня: {quests.dailyLimit - quests.activeCount - quests.completedToday}/{quests.dailyLimit}
                     {quests.resetAt && (
                         <span className="ml-2 text-[var(--color-accent-info)]">
                             (сброс через {formatTime(Math.max(0, quests.resetAt - now))})
