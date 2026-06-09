@@ -68,6 +68,7 @@ export default function JobsPage() {
                     expReward: result.expReward || 0,
                     rewardMin: result.rewardMin,
                     rewardMax: result.rewardMax,
+                    background: result.background || null,
                 },
             });
             setRemaining(result.endTime - Math.floor(Date.now() / 1000));
@@ -98,13 +99,18 @@ export default function JobsPage() {
     const activeJob = character.activeJob;
 
     if (activeJob && remaining !== null && remaining > 0) {
+        const bg = (activeJob as any).background;
         return (
-            <div className="text-center py-8 px-4">
-                <h2 className="text-xl font-bold mb-3"><Icon icon="game-icons:hourglass" width="18" height="18" className="inline mr-1"/>Выполняется работа</h2>
-                <p className="text-lg">{activeJob.name}</p>
-                <p className="text-[var(--color-text-secondary)]">Осталось: {formatTime(remaining)}</p>
-                <p className="text-[var(--color-text-accent)]">Награда: {formatMoney((activeJob as any).rewardMin || activeJob.reward)}–{formatMoney((activeJob as any).rewardMax || activeJob.reward)}{(activeJob as any).premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{(activeJob as any).premiumBonus} премиум)</span> : null}</p>
-                <p className="text-[var(--color-accent-purple)]">Опыт: +{activeJob.expReward || 0}</p>
+            <div className="relative text-center py-8 px-4 rounded-xl overflow-hidden border-2 border-[var(--color-border-default)] min-h-[200px] flex flex-col items-center justify-center"
+                style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+                {bg && <div className="absolute inset-0 bg-black/60" />}
+                <div className="relative z-10">
+                    <h2 className="text-xl font-bold mb-3"><Icon icon="game-icons:hourglass" width="18" height="18" className="inline mr-1"/>Выполняется работа</h2>
+                    <p className="text-lg">{activeJob.name}</p>
+                    <p className="text-[var(--color-text-secondary)]">Осталось: {formatTime(remaining)}</p>
+                    <p className="text-[var(--color-text-accent)]">Награда: {formatMoney((activeJob as any).rewardMin || activeJob.reward)}–{formatMoney((activeJob as any).rewardMax || activeJob.reward)}{(activeJob as any).premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{(activeJob as any).premiumBonus} премиум)</span> : null}</p>
+                    <p className="text-[var(--color-accent-purple)]">Опыт: +{activeJob.expReward || 0}</p>
+                </div>
             </div>
         );
     }

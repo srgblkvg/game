@@ -58,10 +58,10 @@ function startJobForUser(user: any, job: any, res: any) {
         reward = reward + premiumBonus;
     }
 
-    const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, premiumBonus });
+    const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, premiumBonus, background: job.background || null });
     db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, user.id);
 
-    res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax });
+    res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, background: job.background || null });
 }
 
 router.get('/jobs/history', (req: any, res) => {
