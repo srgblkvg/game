@@ -107,7 +107,7 @@ export default function HistoryPage() {
         {b.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(b.goldLost)}</span>}
     </EntryRow>;
     const renderJobRow = (j: any) => <EntryRow time={fmt(j.finishedAt)}>
-        <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» — {formatMoney(j.reward)}{j.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{j.premiumBonus} пр.)</span>}</span>
+        <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» — {formatMoney(j.reward)}{j.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{j.premiumBonus} пр.)</span>}{j.xpGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{j.xpGained} XP</span>}</span>
     </EntryRow>;
     const renderTournamentRow = (t: any) => {
         const ss = t.snapshotStats?JSON.parse(t.snapshotStats):null;
@@ -151,7 +151,7 @@ export default function HistoryPage() {
         }
         if (type === 'job') {
             return <EntryRow time={fmt(data.finishedAt)}>
-                <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{data.jobName}» — {formatMoney(data.reward)}{data.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{data.premiumBonus} пр.)</span>}</span>
+                <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{data.jobName}» — {formatMoney(data.reward)}{data.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{data.premiumBonus} пр.)</span>}{data.xpGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.xpGained} XP</span>}</span>
             </EntryRow>;
         }
         if (type === 'tournament') {
