@@ -71,23 +71,17 @@ export default function CharacterCard({
     ? '/character_woman.webp'
     : '/character_man.webp';
 
-  const [resolvedAvatar, setResolvedAvatar] = useState<string | null>(null);
+  const customUrl = (char as any).avatar || null;
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
-  // Preload custom avatar — fall back to default on error
-  useEffect(() => {
-    const customUrl = (char as any).avatar;
-    if (!customUrl) {
-      setResolvedAvatar(defaultAvatar);
-      return;
-    }
-    const img = new Image();
-    img.onload = () => setResolvedAvatar(customUrl);
-    img.onerror = () => setResolvedAvatar(defaultAvatar);
-    img.src = customUrl;
-    return () => { img.onload = null; img.onerror = null; };
-  }, [(char as any).avatar, defaultAvatar]);
+  // Reset when avatar URL changes
+  useEffect(() => { setAvatarFailed(false); }, [customUrl]);
 
-  const bgImage = isMob ? 'none' : `url(${resolvedAvatar || defaultAvatar})`;
+  const bgImage = isMob
+    ? 'none'
+    : (customUrl && !avatarFailed
+        ? `url(${customUrl})`
+        : `url(${defaultAvatar})`);
 
   // --- Handlers ---
   const handleDrop = (slotId: string, e: React.DragEvent) => {
@@ -173,6 +167,11 @@ export default function CharacterCard({
               backgroundImage: bgImage,
               transform: side === 'right' ? 'scaleX(-1)' : 'none',
             }} />
+          {/* Hidden img to detect avatar load failure */}
+          {customUrl && !avatarFailed && (
+            <img src={customUrl} alt="" onError={() => setAvatarFailed(true)}
+              className="hidden" />
+          )}
         </div>
 
         <StatsOverlay stats={stats} compact={compact} />
