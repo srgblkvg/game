@@ -4,7 +4,7 @@ import { requireFullAccess } from '../middleware/auth';
 
 const router = Router();
 
-router.use('/bank', requireFullAccess);
+// router.use('/bank', requireFullAccess); // отключено для гостей
 
 // Получить состояние банка
 router.get('/bank', (req: any, res) => {
