@@ -4,6 +4,7 @@ import { fetchAdminItems, createAdminItem, updateAdminItem, deleteAdminItem } fr
 import { getHeaders } from '../../api/helpers';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
+import ImageUploader from '../../components/ImageUploader';
 import { inputClass, selectClass, smallInputClass } from '../../utils/formStyles';
 import EditItemModal from './EditItemModal';
 
@@ -88,7 +89,12 @@ export default function AdminItems() {
                     <select value={newItem.rarity_id} onChange={e => setNewItem({ ...newItem, rarity_id: +e.target.value })} className={selectClass}>
                         {rarities.map(r => <option key={r.id} value={r.id} style={{ color: r.color }}>{r.display_name}</option>)}
                     </select>
-                    <input placeholder="Изображение (имя файла в public)" value={newItem.image || ''} onChange={e => setNewItem({ ...newItem, image: e.target.value })} className={inputClass} />
+                    <ImageUploader
+                        currentUrl={newItem.image || null}
+                        folder="items"
+                        onUploaded={(url) => setNewItem({ ...newItem, image: url })}
+                        label="Изображение предмета"
+                    />
                 </div>
                 <details className="mt-2">
                     <summary className="cursor-pointer text-sm mb-1">Бонусы и доп. характеристики</summary>

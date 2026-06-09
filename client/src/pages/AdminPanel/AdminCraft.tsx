@@ -9,6 +9,7 @@ import {
 } from '../../api/admin';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
+import ImageUploader from '../../components/ImageUploader';
 import { getHeaders } from '../../api/helpers';
 import RecipeForm from './AdminCraft/RecipeForm';
 import RecipeListItem from './AdminCraft/RecipeListItem';
@@ -125,7 +126,7 @@ export default function AdminCraft() {
                 <datalist id="type-list">{[...new Set(resources.map(r => r.type).filter(Boolean))].map(t => <option key={t} value={t} />)}</datalist>
             </label>
             <label className="text-sm">Изображение:
-                <input placeholder="имя файла в public" value={res.image || ''} onChange={e => setter({ ...res, image: e.target.value })} className={inputClass} />
+                <ImageUploader currentUrl={res.image || null} folder="craft" onUploaded={(url) => setter({ ...res, image: url })} />
             </label>
             <Button variant="success" size="sm" onClick={onSubmit}>{submitText}</Button>
         </div>

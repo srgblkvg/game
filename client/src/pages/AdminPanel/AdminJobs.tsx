@@ -1,10 +1,11 @@
 import { fetchAdminJobs, createAdminJob, updateAdminJob, deleteAdminJob, adminFinishJobsByJobId } from '../../api';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
+import ImageUploader from '../../components/ImageUploader';
 import { inputClass } from '../../utils/formStyles';
 import { useCrud } from '../../hooks/useCrud';
 
-const DEFAULT_JOB = { name: '', description: '', duration: 0, rewardMin: 0, rewardMax: 0 };
+const DEFAULT_JOB = { name: '', description: '', duration: 0, rewardMin: 0, rewardMax: 0, background: '' };
 
 export default function AdminJobs() {
   const crud = useCrud({
@@ -50,6 +51,12 @@ export default function AdminJobs() {
               <input type="number" value={(formData as any).rewardMax ?? ''} onChange={e => setForm({ ...formData, rewardMax: +e.target.value } as any)} className={inputClass} />
             </label>
           </div>
+          <ImageUploader
+            currentUrl={formData.background || null}
+            folder="jobs"
+            onUploaded={(url) => setForm({ background: url })}
+            label="Фоновое изображение"
+          />
         </div>
         <div className="mt-3 flex gap-2">
           {crud.editing ? (

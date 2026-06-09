@@ -1,9 +1,33 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import path from 'path';
+import fs from 'fs';
 import db from '../database';
 import { createItemSchema, addMoneySchema, resetTimersSchema } from '../validation';
 
 const router = Router();
+
+// ---------- Загрузка изображений ----------
+const ADMIN_UPLOADS_DIR = path.resolve(__dirname, '../../uploads/admin');
+fs.mkdirSync(ADMIN_UPLOADS_DIR, { recursive: true });
+
+router.post('/upload-image', (req: any, res) => {
+    const { image, folder } = req.body; // image: data:image/...;base64,...
+    if (!image || typeof image !== 'string') return res.status(400).json({ error: 'Нет изображения' });
+
+    const match = image.match(/^data:image\/(webp|png|jpeg|jpg);base64,(.+)$/);
+    if (!match) return res.status(400).json({ error: 'Неверный формат (нужен base64 image)' });
+
+    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+    const filename = `${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const subfolder = folder ? `${folder}/` : '';
+    const dir = path.join(ADMIN_UPLOADS_DIR, subfolder);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, filename), Buffer.from(match[2], 'base64'));
+
+    const url = `/uploads/admin/${subfolder}${filename}`;
+    res.json({ success: true, url });
+});
 
 // ---------- Предметы ----------
 router.get('/items', (req: any, res) => {

@@ -11,18 +11,18 @@ router.get('/jobs', (req: any, res) => {
 
 // Создать работу
 router.post('/jobs', (req, res) => {
-    const { name, description, duration, rewardMin, rewardMax } = req.body;
+    const { name, description, duration, rewardMin, rewardMax, background } = req.body;
     if (!name || duration == null) return res.status(400).json({ error: 'name, duration required' });
-    db.prepare('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)')
-        .run(name, description || '', duration, rewardMin || 0, rewardMax || 0);
+    db.prepare('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax, background) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(name, description || '', duration, rewardMin || 0, rewardMax || 0, background || null);
     res.json({ success: true });
 });
 
 // Редактировать работу
 router.put('/jobs/:id', (req, res) => {
-    const { name, description, duration, rewardMin, rewardMax } = req.body;
-    db.prepare('UPDATE jobs SET name=?, description=?, duration=?, rewardMin=?, rewardMax=? WHERE id=?')
-        .run(name, description, duration, rewardMin, rewardMax, req.params.id);
+    const { name, description, duration, rewardMin, rewardMax, background } = req.body;
+    db.prepare('UPDATE jobs SET name=?, description=?, duration=?, rewardMin=?, rewardMax=?, background=? WHERE id=?')
+        .run(name, description, duration, rewardMin, rewardMax, background || null, req.params.id);
     res.json({ success: true });
 });
 

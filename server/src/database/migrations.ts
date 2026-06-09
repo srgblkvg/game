@@ -455,6 +455,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // --- Премиум-бонус в истории PvE-боёв ---
   try { db.exec('ALTER TABLE pve_battles ADD COLUMN premiumBonus INTEGER DEFAULT 0'); } catch {}
 
+  // --- Фоновое изображение для работ ---
+  try { db.exec('ALTER TABLE jobs ADD COLUMN background TEXT'); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }

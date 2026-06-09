@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
+import ImageUploader from '../../components/ImageUploader';
 import { inputClass, selectClass, smallInputClass } from '../../utils/formStyles';
 
 interface Rarity {
@@ -60,7 +61,12 @@ export default function EditItemModal({ item, rarities, onSave, onClose }: EditI
       <select value={form.rarity_id} onChange={e => set('rarity_id', +e.target.value)} className={selectClass}>
         {rarities.map(r => <option key={r.id} value={r.id} style={{ color: r.color }}>{r.display_name}</option>)}
       </select>
-      <input placeholder="Изображение (имя файла в public)" value={form.image || ''} onChange={e => set('image', e.target.value)} className={inputClass} />
+      <ImageUploader
+        currentUrl={form.image || null}
+        folder="items"
+        onUploaded={(url) => set('image', url)}
+        label="Изображение предмета"
+      />
 
       <details className="my-2">
         <summary className="cursor-pointer text-sm">Бонусы и доп. характеристики</summary>
