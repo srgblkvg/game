@@ -105,7 +105,7 @@ export const wsPrivateMessageSchema = z.object({
 
 export const wsItemLinkSchema = z.object({
   type: z.literal('itemLink'),
-  itemId: z.number().int().positive().optional(),
+  itemId: z.number().positive().optional(),
   itemData: z.any().optional(),
 });
 
