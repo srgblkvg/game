@@ -119,7 +119,10 @@ export default function CharacterCard({
     return availableItems.filter((item: any) => {
       if (item.type === 'material' || item.type === 'craft_item') return false;
       if (cat === 'ring') return item.slot === 'ring1' || item.slot === 'ring2' || item.slot === 'ring';
-      if (cat === 'weapon') return item.slot === 'weapon1' || item.slot === 'shield';
+      if (cat === 'weapon') {
+        if (selectedSlot === 'shield') return item.slot === 'shield';
+        return item.slot === 'weapon1';
+      }
       return item.slot === selectedSlot;
     });
   };
