@@ -93,8 +93,8 @@ export function setupRoutes(app: Express) {
   app.use('/api', ordersRoutes);
   app.use('/api', questsRoutes);
   app.use('/api', guildRoutes);
+  app.use('/api', tournamentRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);
-  app.use('/api', tournamentRoutes);
 }

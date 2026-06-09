@@ -80,7 +80,7 @@ export default function TournamentPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [cf, setCf] = useState({ name: '', prizePool: 500, entryFee: 0, registrationMinutes: 30, maxPlayers: 8, minLevel: 1, maxLevel: 999 });
 
-    useEffect(() => { if (!user) navigate('/login'); else if (!user.isGuest) load(); }, [user, tab, completedPage]);
+    useEffect(() => { if (!user) navigate('/login'); else load(); }, [user, tab, completedPage]);
 
     const isGuest = user?.isGuest || false;
 
@@ -129,18 +129,6 @@ export default function TournamentPage() {
     };
 
     if (!data) return <div className="p-4">Загрузка...</div>;
-
-    if (isGuest) {
-        return (
-            <div className="max-w-3xl mx-auto px-4 py-4">
-                <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2" />Турнир «Кровавый Шпиль»</h1>
-                <Card className="text-center py-6">
-                    <Icon icon="game-icons:lock" width="40" height="40" className="mx-auto mb-3 text-[var(--color-text-muted)]" />
-                    <p className="text-sm text-[var(--color-text-muted)]">Турниры недоступны на гостевом аккаунте.</p>
-                </Card>
-            </div>
-        );
-    }
 
     const renderActiveCard = (t: any) => {
         const myReg = t.myRegistration;
