@@ -93,7 +93,7 @@ export default function BestiaryPage() {
   // API returns mobs in level order — just deduplicate, no sort needed
   const [floorsData, setFloorsData] = useState<any[]>([]);
   useEffect(() => {
-    fetch('/api/floors', { headers: getHeaders() })
+    fetch('/api/floors')
       .then(r => r.json()).then(setFloorsData).catch(() => {});
   }, []);
 
