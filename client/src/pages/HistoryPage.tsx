@@ -103,7 +103,7 @@ export default function HistoryPage() {
         <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{b.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{b.mobLevel}</span></span>
         <span className={`font-bold ml-2 ${b.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{b.playerWon?'Победа':'Поражение'}</span>
         {b.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{b.expGained} XP</span>}
-        {b.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(b.goldGained)}</span>}
+        {b.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(b.goldGained)}{b.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{b.premiumBonus} прем.)</span>}</span>}
         {b.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(b.goldLost)}</span>}
     </EntryRow>;
     const renderJobRow = (j: any) => <EntryRow time={fmt(j.finishedAt)}>
@@ -145,7 +145,7 @@ export default function HistoryPage() {
                 <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{data.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{data.mobLevel}</span></span>
                 <span className={`font-bold ml-2 ${data.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{data.playerWon?'Победа':'Поражение'}</span>
                 {data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.expGained} XP</span>}
-                {data.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(data.goldGained)}</span>}
+                {data.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(data.goldGained)}{data.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{data.premiumBonus} прем.)</span>}</span>}
                 {data.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(data.goldLost)}</span>}
             </EntryRow>;
         }

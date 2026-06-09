@@ -276,9 +276,9 @@ router.post('/mob/attack', (req: any, res) => {
         .run(newLevel, newExp, goldGained, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
 
     // Сохраняем в историю PvE
-    db.prepare(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .run(userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null);
+    db.prepare(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, premiumBonus)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null, premiumBonus);
 
     res.json({
         log,
