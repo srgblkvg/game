@@ -21,8 +21,17 @@ router.post('/jobs', (req, res) => {
 // Редактировать работу
 router.put('/jobs/:id', (req, res) => {
     const { name, description, duration, rewardMin, rewardMax, background } = req.body;
-    db.prepare('UPDATE jobs SET name=?, description=?, duration=?, rewardMin=?, rewardMax=?, background=? WHERE id=?')
-        .run(name, description, duration, rewardMin, rewardMax, background || null, req.params.id);
+    const fields: string[] = [];
+    const values: any[] = [];
+    if (name !== undefined) { fields.push('name=?'); values.push(name); }
+    if (description !== undefined) { fields.push('description=?'); values.push(description); }
+    if (duration !== undefined) { fields.push('duration=?'); values.push(duration); }
+    if (rewardMin !== undefined) { fields.push('rewardMin=?'); values.push(rewardMin); }
+    if (rewardMax !== undefined) { fields.push('rewardMax=?'); values.push(rewardMax); }
+    if (background !== undefined) { fields.push('background=?'); values.push(background || null); }
+    if (fields.length === 0) return res.status(400).json({ error: 'Нет данных для обновления' });
+    values.push(req.params.id);
+    db.prepare(`UPDATE jobs SET ${fields.join(',')} WHERE id=?`).run(...values);
     res.json({ success: true });
 });
 

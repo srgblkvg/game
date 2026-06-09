@@ -29,6 +29,18 @@ router.post('/upload-image', (req: any, res) => {
     res.json({ success: true, url });
 });
 
+// Список загруженных изображений
+router.get('/images', (req: any, res) => {
+    const folder = (req.query.folder as string) || '';
+    const dir = path.join(ADMIN_UPLOADS_DIR, folder);
+    if (!fs.existsSync(dir)) return res.json([]);
+    const files = fs.readdirSync(dir)
+        .filter(f => /\.(webp|png|jpg|jpeg)$/i.test(f))
+        .map(f => `/uploads/admin/${folder ? folder + '/' : ''}${f}`)
+        .sort().reverse();
+    res.json(files);
+});
+
 // ---------- Предметы ----------
 router.get('/items', (req: any, res) => {
     const items = db.prepare(`
