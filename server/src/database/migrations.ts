@@ -475,6 +475,14 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     sort_order INTEGER DEFAULT 0
   )`); } catch {}
 
+  // --- Таблица этажей (охоты) ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS floors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    background TEXT,
+    sort_order INTEGER DEFAULT 0
+  )`); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }

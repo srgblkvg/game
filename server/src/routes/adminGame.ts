@@ -55,4 +55,29 @@ router.get('/mob-locations', (_req: any, res) => {
     res.json(locs.map((l: any) => l.location));
 });
 
+// ---------- Этажи ----------
+router.get('/floors', (_req: any, res) => {
+    res.json(db.prepare('SELECT * FROM floors ORDER BY sort_order, name').all());
+});
+
+router.post('/floors', (req, res) => {
+    const { name, background, sort_order } = req.body;
+    if (!name) return res.status(400).json({ error: 'name required' });
+    db.prepare('INSERT INTO floors (name, background, sort_order) VALUES (?,?,?)')
+        .run(name, background || null, sort_order || 0);
+    res.json({ success: true });
+});
+
+router.put('/floors/:id', (req, res) => {
+    const { name, background, sort_order } = req.body;
+    db.prepare('UPDATE floors SET name=?, background=?, sort_order=? WHERE id=?')
+        .run(name, background || null, sort_order || 0, req.params.id);
+    res.json({ success: true });
+});
+
+router.delete('/floors/:id', (req, res) => {
+    db.prepare('DELETE FROM floors WHERE id=?').run(req.params.id);
+    res.json({ success: true });
+});
+
 export default router;
