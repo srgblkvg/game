@@ -33,7 +33,7 @@ export default function GuildRatingPage() {
                             <div className="cursor-pointer" onClick={() => navigate(`/guild/${g.id}`)}>
                                 <h4 className="font-bold text-sm hover:text-[var(--color-accent-info)] transition-colors">🏚️ {g.name}</h4>
                                 <p className="text-xs text-[var(--color-text-muted)]">
-                                    Ур.{g.level} • {g.memberCount} уч. • 👑 {g.leaderName}
+                                    Ур.{g.level} • {g.memberCount} уч. • 👑 {g.leaderName} • 💰 {(g.treasury || 0).toLocaleString()}
                                 </p>
                             </div>
                             {isMyGuild && (
