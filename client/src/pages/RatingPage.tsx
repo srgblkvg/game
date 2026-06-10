@@ -2,6 +2,8 @@ import { Icon } from "@iconify/react";
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchRating } from '../api/character';
+import { useAuth } from '../contexts/AuthContext';
+import { getHeaders, BASE_URL } from '../api/helpers';
 import Card from '../components/ui/Card';
 import GuildTag from '../components/GuildTag';
 import Button from '../components/ui/Button';
@@ -9,11 +11,28 @@ import Button from '../components/ui/Button';
 const LIMIT = 20;
 
 export default function RatingPage() {
+    const { user } = useAuth();
     const [players, setPlayers] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [showInfo, setShowInfo] = useState(false);
+    const [initialPageSet, setInitialPageSet] = useState(false);
     const navigate = useNavigate();
+
+    // Найти страницу с текущим игроком
+    useEffect(() => {
+        if (!user || initialPageSet) return;
+        fetch(`${BASE_URL}/rating/my-position`, { headers: getHeaders() })
+            .then(r => r.json())
+            .then(data => {
+                if (data.position) {
+                    const myPage = Math.ceil(data.position / LIMIT);
+                    setPage(myPage);
+                }
+                setInitialPageSet(true);
+            })
+            .catch(() => setInitialPageSet(true));
+    }, [user]);
 
     useEffect(() => {
         fetchRating(page, LIMIT).then(data => {
@@ -117,14 +136,16 @@ export default function RatingPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {players.map((p, i) => (
-                                <tr key={p.id} className="border-b border-[var(--color-border-light)]">
+                            {players.map((p, i) => {
+                                const isMe = user && p.id === user.id;
+                                return (
+                                <tr key={p.id} className={`border-b border-[var(--color-border-light)] ${isMe ? 'bg-[var(--color-accent-success)]/10' : ''}`}>
                                     <td className="p-1.5">
                                         <span
                                             onClick={() => navigate(`/profile/${p.id}`)}
-                                            className="cursor-pointer text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] transition-colors block truncate"
+                                            className={`cursor-pointer hover:text-[var(--color-accent-info)] transition-colors block truncate ${isMe ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-primary)]'}`}
                                         >
-                                            {i + 1 + (page - 1) * LIMIT}. {p.username}
+                                            {i + 1 + (page - 1) * LIMIT}. {p.username} {isMe ? '(Вы)' : ''}
                                         </span>
                                         <span className="sm:hidden"><GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                                     </td>
@@ -139,7 +160,8 @@ export default function RatingPage() {
                                         {p.elo}
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 )}

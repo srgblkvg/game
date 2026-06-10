@@ -42,4 +42,20 @@ router.get('/rating', (req: any, res) => {
     res.json({ users: result, total });
 });
 
+// Позиция текущего игрока в рейтинге
+router.get('/my-position', (req: any, res) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Не авторизован' });
+
+    const user = db.prepare('SELECT elo FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'Игрок не найден' });
+
+    const elo = user.elo || 1000;
+    const position = (db.prepare(
+        'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND (elo > ? OR (elo = ? AND id < ?))'
+    ).get(elo, elo, userId) as any).cnt + 1;
+
+    res.json({ position });
+});
+
 export default router;
