@@ -35,11 +35,12 @@ export default function RatingPage() {
     }, [user]);
 
     useEffect(() => {
+        if (!initialPageSet) return;
         fetchRating(page, LIMIT).then(data => {
             setPlayers(data.users);
             setTotalPages(Math.ceil(data.total / LIMIT));
         }).catch(console.error);
-    }, [page]);
+    }, [page, initialPageSet]);
 
     return (
         <div className="max-w-xl mx-auto px-4 py-4">
