@@ -103,11 +103,11 @@ export default function HistoryPage() {
         <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{b.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{b.mobLevel}</span></span>
         <span className={`font-bold ml-2 ${b.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{b.playerWon?'Победа':'Поражение'}</span>
         {b.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{b.expGained} XP</span>}
-        {b.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(b.goldGained)}{b.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{b.premiumBonus} прем.)</span>}</span>}
+        {b.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(b.goldGained)}{b.premiumBonus>0&&<span className="text-[var(--color-text-accent)]"> (+{b.premiumBonus} прем.)</span>}</span>}
         {b.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(b.goldLost)}</span>}
     </EntryRow>;
     const renderJobRow = (j: any) => <EntryRow time={fmt(j.finishedAt)}>
-        <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» — {formatMoney(j.reward)}{j.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{j.premiumBonus} пр.)</span>}{j.xpGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{j.xpGained} XP</span>}</span>
+        <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» — {formatMoney(j.reward)}{j.premiumBonus>0&&<span className="text-[var(--color-text-accent)]"> (+{j.premiumBonus} пр.)</span>}{j.xpGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{j.xpGained} XP</span>}</span>
     </EntryRow>;
     const renderTournamentRow = (t: any) => {
         const ss = t.snapshotStats?JSON.parse(t.snapshotStats):null;
@@ -145,13 +145,13 @@ export default function HistoryPage() {
                 <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{data.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{data.mobLevel}</span></span>
                 <span className={`font-bold ml-2 ${data.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{data.playerWon?'Победа':'Поражение'}</span>
                 {data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.expGained} XP</span>}
-                {data.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(data.goldGained)}{data.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{data.premiumBonus} прем.)</span>}</span>}
+                {data.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(data.goldGained)}{data.premiumBonus>0&&<span className="text-[var(--color-text-accent)]"> (+{data.premiumBonus} прем.)</span>}</span>}
                 {data.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(data.goldLost)}</span>}
             </EntryRow>;
         }
         if (type === 'job') {
             return <EntryRow time={fmt(data.finishedAt)}>
-                <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{data.jobName}» — {formatMoney(data.reward)}{data.premiumBonus>0&&<span className="text-[#f1c40f]"> (+{data.premiumBonus} пр.)</span>}{data.xpGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.xpGained} XP</span>}</span>
+                <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{data.jobName}» — {formatMoney(data.reward)}{data.premiumBonus>0&&<span className="text-[var(--color-text-accent)]"> (+{data.premiumBonus} пр.)</span>}{data.xpGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.xpGained} XP</span>}</span>
             </EntryRow>;
         }
         if (type === 'tournament') {

@@ -118,14 +118,14 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
     };
 
     return (
-        <div className="p-2 bg-[#2a2a3e]">
+        <div className="p-2 bg-[var(--color-bg-card)]">
             {isBanned && (
-                <div className="text-[#e74c3c] text-[0.8rem] mb-1 text-center">
+                <div className="text-[var(--color-accent-danger)] text-[0.8rem] mb-1 text-center">
                     Вы заблокированы в чате до {new Date(bannedUntil! * 1000).toLocaleString('ru-RU', { timeZone: 'UTC' })}
                 </div>
             )}
             {chatError && !isBanned && (
-                <div className="text-[#e74c3c] text-[0.8rem] mb-1 text-center">
+                <div className="text-[var(--color-accent-danger)] text-[0.8rem] mb-1 text-center">
                     {chatError}
                 </div>
             )}
@@ -138,9 +138,9 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
                     onKeyDown={handleKeyDown}
                     disabled={isDisabled}
                     placeholder={isDisabled ? disabledPlaceholder : (isGuild ? 'Гильдия...' : isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w ник текст для ЛС)')}
-                    className={`flex-1 p-1 border border-[#555] rounded ${isDisabled ? 'bg-[#222] text-[#888] cursor-not-allowed' : 'bg-[#333] text-white cursor-text'}`}
+                    className={`flex-1 p-1 border border-[var(--color-border-light)] rounded ${isDisabled ? 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-bg-input)] text-[var(--color-text-primary)] cursor-text'}`}
                 />
-                <button onClick={handleSendClick} disabled={isDisabled} className={`border-none rounded py-1 px-3 ${isDisabled ? 'bg-[#555] text-[#888] cursor-not-allowed' : 'bg-[#e63946] text-white cursor-pointer'}`}>➤</button>
+                <button onClick={handleSendClick} disabled={isDisabled} className={`border-none rounded py-1 px-3 ${isDisabled ? 'bg-[var(--color-border-light)] text-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-accent-danger)] text-white cursor-pointer'}`}>➤</button>
                 {autocomplete && (
                     <Autocomplete
                         items={autocomplete.items}

@@ -382,7 +382,7 @@ export default function ChatPanel() {
                             return (
                                 <span
                                     key={i}
-                                    className={`text-[#f1c40f] ${isSelfMention ? 'cursor-default opacity-70' : 'cursor-pointer underline'}`}
+                                    className={`text-[var(--color-text-accent)] ${isSelfMention ? 'cursor-default opacity-70' : 'cursor-pointer underline'}`}
                                     onClick={isSelfMention ? undefined : (e) => handleNickClick(e, name, false)}
                                 >
                                     {part}
@@ -396,13 +396,13 @@ export default function ChatPanel() {
                     <div className="mt-1.5 flex gap-1.5">
                         <button
                             onClick={acceptInvite}
-                            className="px-2.5 py-0.5 text-xs bg-[#27ae60] text-white border-none rounded cursor-pointer"
+                            className="px-2.5 py-0.5 text-xs bg-[var(--color-accent-success)] text-white border-none rounded cursor-pointer"
                         >
                             Принять
                         </button>
                         <button
                             onClick={declineInvite}
-                            className="px-2.5 py-0.5 text-xs bg-[#e74c3c] text-white border-none rounded cursor-pointer"
+                            className="px-2.5 py-0.5 text-xs bg-[var(--color-accent-danger)] text-white border-none rounded cursor-pointer"
                         >
                             Отклонить
                         </button>
@@ -478,7 +478,7 @@ export default function ChatPanel() {
                                 <span className="chat-blink w-2.5 h-2.5 rounded-full bg-white inline-block" />
                             )}
                             {unreadGuild > 0 && (
-                                <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[#2ecc71] inline-block" />
+                                <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[var(--color-accent-success)] inline-block" />
                             )}
                             {Array.from(unreadPrivate.entries()).filter(([,c]) => c > 0).length > 0 && (
                                 <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[#c084fc] inline-block" />
@@ -533,10 +533,10 @@ export default function ChatPanel() {
                         {/* Вертикальный переключатель онлайна */}
                         <div
                             onClick={() => setOnlineOpen(!onlineOpen)}
-                            className="flex items-center cursor-pointer bg-[#111] border-l border-[#333] px-1.5 py-2 shrink-0 select-none hover:bg-[#1a1a1a]"
+                            className="flex items-center cursor-pointer bg-[var(--color-bg-input)] border-l border-[var(--color-bg-input)] px-1.5 py-2 shrink-0 select-none hover:bg-[var(--color-bg-hover)]"
                             title={onlineOpen ? 'Скрыть список' : 'Показать список'}
                         >
-                            <span className="text-[0.75rem] text-[#2ecc71] leading-[1.15]" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                            <span className="text-[0.75rem] text-[var(--color-accent-success)] leading-[1.15]" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
                                 Онлайн: {onlineUsers.length} {onlineOpen ? '◀' : '▶'}
                             </span>
                         </div>

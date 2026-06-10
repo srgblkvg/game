@@ -135,7 +135,7 @@ export default function CharacterCard({
 
   // --- Render ---
   return (
-    <div className={`fighter-card ${side} flex-shrink-0 flex flex-col items-center text-[#eee]`}
+    <div className={`fighter-card ${side} flex-shrink-0 flex flex-col items-center text-[var(--color-text-primary)]`}
       style={{ width: cardWidth, minWidth: cardWidth, margin: cardMargin }}>
       {/* Имя и уровень */}
       <div className="w-full text-center mb-2">
@@ -146,8 +146,8 @@ export default function CharacterCard({
         <div className="flex items-center justify-center gap-2 mt-1">
           <span style={{ fontSize: isVerySmall ? '0.65rem' : isMobile ? '0.75rem' : '0.85rem' }}>Ур. {char.level}</span>
           {showExpBar && (
-            <div className="w-[100px] h-[14px] bg-[#222] rounded overflow-hidden border border-[#555] relative">
-              <div className="h-full bg-[#9b59b6] transition-[width] duration-300" style={{ width: `${expPercent}%` }} />
+            <div className="w-[100px] h-[14px] bg-[var(--color-bg-input)] rounded overflow-hidden border border-[var(--color-border-light)] relative">
+              <div className="h-full bg-[var(--color-accent-purple)] transition-[width] duration-300" style={{ width: `${expPercent}%` }} />
               <span className="absolute inset-0 flex items-center justify-center text-white text-[0.55rem] [text-shadow:0_0_2px_#000]">
                 {expValue}/{expNeeded}
               </span>
@@ -157,7 +157,7 @@ export default function CharacterCard({
       </div>
 
       {/* Фрейм с фоном и слотами */}
-      <div id={cardId} className="border-2 border-[#555] rounded-xl p-[0.8rem] w-full bg-[#2a2a3e] relative"
+      <div id={cardId} className="border-2 border-[var(--color-border-light)] rounded-xl p-[0.8rem] w-full bg-[var(--color-bg-card)] relative"
         style={{ height: frameHeight }}>
         <div className="absolute inset-0 overflow-hidden rounded-[10px]">
           <div className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
@@ -207,16 +207,16 @@ export default function CharacterCard({
 
       {/* Выбор предмета для слота */}
       {!readOnly && selectedSlot && (
-        <div className="mt-4 bg-[#1e1e30] p-2 rounded-lg border border-[#555] w-full">
+        <div className="mt-4 bg-[var(--color-bg-secondary)] p-2 rounded-lg border border-[var(--color-border-light)] w-full">
           <div className="mb-2 text-[0.9rem]">Выберите предмет для {slotNames[selectedSlot]}:</div>
           {getFilteredItems().map((item: any) => (
             <div key={item.id} onClick={() => handleEquipSelect(item.id)}
-              className="p-1.5 bg-[#333] mb-0.5 cursor-pointer rounded text-white text-xs">
+              className="p-1.5 bg-[var(--color-bg-input)] mb-0.5 cursor-pointer rounded text-[var(--color-text-primary)] text-xs">
               {item.name}
             </div>
           ))}
           <button onClick={() => setSelectedSlot(null)}
-            className="mt-2 bg-[#555] border-none rounded text-white px-2 py-1 cursor-pointer text-xs">
+            className="mt-2 bg-[var(--color-border-light)] border-none rounded text-[var(--color-text-primary)] px-2 py-1 cursor-pointer text-xs">
             Закрыть
           </button>
         </div>

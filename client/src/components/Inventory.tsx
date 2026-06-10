@@ -132,14 +132,14 @@ export default function Inventory({
     };
 
     return (
-        <div className="w-full bg-[#1e1e30] rounded-xl p-4 border-2 border-[#555] text-[#eee]">
+        <div className="w-full bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]">
             <div className="flex items-center justify-between mb-2">
                 <h3 className="m-0 flex items-center gap-1">
                     <Icon icon="game-icons:backpack" width="18" height="18" />
                     Инвентарь ({inventory.length}/{maxSlots})</h3>
                 <button
                     onClick={() => setSortEquipment(nextSortOrder(sortEquipment))}
-                    className="bg-transparent border border-[#555] text-[#ccc] rounded px-1.5 py-px cursor-pointer text-xs leading-none"
+                    className="bg-transparent border border-[var(--color-border-light)] text-[var(--color-text-secondary)] rounded px-1.5 py-px cursor-pointer text-xs leading-none"
                     title="Сортировка снаряжения"
                 >
                     {sortSymbol(sortEquipment)}
@@ -179,19 +179,19 @@ export default function Inventory({
             </div>
 
             <div className="flex justify-between items-center">
-                <button onClick={handleExpand} className="bg-[#3498db] border-none text-white px-2.5 py-0.5 rounded cursor-pointer text-xs">
+                <button onClick={handleExpand} className="bg-[var(--color-accent-info)] border-none text-white px-2.5 py-0.5 rounded cursor-pointer text-xs">
                     + Слот ({formatMoney(priceForNextSlot)})
                 </button>
             </div>
 
-            {hasMore && <div className="mt-2 text-[#888] text-xs">Есть ещё предметы вне инвентаря.</div>}
+            {hasMore && <div className="mt-2 text-[var(--color-text-muted)] text-xs">Есть ещё предметы вне инвентаря.</div>}
 
             <div className="mt-4">
                 <div className="flex items-center justify-between mb-1">
                     <h4 className="m-0 text-sm">Ресурсы:</h4>
                     <button
                         onClick={() => setSortCraft(nextSortOrder(sortCraft))}
-                        className="bg-transparent border border-[#555] text-[#ccc] rounded px-1.5 py-px cursor-pointer text-xs leading-none"
+                        className="bg-transparent border border-[var(--color-border-light)] text-[var(--color-text-secondary)] rounded px-1.5 py-px cursor-pointer text-xs leading-none"
                         title="Сортировка ресурсов"
                     >
                         {sortSymbol(sortCraft)}
@@ -201,7 +201,7 @@ export default function Inventory({
                 <div className="flex gap-1 mb-2 flex-wrap">
                     <button
                         onClick={() => setActiveType('all')}
-                        className={`px-2 py-px text-xs rounded cursor-pointer border ${activeType === 'all' ? 'bg-[#444] text-white border-[#666] font-bold' : 'bg-[#222] text-[#aaa] border-[#444] font-normal'}`}
+                        className={`px-2 py-px text-xs rounded cursor-pointer border ${activeType === 'all' ? 'bg-[var(--color-border-default)] text-[var(--color-text-primary)] border-[var(--color-border-light)] font-bold' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] border-[var(--color-border-default)] font-normal'}`}
                     >
                         Все
                     </button>
@@ -209,7 +209,7 @@ export default function Inventory({
                         <button
                             key={type}
                             onClick={() => setActiveType(type)}
-                            className={`px-2 py-px text-xs rounded cursor-pointer border ${activeType === type ? 'bg-[#444] text-white border-[#666] font-bold' : 'bg-[#222] text-[#aaa] border-[#444] font-normal'}`}
+                            className={`px-2 py-px text-xs rounded cursor-pointer border ${activeType === type ? 'bg-[var(--color-border-default)] text-[var(--color-text-primary)] border-[var(--color-border-light)] font-bold' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] border-[var(--color-border-default)] font-normal'}`}
                         >
                             {getLocalizedType(type)}
                         </button>
@@ -217,7 +217,7 @@ export default function Inventory({
                 </div>
 
                 {filteredCraft.length === 0 ? (
-                    <div className="text-[#888] text-xs">Пусто</div>
+                    <div className="text-[var(--color-text-muted)] text-xs">Пусто</div>
                 ) : (
                     <div className="flex flex-wrap gap-1.5">
                         {filteredCraft.map((item: any) => (

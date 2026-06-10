@@ -56,7 +56,7 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
   const tooltip = (
     <div
       ref={tooltipRef}
-      className="fixed bg-[#1e1e30] rounded-lg p-[0.7rem] z-[99999] text-[#eee] text-xs max-w-[220px] pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.8)] border border-solid"
+      className="fixed bg-[var(--color-bg-secondary)] rounded-lg p-[0.7rem] z-[99999] text-[var(--color-text-primary)] text-xs max-w-[220px] pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.8)] border border-solid"
       style={{
         left: adjustedPos.left,
         top: adjustedPos.top,

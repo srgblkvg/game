@@ -28,11 +28,11 @@ export default function HealthBar({ currentHp, maxHp, compact, showRegenHint, re
       <div className={`${labelFontSize} mb-[3px]`}>
         Здоровье: {currentHp}/{maxHp}
       </div>
-      <div className="h-[14px] bg-[#333] rounded overflow-hidden border border-[#555]">
-        <div style={{ width: `${pct}%` }} className="h-full bg-[#e74c3c] transition-[width] duration-400 ease-in-out" />
+      <div className="h-[14px] bg-[var(--color-bg-input)] rounded overflow-hidden border border-[var(--color-border-light)]">
+        <div style={{ width: `${pct}%` }} className="h-full bg-[var(--color-accent-danger)] transition-[width] duration-400 ease-in-out" />
       </div>
       {showRegenHint && currentHp < maxHp && (
-        <div className={`${hintFontSize} text-[#888] mt-[2px]`}>
+        <div className={`${hintFontSize} text-[var(--color-text-muted)] mt-[2px]`}>
           +{regenRate} HP / 10 сек &mdash; полное через {formatRegenTime()}
         </div>
       )}

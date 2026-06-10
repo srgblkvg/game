@@ -1,10 +1,10 @@
 import { Icon } from '@iconify/react';
 
 const stepColors: Record<string, string> = {
-  damage: '#e74c3c', crit: '#f1c40f', dodge: '#3498db',
-  block: '#2ecc71', fullBlock: '#2ecc71', stun: '#9b59b6',
-  counter: '#e67e22', end: '#f1c40f', money: '#f1c40f',
-  attack: '#e74c3c', info: '#aaa',
+  damage: 'var(--color-accent-danger)', crit: 'var(--color-text-accent)', dodge: 'var(--color-accent-info)',
+  block: 'var(--color-accent-success)', fullBlock: 'var(--color-accent-success)', stun: 'var(--color-accent-purple)',
+  counter: 'var(--color-accent-warning)', end: 'var(--color-text-accent)', money: 'var(--color-text-accent)',
+  attack: 'var(--color-accent-danger)', info: 'var(--color-text-muted)',
 };
 
 const stepIcons: Record<string, string> = {
@@ -43,9 +43,9 @@ export function renderBattleLog(steps: BattleStep[]) {
     return (
       <div key={i}>
         {isNewTurn && (
-          <div className="border-t border-[#333] my-1" />
+          <div className="border-t border-[var(--color-bg-input)] my-1" />
         )}
-        <div className="mb-0.5 flex items-center gap-1" style={{ color: stepColors[step.type] || '#aaa' }}>
+        <div className="mb-0.5 flex items-center gap-1" style={{ color: stepColors[step.type] || 'var(--color-text-muted)' }}>
           {icon && <Icon icon={icon} width="14" height="14" className="flex-shrink-0" />}
           <span>{step.message}</span>
         </div>

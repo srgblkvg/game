@@ -58,12 +58,12 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
         )}
         <div className="font-bold text-xs leading-tight break-words min-w-0" style={{ color }}>
           {item.name}
-          {upgradeLevel > 0 && <span className="text-[#f39c12]"> +{upgradeLevel}</span>}
+          {upgradeLevel > 0 && <span className="text-[var(--color-text-accent)]"> +{upgradeLevel}</span>}
         </div>
       </div>
 
       {/* Редкость */}
-      <div className="text-xs mb-2 text-center text-[#aaa]">
+      <div className="text-xs mb-2 text-center text-[var(--color-text-muted)]">
         Редкость: {item.rarity_display || 'Обычный'}
       </div>
 
@@ -74,10 +74,10 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
             <div
               key={i}
               className="flex justify-between py-0.5 px-1"
-              style={i % 2 === 0 ? { background: 'rgba(255,255,255,0.03)' } : undefined}
+              style={i % 2 === 0 ? { background: 'var(--color-bg-hover)' } : undefined}
             >
               <span>{name}</span>
-              <span className="font-bold text-white">+{val}</span>
+              <span className="font-bold text-[var(--color-text-primary)]">+{val}</span>
             </div>
           ))}
         </div>
@@ -92,10 +92,10 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
             <div
               key={i}
               className="flex justify-between py-0.5 px-1"
-              style={i % 2 === 0 ? { background: 'rgba(255,255,255,0.03)' } : undefined}
+              style={i % 2 === 0 ? { background: 'var(--color-bg-hover)' } : undefined}
             >
               <span>{name}</span>
-              <span className="font-bold text-white">{val}</span>
+              <span className="font-bold text-[var(--color-text-primary)]">{val}</span>
             </div>
           ))}
         </div>
@@ -103,7 +103,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
 
       {/* Уровень улучшения */}
       {!resource && upgradeLevel > 0 && (
-        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center text-[#f39c12]">
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center text-[var(--color-text-accent)]">
           Улучшение +{upgradeLevel} (+{upgradeLevel * 5}% к характеристикам)
         </div>
       )}

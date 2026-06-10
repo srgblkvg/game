@@ -86,7 +86,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
         <>
             <div
                 ref={containerRef}
-                className="flex-1 overflow-y-auto overflow-x-auto px-[0.5rem] py-[0.6rem] flex flex-col gap-[2px] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#555] [&::-webkit-scrollbar-thumb]:rounded"
+                className="flex-1 overflow-y-auto overflow-x-auto px-[0.5rem] py-[0.6rem] flex flex-col gap-[2px] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[var(--color-border-light)] [&::-webkit-scrollbar-thumb]:rounded"
             >
                 {groups.map((group, gi) => {
                     const firstMsg = group[0];
@@ -105,7 +105,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                             >
                                 <span
                                     className={`text-[0.72rem] font-semibold select-none ${
-                                        isGuild ? 'text-[#2ecc71]' : isPrivate ? 'text-[#c084fc]' : 'text-[#aaa]'
+                                        isGuild ? 'text-[var(--color-accent-success)]' : isPrivate ? 'text-[var(--color-accent-purple)]' : 'text-[var(--color-text-muted)]'
                                     } ${isOwn ? 'cursor-default' : 'cursor-pointer'}`}
                                     onClick={isOwn ? undefined : (e) => onNickClick(e, firstMsg.senderName, false)}
                                 >
@@ -118,12 +118,12 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                                 ? navigate(`/guild/${firstMsg.senderGuildId}`)
                                                 : navigate('/guild/rating')
                                         }
-                                        className="text-[0.6rem] text-[#2ecc71] cursor-pointer px-1 rounded-[3px]"
+                                        className="text-[0.6rem] text-[var(--color-accent-success)] cursor-pointer px-1 rounded-[3px]"
                                     >
                                         [{firstMsg.senderGuild.length > 8 ? firstMsg.senderGuild.slice(0, 8) + '\u2026' : firstMsg.senderGuild}]
                                     </span>
                                 )}
-                                <span className="text-[0.62rem] text-[#555]">
+                                <span className="text-[0.62rem] text-[var(--color-border-light)]">
                                     {formatTime(firstMsg.createdAt)}
                                 </span>
                             </div>
@@ -141,7 +141,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                             className={`px-[10px] py-[6px] font-bold cursor-pointer text-[0.82rem] break-words shadow-[0_1px_2px_rgba(0,0,0,0.3)] ${
                                                 isOwn
                                                     ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] border border-[rgba(255,255,255,0.08)]'
-                                                    : `rounded-[12px_12px_12px_4px] ${isPrivate ? 'bg-[#2d1f3d]' : 'bg-[#2a2a3e]'} border border-[rgba(255,255,255,0.04)]`
+                                                    : `rounded-[12px_12px_12px_4px] ${isPrivate ? 'bg-[#2d1f3d]' : 'bg-[var(--color-bg-card)]'} border border-[rgba(255,255,255,0.04)]`
                                             }`}
                                             onMouseEnter={(e) =>
                                                 setTooltipData({ item: msg.item, x: e.clientX, y: e.clientY })
@@ -166,10 +166,10 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                                     ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] text-[#eaeaea] border border-[rgba(255,255,255,0.08)]'
                                                     : `rounded-[12px_12px_12px_4px] border border-[rgba(255,255,255,0.04)] ${
                                                         isGuild
-                                                            ? 'bg-[#1a3a1a] text-[#2ecc71]'
+                                                            ? 'bg-[#1a3a1a] text-[var(--color-accent-success)]'
                                                             : isPrivate
-                                                                ? 'bg-[#2d1f3d] text-[#c084fc]'
-                                                                : 'bg-[#2a2a3e] text-[#eaeaea]'
+                                                                ? 'bg-[#2d1f3d] text-[var(--color-accent-purple)]'
+                                                                : 'bg-[var(--color-bg-card)] text-[var(--color-text-primary)]'
                                                     }`
                                             }`}
                                         >

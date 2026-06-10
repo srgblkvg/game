@@ -165,7 +165,7 @@ export default function ShopPage() {
                                             return (
                                                 <div
                                                     key={item.id}
-                                                    className="rounded-xl p-2 sm:p-3 flex flex-col border-2 border-solid bg-[#2a2a3e] shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                                                    className="rounded-xl p-2 sm:p-3 flex flex-col border-2 border-solid bg-[var(--color-bg-card)] shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
                                                     style={{ borderColor: color }}
                                                 >
                                                     <div className="flex-1">

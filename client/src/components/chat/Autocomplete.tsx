@@ -19,12 +19,12 @@ export default function Autocomplete({ items, selectedIndex, onSelect, onClose }
                 bottom: '100%',
                 left: 0,
                 marginBottom: '4px',
-                background: '#2a2a3e',
-                border: '1px solid #555',
+                background: 'var(--color-bg-card)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '6px',
                 boxShadow: '0 -2px 10px rgba(0,0,0,0.5)',
                 zIndex: 3000,
-                color: '#eee',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.85rem',
                 maxHeight: '150px',
                 overflowY: 'auto',
@@ -43,7 +43,7 @@ export default function Autocomplete({ items, selectedIndex, onSelect, onClose }
                     style={{
                         padding: '0.25rem 0.6rem',
                         cursor: 'pointer',
-                        background: idx === selectedIndex ? '#3a3a5e' : 'transparent',
+                        background: idx === selectedIndex ? 'var(--color-bg-card-hover)' : 'transparent',
                         whiteSpace: 'nowrap',
                     }}
                 >

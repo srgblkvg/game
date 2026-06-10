@@ -363,8 +363,8 @@ export default function BestiaryPage() {
                     <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
                     <p className="font-bold text-[var(--color-text-secondary)]">Награда:</p>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                      <span className="text-[#f1c40f]">◆ {info.goldMin}–{info.goldMax} серебра</span>
-                      <span className="text-[#2ecc71]">◆ ~{info.avgXp} XP</span>
+                      <span className="text-[var(--color-text-accent)]">◆ {info.goldMin}–{info.goldMax} серебра</span>
+                      <span className="text-[var(--color-accent-success)]">◆ ~{info.avgXp} XP</span>
                     </div>
                     {info.lootImages.length > 0 && (
                       <div>
@@ -494,7 +494,7 @@ export default function BestiaryPage() {
               {battleResult.playerWon && (
                 <div className="text-sm space-y-1 mb-3">
                   {battleResult.xpGained > 0 && <p>Опыт: +{battleResult.xpGained}</p>}
-                  {battleResult.goldGained > 0 && <p>Золото: +{formatMoney(battleResult.goldGained)}{battleResult.premiumBonus > 0 ? <span className="text-[#f1c40f]"> (+{battleResult.premiumBonus} премиум)</span> : null}</p>}
+                  {battleResult.goldGained > 0 && <p>Золото: +{formatMoney(battleResult.goldGained)}{battleResult.premiumBonus > 0 ? <span className="text-[var(--color-text-accent)]"> (+{battleResult.premiumBonus} премиум)</span> : null}</p>}
                   {battleResult.levelsGained > 0 && <p className="text-[var(--color-accent-purple)]">Уровень +{battleResult.levelsGained}</p>}
                   {battleResult.materialDropped && (
                     <p className={rarityTextColors[battleResult.materialDropped.rarity_id] || 'text-[#aaa]'}>Добыто: {battleResult.materialDropped.name}</p>

@@ -7,7 +7,7 @@ export default function GuildTag({ guildName, guildId, hideNoGuild }: { guildNam
     return (
         <span
             onClick={(e) => { e.stopPropagation(); if (guildId) navigate(`/guild/${guildId}`); }}
-            className="text-[0.6rem] text-[#2ecc71] px-1 rounded cursor-pointer hover:underline"
+            className="text-[0.6rem] text-[var(--color-accent-success)] px-1 rounded cursor-pointer hover:underline"
             title={guildName}
         >[{short}]</span>
     );

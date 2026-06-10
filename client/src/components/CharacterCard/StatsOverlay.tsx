@@ -31,7 +31,7 @@ export default function StatsOverlay({ stats, compact }: StatsOverlayProps) {
   return (
     <div
       style={{ padding, fontSize }}
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/70 rounded-lg z-[1] text-[#eee] leading-[1.2]"
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-bg-card)]/70 rounded-lg z-[1] text-[var(--color-text-primary)] leading-[1.2]"
     >
       <table className="w-full border-collapse">
         <tbody>
