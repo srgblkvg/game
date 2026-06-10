@@ -32,7 +32,7 @@ router.post('/guild/create', (req: any, res) => {
 router.get('/guild/my', (req: any, res) => {
     const userId = req.userId;
     const member = db.prepare(
-        'SELECT gm.*, g.name, g.description, g.joinType, g.level, g.exp, g.leaderId, g.treasury, g.createdAt FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?'
+        'SELECT gm.*, g.name, g.description, g.joinType, g.level, g.exp, g.leaderId, g.treasury, g.taxRate, g.createdAt FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?'
     ).get(userId) as any;
     if (!member) return res.json({ guild: null });
 
@@ -54,6 +54,7 @@ router.get('/guild/my', (req: any, res) => {
             exp: member.exp,
             leaderId: member.leaderId,
             treasury: member.treasury,
+            taxRate: member.taxRate,
             createdAt: member.createdAt,
             myRank: member.rank,
             memberCount: members.length,

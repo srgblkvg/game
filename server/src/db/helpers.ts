@@ -105,7 +105,7 @@ export function collectGuildTax(db: DB, userId: number, income: number, source: 
   const member = db.prepare('SELECT gm.guildId, g.taxRate FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?').get(userId) as any;
   if (!member || !member.taxRate || member.taxRate <= 0) return income;
 
-  const tax = Math.floor(income * member.taxRate / 100);
+  const tax = Math.max(1, Math.floor(income * member.taxRate / 100));
   if (tax <= 0) return income;
 
   db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(tax, member.guildId);
