@@ -14,84 +14,112 @@ const STATS = [
 
 export default function StatAllocation() {
   const { character, setCharacter } = useGame();
-  const [spending, setSpending] = useState(false);
-  const [allocated, setAllocated] = useState<Record<string, number>>({});
+  const [alloc, setAlloc] = useState({ s: 0, a: 0, d: 0, m: 0 });
+  const [msg, setMsg] = useState('');
+  const [collapsed, setCollapsed] = useState(true);
 
-  if (!character || character.statPoints <= 0) return null;
+  if (!character) return null;
 
-  const stats = character.stats || { s: 0, a: 0, d: 0, m: 0 };
-  const remainingPoints = character.statPoints - Object.values(allocated).reduce((a, b) => a + b, 0);
+  const remaining = (character.statPoints || 0) - alloc.s - alloc.a - alloc.d - alloc.m;
 
-  const handleAdd = (key: string) => {
-    if (remainingPoints <= 0) return;
-    setAllocated(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+  const add = (key: 's' | 'a' | 'd' | 'm') => {
+    if (remaining <= 0) return;
+    setAlloc(prev => ({ ...prev, [key]: prev[key] + 1 }));
   };
 
-  const handleRemove = (key: string) => {
-    if (!allocated[key]) return;
-    setAllocated(prev => ({ ...prev, [key]: prev[key] - 1 || 0 }));
+  const remove = (key: 's' | 'a' | 'd' | 'm') => {
+    setAlloc(prev => ({ ...prev, [key]: Math.max(0, prev[key] - 1) }));
   };
 
-  const handleSubmit = async () => {
-    setSpending(true);
+  const handleApply = async () => {
     try {
-      const result = await allocateStats(allocated);
-      setAllocated({});
-      setCharacter(result);
+      if (alloc.s + alloc.a + alloc.d + alloc.m === 0) return;
+      if (remaining > 0) { setMsg('Распределите все очки'); return; }
+      await allocateStats(alloc.s, alloc.a, alloc.d, alloc.m);
+      const fresh = await fetchCharacter();
+      setCharacter(fresh);
+      setAlloc({ s: 0, a: 0, d: 0, m: 0 });
+      setMsg('Применено!');
     } catch (e: any) {
-      alert(e.message || 'Ошибка распределения очков');
-    } finally {
-      setSpending(false);
+      setMsg(e.message);
     }
   };
 
   return (
-    <Card className="mb-4">
-      <h3 className="text-sm mb-3">Распределение очков ({character.statPoints})</h3>
-      {STATS.map(stat => {
-        const current = stats[stat.key] || 0;
-        const extra = allocated[stat.key] || 0;
-        const total = current + extra;
-        return (
-          <div key={stat.key} className="mb-2">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1">
-                <Icon icon={stat.icon} width="14" height="14" style={{ color: stat.color }} />
-                <span className="text-xs">{stat.label}: {total}</span>
-                {extra > 0 && <span className="text-xs" style={{ color: stat.color }}> (+{extra})</span>}
+    <Card className="mt-4 w-full">
+      <div
+        className="flex items-center justify-between cursor-pointer select-none"
+        onClick={() => setCollapsed(!collapsed)}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{collapsed ? '▶' : '▼'}</span>
+          <h3 className="font-bold text-sm">Характеристики</h3>
+        </div>
+        <span className="text-xs text-[var(--color-text-accent)]">
+          {character.statPoints || 0} очк.
+        </span>
+      </div>
+
+      {!collapsed && (
+        <div className="mt-2">
+          {STATS.map(({ key, label, icon, color, desc }) => (
+            <div key={key} className="flex items-center gap-2 py-1 border-b border-[var(--color-border-light)] last:border-b-0">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-sm font-bold flex items-center gap-1" style={{ color }}>
+                    <Icon icon={icon} width="16" height="16" />
+                    {label}
+                  </span>
+                  <span className="text-sm font-bold text-[var(--color-text-primary)]">
+                    {(character.baseStats?.[key] ?? 5) + alloc[key]}
+                    {alloc[key] > 0 && (
+                      <span className="text-[0.6rem] text-[var(--color-accent-success)] ml-1">
+                        +{alloc[key]}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="text-[0.6rem] text-[var(--color-text-muted)]">{desc}</div>
               </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => handleRemove(stat.key)}
-                  disabled={!allocated[stat.key]}
-                  className="px-1.5 py-0.5 text-xs rounded bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-light)] cursor-pointer disabled:opacity-30"
-                >-</button>
-                <button
-                  onClick={() => handleAdd(stat.key)}
-                  disabled={remainingPoints <= 0}
-                  className="px-1.5 py-0.5 text-xs rounded bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-light)] cursor-pointer disabled:opacity-30"
-                >+</button>
-              </div>
+              {(character.statPoints || 0) > 0 && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); remove(key); }}
+                    disabled={alloc[key] <= 0}
+                    className="w-5 h-5 rounded bg-[var(--color-border-default)] text-white text-xs disabled:opacity-20 cursor-pointer leading-none"
+                  >−</button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); add(key); }}
+                    disabled={remaining <= 0}
+                    className="w-5 h-5 rounded bg-[var(--color-accent-info)] text-white text-xs disabled:opacity-20 cursor-pointer leading-none"
+                  >+</button>
+                </div>
+              )}
             </div>
-            <div className="h-1.5 bg-[var(--color-bg-input)] rounded overflow-hidden">
-              <div
-                className="h-full rounded transition-[width] duration-300"
-                style={{ width: `${Math.min(100, (total / 100) * 100)}%`, backgroundColor: stat.color }}
-              />
+          ))}
+
+          {(character.statPoints || 0) > 0 && (
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[0.65rem] text-[var(--color-text-muted)]">
+                Осталось: {remaining}
+              </span>
+              <Button
+                variant="success"
+                size="xs"
+                onClick={(e) => { e.stopPropagation(); handleApply(); }}
+                disabled={alloc.s + alloc.a + alloc.d + alloc.m === 0 || remaining > 0}
+              >
+                Применить
+              </Button>
             </div>
-          </div>
-        );
-      })}
-      {Object.values(allocated).some(v => v > 0) && (
-        <Button
-          onClick={handleSubmit}
-          disabled={spending || remainingPoints > 0}
-          variant="primary"
-          size="sm"
-          className="mt-2 w-full"
-        >
-          {spending ? 'Сохраняем...' : 'Применить'}
-        </Button>
+          )}
+
+          {msg && (
+            <div className={`text-[0.65rem] mt-1 ${msg.includes('Применено') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>
+              {msg}
+            </div>
+          )}
+        </div>
       )}
     </Card>
   );
