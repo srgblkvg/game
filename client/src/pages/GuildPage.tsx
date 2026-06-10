@@ -44,6 +44,13 @@ export default function GuildPage() {
     const [taxRateInput, setTaxRateInput] = useState('');
     const [treasuryTab, setTreasuryTab] = useState<'deposit' | 'tax' | 'history'>('deposit');
 
+    // Динамический поиск в истории казны
+    useEffect(() => {
+        if (treasuryTab !== 'history' || !showTreasury) return;
+        const timer = setTimeout(() => loadTreasury(1, treasurySearch), 300);
+        return () => clearTimeout(timer);
+    }, [treasurySearch]);
+
     const searchUsers = async (q: string) => {
         if (q.length < 2) { setInviteSuggestions([]); return; }
         try {
@@ -326,10 +333,8 @@ export default function GuildPage() {
                                                 placeholder="Поиск по нику..."
                                                 value={treasurySearch}
                                                 onChange={e => setTreasurySearch(e.target.value)}
-                                                onKeyDown={e => { if (e.key === 'Enter') loadTreasury(1, treasurySearch); }}
                                                 className={inputClass}
                                             />
-                                            <Button variant="secondary" size="xs" onClick={() => loadTreasury(1, treasurySearch)}>Найти</Button>
                                         </div>
                                         {treasuryHistory.length > 0 ? (
                                             <div className="text-xs">
