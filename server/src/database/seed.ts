@@ -256,8 +256,9 @@ export function runSeed(db: InstanceType<typeof Database>) {
     }
   }
 
-  // Начальные работы (20 работ) — всегда удаляем старые и вставляем новые
-  db.prepare('DELETE FROM jobs').run();
+  // Начальные работы (20 работ) — добавляем только если таблица пуста
+  const jobCount = (db.prepare('SELECT COUNT(*) as c FROM jobs').get() as any).c;
+  if (jobCount === 0) {
   const insertJob = db.prepare(
     'INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)'
   );
@@ -291,6 +292,7 @@ export function runSeed(db: InstanceType<typeof Database>) {
 
   for (const job of jobs) {
     insertJob.run(job.name, job.description, job.duration, job.rewardMin, job.rewardMax);
+  }
   }
 
   // Начальные названия характеристик
