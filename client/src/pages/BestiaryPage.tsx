@@ -339,7 +339,7 @@ export default function BestiaryPage() {
             <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
           </h1>
           {cooldownRemaining > 0 && (
-            <div className="mb-4 text-sm text-[var(--color-accent-warning)] bg-[#2a2a2a] rounded p-2 text-center">
+            <div className="mb-4 text-sm text-[var(--color-accent-warning)] bg-[var(--color-bg-card)] border border-[var(--color-border-light)] rounded p-2 text-center">
               До следующей атаки: {formatCooldown(cooldownRemaining)}
             </div>
           )}
