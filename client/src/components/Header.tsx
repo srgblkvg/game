@@ -50,7 +50,7 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
                     <span key={i} className="flex items-center gap-1.5">
                         {i > 0 && <span className="text-[var(--color-text-muted)] select-none">›</span>}
                         {isLast ? (
-                            <span className={`font-semibold px-1.5 py-0.5 rounded ${isHome ? 'text-white' : 'text-[var(--color-text-primary)] bg-[var(--color-bg-secondary)]'}`}>
+                            <span className={`font-semibold px-1.5 py-0.5 rounded ${isHome ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-primary)] bg-[var(--color-bg-secondary)]'}`}>
                                 {item.label}
                             </span>
                         ) : (
@@ -176,7 +176,7 @@ export default function Header() {
         <div className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
             <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
                 {user.role === 'player' && character && (
-                    <span className="text-white text-sm font-bold">
+                    <span className="text-[var(--color-text-primary)] text-sm font-bold">
                         Серебро: {character.money.toLocaleString()}
                     </span>
                 )}
