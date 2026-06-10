@@ -353,7 +353,7 @@ export default function BestiaryPage() {
                 <Card key={floor} className={`cursor-pointer hover:border-[var(--color-accent-info)] transition-colors relative overflow-hidden ${disabled ? 'opacity-50' : ''}`}
                   onClick={() => !disabled && selectFloor(floor)}
                   style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-                  {bg && <div className="absolute inset-0 bg-black/70" />}
+                  {bg && <div className="absolute inset-0 bg-[var(--color-overlay-card)]" />}
                   <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <Icon icon="game-icons:castle-ruins" width="20" height="20" className="text-[var(--color-text-muted)]" />

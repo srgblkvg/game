@@ -14,6 +14,7 @@ html {
   --color-bg-input: #333;
   --color-bg-modal: #2a2a3e;
   --color-bg-hover: rgba(255, 255, 255, 0.08);
+  --color-overlay-card: rgba(0, 0, 0, 0.7);
 
   /* Текст */
   --color-text-primary: #eee;
@@ -54,6 +55,7 @@ html {
   --color-bg-input: #e0d8c8;
   --color-bg-modal: #fdfaf3;
   --color-bg-hover: rgba(0, 0, 0, 0.06);
+  --color-overlay-card: rgba(255, 255, 255, 0.7);
 
   --color-text-primary: #2c1810;
   --color-text-secondary: #4a3728;
