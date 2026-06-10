@@ -16,8 +16,6 @@ export default function ContextMenu({ x, y, onWhisper, onProfile, onClose }: Con
     const menuRef = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState({ left: x, top: y });
 
-    // useLayoutEffect срабатывает синхронно после DOM-изменений, до браузерной отрисовки.
-    // Это исключает видимый прыжок, потому что позиция пересчитывается до первого показа меню.
     useLayoutEffect(() => {
         if (!menuRef.current) return;
         const rect = menuRef.current.getBoundingClientRect();
@@ -26,22 +24,18 @@ export default function ContextMenu({ x, y, onWhisper, onProfile, onClose }: Con
         let left = x;
         let top = y;
 
-        // Если меню не влезает по высоте – показываем над курсором
         if (top + rect.height > innerHeight) {
             top = y - rect.height;
         }
-        // Если не влезает по ширине – смещаем влево
         if (left + rect.width > innerWidth) {
             left = innerWidth - rect.width - 5;
         }
-        // Минимальные отступы
         if (left < 5) left = 5;
         if (top < 5) top = 5;
 
         setPos({ left, top });
     }, [x, y]);
 
-    // Закрытие по клику вне меню
     useEffect(() => {
         const handleClick = () => onClose();
         document.addEventListener('click', handleClick);
@@ -55,12 +49,12 @@ export default function ContextMenu({ x, y, onWhisper, onProfile, onClose }: Con
                 position: 'fixed',
                 left: pos.left,
                 top: pos.top,
-                background: '#2a2a3e',
-                border: '1px solid #555',
+                background: 'var(--color-bg-card)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '6px',
                 padding: '0.3rem 0',
                 zIndex: 2000,
-                color: '#eee',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.85rem',
                 minWidth: '140px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.8)',

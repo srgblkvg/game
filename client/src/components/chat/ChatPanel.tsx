@@ -462,12 +462,12 @@ export default function ChatPanel() {
             )}
             <div
                 ref={panelRef}
-                className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] bg-[rgba(30,30,48,0.85)] backdrop-blur-[12px] border-t-2 border-[#555] ${visible ? 'flex' : 'hidden'} ${dragging ? '' : 'transition-[height] duration-150'}`}
+                className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] bg-[var(--color-bg-secondary)]/85 backdrop-blur-[12px] border-t-2 border-[var(--color-border-light)] ${visible ? 'flex' : 'hidden'} ${dragging ? '' : 'transition-[height] duration-150'}`}
                 style={{ height: isPanelOpen ? chatHeight : 40 }}
             >
             <div
                 onClick={() => setIsPanelOpen(!isPanelOpen)}
-                className="cursor-pointer p-2 bg-[rgba(42,42,62,0.9)] border-b border-[#444] flex justify-between items-center"
+                className="cursor-pointer p-2 bg-[var(--color-bg-card)]/90 border-b border-[var(--color-border-default)] flex justify-between items-center"
             >
                 <div className="flex items-center gap-1.5">
                     <Icon icon="game-icons:chat-bubble" width="18" height="18" className="inline" />

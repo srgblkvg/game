@@ -56,27 +56,27 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
     const guildCount = sorted.filter(u => guildMemberIds.has(u.id)).length;
 
     return (
-        <div className="online-panel bg-[#16162a] max-h-full flex flex-col shrink-0 relative" style={{ width }}>
+        <div className="online-panel bg-[var(--color-bg-primary)] max-h-full flex flex-col shrink-0 relative" style={{ width }}>
             {/* Хендл драга ширины */}
             <div
                 onMouseDown={handleResizeStart}
                 onTouchStart={handleResizeStart}
-                className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:w-[8px] hover:bg-[#555] z-10 select-none flex items-center justify-center group transition-all"
+                className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:w-[8px] hover:bg-[var(--color-border-light)] z-10 select-none flex items-center justify-center group transition-all"
                 title="Тяни для изменения ширины"
             >
-                <span className="text-[0.65rem] text-[#666] group-hover:text-[#ccc] opacity-60 group-hover:opacity-100" style={{ writingMode: 'vertical-rl' }}>⠿</span>
+                <span className="text-[0.65rem] text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] opacity-60 group-hover:opacity-100" style={{ writingMode: 'vertical-rl' }}>⠿</span>
             </div>
-            <div className="flex shrink-0 border-b border-l border-[#444]">
+            <div className="flex shrink-0 border-b border-l border-[var(--color-border-default)]">
                 <button
                     onClick={() => setFilter('all')}
-                    className={`flex-1 py-1 text-[0.7rem] cursor-pointer ${filter === 'all' ? 'bg-[#2a2a3e] text-white' : 'bg-transparent text-[var(--color-text-muted)]'}`}
+                    className={`flex-1 py-1 text-[0.7rem] cursor-pointer ${filter === 'all' ? 'bg-[var(--color-bg-card)] text-[var(--color-text-primary)]' : 'bg-transparent text-[var(--color-text-muted)]'}`}
                 >Все</button>
                 <button
                     onClick={() => setFilter('guild')}
-                    className={`flex-1 py-1 text-[0.7rem] cursor-pointer border-l border-[#444] ${filter === 'guild' ? 'bg-[#2a2a3e] text-[#2ecc71]' : 'bg-transparent text-[var(--color-text-muted)]'}`}
+                    className={`flex-1 py-1 text-[0.7rem] cursor-pointer border-l border-[var(--color-border-default)] ${filter === 'guild' ? 'bg-[var(--color-bg-card)] text-[var(--color-accent-success)]' : 'bg-transparent text-[var(--color-text-muted)]'}`}
                 >Гильдия{guildCount > 0 ? ` (${guildCount})` : ''}</button>
             </div>
-            <ul className="list-none p-0 m-0 overflow-y-auto overflow-x-auto [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-[#555] [&::-webkit-scrollbar-thumb]:rounded">
+            <ul className="list-none p-0 m-0 overflow-y-auto overflow-x-auto [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-[var(--color-border-light)] [&::-webkit-scrollbar-thumb]:rounded">
                 {filtered.map((u, i) => {
                     const isMe = u.id === currentUserId;
                     const isGuildMate = guildMemberIds.has(u.id);
@@ -84,20 +84,20 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
                         <li
                             key={u.id}
                             onClick={isMe ? undefined : (e) => onUserClick(e, u.username, false)}
-                            className={`py-[0.2rem] px-1 text-[0.8rem] whitespace-nowrap ${i % 2 === 1 ? 'bg-[#1e1e38]' : ''} ${
+                            className={`py-[0.2rem] px-1 text-[0.8rem] whitespace-nowrap ${i % 2 === 1 ? 'bg-[var(--color-bg-hover)]' : ''} ${
                                 isMe
-                                    ? 'cursor-default text-[#f1c40f] font-normal'
+                                    ? 'cursor-default text-[var(--color-text-accent)] font-normal'
                                     : privateChatWith === u.id
-                                        ? 'cursor-pointer text-[#f1c40f] font-bold'
+                                        ? 'cursor-pointer text-[var(--color-text-accent)] font-bold'
                                         : isGuildMate
-                                            ? 'cursor-pointer text-[#2ecc71] font-normal'
-                                            : 'cursor-pointer text-white font-normal'
+                                            ? 'cursor-pointer text-[var(--color-accent-success)] font-normal'
+                                            : 'cursor-pointer text-[var(--color-text-primary)] font-normal'
                             }`}
                         >
                             {truncate(u.username)}
                             {isMe && ' (Вы)'}
-                            {' '}[<span className="text-white">{u.level}</span>]
-                            {u.guildName && <span className="text-[0.65rem] text-[#2ecc71] ml-1">[{u.guildName.length > 8 ? u.guildName.slice(0, 8) + '\u2026' : u.guildName}]</span>}
+                            {' '}[<span className="text-[var(--color-text-primary)]">{u.level}</span>]
+                            {u.guildName && <span className="text-[0.65rem] text-[var(--color-accent-success)] ml-1">[{u.guildName.length > 8 ? u.guildName.slice(0, 8) + '\u2026' : u.guildName}]</span>}
                         </li>
                     );
                 })}

@@ -52,7 +52,7 @@ export default function SlotBase({
         backgroundColor: color,
       }
     : {
-        backgroundColor: title ? 'var(--color-bg-hover)' : 'var(--color-bg-input)',
+        backgroundColor: title ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.6)',
       };
 
   const slotClassName = `w-[44px] h-[44px] rounded flex items-center justify-center relative font-bold text-white text-[0.65rem] ${item ? 'cursor-pointer' : 'cursor-default'}`;
