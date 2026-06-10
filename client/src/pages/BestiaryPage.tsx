@@ -478,7 +478,7 @@ export default function BestiaryPage() {
 
           {/* Battle log */}
           {battleActive && (
-            <div ref={logRef} className="bg-black rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed mb-4">
+            <div ref={logRef} className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed mb-4">
               {renderBattleLog(visibleSteps)}
             </div>
           )}

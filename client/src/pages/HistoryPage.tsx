@@ -204,7 +204,7 @@ export default function HistoryPage() {
             {selectedBattle&&<Modal open={!!selectedBattle} onClose={()=>setSelectedBattle(null)}
                 title={`⚔ ${selectedBattle.attackerName||'Вы'} vs ${selectedBattle.defenderName||selectedBattle.mobName||'?'}`}
                 width="min(900px, calc(100vw - 2rem))" borderColor="var(--color-border-default)">
-                <div className="bg-black rounded-lg p-3 max-h-[60vh] overflow-y-auto font-mono text-xs leading-relaxed">
+                <div className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 max-h-[60vh] overflow-y-auto font-mono text-xs leading-relaxed">
                     {renderBattleLog(typeof selectedBattle.steps==='string'?JSON.parse(selectedBattle.steps):(selectedBattle.steps||[]))}
                 </div>
                 <div className="flex justify-center mt-4"><Button variant="secondary" size="sm" onClick={()=>setSelectedBattle(null)}>Закрыть</Button></div>

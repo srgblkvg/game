@@ -156,7 +156,7 @@ export default function ArenaPage() {
       {/* Лог боя */}
       {battleSteps.length > 0 && (
         <div>
-          <div ref={logContainerRef} className="bg-black rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed">
+          <div ref={logContainerRef} className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed">
             {renderBattleLog(visibleSteps)}
           </div>
           {currentStep >= battleSteps.length - 1 && battleResult && (
