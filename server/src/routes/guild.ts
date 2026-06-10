@@ -435,24 +435,51 @@ router.post('/guild/treasury/deposit', (req: any, res) => {
     }
 });
 
-// История пополнений казны
+// История пополнений казны (с пагинацией и поиском)
 router.get('/guild/treasury/history', (req: any, res) => {
     const userId = req.userId;
     const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
-    const limit = parseInt(req.query.limit as string) || 30;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const search = (req.query.search as string || '').trim();
+    const offset = (page - 1) * limit;
+
+    let whereClause = 'WHERE l.guildId = ?';
+    const params: any[] = [member.guildId];
+
+    if (search) {
+        whereClause += ' AND u.username LIKE ?';
+        params.push(`%${search}%`);
+    }
+
+    const total = (db.prepare(`SELECT COUNT(*) as cnt FROM guild_treasury_log l JOIN users u ON l.userId = u.id ${whereClause}`).get(...params) as any).cnt;
+
     const logs = db.prepare(`
-        SELECT l.id, l.amount, l.createdAt, u.username
+        SELECT l.id, l.amount, l.type, l.createdAt, u.username
         FROM guild_treasury_log l
         JOIN users u ON l.userId = u.id
-        WHERE l.guildId = ?
+        ${whereClause}
         ORDER BY l.id DESC
-        LIMIT ?
-    `).all(member.guildId, limit);
+        LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
 
     const treasury = (db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(member.guildId) as any)?.treasury || 0;
-    res.json({ treasury, history: logs });
+    res.json({ treasury, history: logs, total, page, totalPages: Math.ceil(total / limit) });
+});
+
+// Установить ставку налога (только лидер)
+router.post('/guild/tax-rate', (req: any, res) => {
+    const userId = req.userId;
+    const { taxRate } = req.body;
+    if (taxRate == null || taxRate < 0 || taxRate > 50) return res.status(400).json({ error: 'Ставка от 0 до 50%' });
+
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может менять налог' });
+
+    db.prepare('UPDATE guilds SET taxRate = ? WHERE id = ?').run(taxRate, member.guildId);
+    res.json({ success: true, taxRate });
 });
 
 export default router;

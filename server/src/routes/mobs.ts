@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../database';
-import { getBaseStats, enrichEquipment } from '../db/helpers';
+import { getBaseStats, enrichEquipment, collectGuildTax } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { addPveRating } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
@@ -272,8 +272,11 @@ router.post('/mob/attack', (req: any, res) => {
     const newStatPoints = (user.statPoints || 0) + levelsGained * 5;
     const newHpAfter = Math.max(0, hpUser);
 
+    // Налог гильдии (PvE)
+    const goldAfterTax = collectGuildTax(db, userId, goldGained, 'tax_pve');
+
     db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`)
-        .run(newLevel, newExp, goldGained, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
+        .run(newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
 
     // Сохраняем в историю PvE
     db.prepare(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, premiumBonus)

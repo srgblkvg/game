@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import db from '../database';
+import { collectGuildTax } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
@@ -81,7 +82,9 @@ router.get('/character/me', (req: any, res) => {
         jobData = JSON.parse(user.activeJob);
         const nowSec = Math.floor(Date.now() / 1000);
         if (nowSec >= jobData.endTime) {
-            const newMoney = user.money + jobData.reward;
+            // Налог гильдии (работы)
+            const rewardAfterTax = collectGuildTax(db, userId, jobData.reward, 'tax_job');
+            const newMoney = user.money + rewardAfterTax;
             const expGain = jobData.expReward || 0;
             let newExp = user.exp + expGain;
             let newLevel = user.level;

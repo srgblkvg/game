@@ -37,6 +37,11 @@ export default function GuildPage() {
     const [treasuryHistory, setTreasuryHistory] = useState<any[]>([]);
     const [treasuryBalance, setTreasuryBalance] = useState(guild?.treasury || 0);
     const [showTreasury, setShowTreasury] = useState(false);
+    const [treasuryPage, setTreasuryPage] = useState(1);
+    const [treasuryTotalPages, setTreasuryTotalPages] = useState(1);
+    const [treasurySearch, setTreasurySearch] = useState('');
+    const [taxRate, setTaxRate] = useState(guild?.taxRate || 0);
+    const [taxRateInput, setTaxRateInput] = useState('');
 
     const searchUsers = async (q: string) => {
         if (q.length < 2) { setInviteSuggestions([]); return; }
@@ -65,6 +70,7 @@ export default function GuildPage() {
             if (data.guild) {
                 setGuild(data.guild); setMembers(data.members);
                 setTreasuryBalance(data.guild.treasury || 0);
+                setTaxRate(data.guild.taxRate || 0);
                 if (data.guild.myRank === 'leader' || data.guild.myRank === 'officer') {
                     fetch(`${BASE_URL}/guild/requests`, { headers: getHeaders() })
                         .then(r => r.json()).then(setRequests).catch(() => {});
@@ -155,13 +161,17 @@ export default function GuildPage() {
 
     const clearMessages = () => { setMessage(''); setError(''); };
 
-    const loadTreasury = async () => {
+    const loadTreasury = async (pageNum = 1, search = '') => {
         try {
-            const r = await fetch(`${BASE_URL}/guild/treasury/history`, { headers: getHeaders() });
+            const params = new URLSearchParams({ page: String(pageNum), limit: '10' });
+            if (search) params.set('search', search);
+            const r = await fetch(`${BASE_URL}/guild/treasury/history?${params}`, { headers: getHeaders() });
             const d = await r.json();
             if (r.ok) {
                 setTreasuryBalance(d.treasury);
                 setTreasuryHistory(d.history || []);
+                setTreasuryPage(d.page);
+                setTreasuryTotalPages(d.totalPages);
             }
         } catch {}
     };
@@ -179,8 +189,24 @@ export default function GuildPage() {
             setTreasuryBalance(d.treasury);
             setTreasuryAmount('');
             setMessage(`Внесено ${amount.toLocaleString()} серебра в казну`);
-            loadTreasury();
+            loadTreasury(1, treasurySearch);
             const fresh = await fetchCharacter(); setCharacter(fresh);
+        } catch (e: any) { setError(e.message); }
+    };
+
+    const handleSetTaxRate = async () => {
+        const rate = parseInt(taxRateInput);
+        if (isNaN(rate) || rate < 0 || rate > 50) { setError('Ставка от 0 до 50%'); return; }
+        try {
+            const r = await fetch(`${BASE_URL}/guild/tax-rate`, {
+                method: 'POST', headers: getHeaders(),
+                body: JSON.stringify({ taxRate: rate }),
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error);
+            setTaxRate(rate);
+            setTaxRateInput('');
+            setMessage(`Ставка налога установлена: ${rate}%`);
         } catch (e: any) { setError(e.message); }
     };
 
@@ -219,11 +245,12 @@ export default function GuildPage() {
                     <Card className="mb-4">
                         <div
                             className="flex items-center justify-between cursor-pointer select-none"
-                            onClick={() => { if (!showTreasury) loadTreasury(); setShowTreasury(!showTreasury); }}
+                            onClick={() => { if (!showTreasury) loadTreasury(1, treasurySearch); setShowTreasury(!showTreasury); }}
                         >
                             <div className="flex items-center gap-2">
                                 <span className="text-sm">{showTreasury ? '▼' : '▶'}</span>
                                 <h3 className="font-bold text-sm">💰 Казна</h3>
+                                {taxRate > 0 && <span className="text-[0.6rem] text-[var(--color-text-muted)]">(налог {taxRate}%)</span>}
                             </div>
                             <span className="text-xs text-[var(--color-text-accent)]">
                                 {treasuryBalance.toLocaleString()} серебра
@@ -231,6 +258,26 @@ export default function GuildPage() {
                         </div>
                         {showTreasury && (
                             <div className="mt-3">
+                                {/* Налог (только лидер) */}
+                                {guild.myRank === 'leader' && (
+                                    <div className="mb-3 p-2 bg-[var(--color-bg-input)] rounded">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-[var(--color-text-muted)]">Налог:</span>
+                                            <span className="text-xs font-bold text-[var(--color-text-primary)]">{taxRate}%</span>
+                                            <input
+                                                type="number" min="0" max="50"
+                                                placeholder="0-50"
+                                                value={taxRateInput}
+                                                onChange={e => setTaxRateInput(e.target.value)}
+                                                className="w-16 text-xs px-1 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border-light)] text-[var(--color-text-primary)]"
+                                            />
+                                            <Button variant="primary" size="xs" onClick={handleSetTaxRate}>✓</Button>
+                                        </div>
+                                        <p className="text-[0.55rem] text-[var(--color-text-muted)] mt-1">% с дохода участников (PvE, PvP, работы, аукцион)</p>
+                                    </div>
+                                )}
+
+                                {/* Внесение */}
                                 <div className="flex gap-2 mb-3">
                                     <input
                                         type="number" min="1"
@@ -241,18 +288,43 @@ export default function GuildPage() {
                                     />
                                     <Button variant="success" size="xs" onClick={handleDeposit}>Внести</Button>
                                 </div>
+
+                                {/* Поиск */}
+                                <div className="flex gap-2 mb-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Поиск по нику..."
+                                        value={treasurySearch}
+                                        onChange={e => { setTreasurySearch(e.target.value); }}
+                                        onKeyDown={e => { if (e.key === 'Enter') loadTreasury(1, treasurySearch); }}
+                                        className={inputClass}
+                                    />
+                                    <Button variant="secondary" size="xs" onClick={() => loadTreasury(1, treasurySearch)}>Найти</Button>
+                                </div>
+
                                 {treasuryHistory.length > 0 && (
                                     <div className="text-xs">
-                                        <h4 className="font-bold text-[var(--color-text-muted)] mb-1">История пополнений</h4>
-                                        <div className="max-h-48 overflow-y-auto space-y-1">
+                                        <h4 className="font-bold text-[var(--color-text-muted)] mb-1">История</h4>
+                                        <div className="space-y-1">
                                             {treasuryHistory.map((h: any) => (
                                                 <div key={h.id} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
                                                     <span className="text-[var(--color-text-primary)]">{h.username}</span>
-                                                    <span className="text-[var(--color-text-accent)]">+{h.amount.toLocaleString()}</span>
+                                                    <span className={h.type?.startsWith('tax') ? 'text-[var(--color-accent-warning)]' : 'text-[var(--color-text-accent)]'}>
+                                                        +{h.amount.toLocaleString()}
+                                                        {h.type?.startsWith('tax') && <span className="text-[0.55rem] ml-0.5">налог</span>}
+                                                    </span>
                                                     <span className="text-[var(--color-text-muted)]">{new Date(h.createdAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
                                                 </div>
                                             ))}
                                         </div>
+                                        {/* Пагинация */}
+                                        {treasuryTotalPages > 1 && (
+                                            <div className="flex justify-center gap-2 mt-2">
+                                                <Button size="xs" disabled={treasuryPage <= 1} onClick={() => loadTreasury(treasuryPage - 1, treasurySearch)}>←</Button>
+                                                <span className="text-[0.65rem] text-[var(--color-text-muted)]">{treasuryPage}/{treasuryTotalPages}</span>
+                                                <Button size="xs" disabled={treasuryPage >= treasuryTotalPages} onClick={() => loadTreasury(treasuryPage + 1, treasurySearch)}>→</Button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 {treasuryHistory.length === 0 && (

@@ -97,3 +97,18 @@ export function spendMoney(db: DB, userId: number, amount: number): boolean {
   const result = db.prepare('UPDATE users SET money = money - ? WHERE id = ? AND money >= ?').run(amount, userId, amount);
   return result.changes > 0;
 }
+
+// --- Налог гильдии ---
+// Вызывает внутри транзакции. Возвращает сумму после вычета налога.
+export function collectGuildTax(db: DB, userId: number, income: number, source: string): number {
+  if (income <= 0) return income;
+  const member = db.prepare('SELECT gm.guildId, g.taxRate FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?').get(userId) as any;
+  if (!member || !member.taxRate || member.taxRate <= 0) return income;
+
+  const tax = Math.floor(income * member.taxRate / 100);
+  if (tax <= 0) return income;
+
+  db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(tax, member.guildId);
+  db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)').run(member.guildId, userId, tax, source);
+  return income - tax;
+}

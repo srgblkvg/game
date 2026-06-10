@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../database';
 import { currentStats } from '../game/stats';
-import { getBaseStats } from '../db/helpers';
+import { getBaseStats, collectGuildTax } from '../db/helpers';
 import { runBattle } from '../game/battle';
 import { calcElo } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
@@ -105,8 +105,11 @@ router.post('/battle', (req: any, res) => {
         else break;
     }
 
+    // Налог гильдии (PvP)
+    const attackerMoneyAfterTax = collectGuildTax(db, attacker.id, attackerWins ? result.moneyGained : 0, 'tax_pvp');
+
     db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`)
-        .run(newLevel, newExp, attackerWins ? result.moneyGained : 0, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
+        .run(newLevel, newExp, attackerMoneyAfterTax, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
             attackerWins ? (result.moneyGained + moneyStolen) : 0, attackerWins ? 0 : moneyStolen, attacker.id);
 
     // --- Обновление защитника ---
@@ -120,8 +123,11 @@ router.post('/battle', (req: any, res) => {
         else break;
     }
 
+    // Налог гильдии (PvP защитник)
+    const defenderMoneyAfterTax = collectGuildTax(db, defender.id, !attackerWins ? result.moneyGained : 0, 'tax_pvp');
+
     db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`)
-        .run(defLevel, defExpRemain, !attackerWins ? result.moneyGained : 0, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defLevelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
+        .run(defLevel, defExpRemain, defenderMoneyAfterTax, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defLevelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
             !attackerWins ? (result.moneyGained + moneyStolen) : 0, !attackerWins ? 0 : moneyStolen, defender.id);
 
     db.prepare(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
