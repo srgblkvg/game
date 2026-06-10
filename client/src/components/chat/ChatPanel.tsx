@@ -475,7 +475,7 @@ export default function ChatPanel() {
                     {!isPanelOpen && (
                         <>
                             {unreadGeneral > 0 && (
-                                <span className="chat-blink w-2.5 h-2.5 rounded-full bg-white inline-block" />
+                                <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[var(--color-text-primary)] inline-block" />
                             )}
                             {unreadGuild > 0 && (
                                 <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[var(--color-accent-success)] inline-block" />
