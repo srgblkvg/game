@@ -7,6 +7,7 @@ import { GameProvider } from './contexts/GameContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { AcquireProvider } from './contexts/AcquireContext';
 import { ServerTimeProvider } from './contexts/ServerTimeContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import './styles/cormorant.css';
 import './styles/theme.css';
 
@@ -44,6 +45,7 @@ window.onunhandledrejection = (event) => {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <ThemeProvider>
     <AuthProvider>
       <GameProvider>
         <ChatProvider>
@@ -55,5 +57,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </ChatProvider>
       </GameProvider>
     </AuthProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

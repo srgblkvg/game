@@ -4,6 +4,7 @@ html {
   font-size: 24px;
 }
 
+/* === Тёмная тема (по умолчанию) === */
 @theme {
   /* Основная палитра */
   --color-bg-primary: #1a1a2e;
@@ -12,6 +13,7 @@ html {
   --color-bg-card-hover: #2a2a4e;
   --color-bg-input: #333;
   --color-bg-modal: #2a2a3e;
+  --color-bg-hover: rgba(255, 255, 255, 0.08);
 
   /* Текст */
   --color-text-primary: #eee;
@@ -41,6 +43,41 @@ html {
 
   /* Тени */
   --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+/* === Светлая тема === */
+[data-theme="light"] {
+  --color-bg-primary: #f5f0e8;
+  --color-bg-secondary: #ede4d4;
+  --color-bg-card: #fdfaf3;
+  --color-bg-card-hover: #f0e8d8;
+  --color-bg-input: #e0d8c8;
+  --color-bg-modal: #fdfaf3;
+  --color-bg-hover: rgba(0, 0, 0, 0.06);
+
+  --color-text-primary: #2c1810;
+  --color-text-secondary: #4a3728;
+  --color-text-muted: #8c7a6b;
+  --color-text-accent: #b8860b;
+
+  --color-accent-success: #1a7a3a;
+  --color-accent-danger: #b71c1c;
+  --color-accent-info: #1a6daa;
+  --color-accent-warning: #b8860b;
+  --color-accent-purple: #7b3f9e;
+
+  --color-border-default: #c4b8a8;
+  --color-border-light: #d4c8b8;
+
+  --color-rarity-junk: #999999;
+  --color-rarity-common: #aaaaaa;
+  --color-rarity-uncommon: #1a7a3a;
+  --color-rarity-rare: #1a6daa;
+  --color-rarity-epic: #7b3f9e;
+  --color-rarity-legendary: #b8860b;
+  --color-rarity-mythic: #b71c1c;
+
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 /* Глобальные стили */

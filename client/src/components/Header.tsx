@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useServerTime } from '../contexts/ServerTimeContext';
 import { useGlobalChat } from '../contexts/ChatContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { fetchBattles, fetchCharacter } from '../api';
 import Button from './ui/Button';
 
@@ -73,6 +74,7 @@ export default function Header() {
     const { character, setCharacter } = useGame();
     const { now: serverNow } = useServerTime();
     const { messages } = useGlobalChat();
+    const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
     const [hasNewBattles, setHasNewBattles] = useState(false);
@@ -226,6 +228,13 @@ export default function Header() {
                                     >
                                         <Icon icon="game-icons:person" width="16" height="16" />
                                         Аккаунт
+                                    </button>
+                                    <button
+                                        onClick={() => { toggleTheme(); setMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
+                                    >
+                                        <Icon icon={theme === 'dark' ? 'game-icons:sun' : 'game-icons:moon'} width="16" height="16" />
+                                        {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
                                     </button>
                                     <a
                                         href="/wiki/"
