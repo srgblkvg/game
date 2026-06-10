@@ -8,8 +8,13 @@ import { ChatProvider } from './contexts/ChatContext';
 import { AcquireProvider } from './contexts/AcquireContext';
 import { ServerTimeProvider } from './contexts/ServerTimeContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { addCollection } from '@iconify/react';
+import gameIcons from '@iconify-json/game-icons/icons.json';
 import './styles/cormorant.css';
 import './styles/theme.css';
+
+// Регистрируем иконки game-icons локально (без API-запросов)
+addCollection(gameIcons);
 
 // Отправка непойманных ошибок на сервер
 window.onerror = (message, source, lineno, colno, error) => {
