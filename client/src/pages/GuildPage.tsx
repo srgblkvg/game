@@ -42,6 +42,7 @@ export default function GuildPage() {
     const [treasurySearch, setTreasurySearch] = useState('');
     const [taxRate, setTaxRate] = useState(guild?.taxRate || 0);
     const [taxRateInput, setTaxRateInput] = useState('');
+    const [treasuryTab, setTreasuryTab] = useState<'deposit' | 'tax' | 'history'>('deposit');
 
     const searchUsers = async (q: string) => {
         if (q.length < 2) { setInviteSuggestions([]); return; }
@@ -258,77 +259,104 @@ export default function GuildPage() {
                         </div>
                         {showTreasury && (
                             <div className="mt-3">
-                                {/* Налог (только лидер) */}
-                                {guild.myRank === 'leader' && (
-                                    <div className="mb-3 p-2 bg-[var(--color-bg-input)] rounded">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-[var(--color-text-muted)]">Налог:</span>
-                                            <span className="text-xs font-bold text-[var(--color-text-primary)]">{taxRate}%</span>
-                                            <input
-                                                type="number" min="0" max="50"
-                                                placeholder="0-50"
-                                                value={taxRateInput}
-                                                onChange={e => setTaxRateInput(e.target.value)}
-                                                className="w-16 text-xs px-1 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border-light)] text-[var(--color-text-primary)]"
-                                            />
-                                            <Button variant="primary" size="xs" onClick={handleSetTaxRate}>✓</Button>
-                                        </div>
-                                        <p className="text-[0.55rem] text-[var(--color-text-muted)] mt-1">% с дохода участников (PvE, PvP, работы, аукцион)</p>
+                                {/* Вкладки */}
+                                <div className="flex border-b border-[var(--color-border-light)] mb-3">
+                                    {(['deposit', 'tax', 'history'] as const).map(tab => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => { setTreasuryTab(tab); if (tab === 'history') loadTreasury(1, treasurySearch); }}
+                                            className={`px-3 py-1 text-xs cursor-pointer border-b-2 transition-colors ${
+                                                treasuryTab === tab
+                                                    ? 'border-[var(--color-accent-info)] text-[var(--color-accent-info)] font-bold'
+                                                    : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                            }`}
+                                        >
+                                            {tab === 'deposit' ? '💰 Вклад' : tab === 'tax' ? '📊 Налог' : '📋 История'}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Вклад: Внесение */}
+                                {treasuryTab === 'deposit' && (
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="number" min="1"
+                                            placeholder="Сумма"
+                                            value={treasuryAmount}
+                                            onChange={e => setTreasuryAmount(e.target.value)}
+                                            className={inputClass}
+                                        />
+                                        <Button variant="success" size="xs" onClick={handleDeposit}>Внести</Button>
                                     </div>
                                 )}
 
-                                {/* Внесение */}
-                                <div className="flex gap-2 mb-3">
-                                    <input
-                                        type="number" min="1"
-                                        placeholder="Сумма"
-                                        value={treasuryAmount}
-                                        onChange={e => setTreasuryAmount(e.target.value)}
-                                        className={inputClass}
-                                    />
-                                    <Button variant="success" size="xs" onClick={handleDeposit}>Внести</Button>
-                                </div>
-
-                                {/* Поиск */}
-                                <div className="flex gap-2 mb-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Поиск по нику..."
-                                        value={treasurySearch}
-                                        onChange={e => { setTreasurySearch(e.target.value); }}
-                                        onKeyDown={e => { if (e.key === 'Enter') loadTreasury(1, treasurySearch); }}
-                                        className={inputClass}
-                                    />
-                                    <Button variant="secondary" size="xs" onClick={() => loadTreasury(1, treasurySearch)}>Найти</Button>
-                                </div>
-
-                                {treasuryHistory.length > 0 && (
-                                    <div className="text-xs">
-                                        <h4 className="font-bold text-[var(--color-text-muted)] mb-1">История</h4>
-                                        <div className="space-y-1">
-                                            {treasuryHistory.map((h: any) => (
-                                                <div key={h.id} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                                    <span className="text-[var(--color-text-primary)]">{h.username}</span>
-                                                    <span className={h.type?.startsWith('tax') ? 'text-[var(--color-accent-warning)]' : 'text-[var(--color-text-accent)]'}>
-                                                        +{h.amount.toLocaleString()}
-                                                        {h.type?.startsWith('tax') && <span className="text-[0.55rem] ml-0.5">налог</span>}
-                                                    </span>
-                                                    <span className="text-[var(--color-text-muted)]">{new Date(h.createdAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
+                                {/* Вклад: Налог */}
+                                {treasuryTab === 'tax' && (
+                                    <div>
+                                        {guild.myRank === 'leader' ? (
+                                            <div className="p-2 bg-[var(--color-bg-input)] rounded">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-[var(--color-text-muted)]">Ставка:</span>
+                                                    <span className="text-xs font-bold text-[var(--color-text-primary)]">{taxRate}%</span>
+                                                    <input
+                                                        type="number" min="0" max="50"
+                                                        placeholder="0-50"
+                                                        value={taxRateInput}
+                                                        onChange={e => setTaxRateInput(e.target.value)}
+                                                        className="w-16 text-xs px-1 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border-light)] text-[var(--color-text-primary)]"
+                                                    />
+                                                    <Button variant="primary" size="xs" onClick={handleSetTaxRate}>✓</Button>
                                                 </div>
-                                            ))}
-                                        </div>
-                                        {/* Пагинация */}
-                                        {treasuryTotalPages > 1 && (
-                                            <div className="flex justify-center gap-2 mt-2">
-                                                <Button size="xs" disabled={treasuryPage <= 1} onClick={() => loadTreasury(treasuryPage - 1, treasurySearch)}>←</Button>
-                                                <span className="text-[0.65rem] text-[var(--color-text-muted)]">{treasuryPage}/{treasuryTotalPages}</span>
-                                                <Button size="xs" disabled={treasuryPage >= treasuryTotalPages} onClick={() => loadTreasury(treasuryPage + 1, treasurySearch)}>→</Button>
+                                                <p className="text-[0.55rem] text-[var(--color-text-muted)] mt-1">% с дохода участников (PvE, PvP, работы, аукцион). Мин. 1 серебро.</p>
                                             </div>
+                                        ) : (
+                                            <p className="text-xs text-[var(--color-text-muted)]">
+                                                Налог: <span className="font-bold text-[var(--color-text-primary)]">{taxRate}%</span> с дохода. Устанавливает лидер.
+                                            </p>
                                         )}
                                     </div>
                                 )}
-                                {treasuryHistory.length === 0 && (
-                                    <p className="text-xs text-[var(--color-text-muted)]">Пока никто не вносил</p>
+
+                                {/* Вклад: История */}
+                                {treasuryTab === 'history' && (
+                                    <div>
+                                        <div className="flex gap-2 mb-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Поиск по нику..."
+                                                value={treasurySearch}
+                                                onChange={e => setTreasurySearch(e.target.value)}
+                                                onKeyDown={e => { if (e.key === 'Enter') loadTreasury(1, treasurySearch); }}
+                                                className={inputClass}
+                                            />
+                                            <Button variant="secondary" size="xs" onClick={() => loadTreasury(1, treasurySearch)}>Найти</Button>
+                                        </div>
+                                        {treasuryHistory.length > 0 ? (
+                                            <div className="text-xs">
+                                                <div className="space-y-1">
+                                                    {treasuryHistory.map((h: any) => (
+                                                        <div key={h.id} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
+                                                            <span className="text-[var(--color-text-primary)]">{h.username}</span>
+                                                            <span className={h.type?.startsWith('tax') ? 'text-[var(--color-accent-warning)]' : 'text-[var(--color-text-accent)]'}>
+                                                                +{h.amount.toLocaleString()}
+                                                                {h.type?.startsWith('tax') && <span className="text-[0.55rem] ml-0.5">налог</span>}
+                                                            </span>
+                                                            <span className="text-[var(--color-text-muted)]">{new Date(h.createdAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {treasuryTotalPages > 1 && (
+                                                    <div className="flex justify-center gap-2 mt-2">
+                                                        <Button size="xs" disabled={treasuryPage <= 1} onClick={() => loadTreasury(treasuryPage - 1, treasurySearch)}>←</Button>
+                                                        <span className="text-[0.65rem] text-[var(--color-text-muted)]">{treasuryPage}/{treasuryTotalPages}</span>
+                                                        <Button size="xs" disabled={treasuryPage >= treasuryTotalPages} onClick={() => loadTreasury(treasuryPage + 1, treasurySearch)}>→</Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-[var(--color-text-muted)]">Пока никто не вносил</p>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         )}
