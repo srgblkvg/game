@@ -44,7 +44,7 @@ router.get('/rating', (req: any, res) => {
 
 // Позиция текущего игрока в рейтинге
 router.get('/my-position', (req: any, res) => {
-    const userId = req.user?.id;
+    const userId = req.userId;
     if (!userId) return res.status(401).json({ error: 'Не авторизован' });
 
     const user = db.prepare('SELECT elo FROM users WHERE id = ?').get(userId) as any;
