@@ -56,7 +56,7 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
                         ) : (
                             <button
                                 onClick={() => navigate(item.path)}
-                                className="text-[var(--color-accent-info)] hover:text-white hover:underline transition-colors px-1 cursor-pointer"
+                                className="text-[var(--color-accent-info)] hover:text-[var(--color-text-primary)] hover:underline transition-colors px-1 cursor-pointer"
                             >
                                 {item.label}
                             </button>

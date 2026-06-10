@@ -11,11 +11,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary:   'bg-[var(--color-accent-info)] hover:bg-blue-600 text-white',
+  primary:   'bg-[var(--color-accent-info)] hover:brightness-75 text-white',
   secondary: 'bg-[var(--color-border-light)] hover:bg-[var(--color-border-default)] text-white',
-  danger:    'bg-[var(--color-accent-danger)] hover:bg-red-500 text-white',
-  ghost:     'bg-transparent hover:bg-white/10 text-[var(--color-text-secondary)]',
-  success:   'bg-[var(--color-accent-success)] hover:bg-green-600 text-white',
+  danger:    'bg-[var(--color-accent-danger)] hover:brightness-75 text-white',
+  ghost:     'bg-transparent hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]',
+  success:   'bg-[var(--color-accent-success)] hover:brightness-75 text-white',
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -38,8 +38,8 @@ export default function Button({
     <button
       className={[
         'inline-flex items-center justify-center gap-1 font-medium',
-        'cursor-pointer transition-colors duration-150',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'cursor-pointer transition-all duration-150',
+        'disabled:opacity-50 disabled:brightness-75 disabled:cursor-not-allowed',
         variantClasses[variant],
         sizeClasses[size],
         fullWidth && 'w-full',

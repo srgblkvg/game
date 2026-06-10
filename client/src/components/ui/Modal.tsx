@@ -43,7 +43,7 @@ export default function Modal({
       >
         <button
           onClick={onClose}
-          className="absolute top-2 right-3 text-[var(--color-text-muted)] hover:text-white text-lg leading-none cursor-pointer"
+          className="absolute top-2 right-3 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg leading-none cursor-pointer"
         >
           ✕
         </button>
