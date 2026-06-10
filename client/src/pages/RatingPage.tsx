@@ -22,7 +22,7 @@ export default function RatingPage() {
     // Найти страницу с текущим игроком
     useEffect(() => {
         if (!user || initialPageSet) return;
-        fetch(`${BASE_URL}/rating/my-position`, { headers: getHeaders() })
+        fetch(`${BASE_URL}/my-position`, { headers: getHeaders() })
             .then(r => r.json())
             .then(data => {
                 if (data.position) {
