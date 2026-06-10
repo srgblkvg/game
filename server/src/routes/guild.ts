@@ -71,7 +71,7 @@ router.get('/guild/list', (req: any, res) => {
             (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount
         FROM guilds g
         JOIN users u ON g.leaderId = u.id
-        ORDER BY g.level DESC, g.exp DESC
+        ORDER BY g.treasury DESC, g.level DESC
         LIMIT 50
     `).all();
     res.json(guilds);

@@ -25,16 +25,21 @@ export default function GuildRatingPage() {
             {guilds.length === 0 ? (
                 <p className="text-sm text-[var(--color-text-muted)]">Нет гильдий</p>
             ) : (
-                guilds.map((g: any) => {
+                guilds.map((g: any, i) => {
                     const isMyGuild = myGuildId && g.id === myGuildId;
+                    const rank = i + 1;
+                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
                     return (
                     <Card key={g.id} className={`mb-2 ${isMyGuild ? 'border-[var(--color-accent-success)] bg-[var(--color-accent-success)]/10' : ''}`}>
                         <div className="flex justify-between items-center">
-                            <div className="cursor-pointer" onClick={() => navigate(`/guild/${g.id}`)}>
-                                <h4 className="font-bold text-sm hover:text-[var(--color-accent-info)] transition-colors">🏚️ {g.name}</h4>
-                                <p className="text-xs text-[var(--color-text-muted)]">
-                                    Ур.{g.level} • {g.memberCount} уч. • 👑 {g.leaderName} • 💰 {(g.treasury || 0).toLocaleString()}
-                                </p>
+                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/guild/${g.id}`)}>
+                                <span className="text-sm font-bold w-8 text-center">{medal}</span>
+                                <div>
+                                    <h4 className="font-bold text-sm hover:text-[var(--color-accent-info)] transition-colors">🏚️ {g.name}</h4>
+                                    <p className="text-xs text-[var(--color-text-muted)]">
+                                        Ур.{g.level} • {g.memberCount} уч. • 👑 {g.leaderName} • 💰 {(g.treasury || 0).toLocaleString()}
+                                    </p>
+                                </div>
                             </div>
                             {isMyGuild && (
                                 <span className="text-[0.6rem] text-[var(--color-accent-success)] font-bold px-2 py-0.5 rounded border border-[var(--color-accent-success)]">Ваша гильдия</span>
