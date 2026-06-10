@@ -166,7 +166,10 @@ export default function GuildPage() {
                                 <h2 className="font-bold text-lg">🏚️ {guild.name}</h2>
                                 <p className="text-xs text-[var(--color-text-muted)]">Уровень {guild.level} • {guild.memberCount} участников</p>
                             </div>
-                            <Button variant="secondary" size="xs" onClick={handleLeave}>Покинуть</Button>
+                            <div className="flex gap-1">
+                                <Button variant="secondary" size="xs" onClick={() => navigate('/guild/rating')}>Рейтинг гильдий</Button>
+                                <Button variant="secondary" size="xs" onClick={handleLeave}>Покинуть</Button>
+                            </div>
                         </div>
                         {guild.description && <p className="text-xs text-[var(--color-text-muted)] mb-2">{guild.description}</p>}
                         <p className="text-xs text-[var(--color-text-muted)]">
