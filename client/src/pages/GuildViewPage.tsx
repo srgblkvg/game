@@ -63,6 +63,9 @@ export default function GuildViewPage() {
 
             {guild && (
                 <>
+                    <Button variant="secondary" size="sm" onClick={() => navigate('/guild/rating')} className="mb-3">
+                        ← Рейтинг гильдий
+                    </Button>
                     <Card className="mb-4">
                         <h1 className="font-bold text-lg flex items-center gap-2">
                             🏚️ {guild.name}
