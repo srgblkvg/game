@@ -65,8 +65,7 @@ export function runBattle(
   addStep({ type: 'info', message: `${turn === 'A' ? attacker.name : defender.name} ходит первым` });
 
   let turns = 0;
-  const maxTurns = 200;
-  while (hpA > 0 && hpD > 0 && turns < maxTurns) {
+  while (hpA > 0 && hpD > 0) {
     turns++;
     if (turn === 'A') {
       // Ход атакующего (игрок)
