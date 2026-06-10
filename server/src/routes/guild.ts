@@ -405,4 +405,54 @@ router.post('/guild/cancel-invites', (req: any, res) => {
     res.json({ success: true, cancelled: info.changes });
 });
 
+// --- Казна гильдии ---
+
+// Внести серебро в казну
+router.post('/guild/treasury/deposit', (req: any, res) => {
+    const userId = req.userId;
+    const { amount } = req.body;
+    if (!amount || amount < 1) return res.status(400).json({ error: 'Укажите сумму (минимум 1 серебра)' });
+
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
+
+    // Проверяем баланс игрока
+    const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    if (!user || user.money < amount) return res.status(400).json({ error: 'Недостаточно серебра в кармане' });
+
+    const tx = db.transaction(() => {
+        db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(amount, userId);
+        db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(amount, member.guildId);
+        db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount) VALUES (?, ?, ?)').run(member.guildId, userId, amount);
+        return db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(member.guildId) as any;
+    });
+
+    try {
+        const result = tx();
+        res.json({ success: true, treasury: result.treasury });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// История пополнений казны
+router.get('/guild/treasury/history', (req: any, res) => {
+    const userId = req.userId;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
+
+    const limit = parseInt(req.query.limit as string) || 30;
+    const logs = db.prepare(`
+        SELECT l.id, l.amount, l.createdAt, u.username
+        FROM guild_treasury_log l
+        JOIN users u ON l.userId = u.id
+        WHERE l.guildId = ?
+        ORDER BY l.id DESC
+        LIMIT ?
+    `).all(member.guildId, limit);
+
+    const treasury = (db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(member.guildId) as any)?.treasury || 0;
+    res.json({ treasury, history: logs });
+});
+
 export default router;

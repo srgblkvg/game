@@ -32,6 +32,12 @@ export default function GuildPage() {
     const [inviteSuggestions, setInviteSuggestions] = useState<any[]>([]);
     const [inviteTargetId, setInviteTargetId] = useState<number | null>(null);
 
+    // Казна
+    const [treasuryAmount, setTreasuryAmount] = useState('');
+    const [treasuryHistory, setTreasuryHistory] = useState<any[]>([]);
+    const [treasuryBalance, setTreasuryBalance] = useState(guild?.treasury || 0);
+    const [showTreasury, setShowTreasury] = useState(false);
+
     const searchUsers = async (q: string) => {
         if (q.length < 2) { setInviteSuggestions([]); return; }
         try {
@@ -58,6 +64,7 @@ export default function GuildPage() {
             ]);
             if (data.guild) {
                 setGuild(data.guild); setMembers(data.members);
+                setTreasuryBalance(data.guild.treasury || 0);
                 if (data.guild.myRank === 'leader' || data.guild.myRank === 'officer') {
                     fetch(`${BASE_URL}/guild/requests`, { headers: getHeaders() })
                         .then(r => r.json()).then(setRequests).catch(() => {});
@@ -148,6 +155,35 @@ export default function GuildPage() {
 
     const clearMessages = () => { setMessage(''); setError(''); };
 
+    const loadTreasury = async () => {
+        try {
+            const r = await fetch(`${BASE_URL}/guild/treasury/history`, { headers: getHeaders() });
+            const d = await r.json();
+            if (r.ok) {
+                setTreasuryBalance(d.treasury);
+                setTreasuryHistory(d.history || []);
+            }
+        } catch {}
+    };
+
+    const handleDeposit = async () => {
+        const amount = parseInt(treasuryAmount);
+        if (!amount || amount < 1) { setError('Укажите сумму (минимум 1)'); return; }
+        try {
+            const r = await fetch(`${BASE_URL}/guild/treasury/deposit`, {
+                method: 'POST', headers: getHeaders(),
+                body: JSON.stringify({ amount }),
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error);
+            setTreasuryBalance(d.treasury);
+            setTreasuryAmount('');
+            setMessage(`Внесено ${amount.toLocaleString()} серебра в казну`);
+            loadTreasury();
+            const fresh = await fetchCharacter(); setCharacter(fresh);
+        } catch (e: any) { setError(e.message); }
+    };
+
     if (!user) return null;
 
     return (
@@ -177,6 +213,53 @@ export default function GuildPage() {
                             {guild.myRank === 'leader' && ' • Вы лидер'}
                             {guild.myRank === 'officer' && ' • Вы офицер'}
                         </p>
+                    </Card>
+
+                    {/* Казна */}
+                    <Card className="mb-4">
+                        <div
+                            className="flex items-center justify-between cursor-pointer select-none"
+                            onClick={() => { if (!showTreasury) loadTreasury(); setShowTreasury(!showTreasury); }}
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm">{showTreasury ? '▼' : '▶'}</span>
+                                <h3 className="font-bold text-sm">💰 Казна</h3>
+                            </div>
+                            <span className="text-xs text-[var(--color-text-accent)]">
+                                {treasuryBalance.toLocaleString()} серебра
+                            </span>
+                        </div>
+                        {showTreasury && (
+                            <div className="mt-3">
+                                <div className="flex gap-2 mb-3">
+                                    <input
+                                        type="number" min="1"
+                                        placeholder="Сумма"
+                                        value={treasuryAmount}
+                                        onChange={e => setTreasuryAmount(e.target.value)}
+                                        className={inputClass}
+                                    />
+                                    <Button variant="success" size="xs" onClick={handleDeposit}>Внести</Button>
+                                </div>
+                                {treasuryHistory.length > 0 && (
+                                    <div className="text-xs">
+                                        <h4 className="font-bold text-[var(--color-text-muted)] mb-1">История пополнений</h4>
+                                        <div className="max-h-48 overflow-y-auto space-y-1">
+                                            {treasuryHistory.map((h: any) => (
+                                                <div key={h.id} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
+                                                    <span className="text-[var(--color-text-primary)]">{h.username}</span>
+                                                    <span className="text-[var(--color-text-accent)]">+{h.amount.toLocaleString()}</span>
+                                                    <span className="text-[var(--color-text-muted)]">{new Date(h.createdAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {treasuryHistory.length === 0 && (
+                                    <p className="text-xs text-[var(--color-text-muted)]">Пока никто не вносил</p>
+                                )}
+                            </div>
+                        )}
                     </Card>
 
                     {/* Пригласить (лидер/офицер) */}

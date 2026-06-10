@@ -483,6 +483,16 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     sort_order INTEGER DEFAULT 0
   )`); } catch {}
 
+  // --- Казна гильдии ---
+  try { db.exec('ALTER TABLE guilds ADD COLUMN treasury INTEGER DEFAULT 0'); } catch {}
+  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_treasury_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guildId INTEGER NOT NULL,
+    userId INTEGER NOT NULL,
+    amount INTEGER NOT NULL,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+  )`); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }
