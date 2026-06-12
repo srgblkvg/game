@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import TournamentBanner from './TournamentBanner';
 import RatingBlock from './RatingBlock';
@@ -6,6 +7,10 @@ import QuestsBlock from './QuestsBlock';
 
 export default function RightSidebar() {
     const [open, setOpen] = useState(false);
+    const location = useLocation();
+
+    // Сворачивать панель при переходе на другую страницу
+    useEffect(() => { setOpen(false); }, [location.pathname]);
 
     useEffect(() => {
         document.body.style.overflow = open ? 'hidden' : '';
