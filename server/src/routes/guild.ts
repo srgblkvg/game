@@ -535,10 +535,42 @@ function isGuildAtWar(guildId: number): any | null {
     db.prepare(
         `UPDATE guild_wars SET status = 'cancelled', endedAt = ? WHERE status = 'pending' AND expiresAt <= ?`
     ).run(now, now);
-    // Авто-завершение просроченных active войн
-    db.prepare(
-        `UPDATE guild_wars SET status = 'ended', endedAt = ? WHERE status = 'active' AND expiresAt <= ?`
-    ).run(now, now);
+    // Авто-завершение просроченных active войн (с переводом казны)
+    const expiredWars = db.prepare(
+        `SELECT * FROM guild_wars WHERE status = 'active' AND expiresAt <= ?`
+    ).all(now) as any[];
+
+    for (const war of expiredWars) {
+        const attackerScore = war.attackerScore || 0;
+        const defenderScore = war.defenderScore || 0;
+
+        let winnerId: number | null = null;
+        let loserId: number | null = null;
+
+        if (attackerScore > defenderScore) {
+            winnerId = war.attackerGuildId;
+            loserId = war.defenderGuildId;
+        } else if (defenderScore > attackerScore) {
+            winnerId = war.defenderGuildId;
+            loserId = war.attackerGuildId;
+        }
+
+        // Перевести казну проигравшего победителю
+        if (winnerId && loserId) {
+            const loserTreasury = (db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(loserId) as any)?.treasury || 0;
+            if (loserTreasury > 0) {
+                db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(loserTreasury, winnerId);
+                db.prepare('UPDATE guilds SET treasury = 0 WHERE id = ?').run(loserId);
+                // Запись в лог казны
+                db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)').run(winnerId, 0, loserTreasury, 'war_win');
+                db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)').run(loserId, 0, -loserTreasury, 'war_loss');
+            }
+        }
+
+        db.prepare(
+            `UPDATE guild_wars SET status = 'ended', endedAt = ?, winnerGuildId = ? WHERE id = ?`
+        ).run(now, winnerId, war.id);
+    }
     return db.prepare(
         `SELECT * FROM guild_wars WHERE (attackerGuildId = ? OR defenderGuildId = ?) AND status IN ('pending', 'active') LIMIT 1`
     ).get(guildId, guildId) as any || null;
