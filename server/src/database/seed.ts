@@ -428,13 +428,13 @@ export function runSeed(db: InstanceType<typeof Database>) {
         name: string; description: string; cost: number;
         rarity: number; chance: number; ingredients: Array<{ name: string; qty: number }>;
       }> = [
-        { name: 'Случайный предмет (Хлам)', description: 'Создать случайный предмет качества Хлам', cost: 10, rarity: 0, chance: 90, ingredients: [{ name: 'Пыль забвения', qty: 2 }] },
-        { name: 'Случайный предмет (Обычный)', description: 'Создать случайный предмет Обычного качества', cost: 30, rarity: 1, chance: 85, ingredients: [{ name: 'Осколок скорби', qty: 2 }] },
-        { name: 'Случайный предмет (Необычный)', description: 'Создать случайный предмет Необычного качества', cost: 80, rarity: 2, chance: 80, ingredients: [{ name: 'Фрагмент ужаса', qty: 3 }] },
-        { name: 'Случайный предмет (Редкий)', description: 'Создать случайный предмет Редкого качества', cost: 250, rarity: 3, chance: 75, ingredients: [{ name: 'Эссенция мрака', qty: 3 }] },
-        { name: 'Случайный предмет (Эпический)', description: 'Создать случайный предмет Эпического качества', cost: 800, rarity: 4, chance: 70, ingredients: [{ name: 'Сердцевина бездны', qty: 4 }] },
-        { name: 'Случайный предмет (Легендарный)', description: 'Создать случайный предмет Легендарного качества', cost: 2500, rarity: 5, chance: 65, ingredients: [{ name: 'Искра погибели', qty: 5 }] },
-        { name: 'Случайный предмет (Мифический)', description: 'Создать случайный предмет Мифического качества', cost: 8000, rarity: 6, chance: 50, ingredients: [{ name: 'Слеза вечности', qty: 7 }] },
+        { name: 'Случайный предмет (Хлам)', description: 'Создать случайный предмет качества Хлам', cost: 5, rarity: 0, chance: 90, ingredients: [{ name: 'Пыль забвения', qty: 1 }] },
+        { name: 'Случайный предмет (Обычный)', description: 'Создать случайный предмет Обычного качества', cost: 15, rarity: 1, chance: 85, ingredients: [{ name: 'Осколок скорби', qty: 1 }] },
+        { name: 'Случайный предмет (Необычный)', description: 'Создать случайный предмет Необычного качества', cost: 40, rarity: 2, chance: 80, ingredients: [{ name: 'Фрагмент ужаса', qty: 1 }] },
+        { name: 'Случайный предмет (Редкий)', description: 'Создать случайный предмет Редкого качества', cost: 125, rarity: 3, chance: 75, ingredients: [{ name: 'Эссенция мрака', qty: 1 }] },
+        { name: 'Случайный предмет (Эпический)', description: 'Создать случайный предмет Эпического качества', cost: 400, rarity: 4, chance: 70, ingredients: [{ name: 'Сердцевина бездны', qty: 1 }] },
+        { name: 'Случайный предмет (Легендарный)', description: 'Создать случайный предмет Легендарного качества', cost: 1250, rarity: 5, chance: 65, ingredients: [{ name: 'Искра погибели', qty: 1 }] },
+        { name: 'Случайный предмет (Мифический)', description: 'Создать случайный предмет Мифического качества', cost: 4000, rarity: 6, chance: 50, ingredients: [{ name: 'Слеза вечности', qty: 1 }] },
       ];
       for (const r of itemRecipes) {
         const info = insertRecipe.run(r.name, r.description, r.cost, 'random_item', r.rarity, r.chance, itemCatId);
