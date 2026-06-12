@@ -175,6 +175,15 @@ export default function Header() {
     return (
         <div className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
             <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
+                {user.role === 'player' && location.pathname !== '/' && (
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
+                        title="Назад"
+                    >
+                        <Icon icon="mdi:arrow-left" width="20" height="20" className="text-[var(--color-text-muted)]" />
+                    </button>
+                )}
                 {user.role === 'player' && character && (
                     <span className="text-[var(--color-text-primary)] text-sm font-bold">
                         Серебро: {character.money.toLocaleString()}
