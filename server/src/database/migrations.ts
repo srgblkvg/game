@@ -533,41 +533,20 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // --- completedAt для турниров ---
   try { db.exec('ALTER TABLE tournaments ADD COLUMN completedAt DATETIME'); } catch {}
 
-  // --- Меняем тип createdAt в tournaments с INTEGER на DATETIME ---
+  // --- Меняем тип createdAt в tournaments с INTEGER на DATETIME (конвертируем на месте) ---
   {
     const colInfo = db.prepare("PRAGMA table_info(tournaments)").all() as any[];
     const createdAtCol = colInfo.find((c: any) => c.name === 'createdAt');
     if (createdAtCol && createdAtCol.type === 'INTEGER') {
       try {
-        db.exec('DROP TABLE IF EXISTS tournaments_new');
-        db.exec(`CREATE TABLE tournaments_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          division TEXT NOT NULL,
-          status TEXT NOT NULL DEFAULT 'registration',
-          registrationStart INTEGER NOT NULL,
-          registrationEnd INTEGER NOT NULL,
-          prizePool INTEGER DEFAULT 0,
-          createdAt DATETIME NOT NULL DEFAULT (datetime('now'))
-        )`);
-        // Копируем данные, конвертируя createdAt
-        const oldData = db.prepare('SELECT * FROM tournaments').all() as any[];
+        const oldData = db.prepare('SELECT id, createdAt FROM tournaments').all() as any[];
+        const update = db.prepare('UPDATE tournaments SET createdAt=? WHERE id=?');
         for (const t of oldData) {
-          const createdAtStr = typeof t.createdAt === 'number' && t.createdAt > 1000000000
-            ? new Date(t.createdAt * 1000).toISOString().replace('T', ' ').slice(0, 19)
-            : (t.createdAt ? String(t.createdAt) : new Date().toISOString().replace('T', ' ').slice(0, 19));
-          db.prepare('INSERT INTO tournaments_new (id, division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?,?,?,?,?,?,?)')
-            .run(t.id, t.division, t.status, t.registrationStart, t.registrationEnd, t.prizePool, createdAtStr);
+          if (typeof t.createdAt === 'number' && t.createdAt > 1000000000) {
+            const s = new Date(t.createdAt * 1000).toISOString().replace('T', ' ').slice(0, 19);
+            update.run(s, t.id);
+          }
         }
-        // Копируем остальные колонки
-        for (const col of ['type', 'entryFee', 'name', 'minLevel', 'maxLevel', 'creatorId', 'basePool', 'maxPlayers', 'completedAt']) {
-          try { db.exec(`ALTER TABLE tournaments_new ADD COLUMN ${col}`); } catch {}
-        }
-        const extraCols = colInfo.filter((c: any) => !['id','division','status','registrationStart','registrationEnd','prizePool','createdAt'].includes(c.name));
-        for (const col of extraCols) {
-          db.exec(`UPDATE tournaments_new SET ${col.name} = (SELECT ${col.name} FROM tournaments WHERE id = tournaments_new.id)`);
-        }
-        db.exec('DROP TABLE tournaments');
-        db.exec('ALTER TABLE tournaments_new RENAME TO tournaments');
       } catch {}
     }
   }
