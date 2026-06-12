@@ -1,12 +1,16 @@
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../env';
 import { isTokenRevoked } from '../tokenBlacklist';
+import db from '../database';
 
 // Временное отключение гостевых ограничений (тестирование)
 let guestRestrictionsDisabled = false;
 export function isGuestRestrictionsDisabled() { return guestRestrictionsDisabled; }
 export function setGuestRestrictionsDisabled(v: boolean) { guestRestrictionsDisabled = v; }
 export function toggleGuestRestrictions(): boolean { guestRestrictionsDisabled = !guestRestrictionsDisabled; return guestRestrictionsDisabled; }
+
+// Кеш для троттлинга обновления lastLoginAt (раз в 5 мин)
+const lastLoginUpdates = new Map<string, number>();
 
 export function authMiddleware(req: any, res: any, next: any) {
     const authHeader = req.headers.authorization;
@@ -21,6 +25,18 @@ export function authMiddleware(req: any, res: any, next: any) {
         req.adminId = decoded.adminId;
         req.role = decoded.role;
         req.isGuest = decoded.isGuest || false;
+
+        // Обновляем lastLoginAt раз в 5 минут (только для игроков)
+        if (decoded.role === 'player') {
+            const now = Math.floor(Date.now() / 1000);
+            const key = `llu_${decoded.userId}`;
+            const last = lastLoginUpdates.get(key) || 0;
+            if (now - last > 300) {
+                lastLoginUpdates.set(key, now);
+                db.prepare('UPDATE users SET lastLoginAt = ? WHERE id = ?').run(now, decoded.userId);
+            }
+        }
+
         next();
     } catch {
         res.status(401).json({ error: 'Токен недействителен' });
