@@ -294,6 +294,28 @@ export default function TournamentPage() {
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
+            {/* Предстоящие официальные турниры */}
+            {data.upcomingOfficial?.length > 0 && (
+                <Card className="mb-3">
+                    <h3 className="font-bold text-sm mb-2">⏳ Скоро откроется запись</h3>
+                    <div className="space-y-1">
+                        {data.upcomingOfficial.map((u: any) => {
+                            const secLeft = Math.max(0, u.registrationOpensAt - Math.floor(Date.now() / 1000));
+                            return (
+                                <div key={u.division} className="flex items-center gap-2 text-xs">
+                                    <span>{u.icon}</span>
+                                    <span className="font-medium">{u.label}</span>
+                                    <span className="text-[var(--color-text-muted)]">ур.{u.minLevel}–{u.maxLevel}</span>
+                                    <span className="text-[var(--color-accent-info)] ml-auto tabular-nums">
+                                        через {formatTimer(secLeft)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Card>
+            )}
+
             {/* Кнопка создания custom турнира */}
             {tab === 'custom' && !showCreate && (
                 <Button variant="danger" size="sm" className="mb-3" onClick={() => setShowCreate(true)}>

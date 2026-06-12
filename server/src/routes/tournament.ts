@@ -560,7 +560,34 @@ router.get('/tournament', (req: any, res) => {
         return a.registrationEnd - b.registrationEnd;
     });
 
+    // Предстоящие официальные турниры (ждём час после завершения)
+    const upcomingOfficial: any[] = [];
+    for (const div of divisions) {
+        const hasActive = db.prepare(
+            "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress') AND type = 'official'"
+        ).get(div.name);
+        if (hasActive) continue;
+        const lastCompleted = db.prepare(
+            "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1"
+        ).get(div.name) as any;
+        if (lastCompleted?.completedAt) {
+            const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
+            const registrationOpensAt = completedTime + 3600 * 1000;
+            if (Date.now() < registrationOpensAt) {
+                upcomingOfficial.push({
+                    division: div.name,
+                    label: div.label,
+                    icon: div.icon,
+                    minLevel: div.minLevel,
+                    maxLevel: div.maxLevel,
+                    registrationOpensAt: Math.floor(registrationOpensAt / 1000),
+                });
+            }
+        }
+    }
+
     res.json({ tournaments: result, userLevel: user.level, tab: 'active', typeFilter,
+        upcomingOfficial,
         warnings: db.prepare(
             "SELECT id, division, type, registrationEnd FROM tournaments WHERE status = 'registration' AND registrationEnd > ? AND registrationEnd <= ?"
         ).all(now, now + 300) as any[]
