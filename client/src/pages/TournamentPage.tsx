@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
@@ -236,6 +237,7 @@ export default function TournamentPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <h1 className="text-xl font-bold mb-2"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2" />Турнир «Кровавый Шпиль»</h1>
+            <BackButton />
             <p className="text-xs text-[var(--color-text-muted)] italic mb-3">«Ворота Арены открыты. Выходит только сильнейший.»</p>
 
             <div className="flex gap-2 mb-4 flex-wrap">

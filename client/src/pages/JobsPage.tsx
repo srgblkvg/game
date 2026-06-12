@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { startRandomJob, fetchCharacter } from '../api';
@@ -139,6 +140,7 @@ export default function JobsPage() {
     return (
         <div className="px-4 py-4 max-w-md mx-auto">
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:swap-bag" width="22" height="22" className="inline mr-2"/>Работы</h2>
+            <BackButton />
 
             <p className="text-sm text-[var(--color-text-muted)] mb-4 text-center">
                 Выберите, сколько времени готовы потратить — работа будет выбрана случайно.

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
@@ -59,6 +60,7 @@ export default function BankPage() {
     return (
         <div className="max-w-md mx-auto px-4 py-4">
             <h1 className="text-xl font-bold mb-2"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
+            <BackButton />
             <Card className="mb-3"><div className="grid grid-cols-2 gap-4 text-center"><div><p className="text-xs text-[var(--color-text-muted)]">При себе</p><p className="text-lg font-bold">{formatMoney(pocket)}</p></div><div><p className="text-xs text-[var(--color-text-muted)]">В банке</p><p className="text-lg font-bold">{formatMoney(bank)}</p></div></div></Card>
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}
             <div className="flex gap-2 mb-3">{(['info','deposit','transfer'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="sm" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'Информация':t==='deposit'?'Пополнение':'Переводы'}</Button>)}</div>

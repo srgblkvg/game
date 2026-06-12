@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,6 +23,7 @@ export default function GuildRatingPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Рейтинг гильдий</h1>
+            <BackButton />
             {guilds.length === 0 ? (
                 <p className="text-sm text-[var(--color-text-muted)]">Нет гильдий</p>
             ) : (

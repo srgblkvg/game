@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useAcquire } from '../contexts/AcquireContext';
@@ -98,6 +99,7 @@ export default function ShopPage() {
     return (
         <div className="px-4 py-4">
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:buy-card" width="22" height="22" className="inline mr-2"/>Магазин</h2>
+            <BackButton />
 
             {message && <p className="mb-3 text-[var(--color-accent-success)] text-sm">{message}</p>}
 
