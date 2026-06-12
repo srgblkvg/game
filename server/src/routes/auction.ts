@@ -241,4 +241,41 @@ router.post('/auction/buy-partial', (req: any, res) => {
     res.json({ success: true, cost, remaining: remainingCount });
 });
 
+// Снять лот с аукциона
+router.post('/auction/cancel', (req: any, res) => {
+    const userId = req.userId;
+    const { lotId } = req.body;
+    if (!lotId) return res.status(400).json({ error: 'Укажите lotId' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const lot = db.prepare('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?').get(lotId, now) as any;
+    if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
+    if (lot.sellerId !== userId) return res.status(400).json({ error: 'Это не ваш лот' });
+
+    const itemData = JSON.parse(lot.itemData);
+
+    // Возвращаем предмет в инвентарь
+    const user = db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
+    const inventory = JSON.parse(user.inventory || '[]');
+    const existingIdx = inventory.findIndex((i: any) =>
+        (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
+    );
+    if (existingIdx !== -1) {
+        inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (itemData.count || 1);
+    } else {
+        inventory.push({ ...itemData, count: itemData.count || 1 });
+    }
+    db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+
+    // Возвращаем деньги текущему лидеру ставок
+    if (lot.currentBidderId && lot.currentBid) {
+        db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(lot.currentBid, lot.currentBidderId);
+    }
+
+    // Удаляем лот
+    db.prepare('DELETE FROM auction_lots WHERE id = ?').run(lotId);
+
+    res.json({ success: true, message: 'Лот снят с аукциона' });
+});
+
 export default router;

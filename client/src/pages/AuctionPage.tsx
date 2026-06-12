@@ -147,9 +147,17 @@ export default function AuctionPage() {
             const lot = lots.find(l => l.id === lotId);
             if (lot) showAcquire(lot.itemData, quantity, 'Куплено');
             setMessage('');
-            load();
-            const fresh = await fetchCharacter();
-            setCharacter(fresh);
+            load(); const fresh = await fetchCharacter(); setCharacter(fresh);
+        }
+        catch (e: any) { setError(e.message); }
+    };
+
+    const handleCancel = async (lotId: number) => {
+        if (!confirm('Снять лот с аукциона? Предмет вернётся в инвентарь.')) return;
+        try {
+            await api('/auction/cancel', { lotId });
+            setMessage('Лот снят с аукциона');
+            load(); const fresh = await fetchCharacter(); setCharacter(fresh);
         } catch (e: any) { setError(e.message); }
     };
 
@@ -459,6 +467,14 @@ export default function AuctionPage() {
                                 <Button variant="secondary" size="xs"
                                     onClick={() => handleBuyPartial(lot.id, partialQty[lot.id] ?? 1)}>
                                     Купить {partialQty[lot.id] ?? 1} шт ({formatMoney(buyoutPerItem * (partialQty[lot.id] ?? 1))})
+                                </Button>
+                            </div>
+                        )}
+                        {lot.sellerId === user?.id && (
+                            <div className="mt-2 border-t border-[var(--color-border-light)] pt-2">
+                                <Button variant="secondary" size="xs" onClick={() => handleCancel(lot.id)}
+                                    style={{ color: 'var(--color-accent-danger)', borderColor: 'var(--color-accent-danger)' }}>
+                                    Снять лот
                                 </Button>
                             </div>
                         )}
