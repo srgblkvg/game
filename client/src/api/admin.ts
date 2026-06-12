@@ -209,8 +209,8 @@ export async function createUpgradeChance(data: any) {
     return res.json();
 }
 
-export async function updateUpgradeChance(level: number, data: any) {
-    const res = await fetch(`${BASE_URL}/admin/upgrade-chances/${level}`, {
+export async function updateUpgradeChance(level: number, rarity_id: number, data: any) {
+    const res = await fetch(`${BASE_URL}/admin/upgrade-chances/${level}/${rarity_id}`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(data),
@@ -219,8 +219,8 @@ export async function updateUpgradeChance(level: number, data: any) {
     return res.json();
 }
 
-export async function deleteUpgradeChance(level: number) {
-    const res = await fetch(`${BASE_URL}/admin/upgrade-chances/${level}`, {
+export async function deleteUpgradeChance(level: number, rarity_id: number) {
+    const res = await fetch(`${BASE_URL}/admin/upgrade-chances/${level}/${rarity_id}`, {
         method: 'DELETE',
         headers: getHeaders(),
     });

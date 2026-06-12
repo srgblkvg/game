@@ -326,17 +326,25 @@ export function runSeed(db: InstanceType<typeof Database>) {
     db.prepare('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)').run('Улучшения', 2);
   }
 
-  // Начальные шансы улучшения
+  // Начальные шансы улучшения (по редкости и уровню)
   const upgradeChanceCount = (db.prepare('SELECT COUNT(*) as cnt FROM upgrade_chances').get() as any).cnt;
   if (upgradeChanceCount === 0) {
-    const insertUpgrade = db.prepare('INSERT OR REPLACE INTO upgrade_chances (level, chance, money_cost) VALUES (?, ?, ?)');
-    insertUpgrade.run(1, 100, 250);
-    insertUpgrade.run(2, 90, 500);
-    insertUpgrade.run(3, 70, 1000);
-    insertUpgrade.run(4, 50, 2000);
-    insertUpgrade.run(5, 25, 4000);
-    insertUpgrade.run(6, 10, 8000);
-    insertUpgrade.run(7, 5, 16000);
+    const insertUpgrade = db.prepare('INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)');
+    const chances: number[] = [100, 90, 70, 50, 25, 10, 5, 3, 2, 1];
+    const costs: Record<number, number[]> = {
+      0: [5, 8, 15, 25, 40, 60, 90, 130, 200, 300],        // Хлам
+      1: [15, 25, 45, 75, 120, 180, 270, 400, 600, 900],    // Обычный
+      2: [50, 80, 150, 250, 400, 600, 900, 1400, 2000, 3000], // Необычный
+      3: [150, 250, 450, 800, 1300, 2000, 3000, 4500, 6500, 10000], // Редкий
+      4: [400, 700, 1300, 2500, 4000, 6000, 9000, 14000, 20000, 30000], // Эпический
+      5: [1000, 1800, 3500, 6500, 10000, 16000, 25000, 38000, 55000, 80000], // Легендарный
+      6: [3000, 5000, 10000, 18000, 30000, 45000, 70000, 100000, 150000, 220000], // Мифический
+    };
+    for (let rarity = 0; rarity <= 6; rarity++) {
+      for (let lvl = 0; lvl < 10; lvl++) {
+        insertUpgrade.run(lvl + 1, rarity, chances[lvl], costs[rarity][lvl]);
+      }
+    }
   }
 
   // Начальные рецепты крафта (материалы + камни улучшения)

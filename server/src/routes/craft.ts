@@ -173,10 +173,11 @@ router.post('/craft/execute', (req: any, res) => {
     }
 });
 
-// Получить информацию об улучшении (шанс и стоимость) для конкретного уровня
-router.get('/craft/upgrade-info/:level', (req, res) => {
+// Получить информацию об улучшении (шанс и стоимость) для конкретного уровня и редкости
+router.get('/craft/upgrade-info/:level/:rarity', (req, res) => {
     const level = Number(req.params.level);
-    const data = db.prepare('SELECT chance, money_cost FROM upgrade_chances WHERE level = ?').get(level) as any;
+    const rarity = Number(req.params.rarity);
+    const data = db.prepare('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?').get(level, rarity) as any;
     if (!data) return res.status(404).json({ error: 'Данные об уровне не найдены' });
     res.json(data);
 });
@@ -218,7 +219,7 @@ router.post('/craft/upgrade', (req: any, res) => {
     const stone = inventory[stoneIndex];
     if (stone.count < 1) return res.status(400).json({ error: 'Недостаточно камней усиления' });
 
-    const upgradeData = db.prepare('SELECT chance, money_cost FROM upgrade_chances WHERE level = ?').get(targetLevel) as any;
+    const upgradeData = db.prepare('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?').get(targetLevel, stoneSlot.rarity_id) as any;
     if (!upgradeData) {
         return res.status(400).json({ error: 'Нет данных для этого уровня улучшения. Свяжитесь с администратором.' });
     }

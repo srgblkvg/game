@@ -186,9 +186,11 @@ export function runSchema(db: InstanceType<typeof Database>) {
   // Шансы улучшения
   db.exec(`
     CREATE TABLE IF NOT EXISTS upgrade_chances (
-      level INTEGER PRIMARY KEY,
+      level INTEGER NOT NULL,
+      rarity_id INTEGER NOT NULL DEFAULT 0,
       chance INTEGER NOT NULL DEFAULT 100,
-      money_cost INTEGER NOT NULL DEFAULT 100
+      money_cost INTEGER NOT NULL DEFAULT 100,
+      PRIMARY KEY (level, rarity_id)
     );
   `);
 

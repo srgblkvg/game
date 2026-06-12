@@ -96,7 +96,7 @@ export default function CraftPage() {
         const stone = stones[0];
         if (item.rarity_id !== stone.rarity_id) { setUpgradeInfo(null); return; }
         const nextLevel = (item.upgradeLevel || 0) + 1;
-        fetchUpgradeInfo(nextLevel)
+        fetchUpgradeInfo(nextLevel, item.rarity_id)
             .then((data: any) => setUpgradeInfo({ item, stone, nextLevel, chance: data.chance, cost: data.money_cost }))
             .catch(() => setUpgradeInfo(null));
     }, [craftSlots]);

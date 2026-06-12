@@ -139,25 +139,26 @@ router.delete('/recipe-categories/:id', (req, res) => {
 
 // ==================== Шансы улучшения (upgrade_chances) ====================
 router.get('/upgrade-chances', (req, res) => {
-    const chances = db.prepare('SELECT * FROM upgrade_chances ORDER BY level').all();
+    const chances = db.prepare('SELECT * FROM upgrade_chances ORDER BY rarity_id, level').all();
     res.json(chances);
 });
 
 router.post('/upgrade-chances', (req, res) => {
-    const { level, chance, money_cost } = req.body;
+    const { level, rarity_id, chance, money_cost } = req.body;
     if (level == null || chance == null || money_cost == null) return res.status(400).json({ error: 'level, chance, money_cost required' });
-    db.prepare('INSERT OR REPLACE INTO upgrade_chances (level, chance, money_cost) VALUES (?, ?, ?)').run(level, chance, money_cost);
+    const rId = rarity_id ?? 0;
+    db.prepare('INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)').run(level, rId, chance, money_cost);
     res.json({ success: true });
 });
 
-router.put('/upgrade-chances/:level', (req, res) => {
+router.put('/upgrade-chances/:level/:rarity_id', (req, res) => {
     const { chance, money_cost } = req.body;
-    db.prepare('UPDATE upgrade_chances SET chance=?, money_cost=? WHERE level=?').run(chance, money_cost, req.params.level);
+    db.prepare('UPDATE upgrade_chances SET chance=?, money_cost=? WHERE level=? AND rarity_id=?').run(chance, money_cost, req.params.level, req.params.rarity_id);
     res.json({ success: true });
 });
 
-router.delete('/upgrade-chances/:level', (req, res) => {
-    db.prepare('DELETE FROM upgrade_chances WHERE level=?').run(req.params.level);
+router.delete('/upgrade-chances/:level/:rarity_id', (req, res) => {
+    db.prepare('DELETE FROM upgrade_chances WHERE level=? AND rarity_id=?').run(req.params.level, req.params.rarity_id);
     res.json({ success: true });
 });
 

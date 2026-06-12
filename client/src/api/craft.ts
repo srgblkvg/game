@@ -21,8 +21,8 @@ export async function upgradeItem(slots: any[]) {
     return res.json();
 }
 
-export async function fetchUpgradeInfo(level: number) {
-    const res = await fetch(`${BASE_URL}/craft/upgrade-info/${level}`, {
+export async function fetchUpgradeInfo(level: number, rarity: number) {
+    const res = await fetch(`${BASE_URL}/craft/upgrade-info/${level}/${rarity}`, {
         headers: getHeaders(),
     });
     if (!res.ok) throw new Error('Ошибка загрузки информации об улучшении');

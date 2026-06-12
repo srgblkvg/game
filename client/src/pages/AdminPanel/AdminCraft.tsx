@@ -49,7 +49,7 @@ export default function AdminCraft() {
     // Upgrade chances
     const [upgradeChances, setUpgradeChances] = useState<any[]>([]);
     const [editingChance, setEditingChance] = useState<any>(null);
-    const [newChance, setNewChance] = useState({ level: 1, chance: 100, money_cost: 100 });
+    const [newChance, setNewChance] = useState({ level: 1, rarity_id: 0, chance: 100, money_cost: 100 });
 
     // Loaders
     useEffect(() => {
@@ -102,16 +102,16 @@ export default function AdminCraft() {
     };
 
     const handleCreateChance = async () => {
-        try { await createUpgradeChance(newChance); setMessage('Шанс улучшения создан'); setUpgradeChances(await fetchUpgradeChances()); setNewChance({ level: 1, chance: 100, money_cost: 100 }); }
+        try { await createUpgradeChance(newChance); setMessage('Шанс улучшения создан'); setUpgradeChances(await fetchUpgradeChances()); setNewChance({ level: 1, rarity_id: 0, chance: 100, money_cost: 100 }); }
         catch (e: any) { setMessage(e.message); }
     };
     const handleUpdateChance = async () => {
-        try { await updateUpgradeChance(editingChance.level, editingChance); setMessage('Шанс улучшения обновлён'); setEditingChance(null); setUpgradeChances(await fetchUpgradeChances()); }
+        try { await updateUpgradeChance(editingChance.level, editingChance.rarity_id, editingChance); setMessage('Шанс улучшения обновлён'); setEditingChance(null); setUpgradeChances(await fetchUpgradeChances()); }
         catch (e: any) { setMessage(e.message); }
     };
-    const handleDeleteChance = async (level: number) => {
+    const handleDeleteChance = async (level: number, rarityId: number) => {
         if (!confirm('Удалить шанс улучшения?')) return;
-        try { await deleteUpgradeChance(level); setUpgradeChances(await fetchUpgradeChances()); } catch (e: any) { setMessage(e.message); }
+        try { await deleteUpgradeChance(level, rarityId); setUpgradeChances(await fetchUpgradeChances()); } catch (e: any) { setMessage(e.message); }
     };
 
     const renderResourceForm = (res: any, setter: any, submitText: string, onSubmit: () => void) => (
@@ -231,6 +231,12 @@ export default function AdminCraft() {
                     <Card className="mb-4">
                         <h3 className="font-bold mb-2">{editingChance ? 'Редактировать шанс' : 'Добавить шанс'}</h3>
                         <div>
+                            <label className="text-sm">Редкость:
+                                <select value={editingChance ? editingChance.rarity_id : newChance.rarity_id}
+                                    onChange={e => editingChance ? setEditingChance({ ...editingChance, rarity_id: +e.target.value }) : setNewChance({ ...newChance, rarity_id: +e.target.value })} className={selectClass}>
+                                    {rarities.map(r => <option key={r.id} value={r.id} style={{ color: r.color }}>{r.display_name}</option>)}
+                                </select>
+                            </label>
                             <label className="text-sm">Уровень:
                                 <input type="number" value={editingChance ? editingChance.level : newChance.level}
                                     onChange={e => editingChance ? setEditingChance({ ...editingChance, level: +e.target.value }) : setNewChance({ ...newChance, level: +e.target.value })} className={inputClass} />
@@ -252,14 +258,15 @@ export default function AdminCraft() {
                     <Card>
                         <h3 className="font-bold mb-2">Все шансы улучшения</h3>
                         <table className="w-full border-collapse text-sm">
-                            <thead><tr className="border-b border-[var(--color-border-default)]"><th className="text-left p-1">Уровень</th><th className="text-left p-1">Шанс (%)</th><th className="text-left p-1">Стоимость</th><th className="text-left p-1">Действия</th></tr></thead>
+                            <thead><tr className="border-b border-[var(--color-border-default)]"><th className="text-left p-1">Редкость</th><th className="text-left p-1">Уровень</th><th className="text-left p-1">Шанс (%)</th><th className="text-left p-1">Стоимость</th><th className="text-left p-1">Действия</th></tr></thead>
                             <tbody>
                                 {upgradeChances.map((uc: any) => (
-                                    <tr key={uc.level} className="border-b border-[var(--color-border-light)]">
+                                    <tr key={`${uc.level}-${uc.rarity_id}`} className="border-b border-[var(--color-border-light)]">
+                                        <td className="p-1" style={{ color: rarities.find(r => r.id === uc.rarity_id)?.color }}>{rarities.find(r => r.id === uc.rarity_id)?.display_name || `#${uc.rarity_id}`}</td>
                                         <td className="p-1">{uc.level}</td><td className="p-1">{uc.chance}</td><td className="p-1">{uc.money_cost}</td>
                                         <td className="p-1">
                                             <Button variant="primary" size="xs" className="mr-1" onClick={() => setEditingChance(uc)}>Ред.</Button>
-                                            <Button variant="danger" size="xs" onClick={() => handleDeleteChance(uc.level)}>Удалить</Button>
+                                            <Button variant="danger" size="xs" onClick={() => handleDeleteChance(uc.level, uc.rarity_id)}>Удалить</Button>
                                         </td>
                                     </tr>
                                 ))}
