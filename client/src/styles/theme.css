@@ -104,7 +104,7 @@ body,
   margin: 0;
   font-family: 'Cormorant Infant', 'Times New Roman', serif;
   font-size: 17px;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--color-text-primary);
   box-sizing: border-box;
 }
