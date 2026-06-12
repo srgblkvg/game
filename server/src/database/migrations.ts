@@ -530,6 +530,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE guild_wars ADD COLUMN defenderScore INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE guild_war_attacks ADD COLUMN battleLog TEXT'); } catch {}
 
+  // --- completedAt для турниров ---
+  try { db.exec('ALTER TABLE tournaments ADD COLUMN completedAt DATETIME'); } catch {}
+
   // --- Обратная связь ---
   try { db.exec(`CREATE TABLE IF NOT EXISTS feedback_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

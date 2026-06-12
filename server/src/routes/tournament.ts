@@ -293,7 +293,7 @@ function finishTournament(tournamentId: number) {
         db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(thirdPlaceId);
     }
 
-    db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('completed', tournamentId);
+    db.prepare('UPDATE tournaments SET status = ?, completedAt = datetime(?) WHERE id = ?').run('completed', new Date().toISOString(), tournamentId);
 
     // --- Обновление скрытого tournamentElo для посева ---
     // Победитель +25, 2-е +15, 3-е +10, полуфиналисты +5, остальные 0
@@ -361,15 +361,23 @@ function autoAdvance(tournamentId: number) {
     }
 
     // Если турнир завершён или отменён — создаём новый для этого дивизиона (только official)
+    // через 1 час после завершения
     if ((t.status === 'completed' || t.status === 'cancelled') && t.type === 'official') {
         const existing = db.prepare(
             "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress')"
         ).get(t.division) as any;
         if (!existing) {
+            // Ждём час после завершения последнего турнира
+            if (t.completedAt) {
+                const completedTime = new Date(t.completedAt + 'Z').getTime();
+                const oneHourLater = completedTime + 3600 * 1000;
+                if (Date.now() < oneHourLater) return; // ещё не время
+            }
             const divConfig = divisions.find(d => d.name === t.division)!;
+            const now2 = Math.floor(Date.now() / 1000);
             db.prepare(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
-            ).run(t.division, 'registration', now, now + REGISTRATION_WINDOW, divConfig.basePool, now);
+            ).run(t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, now2);
         }
     }
 }
