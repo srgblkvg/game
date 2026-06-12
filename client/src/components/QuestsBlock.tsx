@@ -11,7 +11,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
     const navigate = useNavigate();
     const [quests, setQuests] = useState<any>(null);
 
-    useEffect(() => { if (user) loadQuests(); }, [user]);
+    useEffect(() => { if (user) { loadQuests(); const i = setInterval(loadQuests, 10000); return () => clearInterval(i); } }, [user]);
     const loadQuests = async () => { try { setQuests(await (await fetch('/api/tavern/quests',{headers:getHeaders()})).json()); } catch{} };
     if (!quests) return null;
 
