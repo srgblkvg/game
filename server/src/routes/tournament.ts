@@ -60,7 +60,7 @@ function generateBracket(tournamentId: number) {
                 }
             }
         }
-        db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('cancelled', tournamentId);
+        db.prepare('UPDATE tournaments SET status = ?, completedAt = datetime(?) WHERE id = ?').run('cancelled', new Date().toISOString(), tournamentId);
         return;
     }
 
@@ -369,7 +369,7 @@ function autoAdvance(tournamentId: number) {
         if (!existing) {
             // Ждём час после завершения ПОСЛЕДНЕГО турнира этого дивизиона
             const lastCompleted = db.prepare(
-                "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status = 'completed' ORDER BY id DESC LIMIT 1"
+                "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1"
             ).get(t.division) as any;
             if (lastCompleted?.completedAt) {
                 const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
@@ -412,7 +412,7 @@ function getOrCreateTournament(type?: string) {
         if (!activeByDivision[div.name]) {
             // Проверяем: когда завершился последний турнир этого дивизиона
             const lastCompleted = db.prepare(
-                "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status = 'completed' ORDER BY id DESC LIMIT 1"
+                "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1"
             ).get(div.name) as any;
             if (lastCompleted?.completedAt) {
                 const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
