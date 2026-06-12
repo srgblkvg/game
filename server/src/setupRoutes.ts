@@ -30,7 +30,7 @@ import ordersRoutes from './routes/orders';
 import logRoutes from './routes/log';
 import questsRoutes from './routes/quests';
 import guildRoutes from './routes/guild';
-import feedbackRoutes from './routes/feedback';
+import feedbackRoutes, { adminFeedbackRouter } from './routes/feedback';
 import adminGameRoutes from './routes/adminGame';
 import actionsRoutes from './routes/actions';
 
@@ -65,6 +65,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/admin', authMiddleware, requireAdmin, adminBattleRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminTournamentRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminGameRoutes);
+  app.use('/api/admin', authMiddleware, requireAdmin, adminFeedbackRouter);
 
   // Тоггл гостевых ограничений
   app.post('/api/admin/toggle-guest', authMiddleware, requireAdmin, (req, res) => {

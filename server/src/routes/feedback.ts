@@ -2,8 +2,9 @@ import { Router } from 'express';
 import db from '../database';
 
 const router = Router();
+export const adminFeedbackRouter = Router();
 
-// Отправить обращение
+// Отправить обращение (публичный)
 router.post('/feedback', (req: any, res) => {
     const userId = req.userId;
     const { subject, message } = req.body;
@@ -21,9 +22,7 @@ router.post('/feedback', (req: any, res) => {
 });
 
 // Админ: список обращений
-router.get('/admin/feedback', (req: any, res) => {
-    if (req.userRole !== 'admin') return res.status(403).json({ error: 'Нет доступа' });
-
+adminFeedbackRouter.get('/feedback', (req: any, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const offset = (page - 1) * limit;
@@ -37,8 +36,7 @@ router.get('/admin/feedback', (req: any, res) => {
 });
 
 // Админ: отметить прочитанным
-router.post('/admin/feedback/read', (req: any, res) => {
-    if (req.userRole !== 'admin') return res.status(403).json({ error: 'Нет доступа' });
+adminFeedbackRouter.post('/feedback/read', (req: any, res) => {
     const { id } = req.body;
     db.prepare('UPDATE feedback_messages SET read = 1 WHERE id = ?').run(id);
     res.json({ success: true });
