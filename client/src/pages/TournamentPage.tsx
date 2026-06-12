@@ -183,6 +183,15 @@ export default function TournamentPage() {
                         )}
                     </div>
                 )}
+                {t.status === 'registration' && !joinable && !myReg && (
+                    <p className="text-xs text-[var(--color-accent-warning)] mt-1">
+                        ⚠️ Недоступно:{' '}
+                        {t.type === 'official' && data.userLevel < (t.division === 'copper' ? 1 : t.division === 'steel' ? 16 : t.division === 'mithril' ? 36 : 61) && `ваш уровень ${data.userLevel} ниже требуемого`}
+                        {t.type === 'official' && data.userLevel > (t.division === 'copper' ? 15 : t.division === 'steel' ? 35 : t.division === 'mithril' ? 60 : 999) && `ваш уровень ${data.userLevel} выше максимального`}
+                        {t.type === 'custom' && data.userLevel < (t.minLevel || 1) && `ваш уровень ${data.userLevel} ниже требуемого (${t.minLevel})`}
+                        {t.type === 'custom' && data.userLevel > (t.maxLevel || 999) && `ваш уровень ${data.userLevel} выше максимального (${t.maxLevel})`}
+                    </p>
+                )}
                 {myReg && (
                     <p className="text-xs text-[var(--color-accent-success)]">
                         ✅ Вы записаны {myReg.goldenTicket ? '🎫' : ''}
