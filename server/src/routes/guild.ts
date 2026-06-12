@@ -718,7 +718,7 @@ router.get('/guild/war/details', (req: any, res) => {
     const enemyMembers = db.prepare(`
         SELECT u.id, u.username, u.level,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as timesAttacked,
-            (SELECT MAX(createdAt) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id AND won = 0) as lastAttackedAt
+            (SELECT MAX(createdAt) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as lastAttackedAt
         FROM guild_members gm JOIN users u ON gm.userId = u.id
         WHERE gm.guildId = ?
         ORDER BY u.level DESC
@@ -840,9 +840,9 @@ router.post('/guild/war/attack', (req: any, res) => {
         }
     }
 
-    // Защита цели: 1 час после атаки
+    // Защита цели: 1 час после любой атаки на неё
     const lastDefend = db.prepare(
-        'SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND defenderId = ? AND won = 0'
+        'SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND defenderId = ?'
     ).get(war.id, targetId) as any;
     if (lastDefend?.lastAt) {
         const lastTime = new Date(lastDefend.lastAt + 'Z').getTime();
