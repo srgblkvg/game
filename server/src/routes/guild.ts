@@ -812,9 +812,10 @@ router.post('/guild/war/attack', (req: any, res) => {
     const attacker = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     const defender = db.prepare('SELECT * FROM users WHERE id = ?').get(targetId) as any;
 
-    const { currentStats } = require('../utils/stats');
-    const aStats = currentStats(attacker, JSON.parse(attacker.equipment || '{}'));
-    const dStats = currentStats(defender, JSON.parse(defender.equipment || '{}'));
+    const { currentStats } = require('../game/stats');
+    const { getBaseStats } = require('../db/helpers');
+    const aStats = currentStats(getBaseStats(attacker), JSON.parse(attacker.equipment || '{}'));
+    const dStats = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'));
 
     const aHp = aStats.hp;
     const dHp = dStats.hp;
