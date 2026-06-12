@@ -404,8 +404,17 @@ function getOrCreateTournament(type?: string) {
     }
 
     // Для дивизионов без активного турнира — создаём новый official с 30-мин окном
+    // (но не раньше чем через час после завершения предыдущего)
     for (const div of divisions) {
         if (!activeByDivision[div.name]) {
+            // Проверяем: когда завершился последний турнир этого дивизиона
+            const lastCompleted = db.prepare(
+                "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status = 'completed' ORDER BY id DESC LIMIT 1"
+            ).get(div.name) as any;
+            if (lastCompleted?.completedAt) {
+                const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
+                if (Date.now() < completedTime + 3600 * 1000) continue; // ещё не прошёл час
+            }
             db.prepare(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, ?, ?)'
             ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, now, 'official');
