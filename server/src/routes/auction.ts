@@ -113,7 +113,7 @@ router.post('/auction/bid', (req: any, res) => {
     if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
     if (lot.sellerId === userId) return res.status(400).json({ error: 'Нельзя ставить на свой лот' });
 
-    const minBid = lot.currentBid ? Math.floor(lot.currentBid * 1.05) : lot.startPrice;
+    const minBid = lot.currentBid ? lot.currentBid + Math.max(1, Math.floor(lot.currentBid * 0.05)) : lot.startPrice;
     if (amount < minBid) return res.status(400).json({ error: `Мин. ставка: ${minBid} 🥇` });
 
     const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
