@@ -30,6 +30,7 @@ import ordersRoutes from './routes/orders';
 import logRoutes from './routes/log';
 import questsRoutes from './routes/quests';
 import guildRoutes from './routes/guild';
+import feedbackRoutes from './routes/feedback';
 import adminGameRoutes from './routes/adminGame';
 import actionsRoutes from './routes/actions';
 
@@ -93,6 +94,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', ordersRoutes);
   app.use('/api', questsRoutes);
   app.use('/api', guildRoutes);
+  app.use('/api', feedbackRoutes);
   app.use('/api', tournamentRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)

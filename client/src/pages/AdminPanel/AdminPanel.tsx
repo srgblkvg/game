@@ -11,6 +11,7 @@ import AdminBattles from './AdminBattles';
 import AdminTournaments from './AdminTournaments';
 import AdminGame from './AdminGame';
 import AdminOnline from './AdminOnline';
+import AdminFeedback from './AdminFeedback';
 import Button from '../../components/ui/Button';
 import { inputClass } from '../../utils/formStyles';
 
@@ -24,6 +25,7 @@ const tabs = [
     { key: 'chat', label: 'Чат' },
     { key: 'craft', label: 'Крафт' },
     { key: 'online', label: 'Онлайн' },
+    { key: 'feedback', label: 'Обращения' },
 ] as const;
 type Tab = typeof tabs[number]['key'];
 
@@ -123,6 +125,7 @@ export default function AdminPanel() {
             {tab === 'chat' && <AdminChat />}
             {tab === 'craft' && <AdminCraft />}
             {tab === 'online' && <AdminOnline />}
+            {tab === 'feedback' && <AdminFeedback />}
         </div>
     );
 }

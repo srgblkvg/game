@@ -530,6 +530,18 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE guild_wars ADD COLUMN defenderScore INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE guild_war_attacks ADD COLUMN battleLog TEXT'); } catch {}
 
+  // --- Обратная связь ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS feedback_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    username TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    message TEXT NOT NULL,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+    read INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )`); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }
