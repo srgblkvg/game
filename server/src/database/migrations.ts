@@ -554,7 +554,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
         for (const t of oldData) {
           const createdAtStr = typeof t.createdAt === 'number' && t.createdAt > 1000000000
             ? new Date(t.createdAt * 1000).toISOString().replace('T', ' ').slice(0, 19)
-            : String(t.createdAt || datetime('now'));
+            : (t.createdAt ? String(t.createdAt) : new Date().toISOString().replace('T', ' ').slice(0, 19));
           db.prepare('INSERT INTO tournaments_new (id, division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?,?,?,?,?,?,?)')
             .run(t.id, t.division, t.status, t.registrationStart, t.registrationEnd, t.prizePool, createdAtStr);
         }
