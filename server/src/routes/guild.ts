@@ -86,15 +86,30 @@ router.get('/guild/my', (req: any, res) => {
 // Список гильдий (должен быть до /guild/:id)
 router.get('/guild/list', (req: any, res) => {
     const guilds = db.prepare(`
-        SELECT g.*, u.username as leaderName,
+        SELECT g.*, u.username as leaderName, u.id as leaderUserId,
             (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount,
-            (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status IN ('pending','active') LIMIT 1) as warStatus
+            (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status IN ('pending','active') LIMIT 1) as warStatus,
+            (SELECT gw2.id FROM guild_wars gw2 WHERE (gw2.attackerGuildId = g.id OR gw2.defenderGuildId = g.id) AND gw2.status IN ('pending','active') LIMIT 1) as warId
         FROM guilds g
         JOIN users u ON g.leaderId = u.id
         ORDER BY g.treasury DESC, g.level DESC
         LIMIT 50
     `).all();
-    res.json(guilds);
+
+    // Дополнить war-инфой
+    const result = (guilds as any[]).map((g: any) => {
+        if (g.warId) {
+            const war = db.prepare(`SELECT gw.*, a.name as attackerName, d.name as defenderName FROM guild_wars gw JOIN guilds a ON gw.attackerGuildId = a.id JOIN guilds d ON gw.defenderGuildId = d.id WHERE gw.id = ?`).get(g.warId) as any;
+            if (war) {
+                const opponentName = war.attackerGuildId === g.id ? war.defenderName : war.attackerName;
+                g.warStatus = war.status;
+                g.warOpponent = opponentName;
+            }
+        }
+        return g;
+    });
+
+    res.json(result);
 });
 
 // Заявки на вступление (для лидера/офицеров)
