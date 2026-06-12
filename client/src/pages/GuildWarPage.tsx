@@ -54,7 +54,12 @@ export default function GuildWarPage() {
 
     const myScore = data.myGuildId === data.attackerGuildId ? data.attackerScore : data.defenderScore;
     const enemyScore = data.myGuildId === data.attackerGuildId ? data.defenderScore : data.attackerScore;
-    const formatTime = (iso: string) => new Date(iso + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const formatTime = (iso: string) => {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    };
 
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">

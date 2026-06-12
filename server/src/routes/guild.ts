@@ -809,32 +809,35 @@ router.post('/guild/war/attack', (req: any, res) => {
     }
 
     // Симуляция боя (макс HP, как в турнире)
-    const attacker = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
-    const defender = db.prepare('SELECT * FROM users WHERE id = ?').get(targetId) as any;
+    const attacker = db.prepare('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money FROM users u WHERE u.id = ?').get(userId) as any;
+    const defender = db.prepare('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money FROM users u WHERE u.id = ?').get(targetId) as any;
 
     const { currentStats } = require('../game/stats');
     const { getBaseStats } = require('../db/helpers');
+
     const aStats = currentStats(getBaseStats(attacker), JSON.parse(attacker.equipment || '{}'));
     const dStats = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'));
 
     const aHp = aStats.hp;
     const dHp = dStats.hp;
 
-    // Простой бой
+    // Простой бой: сила атаки = s, защита = d
     let aCurrentHp = aHp;
     let dCurrentHp = dHp;
     const log: string[] = [];
+
+    log.push(`⚔ ${attacker.username} (HP: ${aHp}) vs ${defender.username} (HP: ${dHp})`);
 
     let round = 0;
     while (aCurrentHp > 0 && dCurrentHp > 0 && round < 50) {
         round++;
         // Атакующий бьёт
-        const aDmg = Math.max(1, aStats.attack - dStats.defense + Math.floor(Math.random() * 6));
+        const aDmg = Math.max(1, aStats.s - dStats.d + Math.floor(Math.random() * 6));
         dCurrentHp -= aDmg;
         log.push(`${attacker.username} наносит ${aDmg} урона (${defender.username}: ${Math.max(0, dCurrentHp)}/${dHp})`);
         if (dCurrentHp <= 0) break;
         // Защитник бьёт
-        const dDmg = Math.max(1, dStats.attack - aStats.defense + Math.floor(Math.random() * 6));
+        const dDmg = Math.max(1, dStats.s - aStats.d + Math.floor(Math.random() * 6));
         aCurrentHp -= dDmg;
         log.push(`${defender.username} наносит ${dDmg} урона (${attacker.username}: ${Math.max(0, aCurrentHp)}/${aHp})`);
     }
