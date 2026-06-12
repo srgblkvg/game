@@ -246,6 +246,13 @@ export default function Header() {
                                         <Icon icon="game-icons:open-book" width="16" height="16" className="text-[var(--color-accent-success)]" />
                                         Wiki
                                     </a>
+                                    <button
+                                        onClick={() => { navigate('/feedback'); setMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
+                                    >
+                                        <Icon icon="mdi:email-outline" width="16" height="16" className="text-[var(--color-accent-info)]" />
+                                        Обратная связь
+                                    </button>
                                     <a
                                         href="https://vk.com/club239320810"
                                         target="_blank"

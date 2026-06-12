@@ -8,58 +8,6 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { inputClass } from '../../utils/formStyles';
 
-function FeedbackForm() {
-    const [subject, setSubject] = useState('');
-    const [message, setMessage] = useState('');
-    const [msg, setMsg] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault(); setMsg('');
-        if (!subject.trim()) { setMsg('Укажите тему'); return; }
-        if (!message.trim()) { setMsg('Введите сообщение'); return; }
-        try {
-            setLoading(true);
-            const res = await fetch('/api/feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-                body: JSON.stringify({ subject: subject.trim(), message: message.trim() }),
-            });
-            const data = await res.json();
-            if (res.ok) { setSubject(''); setMessage(''); setMsg('✅ Отправлено'); }
-            else setMsg(data.error || 'Ошибка');
-        } catch { setMsg('Ошибка сети'); }
-        finally { setLoading(false); }
-    };
-
-    return (
-        <Card className="mb-4">
-            <h3 className="font-bold mb-2">📬 Обратная связь</h3>
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    placeholder="Тема"
-                    value={subject}
-                    onChange={e => setSubject(e.target.value)}
-                    className={inputClass}
-                />
-                <textarea
-                    placeholder="Сообщение"
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                    className={inputClass}
-                    rows={3}
-                    style={{ resize: 'vertical' }}
-                />
-                <Button variant="primary" size="sm" type="submit" disabled={loading}>
-                    {loading ? '...' : 'Отправить'}
-                </Button>
-                {msg && <p className={`mt-2 text-sm ${msg.startsWith('✅') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{msg}</p>}
-            </form>
-        </Card>
-    );
-}
-
 export default function AccountPage() {
     const { user, loginUser, logout } = useAuth();
     const { character, setCharacter } = useGame();
@@ -348,9 +296,6 @@ export default function AccountPage() {
                 {genderMsg && <p className={`mt-2 text-sm ${genderMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{genderMsg}</p>}
             </Card>
             )}
-
-            {/* Обратная связь */}
-            <FeedbackForm />
 
             <Button variant="danger" size="md" fullWidth onClick={handleLogout}>Выйти</Button>
 
