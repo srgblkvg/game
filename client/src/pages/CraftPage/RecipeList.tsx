@@ -38,7 +38,7 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
                       <ItemIcon
                         color={recipe.result.rarity_color || '#555'}
                         image={recipe.result.image}
-                        name={recipe.result.name || '?'}
+                        name={recipe.result_type === 'random_item' ? '?' : (recipe.result.name || '?')}
                         size="sm"
                       />
                     ) : (
