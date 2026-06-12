@@ -42,20 +42,25 @@ function generateBracket(tournamentId: number) {
         ORDER BY u.tournamentElo ASC
     `).all(tournamentId) as any[];
 
-    if (participants.length < 1) {
+    if (participants.length < 2) {
+        // Отмена — возврат денег для custom турниров
+        const t = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
+        if (t && t.type === 'custom') {
+            // Возврат базового призового фонда создателю
+            if ((t.basePool || 0) > 0) {
+                db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.basePool, t.creatorId);
+            }
+            // Возврат входных взносов всем участникам
+            if ((t.entryFee || 0) > 0) {
+                const parts = db.prepare(
+                    'SELECT userId FROM tournament_participants WHERE tournamentId = ?'
+                ).all(tournamentId) as any[];
+                for (const p of parts) {
+                    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.entryFee, p.userId);
+                }
+            }
+        }
         db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('cancelled', tournamentId);
-        return;
-    }
-
-    // 1 участник — сразу победитель
-    if (participants.length === 1) {
-        const p1 = participants[0];
-        const insertMatch = db.prepare(`
-            INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
-            VALUES (?, 1, ?, NULL, ?)
-        `);
-        insertMatch.run(tournamentId, p1.userId, p1.userId);
-        finishTournament(tournamentId);
         return;
     }
 
