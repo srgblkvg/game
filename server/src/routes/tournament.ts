@@ -253,9 +253,24 @@ function finishTournament(tournamentId: number) {
     }
 
     // Распределение призов
-    const firstPrize = Math.floor(prizePool * 0.5);
-    const secondPrize = Math.floor(prizePool * 0.3);
-    const thirdPrize = prizePool - firstPrize - secondPrize; // остаток
+    let firstPrize: number, secondPrize: number, thirdPrize: number;
+
+    if (!secondPlaceId) {
+        // 1 участник — всё победителю
+        firstPrize = prizePool;
+        secondPrize = 0;
+        thirdPrize = 0;
+    } else if (!thirdPlaceId) {
+        // 2 участника — 70/30
+        firstPrize = Math.floor(prizePool * 0.7);
+        secondPrize = prizePool - firstPrize;
+        thirdPrize = 0;
+    } else {
+        // 3+ участников — 50/30/20
+        firstPrize = Math.floor(prizePool * 0.5);
+        secondPrize = Math.floor(prizePool * 0.3);
+        thirdPrize = prizePool - firstPrize - secondPrize;
+    }
 
     if (prizePool > 0) {
         addMoney(db, winnerId, firstPrize);
