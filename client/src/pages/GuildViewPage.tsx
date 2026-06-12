@@ -14,6 +14,7 @@ export default function GuildViewPage() {
     const [guild, setGuild] = useState<any>(null);
     const [members, setMembers] = useState<any[]>([]);
     const [myGuild, setMyGuild] = useState<any>(null);
+    const [myWar, setMyWar] = useState<any>(null);
     const [war, setWar] = useState<any>(null);
     const [message, setMessage] = useState('');
 
@@ -33,7 +34,7 @@ export default function GuildViewPage() {
         try {
             const r = await fetch(`${BASE_URL}/guild/my`, { headers: getHeaders() });
             const data = await r.json();
-            if (data.guild) setMyGuild(data.guild);
+            if (data.guild) { setMyGuild(data.guild); setMyWar(data.war || null); }
         } catch {}
     };
 
@@ -58,6 +59,25 @@ export default function GuildViewPage() {
     };
 
     const isMember = myGuild && myGuild.id === guild?.id;
+
+    // Условия для кнопки объявления войны:
+    // - я лидер своей гильдии
+    // - это не моя гильдия
+    // - моя гильдия не в войне
+    // - целевая гильдия не в войне
+    const canDeclareWar = myGuild && myGuild.myRank === 'leader'
+        && !isMember
+        && !myWar
+        && !war;
+
+    const handleDeclareWar = async () => {
+        if (!confirm(`Объявить войну гильдии «${guild.name}»?\nКазна обеих гильдий будет заморожена на 24 часа.`)) return;
+        try {
+            const d = await api('/guild/war/declare', { targetGuildId: guild.id });
+            setMessage(d.message);
+            load();
+        } catch (e: any) { setMessage(e.message); }
+    };
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
@@ -84,10 +104,15 @@ export default function GuildViewPage() {
                             </span>
                         </div>
                         {!isMember && (
-                            <div className="mt-3">
+                            <div className="mt-3 flex gap-2">
                                 <Button variant="primary" size="sm" onClick={handleJoin}>
                                     {guild.joinType === 'open' ? 'Вступить' : guild.joinType === 'request' ? 'Подать заявку' : 'Закрыто'}
                                 </Button>
+                                {canDeclareWar && (
+                                    <Button variant="danger" size="sm" onClick={handleDeclareWar}>
+                                        ⚔️ Объявить войну
+                                    </Button>
+                                )}
                             </div>
                         )}
                         {isMember && (
