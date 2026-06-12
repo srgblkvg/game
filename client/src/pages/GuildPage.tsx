@@ -44,6 +44,10 @@ export default function GuildPage() {
     const [taxRateInput, setTaxRateInput] = useState('');
     const [treasuryTab, setTreasuryTab] = useState<'deposit' | 'tax' | 'history'>('deposit');
 
+    // Гильд-войны
+    const [war, setWar] = useState<any>(null);
+    const [warMessage, setWarMessage] = useState('');
+
     // Динамический поиск в истории казны
     useEffect(() => {
         if (treasuryTab !== 'history' || !showTreasury) return;
@@ -79,6 +83,7 @@ export default function GuildPage() {
                 setGuild(data.guild); setMembers(data.members);
                 setTreasuryBalance(data.guild.treasury || 0);
                 setTaxRate(data.guild.taxRate || 0);
+                setWar(data.war || null);
                 if (data.guild.myRank === 'leader' || data.guild.myRank === 'officer') {
                     fetch(`${BASE_URL}/guild/requests`, { headers: getHeaders() })
                         .then(r => r.json()).then(setRequests).catch(() => {});
@@ -167,7 +172,26 @@ export default function GuildPage() {
         } catch (e: any) { setError(e.message); }
     };
 
-    const clearMessages = () => { setMessage(''); setError(''); };
+    const clearMessages = () => { setMessage(''); setError(''); setWarMessage(''); };
+
+    // Гильд-войны: объявить войну
+    const handleDeclareWar = async (targetGuildId: number, targetGuildName: string) => {
+        if (!confirm(`Объявить войну гильдии «${targetGuildName}»?\nКазна обеих гильдий будет заморожена на 24 часа.`)) return;
+        try {
+            const d = await api('/guild/war/declare', { targetGuildId });
+            setMessage(d.message);
+            load();
+        } catch (e: any) { setError(e.message); }
+    };
+
+    // Гильд-войны: ответить на войну
+    const handleWarRespond = async (accept: boolean) => {
+        try {
+            const d = await api('/guild/war/respond', { accept });
+            setMessage(d.message);
+            load();
+        } catch (e: any) { setError(e.message); }
+    };
 
     const loadTreasury = async (pageNum = 1, search = '') => {
         try {
@@ -248,6 +272,57 @@ export default function GuildPage() {
                             {guild.myRank === 'officer' && ' • Вы офицер'}
                         </p>
                     </Card>
+
+                    {/* Блок войны */}
+                    {war && (
+                        <Card className="mb-4 border-l-4 border-l-red-500">
+                            <h3 className="font-bold text-sm flex items-center gap-2 mb-2">
+                                <Icon icon="game-icons:crossed-swords" width="18" height="18" className="text-red-400" />
+                                ⚔️ Гильд-война
+                                <span className={`text-[0.6rem] px-1.5 py-0.5 rounded ${
+                                    war.status === 'pending' ? 'bg-yellow-900/50 text-yellow-400' : 'bg-red-900/50 text-red-400'
+                                }`}>
+                                    {war.status === 'pending' ? 'Ожидает ответа' : 'Активна'}
+                                </span>
+                            </h3>
+                            <div className="text-xs space-y-1">
+                                <p>
+                                    <span className="text-[var(--color-text-muted)]">Атакующая:</span>{' '}
+                                    <span className="text-[var(--color-text-primary)] font-bold">{war.attackerGuild.name}</span>
+                                </p>
+                                <p>
+                                    <span className="text-[var(--color-text-muted)]">Защищается:</span>{' '}
+                                    <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild.name}</span>
+                                </p>
+                                <p className="text-[var(--color-text-muted)]">
+                                    Объявлена: {new Date(war.declaredAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                </p>
+                                {war.acceptedAt && (
+                                    <p className="text-[var(--color-text-muted)]">
+                                        Принята: {new Date(war.acceptedAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                    </p>
+                                )}
+                                <p className="text-[var(--color-text-muted)]">
+                                    Окончание: {new Date(war.expiresAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                </p>
+                                {war.status === 'active' && (
+                                    <p className="text-red-400 text-[0.65rem] mt-1">💰 Казна заморожена до конца войны</p>
+                                )}
+                            </div>
+                            {/* Кнопки для лидера защищающейся гильдии (только при pending) */}
+                            {war.status === 'pending' && !war.isAttacker && guild.myRank === 'leader' && (
+                                <div className="flex gap-2 mt-3">
+                                    <Button variant="danger" size="xs" onClick={() => handleWarRespond(true)}>⚔️ Принять войну</Button>
+                                    <Button variant="secondary" size="xs" onClick={() => handleWarRespond(false)}>Отклонить</Button>
+                                </div>
+                            )}
+                            {war.status === 'pending' && war.isAttacker && (
+                                <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-2">
+                                    Ожидание ответа от лидера «{war.defenderGuild.name}»
+                                </p>
+                            )}
+                        </Card>
+                    )}
 
                     {/* Казна */}
                     <Card className="mb-4">
@@ -502,12 +577,23 @@ export default function GuildPage() {
                                         onClick={() => navigate(`/guild/${g.id}`)}>🏚️ {g.name}</h4>
                                     <p className="text-xs text-[var(--color-text-muted)]">
                                         Ур.{g.level} • {g.memberCount} уч. • {g.leaderName}
+                                        {g.warStatus && <span className="ml-2 text-red-400">⚔️ В войне</span>}
                                     </p>
                                 </div>
-                                <Button variant="primary" size="xs"
-                                    onClick={() => handleJoin(g.id, g.joinType)}>
-                                    {g.joinType === 'open' ? 'Вступить' : g.joinType === 'request' ? 'Заявка' : 'Закрыто'}
-                                </Button>
+                                <div className="flex gap-1 items-center">
+                                    {g.joinType !== 'invite' && (
+                                        <Button variant="primary" size="xs"
+                                            onClick={() => handleJoin(g.id, g.joinType)}>
+                                            {g.joinType === 'open' ? 'Вступить' : 'Заявка'}
+                                        </Button>
+                                    )}
+                                    {/* Кнопка объявления войны (только лидер, не себе, не в войне) */}
+                                    {guild && guild.myRank === 'leader' && !g.warStatus && !war && (
+                                        <Button variant="danger" size="xs" onClick={() => handleDeclareWar(g.id, g.name)}>
+                                            ⚔️
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     ))}

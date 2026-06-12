@@ -44,6 +44,24 @@ router.get('/guild/my', (req: any, res) => {
         "SELECT COUNT(*) as cnt FROM guild_invites WHERE guildId = ? AND status = 'pending'"
     ).get(member.guildId) as any;
 
+    // Информация о войне
+    const war = isGuildAtWar(member.guildId);
+    let warInfo = null;
+    if (war) {
+        const attackerGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.attackerGuildId) as any;
+        const defenderGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.defenderGuildId) as any;
+        warInfo = {
+            id: war.id,
+            attackerGuild,
+            defenderGuild,
+            status: war.status,
+            declaredAt: war.declaredAt,
+            acceptedAt: war.acceptedAt,
+            expiresAt: war.expiresAt,
+            isAttacker: war.attackerGuildId === member.guildId,
+        };
+    }
+
     res.json({
         guild: {
             id: member.guildId,
@@ -61,6 +79,7 @@ router.get('/guild/my', (req: any, res) => {
             pendingInvites: inviteCount.cnt,
         },
         members,
+        war: warInfo,
     });
 });
 
@@ -68,7 +87,8 @@ router.get('/guild/my', (req: any, res) => {
 router.get('/guild/list', (req: any, res) => {
     const guilds = db.prepare(`
         SELECT g.*, u.username as leaderName,
-            (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount
+            (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount,
+            (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status IN ('pending','active') LIMIT 1) as warStatus
         FROM guilds g
         JOIN users u ON g.leaderId = u.id
         ORDER BY g.treasury DESC, g.level DESC
@@ -171,7 +191,24 @@ router.get('/guild/:id', (req: any, res) => {
 
     const memberCount = members.length;
 
-    res.json({ guild: { ...guild, memberCount }, members });
+    // Информация о войне
+    const war = isGuildAtWar(guildId);
+    let warInfo = null;
+    if (war) {
+        const attackerGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.attackerGuildId) as any;
+        const defenderGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.defenderGuildId) as any;
+        warInfo = {
+            id: war.id,
+            attackerGuild,
+            defenderGuild,
+            status: war.status,
+            declaredAt: war.declaredAt,
+            acceptedAt: war.acceptedAt,
+            expiresAt: war.expiresAt,
+        };
+    }
+
+    res.json({ guild: { ...guild, memberCount }, members, war: warInfo });
 });
 
 // Вступить в открытую гильдию
@@ -417,6 +454,10 @@ router.post('/guild/treasury/deposit', (req: any, res) => {
     const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
+    // Блокировка казны при войне
+    const war = isGuildAtWar(member.guildId);
+    if (war && war.status === 'active') return res.status(400).json({ error: 'Казна заморожена на время войны' });
+
     // Проверяем баланс игрока
     const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
     if (!user || user.money < amount) return res.status(400).json({ error: 'Недостаточно серебра в кармане' });
@@ -468,6 +509,122 @@ router.get('/guild/treasury/history', (req: any, res) => {
 
     const treasury = (db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(member.guildId) as any)?.treasury || 0;
     res.json({ treasury, history: logs, total, page, totalPages: Math.ceil(total / limit) });
+});
+
+// --- Гильд-войны ---
+
+// Проверить, в войне ли гильдия
+function isGuildAtWar(guildId: number): any | null {
+    return db.prepare(
+        `SELECT * FROM guild_wars WHERE (attackerGuildId = ? OR defenderGuildId = ?) AND status IN ('pending', 'active') LIMIT 1`
+    ).get(guildId, guildId) as any || null;
+}
+
+// Объявить войну (только лидер)
+router.post('/guild/war/declare', (req: any, res) => {
+    const userId = req.userId;
+    const { targetGuildId } = req.body;
+    if (!targetGuildId) return res.status(400).json({ error: 'Укажите targetGuildId' });
+
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может объявить войну' });
+
+    const myGuildId = member.guildId;
+
+    // Нельзя объявить войну себе
+    if (myGuildId === targetGuildId) return res.status(400).json({ error: 'Нельзя объявить войну своей гильдии' });
+
+    // Проверить, что целевая гильдия существует
+    const targetGuild = db.prepare('SELECT * FROM guilds WHERE id = ?').get(targetGuildId) as any;
+    if (!targetGuild) return res.status(404).json({ error: 'Гильдия не найдена' });
+
+    // Проверить, что моя гильдия не в войне
+    const myWar = isGuildAtWar(myGuildId);
+    if (myWar) return res.status(400).json({ error: 'Ваша гильдия уже участвует в войне' });
+
+    // Проверить, что целевая гильдия не в войне
+    const theirWar = isGuildAtWar(targetGuildId);
+    if (theirWar) return res.status(400).json({ error: 'Целевая гильдия уже участвует в войне' });
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+
+    db.prepare(
+        'INSERT INTO guild_wars (attackerGuildId, defenderGuildId, expiresAt) VALUES (?, ?, ?)'
+    ).run(myGuildId, targetGuildId, expiresAt);
+
+    const myGuild = db.prepare('SELECT name FROM guilds WHERE id = ?').get(myGuildId) as any;
+
+    // Уведомление лидеру защищающейся гильдии через ЛС
+    const defenderLeader = db.prepare(
+        'SELECT u.id FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?'
+    ).get(targetGuildId) as any;
+    if (defenderLeader) {
+        const msg = `⚔️ Гильдия «${myGuild.name}» объявила вам войну! Перейдите на страницу гильдии чтобы принять или отклонить.`;
+        const info = db.prepare(
+            'INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)'
+        ).run(0, defenderLeader.id, msg, JSON.stringify({ type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name }));
+        broadcast('message', { message: {
+            id: info.lastInsertRowid, senderId: 0, senderName: 'system', targetId: defenderLeader.id,
+            content: msg, createdAt: new Date().toISOString(),
+            item: { type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name },
+        }});
+    }
+
+    res.json({ success: true, message: `Война объявлена гильдии «${targetGuild.name}»` });
+});
+
+// Ответить на объявление войны (только лидер защищающейся гильдии)
+router.post('/guild/war/respond', (req: any, res) => {
+    const userId = req.userId;
+    const { accept } = req.body; // true — принять, false — отклонить
+
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может отвечать на войну' });
+
+    const war = db.prepare(
+        `SELECT * FROM guild_wars WHERE defenderGuildId = ? AND status = 'pending' ORDER BY id DESC LIMIT 1`
+    ).get(member.guildId) as any;
+    if (!war) return res.status(404).json({ error: 'Нет входящих объявлений войны' });
+
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+    if (accept) {
+        db.prepare('UPDATE guild_wars SET status = ?, acceptedAt = ? WHERE id = ?').run('active', now, war.id);
+        res.json({ success: true, message: 'Война принята! Казна заморожена на 24 часа.' });
+    } else {
+        db.prepare('UPDATE guild_wars SET status = ?, endedAt = ? WHERE id = ?').run('cancelled', now, war.id);
+        res.json({ success: true, message: 'Война отклонена.' });
+    }
+});
+
+// Статус войны для моей гильдии
+router.get('/guild/war/status', (req: any, res) => {
+    const userId = req.userId;
+    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member) return res.json({ war: null });
+
+    const war = isGuildAtWar(member.guildId);
+    if (!war) return res.json({ war: null });
+
+    const attackerGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.attackerGuildId) as any;
+    const defenderGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.defenderGuildId) as any;
+
+    const isAttacker = war.attackerGuildId === member.guildId;
+
+    res.json({
+        war: {
+            id: war.id,
+            attackerGuild: attackerGuild,
+            defenderGuild: defenderGuild,
+            status: war.status,
+            declaredAt: war.declaredAt,
+            acceptedAt: war.acceptedAt,
+            expiresAt: war.expiresAt,
+            isAttacker,
+            isDefender: !isAttacker,
+        }
+    });
 });
 
 // Установить ставку налога (только лидер)

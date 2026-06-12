@@ -14,6 +14,7 @@ export default function GuildViewPage() {
     const [guild, setGuild] = useState<any>(null);
     const [members, setMembers] = useState<any[]>([]);
     const [myGuild, setMyGuild] = useState<any>(null);
+    const [war, setWar] = useState<any>(null);
     const [message, setMessage] = useState('');
 
     useEffect(() => { load(); }, [id]);
@@ -25,6 +26,7 @@ export default function GuildViewPage() {
             if (!r.ok) { setMessage(data.error || 'Ошибка'); return; }
             setGuild(data.guild);
             setMembers(data.members);
+            setWar(data.war || null);
         } catch { setMessage('Ошибка загрузки'); }
 
         // Проверяем свою гильдию
@@ -94,6 +96,37 @@ export default function GuildViewPage() {
                             </div>
                         )}
                     </Card>
+
+                    {/* Блок войны */}
+                    {war && (
+                        <Card className="mb-4 border-l-4 border-l-red-500">
+                            <h3 className="font-bold text-sm flex items-center gap-2 mb-2">
+                                <Icon icon="game-icons:crossed-swords" width="18" height="18" className="text-red-400" />
+                                ⚔️ Гильд-война
+                                <span className={`text-[0.6rem] px-1.5 py-0.5 rounded ${
+                                    war.status === 'pending' ? 'bg-yellow-900/50 text-yellow-400' : 'bg-red-900/50 text-red-400'
+                                }`}>
+                                    {war.status === 'pending' ? 'Ожидает ответа' : 'Активна'}
+                                </span>
+                            </h3>
+                            <div className="text-xs space-y-1">
+                                <p>
+                                    <span className="text-[var(--color-text-muted)]">Атакующая:</span>{' '}
+                                    <span className="text-[var(--color-text-primary)] font-bold">{war.attackerGuild.name}</span>
+                                </p>
+                                <p>
+                                    <span className="text-[var(--color-text-muted)]">Защищается:</span>{' '}
+                                    <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild.name}</span>
+                                </p>
+                                <p className="text-[var(--color-text-muted)]">
+                                    Объявлена: {new Date(war.declaredAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                </p>
+                                <p className="text-[var(--color-text-muted)]">
+                                    Окончание: {new Date(war.expiresAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                </p>
+                            </div>
+                        </Card>
+                    )}
 
                     <Card>
                         <h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3>

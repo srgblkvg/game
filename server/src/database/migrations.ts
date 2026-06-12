@@ -496,6 +496,21 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
   try { db.exec('ALTER TABLE guild_treasury_log ADD COLUMN type TEXT NOT NULL DEFAULT \'deposit\''); } catch {}
 
+  // --- Гильд-войны ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_wars (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    attackerGuildId INTEGER NOT NULL,
+    defenderGuildId INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    declaredAt TEXT NOT NULL DEFAULT (datetime('now')),
+    acceptedAt TEXT,
+    expiresAt TEXT NOT NULL,
+    endedAt TEXT,
+    winnerGuildId INTEGER,
+    FOREIGN KEY (attackerGuildId) REFERENCES guilds(id),
+    FOREIGN KEY (defenderGuildId) REFERENCES guilds(id)
+  )`); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }
