@@ -701,7 +701,7 @@ router.get('/guild/war/details', (req: any, res) => {
     const myGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(myGuildId) as any;
     const enemyGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(enemyGuildId) as any;
 
-    // Участники моей гильдии
+    // Участники моей гильдии (только кто был в гильдии на момент объявления войны)
     const myMembers = db.prepare(`
         SELECT u.id, u.username, u.level,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id) as attacksMade,
@@ -709,20 +709,20 @@ router.get('/guild/war/details', (req: any, res) => {
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id AND won = 0) as attacksLost,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id AND won = 0) as timesAttacked
         FROM guild_members gm JOIN users u ON gm.userId = u.id
-        WHERE gm.guildId = ?
+        WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt FROM guild_wars WHERE id = ?)
         ORDER BY gm.rank DESC, u.level DESC
-    `).all(war.id, war.id, war.id, war.id, myGuildId) as any[];
+    `).all(war.id, war.id, war.id, war.id, myGuildId, war.id) as any[];
 
-    // Участники вражеской гильдии (с проверкой защиты)
+    // Участники вражеской гильдии (с проверкой защиты, только до войны)
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
     const enemyMembers = db.prepare(`
         SELECT u.id, u.username, u.level,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as timesAttacked,
             (SELECT MAX(createdAt) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as lastAttackedAt
         FROM guild_members gm JOIN users u ON gm.userId = u.id
-        WHERE gm.guildId = ?
+        WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt FROM guild_wars WHERE id = ?)
         ORDER BY u.level DESC
-    `).all(war.id, war.id, enemyGuildId) as any[];
+    `).all(war.id, war.id, enemyGuildId, war.id) as any[];
 
     // Проверка защиты: если атаковали меньше часа назад
     const enemyWithProtection = enemyMembers.map((m: any) => {
@@ -816,6 +816,12 @@ router.post('/guild/war/attack', (req: any, res) => {
     // Проверка: цель во вражеской гильдии
     const targetMember = db.prepare('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?').get(enemyGuildId, targetId) as any;
     if (!targetMember) return res.status(400).json({ error: 'Цель не во вражеской гильдии' });
+
+    // Проверка: атакующий был в гильдии на момент объявления войны
+    if (member.joinedAt > war.declaredAt) return res.status(400).json({ error: 'Вы вступили в гильдию после объявления войны' });
+
+    // Проверка: цель была во вражеской гильдии на момент объявления войны
+    if (targetMember.joinedAt > war.declaredAt) return res.status(400).json({ error: 'Цель вступила в гильдию после объявления войны' });
 
     // Лимит: 3 атаки на атакующего
     const myAttacks = (db.prepare(
