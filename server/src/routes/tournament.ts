@@ -361,15 +361,18 @@ function autoAdvance(tournamentId: number) {
     }
 
     // Если турнир завершён или отменён — создаём новый для этого дивизиона (только official)
-    // через 1 час после завершения
+    // через 1 час после завершения ПОСЛЕДНЕГО турнира
     if ((t.status === 'completed' || t.status === 'cancelled') && t.type === 'official') {
         const existing = db.prepare(
             "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress')"
         ).get(t.division) as any;
         if (!existing) {
-            // Ждём час после завершения последнего турнира
-            if (t.completedAt) {
-                const completedTime = new Date(t.completedAt + 'Z').getTime();
+            // Ждём час после завершения ПОСЛЕДНЕГО турнира этого дивизиона
+            const lastCompleted = db.prepare(
+                "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status = 'completed' ORDER BY id DESC LIMIT 1"
+            ).get(t.division) as any;
+            if (lastCompleted?.completedAt) {
+                const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
                 const oneHourLater = completedTime + 3600 * 1000;
                 if (Date.now() < oneHourLater) {
                     console.log(`[autoAdvance] БЛОК: ${t.division} — ждём до ${new Date(oneHourLater).toISOString()}`);
