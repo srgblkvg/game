@@ -133,7 +133,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                 className={`flex flex-col gap-[2px] max-w-[85%] ${isOwn ? 'items-end' : 'items-start'}`}
                             >
                                 {group.map((msg) =>
-                                    msg.item && msg.item.type !== 'guild_invite' ? (
+                                    msg.item && msg.item.type !== 'guild_invite' && msg.item.type !== 'war_declared' ? (
                                         /* Item link bubble */
                                         <div
                                             key={msg.id}
