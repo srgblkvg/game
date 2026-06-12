@@ -520,6 +520,8 @@ router.get('/tournament', (req: any, res) => {
 
         return {
             ...t,
+            minLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.minLevel; })() : t.minLevel,
+            maxLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.maxLevel; })() : t.maxLevel,
             participantCount: participants.length,
             participants: participants.map((p: any) => ({
                 id: p.userId,
