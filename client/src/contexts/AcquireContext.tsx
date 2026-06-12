@@ -41,24 +41,24 @@ export function AcquireProvider({ children }: { children: ReactNode }) {
                     const img = getItemImage(t.item);
                     return (
                         <div key={t.id} style={{
-                            background: '#1e1e30', border: `2px solid ${color}`,
+                            background: 'var(--color-bg-card)', border: `2px solid ${color}`,
                             borderRadius: '10px', padding: '10px 14px',
                             display: 'flex', alignItems: 'center', gap: '10px',
-                            minWidth: '220px', boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
+                            minWidth: '220px', boxShadow: 'var(--shadow-card)',
                             animation: 'acquireToastIn 0.3s ease',
                         }}>
                             {img && (
                                 <img src={img} alt="" style={{
                                     width: 40, height: 40, borderRadius: '6px',
-                                    border: `1px solid ${color}`, background: '#111',
+                                    border: `1px solid ${color}`, background: 'var(--color-bg-input)',
                                 }} />
                             )}
                             <div>
                                 <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color }}>
                                     {t.item.name}
-                                    {t.quantity > 1 && <span style={{ color: '#aaa', marginLeft: '6px' }}>x{t.quantity}</span>}
+                                    {t.quantity > 1 && <span style={{ color: 'var(--color-text-muted)', marginLeft: '6px' }}>x{t.quantity}</span>}
                                 </div>
-                                <div style={{ fontSize: '0.7rem', color: '#aaa' }}>{t.action}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>{t.action}</div>
                             </div>
                         </div>
                     );
