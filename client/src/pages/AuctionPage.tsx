@@ -382,7 +382,7 @@ export default function AuctionPage() {
                 const pricePerItem = Math.ceil(totalPrice / stackCount);
                 // Цена за штуку для частичного выкупа — от выкупа (если есть)
                 const buyoutPerItem = lot.buyoutPrice ? Math.ceil(lot.buyoutPrice / stackCount) : pricePerItem;
-                const minBid = lot.currentBid ? Math.floor(lot.currentBid * 1.05) : lot.startPrice;
+                const minBid = lot.currentBid ? lot.currentBid + Math.max(1, Math.floor(lot.currentBid * 0.05)) : lot.startPrice;
                 const hoursLeft = Math.max(0, Math.ceil((lot.endsAt - Date.now() / 1000) / 3600));
 
                 return (
