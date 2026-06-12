@@ -96,8 +96,8 @@ export default function TournamentBanner() {
     }, []);
 
     if (loading) return (
-        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative">
-            <h3 className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-full text-[var(--color-text-accent)] text-base font-bold cursor-pointer hover:text-[var(--color-accent-info)] flex items-center gap-1 whitespace-nowrap z-10" onClick={(e) => { e.stopPropagation(); navigate('/tournament'); }}>
+        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl px-4 py-3 min-w-[210px]">
+            <h3 className="text-[var(--color-text-accent)] text-base font-bold cursor-pointer hover:text-[var(--color-accent-info)] flex items-center gap-1 whitespace-nowrap" onClick={(e) => { e.stopPropagation(); navigate('/tournament'); }}>
                 <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
             </h3>
             <p className="text-xs text-[var(--color-text-muted)]">Загрузка...</p>
@@ -125,8 +125,8 @@ export default function TournamentBanner() {
     }
 
     return (
-        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative">
-            <h3 className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-full text-[var(--color-text-accent)] text-base font-bold cursor-pointer hover:text-[var(--color-accent-info)] flex items-center gap-1 whitespace-nowrap z-10" onClick={(e) => { e.stopPropagation(); navigate('/tournament'); }}>
+        <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl px-4 py-3 min-w-[210px]">
+            <h3 className="text-[var(--color-text-accent)] text-base font-bold cursor-pointer hover:text-[var(--color-accent-info)] flex items-center gap-1 whitespace-nowrap" onClick={(e) => { e.stopPropagation(); navigate('/tournament'); }}>
                 <Icon icon="game-icons:trophy" width="18" height="18" /> Турниры
             </h3>
 
