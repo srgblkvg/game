@@ -19,7 +19,7 @@ const STAT_ICONS: Record<string, string> = {
 const BONUS_ICONS: Record<string, string> = {
   'crit': 'game-icons:crosshair',
   'dodge': 'game-icons:dodging',
-  'counter': 'game-icons:counter',
+  'counter': 'game-icons:riposte',
   'fullBlock': 'game-icons:shield-reflect',
 };
 
@@ -36,6 +36,7 @@ const STAT_LABELS: Record<string, string> = {
 
 export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats }: StatsOverlayProps) {
   const [flipped, setFlipped] = useState(false);
+  const [animating, setAnimating] = useState(false);
   const isMobile = compact === 'mobile' || compact === 'verySmall';
   const isVerySmall = compact === 'verySmall';
   const iconSize = isVerySmall ? '10' : isMobile ? '10' : '14';
@@ -47,18 +48,27 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
   const hasBonuses = baseStats && equipmentBonuses;
   const bonusKeys = ['s', 'a', 'd', 'm'] as const;
 
+  const handleFlip = () => {
+    setAnimating(true);
+    setTimeout(() => {
+      setFlipped(!flipped);
+      setTimeout(() => setAnimating(false), 50);
+    }, 150);
+  };
+
+  const overlayClass = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg z-[5] text-[var(--color-text-primary)] transition-all duration-200 ease-out ${
+    animating ? 'opacity-0 scale-90' : 'opacity-100 scale-100'
+  }`;
+
   if (flipped && hasBonuses) {
     return (
-      <div
-        style={{ padding, fontSize }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-bg-card)]/90 rounded-lg z-[1] text-[var(--color-text-primary)] leading-[1.3]"
-      >
+      <div style={{ padding, fontSize }} className={overlayClass + ' bg-[var(--color-bg-card)]/95'}>
         <div className="flex items-center gap-1 mb-1">
           <Icon
             icon="mdi:swap-horizontal"
             width={iconSize} height={iconSize}
             className="cursor-pointer text-[var(--color-accent-info)] hover:text-[var(--color-text-accent)]"
-            onClick={() => setFlipped(false)}
+            onClick={handleFlip}
           />
           <span className="text-[0.6rem] text-[var(--color-text-muted)]">Бонусы</span>
         </div>
@@ -106,17 +116,14 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
   ];
 
   return (
-    <div
-      style={{ padding, fontSize }}
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-bg-card)]/70 rounded-lg z-[1] text-[var(--color-text-primary)] leading-[1.2]"
-    >
+    <div style={{ padding, fontSize }} className={overlayClass + ' bg-[var(--color-bg-card)]/70'}>
       {hasBonuses && (
         <div className="flex justify-end mb-0.5">
           <Icon
             icon="mdi:swap-horizontal"
             width={iconSize} height={iconSize}
             className="cursor-pointer text-[var(--color-accent-info)] hover:text-[var(--color-text-accent)]"
-            onClick={() => setFlipped(true)}
+            onClick={handleFlip}
           />
         </div>
       )}
