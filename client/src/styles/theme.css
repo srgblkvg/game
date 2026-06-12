@@ -17,6 +17,12 @@ html {
   --color-overlay-card: rgba(0, 0, 0, 0.5);
   --color-overlay-text: rgba(0, 0, 0, 0.6);
 
+  /* Война */
+  --color-war-active-text: #f87171;
+  --color-war-active-bg: rgba(220, 38, 38, 0.25);
+  --color-war-pending-text: #facc15;
+  --color-war-pending-bg: rgba(202, 138, 4, 0.25);
+
   /* Текст */
   --color-text-primary: #eee;
   --color-text-secondary: #ccc;
@@ -58,6 +64,11 @@ html {
   --color-bg-hover: rgba(0, 0, 0, 0.06);
   --color-overlay-card: rgba(255, 255, 255, 0.5);
   --color-overlay-text: rgba(255, 255, 255, 0.6);
+
+  --color-war-active-text: #991b1b;
+  --color-war-active-bg: rgba(220, 38, 38, 0.15);
+  --color-war-pending-text: #854d0e;
+  --color-war-pending-bg: rgba(202, 138, 4, 0.15);
 
   --color-text-primary: #2c1810;
   --color-text-secondary: #4a3728;

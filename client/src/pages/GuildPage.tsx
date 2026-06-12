@@ -277,11 +277,14 @@ export default function GuildPage() {
                     {war && (
                         <Card className="mb-4 border-l-4 border-l-red-500">
                             <h3 className="font-bold text-sm flex items-center gap-2 mb-2">
-                                <Icon icon="game-icons:crossed-swords" width="18" height="18" className="text-red-400" />
+                                <Icon icon="game-icons:crossed-swords" width="18" height="18" style={{color: 'var(--color-war-active-text)'}} />
                                 ⚔️ Гильд-война
-                                <span className={`text-[0.6rem] px-1.5 py-0.5 rounded ${
-                                    war.status === 'pending' ? 'bg-yellow-900/50 text-yellow-400' : 'bg-red-900/50 text-red-400'
-                                }`}>
+                                <span className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold"
+                                    style={{
+                                        color: war.status === 'pending' ? 'var(--color-war-pending-text)' : 'var(--color-war-active-text)',
+                                        backgroundColor: war.status === 'pending' ? 'var(--color-war-pending-bg)' : 'var(--color-war-active-bg)',
+                                    }}
+                                >
                                     {war.status === 'pending' ? 'Ожидает ответа' : 'Активна'}
                                 </span>
                             </h3>
@@ -306,7 +309,7 @@ export default function GuildPage() {
                                     Окончание: {new Date(war.expiresAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                 </p>
                                 {war.status === 'active' && (
-                                    <p className="text-red-400 text-[0.65rem] mt-1">💰 Казна заморожена до конца войны</p>
+                                    <p className="text-[0.65rem] mt-1" style={{color: 'var(--color-war-active-text)'}}>💰 Казна заморожена до конца войны</p>
                                 )}
                             </div>
                             {/* Кнопки для лидера защищающейся гильдии (только при pending) */}
@@ -577,7 +580,7 @@ export default function GuildPage() {
                                         onClick={() => navigate(`/guild/${g.id}`)}>🏚️ {g.name}</h4>
                                     <p className="text-xs text-[var(--color-text-muted)]">
                                         Ур.{g.level} • {g.memberCount} уч. • {g.leaderName}
-                                        {g.warStatus && <span className="ml-2 text-red-400">⚔️ В войне</span>}
+                                        {g.warStatus && <span className="ml-2" style={{color: 'var(--color-war-active-text)'}}>⚔️ В войне</span>}
                                     </p>
                                 </div>
                                 <div className="flex gap-1 items-center">
