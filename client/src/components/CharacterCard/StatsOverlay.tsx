@@ -25,8 +25,8 @@ const BONUS_ICONS: Record<string, string> = {
 
 const BONUS_LABELS: Record<string, string> = {
   'crit': 'Крит',
-  'dodge': 'Уклон',
-  'counter': 'Контр',
+  'dodge': 'Уклонение',
+  'counter': 'Контрудар',
   'fullBlock': 'Блок',
 };
 
