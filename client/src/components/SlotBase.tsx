@@ -52,15 +52,14 @@ export default function SlotBase({
         backgroundColor: color,
       }
     : {
-        backgroundColor: title ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.6)',
+        backgroundColor: title ? 'var(--color-bg-input)' : 'var(--color-bg-input)',
       };
 
-  const slotClassName = `w-[44px] h-[44px] rounded flex items-center justify-center relative font-bold text-white text-[0.65rem] ${item ? 'cursor-pointer' : 'cursor-default'}`;
+  const slotClassName = `w-[44px] h-[44px] rounded flex items-center justify-center relative font-bold text-[var(--color-text-muted)] text-[0.65rem] ${item ? 'cursor-pointer' : 'cursor-default'}`;
   const slotStyle: React.CSSProperties = {
     ...bgStyle,
     ...style,
     ...customStyle,
-    textShadow: '0 0 2px #000',
   };
 
   const iconName = title ? EQUIPMENT_ICONS[title] : null;
@@ -87,7 +86,7 @@ export default function SlotBase({
         iconName ? (
           <Icon icon={iconName} width="24" height="24" className="opacity-50" />
         ) : (
-          <span className="text-white/35 text-[0.55rem] text-center leading-[1.1] pointer-events-none">Пусто</span>
+          <span className="text-[var(--color-text-muted)] text-[0.55rem] text-center leading-[1.1] pointer-events-none">Пусто</span>
         )
       )}
     </div>
