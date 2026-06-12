@@ -158,6 +158,12 @@ export default function ShopPage() {
                                 </div>
 
                                 {isExpanded && (
+                                    <>
+                                    {slot === 'ring' && (
+                                        <p className="text-xs text-[var(--color-accent-warning)] bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mt-2">
+                                            ⚠️ Нельзя надеть два одинаковых кольца.
+                                        </p>
+                                    )}
                                     <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(150px,1fr))] mt-2 pt-2 border-t border-[var(--color-border-light)]">
                                         {slotItems.map((item: any) => {
                                             const price = item.cost ?? item.price ?? 100 * Math.pow(10, item.rarity_id);
@@ -192,6 +198,7 @@ export default function ShopPage() {
                                             );
                                         })}
                                     </div>
+                                    </>
                                 )}
                             </Card>
                         );
