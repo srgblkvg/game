@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import BackButton from '../components/BackButton';
+import BackButton from '../../components/BackButton';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGame } from '../../contexts/GameContext';
