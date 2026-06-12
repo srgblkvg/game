@@ -55,7 +55,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
       >
         <div className="flex items-center gap-1 mb-1">
           <Icon
-            icon="game-icons:swap"
+            icon="mdi:swap-horizontal"
             width={iconSize} height={iconSize}
             className="cursor-pointer text-[var(--color-accent-info)] hover:text-[var(--color-text-accent)]"
             onClick={() => setFlipped(false)}
@@ -113,7 +113,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
       {hasBonuses && (
         <div className="flex justify-end mb-0.5">
           <Icon
-            icon="game-icons:swap"
+            icon="mdi:swap-horizontal"
             width={iconSize} height={iconSize}
             className="cursor-pointer text-[var(--color-accent-info)] hover:text-[var(--color-text-accent)]"
             onClick={() => setFlipped(true)}
