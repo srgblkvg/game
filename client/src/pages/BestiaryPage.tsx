@@ -62,6 +62,7 @@ export default function BestiaryPage() {
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { stepsRef.current = battleSteps; }, [battleSteps]);
   useEffect(() => { if (!user) navigate('/login'); }, [user, navigate]);
+  useEffect(() => { if (character?.activeJob) navigate('/jobs'); }, [character?.activeJob, navigate]);
   useEffect(() => { loadMobs(); updateCooldown(); }, []);
   useEffect(() => {
     const handler = () => { setIsMobile(window.innerWidth < 600); setIsVerySmall(window.innerWidth < 420); };

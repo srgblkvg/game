@@ -9,13 +9,14 @@ interface MainBarProps {
     onArenaClick: () => void;
     selectedInventoryItemId?: string | null;
     onInventoryItemClick?: (item: any) => void;
+    hasActiveJob?: boolean;
 }
 
-export default function MainBar({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, selectedInventoryItemId, onInventoryItemClick }: MainBarProps) {
+export default function MainBar({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, selectedInventoryItemId, onInventoryItemClick, hasActiveJob }: MainBarProps) {
     return (
         <div className="flex-1 min-w-[280px] flex flex-col gap-6 w-full sm:w-auto">
             <Inventory selectedItemId={selectedInventoryItemId} onItemClick={onInventoryItemClick} />
-            <Actions canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} />
+            <Actions canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} hasActiveJob={hasActiveJob} />
         </div>
     );
 }

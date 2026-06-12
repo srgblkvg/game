@@ -81,6 +81,7 @@ export default function HomePage() {
           onArenaClick={handleArenaClick}
           selectedInventoryItemId={selectedInventoryItemId}
           onInventoryItemClick={handleInventoryItemClick}
+          hasActiveJob={!!character?.activeJob}
         />
         <RightSidebar />
       </div>

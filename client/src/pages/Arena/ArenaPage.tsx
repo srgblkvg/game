@@ -30,6 +30,9 @@ export default function ArenaPage() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
+  useEffect(() => { if (!user) navigate('/login'); }, [user, navigate]);
+  useEffect(() => { if (character?.activeJob) navigate('/jobs'); }, [character?.activeJob, navigate]);
+
   const {
     opponent,
     battleSteps,
