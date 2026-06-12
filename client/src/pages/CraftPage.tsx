@@ -289,7 +289,7 @@ export default function CraftPage() {
     return (
         <div className="px-4 py-4 min-h-screen">
             <BackButton />
-            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:anvil" width="22" height="22" className="inline mr-2"/>Крафт</h2>
+            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:anvil" width="22" height="22" className="inline mr-2"/>Ремесло</h2>
 
             {/* Инструкция по улучшению */}
             <Card className="mb-4">
@@ -310,7 +310,7 @@ export default function CraftPage() {
                         <div>
                             <h4 className="font-bold text-[var(--color-text-primary)]">📋 Как улучшить:</h4>
                             <ol className="list-decimal pl-4 mt-1 space-y-0.5">
-                                <li>Перетащите <b>предмет</b> и <b>камень улучшения</b> той же редкости в слоты крафта</li>
+                                <li>Перетащите <b>предмет</b> и <b>камень улучшения</b> той же редкости в слоты ремесла</li>
                                 <li>Нажмите <b>«Улучшить»</b></li>
                                 <li>При успехе — предмет получает +1 уровень, характеристики увеличиваются на <b>+10% за каждый уровень</b></li>
                                 <li>При неудаче на уровнях +1..+3 — теряется только камень</li>
@@ -333,7 +333,7 @@ export default function CraftPage() {
                                 <li>+9: 2%</li>
                                 <li>+10: 1%</li>
                             </ul>
-                            <p className="mt-1">Стоимость и шансы настраиваются в админ-панели (Крафт → Шансы улучшения).</p>
+                            <p className="mt-1">Стоимость и шансы настраиваются в админ-панели (Ремесло → Шансы улучшения).</p>
                         </div>
 
                         <div>
@@ -359,7 +359,7 @@ export default function CraftPage() {
             />
 
             <div className="flex gap-8 flex-wrap mt-4">
-                {/* Крафт-блок */}
+                {/* Ремесло-блок */}
                 <div className="flex-shrink-0 w-full max-w-[256px] mx-auto bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-light)] rounded-xl p-4 flex flex-col gap-2">
                     {/* Сетка слотов */}
                     <div className="grid grid-cols-[repeat(3,44px)] grid-rows-[repeat(3,44px)] gap-1 justify-center">

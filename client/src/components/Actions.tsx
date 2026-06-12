@@ -83,7 +83,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
         return () => window.removeEventListener('hashchange', update);
     }, []);
 
-    const questToCard: Record<string, string> = { hunt: 'Охота', arena: 'Арена', job: 'Работы', craft: 'Крафт', auction: 'Аукцион' };
+    const questToCard: Record<string, string> = { hunt: 'Охота', arena: 'Арена', job: 'Работы', craft: 'Ремесло', auction: 'Аукцион' };
     const highlightCard = highlightedCard ? questToCard[highlightedCard] : null;
 
     useEffect(() => {

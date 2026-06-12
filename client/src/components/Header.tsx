@@ -17,7 +17,7 @@ const breadcrumbMap: Record<string, string> = {
     tavern: 'Трактир',
     shop: 'Магазин',
     bank: 'Банк',
-    craft: 'Крафт',
+    craft: 'Ремесло',
     auction: 'Аукцион',
     jobs: 'Работы',
     history: 'Сводка',
@@ -246,7 +246,7 @@ export default function Header() {
                                         onClick={() => setMenuOpen(false)}
                                     >
                                         <Icon icon="game-icons:open-book" width="16" height="16" className="text-[var(--color-accent-success)]" />
-                                        Wiki
+                                        Вики
                                     </a>
                                     <button
                                         onClick={() => { navigate('/feedback'); setMenuOpen(false); }}

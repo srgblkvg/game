@@ -23,7 +23,7 @@ const tabs = [
     { key: 'tournaments', label: 'Турниры' },
     { key: 'game', label: 'Игра' },
     { key: 'chat', label: 'Чат' },
-    { key: 'craft', label: 'Крафт' },
+    { key: 'craft', label: 'Ремесло' },
     { key: 'online', label: 'Онлайн' },
     { key: 'feedback', label: 'Обращения' },
 ] as const;

@@ -100,9 +100,9 @@ export default function ProfilePage() {
                     <StatItem icon="game-icons:cash" label="Заработано" value={formatMoney(profile.totalJobMoney || 0)} />
                     <StatItem icon="game-icons:hourglass" label="Потрачено времени" value={(() => { const s = profile.totalJobSeconds || 0; const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); return h>0 ? `${h} ч ${m} мин` : `${m} мин`; })()} />
 
-                    {/* Крафт */}
+                    {/* Ремесло */}
                     <h3 className="text-xs font-bold text-[var(--color-accent-warning)] uppercase tracking-wider mt-3">
-                        ⚒️ Крафт
+                        ⚒️ Ремесло
                     </h3>
                     <StatItem icon="game-icons:anvil" label="Создано" value={profile.craftCreated || 0} />
                     <StatItem icon="game-icons:arrow-up" label="Улучшено" value={profile.craftUpgraded || 0} />

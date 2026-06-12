@@ -62,7 +62,7 @@ export default function HomePage() {
       {character.money === 0 && (!character.inventory || character.inventory.length === 0) && (
         <div className="mb-4 p-3 bg-[rgba(52,152,219,0.1)] border border-[rgba(52,152,219,0.3)] rounded-lg text-sm text-[var(--color-text-secondary)] text-center">
           👋 Добро пожаловать в MMO Arena!<br />
-          Рекомендуем ознакомиться с <a href="/wiki/" target="_blank" className="text-[var(--color-accent-info)] underline font-bold">📖 гайдом для новичков</a> — там всё про охоту, арену, гильдии, крафт и чат.
+          Рекомендуем ознакомиться с <a href="/wiki/" target="_blank" className="text-[var(--color-accent-info)] underline font-bold">📖 гайдом для новичков</a> — там всё про охоту, арену, гильдии, ремесло и чат.
         </div>
       )}
       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-6 justify-center items-center sm:items-start">
