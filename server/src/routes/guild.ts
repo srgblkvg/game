@@ -832,23 +832,25 @@ router.post('/guild/war/attack', (req: any, res) => {
     const aHp = aStats.hp;
     const dHp = dStats.hp;
 
-    // Простой бой: сила атаки = s, защита = d
+    // Простой бой: baseDamage = s, защита снижает на d*0.4
     let aCurrentHp = aHp;
     let dCurrentHp = dHp;
     const log: string[] = [];
 
-    log.push(`⚔ ${attacker.username} (HP: ${aHp}) vs ${defender.username} (HP: ${dHp})`);
+    log.push(`⚔ ${attacker.username} (HP: ${aHp}, сила: ${aStats.s}) vs ${defender.username} (HP: ${dHp}, защита: ${dStats.d})`);
 
     let round = 0;
     while (aCurrentHp > 0 && dCurrentHp > 0 && round < 50) {
         round++;
         // Атакующий бьёт
-        const aDmg = Math.max(1, aStats.s - dStats.d + Math.floor(Math.random() * 6));
+        let aDmg = aStats.s + Math.floor(Math.random() * 4);
+        aDmg = Math.max(1, Math.round(aDmg - dStats.d * 0.3));
         dCurrentHp -= aDmg;
         log.push(`${attacker.username} наносит ${aDmg} урона (${defender.username}: ${Math.max(0, dCurrentHp)}/${dHp})`);
         if (dCurrentHp <= 0) break;
         // Защитник бьёт
-        const dDmg = Math.max(1, dStats.s - aStats.d + Math.floor(Math.random() * 6));
+        let dDmg = dStats.s + Math.floor(Math.random() * 4);
+        dDmg = Math.max(1, Math.round(dDmg - aStats.d * 0.3));
         aCurrentHp -= dDmg;
         log.push(`${defender.username} наносит ${dDmg} урона (${attacker.username}: ${Math.max(0, aCurrentHp)}/${aHp})`);
     }
