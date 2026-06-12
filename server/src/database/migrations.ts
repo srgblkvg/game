@@ -533,6 +533,45 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   // --- completedAt для турниров ---
   try { db.exec('ALTER TABLE tournaments ADD COLUMN completedAt DATETIME'); } catch {}
 
+  // --- Меняем тип createdAt в tournaments с INTEGER на DATETIME ---
+  {
+    const colInfo = db.prepare("PRAGMA table_info(tournaments)").all() as any[];
+    const createdAtCol = colInfo.find((c: any) => c.name === 'createdAt');
+    if (createdAtCol && createdAtCol.type === 'INTEGER') {
+      try {
+        db.exec('DROP TABLE IF EXISTS tournaments_new');
+        db.exec(`CREATE TABLE tournaments_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          division TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'registration',
+          registrationStart INTEGER NOT NULL,
+          registrationEnd INTEGER NOT NULL,
+          prizePool INTEGER DEFAULT 0,
+          createdAt DATETIME NOT NULL DEFAULT (datetime('now'))
+        )`);
+        // Копируем данные, конвертируя createdAt
+        const oldData = db.prepare('SELECT * FROM tournaments').all() as any[];
+        for (const t of oldData) {
+          const createdAtStr = typeof t.createdAt === 'number' && t.createdAt > 1000000000
+            ? new Date(t.createdAt * 1000).toISOString().replace('T', ' ').slice(0, 19)
+            : String(t.createdAt || datetime('now'));
+          db.prepare('INSERT INTO tournaments_new (id, division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?,?,?,?,?,?,?)')
+            .run(t.id, t.division, t.status, t.registrationStart, t.registrationEnd, t.prizePool, createdAtStr);
+        }
+        // Копируем остальные колонки
+        for (const col of ['type', 'entryFee', 'name', 'minLevel', 'maxLevel', 'creatorId', 'basePool', 'maxPlayers', 'completedAt']) {
+          try { db.exec(`ALTER TABLE tournaments_new ADD COLUMN ${col}`); } catch {}
+        }
+        const extraCols = colInfo.filter((c: any) => !['id','division','status','registrationStart','registrationEnd','prizePool','createdAt'].includes(c.name));
+        for (const col of extraCols) {
+          db.exec(`UPDATE tournaments_new SET ${col.name} = (SELECT ${col.name} FROM tournaments WHERE id = tournaments_new.id)`);
+        }
+        db.exec('DROP TABLE tournaments');
+        db.exec('ALTER TABLE tournaments_new RENAME TO tournaments');
+      } catch {}
+    }
+  }
+
   // --- rarity_id в upgrade_chances (пересоздаём) ---
   // Проверяем, есть ли уже колонка rarity_id (миграция уже выполнена)
   const hasRarityCol = (db.prepare("PRAGMA table_info(upgrade_chances)").all() as any[]).some((c: any) => c.name === 'rarity_id');

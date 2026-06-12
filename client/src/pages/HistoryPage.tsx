@@ -54,7 +54,7 @@ export default function HistoryPage() {
         ...battles.map(b=>({id:`b-${b.id}`,type:'battle',ts:new Date(b.createdAt).getTime(),data:b})),
         ...pveBattles.map(b=>({id:`p-${b.id}`,type:'pve',ts:new Date(b.createdAt).getTime(),data:b})),
         ...jobHistory.map(j=>({id:`j-${j.id}`,type:'job',ts:new Date(j.finishedAt).getTime(),data:j})),
-        ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:new Date(typeof t.createdAt==='number'?t.createdAt*1000:t.createdAt).getTime(),data:t})),
+        ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:new Date(t.createdAt).getTime(),data:t})),
         ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt).getTime(),data:q})),
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
     ].sort((a,b)=>b.ts-a.ts);
@@ -114,7 +114,7 @@ export default function HistoryPage() {
     const renderTournamentRow = (t: any) => {
         const ss = t.snapshotStats?JSON.parse(t.snapshotStats):null;
         const canc = t.status==='cancelled';
-        return <EntryRow time={fmt(typeof t.createdAt==='number'?t.createdAt*1000:t.createdAt)}>
+        return <EntryRow time={fmt(t.createdAt)}>
             <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{t.division==='custom'?t.name||'Турнир':t.division}»{canc?' отменён':' завершён'}</span>
             {canc?<span className="text-[var(--color-text-muted)] ml-1">Не набралось игроков</span>:
             ss?<span className="text-[var(--color-accent-success)] font-bold ml-1">{ss.place}-е место {ss.prize>0?formatMoney(ss.prize):'без приза'}</span>:

@@ -379,8 +379,8 @@ function autoAdvance(tournamentId: number) {
             const divConfig = divisions.find(d => d.name === t.division)!;
             const now2 = Math.floor(Date.now() / 1000);
             db.prepare(
-                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
-            ).run(t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, now2);
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, datetime(?))'
+            ).run(t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, new Date().toISOString());
         }
     }
 }
@@ -419,8 +419,8 @@ function getOrCreateTournament(type?: string) {
                 if (Date.now() < completedTime + 3600 * 1000) continue; // ещё не прошёл час
             }
             db.prepare(
-                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, ?, ?)'
-            ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, now, 'official');
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, datetime(?), ?)'
+            ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, new Date().toISOString(), 'official');
         }
     }
 
@@ -491,7 +491,7 @@ router.get('/tournament', (req: any, res) => {
     // Автопродвижение
     const allForAdvance = db.prepare(
         "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress', 'completed') AND createdAt > ? ORDER BY id DESC"
-    ).all(now - 86400) as any[];
+    ).all(new Date(Date.now() - 86400000).toISOString()) as any[];
     for (const t of allForAdvance) {
         autoAdvance(t.id);
     }
@@ -696,8 +696,8 @@ router.post('/tournament/create-custom', (req: any, res) => {
     let result: any;
     try {
         result = db.prepare(
-            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        ).run('custom', 'registration', now, regEnd, prizePool + entryFee, now, 'custom', userId, entryFee, name, minLvl, maxLvl, prizePool);
+            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool) VALUES (?, ?, ?, ?, ?, datetime(?), ?, ?, ?, ?, ?, ?, ?)'
+        ).run('custom', 'registration', now, regEnd, prizePool + entryFee, new Date().toISOString(), 'custom', userId, entryFee, name, minLvl, maxLvl, prizePool);
     } catch (e: any) {
         return res.status(500).json({ error: 'Ошибка создания турнира: ' + e.message });
     }
