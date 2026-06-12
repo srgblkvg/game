@@ -38,7 +38,7 @@ export default function GuildRatingPage() {
                                     <h4 className="font-bold text-sm hover:text-[var(--color-accent-info)] transition-colors">🏚️ {g.name}</h4>
                                     <div className="text-xs text-[var(--color-text-muted)] space-y-0.5 mt-0.5">
                                         <p>Уровень: {g.level}</p>
-                                        <p>Участники: {g.memberCount}</p>
+                                        <p>Участники: {g.memberCount}/20</p>
                                         <p>Казна: {(g.treasury || 0).toLocaleString()} серебра</p>
                                         <p>
                                             Лидер:{' '}
@@ -49,12 +49,16 @@ export default function GuildRatingPage() {
                                                 👑 {g.leaderName}
                                             </span>
                                         </p>
-                                        {g.warStatus && (
-                                            <p className="text-[var(--color-war-active-text)]">
-                                                ⚔️ {g.warStatus === 'active' ? 'Воюет с' : 'Ожидает ответа от'} «{g.warOpponent}»
-                                            </p>
-                                        )}
                                     </div>
+                                    {g.warStatus && (
+                                        <div className="mt-1.5 text-xs rounded p-1.5"
+                                            style={{
+                                                color: 'var(--color-war-active-text)',
+                                                backgroundColor: 'var(--color-war-active-bg)',
+                                            }}>
+                                            ⚔️ {g.warStatus === 'active' ? 'Воюет с' : 'Ожидает ответа от'} «{g.warOpponent}»
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             {isMyGuild && (
