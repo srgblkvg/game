@@ -104,7 +104,7 @@ export default function LoginPage() {
                         <p className="text-sm text-[var(--color-text-muted)] mb-2">
                             Введите код подтверждения, отправленный на почту
                         </p>
-                        <p className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-2 mb-3">
+                        <p className="text-xs text-[var(--color-accent-warning)] bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mb-3">
                             ⚠ Письмо может попасть в спам. Если не пришло — проверьте папку «Спам».
                         </p>
                         <input
@@ -119,8 +119,8 @@ export default function LoginPage() {
                         <Button variant="danger" fullWidth onClick={handleVerify} disabled={code.length !== 6 || loading}>
                             {loading ? '...' : 'Подтвердить'}
                         </Button>
-                        {resendMsg && <p className={`text-sm mt-2 ${resendMsg.includes('отправлен') ? 'text-green-400' : 'text-red-500'}`}>{resendMsg}</p>}
-                        {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+                        {resendMsg && <p className={`text-sm mt-2 ${resendMsg.includes('отправлен') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{resendMsg}</p>}
+                        {error && <p className="text-[var(--color-accent-danger)] mt-2 text-sm">{error}</p>}
                         <div className="flex gap-2 mt-3">
                             <button onClick={handleResend} disabled={loading} className="flex-1 text-sm text-[var(--color-accent-info)] hover:underline">
                                 Отправить код повторно
@@ -160,7 +160,7 @@ export default function LoginPage() {
                         <Button variant="danger" fullWidth onClick={handleLogin} disabled={loading}>
                             {loading ? '...' : 'Войти'}
                         </Button>
-                        {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+                        {error && <p className="text-[var(--color-accent-danger)] mt-2 text-sm">{error}</p>}
 
                         <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
                             Нет аккаунта?{' '}

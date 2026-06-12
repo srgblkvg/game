@@ -174,7 +174,7 @@ export default function AccountPage() {
                             <p className="text-sm text-[var(--color-text-muted)] mb-2">
                                 Код отправлен на <span className="text-[var(--color-text-primary)]">{guestEmail}</span>
                             </p>
-                            <p className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-2 mb-3">
+                            <p className="text-xs text-[var(--color-accent-warning)] bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mb-3">
                                 ⚠ Письмо может попасть в спам. Если не пришло — проверьте папку «Спам».
                             </p>
                             <input
@@ -189,8 +189,8 @@ export default function AccountPage() {
                             <Button variant="danger" fullWidth onClick={handleGuestVerify} disabled={guestCode.length !== 6 || guestLoading}>
                                 {guestLoading ? '...' : 'Подтвердить'}
                             </Button>
-                            {guestMsg && <p className="text-red-500 mt-2 text-sm">{guestMsg}</p>}
-                            {guestResendMsg && <p className={`text-sm mt-2 ${guestResendMsg.includes('отправлен') ? 'text-green-400' : 'text-red-500'}`}>{guestResendMsg}</p>}
+                            {guestMsg && <p className="text-[var(--color-accent-danger)] mt-2 text-sm">{guestMsg}</p>}
+                            {guestResendMsg && <p className={`text-sm mt-2 ${guestResendMsg.includes('отправлен') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{guestResendMsg}</p>}
                             <div className="flex gap-2 mt-3">
                                 <button onClick={handleGuestResend} disabled={guestLoading} className="flex-1 text-sm text-[var(--color-accent-info)] hover:underline">
                                     Отправить код повторно
@@ -240,7 +240,7 @@ export default function AccountPage() {
                             <Button variant="danger" fullWidth onClick={handleRegisterGuest} disabled={!guestUsername || !guestEmail || !guestPassword || guestLoading}>
                                 {guestLoading ? '...' : 'Зарегистрироваться'}
                             </Button>
-                            {guestMsg && <p className="text-red-500 mt-2 text-sm">{guestMsg}</p>}
+                            {guestMsg && <p className="text-[var(--color-accent-danger)] mt-2 text-sm">{guestMsg}</p>}
                         </>
                     )}
                 </Card>
@@ -254,7 +254,7 @@ export default function AccountPage() {
                     <input type="text" placeholder="Новое имя" value={newUsername} onChange={e => setNewUsername(e.target.value)} className={inputClass} required />
                     <Button variant="primary" size="sm" type="submit">Сохранить</Button>
                 </form>
-                {usernameMsg && <p className={`mt-2 text-sm ${usernameMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{usernameMsg}</p>}
+                {usernameMsg && <p className={`mt-2 text-sm ${usernameMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{usernameMsg}</p>}
             </Card>
             )}
 
@@ -268,7 +268,7 @@ export default function AccountPage() {
                     <p className="text-xs text-[var(--color-text-muted)] mb-2">Минимум 8 символов, цифра и спецсимвол</p>
                     <Button variant="primary" size="sm" type="submit">Сохранить</Button>
                 </form>
-                {passwordMsg && <p className={`mt-2 text-sm ${passwordMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{passwordMsg}</p>}
+                {passwordMsg && <p className={`mt-2 text-sm ${passwordMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{passwordMsg}</p>}
             </Card>
             )}
 
@@ -293,7 +293,7 @@ export default function AccountPage() {
                         Женский
                     </Button>
                 </div>
-                {genderMsg && <p className={`mt-2 text-sm ${genderMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>{genderMsg}</p>}
+                {genderMsg && <p className={`mt-2 text-sm ${genderMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{genderMsg}</p>}
             </Card>
             )}
 
@@ -314,7 +314,7 @@ export default function AccountPage() {
                     </Button>
                 ) : (
                     <Card>
-                        <h3 className="font-bold mb-2 text-red-500">Удаление аккаунта</h3>
+                        <h3 className="font-bold mb-2 text-[var(--color-accent-danger)]">Удаление аккаунта</h3>
                         <p className="text-sm text-[var(--color-text-muted)] mb-3">
                             Это действие необратимо. Все данные будут удалены: персонаж, история боёв, инвентарь.
                         </p>
@@ -334,7 +334,7 @@ export default function AccountPage() {
                                 </Button>
                             </div>
                         </form>
-                        {deleteMsg && <p className="mt-2 text-sm text-red-500">{deleteMsg}</p>}
+                        {deleteMsg && <p className="mt-2 text-sm text-[var(--color-accent-danger)]">{deleteMsg}</p>}
                     </Card>
                 )}
             </div>

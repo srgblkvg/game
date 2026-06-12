@@ -115,7 +115,7 @@ export default function StatAllocation() {
           )}
 
           {msg && (
-            <div className={`text-[0.65rem] mt-1 ${msg.includes('Применено') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>
+            <div className={`text-[0.65rem] mt-1 ${msg.includes('Применено') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>
               {msg}
             </div>
           )}

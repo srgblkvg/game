@@ -305,7 +305,7 @@ export default function CraftPage() {
                                 <li>Перетащите <b>предмет</b> и <b>камень улучшения</b> той же редкости в слоты крафта</li>
                                 <li>Нажмите <b>«Улучшить»</b></li>
                                 <li>При успехе — предмет получает +1 уровень, а характеристики увеличиваются на <b>+5% за каждый уровень</b></li>
-                                <li>При неудаче — <span className="text-red-500">предмет разрушается</span>, вы получаете материал той же редкости</li>
+                                <li>При неудаче — <span className="text-[var(--color-accent-danger)]">предмет разрушается</span>, вы получаете материал той же редкости</li>
                             </ol>
                         </div>
 
@@ -398,7 +398,7 @@ export default function CraftPage() {
                             <div>Улучшение до уровня +{upgradeInfo.nextLevel}</div>
                             <div>Шанс: {upgradeInfo.chance}%</div>
                             <div>Стоимость: {formatMoney(upgradeInfo.cost)}</div>
-                            <div className="text-red-500 font-bold mt-1">При неудаче предмет будет разрушен!!!</div>
+                            <div className="text-[var(--color-accent-danger)] font-bold mt-1">При неудаче предмет будет разрушен!!!</div>
                         </div>
                     )}
 

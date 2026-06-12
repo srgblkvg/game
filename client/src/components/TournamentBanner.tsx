@@ -122,7 +122,7 @@ export default function TournamentBanner() {
                     const label = w.type === 'custom' ? (w.name || 'Турнир') : DIVISION_LABELS[w.division] || w.division;
                     const secLeft = w.registrationEnd - now;
                     return (
-                        <div key={w.id} className="text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded p-1.5">
+                        <div key={w.id} className="text-xs text-[var(--color-accent-warning)] bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-1.5">
                             ⏰ {label}: регистрация закроется через {formatTimer(Math.max(0, secLeft))}!
                         </div>
                     );

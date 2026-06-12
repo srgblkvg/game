@@ -60,7 +60,7 @@ export default function AdminBattles() {
                     ))}
                 </div>
                 <div className="flex gap-4 justify-between mt-3 text-sm">
-                    <span className={selected.winnerId === selected.attackerId ? 'text-[var(--color-accent-success)] font-bold' : 'text-red-500 font-bold'}>
+                    <span className={selected.winnerId === selected.attackerId ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-accent-danger)] font-bold'}>
                         {selected.winnerId === selected.attackerId ? '🏆 Победил атакующий' : '💀 Победил защитник'}
                     </span>
                     <span>Опыт: +{selected.expGained || 0}</span>

@@ -65,8 +65,8 @@ export default function RatingPage() {
                             <ul className="list-disc pl-4 mt-1 space-y-0.5">
                                 <li>Победа над равным: <span className="text-[var(--color-accent-success)]">+20</span></li>
                                 <li>Победа над более сильным: <span className="text-[var(--color-accent-success)]">до +34</span></li>
-                                <li>Поражение от слабого: <span className="text-red-500">до −34</span></li>
-                                <li>Поражение от сильного: <span className="text-red-500">−6</span></li>
+                                <li>Поражение от слабого: <span className="text-[var(--color-accent-danger)]">до −34</span></li>
+                                <li>Поражение от сильного: <span className="text-[var(--color-accent-danger)]">−6</span></li>
                             </ul>
                         </div>
 
@@ -92,9 +92,9 @@ export default function RatingPage() {
                             <h4 className="font-bold text-[var(--color-text-primary)] mb-1">📉 Затухание рейтинга</h4>
                             <p>Если вы не участвуете в PvP-боях, рейтинг начинает падать:</p>
                             <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>7+ дней без боёв: <span className="text-red-500">−5 в день</span></li>
-                                <li>14+ дней: <span className="text-red-500">−10 в день</span></li>
-                                <li>30+ дней: <span className="text-red-500">−20 в день</span></li>
+                                <li>7+ дней без боёв: <span className="text-[var(--color-accent-danger)]">−5 в день</span></li>
+                                <li>14+ дней: <span className="text-[var(--color-accent-danger)]">−10 в день</span></li>
+                                <li>30+ дней: <span className="text-[var(--color-accent-danger)]">−20 в день</span></li>
                             </ul>
                             <p className="mt-1">Минимальный рейтинг: 100 очков.</p>
                         </div>

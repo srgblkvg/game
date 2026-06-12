@@ -86,7 +86,7 @@ export default function ImageUploader({ currentUrl, folder, onUploaded, label, c
                     </Button>
                 )}
             </div>
-            {error && <div className="text-red-500 text-xs mt-1">{error}</div>}
+            {error && <div className="text-[var(--color-accent-danger)] text-xs mt-1">{error}</div>}
 
             <Modal open={showGallery} onClose={() => setShowGallery(false)} title="Галерея изображений" borderColor="var(--color-border-default)">
                 {gallery.length === 0 ? (

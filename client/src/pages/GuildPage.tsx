@@ -249,7 +249,7 @@ export default function GuildPage() {
             <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
-            {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+            {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
             {guild ? (
                 // --- Состою в гильдии ---

@@ -90,7 +90,7 @@ export default function AdminPanel() {
                             {passwordLoading ? '...' : 'Сохранить'}
                         </Button>
                         {passwordMsg && (
-                            <p className={`text-sm ${passwordMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-red-500'}`}>
+                            <p className={`text-sm ${passwordMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>
                                 {passwordMsg}
                             </p>
                         )}

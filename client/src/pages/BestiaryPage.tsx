@@ -336,7 +336,7 @@ export default function BestiaryPage() {
 
       {phase === 'floors' ? (
         <>
-          <h1 className="text-xl font-bold mb-4 text-red-500">
+          <h1 className="text-xl font-bold mb-4 text-[var(--color-accent-danger)]">
             <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
           </h1>
           {cooldownRemaining > 0 && (
@@ -344,7 +344,7 @@ export default function BestiaryPage() {
               До следующей атаки: {formatCooldown(cooldownRemaining)}
             </div>
           )}
-          {error && <p className="text-red-500 mb-4">{error}</p>}
+          {error && <p className="text-[var(--color-accent-danger)] mb-4">{error}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {floors.map((floor) => {
               const info = getFloorInfo(floor);
@@ -502,7 +502,7 @@ export default function BestiaryPage() {
                 </div>
               )}
               {!battleResult.playerWon && battleResult.goldLost > 0 && (
-                <p className="text-red-500 text-sm mb-3">Потеряно: {formatMoney(battleResult.goldLost)}</p>
+                <p className="text-[var(--color-accent-danger)] text-sm mb-3">Потеряно: {formatMoney(battleResult.goldLost)}</p>
               )}
               <div className="flex justify-center gap-3">
                 <Button variant="danger" size="md" onClick={() => { stopAuto(); navigate('/'); }}>
@@ -514,7 +514,7 @@ export default function BestiaryPage() {
 
           {error && !battleDone && (
             <Card className="text-center">
-              <p className="text-red-500 mb-3">{error}</p>
+              <p className="text-[var(--color-accent-danger)] mb-3">{error}</p>
               <Button variant="secondary" size="sm" onClick={backToFloors}>Вернуться</Button>
             </Card>
           )}

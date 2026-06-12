@@ -63,7 +63,7 @@ export default function AdminRegisterPage() {
                 <Button variant="danger" fullWidth onClick={handleRegister}>
                     Создать администратора
                 </Button>
-                {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+                {error && <p className="text-[var(--color-accent-danger)] mt-2 text-sm">{error}</p>}
             </Card>
         </div>
     );

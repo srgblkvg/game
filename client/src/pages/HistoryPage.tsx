@@ -93,18 +93,18 @@ export default function HistoryPage() {
         const win = b.winnerId === user.id;
         return <EntryRow time={fmt(b.createdAt)} onClick={()=>setSelectedBattle(b)}>
             <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{b.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{b.attackerId===user.id?b.defenderName:b.attackerName}</strong> <GuildTag guildName={b.attackerId===user.id?b.defenderGuild:b.attackerGuild} guildId={b.attackerId===user.id?b.defenderGuildId:b.attackerGuildId} /></span>
-            <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-red-500'}`}>{win?'Победа':'Поражение'}</span>
+            <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}`}>{win?'Победа':'Поражение'}</span>
             {win && b.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{b.expGained} XP</span>}
-            {!win && b.expLost>0&&<span className="text-red-400 ml-1"> -{b.expLost} XP</span>}
+            {!win && b.expLost>0&&<span className="text-[var(--color-accent-danger)] ml-1"> -{b.expLost} XP</span>}
             {b.moneyStolen>0&&<span className="text-[var(--color-text-accent)] ml-1"> {win?'+':'-'}{formatMoney(b.moneyStolen)}</span>}
         </EntryRow>;
     };
     const renderPveRow = (b: any) => <EntryRow time={fmt(b.createdAt)} onClick={()=>setSelectedBattle(b)}>
         <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{b.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{b.mobLevel}</span></span>
-        <span className={`font-bold ml-2 ${b.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{b.playerWon?'Победа':'Поражение'}</span>
+        <span className={`font-bold ml-2 ${b.playerWon?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}`}>{b.playerWon?'Победа':'Поражение'}</span>
         {b.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{b.expGained} XP</span>}
         {b.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(b.goldGained)}{b.premiumBonus>0&&<span className="text-[var(--color-text-accent)]"> (+{b.premiumBonus} прем.)</span>}</span>}
-        {b.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(b.goldLost)}</span>}
+        {b.goldLost>0&&<span className="text-[var(--color-accent-danger)] ml-1">-{formatMoney(b.goldLost)}</span>}
     </EntryRow>;
     const renderJobRow = (j: any) => <EntryRow time={fmt(j.finishedAt)}>
         <span><Icon icon="game-icons:swap-bag" width="14" height="14" className="inline mr-1"/>«{j.jobName}» — {formatMoney(j.reward)}{j.premiumBonus>0&&<span className="text-[var(--color-text-accent)]"> (+{j.premiumBonus} пр.)</span>}{j.xpGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{j.xpGained} XP</span>}</span>
@@ -125,7 +125,7 @@ export default function HistoryPage() {
         <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(q.rewardMoney)}</span>
     </EntryRow>;
     const renderMessageRow = (m: any) => <EntryRow time={fmt(m.createdAt)}>
-        <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{m.senderName}: {m.content}</span>
+        <span className="text-[var(--color-accent-purple)]"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{m.senderName}: {m.content}</span>
     </EntryRow>;
 
     const renderEntry = (entry: any) => {
@@ -134,19 +134,19 @@ export default function HistoryPage() {
             const win = data.winnerId === user.id;
             return <EntryRow time={fmt(data.createdAt)} onClick={()=>setSelectedBattle(data)}>
                 <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{data.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{data.attackerId===user.id?data.defenderName:data.attackerName}</strong> <GuildTag guildName={data.attackerId===user.id?data.defenderGuild:data.attackerGuild} guildId={data.attackerId===user.id?data.defenderGuildId:data.attackerGuildId} /></span>
-                <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-red-500'}`}>{win?'Победа':'Поражение'}</span>
+                <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}`}>{win?'Победа':'Поражение'}</span>
                 {win && data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{data.expGained} XP</span>}
-                {!win && data.expLost>0&&<span className="text-red-400 ml-1"> -{data.expLost} XP</span>}
+                {!win && data.expLost>0&&<span className="text-[var(--color-accent-danger)] ml-1"> -{data.expLost} XP</span>}
                 {data.moneyStolen>0&&<span className="text-[var(--color-text-accent)] ml-1"> {win?'+':'-'}{formatMoney(data.moneyStolen)}</span>}
             </EntryRow>;
         }
         if (type === 'pve') {
             return <EntryRow time={fmt(data.createdAt)} onClick={()=>setSelectedBattle(data)}>
                 <span><Icon icon="game-icons:death-skull" width="14" height="14" className="inline mr-1"/><strong>{data.mobName}</strong> <span className="text-[var(--color-text-muted)]">ур.{data.mobLevel}</span></span>
-                <span className={`font-bold ml-2 ${data.playerWon?'text-[var(--color-accent-success)]':'text-red-500'}`}>{data.playerWon?'Победа':'Поражение'}</span>
+                <span className={`font-bold ml-2 ${data.playerWon?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}`}>{data.playerWon?'Победа':'Поражение'}</span>
                 {data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.expGained} XP</span>}
                 {data.goldGained>0&&<span className="text-[var(--color-text-accent)] ml-1">+{formatMoney(data.goldGained)}{data.premiumBonus>0&&<span className="text-[var(--color-text-accent)]"> (+{data.premiumBonus} прем.)</span>}</span>}
-                {data.goldLost>0&&<span className="text-red-500 ml-1">-{formatMoney(data.goldLost)}</span>}
+                {data.goldLost>0&&<span className="text-[var(--color-accent-danger)] ml-1">-{formatMoney(data.goldLost)}</span>}
             </EntryRow>;
         }
         if (type === 'job') {
@@ -173,7 +173,7 @@ export default function HistoryPage() {
         }
         if (type === 'message') {
             return <EntryRow time={fmt(data.createdAt)}>
-                <span className="text-purple-400"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{data.senderName}: {data.content}</span>
+                <span className="text-[var(--color-accent-purple)]"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{data.senderName}: {data.content}</span>
             </EntryRow>;
         }
         return null;

@@ -144,7 +144,7 @@ export default function JobsPage() {
                 Выберите, сколько времени готовы потратить — работа будет выбрана случайно.
             </p>
 
-            {error && <p className="text-red-500 mb-4 text-center text-sm">{error}</p>}
+            {error && <p className="text-[var(--color-accent-danger)] mb-4 text-center text-sm">{error}</p>}
 
             <div className="grid grid-cols-2 gap-3">
                 {durations.map(d => (

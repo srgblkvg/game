@@ -292,7 +292,7 @@ export default function AdminUsers() {
                                 return (
                                     <tr key={u.id} className={`border-b border-[var(--color-border-light)] ${u.bannedUntil > now ? 'bg-red-900/20' : ''}`}>
                                         <td className="p-1">{u.id}</td>
-                                        <td className="p-1">{u.username}{u.isGuest ? <span className="ml-1 text-amber-400 text-xs">🎭</span> : ''}</td>
+                                        <td className="p-1">{u.username}{u.isGuest ? <span className="ml-1 text-[var(--color-accent-warning)] text-xs">🎭</span> : ''}</td>
                                         <td className="p-1">{u.level}</td>
                                         <td className="p-1">{u.money}</td>
                                         <td className="p-1">{u.totalBattles}</td>
@@ -356,7 +356,7 @@ export default function AdminUsers() {
                     if (!user) return null;
                     return (
                         <div className="mt-2 p-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-sm">
-                            <h4 className="font-bold mb-1">#{user.id} {user.username}{user.isGuest ? <span className="ml-1 text-amber-400">🎭 Гость</span> : ''}</h4>
+                            <h4 className="font-bold mb-1">#{user.id} {user.username}{user.isGuest ? <span className="ml-1 text-[var(--color-accent-warning)]">🎭 Гость</span> : ''}</h4>
                             <div className="grid grid-cols-2 gap-1" style={{ fontSize: '12px' }}>
                                 <div>Email: {user.email || '—'}</div>
                                 <div>Подтверждён: {user.emailVerified ? 'Да' : 'Нет'}</div>

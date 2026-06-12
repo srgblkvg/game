@@ -214,14 +214,14 @@ export default function AuctionPage() {
             </div>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
-            {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+            {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
             {tab === 'sell' && (
                 <Card className="mb-4">
                     <h3 className="font-bold mb-2">Выставить лот</h3>
 
                     {/* Slot availability */}
-                    <p className={`text-xs mb-2 ${userLotCount >= maxSlots ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>
+                    <p className={`text-xs mb-2 ${userLotCount >= maxSlots ? 'text-[var(--color-accent-danger)]' : 'text-[var(--color-text-muted)]'}`}>
                         Занято слотов: {userLotCount} из {maxSlots}
                         {userLotCount >= maxSlots && ' (максимум)'}
                     </p>

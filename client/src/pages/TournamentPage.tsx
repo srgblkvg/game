@@ -215,7 +215,7 @@ export default function TournamentPage() {
                                                 {expandedLog === m.id && m.log && (
                                                     <div className="mt-1 p-2 bg-black/40 rounded text-[0.6rem] text-[var(--color-text-muted)] max-h-48 overflow-y-auto font-mono leading-relaxed">
                                                         {m.log.map((step: any, i: number) => (
-                                                            <div key={i} className={step.type === 'end' ? 'text-[var(--color-accent-success)] font-bold' : step.type === 'crit' ? 'text-yellow-400' : step.type === 'damage' ? 'text-red-400' : step.type === 'block' ? 'text-blue-400' : step.type === 'fullBlock' ? 'text-cyan-400 font-bold' : step.type === 'dodge' ? 'text-purple-400' : step.type === 'stun' ? 'text-orange-400' : step.type === 'counter' ? 'text-pink-400' : step.type === 'money' ? 'text-yellow-300' : ''}>
+                                                            <div key={i} className={step.type === 'end' ? 'text-[var(--color-accent-success)] font-bold' : step.type === 'crit' ? 'text-[var(--color-accent-warning)]' : step.type === 'damage' ? 'text-[var(--color-accent-danger)]' : step.type === 'block' ? 'text-[var(--color-accent-info)]' : step.type === 'fullBlock' ? 'text-[var(--color-accent-info)] font-bold' : step.type === 'dodge' ? 'text-[var(--color-accent-purple)]' : step.type === 'stun' ? 'text-[var(--color-accent-warning)]' : step.type === 'counter' ? 'text-[var(--color-accent-purple)]' : step.type === 'money' ? 'text-yellow-300' : ''}>
                                                                 {step.message}
                                                             </div>
                                                         ))}
@@ -246,7 +246,7 @@ export default function TournamentPage() {
             </div>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
-            {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+            {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
             {/* Кнопка создания custom турнира */}
             {tab === 'custom' && !showCreate && (
