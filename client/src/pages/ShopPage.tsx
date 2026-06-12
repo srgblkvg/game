@@ -98,8 +98,8 @@ export default function ShopPage() {
 
     return (
         <div className="px-4 py-4">
-            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:buy-card" width="22" height="22" className="inline mr-2"/>Магазин</h2>
             <BackButton />
+            <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:buy-card" width="22" height="22" className="inline mr-2"/>Магазин</h2>
 
             {message && <p className="mb-3 text-[var(--color-accent-success)] text-sm">{message}</p>}
 

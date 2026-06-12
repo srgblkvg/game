@@ -42,8 +42,8 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-4">
-            <h2 className="text-xl font-bold mb-4">Профиль игрока</h2>
             <BackButton />
+            <h2 className="text-xl font-bold mb-4">Профиль игрока</h2>
 
             <Button variant="secondary" size="sm" onClick={() => navigate('/rating')} className="mb-4">
                 ← Рейтинг игроков

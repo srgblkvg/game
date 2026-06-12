@@ -78,8 +78,8 @@ export default function OrdersPage() {
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
-            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
             <BackButton />
+            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}

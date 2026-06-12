@@ -73,8 +73,8 @@ export default function ArenaPage() {
 
   return (
     <div className="px-4 py-4 min-h-screen">
-      <h1 className="text-center text-xl font-bold mb-4"><Icon icon='game-icons:crossed-swords' width="22" height="22" className="inline mr-2"/>Арена</h1>
-            <BackButton />
+      <BackButton />
+            <h1 className="text-center text-xl font-bold mb-4"><Icon icon='game-icons:crossed-swords' width="22" height="22" className="inline mr-2"/>Арена</h1>
 
       {/* Карточки бойцов */}
       <div className="flex justify-between sm:justify-center gap-2 sm:gap-8 my-4 px-1 sm:px-0">

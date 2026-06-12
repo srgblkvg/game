@@ -337,10 +337,10 @@ export default function BestiaryPage() {
 
       {phase === 'floors' ? (
         <>
+          <BackButton />
           <h1 className="text-xl font-bold mb-4 text-[var(--color-accent-danger)]">
             <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
           </h1>
-            <BackButton />
           {cooldownRemaining > 0 && (
             <div className="mb-4 text-sm text-[var(--color-accent-warning)] bg-[var(--color-bg-card)] border border-[var(--color-border-light)] rounded p-2 text-center">
               До следующей атаки: {formatCooldown(cooldownRemaining)}
