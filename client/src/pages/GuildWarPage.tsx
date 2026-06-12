@@ -12,7 +12,7 @@ export default function GuildWarPage() {
     const navigate = useNavigate();
     const [data, setData] = useState<any>(null);
     const [error, setError] = useState('');
-    const [message, setMessage] = useState('');
+    const [tab, setTab] = useState<'enemies' | 'allies'>('enemies');
     const [battleLog, setBattleLog] = useState<string[]>([]);
     const [battleResult, setBattleResult] = useState<any>(null);
 
@@ -54,31 +54,37 @@ export default function GuildWarPage() {
 
     const myScore = data.myGuildId === data.attackerGuildId ? data.attackerScore : data.defenderScore;
     const enemyScore = data.myGuildId === data.attackerGuildId ? data.defenderScore : data.attackerScore;
-
     const formatTime = (iso: string) => new Date(iso + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
 
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
-            <h1 className="text-xl font-bold mb-2 flex items-center gap-2">
-                <Icon icon="game-icons:crossed-swords" width="22" height="22" className="text-[var(--color-war-active-text)]" />
+            <h1 className="text-xl font-bold mb-3 flex items-center gap-2">
+                <Icon icon="game-icons:crossed-swords" width="22" height="22" style={{color: 'var(--color-war-active-text)'}} />
                 ⚔️ Война гильдий
             </h1>
 
-            {/* Счёт */}
-            <Card className="mb-4 text-center">
-                <div className="flex items-center justify-center gap-4 text-lg font-bold">
-                    <span>{data.myGuild.name}</span>
-                    <span className="text-2xl">{myScore} : {enemyScore}</span>
-                    <span>{data.enemyGuild.name}</span>
+            {/* Счёт — горизонтальный блок */}
+            <Card className="mb-4">
+                <div className="flex items-center justify-between text-center">
+                    <div className="flex-1">
+                        <p className="text-sm font-bold">{data.myGuild.name}</p>
+                    </div>
+                    <div className="flex items-center gap-2 px-4">
+                        <span className="text-2xl font-bold">{myScore}</span>
+                        <span className="text-lg text-[var(--color-text-muted)]">:</span>
+                        <span className="text-2xl font-bold">{enemyScore}</span>
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm font-bold">{data.enemyGuild.name}</p>
+                    </div>
                 </div>
-                <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                <p className="text-[0.6rem] text-[var(--color-text-muted)] text-center mt-1">
                     Окончание: {formatTime(data.expiresAt)}
                 </p>
             </Card>
 
             {error && <p className="text-[var(--color-accent-danger)] text-sm mb-3">{error}</p>}
-            {message && <p className="text-[var(--color-accent-success)] text-sm mb-3">{message}</p>}
 
             {/* Боевой лог */}
             {battleLog.length > 0 && (
@@ -98,7 +104,7 @@ export default function GuildWarPage() {
             )}
 
             {/* Инфо о кулдауне и лимитах */}
-            <div className="text-xs text-[var(--color-text-muted)] mb-4 flex gap-4 flex-wrap">
+            <div className="text-xs text-[var(--color-text-muted)] mb-3 flex gap-4 flex-wrap">
                 <span>Мои атаки: {data.myAttackCount}/3</span>
                 {data.attackCooldownUntil && (
                     <span className="text-[var(--color-accent-warning)]">Кулдаун до: {formatTime(data.attackCooldownUntil)}</span>
@@ -106,71 +112,80 @@ export default function GuildWarPage() {
                 {data.canAttack && <span className="text-[var(--color-accent-success)]">Можно атаковать</span>}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Вражеская гильдия */}
-                <div>
-                    <h3 className="font-bold text-sm mb-2 flex items-center gap-1">
-                        <Icon icon="game-icons:death-skull" width="16" height="16" className="text-[var(--color-war-active-text)]" />
-                        {data.enemyGuild.name}
-                    </h3>
-                    <div className="space-y-1">
-                        {data.enemyMembers.map((m: any) => {
-                            const hasProtection = !!m.protectedUntil;
-                            const maxAttacks = m.timesAttacked >= 3;
-                            const cantAttack = hasProtection || maxAttacks || !data.canAttack;
-                            return (
-                                <Card key={m.id} className="flex items-center justify-between py-2 px-3">
-                                    <div>
-                                        <span className="text-xs text-[var(--color-accent-info)] cursor-pointer hover:underline"
-                                            onClick={() => navigate(`/profile/${m.id}`)}>
-                                            {m.username}
-                                        </span>
-                                        <span className="text-[var(--color-text-muted)] text-[0.6rem] ml-1">ур.{m.level}</span>
-                                        {hasProtection && (
-                                            <span className="text-[0.55rem] text-[var(--color-accent-info)] ml-1">🛡️ защита</span>
-                                        )}
-                                        {maxAttacks && (
-                                            <span className="text-[0.55rem] text-[var(--color-text-muted)] ml-1">{m.timesAttacked}/3</span>
-                                        )}
-                                    </div>
-                                    <Button
-                                        variant="danger"
-                                        size="xs"
-                                        disabled={cantAttack}
-                                        onClick={() => handleAttack(m.id, m.username)}
-                                    >
-                                        ⚔️
-                                    </Button>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                </div>
+            {/* Вкладки */}
+            <div className="flex border-b border-[var(--color-border-light)] mb-3">
+                <button
+                    onClick={() => setTab('enemies')}
+                    className={`px-3 py-1 text-xs cursor-pointer border-b-2 transition-colors ${
+                        tab === 'enemies'
+                            ? 'border-[var(--color-accent-danger)] text-[var(--color-accent-danger)] font-bold'
+                            : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                    }`}
+                >
+                    ⚔️ Враги
+                </button>
+                <button
+                    onClick={() => setTab('allies')}
+                    className={`px-3 py-1 text-xs cursor-pointer border-b-2 transition-colors ${
+                        tab === 'allies'
+                            ? 'border-[var(--color-accent-info)] text-[var(--color-accent-info)] font-bold'
+                            : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                    }`}
+                >
+                    🛡️ Союзники
+                </button>
+            </div>
 
-                {/* Моя гильдия */}
-                <div>
-                    <h3 className="font-bold text-sm mb-2 flex items-center gap-1">
-                        <Icon icon="game-icons:shield" width="16" height="16" className="text-[var(--color-accent-info)]" />
-                        {data.myGuild.name}
-                    </h3>
-                    <div className="space-y-1">
-                        {data.myMembers.map((m: any) => (
+            {/* Враги */}
+            {tab === 'enemies' && (
+                <div className="space-y-1">
+                    {data.enemyMembers.map((m: any) => {
+                        const hasProtection = !!m.protectedUntil;
+                        const maxAttacks = m.timesAttacked >= 3;
+                        const cantAttack = hasProtection || maxAttacks || !data.canAttack;
+                        return (
                             <Card key={m.id} className="flex items-center justify-between py-2 px-3">
-                                <div>
+                                <div className="flex items-center gap-2">
                                     <span className="text-xs text-[var(--color-accent-info)] cursor-pointer hover:underline"
                                         onClick={() => navigate(`/profile/${m.id}`)}>
                                         {m.username}
                                     </span>
-                                    <span className="text-[var(--color-text-muted)] text-[0.6rem] ml-1">ур.{m.level}</span>
+                                    <span className="text-[var(--color-text-muted)] text-[0.6rem]">ур.{m.level}</span>
+                                    {hasProtection && (
+                                        <span className="text-[0.55rem] text-[var(--color-accent-info)]">🛡️</span>
+                                    )}
+                                    <span className="text-[0.55rem] text-[var(--color-text-muted)]">{m.timesAttacked}/3</span>
                                 </div>
-                                <span className="text-[0.6rem] text-[var(--color-text-muted)]">
-                                    ⚔️{Math.min(m.attacksMade, 3)}/3
-                                </span>
+                                <Button variant="danger" size="xs" disabled={cantAttack} onClick={() => handleAttack(m.id, m.username)}>
+                                    ⚔️
+                                </Button>
                             </Card>
-                        ))}
-                    </div>
+                        );
+                    })}
                 </div>
-            </div>
+            )}
+
+            {/* Союзники */}
+            {tab === 'allies' && (
+                <div className="space-y-1">
+                    {data.myMembers.map((m: any) => (
+                        <Card key={m.id} className="flex items-center justify-between py-2 px-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-[var(--color-accent-info)] cursor-pointer hover:underline"
+                                    onClick={() => navigate(`/profile/${m.id}`)}>
+                                    {m.username}
+                                </span>
+                                <span className="text-[var(--color-text-muted)] text-[0.6rem]">ур.{m.level}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[0.6rem]">
+                                <span className="text-[var(--color-accent-success)]">{m.attacksWon || 0}🏆</span>
+                                <span className="text-[var(--color-accent-danger)]">{m.attacksLost || 0}💀</span>
+                                <span className="text-[var(--color-text-muted)]">({m.attacksWon||0}/{m.attacksLost||0}/{m.attacksMade||0})</span>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
 
             {/* История моих атак */}
             {data.myAttacks.length > 0 && (

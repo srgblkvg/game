@@ -673,11 +673,13 @@ router.get('/guild/war/details', (req: any, res) => {
     const myMembers = db.prepare(`
         SELECT u.id, u.username, u.level,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id) as attacksMade,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id AND won = 1) as attacksWon,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id AND won = 0) as attacksLost,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id AND won = 0) as timesAttacked
         FROM guild_members gm JOIN users u ON gm.userId = u.id
         WHERE gm.guildId = ?
         ORDER BY gm.rank DESC, u.level DESC
-    `).all(war.id, war.id, myGuildId) as any[];
+    `).all(war.id, war.id, war.id, war.id, myGuildId) as any[];
 
     // Участники вражеской гильдии (с проверкой защиты)
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
