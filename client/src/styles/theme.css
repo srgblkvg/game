@@ -15,6 +15,7 @@ html {
   --color-bg-modal: #2a2a3e;
   --color-bg-hover: rgba(255, 255, 255, 0.08);
   --color-overlay-card: rgba(0, 0, 0, 0.5);
+  --color-overlay-text: rgba(0, 0, 0, 0.6);
 
   /* Текст */
   --color-text-primary: #eee;
@@ -56,6 +57,7 @@ html {
   --color-bg-modal: #fdfaf3;
   --color-bg-hover: rgba(0, 0, 0, 0.06);
   --color-overlay-card: rgba(255, 255, 255, 0.5);
+  --color-overlay-text: rgba(255, 255, 255, 0.6);
 
   --color-text-primary: #2c1810;
   --color-text-secondary: #4a3728;

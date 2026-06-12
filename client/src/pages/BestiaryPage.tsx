@@ -355,7 +355,7 @@ export default function BestiaryPage() {
                   onClick={() => !disabled && selectFloor(floor)}
                   style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
                   {bg && <div className="absolute inset-0 bg-[var(--color-overlay-card)]" />}
-                  <div className="relative z-10">
+                  <div className="relative z-10 bg-[var(--color-overlay-text)] rounded-lg p-2 -m-2">
                   <div className="flex items-center gap-2 mb-2">
                     <Icon icon="game-icons:castle-ruins" width="20" height="20" className="text-[var(--color-text-muted)]" />
                     <h3 className="font-bold text-sm">{floor}</h3>
