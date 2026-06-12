@@ -511,6 +511,23 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (defenderGuildId) REFERENCES guilds(id)
   )`); } catch {}
 
+  // --- Атаки в гильд-войнах ---
+  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_war_attacks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    warId INTEGER NOT NULL,
+    attackerId INTEGER NOT NULL,
+    defenderId INTEGER NOT NULL,
+    attackerGuildId INTEGER NOT NULL,
+    defenderGuildId INTEGER NOT NULL,
+    won INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (warId) REFERENCES guild_wars(id),
+    FOREIGN KEY (attackerId) REFERENCES users(id),
+    FOREIGN KEY (defenderId) REFERENCES users(id)
+  )`); } catch {}
+  try { db.exec('ALTER TABLE guild_wars ADD COLUMN attackerScore INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE guild_wars ADD COLUMN defenderScore INTEGER DEFAULT 0'); } catch {}
+
   // --- Системный пользователь для автосообщений (турниры, чат) ---
   db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
 }

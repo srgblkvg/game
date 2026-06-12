@@ -314,6 +314,11 @@ export default function GuildPage() {
                                     <p className="text-[0.65rem] mt-1" style={{color: 'var(--color-war-active-text)'}}>💰 Казна заморожена до конца войны</p>
                                 )}
                             </div>
+                            {war.status === 'active' && (
+                                <Button variant="danger" size="xs" className="mt-3" onClick={() => navigate('/guild/war')}>
+                                    ⚔️ На поле боя
+                                </Button>
+                            )}
                             {/* Кнопки для лидера защищающейся гильдии (только при pending) */}
                             {war.status === 'pending' && !war.isAttacker && guild.myRank === 'leader' && (
                                 <div className="flex gap-2 mt-3">

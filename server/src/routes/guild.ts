@@ -648,7 +648,216 @@ router.get('/guild/war/status', (req: any, res) => {
             expiresAt: war.expiresAt,
             isAttacker,
             isDefender: !isAttacker,
+            attackerScore: war.attackerScore || 0,
+            defenderScore: war.defenderScore || 0,
         }
+    });
+});
+
+// Детали войны: участники, атаки, счёт
+router.get('/guild/war/details', (req: any, res) => {
+    const userId = req.userId;
+    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
+
+    const war = isGuildAtWar(member.guildId);
+    if (!war || war.status !== 'active') return res.json({ war: null });
+
+    const myGuildId = member.guildId;
+    const enemyGuildId = war.attackerGuildId === myGuildId ? war.defenderGuildId : war.attackerGuildId;
+
+    const myGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(myGuildId) as any;
+    const enemyGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(enemyGuildId) as any;
+
+    // Участники моей гильдии
+    const myMembers = db.prepare(`
+        SELECT u.id, u.username, u.level,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id) as attacksMade,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id AND won = 0) as timesAttacked
+        FROM guild_members gm JOIN users u ON gm.userId = u.id
+        WHERE gm.guildId = ?
+        ORDER BY gm.rank DESC, u.level DESC
+    `).all(war.id, war.id, myGuildId) as any[];
+
+    // Участники вражеской гильдии (с проверкой защиты)
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const enemyMembers = db.prepare(`
+        SELECT u.id, u.username, u.level,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as timesAttacked,
+            (SELECT MAX(createdAt) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id AND won = 0) as lastAttackedAt
+        FROM guild_members gm JOIN users u ON gm.userId = u.id
+        WHERE gm.guildId = ?
+        ORDER BY u.level DESC
+    `).all(war.id, war.id, enemyGuildId) as any[];
+
+    // Проверка защиты: если атаковали меньше часа назад
+    const enemyWithProtection = enemyMembers.map((m: any) => {
+        let protectedUntil = null;
+        if (m.lastAttackedAt) {
+            const attackedTime = new Date(m.lastAttackedAt + 'Z').getTime();
+            const protectionEnd = attackedTime + 60 * 60 * 1000;
+            if (protectionEnd > Date.now()) {
+                protectedUntil = new Date(protectionEnd).toISOString();
+            }
+        }
+        return { ...m, protectedUntil };
+    });
+
+    // Мои атаки
+    const myAttacks = db.prepare(`
+        SELECT gwa.*, u.username as defenderName
+        FROM guild_war_attacks gwa
+        JOIN users u ON gwa.defenderId = u.id
+        WHERE gwa.warId = ? AND gwa.attackerId = ?
+        ORDER BY gwa.id DESC
+    `).all(war.id, userId) as any[];
+
+    // Сколько атак я сделал
+    const myAttackCount = db.prepare(
+        'SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?'
+    ).get(war.id, userId) as any;
+
+    // Время последней моей атаки
+    const myLastAttack = db.prepare(
+        'SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?'
+    ).get(war.id, userId) as any;
+
+    let attackCooldownUntil = null;
+    if (myLastAttack?.lastAt) {
+        const lastTime = new Date(myLastAttack.lastAt + 'Z').getTime();
+        const cooldownEnd = lastTime + 5 * 60 * 1000;
+        if (cooldownEnd > Date.now()) {
+            attackCooldownUntil = new Date(cooldownEnd).toISOString();
+        }
+    }
+
+    res.json({
+        war: {
+            id: war.id,
+            myGuild,
+            enemyGuild,
+            status: war.status,
+            expiresAt: war.expiresAt,
+            attackerScore: war.attackerScore || 0,
+            defenderScore: war.defenderScore || 0,
+            myGuildId,
+            enemyGuildId,
+            attackerGuildId: war.attackerGuildId,
+            myMembers,
+            enemyMembers: enemyWithProtection,
+            myAttacks,
+            myAttackCount: myAttackCount.cnt,
+            canAttack: myAttackCount.cnt < 3 && !attackCooldownUntil,
+            attackCooldownUntil,
+        }
+    });
+});
+
+// Атаковать участника вражеской гильдии
+router.post('/guild/war/attack', (req: any, res) => {
+    const userId = req.userId;
+    const { targetId } = req.body;
+    if (!targetId) return res.status(400).json({ error: 'Укажите targetId' });
+
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
+    if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
+
+    const war = isGuildAtWar(member.guildId);
+    if (!war || war.status !== 'active') return res.status(400).json({ error: 'Ваша гильдия не в активной войне' });
+
+    const myGuildId = member.guildId;
+    const enemyGuildId = war.attackerGuildId === myGuildId ? war.defenderGuildId : war.attackerGuildId;
+
+    // Проверка: цель во вражеской гильдии
+    const targetMember = db.prepare('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?').get(enemyGuildId, targetId) as any;
+    if (!targetMember) return res.status(400).json({ error: 'Цель не во вражеской гильдии' });
+
+    // Лимит: 3 атаки на атакующего
+    const myAttacks = (db.prepare(
+        'SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?'
+    ).get(war.id, userId) as any).cnt;
+    if (myAttacks >= 3) return res.status(400).json({ error: 'Вы исчерпали лимит атак (3)' });
+
+    // Лимит: 3 атаки на защитника
+    const targetAttacks = (db.prepare(
+        'SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND defenderId = ?'
+    ).get(war.id, targetId) as any).cnt;
+    if (targetAttacks >= 3) return res.status(400).json({ error: 'Этого игрока уже атаковали максимум раз (3)' });
+
+    // Кулдаун: 5 минут с последней атаки
+    const lastAttack = db.prepare(
+        'SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?'
+    ).get(war.id, userId) as any;
+    if (lastAttack?.lastAt) {
+        const lastTime = new Date(lastAttack.lastAt + 'Z').getTime();
+        if (Date.now() - lastTime < 5 * 60 * 1000) {
+            return res.status(400).json({ error: 'Атаковать можно раз в 5 минут' });
+        }
+    }
+
+    // Защита цели: 1 час после атаки
+    const lastDefend = db.prepare(
+        'SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND defenderId = ? AND won = 0'
+    ).get(war.id, targetId) as any;
+    if (lastDefend?.lastAt) {
+        const lastTime = new Date(lastDefend.lastAt + 'Z').getTime();
+        if (Date.now() - lastTime < 60 * 60 * 1000) {
+            return res.status(400).json({ error: 'У игрока защита после атаки (1 час)' });
+        }
+    }
+
+    // Симуляция боя (макс HP, как в турнире)
+    const attacker = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const defender = db.prepare('SELECT * FROM users WHERE id = ?').get(targetId) as any;
+
+    const { currentStats } = require('../utils/stats');
+    const aStats = currentStats(attacker, JSON.parse(attacker.equipment || '{}'));
+    const dStats = currentStats(defender, JSON.parse(defender.equipment || '{}'));
+
+    const aHp = aStats.hp;
+    const dHp = dStats.hp;
+
+    // Простой бой
+    let aCurrentHp = aHp;
+    let dCurrentHp = dHp;
+    const log: string[] = [];
+
+    let round = 0;
+    while (aCurrentHp > 0 && dCurrentHp > 0 && round < 50) {
+        round++;
+        // Атакующий бьёт
+        const aDmg = Math.max(1, aStats.attack - dStats.defense + Math.floor(Math.random() * 6));
+        dCurrentHp -= aDmg;
+        log.push(`${attacker.username} наносит ${aDmg} урона (${defender.username}: ${Math.max(0, dCurrentHp)}/${dHp})`);
+        if (dCurrentHp <= 0) break;
+        // Защитник бьёт
+        const dDmg = Math.max(1, dStats.attack - aStats.defense + Math.floor(Math.random() * 6));
+        aCurrentHp -= dDmg;
+        log.push(`${defender.username} наносит ${dDmg} урона (${attacker.username}: ${Math.max(0, aCurrentHp)}/${aHp})`);
+    }
+
+    const won = dCurrentHp <= 0;
+
+    // Запись атаки
+    db.prepare(`
+        INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `).run(war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0);
+
+    // Обновление счёта
+    if (won) {
+        const scoreField = myGuildId === war.attackerGuildId ? 'attackerScore' : 'defenderScore';
+        db.prepare(`UPDATE guild_wars SET ${scoreField} = ${scoreField} + 1 WHERE id = ?`).run(war.id);
+    }
+
+    res.json({
+        success: true,
+        won,
+        log,
+        attackerHp: aHp,
+        defenderHp: dHp,
+        finalAttackerHp: Math.max(0, aCurrentHp),
+        finalDefenderHp: Math.max(0, dCurrentHp),
     });
 });
 
