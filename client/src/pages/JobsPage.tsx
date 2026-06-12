@@ -108,7 +108,6 @@ export default function JobsPage() {
             <>
             <div className="relative text-center py-8 px-4 rounded-xl overflow-hidden border-2 border-[var(--color-border-default)] min-h-[200px] flex flex-col items-center justify-center mt-6 mx-4"
                 style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-                {bg && <div className="absolute inset-0 bg-[var(--color-overlay-card)]" />}
                 <div className="relative z-10 bg-[var(--color-overlay-text)] rounded-lg p-3 -m-3">
                     <h2 className="text-xl font-bold mb-3"><Icon icon="game-icons:hourglass" width="18" height="18" className="inline mr-1"/>Выполняется работа</h2>
                     <p className="text-lg">{activeJob.name}</p>
