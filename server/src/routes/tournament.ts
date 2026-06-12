@@ -437,6 +437,7 @@ router.get('/tournament', (req: any, res) => {
                 participantCount: participants.length,
                 participants: participants.map((p: any) => ({
                     id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
+                    guildName: p.guildName, guildId: p.guildId,
                     snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
                 })),
                 top3: participants
@@ -489,6 +490,7 @@ router.get('/tournament', (req: any, res) => {
                 id: p.userId,
                 username: p.username,
                 goldenTicket: p.goldenTicket,
+                guildName: p.guildName, guildId: p.guildId,
                 snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
             })),
             myRegistration: myReg || null,
