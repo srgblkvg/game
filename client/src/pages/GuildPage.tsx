@@ -280,7 +280,7 @@ export default function GuildPage() {
                         <Card className="mb-4 border-l-4 border-l-red-500">
                             <h3 className="font-bold text-sm flex items-center gap-2 mb-2">
                                 <Icon icon="game-icons:crossed-swords" width="18" height="18" style={{color: 'var(--color-war-active-text)'}} />
-                                ⚔️ Гильд-война
+                                ⚔️ Поле битвы
                                 <span className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold"
                                     style={{
                                         color: war.status === 'pending' ? 'var(--color-war-pending-text)' : 'var(--color-war-active-text)',

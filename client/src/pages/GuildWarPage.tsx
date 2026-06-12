@@ -77,7 +77,7 @@ export default function GuildWarPage() {
             <BackButton />
             <h1 className="text-xl font-bold mb-3 flex items-center gap-2">
                 <Icon icon="game-icons:crossed-swords" width="22" height="22" style={{color: 'var(--color-war-active-text)'}} />
-                ⚔️ Война гильдий
+                ⚔️ Поле битвы
             </h1>
 
             {/* Счёт */}
