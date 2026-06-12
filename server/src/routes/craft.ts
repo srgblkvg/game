@@ -32,6 +32,12 @@ router.get('/craft/recipes', (req, res) => {
         JOIN rarities r ON i.rarity_id = r.id
         WHERE i.id = ?
       `).get(recipe.result_id) || null;
+        } else if (recipe.result_type === 'random_item') {
+            // result_id = rarity_id, показываем инфо о редкости
+            recipe.result = db.prepare(
+                'SELECT id as rarity_id, display_name as rarity_display, color as rarity_color, name FROM rarities WHERE id = ?'
+            ).get(recipe.result_id) || null;
+            if (recipe.result) recipe.result.name = `Случайный предмет (${recipe.result.rarity_display})`;
         } else if (recipe.result_type === 'craft_item') {
             recipe.result = db.prepare(`
         SELECT c.id, c.name, c.rarity_id, c.image, c.type as itemType,
@@ -137,6 +143,29 @@ router.post('/craft/execute', (req: any, res) => {
                 bonuses: JSON.parse(resultItem.bonuses || '{}'),
                 extra: JSON.parse(resultItem.extra || '{}'),
                 image: resultItem.image || null,
+                upgradeLevel: 0,
+            });
+        } else if (recipe.result_type === 'random_item') {
+            // Случайный предмет указанной редкости (result_id = rarity_id)
+            const rarityId = recipe.result_id;
+            const randomItem = db.prepare(`
+                SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
+                FROM items i
+                JOIN rarities r ON i.rarity_id = r.id
+                WHERE i.rarity_id = ?
+                ORDER BY RANDOM() LIMIT 1
+            `).get(rarityId) as any;
+            if (!randomItem) return res.status(500).json({ error: 'Нет предметов такой редкости' });
+            newInventory.push({
+                id: Date.now() + Math.random(),
+                name: randomItem.name,
+                slot: randomItem.slot,
+                rarity_id: randomItem.rarity_id,
+                rarity_display: randomItem.rarity_display,
+                rarity_color: randomItem.rarity_color,
+                bonuses: JSON.parse(randomItem.bonuses || '{}'),
+                extra: JSON.parse(randomItem.extra || '{}'),
+                image: randomItem.image || null,
                 upgradeLevel: 0,
             });
         } else if (recipe.result_type === 'craft_item') {
