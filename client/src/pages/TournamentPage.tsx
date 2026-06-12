@@ -76,6 +76,7 @@ export default function TournamentPage() {
     const [error, setError] = useState('');
     const [expandedLog, setExpandedLog] = useState<number | null>(null);
     const [completedPage, setCompletedPage] = useState(1);
+    const [showInfo, setShowInfo] = useState(false);
 
     // Форма создания custom турнира
     const [showCreate, setShowCreate] = useState(false);
@@ -245,6 +246,43 @@ export default function TournamentPage() {
             <BackButton />
             <h1 className="text-xl font-bold mb-2"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2" />Турнир «Кровавый Шпиль»</h1>
             <p className="text-xs text-[var(--color-text-muted)] italic mb-3">«Ворота Арены открыты. Выходит только сильнейший.»</p>
+
+            {/* Инфо-блок о турнирах */}
+            <Card className="mb-3">
+                <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => setShowInfo(!showInfo)}>
+                    <span className="text-sm">{showInfo ? '▼' : '▶'}</span>
+                    <h3 className="font-bold text-sm">📖 О турнирах</h3>
+                </div>
+                {showInfo && (
+                    <div className="mt-2 text-xs text-[var(--color-text-muted)] space-y-2">
+                        <div>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">🏆 Призовой фонд</h4>
+                            <p>• <b>3+ участников:</b> 50% победителю, 30% второму месту, 20% третьему</p>
+                            <p>• <b>2 участника:</b> 70% победителю, 30% второму</p>
+                            <p>• Официальные турниры имеют базовый фонд: Медный 500🥇, Стальной 2000🥇, Мифриловый 8000🥇, Адамантовый 25000🥇</p>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">🎫 Золотой билет</h4>
+                            <p>• Стоимость: 1000🥇</p>
+                            <p>• Позволяет участвовать в турнире выше своего уровня</p>
+                            <p>• При регистрации вы получаете приоритетное место в сетке</p>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">🎪 Самоорганизованные турниры</h4>
+                            <p>• Любой игрок может создать свой турнир (вкладка «Самоорганизованные» → «+ Создать турнир»)</p>
+                            <p>• Можно задать: название, призовой фонд, взнос за вход, уровни участников, время регистрации</p>
+                            <p>• Создатель указывает призовой фонд из своего серебра + опциональный взнос с участников</p>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">⚔️ Правила</h4>
+                            <p>• Турнир начинается после окончания регистрации (30 минут для официальных)</p>
+                            <p>• Бои проходят в формате турнирной сетки (single elimination)</p>
+                            <p>• В бою используется максимальное HP, учитывается полная экипировка и статы</p>
+                            <p>• Официальные турниры открывают регистрацию через 1 час после завершения предыдущего</p>
+                        </div>
+                    </div>
+                )}
+            </Card>
 
             <div className="flex gap-2 mb-4 flex-wrap">
                 <Button variant={tab === 'all' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('all'); setCompletedPage(1); }}>Все</Button>
