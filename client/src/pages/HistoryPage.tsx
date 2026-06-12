@@ -114,14 +114,14 @@ export default function HistoryPage() {
     const renderTournamentRow = (t: any) => {
         const ss = t.snapshotStats?JSON.parse(t.snapshotStats):null;
         const canc = t.status==='cancelled';
-        return <EntryRow time={fmtTs(t.createdAt)}>
+        return <EntryRow time={fmt(t.createdAt * 1000)}>
             <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{t.division==='custom'?t.name||'Турнир':t.division}»{canc?' отменён':' завершён'}</span>
             {canc?<span className="text-[var(--color-text-muted)] ml-1">Не набралось игроков</span>:
             ss?<span className="text-[var(--color-accent-success)] font-bold ml-1">{ss.place}-е место {ss.prize>0?formatMoney(ss.prize):'без приза'}</span>:
             <span className="text-[var(--color-text-muted)] ml-1">Участие</span>}
         </EntryRow>;
     };
-    const renderQuestRow = (q: any) => <EntryRow time={q.createdAt.replace('T', ' ').slice(0, 19)} onClick={()=>navigate('/tavern?tab=quests')}>
+    const renderQuestRow = (q: any) => <EntryRow time={fmt(q.createdAt)} onClick={()=>navigate('/tavern?tab=quests')}>
         <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{q.typeName}»</span>
         {q.rewardXp>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{q.rewardXp} XP</span>}
         <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(q.rewardMoney)}</span>
@@ -159,7 +159,7 @@ export default function HistoryPage() {
         if (type === 'tournament') {
             const ss = data.snapshotStats?JSON.parse(data.snapshotStats):null;
             const canc = data.status==='cancelled';
-            return <EntryRow time={fmtTs(data.createdAt)}>
+            return <EntryRow time={fmt(data.createdAt * 1000)}>
                 <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{data.division==='custom'?data.name||'Турнир':data.division}»{canc?' отменён':' завершён'}</span>
                 {canc?<span className="text-[var(--color-text-muted)] ml-1">Не набралось игроков</span>:
                 ss?<span className="text-[var(--color-accent-success)] font-bold ml-1">{ss.place}-е место {ss.prize>0?formatMoney(ss.prize):'без приза'}</span>:
