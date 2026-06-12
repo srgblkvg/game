@@ -331,7 +331,9 @@ export function runSeed(db: InstanceType<typeof Database>) {
 
   // Начальные шансы улучшения (по редкости и уровню)
   const upgradeChanceCount = (db.prepare('SELECT COUNT(*) as cnt FROM upgrade_chances').get() as any).cnt;
-  if (upgradeChanceCount === 0) {
+  // Если данных нет или только одна редкость — перезаполняем все
+  if (upgradeChanceCount < 70) {
+    db.exec('DELETE FROM upgrade_chances');
     const insertUpgrade = db.prepare('INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)');
     const chances: number[] = [100, 90, 70, 50, 25, 10, 5, 3, 2, 1];
     const costs: Record<number, number[]> = {

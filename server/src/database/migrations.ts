@@ -534,23 +534,27 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE tournaments ADD COLUMN completedAt DATETIME'); } catch {}
 
   // --- rarity_id в upgrade_chances (пересоздаём) ---
-  try {
-    db.exec('DROP TABLE IF EXISTS upgrade_chances_new');
-    db.exec(`CREATE TABLE upgrade_chances_new (
-      level INTEGER NOT NULL,
-      rarity_id INTEGER NOT NULL DEFAULT 0,
-      chance INTEGER NOT NULL DEFAULT 100,
-      money_cost INTEGER NOT NULL DEFAULT 100,
-      PRIMARY KEY (level, rarity_id)
-    )`);
-    // Переносим старые данные (rarity_id = 0 для совместимости)
-    const old = db.prepare('SELECT * FROM upgrade_chances').all() as any[];
-    for (const r of old) {
-      db.prepare('INSERT OR REPLACE INTO upgrade_chances_new (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)').run(r.level, 0, r.chance, r.money_cost);
-    }
-    db.exec('DROP TABLE upgrade_chances');
-    db.exec('ALTER TABLE upgrade_chances_new RENAME TO upgrade_chances');
-  } catch {}
+  // Проверяем, есть ли уже колонка rarity_id (миграция уже выполнена)
+  const hasRarityCol = (db.prepare("PRAGMA table_info(upgrade_chances)").all() as any[]).some((c: any) => c.name === 'rarity_id');
+  if (!hasRarityCol) {
+    try {
+      db.exec('DROP TABLE IF EXISTS upgrade_chances_new');
+      db.exec(`CREATE TABLE upgrade_chances_new (
+        level INTEGER NOT NULL,
+        rarity_id INTEGER NOT NULL DEFAULT 0,
+        chance INTEGER NOT NULL DEFAULT 100,
+        money_cost INTEGER NOT NULL DEFAULT 100,
+        PRIMARY KEY (level, rarity_id)
+      )`);
+      // Переносим старые данные (rarity_id = 0 для совместимости)
+      const old = db.prepare('SELECT * FROM upgrade_chances').all() as any[];
+      for (const r of old) {
+        db.prepare('INSERT OR REPLACE INTO upgrade_chances_new (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)').run(r.level, 0, r.chance, r.money_cost);
+      }
+      db.exec('DROP TABLE upgrade_chances');
+      db.exec('ALTER TABLE upgrade_chances_new RENAME TO upgrade_chances');
+    } catch {}
+  }
 
   // --- Обратная связь ---
   try { db.exec(`CREATE TABLE IF NOT EXISTS feedback_messages (
