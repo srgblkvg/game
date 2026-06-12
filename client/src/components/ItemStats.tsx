@@ -23,7 +23,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
 
   const getBonus = (base: number) => {
     if (!base || upgradeLevel === 0) return base;
-    return Math.round(base * (1 + upgradeLevel * 0.05));
+    return Math.round(base * (1 + upgradeLevel * 0.1));
   };
 
   const rows: [string, number][] = [];
@@ -104,7 +104,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       {/* Уровень улучшения */}
       {!resource && upgradeLevel > 0 && (
         <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center text-[var(--color-text-accent)]">
-          Улучшение +{upgradeLevel} (+{upgradeLevel * 5}% к характеристикам)
+          Улучшение +{upgradeLevel} (+{upgradeLevel * 10}% к характеристикам)
         </div>
       )}
 

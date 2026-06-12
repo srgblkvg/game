@@ -46,7 +46,7 @@ export function currentStats(
     for (const item of Object.values(equipment)) {
         if (item.bonuses) {
             const level = item.upgradeLevel || 0;
-            const multiplier = 1 + level * 0.05;
+            const multiplier = 1 + level * 0.1;
             for (const k of Object.keys(item.bonuses)) {
                 const key = k as keyof StatSums;
                 sums[key] = (sums[key] || 0) + Math.round(item.bonuses[key as keyof typeof item.bonuses] * multiplier);
