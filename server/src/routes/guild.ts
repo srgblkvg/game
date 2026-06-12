@@ -454,9 +454,9 @@ router.post('/guild/treasury/deposit', (req: any, res) => {
     const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
-    // Блокировка казны при войне
+    // Блокировка казны при войне (pending или active)
     const war = isGuildAtWar(member.guildId);
-    if (war && war.status === 'active') return res.status(400).json({ error: 'Казна заморожена на время войны' });
+    if (war) return res.status(400).json({ error: 'Казна заморожена на время войны' });
 
     // Проверяем баланс игрока
     const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
