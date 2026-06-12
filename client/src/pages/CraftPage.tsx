@@ -305,38 +305,42 @@ export default function CraftPage() {
                 {showUpgradeInfo && (
                     <div className="mt-3 text-xs text-[var(--color-text-muted)] space-y-2">
                         <p>Улучшение предметов происходит с помощью <span className="text-[var(--color-accent-purple)]">камней улучшения</span> той же редкости, что и предмет.</p>
+                        <p>Стоимость попытки зависит от <b>редкости предмета</b> и <b>уровня заточки</b> — чем выше редкость и уровень, тем дороже.</p>
 
                         <div>
                             <h4 className="font-bold text-[var(--color-text-primary)]">📋 Как улучшить:</h4>
                             <ol className="list-decimal pl-4 mt-1 space-y-0.5">
                                 <li>Перетащите <b>предмет</b> и <b>камень улучшения</b> той же редкости в слоты крафта</li>
                                 <li>Нажмите <b>«Улучшить»</b></li>
-                                <li>При успехе — предмет получает +1 уровень, а характеристики увеличиваются на <b>+5% за каждый уровень</b></li>
-                                <li>При неудаче — <span className="text-[var(--color-accent-danger)]">предмет разрушается</span>, вы получаете материал той же редкости</li>
+                                <li>При успехе — предмет получает +1 уровень, характеристики увеличиваются на <b>+5% за каждый уровень</b></li>
+                                <li>При неудаче на уровнях +1..+3 — теряется только камень</li>
+                                <li>При неудаче на уровнях +4..+6 — теряется камень и предмет</li>
+                                <li>При неудаче на уровнях +7..+10 — <span className="text-[var(--color-accent-danger)]">предмет разрушается</span>, получаете материал той же редкости</li>
                             </ol>
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">📊 Шансы:</h4>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">📊 Шансы (одинаковы для всех редкостей):</h4>
                             <ul className="list-disc pl-4 mt-1 space-y-0.5">
                                 <li>+1: 100%</li>
                                 <li>+2: 90%</li>
-                                <li>+3: 80%</li>
-                                <li>+4: 65%</li>
-                                <li>+5: 50%</li>
-                                <li>+6: 35%</li>
-                                <li>+7: 25%</li>
-                                <li>+8: 15%</li>
-                                <li>+9: 8%</li>
-                                <li>+10: 3%</li>
+                                <li>+3: 70%</li>
+                                <li>+4: 50%</li>
+                                <li>+5: 25%</li>
+                                <li>+6: 10%</li>
+                                <li>+7: 5%</li>
+                                <li>+8: 3%</li>
+                                <li>+9: 2%</li>
+                                <li>+10: 1%</li>
                             </ul>
-                            <p className="mt-1">Шансы можно изменить в админ-панели (раздел «Крафт» → шансы улучшения).</p>
+                            <p className="mt-1">Стоимость и шансы настраиваются в админ-панели (Крафт → Шансы улучшения).</p>
                         </div>
 
                         <div>
                             <h4 className="font-bold text-[var(--color-text-primary)]">💡 Советы:</h4>
                             <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>Улучшайте только ценные предметы — потеря на высоких уровнях болезненна</li>
+                                <li>Уровни +1..+3 безопасны — при неудаче теряется только камень</li>
+                                <li>С +4 рискуете предметом, с +7 — <span className="text-[var(--color-accent-danger)]">полное разрушение</span></li>
                                 <li>Заточка до +7 даёт <span className="text-[var(--color-accent-success)]">+5 рейтинга</span>, до +10 — <span className="text-[var(--color-accent-success)]">+50 рейтинга</span></li>
                                 <li>Характеристики растут на 5% за уровень: предмет +5 имеет +25% к статам</li>
                             </ul>
