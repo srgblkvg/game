@@ -428,6 +428,52 @@ export default function CraftPage() {
                     </div>
                 </div>
 
+                {/* Разборка камней улучшения */}
+                {(() => {
+                    const upgradeStones = (character?.inventory || []).filter((i: any) =>
+                        isCraftItem(i) && i.itemType === 'upgrade'
+                    );
+                    if (upgradeStones.length === 0) return null;
+
+                    const handleDisassemble = async (itemId: number) => {
+                        try {
+                            const res = await fetch('/api/craft/disassemble', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+                                body: JSON.stringify({ itemId }),
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                                const fresh = await fetchCharacter();
+                                setCharacter(fresh);
+                                alert(data.message);
+                            } else {
+                                alert(data.error || 'Ошибка');
+                            }
+                        } catch { alert('Ошибка сети'); }
+                    };
+
+                    return (
+                        <Card className="mb-4">
+                            <h3 className="font-bold text-sm mb-2">🔨 Разборка камней улучшения</h3>
+                            <p className="text-xs text-[var(--color-text-muted)] mb-2">1 камень → 1 материал того же качества</p>
+                            <div className="flex flex-wrap gap-2">
+                                {upgradeStones.map((stone: any) => (
+                                    <button
+                                        key={stone.id}
+                                        onClick={() => handleDisassemble(stone.id)}
+                                        className="px-3 py-1.5 rounded text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-default)] hover:border-[var(--color-accent-info)] cursor-pointer transition-colors flex items-center gap-2"
+                                    >
+                                        <span>{stone.name}</span>
+                                        <span className="text-[var(--color-text-muted)]">(x{stone.count})</span>
+                                        <span className="text-[var(--color-accent-success)]">→</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </Card>
+                    );
+                })()}
+
                 {/* Инвентарь */}
                 <div className="flex-1 min-w-[300px]" onDragOver={handleDragOver} onDrop={handleDropOnInventory}>
                     <Inventory

@@ -304,4 +304,62 @@ router.post('/craft/upgrade', (req: any, res) => {
     }
 });
 
+// Разобрать камень улучшения на материал
+router.post('/craft/disassemble', (req: any, res) => {
+    const userId = req.userId;
+    const { itemId } = req.body;
+    if (!itemId) return res.status(400).json({ error: 'Укажите itemId' });
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const inventory: any[] = JSON.parse(user.inventory || '[]');
+    const stoneIndex = inventory.findIndex((i: any) =>
+        isCraftItem(i) && String(i.id) === String(itemId) && i.itemType === 'upgrade'
+    );
+    if (stoneIndex === -1) return res.status(400).json({ error: 'Камень улучшения не найден' });
+
+    const stone = inventory[stoneIndex];
+    const rarityId = stone.rarity_id || 0;
+
+    // Найти материал той же редкости (type = 'craft')
+    const material = db.prepare(`
+        SELECT c.id, c.name, c.rarity_id, c.type, c.image,
+               r.display_name as rarity_display, r.color as rarity_color
+        FROM craft_items c
+        JOIN rarities r ON c.rarity_id = r.id
+        WHERE c.rarity_id = ? AND c.type = 'craft'
+    `).get(rarityId) as any;
+
+    if (!material) return res.status(400).json({ error: 'Нет материала такой редкости' });
+
+    // Удаляем/уменьшаем камень
+    if (stone.count > 1) {
+        inventory[stoneIndex] = { ...stone, count: stone.count - 1 };
+    } else {
+        inventory.splice(stoneIndex, 1);
+    }
+
+    // Добавляем материал
+    const existing = inventory.find((i: any) => isCraftItem(i) && i.id === material.id);
+    if (existing) {
+        existing.count += 1;
+    } else {
+        inventory.push({
+            type: 'craft_item',
+            id: material.id,
+            name: material.name,
+            rarity_id: material.rarity_id,
+            rarity_display: material.rarity_display,
+            rarity_color: material.rarity_color,
+            count: 1,
+            itemType: material.type || 'craft',
+            image: material.image || null,
+        });
+    }
+
+    db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    res.json({ success: true, message: `Камень разобран в ${material.name}` });
+});
+
 export default router;
