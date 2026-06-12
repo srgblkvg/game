@@ -374,12 +374,8 @@ function autoAdvance(tournamentId: number) {
             if (lastCompleted?.completedAt) {
                 const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
                 const oneHourLater = completedTime + 3600 * 1000;
-                if (Date.now() < oneHourLater) {
-                    console.log(`[autoAdvance] БЛОК: ${t.division} — ждём до ${new Date(oneHourLater).toISOString()}`);
-                    return; // ещё не время
-                }
+                if (Date.now() < oneHourLater) return; // ещё не время
             }
-            console.log(`[autoAdvance] СОЗДАЁМ: ${t.division}`);
             const divConfig = divisions.find(d => d.name === t.division)!;
             const now2 = Math.floor(Date.now() / 1000);
             db.prepare(
@@ -420,12 +416,8 @@ function getOrCreateTournament(type?: string) {
             ).get(div.name) as any;
             if (lastCompleted?.completedAt) {
                 const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
-                if (Date.now() < completedTime + 3600 * 1000) {
-                    console.log(`[tournament] БЛОК: ${div.name} — ждём до ${new Date(completedTime + 3600 * 1000).toISOString()}`);
-                    continue; // ещё не прошёл час
-                }
+                if (Date.now() < completedTime + 3600 * 1000) continue; // ещё не прошёл час
             }
-            console.log(`[tournament] СОЗДАЁМ: ${div.name}`);
             db.prepare(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, ?, ?)'
             ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, now, 'official');
