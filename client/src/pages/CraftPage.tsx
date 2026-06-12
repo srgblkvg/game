@@ -108,7 +108,7 @@ export default function CraftPage() {
     }, []);
 
     const handleItemClick = useCallback((item: any) => {
-        if (isCraftItem(item)) return;
+        if (isCraftItem(item) && item.itemType !== 'upgrade') return;
         setTooltipData(null);
         const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
         if (freeSlotIndex === -1) { alert('Все слоты заняты'); return; }
@@ -133,7 +133,9 @@ export default function CraftPage() {
         setTooltipData(null);
         if (e.shiftKey) { e.stopPropagation(); sendItemLink(item.id, item); return; }
         if (isCraftItem(item)) {
-            setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
+            if (item.itemType !== 'upgrade') {
+                setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
+            }
         }
         setCraftSlots(prev => { const n = [...prev]; n[index] = null; return n; });
     };
@@ -146,7 +148,7 @@ export default function CraftPage() {
         let item = displayInventory.find((i: any) => i.id === numericItemId);
         if (!item) item = character.inventory.find((i: any) => i.id == numericItemId && isCraftItem(i));
         if (!item) return;
-        if (isCraftItem(item)) {
+        if (isCraftItem(item) && item.itemType !== 'upgrade') {
             const used = materialUsage[item.id] || 0;
             if (used >= getOriginalCraftItemCount(item.id)) return;
             setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
@@ -173,7 +175,9 @@ export default function CraftPage() {
         const item = craftSlots[slotIndex];
         if (!item) return;
         if (isCraftItem(item)) {
-            setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
+            if (item.itemType !== 'upgrade') {
+                setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
+            }
         }
         setCraftSlots(prev => { const n = [...prev]; n[slotIndex] = null; return n; });
     };
@@ -415,11 +419,36 @@ export default function CraftPage() {
                         </Button>
                         <Button variant="danger" size="sm" fullWidth disabled={!hasItemsInSlots} onClick={async () => {
                             const itemsToSalvage = craftSlots.filter(s => s && !isCraftItem(s));
-                            if (itemsToSalvage.length === 0) return;
+                            const stonesToDisassemble = craftSlots.filter(s => s && isCraftItem(s) && s.itemType === 'upgrade');
+                            if (itemsToSalvage.length === 0 && stonesToDisassemble.length === 0) return;
+
                             try {
-                                const result = await salvageItems(itemsToSalvage.map(s => s.id));
-                                setCharacter({ ...character, inventory: result.inventory });
-                                setCraftSlots(prev => prev.map(s => (s && !isCraftItem(s) && itemsToSalvage.some(i => i.id === s.id) ? null : s)));
+                                // Разбор предметов
+                                if (itemsToSalvage.length > 0) {
+                                    const result = await salvageItems(itemsToSalvage.map(s => s.id));
+                                    setCharacter({ ...character, inventory: result.inventory });
+                                }
+                                // Разбор камней
+                                for (const stone of stonesToDisassemble) {
+                                    const res = await fetch('/api/craft/disassemble', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+                                        body: JSON.stringify({ itemId: stone.id }),
+                                    });
+                                    const data = await res.json();
+                                    if (res.ok) {
+                                        const fresh = await fetchCharacter();
+                                        setCharacter(fresh);
+                                    } else {
+                                        alert(data.error || 'Ошибка');
+                                    }
+                                }
+                                setCraftSlots(prev => prev.map(s => {
+                                    if (!s) return null;
+                                    if (!isCraftItem(s) && itemsToSalvage.some(i => i.id === s.id)) return null;
+                                    if (isCraftItem(s) && s.itemType === 'upgrade' && stonesToDisassemble.some(i => i.id === s.id)) return null;
+                                    return s;
+                                }));
                                 setMaterialUsage({});
                             } catch (err: any) { alert(err.message); }
                         }}>
@@ -427,52 +456,6 @@ export default function CraftPage() {
                         </Button>
                     </div>
                 </div>
-
-                {/* Разборка камней улучшения */}
-                {(() => {
-                    const upgradeStones = (character?.inventory || []).filter((i: any) =>
-                        isCraftItem(i) && i.itemType === 'upgrade'
-                    );
-                    if (upgradeStones.length === 0) return null;
-
-                    const handleDisassemble = async (itemId: number) => {
-                        try {
-                            const res = await fetch('/api/craft/disassemble', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-                                body: JSON.stringify({ itemId }),
-                            });
-                            const data = await res.json();
-                            if (res.ok) {
-                                const fresh = await fetchCharacter();
-                                setCharacter(fresh);
-                                alert(data.message);
-                            } else {
-                                alert(data.error || 'Ошибка');
-                            }
-                        } catch { alert('Ошибка сети'); }
-                    };
-
-                    return (
-                        <Card className="mb-4">
-                            <h3 className="font-bold text-sm mb-2">🔨 Разборка камней улучшения</h3>
-                            <p className="text-xs text-[var(--color-text-muted)] mb-2">1 камень → 1 материал того же качества</p>
-                            <div className="flex flex-wrap gap-2">
-                                {upgradeStones.map((stone: any) => (
-                                    <button
-                                        key={stone.id}
-                                        onClick={() => handleDisassemble(stone.id)}
-                                        className="px-3 py-1.5 rounded text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-default)] hover:border-[var(--color-accent-info)] cursor-pointer transition-colors flex items-center gap-2"
-                                    >
-                                        <span>{stone.name}</span>
-                                        <span className="text-[var(--color-text-muted)]">(x{stone.count})</span>
-                                        <span className="text-[var(--color-accent-success)]">→</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </Card>
-                    );
-                })()}
 
                 {/* Инвентарь */}
                 <div className="flex-1 min-w-[300px]" onDragOver={handleDragOver} onDrop={handleDropOnInventory}>
