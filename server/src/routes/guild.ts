@@ -714,6 +714,16 @@ router.get('/guild/war/details', (req: any, res) => {
         ORDER BY gwa.id DESC
     `).all(war.id, userId) as any[];
 
+    // Все атаки в войне (для хода войны)
+    const allAttacks = db.prepare(`
+        SELECT gwa.*, au.username as attackerName, du.username as defenderName
+        FROM guild_war_attacks gwa
+        JOIN users au ON gwa.attackerId = au.id
+        JOIN users du ON gwa.defenderId = du.id
+        WHERE gwa.warId = ?
+        ORDER BY gwa.id DESC
+    `).all(war.id) as any[];
+
     // Сколько атак я сделал
     const myAttackCount = db.prepare(
         'SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?'
@@ -748,6 +758,7 @@ router.get('/guild/war/details', (req: any, res) => {
             myMembers,
             enemyMembers: enemyWithProtection,
             myAttacks,
+            allAttacks,
             myAttackCount: myAttackCount.cnt,
             canAttack: myAttackCount.cnt < 3 && !attackCooldownUntil,
             attackCooldownUntil,
@@ -845,10 +856,11 @@ router.post('/guild/war/attack', (req: any, res) => {
     const won = dCurrentHp <= 0;
 
     // Запись атаки
+    const battleLogJson = JSON.stringify(log);
     db.prepare(`
-        INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won)
-        VALUES (?, ?, ?, ?, ?, ?)
-    `).run(war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0);
+        INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won, battleLog)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, battleLogJson);
 
     // Обновление счёта
     if (won) {

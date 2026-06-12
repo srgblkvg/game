@@ -42,6 +42,17 @@ export default function GuildWarPage() {
         } catch (e: any) { setError(e.message); }
     };
 
+    const viewBattleLog = (attack: any) => {
+        try {
+            const log = JSON.parse(attack.battleLog || '[]');
+            setBattleLog(log);
+            setBattleResult({ won: attack.won });
+        } catch {
+            setBattleLog(['Лог боя недоступен']);
+            setBattleResult(null);
+        }
+    };
+
     if (!data) {
         return (
             <div className="px-4 py-4 max-w-3xl mx-auto">
@@ -69,7 +80,7 @@ export default function GuildWarPage() {
                 ⚔️ Война гильдий
             </h1>
 
-            {/* Счёт — горизонтальный блок */}
+            {/* Счёт */}
             <Card className="mb-4">
                 <div className="flex items-center justify-between text-center">
                     <div className="flex-1">
@@ -96,7 +107,7 @@ export default function GuildWarPage() {
                 <Card className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="font-bold text-sm">
-                            {battleResult?.won ? '🏆 Победа!' : '💀 Поражение'}
+                            {battleResult?.won ? '🏆 Победа!' : battleResult?.won === false ? '💀 Поражение' : '📋 Лог боя'}
                         </h3>
                         <Button variant="secondary" size="xs" onClick={() => { setBattleLog([]); setBattleResult(null); }}>✕</Button>
                     </div>
@@ -148,6 +159,12 @@ export default function GuildWarPage() {
                         const hasProtection = !!m.protectedUntil;
                         const maxAttacks = m.timesAttacked >= 3;
                         const cantAttack = hasProtection || maxAttacks || !data.canAttack;
+                        let protectionText = '';
+                        if (hasProtection) {
+                            const protEnd = new Date(m.protectedUntil);
+                            const mins = Math.ceil((protEnd.getTime() - Date.now()) / 60000);
+                            protectionText = `🛡️ ${mins}м`;
+                        }
                         return (
                             <Card key={m.id} className="flex items-center justify-between py-2 px-3">
                                 <div className="flex items-center gap-2">
@@ -157,7 +174,7 @@ export default function GuildWarPage() {
                                     </span>
                                     <span className="text-[var(--color-text-muted)] text-[0.6rem]">ур.{m.level}</span>
                                     {hasProtection && (
-                                        <span className="text-[0.55rem] text-[var(--color-accent-info)]">🛡️</span>
+                                        <span className="text-[0.55rem] text-[var(--color-accent-info)]">{protectionText}</span>
                                     )}
                                     <span className="text-[0.55rem] text-[var(--color-text-muted)]">{m.timesAttacked}/3</span>
                                 </div>
@@ -192,18 +209,30 @@ export default function GuildWarPage() {
                 </div>
             )}
 
-            {/* История моих атак */}
-            {data.myAttacks.length > 0 && (
+            {/* Ход войны — все атаки */}
+            {data.allAttacks && data.allAttacks.length > 0 && (
                 <Card className="mt-4">
-                    <h3 className="font-bold text-sm mb-2">Мои атаки</h3>
+                    <h3 className="font-bold text-sm mb-2">📜 Ход войны</h3>
                     <div className="space-y-1 text-xs">
-                        {data.myAttacks.map((a: any) => (
-                            <div key={a.id} className="flex items-center gap-2 border-b border-[var(--color-border-light)] pb-1">
-                                <span>{a.won ? '🏆' : '💀'}</span>
-                                <span>vs {a.defenderName}</span>
-                                <span className="text-[var(--color-text-muted)] ml-auto">{new Date(a.createdAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
-                            </div>
-                        ))}
+                        {data.allAttacks.map((a: any) => {
+                            const isMyGuild = a.attackerGuildId === data.myGuildId;
+                            return (
+                                <div key={a.id}
+                                    className="flex items-center gap-2 border-b border-[var(--color-border-light)] pb-1 cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded"
+                                    onClick={() => viewBattleLog(a)}
+                                >
+                                    <span>{a.won ? '🏆' : '💀'}</span>
+                                    <span className={isMyGuild ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}>
+                                        {a.attackerName}
+                                    </span>
+                                    <span className="text-[var(--color-text-muted)]">vs</span>
+                                    <span>{a.defenderName}</span>
+                                    <span className="text-[var(--color-text-muted)] ml-auto text-[0.6rem]">
+                                        {new Date(a.createdAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </Card>
             )}
