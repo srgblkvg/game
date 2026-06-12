@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import AdminRegisterPage from './pages/AdminRegisterPage';
 import ChatPanel from './components/chat/ChatPanel';
 import Header from './components/Header';
+import RightSidebar from './components/RightSidebar';
 import ScrollToTop from './components/ScrollToTop';
 import MetrikaTracker from './components/MetrikaTracker';
 
@@ -47,6 +48,7 @@ function App() {
       <ScrollToTop />
       <MetrikaTracker />
       <Header />
+      {user?.role === 'player' && <RightSidebar />}
       <div style={{
         maxWidth: '1024px',
         margin: '0 auto',

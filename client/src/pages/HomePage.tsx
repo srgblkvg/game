@@ -5,10 +5,9 @@ import { useGame } from '../contexts/GameContext';
 import { fetchCharacter, enterArena, equipItem } from '../api';
 import LeftSidebar from '../components/LeftSidebar';
 import MainBar from '../components/MainBar';
-import RightSidebar from '../components/RightSidebar';
-import { getCompatibleSlots } from '../utils/itemUtils';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import { getCompatibleSlots } from '../utils/itemUtils';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -83,7 +82,6 @@ export default function HomePage() {
           onInventoryItemClick={handleInventoryItemClick}
           hasActiveJob={!!character?.activeJob}
         />
-        <RightSidebar />
       </div>
 
       <Modal open={!!noOpponentModal} onClose={() => setNoOpponentModal(null)}>
