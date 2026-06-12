@@ -78,6 +78,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
               <tr key={key}>
                 <td className={tdStyle}>
                   <Icon icon={STAT_ICONS[STAT_LABELS[key]]} width={iconSize} height={iconSize} className="inline mr-0.5" />
+                  {STAT_LABELS[key]}
                 </td>
                 <td className="text-right pl-[2px] text-[var(--color-accent-success)]">
                   +{equipmentBonuses![key]}
