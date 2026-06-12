@@ -513,8 +513,17 @@ router.get('/guild/treasury/history', (req: any, res) => {
 
 // --- Гильд-войны ---
 
-// Проверить, в войне ли гильдия
+// Проверить, в войне ли гильдия (с авто-закрытием просроченных)
 function isGuildAtWar(guildId: number): any | null {
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    // Авто-отмена просроченных pending войн
+    db.prepare(
+        `UPDATE guild_wars SET status = 'cancelled', endedAt = ? WHERE status = 'pending' AND expiresAt <= ?`
+    ).run(now, now);
+    // Авто-завершение просроченных active войн
+    db.prepare(
+        `UPDATE guild_wars SET status = 'ended', endedAt = ? WHERE status = 'active' AND expiresAt <= ?`
+    ).run(now, now);
     return db.prepare(
         `SELECT * FROM guild_wars WHERE (attackerGuildId = ? OR defenderGuildId = ?) AND status IN ('pending', 'active') LIMIT 1`
     ).get(guildId, guildId) as any || null;
@@ -560,7 +569,7 @@ router.post('/guild/war/declare', (req: any, res) => {
         'SELECT u.id FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?'
     ).get(targetGuildId) as any;
     if (defenderLeader) {
-        const msg = `⚔️ Гильдия «${myGuild.name}» объявила вам войну! Перейдите на страницу гильдии чтобы принять или отклонить.`;
+        const msg = `⚔️ Гильдия «${myGuild.name}» объявила вам войну! У вас 24 часа чтобы принять или отклонить. Страница гильдии →`;
         const info = db.prepare(
             'INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)'
         ).run(0, defenderLeader.id, msg, JSON.stringify({ type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name }));
@@ -590,7 +599,8 @@ router.post('/guild/war/respond', (req: any, res) => {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
     if (accept) {
-        db.prepare('UPDATE guild_wars SET status = ?, acceptedAt = ? WHERE id = ?').run('active', now, war.id);
+        const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+        db.prepare('UPDATE guild_wars SET status = ?, acceptedAt = ?, expiresAt = ? WHERE id = ?').run('active', now, newExpiresAt, war.id);
         res.json({ success: true, message: 'Война принята! Казна заморожена на 24 часа.' });
     } else {
         db.prepare('UPDATE guild_wars SET status = ?, endedAt = ? WHERE id = ?').run('cancelled', now, war.id);
