@@ -78,15 +78,21 @@ export default function TournamentBanner() {
         const token = localStorage.getItem('token');
         if (!token) { setLoading(false); return; }
 
-        fetch('/api/tournament', { headers: getHeaders() })
-            .then(r => r.json())
-            .then((data: any) => {
-                setTournaments(data.tournaments || []);
-                setUserLevel(data.userLevel || 1);
-                setWarnings(data.warnings || []);
-            })
-            .catch(() => {})
-            .finally(() => setLoading(false));
+        const load = () => {
+            fetch('/api/tournament', { headers: getHeaders() })
+                .then(r => r.json())
+                .then((data: any) => {
+                    setTournaments(data.tournaments || []);
+                    setUserLevel(data.userLevel || 1);
+                    setWarnings(data.warnings || []);
+                })
+                .catch(() => {})
+                .finally(() => setLoading(false));
+        };
+
+        load();
+        const interval = setInterval(load, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     if (loading) return null;
