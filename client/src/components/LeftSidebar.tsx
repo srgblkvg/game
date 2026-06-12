@@ -41,6 +41,9 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
           guildName: (character as any).guildName,
           guildId: (character as any).guildId,
           avatar: (character as any).avatar || null,
+          baseStats: stats.baseStats,
+          equipmentBonuses: stats.equipmentBonuses,
+          extraStats: stats.extraStats,
         }}
         side="left"
         showHealth

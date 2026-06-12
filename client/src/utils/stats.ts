@@ -1,9 +1,17 @@
 import type { Character } from '../contexts/GameContext';
 
+export interface StatBreakdown {
+  s: number; a: number; d: number; m: number;
+  hp: number;
+  baseStats: { s: number; a: number; d: number; m: number };
+  equipmentBonuses: { s: number; a: number; d: number; m: number };
+  extraStats: { crit: number; dodge: number; counter: number; fullBlock: number };
+}
+
 export function calculateStats(
   char: Character,
   drinkBonuses?: { s: number; a: number; d: number; m: number }
-) {
+): StatBreakdown {
   const sums = { s: 0, a: 0, d: 0, m: 0 };
   const extra = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
 
@@ -37,5 +45,5 @@ export function calculateStats(
   const m = char.baseStats.m + sums.m;
   const hp = s + a + d + m;
 
-  return { s, a, d, m, hp };
+  return { s, a, d, m, hp, baseStats: char.baseStats, equipmentBonuses: sums, extraStats: extra };
 }

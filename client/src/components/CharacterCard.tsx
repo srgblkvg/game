@@ -172,7 +172,13 @@ export default function CharacterCard({
           )}
         </div>
 
-        <StatsOverlay stats={stats} compact={compact} />
+        <StatsOverlay
+          stats={stats}
+          compact={compact}
+          baseStats={(char as any).baseStats}
+          equipmentBonuses={(char as any).equipmentBonuses}
+          extraStats={(char as any).extraStats}
+        />
 
         {!isMob && (
         <EquipmentSlots

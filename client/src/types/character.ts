@@ -33,4 +33,9 @@ export interface CharacterCardData {
   stats?: { s: number; a: number; d: number; m: number; hp?: number };
   gender?: string;
   avatar?: string | null;
+  baseStats?: { s: number; a: number; d: number; m: number };
+  equipmentBonuses?: { s: number; a: number; d: number; m: number };
+  extraStats?: { crit: number; dodge: number; counter: number; fullBlock: number };
+  guildName?: string;
+  guildId?: number;
 }
