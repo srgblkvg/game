@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useAcquire } from '../contexts/AcquireContext';
 import { salvageItems } from '../api';
+import { fetchCharacter } from '../api/character';
 import { getHeaders } from '../api/helpers';
 import { fetchRecipes, upgradeItem, fetchUpgradeInfo } from '../api/craft';
 import Inventory from '../components/Inventory';
