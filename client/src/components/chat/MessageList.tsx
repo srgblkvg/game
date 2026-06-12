@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ItemTooltip from '../ItemTooltip';
 import { getRarityColor } from '../../utils/itemUtils';
+import { formatGameTime } from '../../utils/time';
 import type { ChatMessage } from './types';
 
 interface MessageListProps {
@@ -13,10 +14,7 @@ interface MessageListProps {
 }
 
 function formatTime(dateStr: string): string {
-    const d = new Date(dateStr);
-    const h = d.getUTCHours().toString().padStart(2, '0');
-    const m = d.getUTCMinutes().toString().padStart(2, '0');
-    return `${h}:${m}`;
+    return formatGameTime(dateStr);
 }
 
 const MAX_NICK_LENGTH = 14;

@@ -8,6 +8,7 @@ import { useServerTime } from '../contexts/ServerTimeContext';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchBattles, fetchCharacter } from '../api';
+import { formatGameTime } from '../utils/time';
 import Button from './ui/Button';
 
 const breadcrumbMap: Record<string, string> = {
@@ -198,7 +199,7 @@ export default function Header() {
                 <div className="flex gap-2 ml-auto items-center">
                     {user.role === 'player' && (
                         <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
-                            {new Date(serverNow * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
+                            {formatGameTime(serverNow * 1000)}
                         </span>
                     )}
                     {user.role === 'player' && (

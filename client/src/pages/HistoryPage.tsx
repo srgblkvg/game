@@ -8,6 +8,7 @@ import { fetchJobHistory } from '../api';
 import { fetchAllPrivateMessagesNew } from '../api/chat';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { formatMoney } from '../utils/money';
+import { formatGameDateTime } from '../utils/time';
 import { renderBattleLog } from '../utils/battleLog';
 import Button from '../components/ui/Button';
 import GuildTag from '../components/GuildTag';
@@ -87,7 +88,7 @@ export default function HistoryPage() {
         </div>
     );
 
-    const fmt = (d: any) => new Date(d).toLocaleString();
+    const fmt = (d: any) => formatGameDateTime(d);
     const fmtTs = (ts: number) => new Date(ts*1000).toLocaleDateString();
 
     const renderBattleRow = (b: any) => {
