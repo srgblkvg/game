@@ -26,7 +26,7 @@ router.get('/character/public/:userId', async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    const { enriched: enrichedEquipment } = enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
+    const { enriched: enrichedEquipment } = await enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
     const base = getBaseStats(user);
     const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, collCnt);

@@ -33,7 +33,7 @@ router.get('/arena/opponent', async (req, res) => {
                 // Возвращаем того же соперника — бесплатно
                 const savedBase = { s: saved.baseS ?? 5, a: saved.baseA ?? 5, d: saved.baseD ?? 5, m: saved.baseM ?? 5 };
                 const savedEquip = JSON.parse(saved.equipment || '{}');
-                const { enriched: savedEnriched } = enrichEquipment(db, savedEquip);
+                const { enriched: savedEnriched } = await enrichEquipment(db, savedEquip);
                 const savedCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(saved.id) as any).cnt || 0;
                 const savedStats = currentStats(savedBase, savedEnriched, undefined, savedCollCnt);
                 return res.json({
@@ -99,7 +99,7 @@ router.get('/arena/opponent', async (req, res) => {
 
     const base = { s: opponent.baseS ?? 5, a: opponent.baseA ?? 5, d: opponent.baseD ?? 5, m: opponent.baseM ?? 5 };
     const equipment = JSON.parse(opponent.equipment || '{}');
-    const { enriched: enrichedEquipment } = enrichEquipment(db, equipment);
+    const { enriched: enrichedEquipment } = await enrichEquipment(db, equipment);
     const oppCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(opponent.id) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, oppCollCnt);
 

@@ -116,7 +116,7 @@ async function loadPlayerForBattle(userId: number) {
     let equipment: Record<string, any> = {};
     try { equipment = JSON.parse(u.equipment || '{}'); } catch {}
 
-    const { enriched } = enrichEquipment(db, equipment);
+    const { enriched } = await enrichEquipment(db, equipment);
     const base = getBaseStats(u);
     const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enriched, undefined, collCnt);

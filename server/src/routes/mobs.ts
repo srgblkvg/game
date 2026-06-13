@@ -67,7 +67,7 @@ router.post('/mob/attack', async (req, res) => {
     // Статы игрока
     const userBase = getBaseStats(user);
     const userEquip = JSON.parse(user.equipment || '{}');
-    const { enriched: enrichedEquip } = enrichEquipment(db, userEquip);
+    const { enriched: enrichedEquip } = await enrichEquipment(db, userEquip);
     const userStats = currentStats(userBase, enrichedEquip, getDrinkBonuses(user),
         (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0
     );

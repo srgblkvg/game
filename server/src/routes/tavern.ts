@@ -40,7 +40,7 @@ router.get('/tavern', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     const base = getBaseStats(user);
     const equipment = JSON.parse(user.equipment || '{}');
-    const { enriched } = enrichEquipment(db, equipment);
+    const { enriched } = await enrichEquipment(db, equipment);
 
     // Бонусы от активного напитка
     let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;
@@ -74,7 +74,7 @@ router.post('/tavern/heal', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     const base = getBaseStats(user);
     const equipment = JSON.parse(user.equipment || '{}');
-    const { enriched } = enrichEquipment(db, equipment);
+    const { enriched } = await enrichEquipment(db, equipment);
 
     // Бонусы от активного напитка
     let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;

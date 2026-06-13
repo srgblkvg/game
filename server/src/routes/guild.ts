@@ -97,7 +97,7 @@ router.get('/guild/list', async (req, res) => {
     `).all();
 
     // Дополнить war-инфой
-    const result = (guilds as any[]).map(async (g) => {
+    const result = await Promise.all((guilds as any[]).map(async (g) => {
         if (g.warId) {
             const war = await db.prepare(`SELECT gw.*, a.name as attackerName, d.name as defenderName FROM guild_wars gw JOIN guilds a ON gw.attackerGuildId = a.id JOIN guilds d ON gw.defenderGuildId = d.id WHERE gw.id = ?`).get(g.warId) as any;
             if (war) {
@@ -107,7 +107,7 @@ router.get('/guild/list', async (req, res) => {
             }
         }
         return g;
-    });
+    }));
 
     res.json(result);
 });
