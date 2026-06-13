@@ -81,8 +81,9 @@ class DB {
     return {
       get: async (...p: any[]) => { 
         const r = await pool.query(q, p); 
-        console.log('[WRAPPER] rows:', r.rows.length, 'rowCount:', r.rowCount);
-        return camelRows(r.rows)[0]; },
+        const camelled = camelRows(r.rows);
+        console.log('[WRAPPER] rows:', r.rows.length, 'camelled:', camelled.length);
+        return camelled[0]; },
       all: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows); },
       run: async (...p: any[]) => { const r = await pool.query(q, p); const id = r.rows?.[0]?.id; return { changes: r.rowCount ?? 0, lastInsertRowid: id ? Number(id) : undefined }; },
     };
