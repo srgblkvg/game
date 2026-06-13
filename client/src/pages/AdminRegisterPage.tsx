@@ -11,7 +11,7 @@ export default function AdminRegisterPage() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/admin/check')
+        fetch('/api/admin/check')
             .then(r => r.json())
             .then(data => setAllowRegister(!data.exists))
             .catch(() => setAllowRegister(false));
@@ -19,7 +19,7 @@ export default function AdminRegisterPage() {
 
     const handleRegister = async () => {
         try {
-            const res = await fetch('http://localhost:3001/api/admin/register', {
+            const res = await fetch('/api/admin/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password }),

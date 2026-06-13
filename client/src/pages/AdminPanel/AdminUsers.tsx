@@ -54,7 +54,7 @@ export default function AdminUsers() {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             const token = localStorage.getItem('token');
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            const res = await fetch('http://localhost:3001/api/admin/reset-timers', {
+            const res = await fetch('/api/admin/reset-timers', {
                 method: 'POST', headers,
                 body: JSON.stringify(all ? { all: true } : { userId: parseInt(timerUserId) }),
             });
