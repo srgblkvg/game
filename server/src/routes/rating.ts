@@ -33,7 +33,7 @@ router.get('/rating', async (req, res) => {
         LIMIT ? OFFSET ?
     `).all(limit, offset) as any[];
 
-    const result = users.map(async (u) => ({
+    const result = users.map((u) => ({
         ...u,
         elo: u.elo || 1000,
         rank: getRank(u.elo || 1000),
