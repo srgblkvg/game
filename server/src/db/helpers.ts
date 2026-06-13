@@ -2,24 +2,24 @@ type DB = any;
 
 // --- Подготовленные запросы ---
 async function getItemDataStmt(db: DB, name: string, slot: string) {
-  return db.prepare(`SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.name = ? AND i.slot = ?`).get(name, slot) as any;
+  return await db.prepare(`SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.name = ? AND i.slot = ?`).get(name, slot) as any;
 }
 
 // --- Данные пользователя ---
 export async function getUserById(db: DB, userId: number) {
-  return db.prepare('SELECT u.*, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
+  return await db.prepare('SELECT u.*, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
 }
 
 export async function getUserWithStats(db: DB, userId: number) {
-  return db.prepare('SELECT u.id, u.username, u.level, u.money, u.exp, u.totalBattles, u.wins, u.inventory, u.equipment, u.currentHp, u.lastHpUpdate, u.lastAttackTime, u.protectionUntil, u.inventorySlots, u.activeJob, u.chatBannedUntil, u.openPrivateTabs, u.gender, u.statPoints, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
+  return await db.prepare('SELECT u.id, u.username, u.level, u.money, u.exp, u.totalBattles, u.wins, u.inventory, u.equipment, u.currentHp, u.lastHpUpdate, u.lastAttackTime, u.protectionUntil, u.inventorySlots, u.activeJob, u.chatBannedUntil, u.openPrivateTabs, u.gender, u.statPoints, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
 }
 
 // --- Статы ---
-export function getBaseStats(user: any) {
+export async function getBaseStats(user: any) {
   return { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 };
 }
 
-export function getMaxHp(stats: { hp?: number; s: number; a: number; d: number; m: number }) {
+export async function getMaxHp(stats: { hp?: number; s: number; a: number; d: number; m: number }) {
   return stats.hp ?? (stats.s + stats.a + stats.d + stats.m);
 }
 
@@ -44,7 +44,7 @@ export async function enrichEquipment(db: DB, equipment: Record<string, any>): P
 }
 
 // --- HP ---
-export function recalcHpOnEquip(currentHp: number, oldMaxHp: number, newMaxHp: number) {
+export async function recalcHpOnEquip(currentHp: number, oldMaxHp: number, newMaxHp: number) {
   return Math.max(1, Math.floor(currentHp * newMaxHp / (oldMaxHp || 1)));
 }
 
@@ -78,7 +78,7 @@ export async function collectGuildTax(db: DB, userId: number, income: number, so
 }
 
 // --- Уровни ---
-export function expForLevel(level: number): number {
+export async function expForLevel(level: number): number {
   return 10 * Math.pow(2, level - 1);
 }
 

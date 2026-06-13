@@ -5,7 +5,7 @@ import type Database from 'better-sqlite3';
  *   Новый = Старый + K × (Результат − Ожидание)
  *   Ожидание = 1 / (1 + 10^((R_оппонента − R_игрока) / 400))
  */
-export function calcElo(playerElo: number, opponentElo: number, playerWon: boolean, level: number): number {
+export async function calcElo(playerElo: number, opponentElo: number, playerWon: boolean, level: number): number {
     const k = level <= 10 ? 40 : level <= 25 ? 30 : level <= 50 ? 20 : 15;
     const expected = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
     const result = playerWon ? 1 : 0;
@@ -15,7 +15,7 @@ export function calcElo(playerElo: number, opponentElo: number, playerWon: boole
 /**
  * Декай рейтинга за неактивность в PvP
  */
-export function applyDecay(db: InstanceType<typeof Database>, userId: number, lastPvpTime: number, elo: number): number {
+export async function applyDecay(db: InstanceType<typeof Database>, userId: number, lastPvpTime: number, elo: number): number {
     const now = Math.floor(Date.now() / 1000);
     if (!lastPvpTime) return elo;
 
@@ -31,7 +31,7 @@ export function applyDecay(db: InstanceType<typeof Database>, userId: number, la
     const newElo = Math.max(100, elo - decay);
 
     if (newElo !== elo) {
-        db.prepare('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?').run(newElo, now, userId);
+        await db.prepare('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?').run(newElo, now, userId);
     }
 
     return newElo;
@@ -41,7 +41,7 @@ export function applyDecay(db: InstanceType<typeof Database>, userId: number, la
  * Начисление PvE-рейтинга
  * Возвращает { eloAdded, newElo }
  */
-export function addPveRating(
+export async function addPveRating(
     db: InstanceType<typeof Database>,
     userId: number,
     amount: number,
@@ -49,7 +49,7 @@ export function addPveRating(
     elo: number,
     cooldownCheck: (user: any) => boolean,
 ): { eloAdded: number; newElo: number } | null {
-    const user = db.prepare(
+    const user = await db.prepare(
         'SELECT lastPveRatingTime, lastBossKillDate, pveRating, elo FROM users WHERE id = ?'
     ).get(userId) as any;
     if (!user) return null;
@@ -72,8 +72,8 @@ export function addPveRating(
 /**
  * Проверка и сброс сезона при необходимости
  */
-export function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
-    const season = db.prepare("SELECT * FROM seasons WHERE status = 'active' LIMIT 1").get() as any;
+export async function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
+    const season = await db.prepare("SELECT * FROM seasons WHERE status = 'active' LIMIT 1").get() as any;
     if (!season) return false;
 
     const now = new Date();
@@ -81,11 +81,11 @@ export function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
     if (now < endDate) return false;
 
     // Сезон закончился — архивируем топ-10
-    const top10 = db.prepare(
+    const top10 = await db.prepare(
         'SELECT id, username, elo FROM users ORDER BY elo DESC LIMIT 10'
     ).all() as any[];
 
-    const insertHof = db.prepare(
+    const insertHof = await db.prepare(
         'INSERT INTO hall_of_fame (seasonId, userId, rank, elo, title) VALUES (?, ?, ?, ?, ?)'
     );
 
@@ -94,7 +94,7 @@ export function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
     }
 
     // Закрываем старый сезон
-    db.prepare("UPDATE seasons SET status = 'finished' WHERE id = ?").run(season.id);
+    await db.prepare("UPDATE seasons SET status = 'finished' WHERE id = ?").run(season.id);
 
     // Создаём новый
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -103,13 +103,13 @@ export function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
                         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     const seasonName = `${monthNames[nextMonth.getMonth()]} ${nextMonth.getFullYear()}`;
 
-    db.prepare('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)').run(
+    await db.prepare('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)').run(
         seasonName, nextMonth.toISOString(), endOfNext.toISOString()
     );
 
     // Мягкий сброс ELO: Новый = 1000 + (Старый − 1000) × 0.5
-    const allUsers = db.prepare('SELECT id, elo FROM users').all() as any[];
-    const resetStmt = db.prepare('UPDATE users SET elo = ?, seasonWins = 0, seasonLosses = 0, pveRating = 0 WHERE id = ?');
+    const allUsers = await db.prepare('SELECT id, elo FROM users').all() as any[];
+    const resetStmt = await db.prepare('UPDATE users SET elo = ?, seasonWins = 0, seasonLosses = 0, pveRating = 0 WHERE id = ?');
     for (const u of allUsers) {
         const oldElo = u.elo || 1000;
         const newElo = Math.round(1000 + (oldElo - 1000) * 0.5);

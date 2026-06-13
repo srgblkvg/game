@@ -12,7 +12,7 @@ import { currentStats } from '../game/stats';
 
 const router = Router();
 
-function generateCode(): string {
+async function generateCode(): string {
     return String(Math.floor(100000 + Math.random() * 900000));
 }
 

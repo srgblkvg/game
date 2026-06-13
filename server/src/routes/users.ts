@@ -6,9 +6,9 @@ import { currentStats } from '../game/stats';
 const router = Router();
 
 // Поиск пользователя по логину
-router.get('/character/username/:username', (req: any, res) => {
+router.get('/character/username/:username', async (req, res) => {
     const { username } = req.params;
-    const user = db.prepare(
+    const user = await db.prepare(
         'SELECT id, username, level FROM users WHERE LOWER(username) = LOWER(?)'
     ).get(username);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -16,11 +16,11 @@ router.get('/character/username/:username', (req: any, res) => {
 });
 
 // Публичный профиль игрока
-router.get('/character/public/:userId', (req: any, res) => {
+router.get('/character/public/:userId', async (req, res) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
-    const user: any = db.prepare(
+    const user: any = await db.prepare(
         'SELECT u.id, u.username, u.level, u.totalBattles, u.wins, u.equipment, u.currentHp, u.gender, u.avatar, u.baseS, u.baseA, u.baseD, u.baseM, u.pveTotalBattles, u.pveWins, u.tournamentCount, u.tournamentWins, u.totalJobMoney, u.totalPveMoneyWon, u.totalPvpMoneyWon, u.totalPveMoneyLost, u.totalPvpMoneyLost, u.totalJobSeconds, u.craftCreated, u.craftUpgraded, u.craftBroken, u.createdAt, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?'
     ).get(userId);
 
@@ -28,7 +28,7 @@ router.get('/character/public/:userId', (req: any, res) => {
 
     const { enriched: enrichedEquipment } = enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
     const base = getBaseStats(user);
-    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
+    const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, collCnt);
 
     res.json({
@@ -39,7 +39,7 @@ router.get('/character/public/:userId', (req: any, res) => {
         wins: user.wins,
         pveTotalBattles: user.pveTotalBattles || 0,
         pveWins: user.pveWins || 0,
-        tournamentCount: (db.prepare(
+        tournamentCount: (await db.prepare(
             "SELECT COUNT(*) as cnt FROM tournament_participants tp JOIN tournaments t ON tp.tournamentId = t.id WHERE tp.userId = ? AND t.status = 'completed'"
         ).get(userId) as any).cnt || 0,
         tournamentWins: user.tournamentWins || 0,
@@ -64,13 +64,13 @@ router.get('/character/public/:userId', (req: any, res) => {
 });
 
 // GET /users/list?ids=1,2,3
-router.get('/users/list', (req: any, res) => {
+router.get('/users/list', async (req, res) => {
     const idsParam = req.query.ids as string;
     if (!idsParam) return res.json([]);
     const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n));
     if (ids.length === 0) return res.json([]);
     const placeholders = ids.map(() => '?').join(',');
-    const users = db.prepare(`SELECT id, username FROM users WHERE id IN (${placeholders})`).all(...ids);
+    const users = await db.prepare(`SELECT id, username FROM users WHERE id IN (${placeholders})`).all(...ids);
     res.json(users);
 });
 

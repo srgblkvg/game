@@ -10,14 +10,14 @@ const router = Router();
 
 // Async wrappers for module-level prepared statements
 async function getItemData(name: string, slot: string) {
-  return db.prepare(`SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.name = ? AND i.slot = ?`).get(name, slot) as any;
+  return await db.prepare(`SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.name = ? AND i.slot = ?`).get(name, slot) as any;
 }
 async function getCraftData(id: number) {
-  return db.prepare(`SELECT c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.id = ?`).get(id) as any;
+  return await db.prepare(`SELECT c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.id = ?`).get(id) as any;
 }
 
 // Загрузить персонажа (текущего пользователя)
-router.get('/character/me', async (req: any, res) => {
+router.get('/character/me', async (req, res) => {
     const userId = req.userId;
     const user = await getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -139,7 +139,7 @@ router.get('/character/me', async (req: any, res) => {
     });
 });
 
-router.post('/character/save', async (req: any, res) => {
+router.post('/character/save', async (req, res) => {
     const userId = req.userId;
     const { inventory, equipment, level, exp, money, totalBattles, wins } = req.body;
     await db.prepare('UPDATE users SET level=?, exp=?, money=?, totalBattles=?, wins=?, inventory=?, equipment=? WHERE id=?')
@@ -147,7 +147,7 @@ router.post('/character/save', async (req: any, res) => {
     res.json({ success: true });
 });
 
-router.post('/character/save-tabs', async (req: any, res) => {
+router.post('/character/save-tabs', async (req, res) => {
     const userId = req.userId;
     const { tabs } = req.body;
     if (!Array.isArray(tabs)) return res.status(400).json({ error: 'tabs должен быть массивом' });
@@ -155,7 +155,7 @@ router.post('/character/save-tabs', async (req: any, res) => {
     res.json({ success: true });
 });
 
-router.get('/users/find', async (req: any, res) => {
+router.get('/users/find', async (req, res) => {
     const username = req.query.username as string;
     if (!username) return res.status(400).json({ error: 'Укажите username' });
     const user = await db.prepare('SELECT id, username FROM users WHERE username = ?').get(username) as any;
@@ -163,7 +163,7 @@ router.get('/users/find', async (req: any, res) => {
     res.json(user);
 });
 
-router.get('/users/search', async (req: any, res) => {
+router.get('/users/search', async (req, res) => {
     const q = req.query.q as string;
     if (!q || q.length < 2) return res.json([]);
     const users = await db.prepare('SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10').all(`%${q}%`);
