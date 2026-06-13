@@ -12,11 +12,11 @@ import { currentStats } from '../game/stats';
 
 const router = Router();
 
-async function generateCode(): string {
+function generateCode(): string {
     return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-router.post('/register', async (req, res) => {
+router.post('/register', async async (req, res) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные', details: parsed.error.flatten() });
 
@@ -42,6 +42,8 @@ router.post('/register', async (req, res) => {
 
     const sent = await sendVerificationCode(email, code);
     if (!sent) {
+        // Письмо не ушло — пользователь создан, но потребует подтверждения при входе
+        // Удаляем код (нельзя подтвердить без письма) — пусть запросит повторно через resend-code
         await db.prepare('UPDATE users SET emailCode = NULL, emailCodeExpires = 0 WHERE email = ?').run(email);
         return res.status(500).json({ error: 'Не удалось отправить письмо с кодом. Попробуйте позже или запросите код повторно на странице входа.' });
     }
@@ -70,7 +72,7 @@ router.post('/verify-email', async (req, res) => {
 });
 
 // Повторная отправка кода подтверждения
-router.post('/resend-code', async (req, res) => {
+router.post('/resend-code', async async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email обязателен' });
 
@@ -86,6 +88,7 @@ router.post('/resend-code', async (req, res) => {
             if (decoded.isGuest && decoded.userId) {
                 const guestUser: any = await db.prepare('SELECT id FROM users WHERE id = ?').get(decoded.userId);
                 if (guestUser) {
+                    // Проверяем, не занят ли email другим пользователем
                     const emailTaken = await db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, decoded.userId);
                     if (emailTaken) return res.status(400).json({ error: 'Этот email уже используется' });
 
@@ -201,9 +204,9 @@ router.post('/login', async (req, res) => {
     // Декай рейтинга и проверка сезона
     const ratingUser: any = await db.prepare('SELECT elo, lastPvpTime FROM users WHERE id = ?').get(userRow.id);
     if (ratingUser) {
-        await applyDecay(db, userRow.id, ratingUser.lastPvpTime || 0, ratingUser.elo || 1000);
+        applyDecay(db, userRow.id, ratingUser.lastPvpTime || 0, ratingUser.elo || 1000);
     }
-    await checkSeasonReset(db);
+    checkSeasonReset(db);
 
     // Логируем IP
     if (req.ip) {

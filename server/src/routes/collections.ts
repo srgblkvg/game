@@ -6,7 +6,7 @@ const router = Router();
 // Получить коллекцию пользователя (предметы + сеты)
 router.get('/collections', async (req, res) => {
     const userId = req.userId;
-    const items = await db.prepare(
+    const items = db.prepare(
         'SELECT itemName, slot, rarity_id FROM collections WHERE userId = ?'
     ).all(userId) as any[];
 
@@ -56,7 +56,7 @@ router.post('/collections/add', async (req, res) => {
     }
 
     // Проверяем что предмет ещё не в коллекции
-    const existing = await db.prepare(
+    const existing = db.prepare(
         'SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ?'
     ).get(userId, itemName, slot);
 
@@ -83,7 +83,7 @@ router.post('/collections/add', async (req, res) => {
     await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
 
     // Добавляем в коллекцию
-    await db.prepare(
+    db.prepare(
         'INSERT INTO collections (userId, itemName, slot, rarity_id) VALUES (?, ?, ?, ?)'
     ).run(userId, itemName, slot, removed.rarity_id || 0);
 

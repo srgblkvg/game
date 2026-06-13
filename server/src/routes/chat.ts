@@ -16,7 +16,7 @@ router.get('/chat/recent', async (req, res) => {
     LIMIT ?
   `).all(userId, userId, limit);
 
-  const result = messages.map(async (m) => {
+  const result = messages.map((m: any) => {
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);
@@ -55,7 +55,7 @@ router.get('/chat/private/:userId', async (req, res) => {
     LIMIT ?
   `).all(currentUserId, otherUserId, otherUserId, currentUserId, limit);
 
-  const result = messages.map(async (m) => {
+  const result = messages.map((m: any) => {
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);

@@ -11,7 +11,7 @@ const router = Router();
 const priceFloor: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
 
 // API: получить минимальные цены (для клиента)
-router.get('/auction/price-floor', async (req, res) => {
+router.get('/auction/price-floor', async (_req, res) => {
     res.json(priceFloor);
 });
 
@@ -36,7 +36,7 @@ router.get('/auction', async (req, res) => {
         WHERE l.endsAt > ? ORDER BY l.endsAt ASC
     `).all(now) as any[];
 
-    res.json(lots.map(async (l) => ({ ...l, itemData: JSON.parse(l.itemData) })));
+    res.json(lots.map((l: any) => ({ ...l, itemData: JSON.parse(l.itemData) })));
 });
 
 // Создать лот

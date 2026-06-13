@@ -108,7 +108,7 @@ router.post('/character/salvage', async (req, res) => {
         return true;
     });
 
-    const getCraftItemByRarityId = await db.prepare(`
+    const getCraftItemByRarityId = db.prepare(`
         SELECT c.id, c.name, c.rarity_id, c.type, c.image,
                r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c

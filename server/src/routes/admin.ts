@@ -88,7 +88,7 @@ router.get('/users', async (req, res) => {
     if (filter === 'guests') query += ' WHERE isGuest = 1';
     else if (filter === 'players') query += ' WHERE isGuest = 0';
     query += ' ORDER BY lastLoginAt DESC NULLS LAST';
-    const users = await db.prepare(query).all();
+    const users = db.prepare(query).all();
     res.json(users);
 });
 
@@ -140,7 +140,7 @@ router.delete('/users/:id', async (req, res) => {
 // IP-адреса игрока
 router.get('/users/:id/ips', async (req, res) => {
     const userId = parseInt(req.params.id);
-    const ips = await db.prepare(
+    const ips = db.prepare(
         'SELECT ip, MAX(createdAt) as lastSeen, COUNT(*) as count FROM login_logs WHERE userId = ? GROUP BY ip ORDER BY lastSeen DESC'
     ).all(userId);
     res.json(ips);

@@ -30,13 +30,13 @@ router.post('/tournaments', async (req, res) => {
     if (!div) return res.status(400).json({ error: 'Неизвестный дивизион' });
 
     // Проверяем, нет ли уже активного турнира в этом дивизионе
-    const existing = await db.prepare(
+    const existing = db.prepare(
         "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress')"
     ).get(division) as any;
     if (existing) return res.status(400).json({ error: 'В этом дивизионе уже есть активный турнир' });
 
     const now = Math.floor(Date.now() / 1000);
-    await db.prepare(
+    db.prepare(
         'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(division, status || 'registration', registrationStart || now, registrationEnd || (now + 86400), prizePool || div.basePool, now);
 
@@ -51,7 +51,7 @@ router.put('/tournaments/:id', async (req, res) => {
     const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });
 
-    await db.prepare(
+    db.prepare(
         'UPDATE tournaments SET status=?, registrationStart=?, registrationEnd=?, prizePool=? WHERE id=?'
     ).run(
         status || t.status,

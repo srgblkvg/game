@@ -9,7 +9,7 @@ const router = Router();
 router.get('/pve-battles', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 50;
-    const battles = await db.prepare(
+    const battles = db.prepare(
         'SELECT * FROM pve_battles WHERE userId = ? ORDER BY createdAt DESC LIMIT ?'
     ).all(userId, limit);
     res.json(battles);
@@ -35,7 +35,7 @@ router.get('/tournament-history', authMiddleware, async (req, res) => {
 router.get('/quest-history', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 30;
-    res.json(await db.prepare(
+    res.json(db.prepare(
         'SELECT * FROM quest_history WHERE userId = ? ORDER BY id DESC LIMIT ?'
     ).all(userId, limit));
 });

@@ -8,58 +8,63 @@ import { getUserById, getBaseStats, enrichEquipment, applyExp } from '../db/help
 
 const router = Router();
 
-// Async wrappers for module-level prepared statements
-async function getItemData(name: string, slot: string) {
-  return await db.prepare(`SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.name = ? AND i.slot = ?`).get(name, slot) as any;
-}
-async function getCraftData(id: number) {
-  return await db.prepare(`SELECT c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.id = ?`).get(id) as any;
-}
+const getItemData = db.prepare(`
+    SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color
+    FROM items i JOIN rarities r ON i.rarity_id = r.id
+    WHERE i.name = ? AND i.slot = ?
+`);
+const getCraftData = db.prepare(`
+    SELECT c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color
+    FROM craft_items c JOIN rarities r ON c.rarity_id = r.id
+    WHERE c.id = ?
+`);
 
 // Загрузить персонажа (текущего пользователя)
 router.get('/character/me', async (req, res) => {
     const userId = req.userId;
-    const user = await getUserById(db, userId);
+    const user = getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     let inventory = JSON.parse(user.inventory || '[]');
     const equipment = JSON.parse(user.equipment || '{}');
     let changed = false;
 
-    // Enrich inventory with rarity data (async map)
-    const enrichedInventory = [];
-    for (const item of inventory) {
-        let enriched = { ...item };
+    inventory = inventory.map((item: any) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
             if (item.rarity_id === undefined) {
-                const craftRow = await getCraftData(Number(item.id));
+                const craftRow = getCraftData.get(Number(item.id)) as any;
                 if (craftRow) {
                     changed = true;
-                    enriched = {
-                        ...item, rarity_id: craftRow.rarity_id, rarity_display: craftRow.rarity_display,
-                        rarity_color: craftRow.rarity_color, itemType: item.itemType || craftRow.type || 'craft',
+                    return {
+                        ...item,
+                        rarity_id: craftRow.rarity_id,
+                        rarity_display: craftRow.rarity_display,
+                        rarity_color: craftRow.rarity_color,
+                        itemType: item.itemType || craftRow.type || 'craft',
                         image: item.image ?? craftRow.image ?? null,
                     };
                 }
             }
         } else if (item.slot) {
             if (item.rarity_id === undefined) {
-                const itemRow = await getItemData(item.name, item.slot);
+                const itemRow = getItemData.get(item.name, item.slot) as any;
                 if (itemRow) {
                     changed = true;
-                    enriched = {
-                        ...item, rarity_id: itemRow.rarity_id, rarity_display: itemRow.rarity_display,
-                        rarity_color: itemRow.rarity_color, image: itemRow.image || item.image || null,
+                    return {
+                        ...item,
+                        rarity_id: itemRow.rarity_id,
+                        rarity_display: itemRow.rarity_display,
+                        rarity_color: itemRow.rarity_color,
+                        image: itemRow.image || item.image || null,
                     };
                 }
             }
         }
-        enrichedInventory.push(enriched);
-    }
-    inventory = enrichedInventory;
+        return item;
+    });
 
     // Обогащаем экипировку
-    const { enriched: enrichedEquipment, changed: equipChanged } = await enrichEquipment(db, equipment);
+    const { enriched: enrichedEquipment, changed: equipChanged } = enrichEquipment(db, equipment);
 
     if (changed) {
         await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
@@ -72,7 +77,7 @@ router.get('/character/me', async (req, res) => {
     const drinkBonuses = getDrinkBonuses(user);
     const stats = currentStats(base, enrichedEquipment, drinkBonuses);
 
-    // Бонус коллекции
+    // Бонус коллекции: +1% к основным статам за каждый предмет в коллекции
     const collectionCount = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt;
     const totalCollectionItems = (await db.prepare('SELECT COUNT(*) as cnt FROM collection_set_items').get() as any).cnt;
     if (collectionCount > 0) {
@@ -89,10 +94,11 @@ router.get('/character/me', async (req, res) => {
         jobData = JSON.parse(user.activeJob);
         const nowSec = Math.floor(Date.now() / 1000);
         if (nowSec >= jobData.endTime) {
-            const rewardAfterTax = await collectGuildTax(db, userId, jobData.reward, 'tax_job');
+            // Налог гильдии (работы)
+            const rewardAfterTax = collectGuildTax(db, userId, jobData.reward, 'tax_job');
             const newMoney = user.money + rewardAfterTax;
             const expGain = jobData.expReward || 0;
-            const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(db, userId, expGain, user.exp, user.level, user.statPoints || 0);
+            const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(db, userId, expGain, user.exp, user.level, user.statPoints || 0);
             await db.prepare('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL, totalJobMoney = totalJobMoney + ?, totalJobSeconds = totalJobSeconds + ? WHERE id = ?')
                 .run(newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId);
             await db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
@@ -108,10 +114,15 @@ router.get('/character/me', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     const maxHp = stats.hp;
     let currentHp = applyHpRegen({
-        id: user.id, currentHp: user.currentHp, maxHp,
-        lastHpUpdate: user.lastHpUpdate || 0, roomType: user.roomType, roomUntil: user.roomUntil,
+        id: user.id,
+        currentHp: user.currentHp,
+        maxHp,
+        lastHpUpdate: user.lastHpUpdate || 0,
+        roomType: user.roomType,
+        roomUntil: user.roomUntil,
     });
 
+    // Если currentHp > maxHp (например после изменения бонусов) — ограничиваем
     if (currentHp > maxHp) {
         currentHp = maxHp;
         await db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?').run(maxHp, now, userId);
@@ -120,25 +131,34 @@ router.get('/character/me', async (req, res) => {
     const openPrivateTabs = JSON.parse(user.openPrivateTabs || '[]');
 
     res.json({
-        id: user.id, username: user.username, level: user.level, guildName: user.guildName || null,
-        avatar: user.avatar || null, exp: user.exp, money: user.money, totalBattles: user.totalBattles,
+        id: user.id, username: user.username, level: user.level,
+        guildName: user.guildName || null,
+        avatar: user.avatar || null,
+        exp: user.exp, money: user.money, totalBattles: user.totalBattles,
         wins: user.wins, inventory, equipment: enrichedEquipment,
         baseStats: { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 },
         currentHp, stats, lastAttackTime: user.lastAttackTime || 0,
-        protectionUntil: user.protectionUntil || 0, lastPveAttackTime: user.lastPveAttackTime || 0,
+        protectionUntil: user.protectionUntil || 0,
+        lastPveAttackTime: user.lastPveAttackTime || 0,
         attackCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 150 : 300) - (now - (user.lastAttackTime || 0))),
         pveCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 150 : 300) - (now - (user.lastPveAttackTime || 0))),
-        inventorySlots: user.inventorySlots || 10, activeJob: jobData, role: user.role || 'player',
-        bank: user.bank || 0, guildId: user.guildId || null, lastBankVisit: user.lastBankVisit || 0,
+        inventorySlots: user.inventorySlots || 10,
+        activeJob: jobData, role: user.role || 'player',
+        bank: user.bank || 0,
+        guildId: user.guildId || null,
+        lastBankVisit: user.lastBankVisit || 0,
         room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
         drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
         premium: user.premiumUntil > now ? { until: user.premiumUntil } : null,
-        drinkBonuses, openPrivateTabs, gender: user.gender || 'male',
-        statPoints: user.statPoints || 0, collectionCount: collectionCount || 0,
+        drinkBonuses,
+        openPrivateTabs, gender: user.gender || 'male',
+        statPoints: user.statPoints || 0,
+        collectionCount: collectionCount || 0,
         totalCollectionItems: totalCollectionItems || 189,
     });
 });
 
+// Сохранить персонажа (полное обновление)
 router.post('/character/save', async (req, res) => {
     const userId = req.userId;
     const { inventory, equipment, level, exp, money, totalBattles, wins } = req.body;
@@ -147,6 +167,7 @@ router.post('/character/save', async (req, res) => {
     res.json({ success: true });
 });
 
+// Сохранение открытых вкладок приватного чата
 router.post('/character/save-tabs', async (req, res) => {
     const userId = req.userId;
     const { tabs } = req.body;
@@ -155,6 +176,7 @@ router.post('/character/save-tabs', async (req, res) => {
     res.json({ success: true });
 });
 
+// Поиск пользователя по нику (для перехода из чата в профиль)
 router.get('/users/find', async (req, res) => {
     const username = req.query.username as string;
     if (!username) return res.status(400).json({ error: 'Укажите username' });
@@ -163,10 +185,13 @@ router.get('/users/find', async (req, res) => {
     res.json(user);
 });
 
+// Поиск пользователей по части имени
 router.get('/users/search', async (req, res) => {
     const q = req.query.q as string;
     if (!q || q.length < 2) return res.json([]);
-    const users = await db.prepare('SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10').all(`%${q}%`);
+    const users = db.prepare(
+        'SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10'
+    ).all(`%${q}%`);
     res.json(users);
 });
 

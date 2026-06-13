@@ -7,7 +7,7 @@ const router = Router();
 // Все маршруты крафта требуют полный доступ
 // router.use('/craft', requireFullAccess); // отключено для гостей
 
-async function isCraftItem(item: any): boolean {
+function isCraftItem(item: any): boolean {
     return item?.type === 'material' || item?.type === 'craft_item';
 }
 
@@ -34,7 +34,7 @@ router.get('/craft/recipes', async (req, res) => {
       `).get(recipe.result_id) || null;
         } else if (recipe.result_type === 'random_item') {
             // result_id = rarity_id, показываем инфо о редкости
-            recipe.result = await db.prepare(
+            recipe.result = db.prepare(
                 'SELECT id as rarity_id, display_name as rarity_display, color as rarity_color, name FROM rarities WHERE id = ?'
             ).get(recipe.result_id) || null;
             if (recipe.result) recipe.result.name = `Случайный предмет (${recipe.result.rarity_display})`;
@@ -107,7 +107,7 @@ router.post('/craft/execute', async (req, res) => {
     }
 
     // Списание ресурсов
-    let newInventory = inventory.map(async (item) => {
+    let newInventory = inventory.map((item: any) => {
         if (isCraftItem(item) && ingredientMap.has(String(item.id))) {
             const needed = ingredientMap.get(String(item.id))!;
             if (item.count > needed) {

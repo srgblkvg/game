@@ -76,14 +76,14 @@ router.post('/recipes', async (req, res) => {
     const { name, description, money_cost, ingredients, result_type, result_id, success_chance, category_id } = req.body;
     if (!name || money_cost === undefined) return res.status(400).json({ error: 'name, money_cost required' });
 
-    const result = await db.prepare(
+    const result = db.prepare(
         'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).run(name, description || '', money_cost, result_type || '', result_id || 0, success_chance ?? 100, category_id || null);
 
     const recipeId = result.lastInsertRowid;
 
     if (ingredients && Array.isArray(ingredients)) {
-        const stmt = await db.prepare('INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)');
+        const stmt = db.prepare('INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)');
         for (const ing of ingredients) {
             stmt.run(recipeId, ing.craft_item_id, ing.quantity);
         }
@@ -93,13 +93,13 @@ router.post('/recipes', async (req, res) => {
 
 router.put('/recipes/:id', async (req, res) => {
     const { name, description, money_cost, ingredients, result_type, result_id, success_chance, category_id } = req.body;
-    await db.prepare(
+    db.prepare(
         'UPDATE craft_recipes SET name=?, description=?, money_cost=?, result_type=?, result_id=?, success_chance=?, category_id=? WHERE id=?'
     ).run(name, description, money_cost, result_type || '', result_id || 0, success_chance ?? 100, category_id || null, req.params.id);
 
     await db.prepare('DELETE FROM craft_recipe_ingredients WHERE recipe_id=?').run(req.params.id);
     if (ingredients && Array.isArray(ingredients)) {
-        const stmt = await db.prepare('INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)');
+        const stmt = db.prepare('INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)');
         for (const ing of ingredients) {
             stmt.run(req.params.id, ing.craft_item_id, ing.quantity);
         }

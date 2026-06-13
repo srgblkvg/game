@@ -21,7 +21,7 @@ router.get('/mobs', async (req, res) => {
     }
 
     // Обогащаем мобов изображениями лута
-    const enriched = mobs.map(async (m) => {
+    const enriched = mobs.map((m: any) => {
         const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
         const rarityMap: [number, string, string][] = [
             [0, 'loot_junk', 'Хлам'], [1, 'loot_common', 'Обычный'],
@@ -189,7 +189,7 @@ router.post('/mob/attack', async (req, res) => {
                 rarityRoll -= lt.chance;
             }
 
-            const craftItem = await db.prepare(
+            const craftItem = db.prepare(
                 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ?'
             ).get(selectedRarity) as any;
 

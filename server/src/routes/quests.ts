@@ -31,18 +31,18 @@ const BASE_REWARDS: Record<QuestType, { xp: number; money: number }> = {
     job: { xp: 3, money: 20 }, craft: { xp: 3, money: 25 }, auction: { xp: 3, money: 50 },
 };
 
-async function getToday(): string {
+function getToday(): string {
     return new Date().toISOString().slice(0, 10);
 }
 
-async function getMidnightTS(): number {
+function getMidnightTS(): number {
     const d = new Date();
     d.setUTCHours(24, 0, 0, 0);
     return Math.floor(d.getTime() / 1000);
 }
 
-async function getSnapshot(userId: number): Record<string, number> {
-    const u = await db.prepare(
+function getSnapshot(userId: number): Record<string, number> {
+    const u = db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
     return {
@@ -54,8 +54,8 @@ async function getSnapshot(userId: number): Record<string, number> {
     };
 }
 
-async function getProgress(userId: number, snapshot: any, questType: QuestType): number {
-    const u = await db.prepare(
+function getProgress(userId: number, snapshot: any, questType: QuestType): number {
+    const u = db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
     const s = typeof snapshot === 'string' ? JSON.parse(snapshot) : snapshot;
@@ -74,7 +74,7 @@ router.get('/tavern/quests', async (req, res) => {
     const userId = req.userId;
     const today = getToday();
 
-    let quests = await db.prepare(
+    let quests = db.prepare(
         'SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id'
     ).all(userId, today) as any[];
 
@@ -83,19 +83,19 @@ router.get('/tavern/quests', async (req, res) => {
 
         // Переносим активные квесты со вчера на сегодня
         const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-        const activeYesterday = await db.prepare(
+        const activeYesterday = db.prepare(
             "SELECT * FROM daily_quests WHERE userId = ? AND date = ? AND status = 'active'"
         ).all(userId, yesterday) as any[];
 
         for (const aq of activeYesterday) {
-            await db.prepare(
+            db.prepare(
                 'UPDATE daily_quests SET date = ?, snapshot = ? WHERE id = ?'
             ).run(today, JSON.stringify(now), aq.id);
         }
 
         // Генерируем недостающие available квесты
         const existingTypes = new Set(activeYesterday.map((q: any) => q.questType));
-        const stmt = await db.prepare(
+        const stmt = db.prepare(
             'INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         for (const qt of QUEST_TYPES) {
@@ -108,7 +108,7 @@ router.get('/tavern/quests', async (req, res) => {
             stmt.run(userId, qt, diff, req, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(now), today);
         }
 
-        quests = await db.prepare(
+        quests = db.prepare(
             'SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id'
         ).all(userId, today) as any[];
     }
@@ -129,7 +129,7 @@ router.get('/tavern/quests', async (req, res) => {
     const canTake = activeCount < 3 && (activeCount + completedToday) < 5;
 
     res.json({
-        quests: quests.filter((q: any) => q.status !== 'claimed').map(async (q) => {
+        quests: quests.filter((q: any) => q.status !== 'claimed').map((q: any) => {
             const qt = q.questType as QuestType;
             const info = QUEST_INFO[qt];
             return {
@@ -161,12 +161,12 @@ router.post('/tavern/quests/take', async (req, res) => {
     if (quest.status !== 'available') return res.status(400).json({ error: 'Квест недоступен' });
 
     const today = getToday();
-    const activeCount = (await db.prepare(
+    const activeCount = (db.prepare(
         "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND status = 'active' AND date = ?"
     ).get(userId, today) as any).cnt;
     if (activeCount >= 3) return res.status(400).json({ error: 'Можно взять максимум 3 квеста одновременно' });
 
-    const completedToday = (await db.prepare(
+    const completedToday = (db.prepare(
         "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND date = ? AND status = 'claimed'"
     ).get(userId, today) as any).cnt;
     if (activeCount + completedToday >= 5) return res.status(400).json({ error: 'Дневной лимит квестов (5) исчерпан' });

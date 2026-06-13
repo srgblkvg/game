@@ -8,7 +8,7 @@ const router = Router();
 // Поиск пользователя по логину
 router.get('/character/username/:username', async (req, res) => {
     const { username } = req.params;
-    const user = await db.prepare(
+    const user = db.prepare(
         'SELECT id, username, level FROM users WHERE LOWER(username) = LOWER(?)'
     ).get(username);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -20,7 +20,7 @@ router.get('/character/public/:userId', async (req, res) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
-    const user: any = await db.prepare(
+    const user: any = db.prepare(
         'SELECT u.id, u.username, u.level, u.totalBattles, u.wins, u.equipment, u.currentHp, u.gender, u.avatar, u.baseS, u.baseA, u.baseD, u.baseM, u.pveTotalBattles, u.pveWins, u.tournamentCount, u.tournamentWins, u.totalJobMoney, u.totalPveMoneyWon, u.totalPvpMoneyWon, u.totalPveMoneyLost, u.totalPvpMoneyLost, u.totalJobSeconds, u.craftCreated, u.craftUpgraded, u.craftBroken, u.createdAt, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?'
     ).get(userId);
 
@@ -39,7 +39,7 @@ router.get('/character/public/:userId', async (req, res) => {
         wins: user.wins,
         pveTotalBattles: user.pveTotalBattles || 0,
         pveWins: user.pveWins || 0,
-        tournamentCount: (await db.prepare(
+        tournamentCount: (db.prepare(
             "SELECT COUNT(*) as cnt FROM tournament_participants tp JOIN tournaments t ON tp.tournamentId = t.id WHERE tp.userId = ? AND t.status = 'completed'"
         ).get(userId) as any).cnt || 0,
         tournamentWins: user.tournamentWins || 0,
