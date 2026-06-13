@@ -14,14 +14,14 @@ router.get('/arena/opponent', async (req, res) => {
     const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
     const difficulty = (req.query.difficulty as string) || 'equal'; // easy | equal | hard
 
-    const user: any = await db.oneOrNone('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.inventorySlots, u.lastAttackTime, u.money, u.arenaOpponentId, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?', [userId]);
+    const user: any = await db.prepare('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.inventorySlots, u.lastAttackTime, u.money, u.arenaOpponentId, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
 
     // Если не смена — проверяем закреплённого соперника
     if (!change && user.arenaOpponentId) {
-        const saved = await db.oneOrNone('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.gender, u.avatar, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)', [user.arenaOpponentId, now]) as any;
+        const saved = await db.prepare('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.gender, u.avatar, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)').get(user.arenaOpponentId, now) as any;
         if (saved) {
             // Проверяем, соответствует ли сохранённый соперник запрошенной сложности
             const matchesDifficulty =
@@ -34,7 +34,7 @@ router.get('/arena/opponent', async (req, res) => {
                 const savedBase = { s: saved.baseS ?? 5, a: saved.baseA ?? 5, d: saved.baseD ?? 5, m: saved.baseM ?? 5 };
                 const savedEquip = JSON.parse(saved.equipment || '{}');
                 const { enriched: savedEnriched } = enrichEquipment(db, savedEquip);
-                const savedCollCnt = (await db.oneOrNone('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [saved.id]) as any).cnt || 0;
+                const savedCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(saved.id) as any).cnt || 0;
                 const savedStats = currentStats(savedBase, savedEnriched, undefined, savedCollCnt);
                 return res.json({
                     id: saved.id, name: saved.username, level: saved.level,
@@ -49,7 +49,7 @@ router.get('/arena/opponent', async (req, res) => {
             if (user.money < 10) {
                 return res.status(400).json({ error: 'Недостаточно монет для смены сложности (10 бронзы)' });
             }
-            await db.none('UPDATE users SET money = money - 10 WHERE id = ?', [userId]);
+            await db.prepare('UPDATE users SET money = money - 10 WHERE id = ?').run(userId);
             user.money -= 10;
         }
         // Соперник исчез (удалён/защита) — сбрасываем и подбираем нового ниже
@@ -84,7 +84,7 @@ router.get('/arena/opponent', async (req, res) => {
         if (user.money < 10) {
             return res.status(400).json({ error: 'Недостаточно монет для смены (10 бронзы)' });
         }
-        await db.none('UPDATE users SET money = money - 10 WHERE id = ?', [userId]);
+        await db.prepare('UPDATE users SET money = money - 10 WHERE id = ?').run(userId);
         user.money -= 10;
     }
 
@@ -95,12 +95,12 @@ router.get('/arena/opponent', async (req, res) => {
     const opponent = opponents[Math.floor(Math.random() * opponents.length)];
 
     // Запоминаем выбранного соперника
-    await db.none('UPDATE users SET arenaOpponentId = ? WHERE id = ?', [opponent.id, userId]);
+    await db.prepare('UPDATE users SET arenaOpponentId = ? WHERE id = ?').run(opponent.id, userId);
 
     const base = { s: opponent.baseS ?? 5, a: opponent.baseA ?? 5, d: opponent.baseD ?? 5, m: opponent.baseM ?? 5 };
     const equipment = JSON.parse(opponent.equipment || '{}');
     const { enriched: enrichedEquipment } = enrichEquipment(db, equipment);
-    const oppCollCnt = (await db.oneOrNone('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [opponent.id]) as any).cnt || 0;
+    const oppCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(opponent.id) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, oppCollCnt);
 
     res.json({
@@ -123,7 +123,7 @@ router.post('/arena/enter', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректный запрос' });
 
     const userId = req.userId;
-    const user = await db.oneOrNone('SELECT money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.money < 10) return res.status(400).json({ error: 'Недостаточно монет (нужно 10 бронзы)' });
 
@@ -133,7 +133,7 @@ router.post('/arena/enter', async (req, res) => {
     ).get(userId, now) as any).cnt;
     if (count === 0) return res.status(400).json({ error: 'Нет доступных соперников' });
 
-    await db.none('UPDATE users SET money = money - 10 WHERE id = ?', [userId]);
+    await db.prepare('UPDATE users SET money = money - 10 WHERE id = ?').run(userId);
     res.json({ success: true });
 });
 

@@ -28,7 +28,7 @@ router.get('/character/public/:userId', async (req, res) => {
 
     const { enriched: enrichedEquipment } = enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
     const base = getBaseStats(user);
-    const collCnt = (await db.oneOrNone('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt || 0;
+    const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, collCnt);
 
     res.json({
@@ -70,7 +70,7 @@ router.get('/users/list', async (req, res) => {
     const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n));
     if (ids.length === 0) return res.json([]);
     const placeholders = ids.map(() => '?').join(',');
-    const users = await db.manyOrNone(`SELECT id, username FROM users WHERE id IN (${placeholders})`, [...ids]);
+    const users = await db.prepare(`SELECT id, username FROM users WHERE id IN (${placeholders})`).all(...ids);
     res.json(users);
 });
 
