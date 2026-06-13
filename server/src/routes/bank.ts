@@ -121,7 +121,8 @@ router.get('/bank/transfers', async (req: any, res) => {
     query += ' ORDER BY id DESC LIMIT ?';
     const params: any[] = filter === 'all' ? [userId, userId, limit] : [userId, limit];
 
-    res.json(db.prepare(query).all(...params));
+    const result = await db.prepare(query).all(...params);
+    res.json(result);
 });
 
 // История банковских операций
@@ -135,7 +136,8 @@ router.get('/bank/operations', async (req: any, res) => {
     else if (filter === 'withdraw') query += " AND type = 'withdraw'";
     query += ' ORDER BY id DESC LIMIT ?';
 
-    res.json(db.prepare(query).all(userId, limit));
+    const ops = await db.prepare(query).all(userId, limit);
+    res.json(ops);
 });
 
 export default router;

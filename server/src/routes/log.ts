@@ -35,7 +35,7 @@ router.get('/tournament-history', authMiddleware, async (req: any, res) => {
 router.get('/quest-history', authMiddleware, async (req: any, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 30;
-    res.json(db.prepare(
+    res.json(await db.prepare(
         'SELECT * FROM quest_history WHERE userId = ? ORDER BY id DESC LIMIT ?'
     ).all(userId, limit));
 });
