@@ -134,7 +134,7 @@ const db = new PgWrapper();
 export async function initDB() {
   await runSchema();
   // Миграции пропущены — PG схема уже содержит все поля
-  await runSeed();
+  await runSeed(db as any);
 }
 
 export default db;
