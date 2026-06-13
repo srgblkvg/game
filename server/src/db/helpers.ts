@@ -112,3 +112,26 @@ export function collectGuildTax(db: DB, userId: number, income: number, source: 
   db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)').run(member.guildId, userId, tax, source);
   return income - tax;
 }
+
+// --- Уровни ---
+
+export function expForLevel(level: number): number {
+  return 10 * Math.pow(2, level - 1);
+}
+
+export const STAT_POINTS_PER_LEVEL = 5;
+
+export function applyExp(db: DB, userId: number, expGain: number, currentExp: number, currentLevel: number, currentStatPoints: number): {
+  newExp: number; newLevel: number; levelsGained: number; newStatPoints: number;
+} {
+  let exp = currentExp + expGain;
+  let level = currentLevel;
+  let gained = 0;
+  while (exp >= expForLevel(level)) {
+    exp -= expForLevel(level);
+    level++;
+    gained++;
+  }
+  const sp = currentStatPoints + gained * STAT_POINTS_PER_LEVEL;
+  return { newExp: exp, newLevel: level, levelsGained: gained, newStatPoints: sp };
+}

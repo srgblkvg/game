@@ -4,7 +4,7 @@ import { collectGuildTax } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
-import { getUserById, getBaseStats, enrichEquipment } from '../db/helpers';
+import { getUserById, getBaseStats, enrichEquipment, applyExp } from '../db/helpers';
 
 const router = Router();
 
@@ -97,18 +97,7 @@ router.get('/character/me', (req: any, res) => {
             const rewardAfterTax = collectGuildTax(db, userId, jobData.reward, 'tax_job');
             const newMoney = user.money + rewardAfterTax;
             const expGain = jobData.expReward || 0;
-            let newExp = user.exp + expGain;
-            let newLevel = user.level;
-            let levelsGained = 0;
-            while (true) {
-                const required = 10 * Math.pow(2, newLevel - 1);
-                if (newExp >= required) {
-                    newExp -= required;
-                    newLevel++;
-                    levelsGained++;
-                } else break;
-            }
-            const newStatPoints = (user.statPoints || 0) + levelsGained * 5;
+            const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(db, userId, expGain, user.exp, user.level, user.statPoints || 0);
             db.prepare('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL, totalJobMoney = totalJobMoney + ?, totalJobSeconds = totalJobSeconds + ? WHERE id = ?')
                 .run(newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId);
             db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')

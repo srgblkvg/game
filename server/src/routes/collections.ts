@@ -10,22 +10,38 @@ router.get('/collections', (req: any, res) => {
         'SELECT itemName, slot, rarity_id FROM collections WHERE userId = ?'
     ).all(userId) as any[];
 
-    // Сеты и их статус
-    const sets = db.prepare('SELECT * FROM collection_sets ORDER BY sort_order').all() as any[];
-    const setsWithStatus = sets.map((set: any) => {
-        const setItems = db.prepare(
-            'SELECT item_name, slot FROM collection_set_items WHERE set_id = ?'
-        ).all(set.id) as any[];
-        const collectedCount = setItems.filter((si: any) =>
-            items.some((ci: any) => ci.itemName === si.item_name && ci.slot === si.slot)
-        ).length;
-        return {
-            ...set,
-            totalItems: setItems.length,
-            collectedCount,
-            completed: collectedCount === setItems.length && setItems.length > 0,
-        };
-    });
+    // Сеты и их статус (один JOIN вместо N+1)
+    const sets = db.prepare(`
+        SELECT s.*, si.item_name, si.slot,
+               CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END as collected
+        FROM collection_sets s
+        LEFT JOIN collection_set_items si ON si.set_id = s.id
+        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot
+        ORDER BY s.sort_order, s.id
+    `).all(userId) as any[];
+
+    // Группируем по сетам
+    const setsMap = new Map<number, { set: any; totalItems: number; collectedCount: number }>();
+    for (const row of sets) {
+        if (!setsMap.has(row.id)) {
+            setsMap.set(row.id, {
+                set: { id: row.id, name: row.name, description: row.description, bonus_percent: row.bonus_percent, sort_order: row.sort_order },
+                totalItems: 0,
+                collectedCount: 0,
+            });
+        }
+        const entry = setsMap.get(row.id)!;
+        if (row.item_name) {
+            entry.totalItems++;
+            if (row.collected) entry.collectedCount++;
+        }
+    }
+    const setsWithStatus = [...setsMap.values()].map(entry => ({
+        ...entry.set,
+        totalItems: entry.totalItems,
+        collectedCount: entry.collectedCount,
+        completed: entry.totalItems > 0 && entry.collectedCount === entry.totalItems,
+    }));
 
     res.json({ items, sets: setsWithStatus });
 });

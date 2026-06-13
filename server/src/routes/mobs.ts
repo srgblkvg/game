@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../database';
-import { getBaseStats, enrichEquipment, collectGuildTax } from '../db/helpers';
+import { getBaseStats, enrichEquipment, collectGuildTax, applyExp } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { addPveRating } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
@@ -222,14 +222,7 @@ router.post('/mob/attack', (req: any, res) => {
     }
 
     // Обновление игрока
-    let newExp = user.exp + expGained;
-    let newLevel = user.level;
-    let levelsGained = 0;
-    while (true) {
-        const required = 10 * Math.pow(2, newLevel - 1);
-        if (newExp >= required) { newExp -= required; newLevel++; levelsGained++; }
-        else break;
-    }
+    const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(db, userId, expGained, user.exp, user.level, user.statPoints || 0);
 
     // Потеря золота при поражении: 10% от имеющегося
     let goldLost = 0;
@@ -271,7 +264,6 @@ router.post('/mob/attack', (req: any, res) => {
         }
     }
 
-    const newStatPoints = (user.statPoints || 0) + levelsGained * 5;
     const newHpAfter = Math.max(0, hpUser);
 
     // Налог гильдии (PvE)
