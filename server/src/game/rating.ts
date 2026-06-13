@@ -104,7 +104,7 @@ export async function checkSeasonReset(db: InstanceType<typeof Database>): boole
     const seasonName = `${monthNames[nextMonth.getMonth()]} ${nextMonth.getFullYear()}`;
 
     await db.none('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)', [
-        seasonName, nextMonth.toISOString(]), endOfNext.toISOString()
+        seasonName, nextMonth.toISOString(), endOfNext.toISOString()
     );
 
     // Мягкий сброс ELO: Новый = 1000 + (Старый − 1000) × 0.5
