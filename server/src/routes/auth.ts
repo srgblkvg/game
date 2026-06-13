@@ -144,11 +144,13 @@ router.post('/login', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
     const { username, password } = parsed.data;
-    const login = username; // может быть email или username
+    const login = username;
     const now = Math.floor(Date.now() / 1000);
+    console.log('[LOGIN] attempt:', login);
 
     // Ищем пользователя по email или username
     const userRow: any = await db.prepareGet('SELECT id, passwordHash, failedLogins, lockedUntil, bannedUntil FROM users WHERE username = ? OR email = ?')(login, login);
+    console.log('[LOGIN] userRow:', userRow ? { id: userRow.id, hasPasswordHash: !!userRow.passwordHash, bannedUntil: userRow.bannedUntil, lockedUntil: userRow.lockedUntil } : 'NOT FOUND');
     if (userRow && userRow.lockedUntil > now) {
       const mins = Math.ceil((userRow.lockedUntil - now) / 60);
       auditAccountLocked(login, req.ip);
@@ -171,11 +173,13 @@ router.post('/login', async (req, res) => {
     // Сначала ищем среди администраторов
     const admin: any = await db.prepareGet('SELECT * FROM admins WHERE username = ?')(login);
     if (admin && bcrypt.compareSync(password, admin.passwordHash)) {
+        console.log('[LOGIN] admin success:', admin.username);
         const token = jwt.sign({ adminId: admin.id, role: 'admin', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
         return res.json({ token, user: { id: admin.id, username: admin.username, level: 0, role: 'admin' } });
     }
 
     // Затем среди игроков
+    console.log('[LOGIN] checking player: userRow exists=', !!userRow, 'passwordHash exists=', !!userRow?.passwordHash);
     if (!userRow || !bcrypt.compareSync(password, userRow.passwordHash)) {
         // Увеличиваем счётчик неудачных попыток
         if (userRow) {
