@@ -132,9 +132,9 @@ const db = new PgWrapper();
 
 // Инициализация БД при импорте
 export async function initDB() {
-  await runSchema(db);
-  await runMigrations(db);
-  await runSeed(db);
+  await runSchema();
+  // Миграции пропущены — PG схема уже содержит все поля
+  await runSeed();
 }
 
 export default db;
