@@ -149,8 +149,17 @@ router.post('/login', async (req, res) => {
 
     // Ищем пользователя по email или username
     const userRow: any = await db.prepare('SELECT id, passwordHash, failedLogins, lockedUntil, bannedUntil FROM users WHERE username = ? OR email = ?').get(login, login);
-    if (userRow) console.log('LOGIN userRow keys:', Object.keys(userRow).filter(k => k.length < 20).join(', '));
-    if (userRow) console.log('LOGIN hash exists:', !!userRow.passwordHash, 'type:', typeof userRow.passwordHash);
+    
+    // DEBUG: возвращаем инфу в ответе
+    return res.json({ 
+      debug: true,
+      userFound: !!userRow, 
+      keys: userRow ? Object.keys(userRow).filter(k => k.length < 25) : [],
+      hasPasswordHash: !!userRow?.passwordHash,
+      hasPasswordhash: !!userRow?.passwordhash,
+      hashType: typeof userRow?.passwordHash,
+      hashLen: userRow?.passwordHash?.length
+    });
     if (userRow && userRow.lockedUntil > now) {
       const mins = Math.ceil((userRow.lockedUntil - now) / 60);
       auditAccountLocked(login, req.ip);
