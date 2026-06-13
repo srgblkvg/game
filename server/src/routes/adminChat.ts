@@ -5,7 +5,7 @@ import { broadcast } from '../websocket';
 const router = Router();
 
 // Все сообщения (для админки)
-router.get('/messages', async (req, res) => {
+router.get('/messages', async async (req, res) => {
     const messages = await db.prepare(`
     SELECT m.*, s.username as senderName, t.username as targetName
     FROM chat_messages m
@@ -29,20 +29,20 @@ router.get('/messages', async (req, res) => {
 });
 
 // Удалить одно сообщение
-router.delete('/messages/:id', async (req, res) => {
+router.delete('/messages/:id', async async (req, res) => {
     const { id } = req.params;
     await db.prepare('DELETE FROM chat_messages WHERE id = ?').run(id);
     res.json({ success: true });
 });
 
 // Удалить все сообщения
-router.delete('/messages', async (req, res) => {
+router.delete('/messages', async async (req, res) => {
     await db.prepare('DELETE FROM chat_messages').run();
     res.json({ success: true });
 });
 
 // Заблокировать игрока в чате на N минут
-router.post('/ban-chat', async (req, res) => {
+router.post('/ban-chat', async async (req, res) => {
     const { userId, minutes } = req.body;
     if (!userId || !minutes) return res.status(400).json({ error: 'userId и minutes обязательны' });
     const banUntil = Math.floor(Date.now() / 1000) + minutes * 60;
@@ -51,7 +51,7 @@ router.post('/ban-chat', async (req, res) => {
 });
 
 // Список забаненных в чате
-router.get('/banned', async (req, res) => {
+router.get('/banned', async async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     const users = await db.prepare(`
     SELECT id, username, chatBannedUntil
@@ -63,7 +63,7 @@ router.get('/banned', async (req, res) => {
 });
 
 // Разбанить игрока
-router.post('/unban', async (req, res) => {
+router.post('/unban', async async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
     await db.prepare('UPDATE users SET chatBannedUntil = 0 WHERE id = ?').run(userId);
@@ -71,7 +71,7 @@ router.post('/unban', async (req, res) => {
 });
 
 // Системное сообщение в чат (от system id=0)
-router.post('/system-message', async (req, res) => {
+router.post('/system-message', async async (req, res) => {
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'content обязателен' });
     const info = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)').run(0, null, content);

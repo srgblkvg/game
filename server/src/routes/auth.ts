@@ -16,7 +16,7 @@ function generateCode(): string {
     return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-router.post('/register', async async (req, res) => {
+router.post('/register', async async async (req, res) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные', details: parsed.error.flatten() });
 
@@ -51,7 +51,7 @@ router.post('/register', async async (req, res) => {
     res.json({ message: 'Код подтверждения отправлен на почту' });
 });
 
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', async async (req, res) => {
     const parsed = verifyEmailSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
@@ -72,7 +72,7 @@ router.post('/verify-email', async (req, res) => {
 });
 
 // Повторная отправка кода подтверждения
-router.post('/resend-code', async async (req, res) => {
+router.post('/resend-code', async async async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email обязателен' });
 
@@ -121,7 +121,7 @@ router.post('/resend-code', async async (req, res) => {
 });
 
 // Гостевой вход — без регистрации, ограниченный доступ
-router.post('/guest', async (req, res) => {
+router.post('/guest', async async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     const guestId = `Гость_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
@@ -141,7 +141,7 @@ router.post('/guest', async (req, res) => {
     res.json({ token, user: { id: user.id, username: guestId, level: 1, role: 'player', isGuest: true, gender: 'male' } });
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', async async (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 

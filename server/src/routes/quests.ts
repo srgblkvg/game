@@ -41,8 +41,8 @@ function getMidnightTS(): number {
     return Math.floor(d.getTime() / 1000);
 }
 
-function getSnapshot(userId: number): Record<string, number> {
-    const u = db.prepare(
+async function getSnapshot(userId: number): Record<string, number> {
+    const u = await db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
     return {
@@ -54,8 +54,8 @@ function getSnapshot(userId: number): Record<string, number> {
     };
 }
 
-function getProgress(userId: number, snapshot: any, questType: QuestType): number {
-    const u = db.prepare(
+async function getProgress(userId: number, snapshot: any, questType: QuestType): number {
+    const u = await db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
     const s = typeof snapshot === 'string' ? JSON.parse(snapshot) : snapshot;
@@ -70,7 +70,7 @@ function getProgress(userId: number, snapshot: any, questType: QuestType): numbe
 }
 
 // Получить/сгенерировать квесты
-router.get('/tavern/quests', async (req, res) => {
+router.get('/tavern/quests', async async (req, res) => {
     const userId = req.userId;
     const today = getToday();
 
@@ -151,7 +151,7 @@ router.get('/tavern/quests', async (req, res) => {
 });
 
 // Взять квест
-router.post('/tavern/quests/take', async (req, res) => {
+router.post('/tavern/quests/take', async async (req, res) => {
     const userId = req.userId;
     const questId = parseInt(req.body.questId);
     if (!questId) return res.status(400).json({ error: 'Укажите questId' });
@@ -161,12 +161,12 @@ router.post('/tavern/quests/take', async (req, res) => {
     if (quest.status !== 'available') return res.status(400).json({ error: 'Квест недоступен' });
 
     const today = getToday();
-    const activeCount = (db.prepare(
+    const activeCount = (await db.prepare(
         "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND status = 'active' AND date = ?"
     ).get(userId, today) as any).cnt;
     if (activeCount >= 3) return res.status(400).json({ error: 'Можно взять максимум 3 квеста одновременно' });
 
-    const completedToday = (db.prepare(
+    const completedToday = (await db.prepare(
         "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND date = ? AND status = 'claimed'"
     ).get(userId, today) as any).cnt;
     if (activeCount + completedToday >= 5) return res.status(400).json({ error: 'Дневной лимит квестов (5) исчерпан' });
@@ -180,7 +180,7 @@ router.post('/tavern/quests/take', async (req, res) => {
 });
 
 // Сдать квест
-router.post('/tavern/quests/claim', async (req, res) => {
+router.post('/tavern/quests/claim', async async (req, res) => {
     const userId = req.userId;
     const questId = parseInt(req.body.questId);
     if (!questId) return res.status(400).json({ error: 'Укажите questId' });

@@ -18,7 +18,7 @@ function getRank(elo: number): { name: string; icon: string; color: string } {
 }
 
 // Рейтинг игроков (по ELO)
-router.get('/rating', async (req, res) => {
+router.get('/rating', async async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
@@ -43,7 +43,7 @@ router.get('/rating', async (req, res) => {
 });
 
 // Позиция текущего игрока в рейтинге
-router.get('/my-position', async (req, res) => {
+router.get('/my-position', async async (req, res) => {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: 'Не авторизован' });
 
@@ -51,7 +51,7 @@ router.get('/my-position', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
     const elo = user.elo || 1000;
-    const position = (db.prepare(
+    const position = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND (elo > ? OR (elo = ? AND id < ?))'
     ).get(elo, elo, userId) as any).cnt + 1;
 

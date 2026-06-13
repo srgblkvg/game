@@ -6,7 +6,7 @@ import { currentStats } from '../game/stats';
 const router = Router();
 
 // Поиск пользователя по логину
-router.get('/character/username/:username', async (req, res) => {
+router.get('/character/username/:username', async async (req, res) => {
     const { username } = req.params;
     const user = db.prepare(
         'SELECT id, username, level FROM users WHERE LOWER(username) = LOWER(?)'
@@ -16,7 +16,7 @@ router.get('/character/username/:username', async (req, res) => {
 });
 
 // Публичный профиль игрока
-router.get('/character/public/:userId', async (req, res) => {
+router.get('/character/public/:userId', async async (req, res) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
@@ -26,8 +26,8 @@ router.get('/character/public/:userId', async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    const { enriched: enrichedEquipment } = enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
-    const base = getBaseStats(user);
+    const { enriched: enrichedEquipment } = await enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
+    const base = await getBaseStats(user);
     const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, collCnt);
 
@@ -39,7 +39,7 @@ router.get('/character/public/:userId', async (req, res) => {
         wins: user.wins,
         pveTotalBattles: user.pveTotalBattles || 0,
         pveWins: user.pveWins || 0,
-        tournamentCount: (db.prepare(
+        tournamentCount: (await db.prepare(
             "SELECT COUNT(*) as cnt FROM tournament_participants tp JOIN tournaments t ON tp.tournamentId = t.id WHERE tp.userId = ? AND t.status = 'completed'"
         ).get(userId) as any).cnt || 0,
         tournamentWins: user.tournamentWins || 0,
@@ -64,7 +64,7 @@ router.get('/character/public/:userId', async (req, res) => {
 });
 
 // GET /users/list?ids=1,2,3
-router.get('/users/list', async (req, res) => {
+router.get('/users/list', async async (req, res) => {
     const idsParam = req.query.ids as string;
     if (!idsParam) return res.json([]);
     const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n));

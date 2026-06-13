@@ -32,15 +32,15 @@ const drinks: Record<string, { name: string; bonuses: Record<string, number>; co
 };
 
 // Статус трактира
-router.get('/tavern', async (req, res) => {
+router.get('/tavern', async async (req, res) => {
     const userId = req.userId;
     const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const base = getBaseStats(user);
+    const base = await getBaseStats(user);
     const equipment = JSON.parse(user.equipment || '{}');
-    const { enriched } = enrichEquipment(db, equipment);
+    const { enriched } = await enrichEquipment(db, equipment);
 
     // Бонусы от активного напитка
     let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;
@@ -64,7 +64,7 @@ router.get('/tavern', async (req, res) => {
 });
 
 // Мгновенное лечение
-router.post('/tavern/heal', async (req, res) => {
+router.post('/tavern/heal', async async (req, res) => {
     const userId = req.userId;
     const { full } = req.body; // full=true — полное, иначе 50%
 
@@ -72,9 +72,9 @@ router.post('/tavern/heal', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const base = getBaseStats(user);
+    const base = await getBaseStats(user);
     const equipment = JSON.parse(user.equipment || '{}');
-    const { enriched } = enrichEquipment(db, equipment);
+    const { enriched } = await enrichEquipment(db, equipment);
 
     // Бонусы от активного напитка
     let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;
@@ -99,7 +99,7 @@ router.post('/tavern/heal', async (req, res) => {
 });
 
 // Аренда комнаты
-router.post('/tavern/room', async (req, res) => {
+router.post('/tavern/room', async async (req, res) => {
     const userId = req.userId;
     const { roomType, hours } = req.body; // hours: 1 or 8
 
@@ -123,7 +123,7 @@ router.post('/tavern/room', async (req, res) => {
 });
 
 // Купить напиток
-router.post('/tavern/drink', async (req, res) => {
+router.post('/tavern/drink', async async (req, res) => {
     const userId = req.userId;
     const { drinkType } = req.body;
 

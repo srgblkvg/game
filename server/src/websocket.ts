@@ -56,7 +56,7 @@ function heartbeat(ws: WebSocket & { isAlive?: boolean }) {
   ws.isAlive = true;
 }
 
-export function setupWebSocket(server: any) {
+export async function setupWebSocket(server: any) {
   const wss = new WebSocketServer({ server });
 
   // Интервал проверки живых соединений
@@ -191,7 +191,7 @@ export function setupWebSocket(server: any) {
         }
         if (!item) return;
 
-        const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, NULL, ?, ?)');
+        const stmt = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, NULL, ?, ?)');
         const itemDataJson = JSON.stringify(item);
         const itemName = sanitize(item.name);
         const info = stmt.run(userId, `[${itemName}]`, itemDataJson);
@@ -238,7 +238,7 @@ export function setupWebSocket(server: any) {
             return;
           }
 
-          const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
+          const stmt = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
           const sanitizedPrivate = sanitize(privateContent);
           const info = stmt.run(userId, targetUser.id, sanitizedPrivate);
           const msg = {
@@ -259,7 +259,7 @@ export function setupWebSocket(server: any) {
 
         // Обычное сообщение в общий чат
         const sanitizedContent = sanitize(content);
-        const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, NULL, ?)');
+        const stmt = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, NULL, ?)');
         const info = stmt.run(userId, sanitizedContent);
         const msg = {
           id: info.lastInsertRowid,
@@ -281,7 +281,7 @@ export function setupWebSocket(server: any) {
         const targetId = data.targetUserId;
         if (!targetId) return;
         const sanitizedContent = sanitize(data.content);
-        const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
+        const stmt = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
         const info = stmt.run(userId, targetId, sanitizedContent);
         const msg = {
           id: info.lastInsertRowid,

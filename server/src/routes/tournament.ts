@@ -32,7 +32,7 @@ function nextPowerOfTwo(n: number): number {
  * Добиваем до степени 2 нулями (bye).
  * Пары: 1-й с последним, 2-й с предпоследним и т.д.
  */
-function generateBracket(tournamentId: number) {
+async function generateBracket(tournamentId: number) {
     const participants = await db.prepare(`
         SELECT tp.*, u.username, u.level, u.money, u.baseS, u.baseA, u.baseD, u.baseM,
                u.equipment, u.currentHp, u.statPoints, u.tournamentElo
@@ -52,7 +52,7 @@ function generateBracket(tournamentId: number) {
             }
             // Возврат входных взносов всем участникам
             if ((t.entryFee || 0) > 0) {
-                const parts = db.prepare(
+                const parts = await db.prepare(
                     'SELECT userId FROM tournament_participants WHERE tournamentId = ?'
                 ).all(tournamentId) as any[];
                 for (const p of parts) {
@@ -105,7 +105,7 @@ function generateBracket(tournamentId: number) {
 // Симуляция раунда
 // ---------------------------------------------------------------------------
 
-function loadPlayerForBattle(userId: number) {
+async function loadPlayerForBattle(userId: number) {
     const u = await db.prepare(`
         SELECT id, username, level, money, baseS, baseA, baseD, baseM,
                equipment, currentHp
@@ -116,8 +116,8 @@ function loadPlayerForBattle(userId: number) {
     let equipment: Record<string, any> = {};
     try { equipment = JSON.parse(u.equipment || '{}'); } catch {}
 
-    const { enriched } = enrichEquipment(db, equipment);
-    const base = getBaseStats(u);
+    const { enriched } = await enrichEquipment(db, equipment);
+    const base = await getBaseStats(u);
     const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enriched, undefined, collCnt);
 
@@ -137,7 +137,7 @@ function loadPlayerForBattle(userId: number) {
  * Разрешить все незавершённые матчи текущего раунда.
  * Возвращает номер разрешённого раунда (или 0 если ничего не сделано).
  */
-function resolveCurrentRound(tournamentId: number): number {
+async function resolveCurrentRound(tournamentId: number): number {
     // Находим минимальный раунд с незавершёнными матчами
     const pendingRound = await db.prepare(`
         SELECT round FROM tournament_matches
@@ -172,7 +172,7 @@ function resolveCurrentRound(tournamentId: number): number {
 /**
  * После завершения раунда создать матчи следующего раунда из победителей.
  */
-function advanceWinners(tournamentId: number, finishedRound: number) {
+async function advanceWinners(tournamentId: number, finishedRound: number) {
     const nextRound = finishedRound + 1;
 
     const winners = await db.prepare(`
@@ -204,7 +204,7 @@ function advanceWinners(tournamentId: number, finishedRound: number) {
 // Завершение турнира и призы
 // ---------------------------------------------------------------------------
 
-function finishTournament(tournamentId: number) {
+async function finishTournament(tournamentId: number) {
     const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
     if (!t || t.status === 'completed' || t.status === 'cancelled') return;
 
@@ -300,7 +300,7 @@ function finishTournament(tournamentId: number) {
     // --- Обновление скрытого tournamentElo для посева ---
     // Победитель +25, 2-е +15, 3-е +10, полуфиналисты +5, остальные 0
     // Проигравшие в первом раунде получают небольшой минус
-    const allParts = db.prepare(
+    const allParts = await db.prepare(
         'SELECT userId FROM tournament_participants WHERE tournamentId = ?'
     ).all(tournamentId) as any[];
 
@@ -311,7 +311,7 @@ function finishTournament(tournamentId: number) {
         else if (p.userId === thirdPlaceId) delta = 10;
         else {
             // Проверяем, прошёл ли игрок дальше первого раунда
-            const wonInR1 = db.prepare(
+            const wonInR1 = await db.prepare(
                 'SELECT id FROM tournament_matches WHERE tournamentId = ? AND round = 1 AND winnerId = ?'
             ).get(tournamentId, p.userId) as any;
             if (wonInR1) delta = 3; // прошёл первый раунд
@@ -326,7 +326,7 @@ function finishTournament(tournamentId: number) {
 // Автопродвижение (вызывается при каждом GET /tournament)
 // ---------------------------------------------------------------------------
 
-function autoAdvance(tournamentId: number) {
+async function autoAdvance(tournamentId: number) {
     const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
     if (!t) return;
 
@@ -342,7 +342,7 @@ function autoAdvance(tournamentId: number) {
 
     // Предупреждение за 5 минут — системное сообщение в чат (один раз)
     if (t.status === 'registration' && now >= t.registrationEnd - 300 && now < t.registrationEnd) {
-        const already = db.prepare("SELECT id FROM chat_messages WHERE senderId = 0 AND content LIKE '%регистрация закроется через%' AND createdAt > datetime('now', '-5 minutes')").get();
+        const already = await db.prepare("SELECT id FROM chat_messages WHERE senderId = 0 AND content LIKE '%регистрация закроется через%' AND createdAt > datetime('now', '-5 minutes')").get();
         if (!already) {
             const label = t.type === 'custom' ? (t.name || 'Турнир') : (divisions.find(d => d.name === t.division)?.label || t.division);
             const secLeft = t.registrationEnd - now;
@@ -365,12 +365,12 @@ function autoAdvance(tournamentId: number) {
     // Если турнир завершён или отменён — создаём новый для этого дивизиона (только official)
     // через 1 час после завершения ПОСЛЕДНЕГО турнира
     if ((t.status === 'completed' || t.status === 'cancelled') && t.type === 'official') {
-        const existing = db.prepare(
+        const existing = await db.prepare(
             "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress')"
         ).get(t.division) as any;
         if (!existing) {
             // Ждём час после завершения ПОСЛЕДНЕГО турнира этого дивизиона
-            const lastCompleted = db.prepare(
+            const lastCompleted = await db.prepare(
                 "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1"
             ).get(t.division) as any;
             if (lastCompleted?.completedAt) {
@@ -380,7 +380,7 @@ function autoAdvance(tournamentId: number) {
             }
             const divConfig = divisions.find(d => d.name === t.division)!;
             const now2 = Math.floor(Date.now() / 1000);
-            db.prepare(
+            await db.prepare(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, datetime(?))'
             ).run(t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, new Date().toISOString());
         }
@@ -391,14 +391,14 @@ function autoAdvance(tournamentId: number) {
 // Создание турнира (если нет активного)
 // ---------------------------------------------------------------------------
 
-function getOrCreateTournament(type?: string) {
+async function getOrCreateTournament(type?: string) {
     const now = Math.floor(Date.now() / 1000);
     const typeFilter = type ? "AND type = ?" : "";
     const params: any[] = type ? [type] : [];
 
     // Ищем активные турниры по каждому дивизиону (только official)
     const activeByDivision: Record<string, any> = {};
-    const activeTournaments = db.prepare(
+    const activeTournaments = await db.prepare(
         `SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') AND type = 'official' ORDER BY id DESC`
     ).all() as any[];
 
@@ -413,14 +413,14 @@ function getOrCreateTournament(type?: string) {
     for (const div of divisions) {
         if (!activeByDivision[div.name]) {
             // Проверяем: когда завершился последний турнир этого дивизиона
-            const lastCompleted = db.prepare(
+            const lastCompleted = await db.prepare(
                 "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1"
             ).get(div.name) as any;
             if (lastCompleted?.completedAt) {
                 const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
                 if (Date.now() < completedTime + 3600 * 1000) continue; // ещё не прошёл час
             }
-            db.prepare(
+            await db.prepare(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, datetime(?), ?)'
             ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, new Date().toISOString(), 'official');
         }
@@ -429,7 +429,7 @@ function getOrCreateTournament(type?: string) {
     let query = "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress')";
     if (type) query += " AND type = ?";
     query += " ORDER BY id DESC";
-    return db.prepare(query).all(...params) as any[];
+    return await db.prepare(query).all(...params) as any[];
 }
 
 // ---------------------------------------------------------------------------
@@ -437,7 +437,7 @@ function getOrCreateTournament(type?: string) {
 // ---------------------------------------------------------------------------
 
 // Статус турнира
-router.get('/tournament', async (req, res) => {
+router.get('/tournament', async async (req, res) => {
     const userId = req.userId;
     const user = await db.prepare('SELECT level FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -597,7 +597,7 @@ router.get('/tournament', async (req, res) => {
 });
 
 // Регистрация
-router.post('/tournament/register', async (req, res) => {
+router.post('/tournament/register', async async (req, res) => {
     const userId = req.userId;
     const { division, goldenTicket } = req.body;
 
@@ -648,7 +648,7 @@ router.post('/tournament/register', async (req, res) => {
 
     // Проверка лимита игроков (8 для official, переменный для custom)
     const maxPlayers = tournament.type === 'custom' ? (tournament.maxPlayers || 8) : MAX_PLAYERS;
-    const currentCount = (db.prepare(
+    const currentCount = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?'
     ).get(tournament.id) as any).cnt;
     if (currentCount >= maxPlayers) return res.status(400).json({ error: 'Турнир заполнен' });
@@ -665,7 +665,7 @@ router.post('/tournament/register', async (req, res) => {
     await db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
 
     // Автостарт при заполнении
-    const count = (db.prepare(
+    const count = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?'
     ).get(tournament.id) as any).cnt;
     if (count >= maxPlayers) {
@@ -687,7 +687,7 @@ router.post('/tournament/register', async (req, res) => {
 });
 
 // Создание самоорганизованного турнира
-router.post('/tournament/create-custom', async (req, res) => {
+router.post('/tournament/create-custom', async async (req, res) => {
     const userId = req.userId;
     const prizePool = parseInt(req.body.prizePool) || 0;
     const entryFee = parseInt(req.body.entryFee) || 0;

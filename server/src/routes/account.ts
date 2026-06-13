@@ -10,7 +10,7 @@ import { JWT_SECRET } from '../env';
 
 const router = Router();
 
-router.post('/account/change-username', async (req, res) => {
+router.post('/account/change-username', async async (req, res) => {
     const parsed = changeUsernameSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректное имя' });
 
@@ -37,7 +37,7 @@ router.post('/account/change-username', async (req, res) => {
     res.json({ success: true, newUsername });
 });
 
-router.post('/account/change-gender', async (req, res) => {
+router.post('/account/change-gender', async async (req, res) => {
     const userId = req.userId;
     const { gender } = req.body;
     if (!['male', 'female'].includes(gender)) return res.status(400).json({ error: 'Некорректный пол' });
@@ -45,7 +45,7 @@ router.post('/account/change-gender', async (req, res) => {
     res.json({ success: true, gender });
 });
 
-router.post('/account/change-password', async (req, res) => {
+router.post('/account/change-password', async async (req, res) => {
     const parsed = changePasswordSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
@@ -66,7 +66,7 @@ router.post('/account/change-password', async (req, res) => {
     res.json({ success: true });
 });
 
-router.post('/account/delete', async (req, res) => {
+router.post('/account/delete', async async (req, res) => {
     const userId = req.userId;
     const { currentPassword } = req.body;
 
@@ -95,7 +95,7 @@ router.post('/account/delete', async (req, res) => {
     res.json({ success: true, message: 'Аккаунт удалён. Восстановить невозможно.' });
 });
 
-router.post('/account/logout', async (req, res) => {
+router.post('/account/logout', async async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Не авторизован' });
     const token = authHeader.split(' ')[1];
@@ -109,7 +109,7 @@ router.post('/account/logout', async (req, res) => {
 });
 
 // Регистрация из гостевого аккаунта
-router.post('/account/register-guest', async (req, res) => {
+router.post('/account/register-guest', async async (req, res) => {
     const userId = req.userId;
     if (!req.isGuest) return res.status(400).json({ error: 'Только для гостевых аккаунтов' });
 
@@ -149,7 +149,7 @@ import path from 'path';
 const UPLOADS_DIR = path.resolve(__dirname, '../../uploads/avatars');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-router.post('/account/avatar', async (req, res) => {
+router.post('/account/avatar', async async (req, res) => {
     const userId = req.userId;
     const { avatar } = req.body; // data:image/webp;base64,...
     if (!avatar || typeof avatar !== 'string') return res.status(400).json({ error: 'Нет изображения' });
@@ -170,7 +170,7 @@ router.post('/account/avatar', async (req, res) => {
     res.json({ success: true, avatar: avatarPath });
 });
 
-router.get('/account/avatar/:userId', async (req, res) => {
+router.get('/account/avatar/:userId', async async (req, res) => {
     const user = await db.prepare('SELECT avatar FROM users WHERE id = ?').get(parseInt(req.params.userId)) as any;
     if (!user?.avatar) return res.status(404).json({ error: 'Нет аватара' });
     res.json({ avatar: user.avatar });

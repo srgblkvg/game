@@ -6,12 +6,12 @@ import { getUserById, getBaseStats, recalcHpOnEquip } from '../db/helpers';
 const router = Router();
 
 // Экипировка/снятие предмета
-router.post('/character/equip', async (req, res) => {
+router.post('/character/equip', async async (req, res) => {
     const userId = req.userId;
     const { slotId, itemId } = req.body;
     if (!slotId) return res.status(400).json({ error: 'slotId required' });
 
-    const user = getUserById(db, userId);
+    const user = await getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -21,7 +21,7 @@ router.post('/character/equip', async (req, res) => {
     if (itemId === undefined || itemId === null) {
         if (!currentEquipped) return res.status(400).json({ error: 'Слот пуст' });
 
-        const base = getBaseStats(user);
+        const base = await getBaseStats(user);
         const oldStats = currentStats(base, equipment);
         const oldMaxHp = oldStats.hp;
 
@@ -66,7 +66,7 @@ router.post('/character/equip', async (req, res) => {
         inventory.push(currentEquipped);
     }
 
-    const base = getBaseStats(user);
+    const base = await getBaseStats(user);
     const oldStats = currentStats(base, equipment);
 
     inventory.splice(itemIndex, 1);
@@ -84,12 +84,12 @@ router.post('/character/equip', async (req, res) => {
 });
 
 // Разобрать предмет(ы)
-router.post('/character/salvage', async (req, res) => {
+router.post('/character/salvage', async async (req, res) => {
     const userId = req.userId;
     const { itemIds } = req.body;
     if (!itemIds) return res.status(400).json({ error: 'itemIds required' });
 
-    const user = getUserById(db, userId);
+    const user = await getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     let inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -145,9 +145,9 @@ router.post('/character/salvage', async (req, res) => {
 });
 
 // Расширить инвентарь
-router.post('/character/expand-inventory', async (req, res) => {
+router.post('/character/expand-inventory', async async (req, res) => {
     const userId = req.userId;
-    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const currentSlots = user.inventorySlots || 10;

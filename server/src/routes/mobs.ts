@@ -8,7 +8,7 @@ import { getDrinkBonuses } from '../game/drinks';
 const router = Router();
 
 // Список всех мобов
-router.get('/mobs', async (req, res) => {
+router.get('/mobs', async async (req, res) => {
     const mobs = await db.prepare('SELECT * FROM mobs ORDER BY level, id').all() as any[];
 
     // Собираем изображения и названия материалов по редкостям (первое попавшееся для каждой)
@@ -42,7 +42,7 @@ router.get('/mobs', async (req, res) => {
 });
 
 // Атака моба
-router.post('/mob/attack', async (req, res) => {
+router.post('/mob/attack', async async (req, res) => {
     const userId = req.userId;
     const { mobId } = req.body;
     if (!mobId) return res.status(400).json({ error: 'Не указан ID моба' });
@@ -65,9 +65,9 @@ router.post('/mob/attack', async (req, res) => {
     if (!mob) return res.status(404).json({ error: 'Моб не найден' });
 
     // Статы игрока
-    const userBase = getBaseStats(user);
+    const userBase = await getBaseStats(user);
     const userEquip = JSON.parse(user.equipment || '{}');
-    const { enriched: enrichedEquip } = enrichEquipment(db, userEquip);
+    const { enriched: enrichedEquip } = await enrichEquipment(db, userEquip);
     const userStats = currentStats(userBase, enrichedEquip, getDrinkBonuses(user),
         (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0
     );
@@ -222,7 +222,7 @@ router.post('/mob/attack', async (req, res) => {
     }
 
     // Обновление игрока
-    const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(db, userId, expGained, user.exp, user.level, user.statPoints || 0);
+    const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(db, userId, expGained, user.exp, user.level, user.statPoints || 0);
 
     // Потеря золота при поражении: 10% от имеющегося
     let goldLost = 0;
@@ -267,7 +267,7 @@ router.post('/mob/attack', async (req, res) => {
     const newHpAfter = Math.max(0, hpUser);
 
     // Налог гильдии (PvE)
-    const goldAfterTax = collectGuildTax(db, userId, goldGained, 'tax_pve');
+    const goldAfterTax = await collectGuildTax(db, userId, goldGained, 'tax_pve');
 
     await db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`)
         .run(newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
