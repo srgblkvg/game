@@ -412,6 +412,46 @@ export async function runSchema() {
         status TEXT DEFAULT 'new',
         createdAt TEXT DEFAULT (TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
       );
+
+      CREATE TABLE IF NOT EXISTS feedback_messages (
+        id SERIAL PRIMARY KEY,
+        userId INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        subject TEXT DEFAULT '',
+        message TEXT NOT NULL,
+        read INTEGER DEFAULT 0,
+        createdAt TEXT DEFAULT (TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
+      );
+
+      CREATE TABLE IF NOT EXISTS quest_history (
+        id SERIAL PRIMARY KEY,
+        userId INTEGER NOT NULL,
+        questType TEXT NOT NULL,
+        difficulty TEXT NOT NULL,
+        typeName TEXT DEFAULT '',
+        rewardXp INTEGER DEFAULT 0,
+        rewardMoney INTEGER DEFAULT 0,
+        createdAt TEXT DEFAULT (TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
+      );
+
+      CREATE TABLE IF NOT EXISTS seasons (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        status TEXT DEFAULT 'active',
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL,
+        createdAt TEXT DEFAULT (TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'))
+      );
+
+      CREATE TABLE IF NOT EXISTS hall_of_fame (
+        id SERIAL PRIMARY KEY,
+        seasonId INTEGER NOT NULL,
+        userId INTEGER NOT NULL,
+        rank INTEGER NOT NULL,
+        elo INTEGER DEFAULT 1000,
+        title TEXT,
+        FOREIGN KEY (seasonId) REFERENCES seasons(id)
+      );
     `);
 
     // Индексы
