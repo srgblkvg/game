@@ -79,7 +79,10 @@ class DB {
   prepare(sql: string) {
     const q = lowercaseSQL(pgParams(sql));
     return {
-      get: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows)[0]; },
+      get: async (...p: any[]) => { 
+        console.log('[WRAPPER GET] SQL:', q?.substring(0, 80));
+        console.log('[WRAPPER GET] Params:', JSON.stringify(p));
+        const r = await pool.query(q, p); return camelRows(r.rows)[0]; },
       all: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows); },
       run: async (...p: any[]) => { const r = await pool.query(q, p); const id = r.rows?.[0]?.id; return { changes: r.rowCount ?? 0, lastInsertRowid: id ? Number(id) : undefined }; },
     };
