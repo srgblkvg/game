@@ -126,7 +126,7 @@ router.get('/tavern/quests', (req: any, res) => {
 
     const activeCount = quests.filter((q: any) => q.status === 'active').length;
     const completedToday = quests.filter((q: any) => q.status === 'claimed').length;
-    const canTake = activeCount < 3 && completedToday < 5;
+    const canTake = activeCount < 3 && (activeCount + completedToday) < 5;
 
     res.json({
         quests: quests.filter((q: any) => q.status !== 'claimed').map((q: any) => {
@@ -169,7 +169,8 @@ router.post('/tavern/quests/take', (req: any, res) => {
     const completedToday = (db.prepare(
         "SELECT COUNT(*) as cnt FROM daily_quests WHERE userId = ? AND date = ? AND status = 'claimed'"
     ).get(userId, today) as any).cnt;
-    if (completedToday >= 5) return res.status(400).json({ error: 'Дневной лимит выполнен' });
+    if (activeCount + completedToday >= 5) return res.status(400).json({ error: 'Дневной лимит квестов (5) исчерпан' });
+    if (activeCount >= 3) return res.status(400).json({ error: 'Можно взять максимум 3 квеста одновременно' });
 
     const snapshot = JSON.stringify(getSnapshot(userId));
     db.prepare('UPDATE daily_quests SET status = ?, snapshot = ?, progress = 0 WHERE id = ?')
