@@ -57,7 +57,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         highlightedSlots={highlightedSlots}
       />
       <StatAllocation />
-      <BuffsBlock room={(character as any).room} drink={(character as any).drink} premium={(character as any).premium} inventory={character.inventory} equipment={character.equipment} collectionCount={(character as any).collectionCount || 0} />
+      <BuffsBlock room={(character as any).room} drink={(character as any).drink} premium={(character as any).premium} inventory={character.inventory} equipment={character.equipment} collectionCount={(character as any).collectionCount || 0} totalCollectionItems={(character as any).totalCollectionItems || 189} />
     </div>
   );
 }

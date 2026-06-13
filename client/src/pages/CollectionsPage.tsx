@@ -90,6 +90,7 @@ export default function CollectionsPage() {
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
     const [sets, setSets] = useState<CollectionSet[]>([]);
     const [collectionCount, setCollectionCount] = useState(0);
+    const [totalCollectionItems, setTotalCollectionItems] = useState(189);
     const [loading, setLoading] = useState(true);
 
     const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null);
@@ -107,6 +108,7 @@ export default function CollectionsPage() {
                 setItems(shopItems);
                 setSets(collectionData.sets || []);
                 setCollectionCount(character.collectionCount || 0);
+                setTotalCollectionItems(character.totalCollectionItems || 189);
 
                 const inv = character.inventory || [];
                 setInventoryItems(inv);
@@ -182,7 +184,7 @@ export default function CollectionsPage() {
         return <div className="p-4 max-w-4xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
     }
 
-    const totalPercent = Math.round((collectionCount / 189) * 100);
+    const totalPercent = Math.round((collectionCount / totalCollectionItems) * 100);
 
     return (
         <div className="p-4 max-w-4xl mx-auto">
@@ -192,7 +194,7 @@ export default function CollectionsPage() {
             <div className="mb-3 p-3 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-secondary)]">
                 <p className="text-xs font-medium mb-1">Текущий бонус</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                    Собрано: <span className="text-[var(--color-accent-gold)] font-medium">{collectionCount}/189</span>
+                    Собрано: <span className="text-[var(--color-accent-gold)] font-medium">{collectionCount}/{totalCollectionItems}</span>
                     {collectionCount > 0 && (
                         <span> — <span className="text-[var(--color-accent-success)]">+{collectionCount}%</span> к Силе, Ловкости, Защите, Мастерству и HP</span>
                     )}

@@ -79,6 +79,7 @@ router.get('/character/me', (req: any, res) => {
 
     // Бонус коллекции: +1% к основным статам за каждый предмет в коллекции
     const collectionCount = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt;
+    const totalCollectionItems = (db.prepare('SELECT COUNT(*) as cnt FROM collection_set_items').get() as any).cnt;
     if (collectionCount > 0) {
         const bonus = 1 + collectionCount / 100;
         stats.s = Math.round(stats.s * bonus);
@@ -153,6 +154,7 @@ router.get('/character/me', (req: any, res) => {
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,
         collectionCount: collectionCount || 0,
+        totalCollectionItems: totalCollectionItems || 189,
     });
 });
 
