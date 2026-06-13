@@ -22,17 +22,17 @@ const getCraftData = db.prepare(`
 // Загрузить персонажа (текущего пользователя)
 router.get('/character/me', async (req, res) => {
     const userId = req.userId;
-    const user = getUserById(db, userId);
+    const user = await getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     let inventory = JSON.parse(user.inventory || '[]');
     const equipment = JSON.parse(user.equipment || '{}');
     let changed = false;
 
-    inventory = inventory.map((item: any) => {
+    inventory = await Promise.all(inventory.map(async (item) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
             if (item.rarity_id === undefined) {
-                const craftRow = getCraftData.get(Number(item.id)) as any;
+                const craftRow = await getCraftData.get(Number(item.id)) as any;
                 if (craftRow) {
                     changed = true;
                     return {
@@ -47,7 +47,7 @@ router.get('/character/me', async (req, res) => {
             }
         } else if (item.slot) {
             if (item.rarity_id === undefined) {
-                const itemRow = getItemData.get(item.name, item.slot) as any;
+                const itemRow = await getItemData.get(item.name, item.slot) as any;
                 if (itemRow) {
                     changed = true;
                     return {
@@ -61,10 +61,10 @@ router.get('/character/me', async (req, res) => {
             }
         }
         return item;
-    });
+    }));
 
     // Обогащаем экипировку
-    const { enriched: enrichedEquipment, changed: equipChanged } = enrichEquipment(db, equipment);
+    const { enriched: enrichedEquipment, changed: equipChanged } = await enrichEquipment(db, equipment);
 
     if (changed) {
         await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
@@ -95,10 +95,10 @@ router.get('/character/me', async (req, res) => {
         const nowSec = Math.floor(Date.now() / 1000);
         if (nowSec >= jobData.endTime) {
             // Налог гильдии (работы)
-            const rewardAfterTax = collectGuildTax(db, userId, jobData.reward, 'tax_job');
+            const rewardAfterTax = await collectGuildTax(db, userId, jobData.reward, 'tax_job');
             const newMoney = user.money + rewardAfterTax;
             const expGain = jobData.expReward || 0;
-            const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(db, userId, expGain, user.exp, user.level, user.statPoints || 0);
+            const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(db, userId, expGain, user.exp, user.level, user.statPoints || 0);
             await db.prepare('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL, totalJobMoney = totalJobMoney + ?, totalJobSeconds = totalJobSeconds + ? WHERE id = ?')
                 .run(newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId);
             await db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
@@ -113,7 +113,7 @@ router.get('/character/me', async (req, res) => {
 
     const now = Math.floor(Date.now() / 1000);
     const maxHp = stats.hp;
-    let currentHp = applyHpRegen({
+    let currentHp = await applyHpRegen({
         id: user.id,
         currentHp: user.currentHp,
         maxHp,
@@ -189,7 +189,7 @@ router.get('/users/find', async (req, res) => {
 router.get('/users/search', async (req, res) => {
     const q = req.query.q as string;
     if (!q || q.length < 2) return res.json([]);
-    const users = db.prepare(
+    const users = await db.prepare(
         'SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10'
     ).all(`%${q}%`);
     res.json(users);

@@ -45,7 +45,7 @@ router.post('/jobs/start-random', async (req, res) => {
     startJobForUser(user, job, res);
 });
 
-function startJobForUser(user: any, job: any, res: any) {
+async function startJobForUser(user: any, job: any, res: any) {
     const now = Math.floor(Date.now() / 1000);
     const endTime = now + job.duration;
     let reward = Math.floor(Math.random() * (job.rewardMax - job.rewardMin + 1)) + job.rewardMin;

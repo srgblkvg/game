@@ -13,7 +13,7 @@ router.get('/shop/items', async (req, res) => {
         ORDER BY i.id
     `).all() as any[];
 
-    const result = items.map((item: any) => ({
+    const result = items.map((item) => ({
         ...item,
         bonuses: JSON.parse(item.bonuses || '{}'),
         extra: JSON.parse(item.extra || '{}'),

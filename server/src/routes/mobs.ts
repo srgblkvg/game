@@ -21,7 +21,7 @@ router.get('/mobs', async (req, res) => {
     }
 
     // Обогащаем мобов изображениями лута
-    const enriched = mobs.map((m: any) => {
+    const enriched = mobs.map((m) => {
         const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
         const rarityMap: [number, string, string][] = [
             [0, 'loot_junk', 'Хлам'], [1, 'loot_common', 'Обычный'],
@@ -189,7 +189,7 @@ router.post('/mob/attack', async (req, res) => {
                 rarityRoll -= lt.chance;
             }
 
-            const craftItem = db.prepare(
+            const craftItem = await db.prepare(
                 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ?'
             ).get(selectedRarity) as any;
 
@@ -222,7 +222,7 @@ router.post('/mob/attack', async (req, res) => {
     }
 
     // Обновление игрока
-    const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(db, userId, expGained, user.exp, user.level, user.statPoints || 0);
+    const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(db, userId, expGained, user.exp, user.level, user.statPoints || 0);
 
     // Потеря золота при поражении: 10% от имеющегося
     let goldLost = 0;
@@ -267,7 +267,7 @@ router.post('/mob/attack', async (req, res) => {
     const newHpAfter = Math.max(0, hpUser);
 
     // Налог гильдии (PvE)
-    const goldAfterTax = collectGuildTax(db, userId, goldGained, 'tax_pve');
+    const goldAfterTax = await collectGuildTax(db, userId, goldGained, 'tax_pve');
 
     await db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`)
         .run(newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);

@@ -15,7 +15,7 @@ router.get('/messages', async (req, res) => {
     LIMIT 200
   `).all();
 
-    const result = messages.map((m: any) => {
+    const result = messages.map((m) => {
         if (m.item_data) {
             try {
                 const item = JSON.parse(m.item_data);

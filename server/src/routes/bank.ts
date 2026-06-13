@@ -23,7 +23,7 @@ router.post('/bank/deposit', async (req, res) => {
     const commission = Math.ceil(amount * 0.02);
     const depositAmount = amount - commission;
 
-    const txn = db.transaction(() => {
+    const txn = db.transaction(async () => {
         const user = await db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
         if (!user) throw new Error('User not found');
         if (user.money < amount) throw new Error('Недостаточно монет');
@@ -48,7 +48,7 @@ router.post('/bank/withdraw', async (req, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
 
-    const txn = db.transaction(() => {
+    const txn = db.transaction(async () => {
         const user = await db.prepare('SELECT bank FROM users WHERE id = ?').get(userId) as any;
         if (!user) throw new Error('User not found');
         if (user.bank < amount) throw new Error('Недостаточно монет в банке');
@@ -77,7 +77,7 @@ router.post('/bank/transfer', async (req, res) => {
         return res.status(400).json({ error: 'Укажите номер счёта и сумму' });
     }
 
-    const txn = db.transaction(() => {
+    const txn = db.transaction(async () => {
         // Проверяем существование получателя ДО списания
         const target = await db.prepare('SELECT id, username, accountNumber FROM users WHERE accountNumber = ?').get(accountNumber) as any;
         if (!target) throw new Error('Счёт не найден');
@@ -122,7 +122,7 @@ router.get('/bank/transfers', async (req, res) => {
     query += ' ORDER BY id DESC LIMIT ?';
     const params: any[] = filter === 'all' ? [userId, userId, limit] : [userId, limit];
 
-    res.json(db.prepare(query).all(...params));
+    res.json(await db.prepare(query).all(...params));
 });
 
 // История банковских операций
@@ -136,7 +136,7 @@ router.get('/bank/operations', async (req, res) => {
     else if (filter === 'withdraw') query += " AND type = 'withdraw'";
     query += ' ORDER BY id DESC LIMIT ?';
 
-    res.json(db.prepare(query).all(userId, limit));
+    res.json(await db.prepare(query).all(userId, limit));
 });
 
 export default router;

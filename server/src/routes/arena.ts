@@ -56,7 +56,7 @@ router.get('/arena/opponent', async (req, res) => {
     }
 
     // Подбор соперников по сложности
-    let opponents = db.prepare(
+    let opponents = await db.prepare(
         'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.avatar, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)'
     ).all(userId, now) as any[];
 
@@ -128,7 +128,7 @@ router.post('/arena/enter', async (req, res) => {
     if (user.money < 10) return res.status(400).json({ error: 'Недостаточно монет (нужно 10 бронзы)' });
 
     const now = Math.floor(Date.now() / 1000);
-    const count = (db.prepare(
+    const count = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
     ).get(userId, now) as any).cnt;
     if (count === 0) return res.status(400).json({ error: 'Нет доступных соперников' });
@@ -141,7 +141,7 @@ router.post('/arena/enter', async (req, res) => {
 router.get('/arena/check-opponent', async (req, res) => {
     const userId = req.userId;
     const now = Math.floor(Date.now() / 1000);
-    const count = (db.prepare(
+    const count = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
     ).get(userId, now) as any).cnt;
     if (count === 0) return res.status(404).json({ error: 'Нет доступных соперников' });

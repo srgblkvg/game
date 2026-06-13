@@ -11,7 +11,7 @@ router.post('/character/equip', async (req, res) => {
     const { slotId, itemId } = req.body;
     if (!slotId) return res.status(400).json({ error: 'slotId required' });
 
-    const user = getUserById(db, userId);
+    const user = await getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -89,7 +89,7 @@ router.post('/character/salvage', async (req, res) => {
     const { itemIds } = req.body;
     if (!itemIds) return res.status(400).json({ error: 'itemIds required' });
 
-    const user = getUserById(db, userId);
+    const user = await getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     let inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -108,7 +108,7 @@ router.post('/character/salvage', async (req, res) => {
         return true;
     });
 
-    const getCraftItemByRarityId = db.prepare(`
+    const getCraftItemByRarityId = await db.prepare(`
         SELECT c.id, c.name, c.rarity_id, c.type, c.image,
                r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
