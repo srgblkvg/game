@@ -4,17 +4,12 @@ import pgPromise from 'pg-promise';
 function camelRows(rows: any[]): any[] {
   for (const r of rows) {
     for (const k of Object.keys(r)) {
-      // Replace null with empty string for JSON/text fields
+      // Replace null with default empty JSON where expected
       if (r[k] === null) {
         if (k === 'inventory') { r[k] = '[]'; continue; }
         if (k === 'equipment') { r[k] = '{}'; continue; }
-        if (k === 'activejob' || k === 'openprivatetabs' || k === 'snapshot' ||
-            k === 'log' || k === 'item_data' || k === 'bonuses' || k === 'extra') {
-          r[k] = '';
-          continue;
-        }
       }
-      const cc = k.replace(/(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses)$/i,
+      const cc = k.replace(/(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid)$/i,
         m => m.charAt(0).toUpperCase() + m.slice(1))
         .replace(/taxrate$/i, 'TaxRate').replace(/verified$/i, 'Verified');
       if (cc !== k) r[cc] = r[k];
@@ -44,7 +39,7 @@ class Database {
   prepare(sql: string) {
     const q = convertPlaceholders(sql);
     return {
-      get: (...params: any[]) => rawDb.oneOrNone(q, params).then((r: any) => r ? camelRows([r])[0] : undefined),
+      get: (...params: any[]) => rawDb.manyOrNone(q, params).then((rows: any[]) => rows.length > 0 ? camelRows(rows)[0] : undefined),
       all: (...params: any[]) => rawDb.manyOrNone(q, params).then(camelRows),
       run: (...params: any[]) => rawDb.result(q, params).then((r: any) => ({ changes: r.rowCount })),
     };
@@ -56,7 +51,7 @@ class Database {
         prepare: (sql: string) => {
           const q = convertPlaceholders(sql);
           return {
-            get: (...params: any[]) => t.oneOrNone(q, params).then((r: any) => r ? camelRows([r])[0] : undefined),
+            get: (...params: any[]) => t.manyOrNone(q, params).then((rows: any[]) => rows.length > 0 ? camelRows(rows)[0] : undefined),
             all: (...params: any[]) => t.manyOrNone(q, params).then(camelRows),
             run: (...params: any[]) => t.result(q, params).then((r: any) => ({ changes: r.rowCount })),
           };
