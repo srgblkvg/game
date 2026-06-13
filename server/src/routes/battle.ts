@@ -10,7 +10,7 @@ import { battleSchema } from '../validation';
 
 const router = Router();
 
-router.post('/battle', async (req, res) => {
+router.post('/battle', async async (req, res) => {
     const parsed = battleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные боя' });
 
@@ -47,7 +47,7 @@ router.post('/battle', async (req, res) => {
     // Актуализируем HP защитника (офлайн-реген)
     const dCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(defender.id) as any).cnt || 0;
     const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'), undefined, dCollCnt).hp;
-    const defenderCurrentHp = applyHpRegen({
+    const defenderCurrentHp = await applyHpRegen({
         id: defender.id,
         currentHp: defender.currentHp,
         maxHp: defenderMaxHp,
@@ -99,20 +99,20 @@ router.post('/battle', async (req, res) => {
     const newDefenderElo = calcElo(defender.elo || 1000, attacker.elo || 1000, !attackerWon, defender.level);
 
     // --- Обновление атакующего ---
-    const attExp = applyExp(db, attacker.id, result.winnerId === attacker.id ? result.expGained : 0, attacker.exp, attacker.level, attacker.statPoints || 0);
+    const attExp = await applyExp(db, attacker.id, result.winnerId === attacker.id ? result.expGained : 0, attacker.exp, attacker.level, attacker.statPoints || 0);
 
     // Налог гильдии (PvP)
-    const attackerMoneyAfterTax = collectGuildTax(db, attacker.id, attackerWins ? result.moneyGained : 0, 'tax_pvp');
+    const attackerMoneyAfterTax = await collectGuildTax(db, attacker.id, attackerWins ? result.moneyGained : 0, 'tax_pvp');
 
     await db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`)
         .run(attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
             attackerWins ? (result.moneyGained + moneyStolen) : 0, attackerWins ? 0 : moneyStolen, attacker.id);
 
     // --- Обновление защитника ---
-    const defExp = applyExp(db, defender.id, result.winnerId === defender.id ? result.expGained : 0, defender.exp, defender.level, defender.statPoints || 0);
+    const defExp = await applyExp(db, defender.id, result.winnerId === defender.id ? result.expGained : 0, defender.exp, defender.level, defender.statPoints || 0);
 
     // Налог гильдии (PvP защитник)
-    const defenderMoneyAfterTax = collectGuildTax(db, defender.id, !attackerWins ? result.moneyGained : 0, 'tax_pvp');
+    const defenderMoneyAfterTax = await collectGuildTax(db, defender.id, !attackerWins ? result.moneyGained : 0, 'tax_pvp');
 
     await db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`)
         .run(defExp.newLevel, defExp.newExp, defenderMoneyAfterTax, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
@@ -148,7 +148,7 @@ router.post('/battle', async (req, res) => {
     });
 });
 
-router.get('/battles', async (req, res) => {
+router.get('/battles', async async (req, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 10;
     const battles = await db.prepare(`
@@ -170,7 +170,7 @@ router.get('/battles', async (req, res) => {
 // Админка: все бои (отдельный роутер)
 export const adminRouter = Router();
 
-adminRouter.get('/battles', async (req, res) => {
+adminRouter.get('/battles', async async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;

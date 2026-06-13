@@ -8,7 +8,7 @@ import { getBaseStats, enrichEquipment, spendMoney } from '../db/helpers';
 const router = Router();
 
 // Получить случайного соперника (без боя)
-router.get('/arena/opponent', async (req, res) => {
+router.get('/arena/opponent', async async (req, res) => {
     const userId = req.userId;
     const change = req.query.change === 'true';
     const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
@@ -33,7 +33,7 @@ router.get('/arena/opponent', async (req, res) => {
                 // Возвращаем того же соперника — бесплатно
                 const savedBase = { s: saved.baseS ?? 5, a: saved.baseA ?? 5, d: saved.baseD ?? 5, m: saved.baseM ?? 5 };
                 const savedEquip = JSON.parse(saved.equipment || '{}');
-                const { enriched: savedEnriched } = enrichEquipment(db, savedEquip);
+                const { enriched: savedEnriched } = await enrichEquipment(db, savedEquip);
                 const savedCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(saved.id) as any).cnt || 0;
                 const savedStats = currentStats(savedBase, savedEnriched, undefined, savedCollCnt);
                 return res.json({
@@ -99,7 +99,7 @@ router.get('/arena/opponent', async (req, res) => {
 
     const base = { s: opponent.baseS ?? 5, a: opponent.baseA ?? 5, d: opponent.baseD ?? 5, m: opponent.baseM ?? 5 };
     const equipment = JSON.parse(opponent.equipment || '{}');
-    const { enriched: enrichedEquipment } = enrichEquipment(db, equipment);
+    const { enriched: enrichedEquipment } = await enrichEquipment(db, equipment);
     const oppCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(opponent.id) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, oppCollCnt);
 
@@ -118,7 +118,7 @@ router.get('/arena/opponent', async (req, res) => {
 });
 
 // Вход на арену (платный)
-router.post('/arena/enter', async (req, res) => {
+router.post('/arena/enter', async async (req, res) => {
     const parsed = arenaEnterSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректный запрос' });
 
@@ -128,7 +128,7 @@ router.post('/arena/enter', async (req, res) => {
     if (user.money < 10) return res.status(400).json({ error: 'Недостаточно монет (нужно 10 бронзы)' });
 
     const now = Math.floor(Date.now() / 1000);
-    const count = (db.prepare(
+    const count = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
     ).get(userId, now) as any).cnt;
     if (count === 0) return res.status(400).json({ error: 'Нет доступных соперников' });
@@ -138,10 +138,10 @@ router.post('/arena/enter', async (req, res) => {
 });
 
 // Проверка наличия соперников
-router.get('/arena/check-opponent', async (req, res) => {
+router.get('/arena/check-opponent', async async (req, res) => {
     const userId = req.userId;
     const now = Math.floor(Date.now() / 1000);
-    const count = (db.prepare(
+    const count = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)'
     ).get(userId, now) as any).cnt;
     if (count === 0) return res.status(404).json({ error: 'Нет доступных соперников' });

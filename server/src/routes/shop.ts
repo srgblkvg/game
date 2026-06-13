@@ -5,7 +5,7 @@ import { buyItemSchema } from '../validation';
 const router = Router();
 
 // Получить все предметы для магазина
-router.get('/shop/items', async (req, res) => {
+router.get('/shop/items', async async (req, res) => {
     const items = await db.prepare(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color, r.id as rarity_id
         FROM items i
@@ -24,7 +24,7 @@ router.get('/shop/items', async (req, res) => {
 });
 
 // Купить предмет
-router.post('/shop/buy', async (req, res) => {
+router.post('/shop/buy', async async (req, res) => {
     const parsed = buyItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 

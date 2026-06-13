@@ -5,7 +5,7 @@ import { broadcast } from '../websocket';
 const router = Router();
 
 // Создать гильдию
-router.post('/guild/create', async (req, res) => {
+router.post('/guild/create', async async (req, res) => {
     const userId = req.userId;
     const { name, description, joinType } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: 'Укажите название гильдии' });
@@ -29,7 +29,7 @@ router.post('/guild/create', async (req, res) => {
 });
 
 // Информация о моей гильдии
-router.get('/guild/my', async (req, res) => {
+router.get('/guild/my', async async (req, res) => {
     const userId = req.userId;
     const member = db.prepare(
         'SELECT gm.*, g.name, g.description, g.joinType, g.level, g.exp, g.leaderId, g.treasury, g.taxRate, g.createdAt FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?'
@@ -84,7 +84,7 @@ router.get('/guild/my', async (req, res) => {
 });
 
 // Список гильдий (должен быть до /guild/:id)
-router.get('/guild/list', async (req, res) => {
+router.get('/guild/list', async async (req, res) => {
     const guilds = await db.prepare(`
         SELECT g.*, u.username as leaderName, u.id as leaderUserId,
             (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount,
@@ -113,7 +113,7 @@ router.get('/guild/list', async (req, res) => {
 });
 
 // Заявки на вступление (для лидера/офицеров)
-router.get('/guild/requests', async (req, res) => {
+router.get('/guild/requests', async async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
@@ -129,7 +129,7 @@ router.get('/guild/requests', async (req, res) => {
 });
 
 // Мои приглашения
-router.get('/guild/invites', async (req, res) => {
+router.get('/guild/invites', async async (req, res) => {
     const userId = req.userId;
     const invites = await db.prepare(`
         SELECT gi.*, g.name as guildName, u.username as inviterName
@@ -143,7 +143,7 @@ router.get('/guild/invites', async (req, res) => {
 });
 
 // --- Гильд-чат ---
-router.get('/guild/chat', async (req, res) => {
+router.get('/guild/chat', async async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
@@ -160,7 +160,7 @@ router.get('/guild/chat', async (req, res) => {
     res.json(messages.reverse());
 });
 
-router.post('/guild/chat', async (req, res) => {
+router.post('/guild/chat', async async (req, res) => {
     const userId = req.userId;
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'Пустое сообщение' });
@@ -195,7 +195,7 @@ router.post('/guild/chat', async (req, res) => {
 });
 
 // Публичная информация о гильдии
-router.get('/guild/:id', async (req, res) => {
+router.get('/guild/:id', async async (req, res) => {
     const guildId = parseInt(req.params.id);
     const guild = await db.prepare('SELECT g.*, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?').get(guildId) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
@@ -227,7 +227,7 @@ router.get('/guild/:id', async (req, res) => {
 });
 
 // Вступить в открытую гильдию
-router.post('/guild/join/:id', async (req, res) => {
+router.post('/guild/join/:id', async async (req, res) => {
     const userId = req.userId;
     const guildId = parseInt(req.params.id);
 
@@ -245,7 +245,7 @@ router.post('/guild/join/:id', async (req, res) => {
 });
 
 // Подать заявку
-router.post('/guild/request/:id', async (req, res) => {
+router.post('/guild/request/:id', async async (req, res) => {
     const userId = req.userId;
     const guildId = parseInt(req.params.id);
 
@@ -266,7 +266,7 @@ router.post('/guild/request/:id', async (req, res) => {
 });
 
 // Пригласить игрока (отправить ЛС)
-router.post('/guild/invite', async (req, res) => {
+router.post('/guild/invite', async async (req, res) => {
     const userId = req.userId;
     const { targetId } = req.body;
     if (!targetId) return res.status(400).json({ error: 'Укажите targetId' });
@@ -313,7 +313,7 @@ router.post('/guild/invite', async (req, res) => {
 });
 
 // Принять / отклонить приглашение (по guildId)
-router.post('/guild/accept-invite', async (req, res) => {
+router.post('/guild/accept-invite', async async (req, res) => {
     const userId = req.userId;
     const { guildId, accept } = req.body;
     if (!guildId) return res.status(400).json({ error: 'Укажите guildId' });
@@ -338,7 +338,7 @@ router.post('/guild/accept-invite', async (req, res) => {
 });
 
 // Принять / отклонить приглашение (по ID)
-router.post('/guild/invite/:id', async (req, res) => {
+router.post('/guild/invite/:id', async async (req, res) => {
     const userId = req.userId;
     const inviteId = parseInt(req.params.id);
     const { accept } = req.body; // true/false
@@ -366,7 +366,7 @@ router.post('/guild/invite/:id', async (req, res) => {
 });
 
 // Принять/отклонить заявку (для лидера/офицеров)
-router.post('/guild/handle-request', async (req, res) => {
+router.post('/guild/handle-request', async async (req, res) => {
     const userId = req.userId;
     const { requestId, accept } = req.body;
 
@@ -391,7 +391,7 @@ router.post('/guild/handle-request', async (req, res) => {
 });
 
 // Покинуть гильдию
-router.post('/guild/leave', async (req, res) => {
+router.post('/guild/leave', async async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
@@ -409,7 +409,7 @@ router.post('/guild/leave', async (req, res) => {
 });
 
 // Исключить участника (лидер/офицер)
-router.post('/guild/kick', async (req, res) => {
+router.post('/guild/kick', async async (req, res) => {
     const userId = req.userId;
     const { targetId } = req.body;
     if (!targetId) return res.status(400).json({ error: 'Укажите targetId' });
@@ -429,7 +429,7 @@ router.post('/guild/kick', async (req, res) => {
 });
 
 // Сменить роль участника (только лидер)
-router.post('/guild/role', async (req, res) => {
+router.post('/guild/role', async async (req, res) => {
     const userId = req.userId;
     const { targetId, rank } = req.body;
     if (!targetId || !rank) return res.status(400).json({ error: 'Укажите targetId и rank' });
@@ -447,7 +447,7 @@ router.post('/guild/role', async (req, res) => {
 });
 
 // Отменить все отправленные приглашения (лидер/офицер)
-router.post('/guild/cancel-invites', async (req, res) => {
+router.post('/guild/cancel-invites', async async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
@@ -461,7 +461,7 @@ router.post('/guild/cancel-invites', async (req, res) => {
 // --- Казна гильдии ---
 
 // Внести серебро в казну
-router.post('/guild/treasury/deposit', async (req, res) => {
+router.post('/guild/treasury/deposit', async async (req, res) => {
     const userId = req.userId;
     const { amount } = req.body;
     if (!amount || amount < 1) return res.status(400).json({ error: 'Укажите сумму (минимум 1 серебра)' });
@@ -477,7 +477,7 @@ router.post('/guild/treasury/deposit', async (req, res) => {
     const user = await db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
     if (!user || user.money < amount) return res.status(400).json({ error: 'Недостаточно серебра в кармане' });
 
-    const tx = db.transaction(() => {
+    const tx = db.transaction(async () => {
         await db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(amount, userId);
         await db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(amount, member.guildId);
         await db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount) VALUES (?, ?, ?)').run(member.guildId, userId, amount);
@@ -493,7 +493,7 @@ router.post('/guild/treasury/deposit', async (req, res) => {
 });
 
 // История пополнений казны (с пагинацией и поиском)
-router.get('/guild/treasury/history', async (req, res) => {
+router.get('/guild/treasury/history', async async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
@@ -529,14 +529,14 @@ router.get('/guild/treasury/history', async (req, res) => {
 // --- Гильд-войны ---
 
 // Проверить, в войне ли гильдия (с авто-закрытием просроченных)
-function isGuildAtWar(guildId: number): any | null {
+async function isGuildAtWar(guildId: number): any | null {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
     // Авто-отмена просроченных pending войн
-    db.prepare(
+    await db.prepare(
         `UPDATE guild_wars SET status = 'cancelled', endedAt = ? WHERE status = 'pending' AND expiresAt <= ?`
     ).run(now, now);
     // Авто-завершение просроченных active войн (с переводом казны)
-    const expiredWars = db.prepare(
+    const expiredWars = await db.prepare(
         `SELECT * FROM guild_wars WHERE status = 'active' AND expiresAt <= ?`
     ).all(now) as any[];
 
@@ -567,17 +567,17 @@ function isGuildAtWar(guildId: number): any | null {
             }
         }
 
-        db.prepare(
+        await db.prepare(
             `UPDATE guild_wars SET status = 'ended', endedAt = ?, winnerGuildId = ? WHERE id = ?`
         ).run(now, winnerId, war.id);
     }
-    return db.prepare(
+    return await db.prepare(
         `SELECT * FROM guild_wars WHERE (attackerGuildId = ? OR defenderGuildId = ?) AND status IN ('pending', 'active') LIMIT 1`
     ).get(guildId, guildId) as any || null;
 }
 
 // Объявить войну (только лидер)
-router.post('/guild/war/declare', async (req, res) => {
+router.post('/guild/war/declare', async async (req, res) => {
     const userId = req.userId;
     const { targetGuildId } = req.body;
     if (!targetGuildId) return res.status(400).json({ error: 'Укажите targetGuildId' });
@@ -631,7 +631,7 @@ router.post('/guild/war/declare', async (req, res) => {
 });
 
 // Ответить на объявление войны (только лидер защищающейся гильдии)
-router.post('/guild/war/respond', async (req, res) => {
+router.post('/guild/war/respond', async async (req, res) => {
     const userId = req.userId;
     const { accept } = req.body; // true — принять, false — отклонить
 
@@ -656,7 +656,7 @@ router.post('/guild/war/respond', async (req, res) => {
 });
 
 // Статус войны для моей гильдии
-router.get('/guild/war/status', async (req, res) => {
+router.get('/guild/war/status', async async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.json({ war: null });
@@ -687,7 +687,7 @@ router.get('/guild/war/status', async (req, res) => {
 });
 
 // Детали войны: участники, атаки, счёт
-router.get('/guild/war/details', async (req, res) => {
+router.get('/guild/war/details', async async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
@@ -799,7 +799,7 @@ router.get('/guild/war/details', async (req, res) => {
 });
 
 // Атаковать участника вражеской гильдии
-router.post('/guild/war/attack', async (req, res) => {
+router.post('/guild/war/attack', async async (req, res) => {
     const userId = req.userId;
     const { targetId } = req.body;
     if (!targetId) return res.status(400).json({ error: 'Укажите targetId' });
@@ -824,13 +824,13 @@ router.post('/guild/war/attack', async (req, res) => {
     if (targetMember.joinedAt > war.declaredAt) return res.status(400).json({ error: 'Цель вступила в гильдию после объявления войны' });
 
     // Лимит: 3 атаки на атакующего
-    const myAttacks = (db.prepare(
+    const myAttacks = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?'
     ).get(war.id, userId) as any).cnt;
     if (myAttacks >= 3) return res.status(400).json({ error: 'Вы исчерпали лимит атак (3)' });
 
     // Лимит: 3 атаки на защитника
-    const targetAttacks = (db.prepare(
+    const targetAttacks = (await db.prepare(
         'SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND defenderId = ?'
     ).get(war.id, targetId) as any).cnt;
     if (targetAttacks >= 3) return res.status(400).json({ error: 'Этого игрока уже атаковали максимум раз (3)' });
@@ -923,7 +923,7 @@ router.post('/guild/war/attack', async (req, res) => {
 });
 
 // Установить ставку налога (только лидер)
-router.post('/guild/tax-rate', async (req, res) => {
+router.post('/guild/tax-rate', async async (req, res) => {
     const userId = req.userId;
     const { taxRate } = req.body;
     if (taxRate == null || taxRate < 0 || taxRate > 50) return res.status(400).json({ error: 'Ставка от 0 до 50%' });

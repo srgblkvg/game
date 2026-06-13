@@ -33,7 +33,7 @@ function makeToken(userId: number, role: string): string {
     return jwt.sign({ userId, role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
 }
 
-function findOrCreateUser(provider: string, oauthId: string, username: string): { id: number; username: string; level: number } {
+async function findOrCreateUser(provider: string, oauthId: string, username: string): { id: number; username: string; level: number } {
     const now = Math.floor(Date.now() / 1000);
     const existing: any = await db.prepare('SELECT id, username, level FROM users WHERE oauthProvider = ? AND oauthId = ?')
         .get(provider, oauthId);
@@ -70,12 +70,12 @@ function findOrCreateUser(provider: string, oauthId: string, username: string): 
 }
 
 // --- Яндекс ID ---
-router.get('/yandex', async (_req, res) => {
+router.get('/yandex', async async (_req, res) => {
     const url = `https://oauth.yandex.ru/authorize?response_type=code&client_id=${YA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI_YA)}`;
     res.redirect(url);
 });
 
-router.get('/yandex/callback', async async (req, res) => {
+router.get('/yandex/callback', async async async (req, res) => {
     const { code } = req.query;
     if (!code || typeof code !== 'string') {
         return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
@@ -108,7 +108,7 @@ router.get('/yandex/callback', async async (req, res) => {
             return res.redirect(`${FRONTEND_URL}/login?error=userinfo_failed`);
         }
 
-        const user = findOrCreateUser('yandex', String(userData.id), userData.login || `yandex_${userData.id}`);
+        const user = await findOrCreateUser('yandex', String(userData.id), userData.login || `yandex_${userData.id}`);
         const jwtToken = makeToken(user.id, 'player');
 
         // Логируем IP и аудит
@@ -126,7 +126,7 @@ router.get('/yandex/callback', async async (req, res) => {
 });
 
 // --- VK ID ---
-router.get('/vk', async (_req, res) => {
+router.get('/vk', async async (_req, res) => {
     const verifier = crypto.randomBytes(32).toString('base64url');
     const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
     const state = crypto.randomBytes(16).toString('hex');
@@ -137,7 +137,7 @@ router.get('/vk', async (_req, res) => {
     res.redirect(url);
 });
 
-router.get('/vk/callback', async async (req, res) => {
+router.get('/vk/callback', async async async (req, res) => {
     const { code, state, device_id } = req.query;
     if (!code || typeof code !== 'string') {
         return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
@@ -211,7 +211,7 @@ router.get('/vk/callback', async async (req, res) => {
         }
 
         if (!displayName) displayName = `id${vkUserId}`;
-        const user = findOrCreateUser('vkontakte', vkUserId, displayName);
+        const user = await findOrCreateUser('vkontakte', vkUserId, displayName);
         const jwtToken = makeToken(user.id, 'player');
 
         // Логируем IP и аудит
