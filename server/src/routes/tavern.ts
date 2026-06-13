@@ -48,7 +48,8 @@ router.get('/tavern', (req: any, res) => {
         drinkBonuses = drinks[user.activeDrink]?.bonuses as any;
     }
 
-    const stats = currentStats(base, enriched, drinkBonuses);
+    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(req.userId) as any).cnt || 0;
+    const stats = currentStats(base, enriched, drinkBonuses, collCnt);
     const maxHp = stats.hp;
 
     res.json({
@@ -81,7 +82,8 @@ router.post('/tavern/heal', (req: any, res) => {
         drinkBonuses = drinks[user.activeDrink]?.bonuses as any;
     }
 
-    const stats = currentStats(base, enriched, drinkBonuses);
+    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(req.userId) as any).cnt || 0;
+    const stats = currentStats(base, enriched, drinkBonuses, collCnt);
     const maxHp = stats.hp;
     const missingHp = maxHp - user.currentHp;
     if (missingHp <= 0) return res.status(400).json({ error: 'HP уже полное' });

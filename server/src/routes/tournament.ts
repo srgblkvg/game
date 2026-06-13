@@ -118,7 +118,8 @@ function loadPlayerForBattle(userId: number) {
 
     const { enriched } = enrichEquipment(db, equipment);
     const base = getBaseStats(u);
-    const stats = currentStats(base, enriched);
+    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
+    const stats = currentStats(base, enriched, undefined, collCnt);
 
     return {
         id: u.id,
