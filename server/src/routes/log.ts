@@ -20,13 +20,13 @@ router.get('/tournament-history', authMiddleware, (req: any, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 50;
 
-    const tournaments = db.prepare(`
+    const tournaments = await db.prepareAll(`
         SELECT t.*, tp.snapshotStats
         FROM tournament_participants tp
         JOIN tournaments t ON tp.tournamentId = t.id
         WHERE tp.userId = ? AND t.status IN ('completed', 'cancelled')
         ORDER BY t.id DESC LIMIT ?
-    `).all(userId, limit);
+    `)(userId, limit);
 
     res.json(tournaments);
 });

@@ -3,33 +3,41 @@ import { runSchema } from './schema';
 import { runMigrations } from './migrations';
 import { runSeed } from './seed';
 
+// Конвертирует ? в $1, $2, ... для совместимости с SQLite-синтаксисом
+function convertPlaceholders(sql: string): string {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
+}
+
 // PG-совместимая обёртка похожая на better-sqlite3 API
 class PgWrapper {
-  query(sql: string, params?: any[]): Promise<{ rows: any[]; rowCount: number }> {
-    return pool.query(sql, params);
+  async query(sql: string, params?: any[]): Promise<{ rows: any[]; rowCount: number }> {
+    return pool.query(convertPlaceholders(sql), params);
   }
 
   // Эмулирует db.prepare(sql).get(params)
   prepareGet(sql: string) {
+    const converted = convertPlaceholders(sql);
     return async (...params: any[]): Promise<any | undefined> => {
-      const res = await pool.query(sql, params);
+      const res = await pool.query(converted, params);
       return res.rows[0];
     };
   }
 
   // Эмулирует db.prepare(sql).all(params)
   prepareAll(sql: string) {
+    const converted = convertPlaceholders(sql);
     return async (...params: any[]): Promise<any[]> => {
-      const res = await pool.query(sql, params);
+      const res = await pool.query(converted, params);
       return res.rows;
     };
   }
 
   // Эмулирует db.prepare(sql).run(params)
   prepareRun(sql: string) {
+    const converted = convertPlaceholders(sql);
     return async (...params: any[]): Promise<{ changes: number; lastInsertRowid?: number }> => {
-      // Попытка получить RETURNING id для INSERT
-      const res = await pool.query(sql, params);
+      const res = await pool.query(converted, params);
       const lastId = res.rows?.[0]?.id;
       return { changes: res.rowCount ?? 0, lastInsertRowid: lastId ? Number(lastId) : undefined };
     };
@@ -62,26 +70,29 @@ class PgTransaction {
   constructor(private client: any) {}
 
   async query(sql: string, params?: any[]) {
-    return this.client.query(sql, params);
+    return this.client.query(convertPlaceholders(sql), params);
   }
 
   prepareGet(sql: string) {
+    const converted = convertPlaceholders(sql);
     return async (...params: any[]) => {
-      const res = await this.client.query(sql, params);
+      const res = await this.client.query(converted, params);
       return res.rows[0];
     };
   }
 
   prepareAll(sql: string) {
+    const converted = convertPlaceholders(sql);
     return async (...params: any[]) => {
-      const res = await this.client.query(sql, params);
+      const res = await this.client.query(converted, params);
       return res.rows;
     };
   }
 
   prepareRun(sql: string) {
+    const converted = convertPlaceholders(sql);
     return async (...params: any[]) => {
-      const res = await this.client.query(sql, params);
+      const res = await this.client.query(converted, params);
       const lastId = res.rows?.[0]?.id;
       return { changes: res.rowCount ?? 0, lastInsertRowid: lastId ? Number(lastId) : undefined };
     };

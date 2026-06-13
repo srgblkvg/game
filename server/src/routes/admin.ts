@@ -43,12 +43,12 @@ router.get('/images', (req: any, res) => {
 
 // ---------- Предметы ----------
 router.get('/items', (req: any, res) => {
-    const items = db.prepare(`
+    const items = await db.prepareAll(`
         SELECT i.*, r.name as rarity_name, r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         ORDER BY i.id DESC
-    `).all();
+    `)();
     res.json(items);
 });
 
@@ -57,8 +57,7 @@ router.post('/items', (req: any, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
     const { name, slot, rarity_id, bonuses, extra, image, cost } = parsed.data;
-    db.prepare('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, cost ?? null);
+    await db.prepareRun('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)')(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, cost ?? null);
     res.json({ success: true });
 });
 
@@ -67,13 +66,12 @@ router.put('/items/:id', (req: any, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
     const { name, slot, rarity_id, bonuses, extra, image, cost } = parsed.data;
-    db.prepare('UPDATE items SET name=?, slot=?, rarity_id=?, bonuses=?, extra=?, image=?, cost=? WHERE id=?')
-        .run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, cost ?? null, req.params.id);
+    await db.prepareRun('UPDATE items SET name=?, slot=?, rarity_id=?, bonuses=?, extra=?, image=?, cost=? WHERE id=?')(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, cost ?? null, req.params.id);
     res.json({ success: true });
 });
 
 router.delete('/items/:id', (req: any, res) => {
-    db.prepare('DELETE FROM items WHERE id = ?').run(req.params.id);
+    await db.prepareRun('DELETE FROM items WHERE id = ?')(req.params.id);
     res.json({ success: true });
 });
 
@@ -102,10 +100,10 @@ router.post('/ban-user', (req: any, res) => {
     const seconds = duration * multiplier;
     const bannedUntil = Math.floor(Date.now() / 1000) + seconds;
 
-    const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT id, username FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
-    db.prepare('UPDATE users SET bannedUntil = ? WHERE id = ?').run(bannedUntil, userId);
+    await db.prepareRun('UPDATE users SET bannedUntil = ? WHERE id = ?')(bannedUntil, userId);
     res.json({ success: true, bannedUntil, message: `${user.username} забанен на ${duration} ${unit}` });
 });
 
@@ -114,25 +112,25 @@ router.post('/unban-user', (req: any, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'Требуется userId' });
 
-    db.prepare('UPDATE users SET bannedUntil = 0 WHERE id = ?').run(userId);
+    await db.prepareRun('UPDATE users SET bannedUntil = 0 WHERE id = ?')(userId);
     res.json({ success: true, message: 'Игрок разбанен' });
 });
 
 // Удаление игрока
 router.delete('/users/:id', (req: any, res) => {
     const userId = parseInt(req.params.id);
-    const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT id, username FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
     // Каскадное удаление
-    db.prepare('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?').run(userId, userId);
-    db.prepare('DELETE FROM job_history WHERE userId = ?').run(userId);
-    db.prepare('DELETE FROM chat_messages WHERE senderId = ?').run(userId);
-    db.prepare('DELETE FROM login_logs WHERE userId = ?').run(userId);
-    db.prepare('DELETE FROM auction_lots WHERE sellerId = ?').run(userId);
-    db.prepare('DELETE FROM tournament_participants WHERE userId = ?').run(userId);
-    db.prepare('DELETE FROM order_members WHERE userId = ?').run(userId);
-    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    await db.prepareRun('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?')(userId, userId);
+    await db.prepareRun('DELETE FROM job_history WHERE userId = ?')(userId);
+    await db.prepareRun('DELETE FROM chat_messages WHERE senderId = ?')(userId);
+    await db.prepareRun('DELETE FROM login_logs WHERE userId = ?')(userId);
+    await db.prepareRun('DELETE FROM auction_lots WHERE sellerId = ?')(userId);
+    await db.prepareRun('DELETE FROM tournament_participants WHERE userId = ?')(userId);
+    await db.prepareRun('DELETE FROM order_members WHERE userId = ?')(userId);
+    await db.prepareRun('DELETE FROM users WHERE id = ?')(userId);
 
     res.json({ success: true, message: `Игрок ${user.username} (ID ${userId}) удалён` });
 });
@@ -151,10 +149,10 @@ router.post('/add-money', (req: any, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
     const { userId, amount } = parsed.data;
-    const user = db.prepare('SELECT id, money FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT id, money FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     const newMoney = user.money + amount;
-    db.prepare('UPDATE users SET money = ? WHERE id = ?').run(newMoney, userId);
+    await db.prepareRun('UPDATE users SET money = ? WHERE id = ?')(newMoney, userId);
     res.json({ success: true, newMoney });
 });
 
@@ -164,17 +162,17 @@ router.post('/reset-timers', (req: any, res) => {
 
     const { all, userId } = parsed.data;
     if (all) {
-        db.prepare('UPDATE users SET lastAttackTime = 0, protectionUntil = 0').run();
+        await db.prepareRun('UPDATE users SET lastAttackTime = 0, protectionUntil = 0')();
         return res.json({ success: true });
     }
     if (!userId) return res.status(400).json({ error: 'userId required' });
-    db.prepare('UPDATE users SET lastAttackTime = 0, protectionUntil = 0 WHERE id = ?').run(userId);
+    await db.prepareRun('UPDATE users SET lastAttackTime = 0, protectionUntil = 0 WHERE id = ?')(userId);
     res.json({ success: true });
 });
 
 // Получить список редкостей
 router.get('/rarities', (req: any, res) => {
-    const rarities = db.prepare('SELECT * FROM rarities ORDER BY id').all();
+    const rarities = await db.prepareAll('SELECT * FROM rarities ORDER BY id')();
     res.json(rarities);
 });
 
@@ -184,7 +182,7 @@ router.post('/change-password', (req: any, res) => {
     if (!oldPassword || !newPassword) return res.status(400).json({ error: 'Требуются старый и новый пароль' });
     if (newPassword.length < 8) return res.status(400).json({ error: 'Новый пароль должен быть минимум 8 символов' });
 
-    const admin = db.prepare('SELECT passwordHash FROM admins WHERE id = ?').get(req.adminId) as any;
+    const admin = await db.prepareGet('SELECT passwordHash FROM admins WHERE id = ?')(req.adminId) as any;
     if (!admin) return res.status(404).json({ error: 'Администратор не найден' });
 
     if (!bcrypt.compareSync(oldPassword, admin.passwordHash)) {
@@ -192,7 +190,7 @@ router.post('/change-password', (req: any, res) => {
     }
 
     const passwordHash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE admins SET passwordHash = ? WHERE id = ?').run(passwordHash, req.adminId);
+    await db.prepareRun('UPDATE admins SET passwordHash = ? WHERE id = ?')(passwordHash, req.adminId);
     res.json({ success: true });
 });
 
@@ -201,14 +199,14 @@ router.post('/premium', (req: any, res) => {
     const { userId, days } = req.body;
     if (!userId || !days || days < 1) return res.status(400).json({ error: 'Требуются userId и days (>= 1)' });
 
-    const user = db.prepare('SELECT id, username, premiumUntil FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT id, username, premiumUntil FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
     const now = Math.floor(Date.now() / 1000);
     const currentUntil = Math.max(user.premiumUntil || 0, now);
     const newUntil = currentUntil + days * 86400;
 
-    db.prepare('UPDATE users SET premiumUntil = ? WHERE id = ?').run(newUntil, userId);
+    await db.prepareRun('UPDATE users SET premiumUntil = ? WHERE id = ?')(newUntil, userId);
     const untilDate = new Date(newUntil * 1000).toLocaleDateString('ru-RU');
 
     res.json({ success: true, premiumUntil: newUntil, message: `${user.username}: премиум до ${untilDate} (${days} дн.)` });

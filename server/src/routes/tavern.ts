@@ -34,7 +34,7 @@ const drinks: Record<string, { name: string; bonuses: Record<string, number>; co
 // Статус трактира
 router.get('/tavern', (req: any, res) => {
     const userId = req.userId;
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
@@ -48,7 +48,7 @@ router.get('/tavern', (req: any, res) => {
         drinkBonuses = drinks[user.activeDrink]?.bonuses as any;
     }
 
-    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(req.userId) as any).cnt || 0;
+    const collCnt = (await db.prepareGet('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?')(req.userId) as any).cnt || 0;
     const stats = currentStats(base, enriched, drinkBonuses, collCnt);
     const maxHp = stats.hp;
 
@@ -68,7 +68,7 @@ router.post('/tavern/heal', (req: any, res) => {
     const userId = req.userId;
     const { full } = req.body; // full=true — полное, иначе 50%
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
@@ -82,7 +82,7 @@ router.post('/tavern/heal', (req: any, res) => {
         drinkBonuses = drinks[user.activeDrink]?.bonuses as any;
     }
 
-    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(req.userId) as any).cnt || 0;
+    const collCnt = (await db.prepareGet('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?')(req.userId) as any).cnt || 0;
     const stats = currentStats(base, enriched, drinkBonuses, collCnt);
     const maxHp = stats.hp;
     const missingHp = maxHp - user.currentHp;
@@ -93,7 +93,7 @@ router.post('/tavern/heal', (req: any, res) => {
 
     if (user.money < cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${cost})` });
 
-    db.prepare('UPDATE users SET money = money - ?, currentHp = ? WHERE id = ?').run(cost, user.currentHp + healAmount, userId);
+    await db.prepareRun('UPDATE users SET money = money - ?, currentHp = ? WHERE id = ?')(cost, user.currentHp + healAmount, userId);
 
     res.json({ success: true, hpAfter: user.currentHp + healAmount, cost });
 });
@@ -109,15 +109,14 @@ router.post('/tavern/room', (req: any, res) => {
     const duration = hours === 8 ? 8 : 1;
     const cost = hours === 8 ? room.cost8h : room.cost1h;
 
-    const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT money FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.money < cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${cost})` });
 
     const now = Math.floor(Date.now() / 1000);
     const until = now + duration * 3600;
 
-    db.prepare('UPDATE users SET money = money - ?, roomType = ?, roomUntil = ? WHERE id = ?')
-        .run(cost, roomType, until, userId);
+    await db.prepareRun('UPDATE users SET money = money - ?, roomType = ?, roomUntil = ? WHERE id = ?')(cost, roomType, until, userId);
 
     res.json({ success: true, room: { type: roomType, name: room.name, until, rate: room.rate } });
 });
@@ -130,15 +129,14 @@ router.post('/tavern/drink', (req: any, res) => {
     const drink = drinks[drinkType];
     if (!drink) return res.status(400).json({ error: 'Неизвестный напиток' });
 
-    const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT money FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.money < drink.cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${drink.cost})` });
 
     const now = Math.floor(Date.now() / 1000);
     const until = now + 3600; // 1 час
 
-    db.prepare('UPDATE users SET money = money - ?, activeDrink = ?, drinkUntil = ? WHERE id = ?')
-        .run(drink.cost, drinkType, until, userId);
+    await db.prepareRun('UPDATE users SET money = money - ?, activeDrink = ?, drinkUntil = ? WHERE id = ?')(drink.cost, drinkType, until, userId);
 
     res.json({ success: true, drink: { type: drinkType, name: drink.name, bonuses: drink.bonuses, until } });
 });

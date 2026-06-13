@@ -11,14 +11,14 @@ router.get('/collections', (req: any, res) => {
     ).all(userId) as any[];
 
     // Сеты и их статус (один JOIN вместо N+1)
-    const sets = db.prepare(`
+    const sets = await db.prepareAll(`
         SELECT s.*, si.item_name, si.slot,
                CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END as collected
         FROM collection_sets s
         LEFT JOIN collection_set_items si ON si.set_id = s.id
         LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot
         ORDER BY s.sort_order, s.id
-    `).all(userId) as any[];
+    `)(userId) as any[];
 
     // Группируем по сетам
     const setsMap = new Map<number, { set: any; totalItems: number; collectedCount: number }>();
@@ -65,7 +65,7 @@ router.post('/collections/add', (req: any, res) => {
     }
 
     // Удаляем из инвентаря
-    const user = db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT inventory FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     const inventory = JSON.parse(user.inventory || '[]');
@@ -80,7 +80,7 @@ router.post('/collections/add', (req: any, res) => {
 
     const removed = inventory.splice(itemIndex, 1)[0];
 
-    db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    await db.prepareRun('UPDATE users SET inventory = ? WHERE id = ?')(JSON.stringify(inventory), userId);
 
     // Добавляем в коллекцию
     db.prepare(

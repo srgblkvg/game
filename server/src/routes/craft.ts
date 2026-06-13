@@ -13,25 +13,25 @@ function isCraftItem(item: any): boolean {
 
 // Получить все рецепты (для игрока)
 router.get('/craft/recipes', (req, res) => {
-    const recipes = db.prepare('SELECT * FROM craft_recipes ORDER BY id').all() as any[];
+    const recipes = await db.prepareAll('SELECT * FROM craft_recipes ORDER BY id')() as any[];
     for (const recipe of recipes) {
-        recipe.ingredients = db.prepare(`
+        recipe.ingredients = await db.prepareAll(`
       SELECT ci.id as craft_item_id, ci.name, ci.rarity_id, ci.type as itemType, ci.image, cri.quantity,
              r.display_name as rarity_display, r.color as rarity_color
       FROM craft_recipe_ingredients cri
       JOIN craft_items ci ON ci.id = cri.craft_item_id
       JOIN rarities r ON ci.rarity_id = r.id
       WHERE cri.recipe_id = ?
-    `).all(recipe.id);
+    `)(recipe.id);
 
         if (recipe.result_type === 'item') {
-            recipe.result = db.prepare(`
+            recipe.result = await db.prepareGet(`
         SELECT i.id, i.name, i.slot, i.rarity_id, i.image,
                r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         WHERE i.id = ?
-      `).get(recipe.result_id) || null;
+      `)(recipe.result_id) || null;
         } else if (recipe.result_type === 'random_item') {
             // result_id = rarity_id, показываем инфо о редкости
             recipe.result = db.prepare(
@@ -39,19 +39,19 @@ router.get('/craft/recipes', (req, res) => {
             ).get(recipe.result_id) || null;
             if (recipe.result) recipe.result.name = `Случайный предмет (${recipe.result.rarity_display})`;
         } else if (recipe.result_type === 'craft_item') {
-            recipe.result = db.prepare(`
+            recipe.result = await db.prepareGet(`
         SELECT c.id, c.name, c.rarity_id, c.image, c.type as itemType,
                r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
         JOIN rarities r ON c.rarity_id = r.id
         WHERE c.id = ?
-      `).get(recipe.result_id) || null;
+      `)(recipe.result_id) || null;
         } else {
             recipe.result = null;
         }
 
         // Категория
-        recipe.category = db.prepare('SELECT * FROM craft_recipe_categories WHERE id = ?').get(recipe.category_id) || null;
+        recipe.category = await db.prepareGet('SELECT * FROM craft_recipe_categories WHERE id = ?')(recipe.category_id) || null;
     }
     res.json(recipes);
 });
@@ -63,20 +63,20 @@ router.post('/craft/execute', (req: any, res) => {
 
     if (!recipe_id) return res.status(400).json({ error: 'recipe_id required' });
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const recipe = db.prepare('SELECT * FROM craft_recipes WHERE id = ?').get(Number(recipe_id)) as any;
+    const recipe = await db.prepareGet('SELECT * FROM craft_recipes WHERE id = ?')(Number(recipe_id)) as any;
     if (!recipe) return res.status(400).json({ error: 'Рецепт не найден' });
 
-    const ingredients = db.prepare(`
+    const ingredients = await db.prepareAll(`
     SELECT ci.id, ci.name, ci.rarity_id, ci.type as itemType, cri.quantity,
            r.display_name as rarity_display, r.color as rarity_color
     FROM craft_recipe_ingredients cri
     JOIN craft_items ci ON ci.id = cri.craft_item_id
     JOIN rarities r ON ci.rarity_id = r.id
     WHERE cri.recipe_id = ?
-  `).all(recipe.id) as any[];
+  `)(recipe.id) as any[];
 
     let inventory: any[] = JSON.parse(user.inventory || '[]');
     const ingredientMap = new Map<string, number>();
@@ -126,12 +126,12 @@ router.post('/craft/execute', (req: any, res) => {
 
     if (success) {
         if (recipe.result_type === 'item') {
-            const resultItem = db.prepare(`
+            const resultItem = await db.prepareGet(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         WHERE i.id = ?
-      `).get(recipe.result_id) as any;
+      `)(recipe.result_id) as any;
             if (!resultItem) return res.status(500).json({ error: 'Результирующий предмет не найден' });
             newInventory.push({
                 id: Date.now() + Math.random(),
@@ -148,13 +148,13 @@ router.post('/craft/execute', (req: any, res) => {
         } else if (recipe.result_type === 'random_item') {
             // Случайный предмет указанной редкости (result_id = rarity_id)
             const rarityId = recipe.result_id;
-            const randomItem = db.prepare(`
+            const randomItem = await db.prepareGet(`
                 SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
                 FROM items i
                 JOIN rarities r ON i.rarity_id = r.id
                 WHERE i.rarity_id = ?
                 ORDER BY RANDOM() LIMIT 1
-            `).get(rarityId) as any;
+            `)(rarityId) as any;
             if (!randomItem) return res.status(500).json({ error: 'Нет предметов такой редкости' });
             newInventory.push({
                 id: Date.now() + Math.random(),
@@ -169,12 +169,12 @@ router.post('/craft/execute', (req: any, res) => {
                 upgradeLevel: 0,
             });
         } else if (recipe.result_type === 'craft_item') {
-            const resultCraftItem = db.prepare(`
+            const resultCraftItem = await db.prepareGet(`
         SELECT c.*, r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
         JOIN rarities r ON c.rarity_id = r.id
         WHERE c.id = ?
-      `).get(recipe.result_id) as any;
+      `)(recipe.result_id) as any;
             if (!resultCraftItem) return res.status(500).json({ error: 'Результирующий ресурс не найден' });
             const existing = newInventory.find((i: any) => isCraftItem(i) && String(i.id) === String(recipe.result_id));
             if (existing) {
@@ -194,10 +194,10 @@ router.post('/craft/execute', (req: any, res) => {
             }
         }
 
-        db.prepare('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftCreated = craftCreated + 1 WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
+        await db.prepareRun('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftCreated = craftCreated + 1 WHERE id = ?')(JSON.stringify(newInventory), newMoney, userId);
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: 'Предмет создан!' });
     } else {
-        db.prepare('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
+        await db.prepareRun('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?')(JSON.stringify(newInventory), newMoney, userId);
         return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача, предмет разрушен' });
     }
 });
@@ -206,7 +206,7 @@ router.post('/craft/execute', (req: any, res) => {
 router.get('/craft/upgrade-info/:level/:rarity', (req, res) => {
     const level = Number(req.params.level);
     const rarity = Number(req.params.rarity);
-    const data = db.prepare('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?').get(level, rarity) as any;
+    const data = await db.prepareGet('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?')(level, rarity) as any;
     if (!data) return res.status(404).json({ error: 'Данные об уровне не найдены' });
     res.json(data);
 });
@@ -230,7 +230,7 @@ router.post('/craft/upgrade', (req: any, res) => {
         return res.status(400).json({ error: 'Редкость камня должна совпадать с редкостью предмета' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     let inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -248,7 +248,7 @@ router.post('/craft/upgrade', (req: any, res) => {
     const stone = inventory[stoneIndex];
     if (stone.count < 1) return res.status(400).json({ error: 'Недостаточно камней усиления' });
 
-    const upgradeData = db.prepare('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?').get(targetLevel, stoneSlot.rarity_id) as any;
+    const upgradeData = await db.prepareGet('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?')(targetLevel, stoneSlot.rarity_id) as any;
     if (!upgradeData) {
         return res.status(400).json({ error: 'Нет данных для этого уровня улучшения. Свяжитесь с администратором.' });
     }
@@ -286,12 +286,11 @@ router.post('/craft/upgrade', (req: any, res) => {
         else if (targetLevel === 10) ratingBonus = 50;
         if (ratingBonus > 0) {
             const newElo = Math.max(100, (user.elo || 1000) + ratingBonus);
-            db.prepare('UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?')
-                .run(newMoney, JSON.stringify(newInventory), newElo, ratingBonus, userId);
+            await db.prepareRun('UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?')(newMoney, JSON.stringify(newInventory), newElo, ratingBonus, userId);
             return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, eloAdded: ratingBonus, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` });
         }
 
-        db.prepare('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
+        await db.prepareRun('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?')(JSON.stringify(newInventory), newMoney, userId);
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });
     } else {
         // Неудача: предмет разрушается, выдаём материал
@@ -300,13 +299,13 @@ router.post('/craft/upgrade', (req: any, res) => {
             const destroyedItem = newInventory[itemIdx];
             const rarityId = destroyedItem.rarity_id || 0;
 
-            const craftItem = db.prepare(`
+            const craftItem = await db.prepareGet(`
         SELECT c.id, c.name, c.rarity_id, c.type, c.image,
                r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
         JOIN rarities r ON c.rarity_id = r.id
         WHERE c.rarity_id = ? AND c.type = 'craft'
-      `).get(rarityId) as any;
+      `)(rarityId) as any;
 
             if (craftItem) {
                 const existingCraft = newInventory.find((i: any) => isCraftItem(i) && i.id === craftItem.id);
@@ -329,7 +328,7 @@ router.post('/craft/upgrade', (req: any, res) => {
             newInventory.splice(itemIdx, 1);
         }
 
-        db.prepare('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?').run(JSON.stringify(newInventory), newMoney, userId);
+        await db.prepareRun('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?')(JSON.stringify(newInventory), newMoney, userId);
         return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача! Предмет разрушен.' });
     }
 });
@@ -340,7 +339,7 @@ router.post('/craft/disassemble', (req: any, res) => {
     const { itemId } = req.body;
     if (!itemId) return res.status(400).json({ error: 'Укажите itemId' });
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -353,13 +352,13 @@ router.post('/craft/disassemble', (req: any, res) => {
     const rarityId = stone.rarity_id || 0;
 
     // Найти материал той же редкости (type = 'craft')
-    const material = db.prepare(`
+    const material = await db.prepareGet(`
         SELECT c.id, c.name, c.rarity_id, c.type, c.image,
                r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
         JOIN rarities r ON c.rarity_id = r.id
         WHERE c.rarity_id = ? AND c.type = 'craft'
-    `).get(rarityId) as any;
+    `)(rarityId) as any;
 
     if (!material) return res.status(400).json({ error: 'Нет материала такой редкости' });
 
@@ -388,7 +387,7 @@ router.post('/craft/disassemble', (req: any, res) => {
         });
     }
 
-    db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    await db.prepareRun('UPDATE users SET inventory = ? WHERE id = ?')(JSON.stringify(inventory), userId);
     res.json({ success: true, message: `Камень разобран в ${material.name}` });
 });
 

@@ -6,11 +6,11 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     'failedLogins INTEGER DEFAULT 0',
     'lockedUntil INTEGER DEFAULT 0',
   ]) {
-    try { db.exec(`ALTER TABLE users ADD COLUMN ${col}`); } catch { /* уже существует */ }
+    try { await db.exec(`ALTER TABLE users ADD COLUMN ${col}`); } catch { /* уже существует */ }
   }
 
   // Миграция старых материалов в инвентарях (material → craft_item)
-  const usersWithMaterials = db.prepare('SELECT id, inventory FROM users WHERE inventory LIKE ?').all('%material%') as any[];
+  const usersWithMaterials = await db.prepareAll('SELECT id, inventory FROM users WHERE inventory LIKE ?')('%material%') as any[];
   if (usersWithMaterials.length > 0) {
     const getCraftItemByRarity = db.prepare('SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ?');
     const updateUser = db.prepare('UPDATE users SET inventory = ? WHERE id = ?');
@@ -52,50 +52,50 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   }
 
   // Базовые характеристики и очки статов
-  try { db.exec('ALTER TABLE users ADD COLUMN statPoints INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN baseS INTEGER DEFAULT 5'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN baseA INTEGER DEFAULT 5'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN baseD INTEGER DEFAULT 5'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN baseM INTEGER DEFAULT 5'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN statPoints INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN baseS INTEGER DEFAULT 5'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN baseA INTEGER DEFAULT 5'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN baseD INTEGER DEFAULT 5'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN baseM INTEGER DEFAULT 5'); } catch {}
 
   // Инициализация статов для существующих игроков (у кого NULL)
-  db.exec(`UPDATE users SET baseS = 5, baseA = 5, baseD = 5, baseM = 5
+  await db.exec(`UPDATE users SET baseS = 5, baseA = 5, baseD = 5, baseM = 5
     WHERE baseS IS NULL OR baseS = 0`);
 
   // Email верификация
-  try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN emailCode TEXT'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN emailCodeExpires INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN emailCode TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN emailCodeExpires INTEGER DEFAULT 0'); } catch {}
 
   // OAuth провайдеры
-  try { db.exec('ALTER TABLE users ADD COLUMN oauthProvider TEXT'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN oauthId TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN oauthProvider TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN oauthId TEXT'); } catch {}
 
   // Стоимость предмета
-  try { db.exec('ALTER TABLE items ADD COLUMN cost INTEGER DEFAULT NULL'); } catch {}
+  try { await db.exec('ALTER TABLE items ADD COLUMN cost INTEGER DEFAULT NULL'); } catch {}
 
   // Кулдаун PvE атак
-  try { db.exec('ALTER TABLE users ADD COLUMN lastPveAttackTime INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN lastPveAttackTime INTEGER DEFAULT 0'); } catch {}
 
   // Банк (сокровищница)
-  try { db.exec('ALTER TABLE users ADD COLUMN bank INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN lastBankVisit INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN bank INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN lastBankVisit INTEGER DEFAULT 0'); } catch {}
 
   // Трактир: комната отдыха и напитки
-  try { db.exec('ALTER TABLE users ADD COLUMN roomType TEXT DEFAULT NULL'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN roomUntil INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN activeDrink TEXT DEFAULT NULL'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN drinkUntil INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN roomType TEXT DEFAULT NULL'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN roomUntil INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN activeDrink TEXT DEFAULT NULL'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN drinkUntil INTEGER DEFAULT 0'); } catch {}
 
   // ELO рейтинг
-  try { db.exec('ALTER TABLE users ADD COLUMN elo INTEGER DEFAULT 1000'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN seasonWins INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN seasonLosses INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN lastEloDecay INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN elo INTEGER DEFAULT 1000'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN seasonWins INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN seasonLosses INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN lastEloDecay INTEGER DEFAULT 0'); } catch {}
 
   // Аукцион
-  try { db.exec(`CREATE TABLE IF NOT EXISTS auction_lots (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS auction_lots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sellerId INTEGER NOT NULL,
     itemData TEXT NOT NULL,
@@ -109,11 +109,11 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (sellerId) REFERENCES users(id)
   )`); } catch {}
 
-  try { db.exec('CREATE INDEX IF NOT EXISTS idx_auction_lots_seller ON auction_lots(sellerId)'); } catch {}
-  try { db.exec('CREATE INDEX IF NOT EXISTS idx_auction_lots_ends ON auction_lots(endsAt)'); } catch {}
+  try { await db.exec('CREATE INDEX IF NOT EXISTS idx_auction_lots_seller ON auction_lots(sellerId)'); } catch {}
+  try { await db.exec('CREATE INDEX IF NOT EXISTS idx_auction_lots_ends ON auction_lots(endsAt)'); } catch {}
 
   // Турнир
-  try { db.exec(`CREATE TABLE IF NOT EXISTS tournaments (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS tournaments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     division TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'registration',
@@ -123,7 +123,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     createdAt INTEGER NOT NULL
   )`); } catch {}
 
-  try { db.exec(`CREATE TABLE IF NOT EXISTS tournament_participants (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS tournament_participants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tournamentId INTEGER NOT NULL,
     userId INTEGER NOT NULL,
@@ -134,7 +134,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (userId) REFERENCES users(id)
   )`); } catch {}
 
-  try { db.exec(`CREATE TABLE IF NOT EXISTS tournament_matches (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS tournament_matches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tournamentId INTEGER NOT NULL,
     round INTEGER NOT NULL,
@@ -146,7 +146,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // Ордена (гильдии)
-  try { db.exec(`CREATE TABLE IF NOT EXISTS orders (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     masterId INTEGER NOT NULL,
@@ -158,7 +158,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (masterId) REFERENCES users(id)
   )`); } catch {}
 
-  try { db.exec(`CREATE TABLE IF NOT EXISTS order_members (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS order_members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     orderId INTEGER NOT NULL,
     userId INTEGER NOT NULL UNIQUE,
@@ -169,53 +169,53 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // Авто-подтверждение для пользователей без email (старые/OAuth аккаунты)
-  db.prepare('UPDATE users SET emailVerified = 1 WHERE email IS NULL OR email = ?').run('');
+  await db.prepareRun('UPDATE users SET emailVerified = 1 WHERE email IS NULL OR email = ?')('');
 
   // Бан игроков админом
-  try { db.exec('ALTER TABLE users ADD COLUMN bannedUntil INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN bannedUntil INTEGER DEFAULT 0'); } catch {}
 
   // Премиум
-  try { db.exec('ALTER TABLE users ADD COLUMN premiumUntil INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE job_history ADD COLUMN premiumBonus INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE job_history ADD COLUMN xpGained INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN premiumUntil INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE job_history ADD COLUMN premiumBonus INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE job_history ADD COLUMN xpGained INTEGER DEFAULT 0'); } catch {}
 
   // Время последнего входа
-  try { db.exec('ALTER TABLE users ADD COLUMN lastLoginAt DATETIME'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN lastLoginAt DATETIME'); } catch {}
 
   // Гостевые аккаунты
-  try { db.exec('ALTER TABLE users ADD COLUMN isGuest INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN isGuest INTEGER DEFAULT 0'); } catch {}
 
   // Аватар пользователя
-  try { db.exec('ALTER TABLE users ADD COLUMN avatar TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN avatar TEXT'); } catch {}
 
   // Индексы для новых колонок (после миграций)
-  try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_is_guest ON users(isGuest)'); } catch {}
-  try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_active_job ON users(activeJob)'); } catch {}
+  try { await db.exec('CREATE INDEX IF NOT EXISTS idx_users_is_guest ON users(isGuest)'); } catch {}
+  try { await db.exec('CREATE INDEX IF NOT EXISTS idx_users_active_job ON users(activeJob)'); } catch {}
 
   // Переименование weapon2 → shield в equipment игроков
-  const allUsersEquip = db.prepare('SELECT id, equipment FROM users').all() as any[];
+  const allUsersEquip = await db.prepareAll('SELECT id, equipment FROM users')() as any[];
   for (const u of allUsersEquip) {
     let equip = JSON.parse(u.equipment || '{}');
     if (equip['weapon2']) {
       equip['shield'] = equip['weapon2'];
       delete equip['weapon2'];
-      db.prepare('UPDATE users SET equipment = ? WHERE id = ?').run(JSON.stringify(equip), u.id);
+      await db.prepareRun('UPDATE users SET equipment = ? WHERE id = ?')(JSON.stringify(equip), u.id);
     }
   }
 
   // Переименование slot='weapon2' → 'shield' в таблице предметов
-  db.prepare("UPDATE items SET slot = 'shield' WHERE slot = 'weapon2'").run();
+  await db.prepareRun("UPDATE items SET slot = 'shield' WHERE slot = 'weapon2'")();
 
   // --- Рейтинговая система ---
 
   // Отслеживание для декай и PvE-рейтинга
-  try { db.exec('ALTER TABLE users ADD COLUMN lastPvpTime INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN lastPveRatingTime INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN lastBossKillDate TEXT DEFAULT NULL'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN pveRating INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN lastPvpTime INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN lastPveRatingTime INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN lastBossKillDate TEXT DEFAULT NULL'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN pveRating INTEGER DEFAULT 0'); } catch {}
 
   // Таблица сезонов
-  try { db.exec(`CREATE TABLE IF NOT EXISTS seasons (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS seasons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     startDate TEXT NOT NULL,
@@ -224,7 +224,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // Hall of Fame
-  try { db.exec(`CREATE TABLE IF NOT EXISTS hall_of_fame (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS hall_of_fame (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     seasonId INTEGER NOT NULL,
     userId INTEGER NOT NULL,
@@ -237,7 +237,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // Создать первый сезон, если нет активного
-  const activeSeason = db.prepare("SELECT id FROM seasons WHERE status = 'active' LIMIT 1").get() as any;
+  const activeSeason = await db.prepareGet("SELECT id FROM seasons WHERE status = 'active' LIMIT 1")() as any;
   if (!activeSeason) {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -245,11 +245,11 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     const seasonName = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-    db.prepare('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)').run(seasonName, startOfMonth, endOfMonth);
+    await db.prepareRun('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)')(seasonName, startOfMonth, endOfMonth);
   }
 
   // Лог IP-адресов при входе
-  try { db.exec(`CREATE TABLE IF NOT EXISTS login_logs (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS login_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL,
     ip TEXT NOT NULL,
@@ -258,7 +258,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // Индекс для быстрого поиска IP по пользователю
-  try { db.exec('CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(userId, createdAt DESC)'); } catch {}
+  try { await db.exec('CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(userId, createdAt DESC)'); } catch {}
 
   // Переименование материалов из старых названий в новые (из ideas)
   const materialRenames: Record<string, string> = {
@@ -271,10 +271,10 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     'Красный материал': 'Слеза вечности',
   };
   for (const [oldName, newName] of Object.entries(materialRenames)) {
-    db.prepare('UPDATE craft_items SET name = ? WHERE name = ?').run(newName, oldName);
+    await db.prepareRun('UPDATE craft_items SET name = ? WHERE name = ?')(newName, oldName);
   }
   // Переименование в инвентарях
-  const allUsers = db.prepare('SELECT id, inventory FROM users').all() as any[];
+  const allUsers = await db.prepareAll('SELECT id, inventory FROM users')() as any[];
   for (const u of allUsers) {
     let inv = JSON.parse(u.inventory || '[]');
     let changed = false;
@@ -284,38 +284,38 @@ export function runMigrations(db: InstanceType<typeof Database>) {
         changed = true;
       }
     }
-    if (changed) db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inv), u.id);
+    if (changed) await db.prepareRun('UPDATE users SET inventory = ? WHERE id = ?')(JSON.stringify(inv), u.id);
   }
 
   // --- Расширенная статистика игроков ---
-  try { db.exec('ALTER TABLE users ADD COLUMN pveTotalBattles INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN pveWins INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN tournamentCount INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN tournamentWins INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN totalJobMoney INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN totalPveMoneyWon INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN totalPvpMoneyWon INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN totalPveMoneyLost INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN totalPvpMoneyLost INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN pveTotalBattles INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN pveWins INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN tournamentCount INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN tournamentWins INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN totalJobMoney INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN totalPveMoneyWon INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN totalPvpMoneyWon INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN totalPveMoneyLost INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN totalPvpMoneyLost INTEGER DEFAULT 0'); } catch {}
 
   // --- Скрытый Elo для турнирного посева ---
-  try { db.exec('ALTER TABLE users ADD COLUMN tournamentElo INTEGER DEFAULT 1000'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN tournamentElo INTEGER DEFAULT 1000'); } catch {}
 
   // --- Самоорганизованные турниры ---
-  try { db.exec("ALTER TABLE tournaments ADD COLUMN type TEXT DEFAULT 'official'"); } catch {}
-  try { db.exec('ALTER TABLE tournaments ADD COLUMN creatorId INTEGER'); } catch {}
-  try { db.exec('ALTER TABLE tournaments ADD COLUMN entryFee INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE tournaments ADD COLUMN name TEXT'); } catch {}
-  try { db.exec('ALTER TABLE tournaments ADD COLUMN minLevel INTEGER DEFAULT 1'); } catch {}
-  try { db.exec('ALTER TABLE tournaments ADD COLUMN maxLevel INTEGER DEFAULT 999'); } catch {}
-  try { db.exec('ALTER TABLE tournaments ADD COLUMN basePool INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec("ALTER TABLE tournaments ADD COLUMN type TEXT DEFAULT 'official'"); } catch {}
+  try { await db.exec('ALTER TABLE tournaments ADD COLUMN creatorId INTEGER'); } catch {}
+  try { await db.exec('ALTER TABLE tournaments ADD COLUMN entryFee INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE tournaments ADD COLUMN name TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE tournaments ADD COLUMN minLevel INTEGER DEFAULT 1'); } catch {}
+  try { await db.exec('ALTER TABLE tournaments ADD COLUMN maxLevel INTEGER DEFAULT 999'); } catch {}
+  try { await db.exec('ALTER TABLE tournaments ADD COLUMN basePool INTEGER DEFAULT 0'); } catch {}
 
   // --- Банковские счета ---
-  try { db.exec('ALTER TABLE users ADD COLUMN accountNumber TEXT'); } catch {}
-  try { db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_accountNumber ON users(accountNumber)'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN accountNumber TEXT'); } catch {}
+  try { await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_accountNumber ON users(accountNumber)'); } catch {}
 
   // --- Ежедневные квесты ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS daily_quests (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS daily_quests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL,
     questType TEXT NOT NULL,
@@ -331,20 +331,20 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (userId) REFERENCES users(id)
   )`); } catch {}
 
-  try { db.exec('ALTER TABLE users ADD COLUMN craftCount INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN auctionTrades INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN totalJobSeconds INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN craftCount INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN auctionTrades INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN totalJobSeconds INTEGER DEFAULT 0'); } catch {}
 
   // --- Статистика крафта ---
-  try { db.exec('ALTER TABLE users ADD COLUMN craftCreated INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN craftUpgraded INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE users ADD COLUMN craftBroken INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN craftCreated INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN craftUpgraded INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN craftBroken INTEGER DEFAULT 0'); } catch {}
 
   // --- Унификация xpGained → expGained в pve_battles ---
-  try { db.exec('ALTER TABLE pve_battles RENAME COLUMN xpGained TO expGained'); } catch {}
+  try { await db.exec('ALTER TABLE pve_battles RENAME COLUMN xpGained TO expGained'); } catch {}
 
   // --- История выполненных квестов ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS quest_history (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS quest_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL,
     questType TEXT NOT NULL,
@@ -357,7 +357,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- История переводов ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS transfers (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS transfers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     fromUserId INTEGER NOT NULL,
     toUserId INTEGER NOT NULL,
@@ -373,7 +373,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- История банковских операций ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS bank_operations (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS bank_operations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL,
     type TEXT NOT NULL,
@@ -391,15 +391,15 @@ export function runMigrations(db: InstanceType<typeof Database>) {
       for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
       return code;
   }
-  const usersWithout = db.prepare('SELECT id FROM users WHERE accountNumber IS NULL').all() as any[];
+  const usersWithout = await db.prepareAll('SELECT id FROM users WHERE accountNumber IS NULL')() as any[];
   for (const u of usersWithout) {
       let code: string;
-      do { code = genCode(); } while (db.prepare('SELECT id FROM users WHERE accountNumber = ?').get(code));
-      db.prepare('UPDATE users SET accountNumber = ? WHERE id = ?').run(code, u.id);
+      do { code = genCode(); } while (await db.prepareGet('SELECT id FROM users WHERE accountNumber = ?')(code));
+      await db.prepareRun('UPDATE users SET accountNumber = ? WHERE id = ?')(code, u.id);
   }
 
   // --- История PvE-боёв ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS pve_battles (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS pve_battles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL,
     mobId INTEGER NOT NULL,
@@ -416,8 +416,8 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- Гильдии ---
-  try { db.exec('ALTER TABLE users ADD COLUMN guildId INTEGER DEFAULT NULL REFERENCES guilds(id)'); } catch {}
-  try { db.exec(`CREATE TABLE IF NOT EXISTS guilds (
+  try { await db.exec('ALTER TABLE users ADD COLUMN guildId INTEGER DEFAULT NULL REFERENCES guilds(id)'); } catch {}
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS guilds (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     description TEXT DEFAULT '',
@@ -429,7 +429,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (leaderId) REFERENCES users(id)
   )`); } catch {}
-  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_members (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS guild_members (
     guildId INTEGER NOT NULL,
     userId INTEGER NOT NULL UNIQUE,
     rank TEXT NOT NULL DEFAULT 'member' CHECK(rank IN ('leader','officer','member')),
@@ -438,7 +438,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (userId) REFERENCES users(id),
     PRIMARY KEY (guildId, userId)
   )`); } catch {}
-  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_invites (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS guild_invites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     guildId INTEGER NOT NULL,
     userId INTEGER NOT NULL,
@@ -450,20 +450,20 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- Арена: запоминание выданного соперника ---
-  try { db.exec('ALTER TABLE users ADD COLUMN arenaOpponentId INTEGER DEFAULT NULL'); } catch {}
+  try { await db.exec('ALTER TABLE users ADD COLUMN arenaOpponentId INTEGER DEFAULT NULL'); } catch {}
 
   // --- Премиум-бонус в истории PvE-боёв ---
-  try { db.exec('ALTER TABLE pve_battles ADD COLUMN premiumBonus INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE pve_battles ADD COLUMN premiumBonus INTEGER DEFAULT 0'); } catch {}
 
   // --- Фоновое изображение для работ ---
-  try { db.exec('ALTER TABLE jobs ADD COLUMN background TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE jobs ADD COLUMN background TEXT'); } catch {}
 
   // --- Изображения и описания для мобов ---
-  try { db.exec('ALTER TABLE mobs ADD COLUMN background TEXT'); } catch {}
-  try { db.exec('ALTER TABLE mobs ADD COLUMN description TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE mobs ADD COLUMN background TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE mobs ADD COLUMN description TEXT'); } catch {}
 
   // --- Таблица действий (action cards) ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS actions_config (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS actions_config (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     section TEXT NOT NULL DEFAULT 'world',
     title TEXT NOT NULL,
@@ -476,7 +476,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- Таблица этажей (охоты) ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS floors (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS floors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     background TEXT,
@@ -484,9 +484,9 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- Казна гильдии ---
-  try { db.exec('ALTER TABLE guilds ADD COLUMN treasury INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE guilds ADD COLUMN taxRate INTEGER DEFAULT 0'); } catch {}
-  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_treasury_log (
+  try { await db.exec('ALTER TABLE guilds ADD COLUMN treasury INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE guilds ADD COLUMN taxRate INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS guild_treasury_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     guildId INTEGER NOT NULL,
     userId INTEGER NOT NULL,
@@ -497,7 +497,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   try { db.exec('ALTER TABLE guild_treasury_log ADD COLUMN type TEXT NOT NULL DEFAULT \'deposit\''); } catch {}
 
   // --- Гильд-войны ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_wars (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS guild_wars (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     attackerGuildId INTEGER NOT NULL,
     defenderGuildId INTEGER NOT NULL,
@@ -512,7 +512,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- Атаки в гильд-войнах ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS guild_war_attacks (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS guild_war_attacks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     warId INTEGER NOT NULL,
     attackerId INTEGER NOT NULL,
@@ -526,20 +526,20 @@ export function runMigrations(db: InstanceType<typeof Database>) {
     FOREIGN KEY (attackerId) REFERENCES users(id),
     FOREIGN KEY (defenderId) REFERENCES users(id)
   )`); } catch {}
-  try { db.exec('ALTER TABLE guild_wars ADD COLUMN attackerScore INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE guild_wars ADD COLUMN defenderScore INTEGER DEFAULT 0'); } catch {}
-  try { db.exec('ALTER TABLE guild_war_attacks ADD COLUMN battleLog TEXT'); } catch {}
+  try { await db.exec('ALTER TABLE guild_wars ADD COLUMN attackerScore INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE guild_wars ADD COLUMN defenderScore INTEGER DEFAULT 0'); } catch {}
+  try { await db.exec('ALTER TABLE guild_war_attacks ADD COLUMN battleLog TEXT'); } catch {}
 
   // --- completedAt для турниров ---
-  try { db.exec('ALTER TABLE tournaments ADD COLUMN completedAt DATETIME'); } catch {}
+  try { await db.exec('ALTER TABLE tournaments ADD COLUMN completedAt DATETIME'); } catch {}
 
   // --- Меняем тип createdAt в tournaments с INTEGER на DATETIME (конвертируем на месте) ---
   {
-    const colInfo = db.prepare("PRAGMA table_info(tournaments)").all() as any[];
+    const colInfo = await db.prepareAll("PRAGMA table_info(tournaments)")() as any[];
     const createdAtCol = colInfo.find((c: any) => c.name === 'createdAt');
     if (createdAtCol && createdAtCol.type === 'INTEGER') {
       try {
-        const oldData = db.prepare('SELECT id, createdAt FROM tournaments').all() as any[];
+        const oldData = await db.prepareAll('SELECT id, createdAt FROM tournaments')() as any[];
         const update = db.prepare('UPDATE tournaments SET createdAt=? WHERE id=?');
         for (const t of oldData) {
           if (typeof t.createdAt === 'number' && t.createdAt > 1000000000) {
@@ -553,11 +553,11 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   // --- rarity_id в upgrade_chances (пересоздаём) ---
   // Проверяем, есть ли уже колонка rarity_id (миграция уже выполнена)
-  const hasRarityCol = (db.prepare("PRAGMA table_info(upgrade_chances)").all() as any[]).some((c: any) => c.name === 'rarity_id');
+  const hasRarityCol = (await db.prepareAll("PRAGMA table_info(upgrade_chances)")() as any[]).some((c: any) => c.name === 'rarity_id');
   if (!hasRarityCol) {
     try {
-      db.exec('DROP TABLE IF EXISTS upgrade_chances_new');
-      db.exec(`CREATE TABLE upgrade_chances_new (
+      await db.exec('DROP TABLE IF EXISTS upgrade_chances_new');
+      await db.exec(`CREATE TABLE upgrade_chances_new (
         level INTEGER NOT NULL,
         rarity_id INTEGER NOT NULL DEFAULT 0,
         chance INTEGER NOT NULL DEFAULT 100,
@@ -565,17 +565,17 @@ export function runMigrations(db: InstanceType<typeof Database>) {
         PRIMARY KEY (level, rarity_id)
       )`);
       // Переносим старые данные (rarity_id = 0 для совместимости)
-      const old = db.prepare('SELECT * FROM upgrade_chances').all() as any[];
+      const old = await db.prepareAll('SELECT * FROM upgrade_chances')() as any[];
       for (const r of old) {
-        db.prepare('INSERT OR REPLACE INTO upgrade_chances_new (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)').run(r.level, 0, r.chance, r.money_cost);
+        await db.prepareRun('INSERT OR REPLACE INTO upgrade_chances_new (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)')(r.level, 0, r.chance, r.money_cost);
       }
-      db.exec('DROP TABLE upgrade_chances');
-      db.exec('ALTER TABLE upgrade_chances_new RENAME TO upgrade_chances');
+      await db.exec('DROP TABLE upgrade_chances');
+      await db.exec('ALTER TABLE upgrade_chances_new RENAME TO upgrade_chances');
     } catch {}
   }
 
   // --- Обратная связь ---
-  try { db.exec(`CREATE TABLE IF NOT EXISTS feedback_messages (
+  try { await db.exec(`CREATE TABLE IF NOT EXISTS feedback_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL,
     username TEXT NOT NULL,
@@ -587,5 +587,5 @@ export function runMigrations(db: InstanceType<typeof Database>) {
   )`); } catch {}
 
   // --- Системный пользователь для автосообщений (турниры, чат) ---
-  db.prepare('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)').run(0, 'system', 'system', 100);
+  await db.prepareRun('INSERT OR IGNORE INTO users (id, username, passwordHash, currentHp) VALUES (?, ?, ?, ?)')(0, 'system', 'system', 100);
 }

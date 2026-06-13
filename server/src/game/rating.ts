@@ -31,7 +31,7 @@ export function applyDecay(db: InstanceType<typeof Database>, userId: number, la
     const newElo = Math.max(100, elo - decay);
 
     if (newElo !== elo) {
-        db.prepare('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?').run(newElo, now, userId);
+        await db.prepareRun('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?')(newElo, now, userId);
     }
 
     return newElo;
@@ -73,7 +73,7 @@ export function addPveRating(
  * Проверка и сброс сезона при необходимости
  */
 export function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
-    const season = db.prepare("SELECT * FROM seasons WHERE status = 'active' LIMIT 1").get() as any;
+    const season = await db.prepareGet("SELECT * FROM seasons WHERE status = 'active' LIMIT 1")() as any;
     if (!season) return false;
 
     const now = new Date();
@@ -94,7 +94,7 @@ export function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
     }
 
     // Закрываем старый сезон
-    db.prepare("UPDATE seasons SET status = 'finished' WHERE id = ?").run(season.id);
+    await db.prepareRun("UPDATE seasons SET status = 'finished' WHERE id = ?")(season.id);
 
     // Создаём новый
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -103,12 +103,12 @@ export function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
                         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     const seasonName = `${monthNames[nextMonth.getMonth()]} ${nextMonth.getFullYear()}`;
 
-    db.prepare('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)').run(
+    await db.prepareRun('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)')(
         seasonName, nextMonth.toISOString(), endOfNext.toISOString()
     );
 
     // Мягкий сброс ELO: Новый = 1000 + (Старый − 1000) × 0.5
-    const allUsers = db.prepare('SELECT id, elo FROM users').all() as any[];
+    const allUsers = await db.prepareAll('SELECT id, elo FROM users')() as any[];
     const resetStmt = db.prepare('UPDATE users SET elo = ?, seasonWins = 0, seasonLosses = 0, pveRating = 0 WHERE id = ?');
     for (const u of allUsers) {
         const oldElo = u.elo || 1000;
