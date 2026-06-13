@@ -78,6 +78,7 @@ class DB {
 
   prepare(sql: string) {
     const q = lowercaseSQL(pgParams(sql));
+    console.log('[DB] SQL len:', q?.length, 'preview:', q?.substring(0, 80));
     return {
       get: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows)[0]; },
       all: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows); },
