@@ -467,7 +467,7 @@ router.get('/tournament', async (req: any, res) => {
             return {
                 ...t,
                 participantCount: participants.length,
-                participants: participants.map(async (p: any) => ({
+                participants: participants.map((p: any) => ({
                     id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
                     guildName: p.guildName, guildId: p.guildId,
                     snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
@@ -520,7 +520,7 @@ router.get('/tournament', async (req: any, res) => {
             minLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.minLevel; })() : t.minLevel,
             maxLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.maxLevel; })() : t.maxLevel,
             participantCount: participants.length,
-            participants: participants.map(async (p: any) => ({
+            participants: participants.map((p: any) => ({
                 id: p.userId,
                 username: p.username,
                 goldenTicket: p.goldenTicket,
@@ -540,7 +540,7 @@ router.get('/tournament', async (req: any, res) => {
                     ? (await db.prepareGet('SELECT username FROM users WHERE id = ?')(m.winnerId) as any)?.username
                     : null,
                 log: m.log ? JSON.parse(m.log) : null,
-            })),
+            }))),
         };
     });
 
