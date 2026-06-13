@@ -34,6 +34,7 @@ html {
   --color-accent-danger: #e63946;
   --color-accent-info: #3498db;
   --color-accent-warning: #f1c40f;
+  --color-accent-gold: #f1c40f;
   --color-accent-purple: #9b59b6;
 
   /* Рамки */
@@ -79,6 +80,7 @@ html {
   --color-accent-danger: #b71c1c;
   --color-accent-info: #1a6daa;
   --color-accent-warning: #92400e;
+  --color-accent-gold: #b8860b;
   --color-accent-purple: #7b3f9e;
 
   --color-border-default: #c4b8a8;
