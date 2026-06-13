@@ -1,7 +1,7 @@
 import pool from './pg';
 
 // Конвертирует ? в $1, $2, ...
-async function pgParams(sql: string): string {
+function pgParams(sql: string): string {
   let index = 0;
   return sql.replace(/\?/g, () => `$${++index}`);
 }
@@ -9,7 +9,7 @@ async function pgParams(sql: string): string {
 // Нижний регистр для имён колонок в SQL (PG lowercases unquoted identifiers)
 // passwordHash → passwordhash, currentHp → currenthp
 // Не трогаем строковые литералы (в кавычках)
-async function lowercaseSQL(sql: string): string {
+function lowercaseSQL(sql: string): string {
   // Разбиваем на части: строки в кавычках и всё остальное
   // Кавычки: '...' и "..." (PG dollar-quoting не используется)
   const parts: string[] = [];
@@ -78,7 +78,6 @@ class DB {
 
   prepare(sql: string) {
     const q = lowercaseSQL(pgParams(sql));
-    console.log('[DB] SQL len:', q?.length, 'preview:', q?.substring(0, 80));
     return {
       get: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows)[0]; },
       all: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows); },
