@@ -239,6 +239,10 @@ export function runSchema(db: InstanceType<typeof Database>) {
     CREATE INDEX IF NOT EXISTS idx_jobs_duration ON jobs(duration);
     CREATE INDEX IF NOT EXISTS idx_craft_items_rarity_id ON craft_items(rarity_id);
     CREATE INDEX IF NOT EXISTS idx_craft_recipe_ingredients_recipe ON craft_recipe_ingredients(recipe_id);
+    CREATE INDEX IF NOT EXISTS idx_pve_battles_user ON pve_battles(userId, createdAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament ON tournament_matches(tournamentId, round);
+    CREATE INDEX IF NOT EXISTS idx_guild_treasury_log_guild ON guild_treasury_log(guildId, createdAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_auction_lots_ends ON auction_lots(endsAt);
   `);
 
   // Таблица коллекций
