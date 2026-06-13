@@ -11,7 +11,7 @@ const DIVISIONS = [
 ];
 
 // Получить все турниры
-router.get('/tournaments', (req: any, res) => {
+router.get('/tournaments', async (req: any, res) => {
     const tournaments = await db.prepareAll(`
         SELECT t.*, 
             (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) as participantCount
@@ -22,7 +22,7 @@ router.get('/tournaments', (req: any, res) => {
 });
 
 // Создать турнир
-router.post('/tournaments', (req: any, res) => {
+router.post('/tournaments', async (req: any, res) => {
     const { division, registrationStart, registrationEnd, prizePool, status } = req.body;
     if (!division) return res.status(400).json({ error: 'division required' });
 
@@ -44,7 +44,7 @@ router.post('/tournaments', (req: any, res) => {
 });
 
 // Обновить турнир
-router.put('/tournaments/:id', (req: any, res) => {
+router.put('/tournaments/:id', async (req: any, res) => {
     const { division, status, registrationStart, registrationEnd, prizePool } = req.body;
     const id = req.params.id;
 
@@ -65,7 +65,7 @@ router.put('/tournaments/:id', (req: any, res) => {
 });
 
 // Удалить турнир
-router.delete('/tournaments/:id', (req: any, res) => {
+router.delete('/tournaments/:id', async (req: any, res) => {
     const id = req.params.id;
     await db.prepareRun('DELETE FROM tournament_participants WHERE tournamentId = ?')(id);
     await db.prepareRun('DELETE FROM tournament_matches WHERE tournamentId = ?')(id);
@@ -74,7 +74,7 @@ router.delete('/tournaments/:id', (req: any, res) => {
 });
 
 // Принудительно завершить турнир (сменить статус на completed)
-router.post('/tournaments/:id/finish', (req: any, res) => {
+router.post('/tournaments/:id/finish', async (req: any, res) => {
     const id = req.params.id;
     const t = await db.prepareGet('SELECT * FROM tournaments WHERE id = ?')(id) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });
@@ -83,7 +83,7 @@ router.post('/tournaments/:id/finish', (req: any, res) => {
 });
 
 // Запустить турнир (in_progress)
-router.post('/tournaments/:id/start', (req: any, res) => {
+router.post('/tournaments/:id/start', async (req: any, res) => {
     const id = req.params.id;
     const t = await db.prepareGet('SELECT * FROM tournaments WHERE id = ?')(id) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });

@@ -4,7 +4,7 @@ import db from '../database';
 
 const router = Router();
 
-router.get('/chat/recent', (req: any, res) => {
+router.get('/chat/recent', async (req: any, res) => {
   const userId = req.userId;
   const limit = parseInt(req.query.limit as string) || 20;
   const messages = await db.prepareAll(`
@@ -30,7 +30,7 @@ router.get('/chat/recent', (req: any, res) => {
 });
 
 // Получить список собеседников, с которыми у текущего игрока были личные сообщения
-router.get('/chat/private/peers', (req: any, res) => {
+router.get('/chat/private/peers', async (req: any, res) => {
   const userId = req.userId;
   const peers = await db.prepareAll(`
     SELECT DISTINCT u.id, u.username
@@ -42,7 +42,7 @@ router.get('/chat/private/peers', (req: any, res) => {
 });
 
 // Получить личные сообщения с конкретным пользователем
-router.get('/chat/private/:userId', (req: any, res) => {
+router.get('/chat/private/:userId', async (req: any, res) => {
   const currentUserId = req.userId;
   const otherUserId = parseInt(req.params.userId);
   const limit = parseInt(req.query.limit as string) || 100;

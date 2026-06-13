@@ -11,7 +11,7 @@ const router = Router();
 const ADMIN_UPLOADS_DIR = path.resolve(__dirname, '../../uploads/admin');
 fs.mkdirSync(ADMIN_UPLOADS_DIR, { recursive: true });
 
-router.post('/upload-image', (req: any, res) => {
+router.post('/upload-image', async (req: any, res) => {
     const { image, folder } = req.body; // image: data:image/...;base64,...
     if (!image || typeof image !== 'string') return res.status(400).json({ error: 'Нет изображения' });
 
@@ -30,7 +30,7 @@ router.post('/upload-image', (req: any, res) => {
 });
 
 // Список загруженных изображений
-router.get('/images', (req: any, res) => {
+router.get('/images', async (req: any, res) => {
     const folder = (req.query.folder as string) || '';
     const dir = path.join(ADMIN_UPLOADS_DIR, folder);
     if (!fs.existsSync(dir)) return res.json([]);
@@ -42,7 +42,7 @@ router.get('/images', (req: any, res) => {
 });
 
 // ---------- Предметы ----------
-router.get('/items', (req: any, res) => {
+router.get('/items', async (req: any, res) => {
     const items = await db.prepareAll(`
         SELECT i.*, r.name as rarity_name, r.display_name as rarity_display, r.color as rarity_color
         FROM items i
@@ -52,7 +52,7 @@ router.get('/items', (req: any, res) => {
     res.json(items);
 });
 
-router.post('/items', (req: any, res) => {
+router.post('/items', async (req: any, res) => {
     const parsed = createItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
@@ -61,7 +61,7 @@ router.post('/items', (req: any, res) => {
     res.json({ success: true });
 });
 
-router.put('/items/:id', (req: any, res) => {
+router.put('/items/:id', async (req: any, res) => {
     const parsed = createItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
@@ -70,13 +70,13 @@ router.put('/items/:id', (req: any, res) => {
     res.json({ success: true });
 });
 
-router.delete('/items/:id', (req: any, res) => {
+router.delete('/items/:id', async (req: any, res) => {
     await db.prepareRun('DELETE FROM items WHERE id = ?')(req.params.id);
     res.json({ success: true });
 });
 
 // ---------- Игроки ----------
-router.get('/users', (req: any, res) => {
+router.get('/users', async (req: any, res) => {
     const filter = req.query.filter as string || 'all'; // all | guests | players
     let query = `
         SELECT id, username, level, money, totalBattles, wins,
@@ -91,7 +91,7 @@ router.get('/users', (req: any, res) => {
 });
 
 // Бан игрока
-router.post('/ban-user', (req: any, res) => {
+router.post('/ban-user', async (req: any, res) => {
     const { userId, duration, unit } = req.body;
     if (!userId || !duration) return res.status(400).json({ error: 'Требуются userId и duration' });
 
@@ -108,7 +108,7 @@ router.post('/ban-user', (req: any, res) => {
 });
 
 // Разбан игрока
-router.post('/unban-user', (req: any, res) => {
+router.post('/unban-user', async (req: any, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'Требуется userId' });
 
@@ -117,7 +117,7 @@ router.post('/unban-user', (req: any, res) => {
 });
 
 // Удаление игрока
-router.delete('/users/:id', (req: any, res) => {
+router.delete('/users/:id', async (req: any, res) => {
     const userId = parseInt(req.params.id);
     const user = await db.prepareGet('SELECT id, username FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
@@ -136,7 +136,7 @@ router.delete('/users/:id', (req: any, res) => {
 });
 
 // IP-адреса игрока
-router.get('/users/:id/ips', (req: any, res) => {
+router.get('/users/:id/ips', async (req: any, res) => {
     const userId = parseInt(req.params.id);
     const ips = db.prepare(
         'SELECT ip, MAX(createdAt) as lastSeen, COUNT(*) as count FROM login_logs WHERE userId = ? GROUP BY ip ORDER BY lastSeen DESC'
@@ -144,7 +144,7 @@ router.get('/users/:id/ips', (req: any, res) => {
     res.json(ips);
 });
 
-router.post('/add-money', (req: any, res) => {
+router.post('/add-money', async (req: any, res) => {
     const parsed = addMoneySchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
@@ -156,7 +156,7 @@ router.post('/add-money', (req: any, res) => {
     res.json({ success: true, newMoney });
 });
 
-router.post('/reset-timers', (req: any, res) => {
+router.post('/reset-timers', async (req: any, res) => {
     const parsed = resetTimersSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
@@ -171,13 +171,13 @@ router.post('/reset-timers', (req: any, res) => {
 });
 
 // Получить список редкостей
-router.get('/rarities', (req: any, res) => {
+router.get('/rarities', async (req: any, res) => {
     const rarities = await db.prepareAll('SELECT * FROM rarities ORDER BY id')();
     res.json(rarities);
 });
 
 // Смена пароля администратора
-router.post('/change-password', (req: any, res) => {
+router.post('/change-password', async (req: any, res) => {
     const { oldPassword, newPassword } = req.body;
     if (!oldPassword || !newPassword) return res.status(400).json({ error: 'Требуются старый и новый пароль' });
     if (newPassword.length < 8) return res.status(400).json({ error: 'Новый пароль должен быть минимум 8 символов' });
@@ -195,7 +195,7 @@ router.post('/change-password', (req: any, res) => {
 });
 
 // Выдача премиума
-router.post('/premium', (req: any, res) => {
+router.post('/premium', async (req: any, res) => {
     const { userId, days } = req.body;
     if (!userId || !days || days < 1) return res.status(400).json({ error: 'Требуются userId и days (>= 1)' });
 

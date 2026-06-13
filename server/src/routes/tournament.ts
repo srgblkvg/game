@@ -432,7 +432,7 @@ async function getOrCreateTournament(type?: string) {
 // ---------------------------------------------------------------------------
 
 // Статус турнира
-router.get('/tournament', (req: any, res) => {
+router.get('/tournament', async (req: any, res) => {
     const userId = req.userId;
     const user = await db.prepareGet('SELECT level FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -592,7 +592,7 @@ router.get('/tournament', (req: any, res) => {
 });
 
 // Регистрация
-router.post('/tournament/register', (req: any, res) => {
+router.post('/tournament/register', async (req: any, res) => {
     const userId = req.userId;
     const { division, goldenTicket } = req.body;
 
@@ -681,7 +681,7 @@ router.post('/tournament/register', (req: any, res) => {
 });
 
 // Создание самоорганизованного турнира
-router.post('/tournament/create-custom', (req: any, res) => {
+router.post('/tournament/create-custom', async (req: any, res) => {
     const userId = req.userId;
     const prizePool = parseInt(req.body.prizePool) || 0;
     const entryFee = parseInt(req.body.entryFee) || 0;

@@ -6,7 +6,7 @@ import { getUserById, getBaseStats, recalcHpOnEquip } from '../db/helpers';
 const router = Router();
 
 // Экипировка/снятие предмета
-router.post('/character/equip', (req: any, res) => {
+router.post('/character/equip', async (req: any, res) => {
     const userId = req.userId;
     const { slotId, itemId } = req.body;
     if (!slotId) return res.status(400).json({ error: 'slotId required' });
@@ -82,7 +82,7 @@ router.post('/character/equip', (req: any, res) => {
 });
 
 // Разобрать предмет(ы)
-router.post('/character/salvage', (req: any, res) => {
+router.post('/character/salvage', async (req: any, res) => {
     const userId = req.userId;
     const { itemIds } = req.body;
     if (!itemIds) return res.status(400).json({ error: 'itemIds required' });
@@ -143,7 +143,7 @@ router.post('/character/salvage', (req: any, res) => {
 });
 
 // Расширить инвентарь
-router.post('/character/expand-inventory', (req: any, res) => {
+router.post('/character/expand-inventory', async (req: any, res) => {
     const userId = req.userId;
     const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });

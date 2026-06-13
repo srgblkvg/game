@@ -70,7 +70,7 @@ async function getProgress(userId: number, snapshot: any, questType: QuestType):
 }
 
 // Получить/сгенерировать квесты
-router.get('/tavern/quests', (req: any, res) => {
+router.get('/tavern/quests', async (req: any, res) => {
     const userId = req.userId;
     const today = getToday();
 
@@ -151,7 +151,7 @@ router.get('/tavern/quests', (req: any, res) => {
 });
 
 // Взять квест
-router.post('/tavern/quests/take', (req: any, res) => {
+router.post('/tavern/quests/take', async (req: any, res) => {
     const userId = req.userId;
     const questId = parseInt(req.body.questId);
     if (!questId) return res.status(400).json({ error: 'Укажите questId' });
@@ -178,7 +178,7 @@ router.post('/tavern/quests/take', (req: any, res) => {
 });
 
 // Сдать квест
-router.post('/tavern/quests/claim', (req: any, res) => {
+router.post('/tavern/quests/claim', async (req: any, res) => {
     const userId = req.userId;
     const questId = parseInt(req.body.questId);
     if (!questId) return res.status(400).json({ error: 'Укажите questId' });

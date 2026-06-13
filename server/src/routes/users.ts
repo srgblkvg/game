@@ -6,7 +6,7 @@ import { currentStats } from '../game/stats';
 const router = Router();
 
 // Поиск пользователя по логину
-router.get('/character/username/:username', (req: any, res) => {
+router.get('/character/username/:username', async (req: any, res) => {
     const { username } = req.params;
     const user = db.prepare(
         'SELECT id, username, level FROM users WHERE LOWER(username) = LOWER(?)'
@@ -16,7 +16,7 @@ router.get('/character/username/:username', (req: any, res) => {
 });
 
 // Публичный профиль игрока
-router.get('/character/public/:userId', (req: any, res) => {
+router.get('/character/public/:userId', async (req: any, res) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
@@ -64,7 +64,7 @@ router.get('/character/public/:userId', (req: any, res) => {
 });
 
 // GET /users/list?ids=1,2,3
-router.get('/users/list', (req: any, res) => {
+router.get('/users/list', async (req: any, res) => {
     const idsParam = req.query.ids as string;
     if (!idsParam) return res.json([]);
     const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n));

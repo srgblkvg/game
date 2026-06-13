@@ -32,7 +32,7 @@ const drinks: Record<string, { name: string; bonuses: Record<string, number>; co
 };
 
 // Статус трактира
-router.get('/tavern', (req: any, res) => {
+router.get('/tavern', async (req: any, res) => {
     const userId = req.userId;
     const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -64,7 +64,7 @@ router.get('/tavern', (req: any, res) => {
 });
 
 // Мгновенное лечение
-router.post('/tavern/heal', (req: any, res) => {
+router.post('/tavern/heal', async (req: any, res) => {
     const userId = req.userId;
     const { full } = req.body; // full=true — полное, иначе 50%
 
@@ -99,7 +99,7 @@ router.post('/tavern/heal', (req: any, res) => {
 });
 
 // Аренда комнаты
-router.post('/tavern/room', (req: any, res) => {
+router.post('/tavern/room', async (req: any, res) => {
     const userId = req.userId;
     const { roomType, hours } = req.body; // hours: 1 or 8
 
@@ -122,7 +122,7 @@ router.post('/tavern/room', (req: any, res) => {
 });
 
 // Купить напиток
-router.post('/tavern/drink', (req: any, res) => {
+router.post('/tavern/drink', async (req: any, res) => {
     const userId = req.userId;
     const { drinkType } = req.body;
 

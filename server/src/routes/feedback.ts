@@ -5,7 +5,7 @@ const router = Router();
 export const adminFeedbackRouter = Router();
 
 // Отправить обращение (публичный)
-router.post('/feedback', (req: any, res) => {
+router.post('/feedback', async (req: any, res) => {
     const userId = req.userId;
     const { subject, message } = req.body;
     if (!subject || !subject.trim()) return res.status(400).json({ error: 'Укажите тему' });
@@ -22,7 +22,7 @@ router.post('/feedback', (req: any, res) => {
 });
 
 // Админ: список обращений
-adminFeedbackRouter.get('/feedback', (req: any, res) => {
+adminFeedbackRouter.get('/feedback', async (req: any, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const offset = (page - 1) * limit;
@@ -36,7 +36,7 @@ adminFeedbackRouter.get('/feedback', (req: any, res) => {
 });
 
 // Админ: отметить прочитанным
-adminFeedbackRouter.post('/feedback/read', (req: any, res) => {
+adminFeedbackRouter.post('/feedback/read', async (req: any, res) => {
     const { id } = req.body;
     await db.prepareRun('UPDATE feedback_messages SET read = 1 WHERE id = ?')(id);
     res.json({ success: true });

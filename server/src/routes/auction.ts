@@ -11,12 +11,12 @@ const router = Router();
 const priceFloor: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
 
 // API: получить минимальные цены (для клиента)
-router.get('/auction/price-floor', (_req, res) => {
+router.get('/auction/price-floor', async (_req, res) => {
     res.json(priceFloor);
 });
 
 // Все лоты
-router.get('/auction', (req: any, res) => {
+router.get('/auction', async (req: any, res) => {
     const now = Math.floor(Date.now() / 1000);
     // Закрываем просроченные лоты
     const expired = await db.prepareAll('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NOT NULL')(now) as any[];
@@ -40,7 +40,7 @@ router.get('/auction', (req: any, res) => {
 });
 
 // Создать лот
-router.post('/auction/sell', (req: any, res) => {
+router.post('/auction/sell', async (req: any, res) => {
     const userId = req.userId;
     const { itemData, startPrice, buyoutPrice, duration, count } = req.body;
 
@@ -102,7 +102,7 @@ router.post('/auction/sell', (req: any, res) => {
 });
 
 // Сделать ставку
-router.post('/auction/bid', (req: any, res) => {
+router.post('/auction/bid', async (req: any, res) => {
     const userId = req.userId;
     const { lotId, amount } = req.body;
     if (!lotId || !amount) return res.status(400).json({ error: 'Нет данных' });
@@ -130,7 +130,7 @@ router.post('/auction/bid', (req: any, res) => {
 });
 
 // Выкуп (buyout) — полный выкуп лота
-router.post('/auction/buyout', (req: any, res) => {
+router.post('/auction/buyout', async (req: any, res) => {
     const userId = req.userId;
     const { lotId } = req.body;
 
@@ -177,7 +177,7 @@ router.post('/auction/buyout', (req: any, res) => {
 });
 
 // Купить часть стека (Buy N from stack)
-router.post('/auction/buy-partial', (req: any, res) => {
+router.post('/auction/buy-partial', async (req: any, res) => {
     const userId = req.userId;
     const { lotId, quantity } = req.body;
 
@@ -240,7 +240,7 @@ router.post('/auction/buy-partial', (req: any, res) => {
 });
 
 // Снять лот с аукциона
-router.post('/auction/cancel', (req: any, res) => {
+router.post('/auction/cancel', async (req: any, res) => {
     const userId = req.userId;
     const { lotId } = req.body;
     if (!lotId) return res.status(400).json({ error: 'Укажите lotId' });

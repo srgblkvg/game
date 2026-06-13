@@ -4,7 +4,7 @@ import db from '../database';
 const router = Router();
 
 // Получить коллекцию пользователя (предметы + сеты)
-router.get('/collections', (req: any, res) => {
+router.get('/collections', async (req: any, res) => {
     const userId = req.userId;
     const items = db.prepare(
         'SELECT itemName, slot, rarity_id FROM collections WHERE userId = ?'
@@ -47,7 +47,7 @@ router.get('/collections', (req: any, res) => {
 });
 
 // Добавить предмет в коллекцию (удаляет из инвентаря)
-router.post('/collections/add', (req: any, res) => {
+router.post('/collections/add', async (req: any, res) => {
     const userId = req.userId;
     const { itemName, slot, itemId } = req.body;
 

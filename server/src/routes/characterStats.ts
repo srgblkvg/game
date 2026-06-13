@@ -4,7 +4,7 @@ import db from '../database';
 const router = Router();
 
 // Распределение очков статов
-router.post('/character/allocate-stats', (req: any, res) => {
+router.post('/character/allocate-stats', async (req: any, res) => {
     const userId = req.userId;
     const { s, a, d, m } = req.body;
     const total = (s || 0) + (a || 0) + (d || 0) + (m || 0);
@@ -26,7 +26,7 @@ router.post('/character/allocate-stats', (req: any, res) => {
 });
 
 // Список названий характеристик
-router.get('/stat-names', (req: any, res) => {
+router.get('/stat-names', async (req: any, res) => {
     const stats = await db.prepareAll('SELECT * FROM stat_names')();
     res.json(stats);
 });

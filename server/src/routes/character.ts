@@ -20,7 +20,7 @@ const getCraftData = db.prepare(`
 `);
 
 // Загрузить персонажа (текущего пользователя)
-router.get('/character/me', (req: any, res) => {
+router.get('/character/me', async (req: any, res) => {
     const userId = req.userId;
     const user = getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -155,7 +155,7 @@ router.get('/character/me', (req: any, res) => {
 });
 
 // Сохранить персонажа (полное обновление)
-router.post('/character/save', (req: any, res) => {
+router.post('/character/save', async (req: any, res) => {
     const userId = req.userId;
     const { inventory, equipment, level, exp, money, totalBattles, wins } = req.body;
     await db.prepareRun('UPDATE users SET level=?, exp=?, money=?, totalBattles=?, wins=?, inventory=?, equipment=? WHERE id=?')(level, exp, money, totalBattles, wins, JSON.stringify(inventory), JSON.stringify(equipment), userId);
@@ -163,7 +163,7 @@ router.post('/character/save', (req: any, res) => {
 });
 
 // Сохранение открытых вкладок приватного чата
-router.post('/character/save-tabs', (req: any, res) => {
+router.post('/character/save-tabs', async (req: any, res) => {
     const userId = req.userId;
     const { tabs } = req.body;
     if (!Array.isArray(tabs)) return res.status(400).json({ error: 'tabs должен быть массивом' });
@@ -172,7 +172,7 @@ router.post('/character/save-tabs', (req: any, res) => {
 });
 
 // Поиск пользователя по нику (для перехода из чата в профиль)
-router.get('/users/find', (req: any, res) => {
+router.get('/users/find', async (req: any, res) => {
     const username = req.query.username as string;
     if (!username) return res.status(400).json({ error: 'Укажите username' });
     const user = await db.prepareGet('SELECT id, username FROM users WHERE username = ?')(username) as any;
@@ -181,7 +181,7 @@ router.get('/users/find', (req: any, res) => {
 });
 
 // Поиск пользователей по части имени
-router.get('/users/search', (req: any, res) => {
+router.get('/users/search', async (req: any, res) => {
     const q = req.query.q as string;
     if (!q || q.length < 2) return res.json([]);
     const users = db.prepare(

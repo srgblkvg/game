@@ -50,7 +50,7 @@ router.post('/register', async (req, res) => {
     res.json({ message: 'Код подтверждения отправлен на почту' });
 });
 
-router.post('/verify-email', (req, res) => {
+router.post('/verify-email', async (req, res) => {
     const parsed = verifyEmailSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
@@ -120,7 +120,7 @@ router.post('/resend-code', async (req, res) => {
 });
 
 // Гостевой вход — без регистрации, ограниченный доступ
-router.post('/guest', (req, res) => {
+router.post('/guest', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     const guestId = `Гость_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
@@ -139,7 +139,7 @@ router.post('/guest', (req, res) => {
     res.json({ token, user: { id: user.id, username: guestId, level: 1, role: 'player', isGuest: true, gender: 'male' } });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 

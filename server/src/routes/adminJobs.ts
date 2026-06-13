@@ -4,13 +4,13 @@ import db from '../database';
 const router = Router();
 
 // Получить все работы (админка)
-router.get('/jobs', (req: any, res) => {
+router.get('/jobs', async (req: any, res) => {
     const jobs = await db.prepareAll('SELECT * FROM jobs ORDER BY duration ASC')();
     res.json(jobs);
 });
 
 // Создать работу
-router.post('/jobs', (req, res) => {
+router.post('/jobs', async (req, res) => {
     const { name, description, duration, rewardMin, rewardMax, background } = req.body;
     if (!name || duration == null) return res.status(400).json({ error: 'name, duration required' });
     await db.prepareRun('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax, background) VALUES (?, ?, ?, ?, ?, ?)')(name, description || '', duration, rewardMin || 0, rewardMax || 0, background || null);
@@ -18,7 +18,7 @@ router.post('/jobs', (req, res) => {
 });
 
 // Редактировать работу
-router.put('/jobs/:id', (req, res) => {
+router.put('/jobs/:id', async (req, res) => {
     const { name, description, duration, rewardMin, rewardMax, background } = req.body;
     const fields: string[] = [];
     const values: any[] = [];
@@ -35,13 +35,13 @@ router.put('/jobs/:id', (req, res) => {
 });
 
 // Удалить работу
-router.delete('/jobs/:id', (req, res) => {
+router.delete('/jobs/:id', async (req, res) => {
     await db.prepareRun('DELETE FROM jobs WHERE id = ?')(req.params.id);
     res.json({ success: true });
 });
 
 // Принудительно завершить работу игрока
-router.post('/finish-job', (req, res) => {
+router.post('/finish-job', async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
     const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
@@ -60,7 +60,7 @@ router.post('/finish-job', (req, res) => {
 });
 
 // Завершить все работы по ID работы
-router.post('/finish-jobs-by-jobid', (req, res) => {
+router.post('/finish-jobs-by-jobid', async (req, res) => {
     const { jobId } = req.body;
     if (!jobId) return res.status(400).json({ error: 'jobId required' });
     const users = await db.prepareAll('SELECT * FROM users WHERE activeJob IS NOT NULL')() as any[];

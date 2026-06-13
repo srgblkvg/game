@@ -10,7 +10,7 @@ import { battleSchema } from '../validation';
 
 const router = Router();
 
-router.post('/battle', (req: any, res) => {
+router.post('/battle', async (req: any, res) => {
     const parsed = battleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные боя' });
 
@@ -145,7 +145,7 @@ router.post('/battle', (req: any, res) => {
     });
 });
 
-router.get('/battles', (req: any, res) => {
+router.get('/battles', async (req: any, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 10;
     const battles = await db.prepareAll(`
@@ -167,7 +167,7 @@ router.get('/battles', (req: any, res) => {
 // Админка: все бои (отдельный роутер)
 export const adminRouter = Router();
 
-adminRouter.get('/battles', (req: any, res) => {
+adminRouter.get('/battles', async (req: any, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
