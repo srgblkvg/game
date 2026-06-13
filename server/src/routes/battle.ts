@@ -45,7 +45,8 @@ router.post('/battle', (req: any, res) => {
     }
 
     // Актуализируем HP защитника (офлайн-реген)
-    const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}')).hp;
+    const dCollCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(defender.id) as any).cnt || 0;
+    const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'), undefined, dCollCnt).hp;
     const defenderCurrentHp = applyHpRegen({
         id: defender.id,
         currentHp: defender.currentHp,
@@ -64,6 +65,7 @@ router.post('/battle', (req: any, res) => {
         money: attacker.money,
         currentHp: attacker.currentHp ?? undefined,
         drinkBonuses: getDrinkBonuses(attacker),
+        collectionBonus: (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(attacker.id) as any).cnt || 0,
     };
     const defenderData = {
         id: defender.id,
@@ -74,6 +76,7 @@ router.post('/battle', (req: any, res) => {
         money: defender.money,
         currentHp: defenderCurrentHp,
         drinkBonuses: getDrinkBonuses(defender),
+        collectionBonus: (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(defender.id) as any).cnt || 0,
     };
 
     const result = runBattle(attackerData, defenderData);
@@ -152,7 +155,7 @@ router.post('/battle', (req: any, res) => {
             name: defenderData.name,
             level: defenderData.level,
             equipment: defenderData.equipment,
-            stats: currentStats(defenderData.base, defenderData.equipment),
+            stats: currentStats(defenderData.base, defenderData.equipment, undefined, defenderData.collectionBonus),
         },
         moneyAfter: updatedAttacker.money,
         moneyStolen,

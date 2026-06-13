@@ -33,6 +33,7 @@ const GuildViewPage = lazy(() => import('./pages/GuildViewPage'));
 const GuildRatingPage = lazy(() => import('./pages/GuildRatingPage'));
 const GuildWarPage = lazy(() => import('./pages/GuildWarPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
+const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
 
 function Loading() {
   return (
@@ -82,6 +83,7 @@ function App() {
             <Route path="/guild/rating" element={user?.role === 'player' ? <GuildRatingPage /> : <Navigate to="/login" />} />
             <Route path="/guild/war" element={user?.role === 'player' ? <GuildWarPage /> : <Navigate to="/login" />} />
             <Route path="/feedback" element={user?.role === 'player' ? <FeedbackPage /> : <Navigate to="/login" />} />
+            <Route path="/collections" element={user?.role === 'player' ? <CollectionsPage /> : <Navigate to="/login" />} />
             <Route path="/guild/:id" element={user?.role === 'player' ? <GuildViewPage /> : <Navigate to="/login" />} />
             <Route path="/admin/register" element={<AdminRegisterPage />} />
             <Route path="/adminpanel" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} />

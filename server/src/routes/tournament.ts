@@ -128,6 +128,7 @@ function loadPlayerForBattle(userId: number) {
         level: u.level,
         money: u.money || 0,
         currentHp: stats.hp, // всегда полное HP для турнирных боёв
+        collectionBonus: (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0,
     };
 }
 

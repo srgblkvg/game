@@ -33,6 +33,8 @@ import guildRoutes from './routes/guild';
 import feedbackRoutes, { adminFeedbackRouter } from './routes/feedback';
 import adminGameRoutes from './routes/adminGame';
 import actionsRoutes from './routes/actions';
+import collectionsRoutes from './routes/collections';
+import adminCollectionsRoutes from './routes/adminCollections';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -66,6 +68,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/admin', authMiddleware, requireAdmin, adminTournamentRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminGameRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminFeedbackRouter);
+  app.use('/api/admin', authMiddleware, requireAdmin, adminCollectionsRoutes);
 
   // Тоггл гостевых ограничений
   app.post('/api/admin/toggle-guest', authMiddleware, requireAdmin, (req, res) => {
@@ -97,6 +100,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', guildRoutes);
   app.use('/api', feedbackRoutes);
   app.use('/api', tournamentRoutes);
+  app.use('/api', collectionsRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);

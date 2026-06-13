@@ -14,7 +14,7 @@ interface LeftSidebarProps {
 export default function LeftSidebar({ character, onEquip, selectedItemId, highlightedSlots }: LeftSidebarProps) {
   if (!character) return null;
   const drinkBonuses = (character as any).drinkBonuses;
-  const stats = calculateStats(character, drinkBonuses);
+  const stats = calculateStats(character, drinkBonuses, (character as any).collectionCount || 0);
 
   // Реген из комнаты
   const room = (character as any).room;
@@ -44,6 +44,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
           baseStats: stats.baseStats,
           equipmentBonuses: stats.equipmentBonuses,
           extraStats: stats.extraStats,
+          collectionBonus: (character as any).collectionCount || 0,
         }}
         side="left"
         showHealth
@@ -56,7 +57,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         highlightedSlots={highlightedSlots}
       />
       <StatAllocation />
-      <BuffsBlock room={(character as any).room} drink={(character as any).drink} premium={(character as any).premium} />
+      <BuffsBlock room={(character as any).room} drink={(character as any).drink} premium={(character as any).premium} inventory={character.inventory} equipment={character.equipment} />
     </div>
   );
 }

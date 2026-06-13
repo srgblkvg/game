@@ -31,6 +31,7 @@ const breadcrumbMap: Record<string, string> = {
     guild: 'Гильдия',
     war: 'Поле боя',
     feedback: 'Обратная связь',
+    collections: 'Коллекция',
 };
 
 function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: string) => void }) {

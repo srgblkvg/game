@@ -28,7 +28,8 @@ router.get('/character/public/:userId', (req: any, res) => {
 
     const { enriched: enrichedEquipment } = enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
     const base = getBaseStats(user);
-    const stats = currentStats(base, enrichedEquipment);
+    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
+    const stats = currentStats(base, enrichedEquipment, undefined, collCnt);
 
     res.json({
         id: user.id,

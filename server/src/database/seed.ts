@@ -496,4 +496,23 @@ export function runSeed(db: InstanceType<typeof Database>) {
 
     for (const m of mobs) insertMob.run(...m);
   }
+
+  // Стандартные сеты коллекций (7 редкостей)
+  const collectionSetCount = (db.prepare('SELECT COUNT(*) as cnt FROM collection_sets').get() as any).cnt;
+  if (collectionSetCount === 0) {
+    const allSlots = ['helmet', 'chest', 'gloves', 'boots', 'weapon1', 'shield', 'amulet', 'ring', 'belt'];
+    const raritySetNames = ['Коллекция Хлама', 'Коллекция Обычных', 'Коллекция Необычных', 'Коллекция Редких', 'Коллекция Эпических', 'Коллекция Легендарных', 'Коллекция Мифических'];
+    const insertSet = db.prepare('INSERT INTO collection_sets (name, description, bonus_percent, sort_order) VALUES (?, ?, ?, ?)');
+    const insertSetItem = db.prepare('INSERT INTO collection_set_items (set_id, item_name, slot) VALUES (?, ?, ?)');
+
+    for (let rarity = 0; rarity <= 6; rarity++) {
+      const info = insertSet.run(raritySetNames[rarity], `Все предметы редкости ${rarity}`, rarity + 1, rarity + 1);
+      const setId = info.lastInsertRowid as number;
+
+      const rarityItems = db.prepare('SELECT name, slot FROM items WHERE rarity_id = ?').all(rarity) as any[];
+      for (const item of rarityItems) {
+        insertSetItem.run(setId, item.name, item.slot);
+      }
+    }
+  }
 }

@@ -240,4 +240,41 @@ export function runSchema(db: InstanceType<typeof Database>) {
     CREATE INDEX IF NOT EXISTS idx_craft_items_rarity_id ON craft_items(rarity_id);
     CREATE INDEX IF NOT EXISTS idx_craft_recipe_ingredients_recipe ON craft_recipe_ingredients(recipe_id);
   `);
+
+  // Таблица коллекций
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS collections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER NOT NULL,
+      itemName TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      rarity_id INTEGER NOT NULL,
+      addedAt INTEGER DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (userId) REFERENCES users(id),
+      UNIQUE(userId, itemName, slot)
+    );
+    CREATE INDEX IF NOT EXISTS idx_collections_user ON collections(userId);
+  `);
+
+  // Сеты коллекций (админка)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS collection_sets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      bonus_percent INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS collection_set_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      set_id INTEGER NOT NULL,
+      item_name TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      FOREIGN KEY (set_id) REFERENCES collection_sets(id) ON DELETE CASCADE,
+      UNIQUE(set_id, item_name, slot)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_collection_set_items_set ON collection_set_items(set_id);
+  `);
 }

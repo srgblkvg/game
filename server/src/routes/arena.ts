@@ -34,7 +34,8 @@ router.get('/arena/opponent', (req: any, res) => {
                 const savedBase = { s: saved.baseS ?? 5, a: saved.baseA ?? 5, d: saved.baseD ?? 5, m: saved.baseM ?? 5 };
                 const savedEquip = JSON.parse(saved.equipment || '{}');
                 const { enriched: savedEnriched } = enrichEquipment(db, savedEquip);
-                const savedStats = currentStats(savedBase, savedEnriched);
+                const savedCollCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(saved.id) as any).cnt || 0;
+                const savedStats = currentStats(savedBase, savedEnriched, undefined, savedCollCnt);
                 return res.json({
                     id: saved.id, name: saved.username, level: saved.level,
                     equipment: savedEnriched, stats: savedStats,
@@ -99,7 +100,8 @@ router.get('/arena/opponent', (req: any, res) => {
     const base = { s: opponent.baseS ?? 5, a: opponent.baseA ?? 5, d: opponent.baseD ?? 5, m: opponent.baseM ?? 5 };
     const equipment = JSON.parse(opponent.equipment || '{}');
     const { enriched: enrichedEquipment } = enrichEquipment(db, equipment);
-    const stats = currentStats(base, enrichedEquipment);
+    const oppCollCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(opponent.id) as any).cnt || 0;
+    const stats = currentStats(base, enrichedEquipment, undefined, oppCollCnt);
 
     res.json({
         id: opponent.id,

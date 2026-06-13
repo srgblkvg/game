@@ -7,6 +7,7 @@ interface StatsOverlayProps {
   baseStats?: { s: number; a: number; d: number; m: number };
   equipmentBonuses?: { s: number; a: number; d: number; m: number };
   extraStats?: { crit: number; dodge: number; counter: number; fullBlock: number };
+  collectionBonus?: number;
 }
 
 const STAT_ICONS: Record<string, string> = {
@@ -34,7 +35,7 @@ const STAT_LABELS: Record<string, string> = {
   's': 'Сила', 'a': 'Ловкость', 'd': 'Защита', 'm': 'Мастерство',
 };
 
-export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats }: StatsOverlayProps) {
+export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus }: StatsOverlayProps) {
   const [flipped, setFlipped] = useState(false);
   const [animating, setAnimating] = useState(false);
   const isMobile = compact === 'mobile' || compact === 'verySmall';
@@ -101,6 +102,18 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                     </tr>
                   );
                 })}
+              </>
+            )}
+            {collectionBonus && collectionBonus > 0 && (
+              <>
+                <tr><td colSpan={2}><div className="border-t border-[var(--color-border-light)] my-0.5" /></td></tr>
+                <tr>
+                  <td className={tdStyle}>
+                    <Icon icon="game-icons:book-cover" width={iconSize} height={iconSize} className="inline mr-0.5 text-[var(--color-accent-gold)]" />
+                    Коллекция
+                  </td>
+                  <td className="text-right pl-[2px] text-[var(--color-accent-gold)]">+{collectionBonus}%</td>
+                </tr>
               </>
             )}
           </tbody>

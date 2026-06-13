@@ -38,7 +38,8 @@ export interface StatSums {
 export function currentStats(
     base: { s: number; a: number; d: number; m: number },
     equipment: Record<string, GameItem>,
-    drinkBonuses?: { s: number; a: number; d: number; m: number }
+    drinkBonuses?: { s: number; a: number; d: number; m: number },
+    collectionBonus?: number
 ): CharStats {
     const sums: StatSums = { s: 0, a: 0, d: 0, m: 0 };
     const extra: Record<string, number> = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
@@ -68,12 +69,23 @@ export function currentStats(
         sums.m += drinkBonuses.m || 0;
     }
 
-    const st = {
+    let st = {
         s: base.s + (sums.s || 0),
         a: base.a + (sums.a || 0),
         d: base.d + (sums.d || 0),
         m: base.m + (sums.m || 0),
     };
+
+    // Бонус коллекции
+    if (collectionBonus && collectionBonus > 0) {
+        const mult = 1 + collectionBonus / 100;
+        st = {
+            s: Math.round(st.s * mult),
+            a: Math.round(st.a * mult),
+            d: Math.round(st.d * mult),
+            m: Math.round(st.m * mult),
+        };
+    }
 
     const hp = st.s + st.a + st.d + st.m;
 

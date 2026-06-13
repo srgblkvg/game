@@ -864,8 +864,11 @@ router.post('/guild/war/attack', (req: any, res) => {
     const { currentStats } = require('../game/stats');
     const { getBaseStats } = require('../db/helpers');
 
-    const aStats = currentStats(getBaseStats(attacker), JSON.parse(attacker.equipment || '{}'));
-    const dStats = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'));
+    const aCollCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
+    const dCollCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(targetId) as any).cnt || 0;
+
+    const aStats = currentStats(getBaseStats(attacker), JSON.parse(attacker.equipment || '{}'), undefined, aCollCnt);
+    const dStats = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'), undefined, dCollCnt);
 
     const aHp = aStats.hp;
     const dHp = dStats.hp;

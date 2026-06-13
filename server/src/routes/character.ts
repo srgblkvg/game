@@ -77,6 +77,17 @@ router.get('/character/me', (req: any, res) => {
     const drinkBonuses = getDrinkBonuses(user);
     const stats = currentStats(base, enrichedEquipment, drinkBonuses);
 
+    // Бонус коллекции: +1% к основным статам за каждый предмет в коллекции
+    const collectionCount = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt;
+    if (collectionCount > 0) {
+        const bonus = 1 + collectionCount / 100;
+        stats.s = Math.round(stats.s * bonus);
+        stats.a = Math.round(stats.a * bonus);
+        stats.d = Math.round(stats.d * bonus);
+        stats.m = Math.round(stats.m * bonus);
+        stats.hp = Math.round((stats.hp || 50) * bonus);
+    }
+
     let jobData = null;
     if (user.activeJob) {
         jobData = JSON.parse(user.activeJob);
@@ -146,6 +157,7 @@ router.get('/character/me', (req: any, res) => {
         drinkBonuses,
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,
+        collectionCount: collectionCount || 0,
     });
 });
 

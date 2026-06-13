@@ -178,6 +178,7 @@ export default function CharacterCard({
           baseStats={(char as any).baseStats}
           equipmentBonuses={(char as any).equipmentBonuses}
           extraStats={(char as any).extraStats}
+          collectionBonus={(char as any).collectionBonus}
         />
 
         {!isMob && (

@@ -10,7 +10,8 @@ export interface StatBreakdown {
 
 export function calculateStats(
   char: Character,
-  drinkBonuses?: { s: number; a: number; d: number; m: number }
+  drinkBonuses?: { s: number; a: number; d: number; m: number },
+  collectionBonus?: number
 ): StatBreakdown {
   const sums = { s: 0, a: 0, d: 0, m: 0 };
   const extra = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
@@ -44,6 +45,21 @@ export function calculateStats(
   const d = char.baseStats.d + sums.d;
   const m = char.baseStats.m + sums.m;
   const hp = s + a + d + m;
+
+  // Бонус коллекции
+  if (collectionBonus && collectionBonus > 0) {
+    const multiplier = 1 + collectionBonus / 100;
+    return {
+      s: Math.round(s * multiplier),
+      a: Math.round(a * multiplier),
+      d: Math.round(d * multiplier),
+      m: Math.round(m * multiplier),
+      hp: Math.round(hp * multiplier),
+      baseStats: char.baseStats,
+      equipmentBonuses: sums,
+      extraStats: extra,
+    };
+  }
 
   return { s, a, d, m, hp, baseStats: char.baseStats, equipmentBonuses: sums, extraStats: extra };
 }

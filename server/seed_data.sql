@@ -1,0 +1,362 @@
+-- =====================================================
+-- Hermes Game — Seed data dump
+-- Generated from server/src/database/seed.ts
+-- =====================================================
+
+-- Редкости (Rarities)
+INSERT OR IGNORE INTO rarities (id, name, display_name, color) VALUES
+(0, 'junk', 'Хлам', '#888888'),
+(1, 'common', 'Обычный', '#cccccc'),
+(2, 'uncommon', 'Необычный', '#2ecc71'),
+(3, 'rare', 'Редкий', '#3498db'),
+(4, 'epic', 'Эпический', '#9b59b6'),
+(5, 'legendary', 'Легендарный', '#f1c40f'),
+(6, 'mythic', 'Мифический', '#e74c3c');
+
+-- Характеристики (Stat Names)
+INSERT OR IGNORE INTO stat_names (name, nameRu) VALUES
+('s', 'Сила'), ('a', 'Ловкость'), ('d', 'Защита'), ('m', 'Мастерство'),
+('crit', 'Крит'), ('dodge', 'Уклонение'), ('counter', 'Контрудар'),
+('fullBlock', 'Полный блок'), ('block', 'Блок');
+
+-- Категории рецептов
+INSERT OR IGNORE INTO craft_recipe_categories (name, sort_order) VALUES
+('Материалы', 1), ('Улучшения', 2);
+INSERT OR IGNORE INTO craft_recipe_categories (name, sort_order) VALUES ('Предметы', 3);
+
+-- Материалы и камни (craft_items)
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Пыль забвения', 0, 'craft', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Осколок скорби', 1, 'craft', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Фрагмент ужаса', 2, 'craft', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Эссенция мрака', 3, 'craft', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Сердцевина бездны', 4, 'craft', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Искра погибели', 5, 'craft', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Слеза вечности', 6, 'craft', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Хлам)', 0, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Обычный)', 1, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Необычный)', 2, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Редкий)', 3, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Эпический)', 4, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Легендарный)', 5, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Мифический)', 6, 'upgrade', NULL);
+
+-- Предметы экипировки (items)
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Скорбный капюшон', 'helmet', 0, '{"s":1,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_gray.webp', 10);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Гнилостный саллет', 'helmet', 0, '{"s":0,"a":0,"d":1,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_gray.webp', 8);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Могильный череп', 'helmet', 0, '{"s":0,"a":1,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_gray.webp', 12);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кровавая маска', 'helmet', 1, '{"s":2,"a":0,"d":0,"m":3}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_white.webp', 40);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Катакомбный бацинет', 'helmet', 1, '{"s":0,"a":3,"d":2,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Истлевший капюшон', 'helmet', 1, '{"s":0,"a":0,"d":3,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_white.webp', 30);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Призрачный венец', 'helmet', 2, '{"s":5,"a":0,"d":0,"m":4}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Проклятый клобук', 'helmet', 2, '{"s":0,"a":6,"d":4,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_green.webp', 100);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Шепчущий шлем', 'helmet', 2, '{"s":0,"a":0,"d":5,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_green.webp', 110);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Плакальщицы бацинет', 'helmet', 3, '{"s":8,"a":0,"d":6,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_blue.webp', 280);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Ритуальная маска', 'helmet', 3, '{"s":0,"a":9,"d":0,"m":7}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_blue.webp', 300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Костяная корона', 'helmet', 3, '{"s":7,"a":0,"d":0,"m":8}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Погребальный венец', 'helmet', 4, '{"s":12,"a":0,"d":10,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_purple.webp', 700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Черепная диадема', 'helmet', 4, '{"s":0,"a":13,"d":0,"m":11}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Мертвенный наголовник', 'helmet', 4, '{"s":11,"a":9,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_purple.webp', 800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Висельника корона', 'helmet', 5, '{"s":18,"a":0,"d":15,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_yellow.webp', 2200);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Безымянный капюшон', 'helmet', 5, '{"s":0,"a":19,"d":0,"m":14}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_yellow.webp', 2400);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Криптовый шлем', 'helmet', 5, '{"s":16,"a":14,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_yellow.webp', 2600);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Жертвенный венец', 'helmet', 6, '{"s":25,"a":0,"d":20,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_red.webp', 7000);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Утопленника маска', 'helmet', 6, '{"s":0,"a":26,"d":0,"m":22}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Пепельная корона', 'helmet', 6, '{"s":23,"a":19,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_red.webp', 8000);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Скорлупный доспех', 'chest', 0, '{"s":0,"a":0,"d":1,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_gray.webp', 10);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Выпотрошенная кольчуга', 'chest', 0, '{"s":0,"a":0,"d":2,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_gray.webp', 12);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Гробовой панцирь', 'chest', 0, '{"s":1,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_gray.webp', 8);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Рёберный нагрудник', 'chest', 1, '{"s":0,"a":0,"d":3,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Хитиновая кираса', 'chest', 1, '{"s":0,"a":3,"d":2,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_white.webp', 40);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кандальная бригантина', 'chest', 1, '{"s":0,"a":0,"d":2,"m":2}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_white.webp', 45);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Саркофаговый латник', 'chest', 2, '{"s":0,"a":0,"d":6,"m":4}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_green.webp', 130);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Плащаничное облачение', 'chest', 2, '{"s":0,"a":5,"d":5,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Эшафотный панцирь', 'chest', 2, '{"s":6,"a":0,"d":4,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_green.webp', 140);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Заупокойная кираса', 'chest', 3, '{"s":0,"a":0,"d":8,"m":7}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_blue.webp', 350);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Крематорный нагрудник', 'chest', 3, '{"s":9,"a":0,"d":6,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Некропольный доспех', 'chest', 3, '{"s":0,"a":8,"d":7,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_blue.webp', 360);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Склепный панцирь', 'chest', 4, '{"s":13,"a":0,"d":11,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_purple.webp', 800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Удавленничий латник', 'chest', 4, '{"s":0,"a":12,"d":10,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Братской могилы экзоскелет', 'chest', 4, '{"s":11,"a":0,"d":0,"m":12}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_purple.webp', 850);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Забальзамированная кираса', 'chest', 5, '{"s":18,"a":0,"d":16,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_yellow.webp', 2500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Исповедальный доспех', 'chest', 5, '{"s":0,"a":20,"d":15,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_yellow.webp', 2700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Скальпированный панцирь', 'chest', 5, '{"s":17,"a":0,"d":0,"m":16}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_yellow.webp', 2800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Саркофаговый экзоскелет', 'chest', 6, '{"s":26,"a":0,"d":22,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Крематорная кираса', 'chest', 6, '{"s":24,"a":20,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_red.webp', 8000);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Эшафотное облачение', 'chest', 6, '{"s":0,"a":25,"d":21,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'chest/chest_red.webp', 7800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Отсечённые пальчатки', 'gloves', 0, '{"s":1,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_gray.webp', 8);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Мумифицированные рукавицы', 'gloves', 0, '{"s":0,"a":0,"d":1,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_gray.webp', 10);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Костяшковые захваты', 'gloves', 0, '{"s":0,"a":1,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_gray.webp', 7);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Жильные перчатки', 'gloves', 1, '{"s":3,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_white.webp', 30);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Фаланговые латы', 'gloves', 1, '{"s":0,"a":2,"d":2,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Ладонные рукавицы', 'gloves', 1, '{"s":0,"a":0,"d":3,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_white.webp', 32);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Когтистые боевые рукавицы', 'gloves', 2, '{"s":5,"a":4,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_green.webp', 110);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Суставчатые когти', 'gloves', 2, '{"s":0,"a":6,"d":0,"m":3}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Щупальцевые захваты', 'gloves', 2, '{"s":4,"a":0,"d":5,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_green.webp', 115);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Крючковатые перчатки', 'gloves', 3, '{"s":8,"a":0,"d":0,"m":6}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_blue.webp', 300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Хваткие латы', 'gloves', 3, '{"s":0,"a":9,"d":6,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_blue.webp', 310);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Десничные кистени', 'gloves', 3, '{"s":7,"a":7,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Пальцы мертвеца', 'gloves', 4, '{"s":13,"a":0,"d":10,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_purple.webp', 720);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Сведённые рукавицы', 'gloves', 4, '{"s":0,"a":12,"d":0,"m":11}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Ногтевые сжиматели', 'gloves', 4, '{"s":10,"a":10,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_purple.webp', 700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Фаланговые когти', 'gloves', 5, '{"s":19,"a":0,"d":14,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_yellow.webp', 2300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Ладонные боевые рукавицы', 'gloves', 5, '{"s":0,"a":18,"d":0,"m":16}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_yellow.webp', 2400);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Костяшковые латы', 'gloves', 5, '{"s":16,"a":15,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_yellow.webp', 2500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Пальцы мертвеца культяпки', 'gloves', 6, '{"s":26,"a":20,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_red.webp', 7200);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Щупальцевые захваты', 'gloves', 6, '{"s":0,"a":27,"d":0,"m":21}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Хваткие когти', 'gloves', 6, '{"s":23,"a":0,"d":22,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'gloves/gloves_red.webp', 7800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Стоптанные обмотки', 'boots', 0, '{"s":0,"a":1,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_gray.webp', 9);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Могильные башмаки', 'boots', 0, '{"s":0,"a":0,"d":1,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_gray.webp', 7);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Бродяжьи ступни', 'boots', 0, '{"s":1,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_gray.webp', 8);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Костяные сапоги', 'boots', 1, '{"s":0,"a":3,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_white.webp', 30);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Погребённые поножи', 'boots', 1, '{"s":0,"a":0,"d":3,"m":2}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Шагающие лапы', 'boots', 1, '{"s":2,"a":2,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_white.webp', 32);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Болотные ботфорты', 'boots', 2, '{"s":0,"a":6,"d":0,"m":4}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Заледенелые котурны', 'boots', 2, '{"s":5,"a":4,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_green.webp', 110);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Теневые сапоги', 'boots', 2, '{"s":0,"a":5,"d":4,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_green.webp', 115);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Окаменелые поножи', 'boots', 3, '{"s":0,"a":8,"d":6,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_blue.webp', 300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Пустотные башмаки', 'boots', 3, '{"s":7,"a":7,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Бездонные ступни', 'boots', 3, '{"s":0,"a":9,"d":0,"m":7}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_blue.webp', 310);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Копытные сапоги', 'boots', 4, '{"s":12,"a":11,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Трясинные ботфорты', 'boots', 4, '{"s":0,"a":14,"d":0,"m":10}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_purple.webp', 720);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Скитальческие лапы', 'boots', 4, '{"s":11,"a":0,"d":10,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_purple.webp', 700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Могильные котурны', 'boots', 5, '{"s":18,"a":16,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_yellow.webp', 2300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Шагающие поножи', 'boots', 5, '{"s":0,"a":20,"d":0,"m":15}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_yellow.webp', 2500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Заледенелые ступни', 'boots', 5, '{"s":17,"a":0,"d":15,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_yellow.webp', 2400);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Теневые ботфорты', 'boots', 6, '{"s":25,"a":22,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Пустотные сапоги', 'boots', 6, '{"s":0,"a":27,"d":0,"m":21}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_red.webp', 7800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Бездонные лапы', 'boots', 6, '{"s":24,"a":20,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'boots/boots_red.webp', 7200);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Стон могильщика', 'weapon1', 0, '{"s":2,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_gray.webp', 12);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Гниль утопленника', 'weapon1', 0, '{"s":1,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_gray.webp', 8);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Плач червей', 'weapon1', 0, '{"s":1,"a":1,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_gray.webp', 10);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Голод палача', 'weapon1', 1, '{"s":3,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_white.webp', 40);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Шёпот душегуба', 'weapon1', 1, '{"s":3,"a":0,"d":0,"m":2}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_white.webp', 45);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Тлен некроманта', 'weapon1', 1, '{"s":4,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Скорбь инквизитора', 'weapon1', 2, '{"s":6,"a":0,"d":0,"m":4}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_green.webp', 130);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Мор отступника', 'weapon1', 2, '{"s":5,"a":4,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Жажда гробовщика', 'weapon1', 2, '{"s":7,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_green.webp', 110);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Агония мученика', 'weapon1', 3, '{"s":10,"a":0,"d":6,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Погибель лжепророка', 'weapon1', 3, '{"s":9,"a":0,"d":0,"m":7}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_blue.webp', 350);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Коса жреца', 'weapon1', 3, '{"s":8,"a":7,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_blue.webp', 300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Бездна вивисектора', 'weapon1', 4, '{"s":14,"a":0,"d":0,"m":11}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_purple.webp', 800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Расплата схимника', 'weapon1', 4, '{"s":13,"a":10,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Забвение костяного короля', 'weapon1', 4, '{"s":15,"a":0,"d":10,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_purple.webp', 850);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Проклятие еретика', 'weapon1', 5, '{"s":20,"a":0,"d":0,"m":16}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_yellow.webp', 2600);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Ужас псаря', 'weapon1', 5, '{"s":19,"a":15,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_yellow.webp', 2400);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Казнь мёртвой невесты', 'weapon1', 5, '{"s":18,"a":0,"d":15,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_yellow.webp', 2700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Жатва слепой девы', 'weapon1', 6, '{"s":27,"a":0,"d":0,"m":22}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_red.webp', 7800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Наваждение червей', 'weapon1', 6, '{"s":26,"a":20,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Суд костяного короля', 'weapon1', 6, '{"s":28,"a":0,"d":21,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'sword/sword_red.webp', 8000);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Гробовая преграда', 'shield', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":1}', 'shield/shield_gray.webp', 10);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Костяная плита', 'shield', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":2}', 'shield/shield_gray.webp', 12);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Истлевшая защита', 'shield', 0, '{"s":1,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":1}', 'shield/shield_gray.webp', 8);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Погребальный барьер', 'shield', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":3}', 'shield/shield_white.webp', 40);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Черепная стена', 'shield', 1, '{"s":2,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":2}', 'shield/shield_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Скорбный затвор', 'shield', 1, '{"s":0,"a":0,"d":0,"m":2}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":3}', 'shield/shield_white.webp', 45);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Надгробный бастион', 'shield', 2, '{"s":0,"a":0,"d":0,"m":4}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":4}', 'shield/shield_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Ритуальная преграда', 'shield', 2, '{"s":5,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":5}', 'shield/shield_green.webp', 130);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Проклятый оплот', 'shield', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":5}', 'shield/shield_green.webp', 110);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Саркофаговая стена', 'shield', 3, '{"s":8,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":6}', 'shield/shield_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Мертвецкий затвор', 'shield', 3, '{"s":0,"a":0,"d":0,"m":6}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":7}', 'shield/shield_blue.webp', 350);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кровоточащая крепость', 'shield', 3, '{"s":7,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":7}', 'shield/shield_blue.webp', 300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Вдовий бастион', 'shield', 4, '{"s":12,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":10}', 'shield/shield_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Заупокойная преграда', 'shield', 4, '{"s":0,"a":0,"d":0,"m":10}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":11}', 'shield/shield_purple.webp', 800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Жертвенная стена', 'shield', 4, '{"s":10,"a":8,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":9}', 'shield/shield_purple.webp', 720);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Погребальная крепость', 'shield', 5, '{"s":17,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":15}', 'shield/shield_yellow.webp', 2500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Истлевший оплот', 'shield', 5, '{"s":0,"a":0,"d":0,"m":14}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":17}', 'shield/shield_yellow.webp', 2700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Костяной бастион', 'shield', 5, '{"s":16,"a":13,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":14}', 'shield/shield_yellow.webp', 2400);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Саркофаговая крепость', 'shield', 6, '{"s":24,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":22}', 'shield/shield_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Мёртвая стена', 'shield', 6, '{"s":0,"a":0,"d":0,"m":20}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":24}', 'shield/shield_red.webp', 8000);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Проклятый бастион', 'shield', 6, '{"s":23,"a":18,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":21}', 'shield/shield_red.webp', 7800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Зуб мёртвых', 'amulet', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":1,"dodge":0,"counter":0,"fullBlock":0}', 'amulet/amulet_gray.webp', 10);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Осколок гнили', 'amulet', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":1,"counter":0,"fullBlock":0}', 'amulet/amulet_gray.webp', 8);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Фаланга скорби', 'amulet', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":1}', 'amulet/amulet_gray.webp', 12);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Глаз падших', 'amulet', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":2,"dodge":0,"counter":0,"fullBlock":0}', 'amulet/amulet_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Клык забытых', 'amulet', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":3,"counter":0,"fullBlock":0}', 'amulet/amulet_white.webp', 40);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Медальон бездны', 'amulet', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":2,"fullBlock":0}', 'amulet/amulet_white.webp', 30);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Реликвия неупокоенных', 'amulet', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":4,"dodge":0,"counter":3,"fullBlock":0}', 'amulet/amulet_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Сердце тьмы', 'amulet', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":5,"counter":0,"fullBlock":0}', 'amulet/amulet_green.webp', 110);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Фетиш мора', 'amulet', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":5,"fullBlock":0}', 'amulet/amulet_green.webp', 115);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Печать загробья', 'amulet', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":6,"dodge":0,"counter":0,"fullBlock":5}', 'amulet/amulet_blue.webp', 300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Слеза чертога боли', 'amulet', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":8,"counter":0,"fullBlock":0}', 'amulet/amulet_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Идол вечного сна', 'amulet', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":7,"dodge":0,"counter":6,"fullBlock":0}', 'amulet/amulet_blue.webp', 350);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Узел шёпота', 'amulet', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":10,"dodge":0,"counter":8,"fullBlock":0}', 'amulet/amulet_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Талисман лимба', 'amulet', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":12,"counter":0,"fullBlock":0}', 'amulet/amulet_purple.webp', 720);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Ладонка пустоты', 'amulet', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":9,"dodge":0,"counter":0,"fullBlock":9}', 'amulet/amulet_purple.webp', 800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Ключ некрополя', 'amulet', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":15,"dodge":0,"counter":12,"fullBlock":0}', 'amulet/amulet_yellow.webp', 2500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Сердце безмолвия', 'amulet', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":17,"counter":0,"fullBlock":0}', 'amulet/amulet_yellow.webp', 2700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Желчь мёртвых', 'amulet', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":14,"dodge":0,"counter":0,"fullBlock":13}', 'amulet/amulet_yellow.webp', 2400);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Глаз бездны', 'amulet', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":22,"dodge":0,"counter":18,"fullBlock":0}', 'amulet/amulet_red.webp', 7800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Печать плача', 'amulet', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":24,"counter":0,"fullBlock":0}', 'amulet/amulet_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Слеза могилы', 'amulet', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":20,"dodge":0,"counter":0,"fullBlock":19}', 'amulet/amulet_red.webp', 8000);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Виток немых', 'ring', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":1,"counter":0,"fullBlock":0}', 'ring/ring_gray.webp', 9);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Петля слепых', 'ring', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":1,"dodge":0,"counter":0,"fullBlock":0}', 'ring/ring_gray.webp', 7);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Обруч глухих', 'ring', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":1}', 'ring/ring_gray.webp', 10);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кольцо мёртвых уз', 'ring', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":2,"counter":0,"fullBlock":0}', 'ring/ring_white.webp', 32);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Печатка кровавых клятв', 'ring', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":2,"dodge":0,"counter":0,"fullBlock":0}', 'ring/ring_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Спираль тёмных обетов', 'ring', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":2,"fullBlock":0}', 'ring/ring_white.webp', 30);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Хватка сломанных судеб', 'ring', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":4,"dodge":0,"counter":3,"fullBlock":0}', 'ring/ring_green.webp', 115);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Оковы разорванных душ', 'ring', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":5,"counter":0,"fullBlock":0}', 'ring/ring_green.webp', 110);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Узел теневого ковена', 'ring', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":4,"fullBlock":0}', 'ring/ring_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кольцо костяного трона', 'ring', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":7,"dodge":0,"counter":0,"fullBlock":6}', 'ring/ring_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Печатка пепельного царства', 'ring', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":8,"counter":0,"fullBlock":0}', 'ring/ring_blue.webp', 350);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Виток червового короля', 'ring', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":6,"dodge":0,"counter":6,"fullBlock":0}', 'ring/ring_blue.webp', 300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Хватка багрового пира', 'ring', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":10,"dodge":8,"counter":0,"fullBlock":0}', 'ring/ring_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Спираль воронья', 'ring', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":11,"counter":0,"fullBlock":0}', 'ring/ring_purple.webp', 700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Цепь крысиного короля', 'ring', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":9,"dodge":0,"counter":0,"fullBlock":10}', 'ring/ring_purple.webp', 800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кольцо змеиного гнезда', 'ring', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":16,"dodge":0,"counter":14,"fullBlock":0}', 'ring/ring_yellow.webp', 2500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Обруч волчьего часа', 'ring', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":18,"counter":0,"fullBlock":0}', 'ring/ring_yellow.webp', 2700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Оковы проклятых', 'ring', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":15,"dodge":0,"counter":0,"fullBlock":14}', 'ring/ring_yellow.webp', 2400);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кольцо забвенных', 'ring', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":22,"dodge":0,"counter":19,"fullBlock":0}', 'ring/ring_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Печатка разорванных душ', 'ring', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":24,"counter":0,"fullBlock":0}', 'ring/ring_red.webp', 7800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Хватка теневого ковена', 'ring', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":21,"dodge":0,"counter":0,"fullBlock":20}', 'ring/ring_red.webp', 8000);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кишечный ремень', 'belt', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":1,"fullBlock":0}', 'belt/belt_gray.webp', 8);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кожаная перевязь', 'belt', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":1,"counter":0,"fullBlock":0}', 'belt/belt_gray.webp', 10);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Жильный кушак', 'belt', 0, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":1,"dodge":0,"counter":0,"fullBlock":0}', 'belt/belt_gray.webp', 7);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Сухожильный пояс', 'belt', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":2,"counter":0,"fullBlock":0}', 'belt/belt_white.webp', 30);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Скальповый ремень', 'belt', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":2,"dodge":0,"counter":0,"fullBlock":0}', 'belt/belt_white.webp', 35);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кандальная портупея', 'belt', 1, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":2}', 'belt/belt_white.webp', 32);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Рёберный кушак', 'belt', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":4,"dodge":0,"counter":3,"fullBlock":0}', 'belt/belt_green.webp', 110);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Мускульный жгут', 'belt', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":5,"counter":0,"fullBlock":0}', 'belt/belt_green.webp', 120);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Позвоночная перевязь', 'belt', 2, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":3,"dodge":0,"counter":4,"fullBlock":0}', 'belt/belt_green.webp', 115);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Удавной ремень', 'belt', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":7,"dodge":0,"counter":0,"fullBlock":6}', 'belt/belt_blue.webp', 300);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Трупный кушак', 'belt', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":8,"counter":0,"fullBlock":0}', 'belt/belt_blue.webp', 320);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Петлевой пояс', 'belt', 3, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":6,"dodge":6,"counter":0,"fullBlock":0}', 'belt/belt_blue.webp', 350);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Мертвецкая портупея', 'belt', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":11,"dodge":0,"counter":9,"fullBlock":0}', 'belt/belt_purple.webp', 750);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Жгутовый ремень', 'belt', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":12,"counter":0,"fullBlock":0}', 'belt/belt_purple.webp', 700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Цепная перевязь', 'belt', 4, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":10,"dodge":0,"counter":0,"fullBlock":9}', 'belt/belt_purple.webp', 800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Удавной жгут', 'belt', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":16,"dodge":0,"counter":14,"fullBlock":0}', 'belt/belt_yellow.webp', 2500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Трупная портупея', 'belt', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":18,"counter":0,"fullBlock":0}', 'belt/belt_yellow.webp', 2700);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Позвоночный пояс', 'belt', 5, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":15,"dodge":0,"counter":0,"fullBlock":13}', 'belt/belt_yellow.webp', 2400);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Мертвецкий ремень', 'belt', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":23,"dodge":0,"counter":19,"fullBlock":0}', 'belt/belt_red.webp', 7500);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Кандальный кушак', 'belt', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":24,"counter":0,"fullBlock":0}', 'belt/belt_red.webp', 7800);
+INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Удавная перевязь', 'belt', 6, '{"s":0,"a":0,"d":0,"m":0}', '{"crit":21,"dodge":0,"counter":0,"fullBlock":20}', 'belt/belt_red.webp', 8000);
+
+-- Работы (jobs)
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Обход стен', 'Дозор по крепостной стене. Факел, ветер, шёпот из бойниц.', 600, 2, 5);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Чистка склепа', 'Вынести истлевшие останки, заменить свечи, отогнать крыс.', 600, 3, 6);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Кормление псов', 'Псарня у восточной башни. Мясо с костями, не спрашивай чьими.', 600, 2, 5);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Заточка оружия', 'Точильный круг в оружейной. Клинки для гарнизона, кровь не отмывать.', 600, 3, 7);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Растопка печей', 'Главный зал, кухня, казармы. Угля хватит, только не смотри в поддувало.', 600, 2, 5);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Уборка темницы', 'Цепи, сырость, стоны из пустых камер. Вынести ведро — и назад.', 1800, 10, 20);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Помощь на кухне', 'Разделка мяса для гарнизона. Топором. Не принюхивайся.', 1800, 10, 22);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Осмотр крипты', 'Проверить сохранность саркофагов, доложить о свежих трещинах.', 1800, 12, 25);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Полив сада костей', 'На внутреннем дворе растут белые цветы. Удобрять только золой.', 1800, 10, 22);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Сортировка арсенала', 'Пересчитать стрелы, заменить сгнившую тетиву, промаркировать яды.', 1800, 12, 25);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Вылазка в Деревню Пепла', 'Сгоревшее поселение к востоку. Найти припасы, не стать пеплом.', 3600, 35, 80);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Охота на бродячих мертвецов', 'Лес Черепов. Мертвецы не спят. Вернись с трофеями.', 3600, 40, 90);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Сбор скверноцвета', 'Ядовитые луга. Цветы для алхимика. Надевай перчатки.', 3600, 35, 75);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Разведка Старого Тракта', 'Заброшенная дорога на север. Карта, отметки, не сворачивай.', 3600, 40, 85);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Зачистка Катакомб', 'Первый ярус подземелий за стеной. Пауки, плесень, золото.', 3600, 45, 100);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Экспедиция к Чёрному Монастырю', 'Руины на холме. Реликвии, еретики, колокола звонят сами.', 28800, 300, 600);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Поход в Гнилую Топь', 'Болота к югу. Утопленники, трясина, редкий лут.', 28800, 280, 550);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Осада Башни Плакальщиц', 'Западная граница. Призраки, крики, сокровища в подвале.', 28800, 320, 650);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Рейд на Некрополь Королей', 'Древние гробницы. Ловушки, стража, короны мертвецов.', 28800, 350, 700);
+INSERT OR IGNORE INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES ('Контракт в Бездонный Овраг', 'Трещина в земле на севере. Там, куда не смотрит свет.', 28800, 330, 680);
+
+-- Мобы (mobs)
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Костяная крыса', 1, 8, 3, 2, 1, 0, 0, 1, 2, 0.8, 0.2, 0, 0, 0, 0, 0, 'Склеп');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Блуждающий череп', 1, 10, 2, 1, 2, 1, 0, 1, 3, 0.75, 0.25, 0, 0, 0, 0, 0, 'Склеп');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Слизень склепа', 2, 14, 4, 1, 2, 0, 1, 1, 3, 0.7, 0.3, 0, 0, 0, 0, 0, 'Склеп');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Плакальщик', 3, 18, 5, 3, 2, 1, 1, 1, 3, 0.6, 0.35, 0.05, 0, 0, 0, 0, 'Подземелье');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Гнилой страж', 4, 22, 6, 3, 3, 1, 1, 2, 4, 0.5, 0.4, 0.1, 0, 0, 0, 0, 'Подземелье');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Упырь-послушник', 5, 28, 7, 4, 3, 2, 2, 2, 5, 0.45, 0.4, 0.15, 0, 0, 0, 0, 'Подземелье');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Пепельный бродяга', 6, 35, 9, 5, 4, 2, 1, 2, 5, 0.4, 0.4, 0.2, 0, 0, 0, 0, 'Катакомбы');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Костяной пёс', 8, 45, 12, 7, 5, 3, 1, 3, 7, 0.3, 0.4, 0.25, 0.05, 0, 0, 0, 'Катакомбы');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Шепчущий мертвец', 10, 55, 14, 8, 7, 4, 2, 3, 8, 0, 0.4, 0.35, 0.2, 0.05, 0, 0, 'Деревня Пепла');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Вдова Леса Черепов', 12, 70, 17, 10, 9, 5, 2, 4, 10, 0, 0.35, 0.35, 0.25, 0.05, 0, 0, 'Лес Черепов');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Гниющий рыцарь', 14, 85, 20, 11, 12, 6, 2, 5, 12, 0, 0.3, 0.3, 0.3, 0.1, 0, 0, 'Лес Черепов');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Ядовитый ползун', 16, 100, 24, 13, 14, 7, 1, 5, 12, 0, 0.35, 0.4, 0.2, 0.05, 0, 0, 'Старый Тракт');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Призрак тракта', 18, 115, 27, 16, 15, 8, 1, 6, 15, 0, 0.3, 0.4, 0.25, 0.05, 0, 0, 'Старый Тракт');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Паук-костолом', 20, 130, 30, 18, 18, 9, 2, 8, 18, 0, 0.25, 0.4, 0.25, 0.1, 0, 0, 'Ядовитые луга');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Еретик-отступник', 23, 155, 35, 20, 22, 11, 2, 10, 22, 0, 0, 0.4, 0.35, 0.2, 0.05, 0, 'Первый ярус');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Палач катакомб', 26, 180, 40, 22, 26, 13, 2, 12, 28, 0, 0, 0.35, 0.35, 0.25, 0.05, 0, 'Первый ярус');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Кошмарный схимник', 29, 210, 46, 25, 30, 15, 2, 15, 35, 0, 0, 0.3, 0.35, 0.25, 0.1, 0, 'Первый ярус');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Утопленник топи', 32, 240, 52, 28, 34, 17, 1, 18, 40, 0, 0, 0.25, 0.4, 0.25, 0.1, 0, 'Гнилая Топь');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Монастырский страж', 36, 280, 60, 32, 40, 20, 1, 22, 50, 0, 0, 0, 0.4, 0.35, 0.2, 0.05, 'Чёрный Монастырь');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Колокольный звонарь', 40, 320, 68, 35, 46, 23, 2, 30, 65, 0, 0, 0, 0.35, 0.4, 0.2, 0.05, 'Чёрный Монастырь');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Плакальщица башни', 44, 370, 78, 38, 54, 27, 2, 38, 80, 0, 0, 0, 0.3, 0.4, 0.25, 0.05, 'Башня Плакальщиц');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Рыцарь ордена Скорби', 48, 420, 88, 42, 62, 31, 2, 48, 100, 0, 0, 0, 0.25, 0.4, 0.3, 0.05, 'Башня Плакальщиц');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Королевский страж', 53, 480, 100, 48, 72, 36, 1, 55, 120, 0, 0, 0, 0, 0.45, 0.35, 0.2, 'Некрополь Королей');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Древний лич', 58, 550, 112, 52, 84, 42, 1, 70, 150, 0, 0, 0, 0, 0.4, 0.4, 0.2, 'Некрополь Королей');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Костяной король', 64, 630, 128, 58, 98, 49, 2, 90, 190, 0, 0, 0, 0, 0.35, 0.45, 0.2, 'Некрополь Королей');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Бездонный ужас', 70, 720, 146, 64, 112, 56, 2, 110, 240, 0, 0, 0, 0, 0.3, 0.5, 0.2, 'Бездонный Овраг');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Архидемон бездны', 78, 840, 168, 72, 130, 65, 1, 150, 320, 0, 0, 0, 0, 0, 0.6, 0.4, 'Врата Бездны');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Ткач судеб', 86, 1000, 196, 80, 156, 78, 1, 200, 420, 0, 0, 0, 0, 0, 0.5, 0.5, 'Врата Бездны');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Глас пустоты', 94, 1180, 226, 90, 184, 92, 2, 280, 560, 0, 0, 0, 0, 0, 0.4, 0.6, 'Врата Бездны');
+INSERT OR IGNORE INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max, loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location) VALUES ('Смерть', 100, 1400, 260, 100, 220, 110, 2, 400, 800, 0, 0, 0, 0, 0, 0.3, 0.7, 'Врата Бездны');
+
+-- Шансы улучшения (upgrade_chances)
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (1, 0, 100, 5);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (2, 0, 90, 8);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (3, 0, 70, 15);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (4, 0, 50, 25);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (5, 0, 25, 40);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (6, 0, 10, 60);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (7, 0, 5, 90);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (8, 0, 3, 130);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (9, 0, 2, 200);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (10, 0, 1, 300);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (1, 1, 100, 15);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (2, 1, 90, 25);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (3, 1, 70, 45);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (4, 1, 50, 75);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (5, 1, 25, 120);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (6, 1, 10, 180);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (7, 1, 5, 270);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (8, 1, 3, 400);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (9, 1, 2, 600);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (10, 1, 1, 900);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (1, 2, 100, 50);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (2, 2, 90, 80);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (3, 2, 70, 150);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (4, 2, 50, 250);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (5, 2, 25, 400);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (6, 2, 10, 600);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (7, 2, 5, 900);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (8, 2, 3, 1400);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (9, 2, 2, 2000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (10, 2, 1, 3000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (1, 3, 100, 150);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (2, 3, 90, 250);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (3, 3, 70, 450);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (4, 3, 50, 800);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (5, 3, 25, 1300);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (6, 3, 10, 2000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (7, 3, 5, 3000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (8, 3, 3, 4500);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (9, 3, 2, 6500);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (10, 3, 1, 10000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (1, 4, 100, 400);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (2, 4, 90, 700);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (3, 4, 70, 1300);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (4, 4, 50, 2500);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (5, 4, 25, 4000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (6, 4, 10, 6000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (7, 4, 5, 9000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (8, 4, 3, 14000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (9, 4, 2, 20000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (10, 4, 1, 30000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (1, 5, 100, 1000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (2, 5, 90, 1800);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (3, 5, 70, 3500);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (4, 5, 50, 6500);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (5, 5, 25, 10000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (6, 5, 10, 16000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (7, 5, 5, 25000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (8, 5, 3, 38000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (9, 5, 2, 55000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (10, 5, 1, 80000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (1, 6, 100, 3000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (2, 6, 90, 5000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (3, 6, 70, 10000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (4, 6, 50, 18000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (5, 6, 25, 30000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (6, 6, 10, 45000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (7, 6, 5, 70000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (8, 6, 3, 100000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (9, 6, 2, 150000);
+INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (10, 6, 1, 220000);
+
+-- Рецепты крафта (craft_recipes + ингредиенты) — см. seed.ts строки 355-449
+-- Заполняются автоматически через runSeed(), здесь только справочно
+-- Формат: material_recipes (6), stone_recipes (7), item_recipes (7)
