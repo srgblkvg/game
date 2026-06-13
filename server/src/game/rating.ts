@@ -5,7 +5,7 @@ import type Database from 'better-sqlite3';
  *   Новый = Старый + K × (Результат − Ожидание)
  *   Ожидание = 1 / (1 + 10^((R_оппонента − R_игрока) / 400))
  */
-async function calcElo(playerElo: number, opponentElo: number, playerWon: boolean, level: number): number {
+export async function calcElo(playerElo: number, opponentElo: number, playerWon: boolean, level: number): number {
     const k = level <= 10 ? 40 : level <= 25 ? 30 : level <= 50 ? 20 : 15;
     const expected = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
     const result = playerWon ? 1 : 0;
@@ -15,7 +15,7 @@ async function calcElo(playerElo: number, opponentElo: number, playerWon: boolea
 /**
  * Декай рейтинга за неактивность в PvP
  */
-async function applyDecay(db: InstanceType<typeof Database>, userId: number, lastPvpTime: number, elo: number): number {
+export async function applyDecay(db: InstanceType<typeof Database>, userId: number, lastPvpTime: number, elo: number): number {
     const now = Math.floor(Date.now() / 1000);
     if (!lastPvpTime) return elo;
 
@@ -41,7 +41,7 @@ async function applyDecay(db: InstanceType<typeof Database>, userId: number, las
  * Начисление PvE-рейтинга
  * Возвращает { eloAdded, newElo }
  */
-async function addPveRating(
+export async function addPveRating(
     db: InstanceType<typeof Database>,
     userId: number,
     amount: number,
@@ -49,9 +49,9 @@ async function addPveRating(
     elo: number,
     cooldownCheck: (user: any) => boolean,
 ): { eloAdded: number; newElo: number } | null {
-    const user = db.prepare(
+    const user = await db.prepareGet(
         'SELECT lastPveRatingTime, lastBossKillDate, pveRating, elo FROM users WHERE id = ?'
-    ).get(userId) as any;
+    )(userId) as any;
     if (!user) return null;
 
     if (!cooldownCheck(user)) return null;
@@ -72,7 +72,7 @@ async function addPveRating(
 /**
  * Проверка и сброс сезона при необходимости
  */
-async function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
+export async function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
     const season = await db.prepareGet("SELECT * FROM seasons WHERE status = 'active' LIMIT 1")() as any;
     if (!season) return false;
 
