@@ -8,12 +8,12 @@ import { getDrinkBonuses } from '../game/drinks';
 const router = Router();
 
 // Список всех мобов
-router.get('/mobs', async (req: any, res) => {
-    const mobs = await db.prepareAll('SELECT * FROM mobs ORDER BY level, id')() as any[];
+router.get('/mobs', (req: any, res) => {
+    const mobs = db.prepare('SELECT * FROM mobs ORDER BY level, id').all() as any[];
 
     // Собираем изображения и названия материалов по редкостям (первое попавшееся для каждой)
     const craftInfo: Record<number, { image: string; name: string }> = {};
-    const allCraft = await db.prepareAll('SELECT rarity_id, image, name FROM craft_items WHERE image IS NOT NULL')() as any[];
+    const allCraft = db.prepare('SELECT rarity_id, image, name FROM craft_items WHERE image IS NOT NULL').all() as any[];
     for (const c of allCraft) {
         if (!craftInfo[c.rarity_id] && c.image) {
             craftInfo[c.rarity_id] = { image: c.image, name: c.name };
@@ -21,7 +21,7 @@ router.get('/mobs', async (req: any, res) => {
     }
 
     // Обогащаем мобов изображениями лута
-    const enriched = mobs.map(async (m) => {
+    const enriched = mobs.map((m: any) => {
         const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
         const rarityMap: [number, string, string][] = [
             [0, 'loot_junk', 'Хлам'], [1, 'loot_common', 'Обычный'],
@@ -42,7 +42,7 @@ router.get('/mobs', async (req: any, res) => {
 });
 
 // Атака моба
-router.post('/mob/attack', async (req: any, res) => {
+router.post('/mob/attack', (req: any, res) => {
     const userId = req.userId;
     const { mobId } = req.body;
     if (!mobId) return res.status(400).json({ error: 'Не указан ID моба' });
@@ -50,7 +50,7 @@ router.post('/mob/attack', async (req: any, res) => {
     const now = Math.floor(Date.now() / 1000);
 
     // Проверка кулдауна PvE (раздельный с PvP — 5 мин, премиум 2.5 мин)
-    const user = await db.prepareGet('SELECT * FROM users WHERE id = ?')(userId) as any;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const hasPremium = (user.premiumUntil || 0) > now;
@@ -61,7 +61,7 @@ router.post('/mob/attack', async (req: any, res) => {
         return res.status(400).json({ error: `До следующей атаки моба осталось ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
     }
 
-    const mob = await db.prepareGet('SELECT * FROM mobs WHERE id = ?')(mobId) as any;
+    const mob = db.prepare('SELECT * FROM mobs WHERE id = ?').get(mobId) as any;
     if (!mob) return res.status(404).json({ error: 'Моб не найден' });
 
     // Статы игрока
@@ -69,7 +69,7 @@ router.post('/mob/attack', async (req: any, res) => {
     const userEquip = JSON.parse(user.equipment || '{}');
     const { enriched: enrichedEquip } = enrichEquipment(db, userEquip);
     const userStats = currentStats(userBase, enrichedEquip, getDrinkBonuses(user),
-        (await db.prepareGet('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?')(userId) as any).cnt || 0
+        (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0
     );
 
     // Статы моба (s=atk, a=agi, d=def, m=mst)
@@ -214,7 +214,7 @@ router.post('/mob/attack', async (req: any, res) => {
                 } else {
                     inventory.push(materialDropped);
                 }
-                await db.prepareRun('UPDATE users SET inventory = ? WHERE id = ?')(JSON.stringify(inventory), userId);
+                db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
 
                 addStep({ type: 'money', message: `Добыто: ${craftItem.display_name} материал` });
             }
@@ -230,7 +230,7 @@ router.post('/mob/attack', async (req: any, res) => {
     if (!playerWon) {
         goldLost = Math.floor(user.money * 0.1);
         if (goldLost > 0) {
-            await db.prepareRun('UPDATE users SET money = money - ? WHERE id = ?')(goldLost, userId);
+            db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(goldLost, userId);
             addStep({ type: 'money', message: `${mob.name} забирает ${goldLost} монет!` });
         }
     } else {
@@ -259,7 +259,8 @@ router.post('/mob/attack', async (req: any, res) => {
             if (ratingGained > 0) {
                 addStep({ type: 'rating', message: `Рейтинг +${ratingGained}` });
             }
-            await db.prepareRun(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`)(...updateValues, userId);
+            db.prepare(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`)
+                .run(...updateValues, userId);
         }
     }
 
@@ -268,11 +269,13 @@ router.post('/mob/attack', async (req: any, res) => {
     // Налог гильдии (PvE)
     const goldAfterTax = collectGuildTax(db, userId, goldGained, 'tax_pve');
 
-    await db.prepareRun(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`)(newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
+    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`)
+        .run(newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
 
     // Сохраняем в историю PvE
-    await db.prepareRun(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, premiumBonus)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)(userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null, premiumBonus);
+    db.prepare(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, premiumBonus)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null, premiumBonus);
 
     res.json({
         log,

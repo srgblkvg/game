@@ -5,13 +5,13 @@ import { buyItemSchema } from '../validation';
 const router = Router();
 
 // Получить все предметы для магазина
-router.get('/shop/items', async (req: any, res) => {
-    const items = await db.prepareAll(`
+router.get('/shop/items', (req: any, res) => {
+    const items = db.prepare(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color, r.id as rarity_id
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         ORDER BY i.id
-    `)() as any[];
+    `).all() as any[];
 
     const result = items.map((item: any) => ({
         ...item,
@@ -24,22 +24,22 @@ router.get('/shop/items', async (req: any, res) => {
 });
 
 // Купить предмет
-router.post('/shop/buy', async (req: any, res) => {
+router.post('/shop/buy', (req: any, res) => {
     const parsed = buyItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
     const userId = req.userId;
     const { itemId } = parsed.data;
 
-    const user = await db.prepareGet('SELECT money, inventory, inventorySlots FROM users WHERE id = ?')(userId) as any;
+    const user = db.prepare('SELECT money, inventory, inventorySlots FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const dbItem = await db.prepareGet(`
+    const dbItem = db.prepare(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         WHERE i.id = ?
-    `)(itemId) as any;
+    `).get(itemId) as any;
     if (!dbItem) return res.status(404).json({ error: 'Item not found' });
 
     const price = dbItem.cost ?? Math.floor(100 * Math.pow(10, dbItem.rarity_id));
@@ -68,7 +68,8 @@ router.post('/shop/buy', async (req: any, res) => {
 
     inventory.push(newItem);
 
-    await db.prepareRun('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?')(price, JSON.stringify(inventory), userId);
+    db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?')
+        .run(price, JSON.stringify(inventory), userId);
 
     res.json({ success: true, moneyAfter: user.money - price });
 });

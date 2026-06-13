@@ -1,8 +1,8 @@
 import type Database from 'better-sqlite3';
 
-export async function runSeed(db: InstanceType<typeof Database>) {
+export function runSeed(db: InstanceType<typeof Database>) {
   // Начальные редкости
-  const rarityCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM rarities')() as any).cnt;
+  const rarityCount = (db.prepare('SELECT COUNT(*) as cnt FROM rarities').get() as any).cnt;
   if (rarityCount === 0) {
     const insertRarity = db.prepare('INSERT INTO rarities (id, name, display_name, color) VALUES (?, ?, ?, ?)');
     insertRarity.run(0, 'junk', 'Хлам', '#888888');
@@ -15,7 +15,7 @@ export async function runSeed(db: InstanceType<typeof Database>) {
   }
 
   // Начальные предметы (189 предметов — по 21 на каждый слот)
-  const itemCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM items')() as any).cnt;
+  const itemCount = (db.prepare('SELECT COUNT(*) as cnt FROM items').get() as any).cnt;
   if (itemCount === 0) {
     const insert = db.prepare(
       'INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -257,7 +257,7 @@ export async function runSeed(db: InstanceType<typeof Database>) {
   }
 
   // Начальные работы (20 работ) — добавляем только если таблица пуста
-  const jobCount = (await db.prepareGet('SELECT COUNT(*) as c FROM jobs')() as any).c;
+  const jobCount = (db.prepare('SELECT COUNT(*) as c FROM jobs').get() as any).c;
   if (jobCount === 0) {
   const insertJob = db.prepare(
     'INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)'
@@ -296,7 +296,7 @@ export async function runSeed(db: InstanceType<typeof Database>) {
   }
 
   // Начальные названия характеристик
-  const statCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM stat_names')() as any).cnt;
+  const statCount = (db.prepare('SELECT COUNT(*) as cnt FROM stat_names').get() as any).cnt;
   if (statCount === 0) {
     const insert = db.prepare('INSERT INTO stat_names (name, nameRu) VALUES (?, ?)');
     const stats = [
@@ -308,7 +308,7 @@ export async function runSeed(db: InstanceType<typeof Database>) {
   }
 
   // Начальные ресурсы (материалы + камни улучшения)
-  const craftItemCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM craft_items')() as any).cnt;
+  const craftItemCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_items').get() as any).cnt;
   if (craftItemCount === 0) {
     const insertCraft = db.prepare('INSERT INTO craft_items (name, rarity_id, type, image) VALUES (?, ?, ?, ?)');
     // Материалы (type='craft')
@@ -320,20 +320,20 @@ export async function runSeed(db: InstanceType<typeof Database>) {
   }
 
   // Начальные категории рецептов
-  const catCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM craft_recipe_categories')() as any).cnt;
+  const catCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_recipe_categories').get() as any).cnt;
   if (catCount === 0) {
-    await db.prepareRun('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)')('Материалы', 1);
-    await db.prepareRun('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)')('Улучшения', 2);
+    db.prepare('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)').run('Материалы', 1);
+    db.prepare('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)').run('Улучшения', 2);
   }
 
   // Категория «Предметы» (добавляем если нет)
-  try { await db.prepareRun('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)')('Предметы', 3); } catch {}
+  try { db.prepare('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)').run('Предметы', 3); } catch {}
 
   // Начальные шансы улучшения (по редкости и уровню)
-  const upgradeChanceCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM upgrade_chances')() as any).cnt;
+  const upgradeChanceCount = (db.prepare('SELECT COUNT(*) as cnt FROM upgrade_chances').get() as any).cnt;
   // Если данных нет или только одна редкость — перезаполняем все
   if (upgradeChanceCount < 70) {
-    await db.exec('DELETE FROM upgrade_chances');
+    db.exec('DELETE FROM upgrade_chances');
     const insertUpgrade = db.prepare('INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)');
     const chances: number[] = [100, 90, 70, 50, 25, 10, 5, 3, 2, 1];
     const costs: Record<number, number[]> = {
@@ -353,7 +353,7 @@ export async function runSeed(db: InstanceType<typeof Database>) {
   }
 
   // Начальные рецепты крафта (материалы + камни улучшения)
-  const recipeCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM craft_recipes')() as any).cnt;
+  const recipeCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_recipes').get() as any).cnt;
   if (recipeCount === 0) {
     const insertRecipe = db.prepare(
       'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -361,12 +361,13 @@ export async function runSeed(db: InstanceType<typeof Database>) {
     const insertIngredient = db.prepare(
       'INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)'
     );
-    const getCraftItemId = async (name: string): Promise<number> =>
-      (await db.prepareGet('SELECT id FROM craft_items WHERE name = ?')(name) as any).id;
-    const getCatId = async (name: string): Promise<number> =>
-      (await db.prepareGet('SELECT id FROM craft_recipe_categories WHERE name = ?')(name) as any).id;
-    const matCatId = await getCatId('Материалы');
-    const upgCatId = await getCatId('Улучшения');
+    const getCraftItemId = (name: string): number =>
+      (db.prepare('SELECT id FROM craft_items WHERE name = ?').get(name) as any).id;
+    const getCatId = (name: string): number =>
+      (db.prepare('SELECT id FROM craft_recipe_categories WHERE name = ?').get(name) as any).id;
+
+    const matCatId = getCatId('Материалы');
+    const upgCatId = getCatId('Улучшения');
 
     // Рецепты улучшения материалов (раздел «Материалы»)
     const materialRecipes: Array<{
@@ -401,17 +402,17 @@ export async function runSeed(db: InstanceType<typeof Database>) {
     ];
 
     for (const r of allRecipes) {
-      const info = insertRecipe.run(r.name, r.description, r.cost, 'craft_item', await getCraftItemId(r.result), r.chance, r.categoryId);
+      const info = insertRecipe.run(r.name, r.description, r.cost, 'craft_item', getCraftItemId(r.result), r.chance, r.categoryId);
       const recipeId = info.lastInsertRowid;
       for (const ing of r.ingredients) {
-        insertIngredient.run(recipeId, await getCraftItemId(ing.name), ing.qty);
+        insertIngredient.run(recipeId, getCraftItemId(ing.name), ing.qty);
       }
     }
   }
 
   // Рецепты случайных предметов (всегда проверяем, добавляем если нет)
   {
-    const itemRecipeCount = (await db.prepareGet("SELECT COUNT(*) as cnt FROM craft_recipes WHERE result_type = 'random_item'")() as any).cnt;
+    const itemRecipeCount = (db.prepare("SELECT COUNT(*) as cnt FROM craft_recipes WHERE result_type = 'random_item'").get() as any).cnt;
     if (itemRecipeCount === 0) {
       const insertRecipe = db.prepare(
         'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -419,11 +420,12 @@ export async function runSeed(db: InstanceType<typeof Database>) {
       const insertIngredient = db.prepare(
         'INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)'
       );
-      const getCraftItemId = async (name: string): Promise<number> =>
-        (await db.prepareGet('SELECT id FROM craft_items WHERE name = ?')(name) as any).id;
-      const getCatId = async (name: string): Promise<number> =>
-        (await db.prepareGet('SELECT id FROM craft_recipe_categories WHERE name = ?')(name) as any).id;
-      const itemCatId = await getCatId('Предметы');
+      const getCraftItemId = (name: string): number =>
+        (db.prepare('SELECT id FROM craft_items WHERE name = ?').get(name) as any).id;
+      const getCatId = (name: string): number =>
+        (db.prepare('SELECT id FROM craft_recipe_categories WHERE name = ?').get(name) as any).id;
+
+      const itemCatId = getCatId('Предметы');
       const itemRecipes: Array<{
         name: string; description: string; cost: number;
         rarity: number; chance: number; ingredients: Array<{ name: string; qty: number }>;
@@ -440,14 +442,14 @@ export async function runSeed(db: InstanceType<typeof Database>) {
         const info = insertRecipe.run(r.name, r.description, r.cost, 'random_item', r.rarity, r.chance, itemCatId);
         const recipeId = info.lastInsertRowid;
         for (const ing of r.ingredients) {
-          insertIngredient.run(recipeId, await getCraftItemId(ing.name), ing.qty);
+          insertIngredient.run(recipeId, getCraftItemId(ing.name), ing.qty);
         }
       }
     }
   }
 
   // Мобы (PvE бестиарий)
-  const mobCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM mobs')() as any).cnt;
+  const mobCount = (db.prepare('SELECT COUNT(*) as cnt FROM mobs').get() as any).cnt;
   if (mobCount === 0) {
     const insertMob = db.prepare(`INSERT INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max,
       loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location)
@@ -496,7 +498,7 @@ export async function runSeed(db: InstanceType<typeof Database>) {
   }
 
   // Стандартные сеты коллекций (7 редкостей)
-  const collectionSetCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM collection_sets')() as any).cnt;
+  const collectionSetCount = (db.prepare('SELECT COUNT(*) as cnt FROM collection_sets').get() as any).cnt;
   if (collectionSetCount === 0) {
     const allSlots = ['helmet', 'chest', 'gloves', 'boots', 'weapon1', 'shield', 'amulet', 'ring', 'belt'];
     const raritySetNames = ['Коллекция Хлама', 'Коллекция Обычных', 'Коллекция Необычных', 'Коллекция Редких', 'Коллекция Эпических', 'Коллекция Легендарных', 'Коллекция Мифических'];
@@ -507,7 +509,7 @@ export async function runSeed(db: InstanceType<typeof Database>) {
       const info = insertSet.run(raritySetNames[rarity], `Все предметы редкости ${rarity}`, rarity + 1, rarity + 1);
       const setId = info.lastInsertRowid as number;
 
-      const rarityItems = await db.prepareAll('SELECT name, slot FROM items WHERE rarity_id = ?')(rarity) as any[];
+      const rarityItems = db.prepare('SELECT name, slot FROM items WHERE rarity_id = ?').all(rarity) as any[];
       for (const item of rarityItems) {
         insertSetItem.run(setId, item.name, item.slot);
       }

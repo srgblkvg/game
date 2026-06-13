@@ -31,17 +31,17 @@ const BASE_REWARDS: Record<QuestType, { xp: number; money: number }> = {
     job: { xp: 3, money: 20 }, craft: { xp: 3, money: 25 }, auction: { xp: 3, money: 50 },
 };
 
-async function getToday(): string {
+function getToday(): string {
     return new Date().toISOString().slice(0, 10);
 }
 
-async function getMidnightTS(): number {
+function getMidnightTS(): number {
     const d = new Date();
     d.setUTCHours(24, 0, 0, 0);
     return Math.floor(d.getTime() / 1000);
 }
 
-async function getSnapshot(userId: number): Record<string, number> {
+function getSnapshot(userId: number): Record<string, number> {
     const u = db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
@@ -54,7 +54,7 @@ async function getSnapshot(userId: number): Record<string, number> {
     };
 }
 
-async function getProgress(userId: number, snapshot: any, questType: QuestType): number {
+function getProgress(userId: number, snapshot: any, questType: QuestType): number {
     const u = db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
@@ -70,7 +70,7 @@ async function getProgress(userId: number, snapshot: any, questType: QuestType):
 }
 
 // Получить/сгенерировать квесты
-router.get('/tavern/quests', async (req: any, res) => {
+router.get('/tavern/quests', (req: any, res) => {
     const userId = req.userId;
     const today = getToday();
 
@@ -118,7 +118,7 @@ router.get('/tavern/quests', async (req: any, res) => {
         if (q.status === 'active') {
             const prog = getProgress(userId, q.snapshot, q.questType);
             if (prog !== q.progress) {
-                await db.prepareRun('UPDATE daily_quests SET progress = ? WHERE id = ?')(Math.min(prog, q.requirement), q.id);
+                db.prepare('UPDATE daily_quests SET progress = ? WHERE id = ?').run(Math.min(prog, q.requirement), q.id);
                 q.progress = Math.min(prog, q.requirement);
             }
         }
@@ -129,7 +129,7 @@ router.get('/tavern/quests', async (req: any, res) => {
     const canTake = activeCount < 3 && completedToday < 5;
 
     res.json({
-        quests: quests.filter((q: any) => q.status !== 'claimed').map(async (q) => {
+        quests: quests.filter((q: any) => q.status !== 'claimed').map((q: any) => {
             const qt = q.questType as QuestType;
             const info = QUEST_INFO[qt];
             return {
@@ -151,12 +151,12 @@ router.get('/tavern/quests', async (req: any, res) => {
 });
 
 // Взять квест
-router.post('/tavern/quests/take', async (req: any, res) => {
+router.post('/tavern/quests/take', (req: any, res) => {
     const userId = req.userId;
     const questId = parseInt(req.body.questId);
     if (!questId) return res.status(400).json({ error: 'Укажите questId' });
 
-    const quest = await db.prepareGet('SELECT * FROM daily_quests WHERE id = ? AND userId = ?')(questId, userId) as any;
+    const quest = db.prepare('SELECT * FROM daily_quests WHERE id = ? AND userId = ?').get(questId, userId) as any;
     if (!quest) return res.status(404).json({ error: 'Квест не найден' });
     if (quest.status !== 'available') return res.status(400).json({ error: 'Квест недоступен' });
 
@@ -172,18 +172,19 @@ router.post('/tavern/quests/take', async (req: any, res) => {
     if (completedToday >= 5) return res.status(400).json({ error: 'Дневной лимит выполнен' });
 
     const snapshot = JSON.stringify(getSnapshot(userId));
-    await db.prepareRun('UPDATE daily_quests SET status = ?, snapshot = ?, progress = 0 WHERE id = ?')('active', snapshot, questId);
+    db.prepare('UPDATE daily_quests SET status = ?, snapshot = ?, progress = 0 WHERE id = ?')
+        .run('active', snapshot, questId);
 
     res.json({ success: true });
 });
 
 // Сдать квест
-router.post('/tavern/quests/claim', async (req: any, res) => {
+router.post('/tavern/quests/claim', (req: any, res) => {
     const userId = req.userId;
     const questId = parseInt(req.body.questId);
     if (!questId) return res.status(400).json({ error: 'Укажите questId' });
 
-    const quest = await db.prepareGet('SELECT * FROM daily_quests WHERE id = ? AND userId = ?')(questId, userId) as any;
+    const quest = db.prepare('SELECT * FROM daily_quests WHERE id = ? AND userId = ?').get(questId, userId) as any;
     if (!quest) return res.status(404).json({ error: 'Квест не найден' });
     if (quest.status !== 'active') return res.status(400).json({ error: 'Квест не активен' });
 
@@ -192,10 +193,13 @@ router.post('/tavern/quests/claim', async (req: any, res) => {
         return res.status(400).json({ error: `Прогресс: ${prog}/${quest.requirement}` });
     }
 
-    await db.prepareRun('UPDATE users SET money = money + ?, exp = exp + ? WHERE id = ?')(quest.rewardMoney, quest.rewardXp, userId);
-    await db.prepareRun('UPDATE daily_quests SET status = ?, progress = ? WHERE id = ?')('claimed', quest.requirement, questId);
+    db.prepare('UPDATE users SET money = money + ?, exp = exp + ? WHERE id = ?')
+        .run(quest.rewardMoney, quest.rewardXp, userId);
+    db.prepare('UPDATE daily_quests SET status = ?, progress = ? WHERE id = ?')
+        .run('claimed', quest.requirement, questId);
 
-    await db.prepareRun('INSERT INTO quest_history (userId, questType, difficulty, typeName, rewardXp, rewardMoney) VALUES (?, ?, ?, ?, ?, ?)')(userId, quest.questType, quest.difficulty, QUEST_INFO[quest.questType as QuestType]?.name || quest.questType, quest.rewardXp, quest.rewardMoney);
+    db.prepare('INSERT INTO quest_history (userId, questType, difficulty, typeName, rewardXp, rewardMoney) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(userId, quest.questType, quest.difficulty, QUEST_INFO[quest.questType as QuestType]?.name || quest.questType, quest.rewardXp, quest.rewardMoney);
 
     // Выдаём новый квест того же типа со случайной сложностью
     const today = getToday();
@@ -204,9 +208,10 @@ router.post('/tavern/quests/claim', async (req: any, res) => {
     const d = DIFFICULTIES[newDiff];
     const newReq = d.req[quest.questType as QuestType];
     const rw = BASE_REWARDS[quest.questType as QuestType];
-    await db.prepareRun('INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')(userId, quest.questType, newDiff, newReq, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(getSnapshot(userId)), today);
+    db.prepare('INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(userId, quest.questType, newDiff, newReq, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(getSnapshot(userId)), today);
 
-    const updated = await db.prepareGet('SELECT money, exp FROM users WHERE id = ?')(userId) as any;
+    const updated = db.prepare('SELECT money, exp FROM users WHERE id = ?').get(userId) as any;
     res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: quest.rewardMoney, money: updated.money, exp: updated.exp });
 });
 

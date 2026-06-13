@@ -4,19 +4,19 @@ import db from '../database';
 
 const router = Router();
 
-router.get('/chat/recent', async (req: any, res) => {
+router.get('/chat/recent', (req: any, res) => {
   const userId = req.userId;
   const limit = parseInt(req.query.limit as string) || 20;
-  const messages = await db.prepareAll(`
+  const messages = db.prepare(`
     SELECT m.*, u.username as senderName
     FROM chat_messages m
     JOIN users u ON m.senderId = u.id
     WHERE m.targetId IS NULL OR m.senderId = ? OR m.targetId = ?
     ORDER BY m.createdAt DESC
     LIMIT ?
-  `)(userId, userId, limit);
+  `).all(userId, userId, limit);
 
-  const result = messages.map(async (m) => {
+  const result = messages.map((m: any) => {
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);
@@ -30,32 +30,32 @@ router.get('/chat/recent', async (req: any, res) => {
 });
 
 // Получить список собеседников, с которыми у текущего игрока были личные сообщения
-router.get('/chat/private/peers', async (req: any, res) => {
+router.get('/chat/private/peers', (req: any, res) => {
   const userId = req.userId;
-  const peers = await db.prepareAll(`
+  const peers = db.prepare(`
     SELECT DISTINCT u.id, u.username
     FROM chat_messages m
     JOIN users u ON (u.id = CASE WHEN m.senderId = ? THEN m.targetId ELSE m.senderId END)
     WHERE m.targetId IS NOT NULL AND (m.senderId = ? OR m.targetId = ?)
-  `)(userId, userId, userId);
+  `).all(userId, userId, userId);
   res.json(peers);
 });
 
 // Получить личные сообщения с конкретным пользователем
-router.get('/chat/private/:userId', async (req: any, res) => {
+router.get('/chat/private/:userId', (req: any, res) => {
   const currentUserId = req.userId;
   const otherUserId = parseInt(req.params.userId);
   const limit = parseInt(req.query.limit as string) || 100;
-  const messages = await db.prepareAll(`
+  const messages = db.prepare(`
     SELECT m.*, u.username as senderName
     FROM chat_messages m
     JOIN users u ON m.senderId = u.id
     WHERE (m.senderId = ? AND m.targetId = ?) OR (m.senderId = ? AND m.targetId = ?)
     ORDER BY m.createdAt DESC
     LIMIT ?
-  `)(currentUserId, otherUserId, otherUserId, currentUserId, limit);
+  `).all(currentUserId, otherUserId, otherUserId, currentUserId, limit);
 
-  const result = messages.map(async (m) => {
+  const result = messages.map((m: any) => {
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);

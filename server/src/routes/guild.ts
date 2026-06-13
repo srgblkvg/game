@@ -5,16 +5,16 @@ import { broadcast } from '../websocket';
 const router = Router();
 
 // Создать гильдию
-router.post('/guild/create', async (req: any, res) => {
+router.post('/guild/create', (req: any, res) => {
     const userId = req.userId;
     const { name, description, joinType } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: 'Укажите название гильдии' });
     if (!['open', 'request', 'invite'].includes(joinType || 'open')) return res.status(400).json({ error: 'Неверный тип вступления' });
 
-    const existing = await db.prepareGet('SELECT id FROM guilds WHERE name = ?')(name.trim());
+    const existing = db.prepare('SELECT id FROM guilds WHERE name = ?').get(name.trim());
     if (existing) return res.status(400).json({ error: 'Гильдия с таким названием уже существует' });
 
-    const alreadyInGuild = await db.prepareGet('SELECT guildId FROM users WHERE id = ?')(userId) as any;
+    const alreadyInGuild = db.prepare('SELECT guildId FROM users WHERE id = ?').get(userId) as any;
     if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии. Покиньте текущую чтобы создать новую.' });
 
     const info = db.prepare(
@@ -22,14 +22,14 @@ router.post('/guild/create', async (req: any, res) => {
     ).run(name.trim(), description || '', userId, joinType || 'open');
 
     const guildId = info.lastInsertRowid;
-    await db.prepareRun('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)')(guildId, userId, 'leader');
-    await db.prepareRun('UPDATE users SET guildId = ? WHERE id = ?')(guildId, userId);
+    db.prepare('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)').run(guildId, userId, 'leader');
+    db.prepare('UPDATE users SET guildId = ? WHERE id = ?').run(guildId, userId);
 
     res.json({ success: true, guildId: Number(guildId), name: name.trim() });
 });
 
 // Информация о моей гильдии
-router.get('/guild/my', async (req: any, res) => {
+router.get('/guild/my', (req: any, res) => {
     const userId = req.userId;
     const member = db.prepare(
         'SELECT gm.*, g.name, g.description, g.joinType, g.level, g.exp, g.leaderId, g.treasury, g.taxRate, g.createdAt FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?'
@@ -48,8 +48,8 @@ router.get('/guild/my', async (req: any, res) => {
     const war = isGuildAtWar(member.guildId);
     let warInfo = null;
     if (war) {
-        const attackerGuild = await db.prepareGet('SELECT id, name FROM guilds WHERE id = ?')(war.attackerGuildId) as any;
-        const defenderGuild = await db.prepareGet('SELECT id, name FROM guilds WHERE id = ?')(war.defenderGuildId) as any;
+        const attackerGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.attackerGuildId) as any;
+        const defenderGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.defenderGuildId) as any;
         warInfo = {
             id: war.id,
             attackerGuild,
@@ -84,8 +84,8 @@ router.get('/guild/my', async (req: any, res) => {
 });
 
 // Список гильдий (должен быть до /guild/:id)
-router.get('/guild/list', async (req: any, res) => {
-    const guilds = await db.prepareAll(`
+router.get('/guild/list', (req: any, res) => {
+    const guilds = db.prepare(`
         SELECT g.*, u.username as leaderName, u.id as leaderUserId,
             (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount,
             (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status IN ('pending','active') LIMIT 1) as warStatus,
@@ -94,12 +94,12 @@ router.get('/guild/list', async (req: any, res) => {
         JOIN users u ON g.leaderId = u.id
         ORDER BY g.treasury DESC, g.level DESC
         LIMIT 50
-    `)();
+    `).all();
 
     // Дополнить war-инфой
-    const result = (guilds as any[]).map(async (g) => {
+    const result = (guilds as any[]).map((g: any) => {
         if (g.warId) {
-            const war = await db.prepareGet(`SELECT gw.*, a.name as attackerName, d.name as defenderName FROM guild_wars gw JOIN guilds a ON gw.attackerGuildId = a.id JOIN guilds d ON gw.defenderGuildId = d.id WHERE gw.id = ?`)(g.warId) as any;
+            const war = db.prepare(`SELECT gw.*, a.name as attackerName, d.name as defenderName FROM guild_wars gw JOIN guilds a ON gw.attackerGuildId = a.id JOIN guilds d ON gw.defenderGuildId = d.id WHERE gw.id = ?`).get(g.warId) as any;
             if (war) {
                 const opponentName = war.attackerGuildId === g.id ? war.defenderName : war.attackerName;
                 g.warStatus = war.status;
@@ -113,63 +113,63 @@ router.get('/guild/list', async (req: any, res) => {
 });
 
 // Заявки на вступление (для лидера/офицеров)
-router.get('/guild/requests', async (req: any, res) => {
+router.get('/guild/requests', (req: any, res) => {
     const userId = req.userId;
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
 
-    const requests = await db.prepareAll(`
+    const requests = db.prepare(`
         SELECT gi.*, u.username
         FROM guild_invites gi
         JOIN users u ON gi.userId = u.id
         WHERE gi.guildId = ? AND gi.status = 'pending' AND gi.invitedBy = 0
         ORDER BY gi.createdAt DESC
-    `)(member.guildId);
+    `).all(member.guildId);
     res.json(requests);
 });
 
 // Мои приглашения
-router.get('/guild/invites', async (req: any, res) => {
+router.get('/guild/invites', (req: any, res) => {
     const userId = req.userId;
-    const invites = await db.prepareAll(`
+    const invites = db.prepare(`
         SELECT gi.*, g.name as guildName, u.username as inviterName
         FROM guild_invites gi
         JOIN guilds g ON gi.guildId = g.id
         LEFT JOIN users u ON gi.invitedBy = u.id
         WHERE gi.userId = ? AND gi.status = 'pending'
         ORDER BY gi.createdAt DESC
-    `)(userId);
+    `).all(userId);
     res.json(invites);
 });
 
 // --- Гильд-чат ---
-router.get('/guild/chat', async (req: any, res) => {
+router.get('/guild/chat', (req: any, res) => {
     const userId = req.userId;
-    const member = await db.prepareGet('SELECT guildId FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
     const guildId = member.guildId;
-    const messages = await db.prepareAll(`
+    const messages = db.prepare(`
         SELECT m.*, u.username as senderName
         FROM chat_messages m
         JOIN users u ON m.senderId = u.id
         WHERE m.targetId = ?
         ORDER BY m.createdAt DESC
         LIMIT 10
-    `)(-guildId);
+    `).all(-guildId);
     res.json(messages.reverse());
 });
 
-router.post('/guild/chat', async (req: any, res) => {
+router.post('/guild/chat', (req: any, res) => {
     const userId = req.userId;
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'Пустое сообщение' });
 
-    const member = await db.prepareGet('SELECT guildId FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
     const guildId = member.guildId;
-    const sender = await db.prepareGet('SELECT username FROM users WHERE id = ?')(userId) as any;
+    const sender = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
     const info = db.prepare(
         'INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)'
     ).run(userId, -guildId, content);
@@ -184,7 +184,7 @@ router.post('/guild/chat', async (req: any, res) => {
     };
 
     // Рассылаем всем членам гильдии
-    const members = await db.prepareAll('SELECT userId FROM guild_members WHERE guildId = ?')(guildId) as any[];
+    const members = db.prepare('SELECT userId FROM guild_members WHERE guildId = ?').all(guildId) as any[];
     const { broadcast } = require('../websocket');
     members.forEach((m: any) => {
         broadcast('message', { message: msg }, m.userId === userId ? undefined : undefined);
@@ -195,9 +195,9 @@ router.post('/guild/chat', async (req: any, res) => {
 });
 
 // Публичная информация о гильдии
-router.get('/guild/:id', async (req: any, res) => {
+router.get('/guild/:id', (req: any, res) => {
     const guildId = parseInt(req.params.id);
-    const guild = await db.prepareGet('SELECT g.*, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?')(guildId) as any;
+    const guild = db.prepare('SELECT g.*, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?').get(guildId) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
 
     const members = db.prepare(
@@ -210,8 +210,8 @@ router.get('/guild/:id', async (req: any, res) => {
     const war = isGuildAtWar(guildId);
     let warInfo = null;
     if (war) {
-        const attackerGuild = await db.prepareGet('SELECT id, name FROM guilds WHERE id = ?')(war.attackerGuildId) as any;
-        const defenderGuild = await db.prepareGet('SELECT id, name FROM guilds WHERE id = ?')(war.defenderGuildId) as any;
+        const attackerGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.attackerGuildId) as any;
+        const defenderGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.defenderGuildId) as any;
         warInfo = {
             id: war.id,
             attackerGuild,
@@ -227,32 +227,32 @@ router.get('/guild/:id', async (req: any, res) => {
 });
 
 // Вступить в открытую гильдию
-router.post('/guild/join/:id', async (req: any, res) => {
+router.post('/guild/join/:id', (req: any, res) => {
     const userId = req.userId;
     const guildId = parseInt(req.params.id);
 
-    const alreadyInGuild = await db.prepareGet('SELECT guildId FROM users WHERE id = ?')(userId) as any;
+    const alreadyInGuild = db.prepare('SELECT guildId FROM users WHERE id = ?').get(userId) as any;
     if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
 
-    const guild = await db.prepareGet('SELECT * FROM guilds WHERE id = ?')(guildId) as any;
+    const guild = db.prepare('SELECT * FROM guilds WHERE id = ?').get(guildId) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
     if (guild.joinType !== 'open') return res.status(400).json({ error: 'Гильдия доступна только по заявке или приглашению' });
 
-    await db.prepareRun('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)')(guildId, userId, 'member');
-    await db.prepareRun('UPDATE users SET guildId = ? WHERE id = ?')(guildId, userId);
+    db.prepare('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)').run(guildId, userId, 'member');
+    db.prepare('UPDATE users SET guildId = ? WHERE id = ?').run(guildId, userId);
 
     res.json({ success: true });
 });
 
 // Подать заявку
-router.post('/guild/request/:id', async (req: any, res) => {
+router.post('/guild/request/:id', (req: any, res) => {
     const userId = req.userId;
     const guildId = parseInt(req.params.id);
 
-    const alreadyInGuild = await db.prepareGet('SELECT guildId FROM users WHERE id = ?')(userId) as any;
+    const alreadyInGuild = db.prepare('SELECT guildId FROM users WHERE id = ?').get(userId) as any;
     if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
 
-    const guild = await db.prepareGet('SELECT * FROM guilds WHERE id = ?')(guildId) as any;
+    const guild = db.prepare('SELECT * FROM guilds WHERE id = ?').get(guildId) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
     if (guild.joinType !== 'request') return res.status(400).json({ error: 'Эта гильдия не принимает заявки' });
 
@@ -261,21 +261,21 @@ router.post('/guild/request/:id', async (req: any, res) => {
     ).get(guildId, userId);
     if (existing) return res.status(400).json({ error: 'Заявка уже отправлена' });
 
-    await db.prepareRun('INSERT INTO guild_invites (guildId, userId, invitedBy) VALUES (?, ?, ?)')(guildId, userId, 0);
+    db.prepare('INSERT INTO guild_invites (guildId, userId, invitedBy) VALUES (?, ?, ?)').run(guildId, userId, 0);
     res.json({ success: true });
 });
 
 // Пригласить игрока (отправить ЛС)
-router.post('/guild/invite', async (req: any, res) => {
+router.post('/guild/invite', (req: any, res) => {
     const userId = req.userId;
     const { targetId } = req.body;
     if (!targetId) return res.status(400).json({ error: 'Укажите targetId' });
 
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не состоите в гильдии' });
     if (member.rank !== 'leader' && member.rank !== 'officer') return res.status(400).json({ error: 'Только лидер и офицеры могут приглашать' });
 
-    const target = await db.prepareGet('SELECT id, username, guildId FROM users WHERE id = ?')(targetId) as any;
+    const target = db.prepare('SELECT id, username, guildId FROM users WHERE id = ?').get(targetId) as any;
     if (!target) return res.status(404).json({ error: 'Игрок не найден' });
     if (target.guildId) return res.status(400).json({ error: 'Игрок уже в гильдии' });
 
@@ -291,17 +291,17 @@ router.post('/guild/invite', async (req: any, res) => {
             return res.status(400).json({ error: `Приглашение уже отправлено. Повторно можно через ${remaining} мин` });
         }
         // Старое приглашение — отменяем
-        await db.prepareRun("UPDATE guild_invites SET status = 'declined' WHERE id = ?")(existing.id);
+        db.prepare("UPDATE guild_invites SET status = 'declined' WHERE id = ?").run(existing.id);
     }
 
-    const guild = await db.prepareGet('SELECT name FROM guilds WHERE id = ?')(member.guildId) as any;
+    const guild = db.prepare('SELECT name FROM guilds WHERE id = ?').get(member.guildId) as any;
 
-    await db.prepareRun('INSERT INTO guild_invites (guildId, userId, invitedBy) VALUES (?, ?, ?)')(member.guildId, targetId, userId);
+    db.prepare('INSERT INTO guild_invites (guildId, userId, invitedBy) VALUES (?, ?, ?)').run(member.guildId, targetId, userId);
 
     // ЛС с приглашением
-    const inviter = await db.prepareGet('SELECT username FROM users WHERE id = ?')(userId) as any;
+    const inviter = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
     const msg = `🏚️ ${inviter.username} приглашает вас в гильдию «${guild.name}». Нажмите чтобы принять.`;
-    const info = await db.prepareRun('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)')(0, targetId, msg, JSON.stringify({ type: 'guild_invite', guildId: member.guildId, guildName: guild.name }));
+    const info = db.prepare('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)').run(0, targetId, msg, JSON.stringify({ type: 'guild_invite', guildId: member.guildId, guildName: guild.name }));
 
     broadcast('message', { message: {
         id: info.lastInsertRowid, senderId: 0, senderName: 'system', targetId,
@@ -313,7 +313,7 @@ router.post('/guild/invite', async (req: any, res) => {
 });
 
 // Принять / отклонить приглашение (по guildId)
-router.post('/guild/accept-invite', async (req: any, res) => {
+router.post('/guild/accept-invite', (req: any, res) => {
     const userId = req.userId;
     const { guildId, accept } = req.body;
     if (!guildId) return res.status(400).json({ error: 'Укажите guildId' });
@@ -324,132 +324,132 @@ router.post('/guild/accept-invite', async (req: any, res) => {
     if (!invite) return res.status(404).json({ error: 'Приглашение не найдено' });
 
     if (accept) {
-        const alreadyInGuild = await db.prepareGet('SELECT guildId FROM users WHERE id = ?')(userId) as any;
+        const alreadyInGuild = db.prepare('SELECT guildId FROM users WHERE id = ?').get(userId) as any;
         if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
 
-        await db.prepareRun('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)')(guildId, userId, 'member');
-        await db.prepareRun('UPDATE users SET guildId = ? WHERE id = ?')(guildId, userId);
-        await db.prepareRun("UPDATE guild_invites SET status = 'accepted' WHERE guildId = ? AND userId = ? AND status = 'pending'")(guildId, userId);
+        db.prepare('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)').run(guildId, userId, 'member');
+        db.prepare('UPDATE users SET guildId = ? WHERE id = ?').run(guildId, userId);
+        db.prepare("UPDATE guild_invites SET status = 'accepted' WHERE guildId = ? AND userId = ? AND status = 'pending'").run(guildId, userId);
     } else {
-        await db.prepareRun("UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND userId = ? AND status = 'pending'")(guildId, userId);
+        db.prepare("UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND userId = ? AND status = 'pending'").run(guildId, userId);
     }
 
     res.json({ success: true });
 });
 
 // Принять / отклонить приглашение (по ID)
-router.post('/guild/invite/:id', async (req: any, res) => {
+router.post('/guild/invite/:id', (req: any, res) => {
     const userId = req.userId;
     const inviteId = parseInt(req.params.id);
     const { accept } = req.body; // true/false
 
-    const invite = await db.prepareGet('SELECT * FROM guild_invites WHERE id = ? AND userId = ? AND status = ?')(inviteId, userId, 'pending') as any;
+    const invite = db.prepare('SELECT * FROM guild_invites WHERE id = ? AND userId = ? AND status = ?').get(inviteId, userId, 'pending') as any;
     if (!invite) return res.status(404).json({ error: 'Приглашение не найдено' });
 
     if (accept) {
-        const alreadyInGuild = await db.prepareGet('SELECT guildId FROM users WHERE id = ?')(userId) as any;
+        const alreadyInGuild = db.prepare('SELECT guildId FROM users WHERE id = ?').get(userId) as any;
         if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
 
-        await db.prepareRun('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)')(invite.guildId, userId, 'member');
-        await db.prepareRun('UPDATE users SET guildId = ? WHERE id = ?')(invite.guildId, userId);
-        await db.prepareRun('UPDATE guild_invites SET status = ? WHERE id = ?')('accepted', inviteId);
+        db.prepare('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)').run(invite.guildId, userId, 'member');
+        db.prepare('UPDATE users SET guildId = ? WHERE id = ?').run(invite.guildId, userId);
+        db.prepare('UPDATE guild_invites SET status = ? WHERE id = ?').run('accepted', inviteId);
     } else {
-        await db.prepareRun('UPDATE guild_invites SET status = ? WHERE id = ?')('declined', inviteId);
+        db.prepare('UPDATE guild_invites SET status = ? WHERE id = ?').run('declined', inviteId);
     }
 
     // Удаляем другие pending приглашения для этого игрока
     if (accept) {
-        await db.prepareRun("DELETE FROM guild_invites WHERE userId = ? AND id != ? AND status = 'pending'")(userId, inviteId);
+        db.prepare("DELETE FROM guild_invites WHERE userId = ? AND id != ? AND status = 'pending'").run(userId, inviteId);
     }
 
     res.json({ success: true });
 });
 
 // Принять/отклонить заявку (для лидера/офицеров)
-router.post('/guild/handle-request', async (req: any, res) => {
+router.post('/guild/handle-request', (req: any, res) => {
     const userId = req.userId;
     const { requestId, accept } = req.body;
 
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
 
-    const invite = await db.prepareGet("SELECT * FROM guild_invites WHERE id = ? AND guildId = ? AND status = 'pending'")(requestId, member.guildId) as any;
+    const invite = db.prepare("SELECT * FROM guild_invites WHERE id = ? AND guildId = ? AND status = 'pending'").get(requestId, member.guildId) as any;
     if (!invite) return res.status(404).json({ error: 'Заявка не найдена' });
 
     if (accept) {
-        const targetGuild = await db.prepareGet('SELECT guildId FROM users WHERE id = ?')(invite.userId) as any;
+        const targetGuild = db.prepare('SELECT guildId FROM users WHERE id = ?').get(invite.userId) as any;
         if (targetGuild?.guildId) return res.status(400).json({ error: 'Игрок уже в гильдии' });
 
-        await db.prepareRun('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)')(member.guildId, invite.userId, 'member');
-        await db.prepareRun('UPDATE users SET guildId = ? WHERE id = ?')(member.guildId, invite.userId);
-        await db.prepareRun('UPDATE guild_invites SET status = ? WHERE id = ?')('accepted', requestId);
+        db.prepare('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)').run(member.guildId, invite.userId, 'member');
+        db.prepare('UPDATE users SET guildId = ? WHERE id = ?').run(member.guildId, invite.userId);
+        db.prepare('UPDATE guild_invites SET status = ? WHERE id = ?').run('accepted', requestId);
     } else {
-        await db.prepareRun('UPDATE guild_invites SET status = ? WHERE id = ?')('declined', requestId);
+        db.prepare('UPDATE guild_invites SET status = ? WHERE id = ?').run('declined', requestId);
     }
 
     res.json({ success: true });
 });
 
 // Покинуть гильдию
-router.post('/guild/leave', async (req: any, res) => {
+router.post('/guild/leave', (req: any, res) => {
     const userId = req.userId;
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
     if (member.rank === 'leader') {
-        const otherMembers = await db.prepareGet('SELECT COUNT(*) as cnt FROM guild_members WHERE guildId = ? AND userId != ?')(member.guildId, userId) as any;
+        const otherMembers = db.prepare('SELECT COUNT(*) as cnt FROM guild_members WHERE guildId = ? AND userId != ?').get(member.guildId, userId) as any;
         if (otherMembers.cnt > 0) return res.status(400).json({ error: 'Передайте лидерство другому члену перед выходом' });
-        await db.prepareRun('DELETE FROM guilds WHERE id = ?')(member.guildId);
+        db.prepare('DELETE FROM guilds WHERE id = ?').run(member.guildId);
     }
 
-    await db.prepareRun('DELETE FROM guild_members WHERE guildId = ? AND userId = ?')(member.guildId, userId);
-    await db.prepareRun('UPDATE users SET guildId = NULL WHERE id = ?')(userId);
+    db.prepare('DELETE FROM guild_members WHERE guildId = ? AND userId = ?').run(member.guildId, userId);
+    db.prepare('UPDATE users SET guildId = NULL WHERE id = ?').run(userId);
 
     res.json({ success: true });
 });
 
 // Исключить участника (лидер/офицер)
-router.post('/guild/kick', async (req: any, res) => {
+router.post('/guild/kick', (req: any, res) => {
     const userId = req.userId;
     const { targetId } = req.body;
     if (!targetId) return res.status(400).json({ error: 'Укажите targetId' });
 
-    const actor = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const actor = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!actor || (actor.rank !== 'leader' && actor.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
 
-    const target = await db.prepareGet('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?')(actor.guildId, targetId) as any;
+    const target = db.prepare('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?').get(actor.guildId, targetId) as any;
     if (!target) return res.status(400).json({ error: 'Игрок не в гильдии' });
     if (target.rank === 'leader') return res.status(400).json({ error: 'Нельзя исключить лидера' });
     if (actor.rank === 'officer' && target.rank === 'officer') return res.status(400).json({ error: 'Офицер не может исключить другого офицера' });
 
-    await db.prepareRun('DELETE FROM guild_members WHERE guildId = ? AND userId = ?')(actor.guildId, targetId);
-    await db.prepareRun('UPDATE users SET guildId = NULL WHERE id = ?')(targetId);
+    db.prepare('DELETE FROM guild_members WHERE guildId = ? AND userId = ?').run(actor.guildId, targetId);
+    db.prepare('UPDATE users SET guildId = NULL WHERE id = ?').run(targetId);
 
     res.json({ success: true });
 });
 
 // Сменить роль участника (только лидер)
-router.post('/guild/role', async (req: any, res) => {
+router.post('/guild/role', (req: any, res) => {
     const userId = req.userId;
     const { targetId, rank } = req.body;
     if (!targetId || !rank) return res.status(400).json({ error: 'Укажите targetId и rank' });
     if (!['officer', 'member'].includes(rank)) return res.status(400).json({ error: 'Неверный ранг' });
 
-    const actor = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const actor = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!actor || actor.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может менять роли' });
 
-    const target = await db.prepareGet('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?')(actor.guildId, targetId) as any;
+    const target = db.prepare('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?').get(actor.guildId, targetId) as any;
     if (!target) return res.status(400).json({ error: 'Игрок не в гильдии' });
     if (target.rank === 'leader') return res.status(400).json({ error: 'Нельзя изменить роль лидера' });
 
-    await db.prepareRun('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?')(rank, actor.guildId, targetId);
+    db.prepare('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?').run(rank, actor.guildId, targetId);
     res.json({ success: true });
 });
 
 // Отменить все отправленные приглашения (лидер/офицер)
-router.post('/guild/cancel-invites', async (req: any, res) => {
+router.post('/guild/cancel-invites', (req: any, res) => {
     const userId = req.userId;
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member || (member.rank !== 'leader' && member.rank !== 'officer')) return res.status(400).json({ error: 'Нет прав' });
 
     const info = db.prepare(
@@ -461,12 +461,12 @@ router.post('/guild/cancel-invites', async (req: any, res) => {
 // --- Казна гильдии ---
 
 // Внести серебро в казну
-router.post('/guild/treasury/deposit', async (req: any, res) => {
+router.post('/guild/treasury/deposit', (req: any, res) => {
     const userId = req.userId;
     const { amount } = req.body;
     if (!amount || amount < 1) return res.status(400).json({ error: 'Укажите сумму (минимум 1 серебра)' });
 
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
     // Блокировка казны при войне (pending или active)
@@ -474,14 +474,14 @@ router.post('/guild/treasury/deposit', async (req: any, res) => {
     if (war) return res.status(400).json({ error: 'Казна заморожена на время войны' });
 
     // Проверяем баланс игрока
-    const user = await db.prepareGet('SELECT money FROM users WHERE id = ?')(userId) as any;
+    const user = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
     if (!user || user.money < amount) return res.status(400).json({ error: 'Недостаточно серебра в кармане' });
 
-    const tx = db.transaction(async () => {
-        await db.prepareRun('UPDATE users SET money = money - ? WHERE id = ?')(amount, userId);
-        await db.prepareRun('UPDATE guilds SET treasury = treasury + ? WHERE id = ?')(amount, member.guildId);
-        await db.prepareRun('INSERT INTO guild_treasury_log (guildId, userId, amount) VALUES (?, ?, ?)')(member.guildId, userId, amount);
-        return await db.prepareGet('SELECT treasury FROM guilds WHERE id = ?')(member.guildId) as any;
+    const tx = db.transaction(() => {
+        db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(amount, userId);
+        db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(amount, member.guildId);
+        db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount) VALUES (?, ?, ?)').run(member.guildId, userId, amount);
+        return db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(member.guildId) as any;
     });
 
     try {
@@ -493,9 +493,9 @@ router.post('/guild/treasury/deposit', async (req: any, res) => {
 });
 
 // История пополнений казны (с пагинацией и поиском)
-router.get('/guild/treasury/history', async (req: any, res) => {
+router.get('/guild/treasury/history', (req: any, res) => {
     const userId = req.userId;
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
     const page = parseInt(req.query.page as string) || 1;
@@ -511,25 +511,25 @@ router.get('/guild/treasury/history', async (req: any, res) => {
         params.push(`%${search}%`);
     }
 
-    const total = (await db.prepareGet(`SELECT COUNT(*) as cnt FROM guild_treasury_log l JOIN users u ON l.userId = u.id ${whereClause}`)(...params) as any).cnt;
+    const total = (db.prepare(`SELECT COUNT(*) as cnt FROM guild_treasury_log l JOIN users u ON l.userId = u.id ${whereClause}`).get(...params) as any).cnt;
 
-    const logs = await db.prepareAll(`
+    const logs = db.prepare(`
         SELECT l.id, l.amount, l.type, l.createdAt, u.username
         FROM guild_treasury_log l
         JOIN users u ON l.userId = u.id
         ${whereClause}
         ORDER BY l.id DESC
         LIMIT ? OFFSET ?
-    `)(...params, limit, offset);
+    `).all(...params, limit, offset);
 
-    const treasury = (await db.prepareGet('SELECT treasury FROM guilds WHERE id = ?')(member.guildId) as any)?.treasury || 0;
+    const treasury = (db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(member.guildId) as any)?.treasury || 0;
     res.json({ treasury, history: logs, total, page, totalPages: Math.ceil(total / limit) });
 });
 
 // --- Гильд-войны ---
 
 // Проверить, в войне ли гильдия (с авто-закрытием просроченных)
-async function isGuildAtWar(guildId: number): any | null {
+function isGuildAtWar(guildId: number): any | null {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
     // Авто-отмена просроченных pending войн
     db.prepare(
@@ -557,13 +557,13 @@ async function isGuildAtWar(guildId: number): any | null {
 
         // Перевести казну проигравшего победителю
         if (winnerId && loserId) {
-            const loserTreasury = (await db.prepareGet('SELECT treasury FROM guilds WHERE id = ?')(loserId) as any)?.treasury || 0;
+            const loserTreasury = (db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(loserId) as any)?.treasury || 0;
             if (loserTreasury > 0) {
-                await db.prepareRun('UPDATE guilds SET treasury = treasury + ? WHERE id = ?')(loserTreasury, winnerId);
-                await db.prepareRun('UPDATE guilds SET treasury = 0 WHERE id = ?')(loserId);
+                db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(loserTreasury, winnerId);
+                db.prepare('UPDATE guilds SET treasury = 0 WHERE id = ?').run(loserId);
                 // Запись в лог казны
-                await db.prepareRun('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)')(winnerId, 0, loserTreasury, 'war_win');
-                await db.prepareRun('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)')(loserId, 0, -loserTreasury, 'war_loss');
+                db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)').run(winnerId, 0, loserTreasury, 'war_win');
+                db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)').run(loserId, 0, -loserTreasury, 'war_loss');
             }
         }
 
@@ -577,12 +577,12 @@ async function isGuildAtWar(guildId: number): any | null {
 }
 
 // Объявить войну (только лидер)
-router.post('/guild/war/declare', async (req: any, res) => {
+router.post('/guild/war/declare', (req: any, res) => {
     const userId = req.userId;
     const { targetGuildId } = req.body;
     if (!targetGuildId) return res.status(400).json({ error: 'Укажите targetGuildId' });
 
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может объявить войну' });
 
     const myGuildId = member.guildId;
@@ -591,7 +591,7 @@ router.post('/guild/war/declare', async (req: any, res) => {
     if (myGuildId === targetGuildId) return res.status(400).json({ error: 'Нельзя объявить войну своей гильдии' });
 
     // Проверить, что целевая гильдия существует
-    const targetGuild = await db.prepareGet('SELECT * FROM guilds WHERE id = ?')(targetGuildId) as any;
+    const targetGuild = db.prepare('SELECT * FROM guilds WHERE id = ?').get(targetGuildId) as any;
     if (!targetGuild) return res.status(404).json({ error: 'Гильдия не найдена' });
 
     // Проверить, что моя гильдия не в войне
@@ -609,7 +609,7 @@ router.post('/guild/war/declare', async (req: any, res) => {
         'INSERT INTO guild_wars (attackerGuildId, defenderGuildId, expiresAt) VALUES (?, ?, ?)'
     ).run(myGuildId, targetGuildId, expiresAt);
 
-    const myGuild = await db.prepareGet('SELECT name FROM guilds WHERE id = ?')(myGuildId) as any;
+    const myGuild = db.prepare('SELECT name FROM guilds WHERE id = ?').get(myGuildId) as any;
 
     // Уведомление лидеру защищающейся гильдии через ЛС
     const defenderLeader = db.prepare(
@@ -631,11 +631,11 @@ router.post('/guild/war/declare', async (req: any, res) => {
 });
 
 // Ответить на объявление войны (только лидер защищающейся гильдии)
-router.post('/guild/war/respond', async (req: any, res) => {
+router.post('/guild/war/respond', (req: any, res) => {
     const userId = req.userId;
     const { accept } = req.body; // true — принять, false — отклонить
 
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может отвечать на войну' });
 
     const war = db.prepare(
@@ -647,25 +647,25 @@ router.post('/guild/war/respond', async (req: any, res) => {
 
     if (accept) {
         const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
-        await db.prepareRun('UPDATE guild_wars SET status = ?, acceptedAt = ?, expiresAt = ? WHERE id = ?')('active', now, newExpiresAt, war.id);
+        db.prepare('UPDATE guild_wars SET status = ?, acceptedAt = ?, expiresAt = ? WHERE id = ?').run('active', now, newExpiresAt, war.id);
         res.json({ success: true, message: 'Война принята! Казна заморожена на 24 часа.' });
     } else {
-        await db.prepareRun('UPDATE guild_wars SET status = ?, endedAt = ? WHERE id = ?')('cancelled', now, war.id);
+        db.prepare('UPDATE guild_wars SET status = ?, endedAt = ? WHERE id = ?').run('cancelled', now, war.id);
         res.json({ success: true, message: 'Война отклонена.' });
     }
 });
 
 // Статус войны для моей гильдии
-router.get('/guild/war/status', async (req: any, res) => {
+router.get('/guild/war/status', (req: any, res) => {
     const userId = req.userId;
-    const member = await db.prepareGet('SELECT guildId FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.json({ war: null });
 
     const war = isGuildAtWar(member.guildId);
     if (!war) return res.json({ war: null });
 
-    const attackerGuild = await db.prepareGet('SELECT id, name FROM guilds WHERE id = ?')(war.attackerGuildId) as any;
-    const defenderGuild = await db.prepareGet('SELECT id, name FROM guilds WHERE id = ?')(war.defenderGuildId) as any;
+    const attackerGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.attackerGuildId) as any;
+    const defenderGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(war.defenderGuildId) as any;
 
     const isAttacker = war.attackerGuildId === member.guildId;
 
@@ -687,9 +687,9 @@ router.get('/guild/war/status', async (req: any, res) => {
 });
 
 // Детали войны: участники, атаки, счёт
-router.get('/guild/war/details', async (req: any, res) => {
+router.get('/guild/war/details', (req: any, res) => {
     const userId = req.userId;
-    const member = await db.prepareGet('SELECT guildId FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT guildId FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
     const war = isGuildAtWar(member.guildId);
@@ -698,11 +698,11 @@ router.get('/guild/war/details', async (req: any, res) => {
     const myGuildId = member.guildId;
     const enemyGuildId = war.attackerGuildId === myGuildId ? war.defenderGuildId : war.attackerGuildId;
 
-    const myGuild = await db.prepareGet('SELECT id, name FROM guilds WHERE id = ?')(myGuildId) as any;
-    const enemyGuild = await db.prepareGet('SELECT id, name FROM guilds WHERE id = ?')(enemyGuildId) as any;
+    const myGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(myGuildId) as any;
+    const enemyGuild = db.prepare('SELECT id, name FROM guilds WHERE id = ?').get(enemyGuildId) as any;
 
     // Участники моей гильдии (только кто был в гильдии на момент объявления войны)
-    const myMembers = await db.prepareAll(`
+    const myMembers = db.prepare(`
         SELECT u.id, u.username, u.level,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id) as attacksMade,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id AND won = 1) as attacksWon,
@@ -711,21 +711,21 @@ router.get('/guild/war/details', async (req: any, res) => {
         FROM guild_members gm JOIN users u ON gm.userId = u.id
         WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt FROM guild_wars WHERE id = ?)
         ORDER BY gm.rank DESC, u.level DESC
-    `)(war.id, war.id, war.id, war.id, myGuildId, war.id) as any[];
+    `).all(war.id, war.id, war.id, war.id, myGuildId, war.id) as any[];
 
     // Участники вражеской гильдии (с проверкой защиты, только до войны)
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    const enemyMembers = await db.prepareAll(`
+    const enemyMembers = db.prepare(`
         SELECT u.id, u.username, u.level,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as timesAttacked,
             (SELECT MAX(createdAt) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as lastAttackedAt
         FROM guild_members gm JOIN users u ON gm.userId = u.id
         WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt FROM guild_wars WHERE id = ?)
         ORDER BY u.level DESC
-    `)(war.id, war.id, enemyGuildId, war.id) as any[];
+    `).all(war.id, war.id, enemyGuildId, war.id) as any[];
 
     // Проверка защиты: если атаковали меньше часа назад
-    const enemyWithProtection = enemyMembers.map(async (m) => {
+    const enemyWithProtection = enemyMembers.map((m: any) => {
         let protectedUntil = null;
         if (m.lastAttackedAt) {
             const attackedTime = new Date(m.lastAttackedAt + 'Z').getTime();
@@ -738,23 +738,23 @@ router.get('/guild/war/details', async (req: any, res) => {
     });
 
     // Мои атаки
-    const myAttacks = await db.prepareAll(`
+    const myAttacks = db.prepare(`
         SELECT gwa.*, u.username as defenderName
         FROM guild_war_attacks gwa
         JOIN users u ON gwa.defenderId = u.id
         WHERE gwa.warId = ? AND gwa.attackerId = ?
         ORDER BY gwa.id DESC
-    `)(war.id, userId) as any[];
+    `).all(war.id, userId) as any[];
 
     // Все атаки в войне (для хода войны)
-    const allAttacks = await db.prepareAll(`
+    const allAttacks = db.prepare(`
         SELECT gwa.*, au.username as attackerName, du.username as defenderName
         FROM guild_war_attacks gwa
         JOIN users au ON gwa.attackerId = au.id
         JOIN users du ON gwa.defenderId = du.id
         WHERE gwa.warId = ?
         ORDER BY gwa.id DESC
-    `)(war.id) as any[];
+    `).all(war.id) as any[];
 
     // Сколько атак я сделал
     const myAttackCount = db.prepare(
@@ -799,12 +799,12 @@ router.get('/guild/war/details', async (req: any, res) => {
 });
 
 // Атаковать участника вражеской гильдии
-router.post('/guild/war/attack', async (req: any, res) => {
+router.post('/guild/war/attack', (req: any, res) => {
     const userId = req.userId;
     const { targetId } = req.body;
     if (!targetId) return res.status(400).json({ error: 'Укажите targetId' });
 
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
     const war = isGuildAtWar(member.guildId);
@@ -814,7 +814,7 @@ router.post('/guild/war/attack', async (req: any, res) => {
     const enemyGuildId = war.attackerGuildId === myGuildId ? war.defenderGuildId : war.attackerGuildId;
 
     // Проверка: цель во вражеской гильдии
-    const targetMember = await db.prepareGet('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?')(enemyGuildId, targetId) as any;
+    const targetMember = db.prepare('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?').get(enemyGuildId, targetId) as any;
     if (!targetMember) return res.status(400).json({ error: 'Цель не во вражеской гильдии' });
 
     // Проверка: атакующий был в гильдии на момент объявления войны
@@ -858,14 +858,14 @@ router.post('/guild/war/attack', async (req: any, res) => {
     }
 
     // Симуляция боя (макс HP, как в турнире)
-    const attacker = await db.prepareGet('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money FROM users u WHERE u.id = ?')(userId) as any;
-    const defender = await db.prepareGet('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money FROM users u WHERE u.id = ?')(targetId) as any;
+    const attacker = db.prepare('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money FROM users u WHERE u.id = ?').get(userId) as any;
+    const defender = db.prepare('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money FROM users u WHERE u.id = ?').get(targetId) as any;
 
     const { currentStats } = require('../game/stats');
     const { getBaseStats } = require('../db/helpers');
 
-    const aCollCnt = (await db.prepareGet('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?')(userId) as any).cnt || 0;
-    const dCollCnt = (await db.prepareGet('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?')(targetId) as any).cnt || 0;
+    const aCollCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
+    const dCollCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(targetId) as any).cnt || 0;
 
     const aStats = currentStats(getBaseStats(attacker), JSON.parse(attacker.equipment || '{}'), undefined, aCollCnt);
     const dStats = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'), undefined, dCollCnt);
@@ -900,15 +900,15 @@ router.post('/guild/war/attack', async (req: any, res) => {
 
     // Запись атаки
     const battleLogJson = JSON.stringify(log);
-    await db.prepareRun(`
+    db.prepare(`
         INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won, battleLog)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    `)(war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, battleLogJson);
+    `).run(war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, battleLogJson);
 
     // Обновление счёта
     if (won) {
         const scoreField = myGuildId === war.attackerGuildId ? 'attackerScore' : 'defenderScore';
-        await db.prepareRun(`UPDATE guild_wars SET ${scoreField} = ${scoreField} + 1 WHERE id = ?`)(war.id);
+        db.prepare(`UPDATE guild_wars SET ${scoreField} = ${scoreField} + 1 WHERE id = ?`).run(war.id);
     }
 
     res.json({
@@ -923,15 +923,15 @@ router.post('/guild/war/attack', async (req: any, res) => {
 });
 
 // Установить ставку налога (только лидер)
-router.post('/guild/tax-rate', async (req: any, res) => {
+router.post('/guild/tax-rate', (req: any, res) => {
     const userId = req.userId;
     const { taxRate } = req.body;
     if (taxRate == null || taxRate < 0 || taxRate > 50) return res.status(400).json({ error: 'Ставка от 0 до 50%' });
 
-    const member = await db.prepareGet('SELECT * FROM guild_members WHERE userId = ?')(userId) as any;
+    const member = db.prepare('SELECT * FROM guild_members WHERE userId = ?').get(userId) as any;
     if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может менять налог' });
 
-    await db.prepareRun('UPDATE guilds SET taxRate = ? WHERE id = ?')(taxRate, member.guildId);
+    db.prepare('UPDATE guilds SET taxRate = ? WHERE id = ?').run(taxRate, member.guildId);
     res.json({ success: true, taxRate });
 });
 
