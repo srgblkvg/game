@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 
-async function runSeed(db: InstanceType<typeof Database>) {
+export async function runSeed(db: InstanceType<typeof Database>) {
   // Начальные редкости
   const rarityCount = (await db.prepareGet('SELECT COUNT(*) as cnt FROM rarities')() as any).cnt;
   if (rarityCount === 0) {

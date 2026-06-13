@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 
-async function runMigrations(db: InstanceType<typeof Database>) {
+export async function runMigrations(db: InstanceType<typeof Database>) {
   // Блокировка аккаунта (failedLogins, lockedUntil)
   for (const col of [
     'failedLogins INTEGER DEFAULT 0',
