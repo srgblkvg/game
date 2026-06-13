@@ -19,10 +19,27 @@ function camelRows(rows: any[]): any[] {
   return rows;
 }
 
-// --- ? → $1 ---
+// --- ? → $1 + lowercase identifiers ---
 function pgSQL(sql: string): string {
-  let i = 0;
-  return sql.replace(/\?/g, () => `$${++i}`);
+  // Lowercase all column names (PG lowercases unquoted identifiers)
+  // Skip string literals (in quotes)
+  let out = '';
+  let inString: string | null = null;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (inString) {
+      out += ch;
+      if (ch === inString) inString = null;
+    } else if (ch === "'" || ch === '"') {
+      out += ch;
+      inString = ch;
+    } else {
+      out += ch.toLowerCase();
+    }
+  }
+  // ? → $1
+  let idx = 0;
+  return out.replace(/\?/g, () => `$${++idx}`);
 }
 
 // --- pg-promise ---

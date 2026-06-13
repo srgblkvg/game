@@ -60,7 +60,7 @@ function generateBracket(tournamentId: number) {
                 }
             }
         }
-        db.prepare('UPDATE tournaments SET status = ?, completedAt = datetime(?) WHERE id = ?').run('cancelled', new Date().toISOString(), tournamentId);
+        db.prepare('UPDATE tournaments SET status = ?, completedAt = ? WHERE id = ?').run('cancelled', new Date().toISOString(), tournamentId);
         return;
     }
 
@@ -295,7 +295,7 @@ function finishTournament(tournamentId: number) {
         db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(thirdPlaceId);
     }
 
-    db.prepare('UPDATE tournaments SET status = ?, completedAt = datetime(?) WHERE id = ?').run('completed', new Date().toISOString(), tournamentId);
+    db.prepare('UPDATE tournaments SET status = ?, completedAt = ? WHERE id = ?').run('completed', new Date().toISOString(), tournamentId);
 
     // --- Обновление скрытого tournamentElo для посева ---
     // Победитель +25, 2-е +15, 3-е +10, полуфиналисты +5, остальные 0
@@ -342,7 +342,7 @@ function autoAdvance(tournamentId: number) {
 
     // Предупреждение за 5 минут — системное сообщение в чат (один раз)
     if (t.status === 'registration' && now >= t.registrationEnd - 300 && now < t.registrationEnd) {
-        const already = db.prepare("SELECT id FROM chat_messages WHERE senderId = 0 AND content LIKE '%регистрация закроется через%' AND createdAt > datetime('now', '-5 minutes')").get();
+        const already = db.prepare("SELECT id FROM chat_messages WHERE senderId = 0 AND content LIKE '%регистрация закроется через%' AND createdAt > NOW() - INTERVAL '5 minutes'").get();
         if (!already) {
             const label = t.type === 'custom' ? (t.name || 'Турнир') : (divisions.find(d => d.name === t.division)?.label || t.division);
             const secLeft = t.registrationEnd - now;
@@ -381,7 +381,7 @@ function autoAdvance(tournamentId: number) {
             const divConfig = divisions.find(d => d.name === t.division)!;
             const now2 = Math.floor(Date.now() / 1000);
             db.prepare(
-                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, datetime(?))'
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
             ).run(t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, new Date().toISOString());
         }
     }
@@ -421,7 +421,7 @@ function getOrCreateTournament(type?: string) {
                 if (Date.now() < completedTime + 3600 * 1000) continue; // ещё не прошёл час
             }
             db.prepare(
-                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, datetime(?), ?)'
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, ?, ?)'
             ).run(div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, new Date().toISOString(), 'official');
         }
     }
@@ -725,7 +725,7 @@ router.post('/tournament/create-custom', (req: any, res) => {
     let result: any;
     try {
         result = db.prepare(
-            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool) VALUES (?, ?, ?, ?, ?, datetime(?), ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         ).run('custom', 'registration', now, regEnd, prizePool + entryFee, new Date().toISOString(), 'custom', userId, entryFee, name, minLvl, maxLvl, prizePool);
     } catch (e: any) {
         return res.status(500).json({ error: 'Ошибка создания турнира: ' + e.message });
