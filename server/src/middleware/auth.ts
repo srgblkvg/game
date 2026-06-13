@@ -5,9 +5,9 @@ import db from '../database';
 
 // Временное отключение гостевых ограничений (тестирование)
 let guestRestrictionsDisabled = false;
-export function isGuestRestrictionsDisabled() { return guestRestrictionsDisabled; }
-export function setGuestRestrictionsDisabled(v: boolean) { guestRestrictionsDisabled = v; }
-export function toggleGuestRestrictions(): boolean { guestRestrictionsDisabled = !guestRestrictionsDisabled; return guestRestrictionsDisabled; }
+export async function isGuestRestrictionsDisabled() { return guestRestrictionsDisabled; }
+export async function setGuestRestrictionsDisabled(v: boolean) { guestRestrictionsDisabled = v; }
+export async function toggleGuestRestrictions(): boolean { guestRestrictionsDisabled = !guestRestrictionsDisabled; return guestRestrictionsDisabled; }
 
 // Кеш для троттлинга обновления lastLoginAt (раз в 5 мин)
 const lastLoginUpdates = new Map<string, number>();
@@ -43,17 +43,17 @@ export async function authMiddleware(req: any, res: any, next: any) {
     }
 }
 
-export function requireAdmin(req: any, res: any, next: any) {
+export async function requireAdmin(req: any, res: any, next: any) {
     if (req.role !== 'admin') return res.status(403).json({ error: 'Доступ запрещён' });
     next();
 }
 
-export function requirePlayer(req: any, res: any, next: any) {
+export async function requirePlayer(req: any, res: any, next: any) {
     if (req.role === 'admin') return res.status(403).json({ error: 'Администратор не может выполнять игровые действия' });
     next();
 }
 
-export function requireFullAccess(req: any, res: any, next: any) {
+export async function requireFullAccess(req: any, res: any, next: any) {
     if (guestRestrictionsDisabled) return next();
     if (req.isGuest) return res.status(403).json({ error: 'На гостевом аккаунте доступ к этой функции заблокирован' });
     next();

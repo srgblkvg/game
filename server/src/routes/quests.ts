@@ -31,11 +31,11 @@ const BASE_REWARDS: Record<QuestType, { xp: number; money: number }> = {
     job: { xp: 3, money: 20 }, craft: { xp: 3, money: 25 }, auction: { xp: 3, money: 50 },
 };
 
-function getToday(): string {
+async function getToday(): string {
     return new Date().toISOString().slice(0, 10);
 }
 
-function getMidnightTS(): number {
+async function getMidnightTS(): number {
     const d = new Date();
     d.setUTCHours(24, 0, 0, 0);
     return Math.floor(d.getTime() / 1000);
@@ -88,14 +88,14 @@ router.get('/tavern/quests', async (req, res) => {
         ).all(userId, yesterday) as any[];
 
         for (const aq of activeYesterday) {
-            db.prepare(
+            await db.prepare(
                 'UPDATE daily_quests SET date = ?, snapshot = ? WHERE id = ?'
             ).run(today, JSON.stringify(now), aq.id);
         }
 
         // Генерируем недостающие available квесты
         const existingTypes = new Set(activeYesterday.map((q: any) => q.questType));
-        const stmt = db.prepare(
+        const stmt = await db.prepare(
             'INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         for (const qt of QUEST_TYPES) {
@@ -129,7 +129,7 @@ router.get('/tavern/quests', async (req, res) => {
     const canTake = activeCount < 3 && (activeCount + completedToday) < 5;
 
     res.json({
-        quests: quests.filter((q: any) => q.status !== 'claimed').map((q: any) => {
+        quests: quests.filter((q: any) => q.status !== 'claimed').map((q) => {
             const qt = q.questType as QuestType;
             const info = QUEST_INFO[qt];
             return {

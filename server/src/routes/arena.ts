@@ -33,7 +33,7 @@ router.get('/arena/opponent', async (req, res) => {
                 // Возвращаем того же соперника — бесплатно
                 const savedBase = { s: saved.baseS ?? 5, a: saved.baseA ?? 5, d: saved.baseD ?? 5, m: saved.baseM ?? 5 };
                 const savedEquip = JSON.parse(saved.equipment || '{}');
-                const { enriched: savedEnriched } = await enrichEquipment(db, savedEquip);
+                const { enriched: savedEnriched } = enrichEquipment(db, savedEquip);
                 const savedCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(saved.id) as any).cnt || 0;
                 const savedStats = currentStats(savedBase, savedEnriched, undefined, savedCollCnt);
                 return res.json({
@@ -56,7 +56,7 @@ router.get('/arena/opponent', async (req, res) => {
     }
 
     // Подбор соперников по сложности
-    let opponents = db.prepare(
+    let opponents = await db.prepare(
         'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.avatar, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)'
     ).all(userId, now) as any[];
 
@@ -99,7 +99,7 @@ router.get('/arena/opponent', async (req, res) => {
 
     const base = { s: opponent.baseS ?? 5, a: opponent.baseA ?? 5, d: opponent.baseD ?? 5, m: opponent.baseM ?? 5 };
     const equipment = JSON.parse(opponent.equipment || '{}');
-    const { enriched: enrichedEquipment } = await enrichEquipment(db, equipment);
+    const { enriched: enrichedEquipment } = enrichEquipment(db, equipment);
     const oppCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(opponent.id) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, oppCollCnt);
 

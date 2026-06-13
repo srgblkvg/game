@@ -4,12 +4,17 @@ import pgPromise from 'pg-promise';
 function camelRows(rows: any[]): any[] {
   for (const r of rows) {
     for (const k of Object.keys(r)) {
-      // Replace null with default empty JSON where expected
+      // Replace null with empty string for JSON/text fields
       if (r[k] === null) {
         if (k === 'inventory') { r[k] = '[]'; continue; }
         if (k === 'equipment') { r[k] = '{}'; continue; }
+        if (k === 'activejob' || k === 'openprivatetabs' || k === 'snapshot' ||
+            k === 'log' || k === 'item_data' || k === 'bonuses' || k === 'extra') {
+          r[k] = '';
+          continue;
+        }
       }
-      const cc = k.replace(/(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid)$/i,
+      const cc = k.replace(/(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses)$/i,
         m => m.charAt(0).toUpperCase() + m.slice(1))
         .replace(/taxrate$/i, 'TaxRate').replace(/verified$/i, 'Verified');
       if (cc !== k) r[cc] = r[k];

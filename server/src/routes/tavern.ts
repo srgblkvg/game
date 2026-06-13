@@ -38,9 +38,9 @@ router.get('/tavern', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const base = await getBaseStats(user);
+    const base = getBaseStats(user);
     const equipment = JSON.parse(user.equipment || '{}');
-    const { enriched } = await enrichEquipment(db, equipment);
+    const { enriched } = enrichEquipment(db, equipment);
 
     // Бонусы от активного напитка
     let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;
@@ -58,8 +58,8 @@ router.get('/tavern', async (req, res) => {
         money: user.money,
         room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
         drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
-        rooms: Object.entries(rooms).map(async ([key, r]) => ({ key, ...r })),
-        drinks: Object.entries(drinks).map(async ([key, d]) => ({ key, ...d })),
+        rooms: Object.entries(rooms).map(([key, r]) => ({ key, ...r })),
+        drinks: Object.entries(drinks).map(([key, d]) => ({ key, ...d })),
     });
 });
 
@@ -72,9 +72,9 @@ router.post('/tavern/heal', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const base = await getBaseStats(user);
+    const base = getBaseStats(user);
     const equipment = JSON.parse(user.equipment || '{}');
-    const { enriched } = await enrichEquipment(db, equipment);
+    const { enriched } = enrichEquipment(db, equipment);
 
     // Бонусы от активного напитка
     let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;

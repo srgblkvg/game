@@ -8,7 +8,7 @@ const router = Router();
 // Поиск пользователя по логину
 router.get('/character/username/:username', async (req, res) => {
     const { username } = req.params;
-    const user = db.prepare(
+    const user = await db.prepare(
         'SELECT id, username, level FROM users WHERE LOWER(username) = LOWER(?)'
     ).get(username);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -20,14 +20,14 @@ router.get('/character/public/:userId', async (req, res) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
-    const user: any = db.prepare(
+    const user: any = await db.prepare(
         'SELECT u.id, u.username, u.level, u.totalBattles, u.wins, u.equipment, u.currentHp, u.gender, u.avatar, u.baseS, u.baseA, u.baseD, u.baseM, u.pveTotalBattles, u.pveWins, u.tournamentCount, u.tournamentWins, u.totalJobMoney, u.totalPveMoneyWon, u.totalPvpMoneyWon, u.totalPveMoneyLost, u.totalPvpMoneyLost, u.totalJobSeconds, u.craftCreated, u.craftUpgraded, u.craftBroken, u.createdAt, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?'
     ).get(userId);
 
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    const { enriched: enrichedEquipment } = await enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
-    const base = await getBaseStats(user);
+    const { enriched: enrichedEquipment } = enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
+    const base = getBaseStats(user);
     const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, collCnt);
 
@@ -69,7 +69,7 @@ router.get('/users/list', async (req, res) => {
     if (!idsParam) return res.json([]);
     const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n));
     if (ids.length === 0) return res.json([]);
-    const placeholders = ids.map(async () => '?').join(',');
+    const placeholders = ids.map(() => '?').join(',');
     const users = await db.prepare(`SELECT id, username FROM users WHERE id IN (${placeholders})`).all(...ids);
     res.json(users);
 });

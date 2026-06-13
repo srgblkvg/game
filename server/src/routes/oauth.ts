@@ -29,7 +29,7 @@ setInterval(() => {
     }
 }, 5 * 60 * 1000);
 
-function makeToken(userId: number, role: string): string {
+async function makeToken(userId: number, role: string): string {
     return jwt.sign({ userId, role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
 }
 
@@ -70,7 +70,7 @@ async function findOrCreateUser(provider: string, oauthId: string, username: str
 }
 
 // --- Яндекс ID ---
-router.get('/yandex', async (_req, res) => {
+router.get('/yandex', async (req, res) => {
     const url = `https://oauth.yandex.ru/authorize?response_type=code&client_id=${YA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI_YA)}`;
     res.redirect(url);
 });
@@ -108,7 +108,7 @@ router.get('/yandex/callback', async (req, res) => {
             return res.redirect(`${FRONTEND_URL}/login?error=userinfo_failed`);
         }
 
-        const user = await findOrCreateUser('yandex', String(userData.id), userData.login || `yandex_${userData.id}`);
+        const user = findOrCreateUser('yandex', String(userData.id), userData.login || `yandex_${userData.id}`);
         const jwtToken = makeToken(user.id, 'player');
 
         // Логируем IP и аудит
@@ -126,7 +126,7 @@ router.get('/yandex/callback', async (req, res) => {
 });
 
 // --- VK ID ---
-router.get('/vk', async (_req, res) => {
+router.get('/vk', async (req, res) => {
     const verifier = crypto.randomBytes(32).toString('base64url');
     const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
     const state = crypto.randomBytes(16).toString('hex');
@@ -211,7 +211,7 @@ router.get('/vk/callback', async (req, res) => {
         }
 
         if (!displayName) displayName = `id${vkUserId}`;
-        const user = await findOrCreateUser('vkontakte', vkUserId, displayName);
+        const user = findOrCreateUser('vkontakte', vkUserId, displayName);
         const jwtToken = makeToken(user.id, 'player');
 
         // Логируем IP и аудит

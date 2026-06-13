@@ -21,7 +21,7 @@ router.post('/character/equip', async (req, res) => {
     if (itemId === undefined || itemId === null) {
         if (!currentEquipped) return res.status(400).json({ error: 'Слот пуст' });
 
-        const base = await getBaseStats(user);
+        const base = getBaseStats(user);
         const oldStats = currentStats(base, equipment);
         const oldMaxHp = oldStats.hp;
 
@@ -66,7 +66,7 @@ router.post('/character/equip', async (req, res) => {
         inventory.push(currentEquipped);
     }
 
-    const base = await getBaseStats(user);
+    const base = getBaseStats(user);
     const oldStats = currentStats(base, equipment);
 
     inventory.splice(itemIndex, 1);
@@ -108,7 +108,7 @@ router.post('/character/salvage', async (req, res) => {
         return true;
     });
 
-    const getCraftItemByRarityId = db.prepare(`
+    const getCraftItemByRarityId = await db.prepare(`
         SELECT c.id, c.name, c.rarity_id, c.type, c.image,
                r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
@@ -147,7 +147,7 @@ router.post('/character/salvage', async (req, res) => {
 // Расширить инвентарь
 router.post('/character/expand-inventory', async (req, res) => {
     const userId = req.userId;
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const currentSlots = user.inventorySlots || 10;

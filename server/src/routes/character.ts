@@ -29,10 +29,10 @@ router.get('/character/me', async (req, res) => {
     const equipment = JSON.parse(user.equipment || '{}');
     let changed = false;
 
-    inventory = inventory.map((item: any) => {
+    inventory = await Promise.all(inventory.map(async (item) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
             if (item.rarity_id === undefined) {
-                const craftRow = getCraftData.get(Number(item.id)) as any;
+                const craftRow = await getCraftData.get(Number(item.id)) as any;
                 if (craftRow) {
                     changed = true;
                     return {
@@ -47,7 +47,7 @@ router.get('/character/me', async (req, res) => {
             }
         } else if (item.slot) {
             if (item.rarity_id === undefined) {
-                const itemRow = getItemData.get(item.name, item.slot) as any;
+                const itemRow = await getItemData.get(item.name, item.slot) as any;
                 if (itemRow) {
                     changed = true;
                     return {
@@ -61,7 +61,7 @@ router.get('/character/me', async (req, res) => {
             }
         }
         return item;
-    });
+    }));
 
     // Обогащаем экипировку
     const { enriched: enrichedEquipment, changed: equipChanged } = await enrichEquipment(db, equipment);
@@ -73,7 +73,7 @@ router.get('/character/me', async (req, res) => {
         await db.prepare('UPDATE users SET equipment = ? WHERE id = ?').run(JSON.stringify(enrichedEquipment), userId);
     }
 
-    const base = await getBaseStats(user);
+    const base = getBaseStats(user);
     const drinkBonuses = getDrinkBonuses(user);
     const stats = currentStats(base, enrichedEquipment, drinkBonuses);
 
@@ -180,7 +180,7 @@ router.post('/character/save-tabs', async (req, res) => {
 router.get('/users/find', async (req, res) => {
     const username = req.query.username as string;
     if (!username) return res.status(400).json({ error: 'Укажите username' });
-    const user = db.prepare('SELECT id, username FROM users WHERE username = ?').get(username) as any;
+    const user = await db.prepare('SELECT id, username FROM users WHERE username = ?').get(username) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     res.json(user);
 });
@@ -189,7 +189,7 @@ router.get('/users/find', async (req, res) => {
 router.get('/users/search', async (req, res) => {
     const q = req.query.q as string;
     if (!q || q.length < 2) return res.json([]);
-    const users = db.prepare(
+    const users = await db.prepare(
         'SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10'
     ).all(`%${q}%`);
     res.json(users);

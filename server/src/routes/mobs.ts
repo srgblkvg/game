@@ -21,7 +21,7 @@ router.get('/mobs', async (req, res) => {
     }
 
     // Обогащаем мобов изображениями лута
-    const enriched = mobs.map((m: any) => {
+    const enriched = mobs.map((m) => {
         const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
         const rarityMap: [number, string, string][] = [
             [0, 'loot_junk', 'Хлам'], [1, 'loot_common', 'Обычный'],
@@ -65,9 +65,9 @@ router.post('/mob/attack', async (req, res) => {
     if (!mob) return res.status(404).json({ error: 'Моб не найден' });
 
     // Статы игрока
-    const userBase = await getBaseStats(user);
+    const userBase = getBaseStats(user);
     const userEquip = JSON.parse(user.equipment || '{}');
-    const { enriched: enrichedEquip } = await enrichEquipment(db, userEquip);
+    const { enriched: enrichedEquip } = enrichEquipment(db, userEquip);
     const userStats = currentStats(userBase, enrichedEquip, getDrinkBonuses(user),
         (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0
     );
@@ -189,7 +189,7 @@ router.post('/mob/attack', async (req, res) => {
                 rarityRoll -= lt.chance;
             }
 
-            const craftItem = db.prepare(
+            const craftItem = await db.prepare(
                 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ?'
             ).get(selectedRarity) as any;
 

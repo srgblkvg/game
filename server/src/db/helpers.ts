@@ -45,14 +45,14 @@ export function getMaxHp(stats: { hp?: number; s: number; a: number; d: number; 
 
 // --- Экипировка ---
 
-export function enrichEquipment(db: DB, equipment: Record<string, any>): { enriched: Record<string, any>; changed: boolean } {
+export async function enrichEquipment(db: DB, equipment: Record<string, any>): Promise<{ enriched: Record<string, any>; changed: boolean }> {
   const stmt = getItemDataStmt(db);
   let changed = false;
   const enriched: Record<string, any> = {};
 
   for (const [slotId, item] of Object.entries(equipment)) {
     if (item && item.slot && item.rarity_id === undefined) {
-      const row = stmt.get(item.name, item.slot) as any;
+      const row = await stmt.get(item.name, item.slot) as any;
       if (row) {
         changed = true;
         enriched[slotId] = {
@@ -82,8 +82,7 @@ export function recalcHpOnEquip(currentHp: number, oldMaxHp: number, newMaxHp: n
 // --- Деньги ---
 
 export async function transferMoney(db: DB, fromUserId: number, toUserId: number, amount: number) {
-  const stmt = await db.prepare('UPDATE users SET money = money - ? WHERE id = ? AND money >= ?');
-  const result = stmt.run(amount, fromUserId, amount);
+  const result = await db.prepare('UPDATE users SET money = money - ? WHERE id = ? AND money >= ?').run(amount, fromUserId, amount);
   if (result.changes === 0) return false;
   await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(amount, toUserId);
   return true;
@@ -93,14 +92,13 @@ export async function addMoney(db: DB, userId: number, amount: number) {
   await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(amount, userId);
 }
 
-export async function spendMoney(db: DB, userId: number, amount: number): boolean {
+export async function spendMoney(db: DB, userId: number, amount: number): Promise<boolean> {
   const result = await db.prepare('UPDATE users SET money = money - ? WHERE id = ? AND money >= ?').run(amount, userId, amount);
   return result.changes > 0;
 }
 
 // --- Налог гильдии ---
-// Вызывает внутри транзакции. Возвращает сумму после вычета налога.
-export async function collectGuildTax(db: DB, userId: number, income: number, source: string): number {
+export async function collectGuildTax(db: DB, userId: number, income: number, source: string): Promise<number> {
   if (income <= 0) return income;
   const member = await db.prepare('SELECT gm.guildId, g.taxRate FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?').get(userId) as any;
   if (!member || !member.taxRate || member.taxRate <= 0) return income;

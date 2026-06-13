@@ -12,7 +12,7 @@ import { currentStats } from '../game/stats';
 
 const router = Router();
 
-function generateCode(): string {
+async function generateCode(): string {
     return String(Math.floor(100000 + Math.random() * 900000));
 }
 
@@ -135,7 +135,7 @@ router.post('/guest', async (req, res) => {
 
     auditLoginSuccess(guestId, user.id, req.ip);
     if (req.ip) {
-        await db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip);
+        try { await db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip); } catch {}
     }
 
     res.json({ token, user: { id: user.id, username: guestId, level: 1, role: 'player', isGuest: true, gender: 'male' } });
@@ -210,7 +210,7 @@ router.post('/login', async (req, res) => {
 
     // Логируем IP
     if (req.ip) {
-        await db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(userRow.id, req.ip);
+        try { await db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(userRow.id, req.ip); } catch {}
     }
 
     const token = jwt.sign({ userId: userRow.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });

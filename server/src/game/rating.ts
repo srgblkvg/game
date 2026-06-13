@@ -41,7 +41,7 @@ export async function applyDecay(db: InstanceType<typeof Database>, userId: numb
  * Начисление PvE-рейтинга
  * Возвращает { eloAdded, newElo }
  */
-export function addPveRating(
+export async function addPveRating(
     db: InstanceType<typeof Database>,
     userId: number,
     amount: number,
@@ -49,7 +49,7 @@ export function addPveRating(
     elo: number,
     cooldownCheck: (user: any) => boolean,
 ): { eloAdded: number; newElo: number } | null {
-    const user = db.prepare(
+    const user = await db.prepare(
         'SELECT lastPveRatingTime, lastBossKillDate, pveRating, elo FROM users WHERE id = ?'
     ).get(userId) as any;
     if (!user) return null;
@@ -85,7 +85,7 @@ export async function checkSeasonReset(db: InstanceType<typeof Database>): boole
         'SELECT id, username, elo FROM users ORDER BY elo DESC LIMIT 10'
     ).all() as any[];
 
-    const insertHof = db.prepare(
+    const insertHof = await db.prepare(
         'INSERT INTO hall_of_fame (seasonId, userId, rank, elo, title) VALUES (?, ?, ?, ?, ?)'
     );
 

@@ -5,7 +5,7 @@ const router = Router();
 
 // ==================== Ресурсы (craft_items) ====================
 router.get('/craft-items', async (req, res) => {
-    const items = db.prepare(`
+    const items = await db.prepare(`
         SELECT c.*, r.name as rarity_name, r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
         JOIN rarities r ON c.rarity_id = r.id
@@ -36,7 +36,7 @@ router.delete('/craft-items/:id', async (req, res) => {
 
 // ==================== Рецепты (craft_recipes) ====================
 router.get('/recipes', async (req, res) => {
-    const recipes = db.prepare('SELECT * FROM craft_recipes ORDER BY id').all() as any[];
+    const recipes = await db.prepare('SELECT * FROM craft_recipes ORDER BY id').all() as any[];
     for (const recipe of recipes) {
         recipe.ingredients = await db.prepare(`
             SELECT ci.id, ci.name, ci.rarity_id, ci.type as itemType, ci.image, cri.quantity,
@@ -76,14 +76,14 @@ router.post('/recipes', async (req, res) => {
     const { name, description, money_cost, ingredients, result_type, result_id, success_chance, category_id } = req.body;
     if (!name || money_cost === undefined) return res.status(400).json({ error: 'name, money_cost required' });
 
-    const result = db.prepare(
+    const result = await db.prepare(
         'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).run(name, description || '', money_cost, result_type || '', result_id || 0, success_chance ?? 100, category_id || null);
 
     const recipeId = result.lastInsertRowid;
 
     if (ingredients && Array.isArray(ingredients)) {
-        const stmt = db.prepare('INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)');
+        const stmt = await db.prepare('INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)');
         for (const ing of ingredients) {
             stmt.run(recipeId, ing.craft_item_id, ing.quantity);
         }
@@ -93,13 +93,13 @@ router.post('/recipes', async (req, res) => {
 
 router.put('/recipes/:id', async (req, res) => {
     const { name, description, money_cost, ingredients, result_type, result_id, success_chance, category_id } = req.body;
-    db.prepare(
+    await db.prepare(
         'UPDATE craft_recipes SET name=?, description=?, money_cost=?, result_type=?, result_id=?, success_chance=?, category_id=? WHERE id=?'
     ).run(name, description, money_cost, result_type || '', result_id || 0, success_chance ?? 100, category_id || null, req.params.id);
 
     await db.prepare('DELETE FROM craft_recipe_ingredients WHERE recipe_id=?').run(req.params.id);
     if (ingredients && Array.isArray(ingredients)) {
-        const stmt = db.prepare('INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)');
+        const stmt = await db.prepare('INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)');
         for (const ing of ingredients) {
             stmt.run(req.params.id, ing.craft_item_id, ing.quantity);
         }
@@ -115,7 +115,7 @@ router.delete('/recipes/:id', async (req, res) => {
 
 // ==================== Категории рецептов ====================
 router.get('/recipe-categories', async (req, res) => {
-    const cats = db.prepare('SELECT * FROM craft_recipe_categories ORDER BY sort_order, id').all();
+    const cats = await db.prepare('SELECT * FROM craft_recipe_categories ORDER BY sort_order, id').all();
     res.json(cats);
 });
 
@@ -139,7 +139,7 @@ router.delete('/recipe-categories/:id', async (req, res) => {
 
 // ==================== Шансы улучшения (upgrade_chances) ====================
 router.get('/upgrade-chances', async (req, res) => {
-    const chances = db.prepare('SELECT * FROM upgrade_chances ORDER BY rarity_id, level').all();
+    const chances = await db.prepare('SELECT * FROM upgrade_chances ORDER BY rarity_id, level').all();
     res.json(chances);
 });
 

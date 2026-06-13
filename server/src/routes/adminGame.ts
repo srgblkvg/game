@@ -4,7 +4,7 @@ import db from '../database';
 const router = Router();
 
 // ---------- Действия (action cards) ----------
-router.get('/actions', async (_req, res) => {
+router.get('/actions', async (req, res) => {
     const actions = await db.prepare('SELECT * FROM actions_config ORDER BY section, sort_order').all();
     res.json(actions);
 });
@@ -30,7 +30,7 @@ router.delete('/actions/:id', async (req, res) => {
 });
 
 // ---------- Мобы ----------
-router.get('/mobs', async (_req, res) => {
+router.get('/mobs', async (req, res) => {
     const mobs = await db.prepare('SELECT * FROM mobs ORDER BY location, level').all();
     res.json(mobs);
 });
@@ -50,13 +50,13 @@ router.put('/mobs/:id', async (req, res) => {
 });
 
 // Уникальные локации (этажи)
-router.get('/mob-locations', async (_req, res) => {
+router.get('/mob-locations', async (req, res) => {
     const locs = await db.prepare('SELECT DISTINCT location FROM mobs ORDER BY location').all();
-    res.json(locs.map(async (l: any) => l.location));
+    res.json(locs.map((l: any) => l.location));
 });
 
 // ---------- Этажи ----------
-router.get('/floors', async (_req, res) => {
+router.get('/floors', async (req, res) => {
     res.json(await db.prepare('SELECT * FROM floors ORDER BY sort_order, name').all());
 });
 

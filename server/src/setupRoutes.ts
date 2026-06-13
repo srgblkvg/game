@@ -46,13 +46,13 @@ export async function setupRoutes(app: Express) {
   app.use('/api', actionsRoutes);
 
   // Этажи (публичный — нужен бестиарию)
-  app.get('/api/floors', async (_req, res) => {
+  app.get('/api/floors', async (req, res) => {
     const db = require('./database').default;
     res.json(await db.prepare('SELECT * FROM floors ORDER BY sort_order, name').all());
   });
 
   // Серверное время (публичный)
-  app.get('/api/time', async (_req, res) => {
+  app.get('/api/time', async (req, res) => {
     res.json({ now: Math.floor(Date.now() / 1000) });
   });
 
