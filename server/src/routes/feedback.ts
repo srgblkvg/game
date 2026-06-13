@@ -14,7 +14,7 @@ router.post('/feedback', async (req, res) => {
     const user = await db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(400).json({ error: 'Пользователь не найден' });
 
-    db.prepare(
+    await db.prepare(
         'INSERT INTO feedback_messages (userId, username, subject, message) VALUES (?, ?, ?, ?)'
     ).run(userId, user.username, subject.trim(), message.trim());
 
@@ -28,7 +28,7 @@ adminFeedbackRouter.get('/feedback', async (req, res) => {
     const offset = (page - 1) * limit;
 
     const total = (await db.prepare('SELECT COUNT(*) as cnt FROM feedback_messages').get() as any).cnt;
-    const messages = db.prepare(
+    const messages = await db.prepare(
         'SELECT * FROM feedback_messages ORDER BY id DESC LIMIT ? OFFSET ?'
     ).all(limit, offset);
 
