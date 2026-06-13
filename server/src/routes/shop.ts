@@ -6,12 +6,12 @@ const router = Router();
 
 // Получить все предметы для магазина
 router.get('/shop/items', async (req, res) => {
-    const items = await db.prepare(`
+    const items = await db.manyOrNone(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color, r.id as rarity_id
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         ORDER BY i.id
-    `).all() as any[];
+    `) as any[];
 
     const result = items.map((item: any) => ({
         ...item,
@@ -31,15 +31,15 @@ router.post('/shop/buy', async (req, res) => {
     const userId = req.userId;
     const { itemId } = parsed.data;
 
-    const user = await db.prepare('SELECT money, inventory, inventorySlots FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT money, inventory, inventorySlots FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const dbItem = await db.prepare(`
+    const dbItem = await db.oneOrNone(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         WHERE i.id = ?
-    `).get(itemId) as any;
+    `, [itemId]) as any;
     if (!dbItem) return res.status(404).json({ error: 'Item not found' });
 
     const price = dbItem.cost ?? Math.floor(100 * Math.pow(10, dbItem.rarity_id));
@@ -68,7 +68,7 @@ router.post('/shop/buy', async (req, res) => {
 
     inventory.push(newItem);
 
-    await db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?').run(price, JSON.stringify(inventory), userId);
+    await db.none('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?', [price, JSON.stringify(inventory]), userId);
 
     res.json({ success: true, moneyAfter: user.money - price });
 });

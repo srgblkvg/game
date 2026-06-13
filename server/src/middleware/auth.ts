@@ -33,7 +33,7 @@ export async function authMiddleware(req: any, res: any, next: any) {
             const last = lastLoginUpdates.get(key) || 0;
             if (now - last > 300) {
                 lastLoginUpdates.set(key, now);
-                await db.prepare('UPDATE users SET lastLoginAt = ? WHERE id = ?').run(now, decoded.userId);
+                await db.none('UPDATE users SET lastLoginAt = ? WHERE id = ?', [now, decoded.userId]);
             }
         }
 

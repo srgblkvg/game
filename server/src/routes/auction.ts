@@ -19,22 +19,22 @@ router.get('/auction/price-floor', async (req, res) => {
 router.get('/auction', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     // Закрываем просроченные лоты
-    const expired = await db.prepare('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NOT NULL').all(now) as any[];
+    const expired = await db.manyOrNone('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NOT NULL', [now]) as any[];
     for (const lot of expired) {
         const commission = Math.floor(lot.currentBid * 0.1);
         const payout = lot.currentBid - commission;
-        await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(payout, lot.sellerId);
-        await db.prepare('DELETE FROM auction_lots WHERE id = ?').run(lot.id);
+        await db.none('UPDATE users SET money = money + ? WHERE id = ?', [payout, lot.sellerId]);
+        await db.none('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
     }
     // Удаляем непроданные
-    await db.prepare('DELETE FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL').run(now);
+    await db.none('DELETE FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL', [now]);
 
-    const lots = await db.prepare(`
+    const lots = await db.manyOrNone(`
         SELECT l.*, u.username as sellerName, g.name as sellerGuild, u.guildId as sellerGuildId FROM auction_lots l
         JOIN users u ON l.sellerId = u.id
         LEFT JOIN guilds g ON u.guildId = g.id
         WHERE l.endsAt > ? ORDER BY l.endsAt ASC
-    `).all(now) as any[];
+    `, [now]) as any[];
 
     res.json(lots.map((l: any) => ({ ...l, itemData: JSON.parse(l.itemData) })));
 });
@@ -58,12 +58,12 @@ router.post('/auction/sell', async (req, res) => {
     if (buyoutPrice && buyoutPrice <= startPrice) return res.status(400).json({ error: 'Цена выкупа должна быть выше стартовой' });
 
     // Проверка лимита (5 лотов)
-    const userLotCount = (await db.prepare('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ?').get(userId) as any).cnt;
+    const userLotCount = (await db.oneOrNone('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ?', [userId]) as any).cnt;
     if (userLotCount >= 5) return res.status(400).json({ error: 'Максимум 5 лотов' });
 
     // Комиссия за листинг 5% (от общей стартовой цены)
     const listingFee = Math.max(1, Math.floor(totalStartPrice * 0.05));
-    const user = await db.prepare('SELECT money, inventory FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT money, inventory FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.money < listingFee) return res.status(400).json({ error: `Недостаточно монет для листинга (${listingFee} 🥇)` });
 
@@ -94,9 +94,9 @@ router.post('/auction/sell', async (req, res) => {
     const dur = duration || 24;
     const endsAt = now + dur * 3600;
 
-    await db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?').run(listingFee, JSON.stringify(inventory), userId);
-    await db.prepare(`INSERT INTO auction_lots (sellerId, itemData, startPrice, buyoutPrice, currentBid, duration, endsAt, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(userId, JSON.stringify(sellItemData), totalStartPrice, totalBuyoutPrice, null, dur, endsAt, now);
+    await db.none('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?', [listingFee, JSON.stringify(inventory]), userId);
+    await db.none(`INSERT INTO auction_lots (sellerId, itemData, startPrice, buyoutPrice, currentBid, duration, endsAt, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [userId, JSON.stringify(sellItemData]), totalStartPrice, totalBuyoutPrice, null, dur, endsAt, now);
 
     res.json({ success: true, listingFee });
 });
@@ -108,23 +108,23 @@ router.post('/auction/bid', async (req, res) => {
     if (!lotId || !amount) return res.status(400).json({ error: 'Нет данных' });
 
     const now = Math.floor(Date.now() / 1000);
-    const lot = await db.prepare('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?').get(lotId, now) as any;
+    const lot = await db.oneOrNone('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?', [lotId, now]) as any;
     if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
     if (lot.sellerId === userId) return res.status(400).json({ error: 'Нельзя ставить на свой лот' });
 
     const minBid = lot.currentBid ? lot.currentBid + Math.max(1, Math.floor(lot.currentBid * 0.05)) : lot.startPrice;
     if (amount < minBid) return res.status(400).json({ error: `Мин. ставка: ${minBid} 🥇` });
 
-    const user = await db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT money FROM users WHERE id = ?', [userId]) as any;
     if (!user || user.money < amount) return res.status(400).json({ error: 'Недостаточно монет' });
 
     // Возврат денег предыдущему лидеру
     if (lot.currentBidderId) {
-        await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(lot.currentBid, lot.currentBidderId);
+        await db.none('UPDATE users SET money = money + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
     }
 
-    await db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(amount, userId);
-    await db.prepare('UPDATE auction_lots SET currentBid = ?, currentBidderId = ? WHERE id = ?').run(amount, userId, lotId);
+    await db.none('UPDATE users SET money = money - ? WHERE id = ?', [amount, userId]);
+    await db.none('UPDATE auction_lots SET currentBid = ?, currentBidderId = ? WHERE id = ?', [amount, userId, lotId]);
 
     res.json({ success: true });
 });
@@ -135,12 +135,12 @@ router.post('/auction/buyout', async (req, res) => {
     const { lotId } = req.body;
 
     const now = Math.floor(Date.now() / 1000);
-    const lot = await db.prepare('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?').get(lotId, now) as any;
+    const lot = await db.oneOrNone('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?', [lotId, now]) as any;
     if (!lot) return res.status(404).json({ error: 'Лот не найден' });
     if (!lot.buyoutPrice) return res.status(400).json({ error: 'У лота нет выкупа' });
     if (lot.sellerId === userId) return res.status(400).json({ error: 'Нельзя купить свой лот' });
 
-    const user = await db.prepare('SELECT money, inventory FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT money, inventory FROM users WHERE id = ?', [userId]) as any;
     if (user.money < lot.buyoutPrice) return res.status(400).json({ error: 'Недостаточно монет' });
 
     const commission = Math.floor(lot.buyoutPrice * 0.1);
@@ -148,7 +148,7 @@ router.post('/auction/buyout', async (req, res) => {
 
     // Возврат предыдущему лидеру
     if (lot.currentBidderId) {
-        await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(lot.currentBid, lot.currentBidderId);
+        await db.none('UPDATE users SET money = money + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
     }
 
     const itemData = JSON.parse(lot.itemData);
@@ -169,9 +169,9 @@ router.post('/auction/buyout', async (req, res) => {
         inventory.push(itemData);
     }
 
-    await db.prepare('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?').run(lot.buyoutPrice, JSON.stringify(inventory), userId);
-    await db.prepare('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?').run(payout, lot.sellerId);
-    await db.prepare('DELETE FROM auction_lots WHERE id = ?').run(lotId);
+    await db.none('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [lot.buyoutPrice, JSON.stringify(inventory]), userId);
+    await db.none('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+    await db.none('DELETE FROM auction_lots WHERE id = ?', [lotId]);
 
     res.json({ success: true });
 });
@@ -184,7 +184,7 @@ router.post('/auction/buy-partial', async (req, res) => {
     if (!lotId || !quantity || quantity < 1) return res.status(400).json({ error: 'Нет данных' });
 
     const now = Math.floor(Date.now() / 1000);
-    const lot = await db.prepare('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?').get(lotId, now) as any;
+    const lot = await db.oneOrNone('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?', [lotId, now]) as any;
     if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
     if (lot.sellerId === userId) return res.status(400).json({ error: 'Нельзя купить свой лот' });
 
@@ -198,7 +198,7 @@ router.post('/auction/buy-partial', async (req, res) => {
     const pricePerItem = Math.ceil(totalPrice / stackCount);
     const cost = pricePerItem * quantity;
 
-    const user = await db.prepare('SELECT money, inventory FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT money, inventory FROM users WHERE id = ?', [userId]) as any;
     if (!user || user.money < cost) return res.status(400).json({ error: 'Недостаточно монет' });
 
     // Комиссия 10% пропорционально
@@ -222,19 +222,19 @@ router.post('/auction/buy-partial', async (req, res) => {
     const remainingCount = stackCount - quantity;
     if (remainingCount <= 0) {
         // Полностью распродано
-        await db.prepare('DELETE FROM auction_lots WHERE id = ?').run(lotId);
+        await db.none('DELETE FROM auction_lots WHERE id = ?', [lotId]);
     } else {
         const newItemData = { ...itemData, count: remainingCount };
         const newStartPrice = Math.max(1, Math.floor(lot.startPrice * remainingCount / stackCount));
         const newBuyoutPrice = lot.buyoutPrice ? Math.max(1, Math.floor(lot.buyoutPrice * remainingCount / stackCount)) : null;
         // Пропорционально уменьшаем ставку, если есть
         const newCurrentBid = lot.currentBid ? Math.max(newStartPrice, Math.floor(lot.currentBid * remainingCount / stackCount)) : null;
-        await db.prepare(`UPDATE auction_lots SET itemData = ?, startPrice = ?, buyoutPrice = ?, currentBid = ? WHERE id = ?`).run(JSON.stringify(newItemData), newStartPrice, newBuyoutPrice, newCurrentBid, lotId);
+        await db.none(`UPDATE auction_lots SET itemData = ?, startPrice = ?, buyoutPrice = ?, currentBid = ? WHERE id = ?`, [JSON.stringify(newItemData]), newStartPrice, newBuyoutPrice, newCurrentBid, lotId);
     }
 
     // Списываем деньги покупателю и начисляем продавцу
-    await db.prepare('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?').run(cost, JSON.stringify(inventory), userId);
-    await db.prepare('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?').run(payout, lot.sellerId);
+    await db.none('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [cost, JSON.stringify(inventory]), userId);
+    await db.none('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
 
     res.json({ success: true, cost, remaining: remainingCount });
 });
@@ -246,14 +246,14 @@ router.post('/auction/cancel', async (req, res) => {
     if (!lotId) return res.status(400).json({ error: 'Укажите lotId' });
 
     const now = Math.floor(Date.now() / 1000);
-    const lot = await db.prepare('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?').get(lotId, now) as any;
+    const lot = await db.oneOrNone('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?', [lotId, now]) as any;
     if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
     if (lot.sellerId !== userId) return res.status(400).json({ error: 'Это не ваш лот' });
 
     const itemData = JSON.parse(lot.itemData);
 
     // Возвращаем предмет в инвентарь
-    const user = await db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT inventory FROM users WHERE id = ?', [userId]) as any;
     const inventory = JSON.parse(user.inventory || '[]');
     const existingIdx = inventory.findIndex((i: any) =>
         (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
@@ -263,15 +263,15 @@ router.post('/auction/cancel', async (req, res) => {
     } else {
         inventory.push({ ...itemData, count: itemData.count || 1 });
     }
-    await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    await db.none('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory]), userId);
 
     // Возвращаем деньги текущему лидеру ставок
     if (lot.currentBidderId && lot.currentBid) {
-        await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(lot.currentBid, lot.currentBidderId);
+        await db.none('UPDATE users SET money = money + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
     }
 
     // Удаляем лот
-    await db.prepare('DELETE FROM auction_lots WHERE id = ?').run(lotId);
+    await db.none('DELETE FROM auction_lots WHERE id = ?', [lotId]);
 
     res.json({ success: true, message: 'Лот снят с аукциона' });
 });
