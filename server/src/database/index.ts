@@ -37,7 +37,7 @@ function lowercaseSQL(sql: string): string {
 }
 
 // CamelCase ключи для результатов
-async function camelRows(rows: any[]): any[] {
+function camelRows(rows: any[]): any[] {
   return rows.map(row => {
     const out: any = { ...row };
     for (const key of Object.keys(row)) {
@@ -79,11 +79,7 @@ class DB {
   prepare(sql: string) {
     const q = lowercaseSQL(pgParams(sql));
     return {
-      get: async (...p: any[]) => { 
-        const r = await pool.query(q, p); 
-        const camelled = camelRows(r.rows);
-        console.log('[WRAPPER] rows:', r.rows.length, 'camelled:', camelled.length);
-        return camelled[0]; },
+      get: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows)[0]; },
       all: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows); },
       run: async (...p: any[]) => { const r = await pool.query(q, p); const id = r.rows?.[0]?.id; return { changes: r.rowCount ?? 0, lastInsertRowid: id ? Number(id) : undefined }; },
     };
