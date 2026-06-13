@@ -32,7 +32,7 @@ const drinks: Record<string, { name: string; bonuses: Record<string, number>; co
 };
 
 // Статус трактира
-router.get('/tavern', async async (req, res) => {
+router.get('/tavern', async (req, res) => {
     const userId = req.userId;
     const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -58,13 +58,13 @@ router.get('/tavern', async async (req, res) => {
         money: user.money,
         room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
         drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
-        rooms: Object.entries(rooms).map(([key, r]) => ({ key, ...r })),
-        drinks: Object.entries(drinks).map(([key, d]) => ({ key, ...d })),
+        rooms: Object.entries(rooms).map(async ([key, r]) => ({ key, ...r })),
+        drinks: Object.entries(drinks).map(async ([key, d]) => ({ key, ...d })),
     });
 });
 
 // Мгновенное лечение
-router.post('/tavern/heal', async async (req, res) => {
+router.post('/tavern/heal', async (req, res) => {
     const userId = req.userId;
     const { full } = req.body; // full=true — полное, иначе 50%
 
@@ -99,7 +99,7 @@ router.post('/tavern/heal', async async (req, res) => {
 });
 
 // Аренда комнаты
-router.post('/tavern/room', async async (req, res) => {
+router.post('/tavern/room', async (req, res) => {
     const userId = req.userId;
     const { roomType, hours } = req.body; // hours: 1 or 8
 
@@ -123,7 +123,7 @@ router.post('/tavern/room', async async (req, res) => {
 });
 
 // Купить напиток
-router.post('/tavern/drink', async async (req, res) => {
+router.post('/tavern/drink', async (req, res) => {
     const userId = req.userId;
     const { drinkType } = req.body;
 

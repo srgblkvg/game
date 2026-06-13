@@ -4,7 +4,7 @@ import db from '../database';
 const router = Router();
 
 // ==================== Ресурсы (craft_items) ====================
-router.get('/craft-items', async async (req, res) => {
+router.get('/craft-items', async (req, res) => {
     const items = db.prepare(`
         SELECT c.*, r.name as rarity_name, r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
@@ -14,7 +14,7 @@ router.get('/craft-items', async async (req, res) => {
     res.json(items);
 });
 
-router.post('/craft-items', async async (req, res) => {
+router.post('/craft-items', async (req, res) => {
     const { name, rarity_id, description, type, image } = req.body;
     if (!name || rarity_id === undefined) return res.status(400).json({ error: 'name, rarity_id required' });
     await db.prepare('INSERT INTO craft_items (name, rarity_id, description, type, image) VALUES (?, ?, ?, ?, ?)')
@@ -22,20 +22,20 @@ router.post('/craft-items', async async (req, res) => {
     res.json({ success: true });
 });
 
-router.put('/craft-items/:id', async async (req, res) => {
+router.put('/craft-items/:id', async (req, res) => {
     const { name, rarity_id, description, type, image } = req.body;
     await db.prepare('UPDATE craft_items SET name=?, rarity_id=?, description=?, type=?, image=? WHERE id=?')
         .run(name, rarity_id, description, type || 'craft', image || null, req.params.id);
     res.json({ success: true });
 });
 
-router.delete('/craft-items/:id', async async (req, res) => {
+router.delete('/craft-items/:id', async (req, res) => {
     await db.prepare('DELETE FROM craft_items WHERE id=?').run(req.params.id);
     res.json({ success: true });
 });
 
 // ==================== Рецепты (craft_recipes) ====================
-router.get('/recipes', async async (req, res) => {
+router.get('/recipes', async (req, res) => {
     const recipes = db.prepare('SELECT * FROM craft_recipes ORDER BY id').all() as any[];
     for (const recipe of recipes) {
         recipe.ingredients = await db.prepare(`
@@ -72,7 +72,7 @@ router.get('/recipes', async async (req, res) => {
     res.json(recipes);
 });
 
-router.post('/recipes', async async (req, res) => {
+router.post('/recipes', async (req, res) => {
     const { name, description, money_cost, ingredients, result_type, result_id, success_chance, category_id } = req.body;
     if (!name || money_cost === undefined) return res.status(400).json({ error: 'name, money_cost required' });
 
@@ -91,7 +91,7 @@ router.post('/recipes', async async (req, res) => {
     res.json({ success: true, id: recipeId });
 });
 
-router.put('/recipes/:id', async async (req, res) => {
+router.put('/recipes/:id', async (req, res) => {
     const { name, description, money_cost, ingredients, result_type, result_id, success_chance, category_id } = req.body;
     db.prepare(
         'UPDATE craft_recipes SET name=?, description=?, money_cost=?, result_type=?, result_id=?, success_chance=?, category_id=? WHERE id=?'
@@ -107,43 +107,43 @@ router.put('/recipes/:id', async async (req, res) => {
     res.json({ success: true });
 });
 
-router.delete('/recipes/:id', async async (req, res) => {
+router.delete('/recipes/:id', async (req, res) => {
     await db.prepare('DELETE FROM craft_recipes WHERE id=?').run(req.params.id);
     await db.prepare('DELETE FROM craft_recipe_ingredients WHERE recipe_id=?').run(req.params.id);
     res.json({ success: true });
 });
 
 // ==================== Категории рецептов ====================
-router.get('/recipe-categories', async async (req, res) => {
+router.get('/recipe-categories', async (req, res) => {
     const cats = db.prepare('SELECT * FROM craft_recipe_categories ORDER BY sort_order, id').all();
     res.json(cats);
 });
 
-router.post('/recipe-categories', async async (req, res) => {
+router.post('/recipe-categories', async (req, res) => {
     const { name, sort_order } = req.body;
     if (!name) return res.status(400).json({ error: 'name required' });
     await db.prepare('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)').run(name, sort_order || 0);
     res.json({ success: true });
 });
 
-router.put('/recipe-categories/:id', async async (req, res) => {
+router.put('/recipe-categories/:id', async (req, res) => {
     const { name, sort_order } = req.body;
     await db.prepare('UPDATE craft_recipe_categories SET name=?, sort_order=? WHERE id=?').run(name, sort_order || 0, req.params.id);
     res.json({ success: true });
 });
 
-router.delete('/recipe-categories/:id', async async (req, res) => {
+router.delete('/recipe-categories/:id', async (req, res) => {
     await db.prepare('DELETE FROM craft_recipe_categories WHERE id=?').run(req.params.id);
     res.json({ success: true });
 });
 
 // ==================== Шансы улучшения (upgrade_chances) ====================
-router.get('/upgrade-chances', async async (req, res) => {
+router.get('/upgrade-chances', async (req, res) => {
     const chances = db.prepare('SELECT * FROM upgrade_chances ORDER BY rarity_id, level').all();
     res.json(chances);
 });
 
-router.post('/upgrade-chances', async async (req, res) => {
+router.post('/upgrade-chances', async (req, res) => {
     const { level, rarity_id, chance, money_cost } = req.body;
     if (level == null || chance == null || money_cost == null) return res.status(400).json({ error: 'level, chance, money_cost required' });
     const rId = rarity_id ?? 0;
@@ -151,13 +151,13 @@ router.post('/upgrade-chances', async async (req, res) => {
     res.json({ success: true });
 });
 
-router.put('/upgrade-chances/:level/:rarity_id', async async (req, res) => {
+router.put('/upgrade-chances/:level/:rarity_id', async (req, res) => {
     const { chance, money_cost } = req.body;
     await db.prepare('UPDATE upgrade_chances SET chance=?, money_cost=? WHERE level=? AND rarity_id=?').run(chance, money_cost, req.params.level, req.params.rarity_id);
     res.json({ success: true });
 });
 
-router.delete('/upgrade-chances/:level/:rarity_id', async async (req, res) => {
+router.delete('/upgrade-chances/:level/:rarity_id', async (req, res) => {
     await db.prepare('DELETE FROM upgrade_chances WHERE level=? AND rarity_id=?').run(req.params.level, req.params.rarity_id);
     res.json({ success: true });
 });

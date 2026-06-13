@@ -8,7 +8,7 @@ import { getDrinkBonuses } from '../game/drinks';
 const router = Router();
 
 // Список всех мобов
-router.get('/mobs', async async (req, res) => {
+router.get('/mobs', async (req, res) => {
     const mobs = await db.prepare('SELECT * FROM mobs ORDER BY level, id').all() as any[];
 
     // Собираем изображения и названия материалов по редкостям (первое попавшееся для каждой)
@@ -42,7 +42,7 @@ router.get('/mobs', async async (req, res) => {
 });
 
 // Атака моба
-router.post('/mob/attack', async async (req, res) => {
+router.post('/mob/attack', async (req, res) => {
     const userId = req.userId;
     const { mobId } = req.body;
     if (!mobId) return res.status(400).json({ error: 'Не указан ID моба' });

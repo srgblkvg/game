@@ -6,7 +6,7 @@ import { getUserById, getBaseStats, recalcHpOnEquip } from '../db/helpers';
 const router = Router();
 
 // Экипировка/снятие предмета
-router.post('/character/equip', async async (req, res) => {
+router.post('/character/equip', async (req, res) => {
     const userId = req.userId;
     const { slotId, itemId } = req.body;
     if (!slotId) return res.status(400).json({ error: 'slotId required' });
@@ -84,7 +84,7 @@ router.post('/character/equip', async async (req, res) => {
 });
 
 // Разобрать предмет(ы)
-router.post('/character/salvage', async async (req, res) => {
+router.post('/character/salvage', async (req, res) => {
     const userId = req.userId;
     const { itemIds } = req.body;
     if (!itemIds) return res.status(400).json({ error: 'itemIds required' });
@@ -145,7 +145,7 @@ router.post('/character/salvage', async async (req, res) => {
 });
 
 // Расширить инвентарь
-router.post('/character/expand-inventory', async async (req, res) => {
+router.post('/character/expand-inventory', async (req, res) => {
     const userId = req.userId;
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });

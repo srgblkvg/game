@@ -18,7 +18,7 @@ function getRank(elo: number): { name: string; icon: string; color: string } {
 }
 
 // Рейтинг игроков (по ELO)
-router.get('/rating', async async (req, res) => {
+router.get('/rating', async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
@@ -43,7 +43,7 @@ router.get('/rating', async async (req, res) => {
 });
 
 // Позиция текущего игрока в рейтинге
-router.get('/my-position', async async (req, res) => {
+router.get('/my-position', async (req, res) => {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: 'Не авторизован' });
 

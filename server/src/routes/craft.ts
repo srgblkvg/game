@@ -12,7 +12,7 @@ function isCraftItem(item: any): boolean {
 }
 
 // Получить все рецепты (для игрока)
-router.get('/craft/recipes', async async (req, res) => {
+router.get('/craft/recipes', async (req, res) => {
     const recipes = await db.prepare('SELECT * FROM craft_recipes ORDER BY id').all() as any[];
     for (const recipe of recipes) {
         recipe.ingredients = await db.prepare(`
@@ -57,7 +57,7 @@ router.get('/craft/recipes', async async (req, res) => {
 });
 
 // Выполнить крафт по рецепту
-router.post('/craft/execute', async async (req, res) => {
+router.post('/craft/execute', async (req, res) => {
     const userId = req.userId;
     const { recipe_id } = req.body;
 
@@ -203,7 +203,7 @@ router.post('/craft/execute', async async (req, res) => {
 });
 
 // Получить информацию об улучшении (шанс и стоимость) для конкретного уровня и редкости
-router.get('/craft/upgrade-info/:level/:rarity', async async (req, res) => {
+router.get('/craft/upgrade-info/:level/:rarity', async (req, res) => {
     const level = Number(req.params.level);
     const rarity = Number(req.params.rarity);
     const data = await db.prepare('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?').get(level, rarity) as any;
@@ -212,7 +212,7 @@ router.get('/craft/upgrade-info/:level/:rarity', async async (req, res) => {
 });
 
 // Улучшение предмета
-router.post('/craft/upgrade', async async (req, res) => {
+router.post('/craft/upgrade', async (req, res) => {
     const userId = req.userId;
     const { slots } = req.body;
 
@@ -335,7 +335,7 @@ router.post('/craft/upgrade', async async (req, res) => {
 });
 
 // Разобрать камень улучшения на материал
-router.post('/craft/disassemble', async async (req, res) => {
+router.post('/craft/disassemble', async (req, res) => {
     const userId = req.userId;
     const { itemId } = req.body;
     if (!itemId) return res.status(400).json({ error: 'Укажите itemId' });

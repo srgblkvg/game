@@ -4,7 +4,7 @@ import db from '../database';
 const router = Router();
 
 // Получить все сеты
-router.get('/collection-sets', async async (_req, res) => {
+router.get('/collection-sets', async (_req, res) => {
     const sets = await db.prepare('SELECT * FROM collection_sets ORDER BY sort_order').all();
     const result = (sets as any[]).map((set: any) => {
         const items = db.prepare(
@@ -16,7 +16,7 @@ router.get('/collection-sets', async async (_req, res) => {
 });
 
 // Создать сет
-router.post('/collection-sets', async async (req, res) => {
+router.post('/collection-sets', async (req, res) => {
     const { name, description, bonus_percent, sort_order, items } = req.body;
     if (!name) return res.status(400).json({ error: 'name required' });
 
@@ -39,7 +39,7 @@ router.post('/collection-sets', async async (req, res) => {
 });
 
 // Обновить сет
-router.put('/collection-sets/:id', async async (req, res) => {
+router.put('/collection-sets/:id', async (req, res) => {
     const { name, description, bonus_percent, sort_order, items } = req.body;
     const setId = Number(req.params.id);
 
@@ -66,7 +66,7 @@ router.put('/collection-sets/:id', async async (req, res) => {
 });
 
 // Удалить сет
-router.delete('/collection-sets/:id', async async (req, res) => {
+router.delete('/collection-sets/:id', async (req, res) => {
     const setId = Number(req.params.id);
     await db.prepare('DELETE FROM collection_set_items WHERE set_id = ?').run(setId);
     await db.prepare('DELETE FROM collection_sets WHERE id = ?').run(setId);

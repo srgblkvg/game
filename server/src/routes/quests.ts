@@ -70,11 +70,11 @@ async function getProgress(userId: number, snapshot: any, questType: QuestType):
 }
 
 // Получить/сгенерировать квесты
-router.get('/tavern/quests', async async (req, res) => {
+router.get('/tavern/quests', async (req, res) => {
     const userId = req.userId;
     const today = getToday();
 
-    let quests = db.prepare(
+    let quests = await db.prepare(
         'SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id'
     ).all(userId, today) as any[];
 
@@ -83,7 +83,7 @@ router.get('/tavern/quests', async async (req, res) => {
 
         // Переносим активные квесты со вчера на сегодня
         const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-        const activeYesterday = db.prepare(
+        const activeYesterday = await db.prepare(
             "SELECT * FROM daily_quests WHERE userId = ? AND date = ? AND status = 'active'"
         ).all(userId, yesterday) as any[];
 
@@ -108,7 +108,7 @@ router.get('/tavern/quests', async async (req, res) => {
             stmt.run(userId, qt, diff, req, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(now), today);
         }
 
-        quests = db.prepare(
+        quests = await db.prepare(
             'SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id'
         ).all(userId, today) as any[];
     }
@@ -151,7 +151,7 @@ router.get('/tavern/quests', async async (req, res) => {
 });
 
 // Взять квест
-router.post('/tavern/quests/take', async async (req, res) => {
+router.post('/tavern/quests/take', async (req, res) => {
     const userId = req.userId;
     const questId = parseInt(req.body.questId);
     if (!questId) return res.status(400).json({ error: 'Укажите questId' });
@@ -180,7 +180,7 @@ router.post('/tavern/quests/take', async async (req, res) => {
 });
 
 // Сдать квест
-router.post('/tavern/quests/claim', async async (req, res) => {
+router.post('/tavern/quests/claim', async (req, res) => {
     const userId = req.userId;
     const questId = parseInt(req.body.questId);
     if (!questId) return res.status(400).json({ error: 'Укажите questId' });

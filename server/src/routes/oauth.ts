@@ -70,12 +70,12 @@ async function findOrCreateUser(provider: string, oauthId: string, username: str
 }
 
 // --- Яндекс ID ---
-router.get('/yandex', async async (_req, res) => {
+router.get('/yandex', async (_req, res) => {
     const url = `https://oauth.yandex.ru/authorize?response_type=code&client_id=${YA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI_YA)}`;
     res.redirect(url);
 });
 
-router.get('/yandex/callback', async async async (req, res) => {
+router.get('/yandex/callback', async (req, res) => {
     const { code } = req.query;
     if (!code || typeof code !== 'string') {
         return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
@@ -126,7 +126,7 @@ router.get('/yandex/callback', async async async (req, res) => {
 });
 
 // --- VK ID ---
-router.get('/vk', async async (_req, res) => {
+router.get('/vk', async (_req, res) => {
     const verifier = crypto.randomBytes(32).toString('base64url');
     const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
     const state = crypto.randomBytes(16).toString('hex');
@@ -137,7 +137,7 @@ router.get('/vk', async async (_req, res) => {
     res.redirect(url);
 });
 
-router.get('/vk/callback', async async async (req, res) => {
+router.get('/vk/callback', async (req, res) => {
     const { code, state, device_id } = req.query;
     if (!code || typeof code !== 'string') {
         return res.redirect(`${FRONTEND_URL}/login?error=no_code`);

@@ -8,7 +8,7 @@ const rankNames: Record<string, string> = {
 };
 
 // Список орденов
-router.get('/orders', async async (req, res) => {
+router.get('/orders', async (req, res) => {
     const orders = await db.prepare(`
         SELECT o.*, u.username as masterName,
             (SELECT COUNT(*) FROM order_members WHERE orderId = o.id) as memberCount
@@ -18,7 +18,7 @@ router.get('/orders', async async (req, res) => {
 });
 
 // Мой орден
-router.get('/orders/my', async async (req, res) => {
+router.get('/orders/my', async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT * FROM order_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.json({ order: null });
@@ -35,7 +35,7 @@ router.get('/orders/my', async async (req, res) => {
 });
 
 // Создать орден
-router.post('/orders/create', async async (req, res) => {
+router.post('/orders/create', async (req, res) => {
     const userId = req.userId;
     const { name } = req.body;
     if (!name || name.length < 2) return res.status(400).json({ error: 'Имя ордена от 2 символов' });
@@ -59,7 +59,7 @@ router.post('/orders/create', async async (req, res) => {
 });
 
 // Вступить в орден
-router.post('/orders/join', async async (req, res) => {
+router.post('/orders/join', async (req, res) => {
     const userId = req.userId;
     const { orderId } = req.body;
 
@@ -79,7 +79,7 @@ router.post('/orders/join', async async (req, res) => {
 });
 
 // Покинуть орден
-router.post('/orders/leave', async async (req, res) => {
+router.post('/orders/leave', async (req, res) => {
     const userId = req.userId;
     const member = await db.prepare('SELECT * FROM order_members WHERE userId = ?').get(userId) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в ордене' });
@@ -90,7 +90,7 @@ router.post('/orders/leave', async async (req, res) => {
 });
 
 // Пожертвовать в казну
-router.post('/orders/donate', async async (req, res) => {
+router.post('/orders/donate', async (req, res) => {
     const userId = req.userId;
     const { amount } = req.body;
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
@@ -107,7 +107,7 @@ router.post('/orders/donate', async async (req, res) => {
 });
 
 // Повысить/понизить участника (магистр/офицер)
-router.post('/orders/promote', async async (req, res) => {
+router.post('/orders/promote', async (req, res) => {
     const userId = req.userId;
     const { targetUserId, newRank } = req.body;
     if (!['officer', 'veteran', 'fighter', 'recruit'].includes(newRank)) return res.status(400).json({ error: 'Недопустимый ранг' });
@@ -124,7 +124,7 @@ router.post('/orders/promote', async async (req, res) => {
 });
 
 // Исключить участника
-router.post('/orders/kick', async async (req, res) => {
+router.post('/orders/kick', async (req, res) => {
     const userId = req.userId;
     const { targetUserId } = req.body;
 

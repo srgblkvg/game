@@ -74,7 +74,7 @@ export async function setupWebSocket(server: any) {
   });
 
   // ---------- Подключение ----------
-  wss.on('connection', (ws: WebSocket, req) => {
+  wss.on('connection', async (ws: WebSocket, req) => {
     // Инициализация heartbeat-флага
     (ws as WebSocket & { isAlive?: boolean }).isAlive = true;
     ws.on('pong', () => heartbeat(ws));
@@ -155,7 +155,7 @@ export async function setupWebSocket(server: any) {
     notifyUserOnline(onlineUser);
 
     // ---------- Обработка сообщений ----------
-    ws.on('message', (raw) => {
+    ws.on('message', async (raw) => {
       let data: any;
       try { data = JSON.parse(raw.toString()); } catch { return; }
 

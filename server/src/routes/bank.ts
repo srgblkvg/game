@@ -7,7 +7,7 @@ const router = Router();
 // router.use('/bank', requireFullAccess); // отключено для гостей
 
 // Получить состояние банка
-router.get('/bank', async async (req, res) => {
+router.get('/bank', async (req, res) => {
     const userId = req.userId;
     const user = await db.prepare('SELECT money, bank, accountNumber FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -15,7 +15,7 @@ router.get('/bank', async async (req, res) => {
 });
 
 // Положить в банк
-router.post('/bank/deposit', async async (req, res) => {
+router.post('/bank/deposit', async (req, res) => {
     const userId = req.userId;
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
@@ -43,7 +43,7 @@ router.post('/bank/deposit', async async (req, res) => {
 });
 
 // Снять из банка
-router.post('/bank/withdraw', async async (req, res) => {
+router.post('/bank/withdraw', async (req, res) => {
     const userId = req.userId;
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
@@ -68,7 +68,7 @@ router.post('/bank/withdraw', async async (req, res) => {
 });
 
 // Перевод по номеру счёта
-router.post('/bank/transfer', async async (req, res) => {
+router.post('/bank/transfer', async (req, res) => {
     const userId = req.userId;
     const { accountNumber, amount } = req.body;
     const transferAmount = parseInt(amount);
@@ -110,7 +110,7 @@ router.post('/bank/transfer', async async (req, res) => {
 });
 
 // История переводов
-router.get('/bank/transfers', async async (req, res) => {
+router.get('/bank/transfers', async (req, res) => {
     const userId = req.userId;
     const filter = (req.query.filter as string) || 'all';
     const limit = parseInt(req.query.limit as string) || 30;
@@ -126,7 +126,7 @@ router.get('/bank/transfers', async async (req, res) => {
 });
 
 // История банковских операций
-router.get('/bank/operations', async async (req, res) => {
+router.get('/bank/operations', async (req, res) => {
     const userId = req.userId;
     const filter = (req.query.filter as string) || 'all';
     const limit = parseInt(req.query.limit as string) || 30;

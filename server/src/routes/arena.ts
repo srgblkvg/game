@@ -8,7 +8,7 @@ import { getBaseStats, enrichEquipment, spendMoney } from '../db/helpers';
 const router = Router();
 
 // Получить случайного соперника (без боя)
-router.get('/arena/opponent', async async (req, res) => {
+router.get('/arena/opponent', async (req, res) => {
     const userId = req.userId;
     const change = req.query.change === 'true';
     const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
@@ -118,7 +118,7 @@ router.get('/arena/opponent', async async (req, res) => {
 });
 
 // Вход на арену (платный)
-router.post('/arena/enter', async async (req, res) => {
+router.post('/arena/enter', async (req, res) => {
     const parsed = arenaEnterSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректный запрос' });
 
@@ -138,7 +138,7 @@ router.post('/arena/enter', async async (req, res) => {
 });
 
 // Проверка наличия соперников
-router.get('/arena/check-opponent', async async (req, res) => {
+router.get('/arena/check-opponent', async (req, res) => {
     const userId = req.userId;
     const now = Math.floor(Date.now() / 1000);
     const count = (await db.prepare(

@@ -5,12 +5,12 @@ import { startJobSchema, createJobSchema } from '../validation';
 const router = Router();
 
 // Игровые
-router.get('/jobs', async async (req, res) => {
+router.get('/jobs', async (req, res) => {
     const jobs = await db.prepare('SELECT * FROM jobs').all();
     res.json(jobs);
 });
 
-router.post('/jobs/start', async async (req, res) => {
+router.post('/jobs/start', async (req, res) => {
     const parsed = startJobSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
@@ -28,7 +28,7 @@ router.post('/jobs/start', async async (req, res) => {
 });
 
 // Случайная работа по длительности
-router.post('/jobs/start-random', async async (req, res) => {
+router.post('/jobs/start-random', async (req, res) => {
     const userId = req.userId;
     const { duration } = req.body; // 600, 1800, 3600, 28800
 
@@ -64,14 +64,14 @@ async function startJobForUser(user: any, job: any, res: any) {
     res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, background: job.background || null });
 }
 
-router.get('/jobs/history', async async (req, res) => {
+router.get('/jobs/history', async (req, res) => {
     const userId = req.userId;
     const history = await db.prepare('SELECT * FROM job_history WHERE userId = ? ORDER BY finishedAt DESC LIMIT 10').all(userId);
     res.json(history);
 });
 
 // Отменить работу без награды
-router.post('/jobs/cancel', async async (req, res) => {
+router.post('/jobs/cancel', async (req, res) => {
     const userId = req.userId;
     const user = await db.prepare('SELECT activeJob FROM users WHERE id = ?').get(userId) as any;
     if (!user || !user.activeJob) return res.status(400).json({ error: 'Нет активной работы' });
@@ -80,12 +80,12 @@ router.post('/jobs/cancel', async async (req, res) => {
 });
 
 // Административные
-router.get('/admin/jobs', async async (req, res) => {
+router.get('/admin/jobs', async (req, res) => {
     const jobs = await db.prepare('SELECT * FROM jobs ORDER BY id').all();
     res.json(jobs);
 });
 
-router.post('/admin/jobs', async async (req, res) => {
+router.post('/admin/jobs', async (req, res) => {
     const parsed = createJobSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные работы' });
 
@@ -95,7 +95,7 @@ router.post('/admin/jobs', async async (req, res) => {
     res.json({ success: true });
 });
 
-router.put('/admin/jobs/:id', async async (req, res) => {
+router.put('/admin/jobs/:id', async (req, res) => {
     const parsed = createJobSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные работы' });
 
@@ -105,7 +105,7 @@ router.put('/admin/jobs/:id', async async (req, res) => {
     res.json({ success: true });
 });
 
-router.delete('/admin/jobs/:id', async async (req, res) => {
+router.delete('/admin/jobs/:id', async (req, res) => {
     await db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
     res.json({ success: true });
 });
