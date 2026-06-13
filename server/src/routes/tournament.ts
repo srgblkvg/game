@@ -467,14 +467,14 @@ router.get('/tournament', async (req: any, res) => {
             return {
                 ...t,
                 participantCount: participants.length,
-                participants: participants.map((p: any) => ({
+                participants: participants.map(async (p: any) => ({
                     id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
                     guildName: p.guildName, guildId: p.guildId,
                     snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
                 })),
                 top3: participants
                     .filter((p: any) => p.snapshotStats)
-                    .map((p: any) => ({ ...JSON.parse(p.snapshotStats), username: p.username }))
+                    .map(async (p: any) => ({ ...JSON.parse(p.snapshotStats), username: p.username }))
                     .sort((a: any, b: any) => a.place - b.place),
             };
         });
@@ -520,7 +520,7 @@ router.get('/tournament', async (req: any, res) => {
             minLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.minLevel; })() : t.minLevel,
             maxLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.maxLevel; })() : t.maxLevel,
             participantCount: participants.length,
-            participants: participants.map((p: any) => ({
+            participants: participants.map(async (p: any) => ({
                 id: p.userId,
                 username: p.username,
                 goldenTicket: p.goldenTicket,
@@ -528,7 +528,7 @@ router.get('/tournament', async (req: any, res) => {
                 snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
             })),
             myRegistration: myReg || null,
-            matches: matches.map((m: any) => ({
+            matches: await Promise.all(matches.map(async (m: any) => ({
                 ...m,
                 player1Name: m.player1Id
                     ? (await db.prepareGet('SELECT username FROM users WHERE id = ?')(m.player1Id) as any)?.username
