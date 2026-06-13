@@ -18,7 +18,7 @@ export function calculateStats(
   for (const item of Object.values(char.equipment)) {
     if (item.bonuses) {
       const level = item.upgradeLevel || 0;
-      const multiplier = 1 + level * 0.05;
+      const multiplier = 1 + level * 0.1;
       for (const k of Object.keys(item.bonuses)) {
         sums[k as keyof typeof sums] += Math.round(item.bonuses[k as keyof typeof item.bonuses] * multiplier);
       }
