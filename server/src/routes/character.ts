@@ -8,16 +8,16 @@ import { getUserById, getBaseStats, enrichEquipment, applyExp } from '../db/help
 
 const router = Router();
 
-const getItemData = db.prepare(`
+const getItemData = (name: string, slot: string) => db.oneOrNone(`
     SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color
     FROM items i JOIN rarities r ON i.rarity_id = r.id
-    WHERE i.name = ? AND i.slot = ?
-`);
-const getCraftData = db.prepare(`
+    WHERE i.name = $1 AND i.slot = $2
+`, [name, slot]);
+const getCraftData = (id: number) => db.oneOrNone(`
     SELECT c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color
     FROM craft_items c JOIN rarities r ON c.rarity_id = r.id
-    WHERE c.id = ?
-`);
+    WHERE c.id = $1
+`, [id]);
 
 // Загрузить персонажа (текущего пользователя)
 router.get('/character/me', async (req, res) => {
