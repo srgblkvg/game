@@ -17,11 +17,13 @@ function formatTime(seconds: number) {
     const d = Math.floor(seconds / 86400);
     const h = Math.floor((seconds % 86400) / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    if (d > 0) return `${d} дн ${h} ч ${m} мин`;
-    return h > 0 ? `${h} ч ${m} мин` : `${m} мин`;
+    if (d > 0) return `${d} дн ${h} ч`;
+    if (h > 0) return `${h} ч ${m} мин`;
+    return `${m} мин`;
 }
 
 const roomNames: Record<string, string> = { closet: 'Чулан', bed: 'Койка', chamber: 'Покой' };
+const roomIcons: Record<string, string> = { closet: 'game-icons:wooden-crate', bed: 'game-icons:bed', chamber: 'game-icons:castle' };
 const roomRates: Record<string, number> = { closet: 3, bed: 10, chamber: 50 };
 
 const drinkNames: Record<string, string> = {
@@ -44,118 +46,94 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment 
         return () => clearInterval(t);
     }, []);
 
-    // Индикатор: синхронно по inventory/equipment + коллекции
     useEffect(() => {
         fetch('/api/collections', { headers: getHeaders() })
             .then(r => r.json())
             .then((data: any) => {
                 const collSet = new Set<string>();
-                const collItems = data.items || [];
-                for (const c of collItems) {
-                    collSet.add(`${c.itemName}|${c.slot}`);
-                }
+                for (const c of (data.items || [])) collSet.add(`${c.itemName}|${c.slot}`);
+
                 const inv = inventory || [];
                 const eq = equipment || {};
                 const equippedNames = new Set<string>();
                 for (const slot of Object.values(eq)) {
-                    if ((slot as any)?.name && (slot as any)?.slot) {
-                        equippedNames.add(`${(slot as any).name}|${(slot as any).slot}`);
-                    }
+                    if ((slot as any)?.name && (slot as any)?.slot) equippedNames.add(`${(slot as any).name}|${(slot as any).slot}`);
                 }
                 const hasAddable = inv.some((invItem: any) =>
-                    invItem.name && invItem.slot &&
-                    !collSet.has(`${invItem.name}|${invItem.slot}`) &&
-                    !equippedNames.has(`${invItem.name}|${invItem.slot}`)
+                    invItem.name && invItem.slot && !collSet.has(`${invItem.name}|${invItem.slot}`) && !equippedNames.has(`${invItem.name}|${invItem.slot}`)
                 );
                 setHasCollectionItems(hasAddable);
+
+                const sets = data.sets || [];
+                const totalItems = sets.reduce((sum: number, s: any) => sum + (s.totalItems || 0), 0);
+                setCollectionPercent(totalItems > 0 ? Math.round(((data.items || []).length / totalItems) * 100) : 0);
             })
             .catch(() => {});
     }, [inventory, equipment]);
-
-    // Процент коллекции: загружаем один раз
-    useEffect(() => {
-        fetch('/api/collections', { headers: getHeaders() })
-            .then(r => r.json())
-            .then((data: any) => {
-                const sets = data.sets || [];
-                const collItems = data.items || [];
-                const totalItems = sets.reduce((sum: number, s: any) => sum + (s.totalItems || 0), 0);
-                const pct = totalItems > 0 ? Math.round((collItems.length / totalItems) * 100) : 0;
-                setCollectionPercent(pct);
-            })
-            .catch(() => {});
-    }, []);
 
     const hasRoom = room && room.until > now;
     const hasDrink = drink && drink.until > now;
     const hasPremium = premium && premium.until > now;
     const activeCount = [hasRoom, hasDrink, hasPremium].filter(Boolean).length;
 
+    const activeList = [
+        hasRoom && `🏠 ${roomNames[room!.type] || room!.type}`,
+        hasDrink && `🍺 ${drinkNames[drink!.type] || drink!.type}`,
+        hasPremium && '⭐ Премиум',
+    ].filter(Boolean).join(', ');
+
     return (
         <Card className="mt-4 w-full">
-            <div
-                className="flex items-center justify-between cursor-pointer select-none"
-                onClick={() => setCollapsed(!collapsed)}
-            >
-                <div className="flex items-center gap-2">
-                    <span className="text-sm">{collapsed ? '▶' : '▼'}</span>
-                    <h3 className="font-bold text-sm">Усиления</h3>
-                    {hasCollectionItems && (
-                        <span className="w-2 h-2 rounded-full bg-[#2ecc71] flex-shrink-0" />
+            <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setCollapsed(!collapsed)}>
+                <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs flex-shrink-0">{collapsed ? '▶' : '▼'}</span>
+                    <h3 className="font-bold text-sm flex-shrink-0">Усиления</h3>
+                    {hasCollectionItems && <span className="w-2 h-2 rounded-full bg-[#2ecc71] flex-shrink-0" />}
+                    {collapsed && activeList && (
+                        <span className="text-xs text-[var(--color-text-muted)] truncate">{activeList}</span>
                     )}
                 </div>
-                <span className="text-xs text-[var(--color-text-muted)]">
+                <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0 ml-2">
                     {activeCount > 0 ? `${activeCount} акт.` : 'Нет'}
                 </span>
             </div>
 
             {!collapsed && (
-                <div className="mt-3 space-y-3">
+                <div className="mt-2 space-y-2">
                     {/* Временные */}
-                    <div>
-                        <div className="text-[0.7rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                            <Icon icon="game-icons:hourglass" width="11" height="11" /> Временные
+                    <div className="space-y-0.5">
+                        <div className="text-[0.65rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                            <Icon icon="game-icons:hourglass" width="10" height="10" /> Временные
                         </div>
-                        <div className="space-y-0.5">
-                            {/* Комната */}
-                            <div
-                                className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1"
-                                onClick={() => navigate('/tavern?tab=room')}
-                            >
-                                <span className={hasRoom ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}>
-                                    Комната{hasRoom && room ? `: ${roomNames[room.type] || room.type} (×${roomRates[room.type] || '?'})` : ''}
-                                </span>
-                                <span className="text-[var(--color-text-muted)]">
-                                    {hasRoom && room ? formatTime(room.until - now) : 'Отсутствует'}
-                                </span>
-                            </div>
 
-                            {/* Напиток */}
-                            <div
-                                className="flex justify-between text-xs py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1"
-                                onClick={() => navigate('/tavern?tab=drink')}
-                            >
-                                <span className={hasDrink ? 'text-[var(--color-accent-purple)]' : 'text-[var(--color-text-muted)]'}>
-                                    Напиток{hasDrink && drink ? `: ${drinkNames[drink.type] || drink.type}` : ''}
-                                </span>
-                                <span className="text-[var(--color-text-muted)]">
-                                    {hasDrink && drink ? formatTime(drink.until - now) : 'Отсутствует'}
-                                </span>
-                            </div>
+                        {/* Комната */}
+                        <BuffRow
+                            icon={hasRoom && room ? roomIcons[room.type] || 'game-icons:wooden-crate' : 'game-icons:wooden-crate'}
+                            label="Комната"
+                            active={!!hasRoom}
+                            detail={hasRoom && room ? `${roomNames[room.type] || room.type} ×${roomRates[room.type] || '?'}` : ''}
+                            time={hasRoom && room ? formatTime(room.until - now) : '—'}
+                            onClick={() => navigate('/tavern?tab=room')}
+                        />
 
-                            {/* Премиум */}
-                            <div
-                                className="flex justify-between text-xs py-1 cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1"
-                                onClick={() => navigate('/premium')}
-                            >
-                                <span className={hasPremium ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-muted)]'} style={hasPremium ? { color: '#f1c40f' } : undefined}>
-                                    Премиум
-                                </span>
-                                <span className="text-[var(--color-text-muted)]">
-                                    {hasPremium && premium ? formatTime(premium.until - now) : 'Отсутствует'}
-                                </span>
-                            </div>
-                        </div>
+                        {/* Напиток */}
+                        <BuffRow
+                            icon="game-icons:beer-bottle"
+                            label="Напиток"
+                            active={!!hasDrink}
+                            detail={hasDrink && drink ? drinkNames[drink.type] || drink.type : ''}
+                            time={hasDrink && drink ? formatTime(drink.until - now) : '—'}
+                            onClick={() => navigate('/tavern?tab=drink')}
+                        />
+
+                        {/* Премиум */}
+                        <BuffRow
+                            icon="game-icons:star-formation"
+                            label="Премиум"
+                            active={!!hasPremium}
+                            time={hasPremium && premium ? formatTime(premium.until - now) : '—'}
+                            onClick={() => navigate('/premium')}
+                        />
                     </div>
 
                     {/* Разделитель */}
@@ -163,21 +141,40 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment 
 
                     {/* Постоянные */}
                     <div>
-                        <div className="text-[0.7rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                            <Icon icon="game-icons:infinity" width="11" height="11" /> Постоянные
+                        <div className="text-[0.65rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 flex items-center gap-1">
+                            <Icon icon="game-icons:infinity" width="10" height="10" /> Постоянные
                         </div>
-                        <div className="flex justify-between text-xs py-1 text-[var(--color-text-muted)] rounded px-1 -mx-1 cursor-pointer hover:bg-[var(--color-bg-hover)]" onClick={() => navigate('/collections')}>
-                            <span className="flex items-center gap-1.5">
-                                Коллекция
-                                {hasCollectionItems && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#2ecc71] flex-shrink-0" />
-                                )}
-                            </span>
-                            <span>{collectionPercent}%</span>
+                        <div className="cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1 py-0.5" onClick={() => navigate('/collections')}>
+                            <div className="flex justify-between items-center text-xs mb-0.5">
+                                <span className="flex items-center gap-1.5">
+                                    <Icon icon="game-icons:book-cover" width="12" height="12" className="text-[var(--color-text-muted)]" />
+                                    Коллекция
+                                    {hasCollectionItems && <span className="w-1.5 h-1.5 rounded-full bg-[#2ecc71]" />}
+                                </span>
+                                <span className="text-[var(--color-text-muted)]">{collectionPercent}%</span>
+                            </div>
+                            <div className="w-full h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                <div className="h-full bg-[var(--color-accent-gold)] rounded-full transition-all duration-500"
+                                    style={{ width: `${collectionPercent}%` }} />
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
         </Card>
+    );
+}
+
+function BuffRow({ icon, label, active, detail, time, onClick }: {
+    icon: string; label: string; active: boolean; detail?: string; time: string; onClick: () => void;
+}) {
+    return (
+        <div className="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1" onClick={onClick}>
+            <Icon icon={icon} width="12" height="12" className={active ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-muted)]'} />
+            <span className={active ? 'text-[var(--color-text-primary)] font-medium' : 'text-[var(--color-text-muted)]'}>
+                {label}{detail ? `: ${detail}` : ''}
+            </span>
+            <span className="ml-auto text-[var(--color-text-muted)] tabular-nums">{time}</span>
+        </div>
     );
 }
