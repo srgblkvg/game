@@ -31,17 +31,17 @@ const BASE_REWARDS: Record<QuestType, { xp: number; money: number }> = {
     job: { xp: 3, money: 20 }, craft: { xp: 3, money: 25 }, auction: { xp: 3, money: 50 },
 };
 
-function getToday(): string {
+async function getToday(): string {
     return new Date().toISOString().slice(0, 10);
 }
 
-function getMidnightTS(): number {
+async function getMidnightTS(): number {
     const d = new Date();
     d.setUTCHours(24, 0, 0, 0);
     return Math.floor(d.getTime() / 1000);
 }
 
-function getSnapshot(userId: number): Record<string, number> {
+async function getSnapshot(userId: number): Record<string, number> {
     const u = db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;
@@ -54,7 +54,7 @@ function getSnapshot(userId: number): Record<string, number> {
     };
 }
 
-function getProgress(userId: number, snapshot: any, questType: QuestType): number {
+async function getProgress(userId: number, snapshot: any, questType: QuestType): number {
     const u = db.prepare(
         'SELECT pveWins, wins, craftCount, auctionTrades, totalJobSeconds FROM users WHERE id = ?'
     ).get(userId) as any;

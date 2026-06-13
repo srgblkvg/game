@@ -7,7 +7,7 @@ import db from '../database';
  * Реген: 1 HP каждые 10 сек (базовый), ускорение от комнаты:
  *   closet=×3, bed=×10, chamber=×50
  */
-export function applyHpRegen(user: {
+async function applyHpRegen(user: {
     id: number;
     currentHp: number;
     maxHp: number;

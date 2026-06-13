@@ -20,7 +20,7 @@ const divisions = [
 // Брекет
 // ---------------------------------------------------------------------------
 
-function nextPowerOfTwo(n: number): number {
+async function nextPowerOfTwo(n: number): number {
     let p = 1;
     while (p < n) p *= 2;
     return p;
@@ -32,7 +32,7 @@ function nextPowerOfTwo(n: number): number {
  * Добиваем до степени 2 нулями (bye).
  * Пары: 1-й с последним, 2-й с предпоследним и т.д.
  */
-function generateBracket(tournamentId: number) {
+async function generateBracket(tournamentId: number) {
     const participants = await db.prepareAll(`
         SELECT tp.*, u.username, u.level, u.money, u.baseS, u.baseA, u.baseD, u.baseM,
                u.equipment, u.currentHp, u.statPoints, u.tournamentElo
@@ -105,7 +105,7 @@ function generateBracket(tournamentId: number) {
 // Симуляция раунда
 // ---------------------------------------------------------------------------
 
-function loadPlayerForBattle(userId: number) {
+async function loadPlayerForBattle(userId: number) {
     const u = await db.prepareGet(`
         SELECT id, username, level, money, baseS, baseA, baseD, baseM,
                equipment, currentHp
@@ -137,7 +137,7 @@ function loadPlayerForBattle(userId: number) {
  * Разрешить все незавершённые матчи текущего раунда.
  * Возвращает номер разрешённого раунда (или 0 если ничего не сделано).
  */
-function resolveCurrentRound(tournamentId: number): number {
+async function resolveCurrentRound(tournamentId: number): number {
     // Находим минимальный раунд с незавершёнными матчами
     const pendingRound = await db.prepareGet(`
         SELECT round FROM tournament_matches
@@ -172,7 +172,7 @@ function resolveCurrentRound(tournamentId: number): number {
 /**
  * После завершения раунда создать матчи следующего раунда из победителей.
  */
-function advanceWinners(tournamentId: number, finishedRound: number) {
+async function advanceWinners(tournamentId: number, finishedRound: number) {
     const nextRound = finishedRound + 1;
 
     const winners = await db.prepareAll(`
@@ -204,7 +204,7 @@ function advanceWinners(tournamentId: number, finishedRound: number) {
 // Завершение турнира и призы
 // ---------------------------------------------------------------------------
 
-function finishTournament(tournamentId: number) {
+async function finishTournament(tournamentId: number) {
     const t = await db.prepareGet('SELECT * FROM tournaments WHERE id = ?')(tournamentId) as any;
     if (!t || t.status === 'completed' || t.status === 'cancelled') return;
 
@@ -322,7 +322,7 @@ function finishTournament(tournamentId: number) {
 // Автопродвижение (вызывается при каждом GET /tournament)
 // ---------------------------------------------------------------------------
 
-function autoAdvance(tournamentId: number) {
+async function autoAdvance(tournamentId: number) {
     const t = await db.prepareGet('SELECT * FROM tournaments WHERE id = ?')(tournamentId) as any;
     if (!t) return;
 
@@ -386,7 +386,7 @@ function autoAdvance(tournamentId: number) {
 // Создание турнира (если нет активного)
 // ---------------------------------------------------------------------------
 
-function getOrCreateTournament(type?: string) {
+async function getOrCreateTournament(type?: string) {
     const now = Math.floor(Date.now() / 1000);
     const typeFilter = type ? "AND type = ?" : "";
     const params: any[] = type ? [type] : [];

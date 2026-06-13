@@ -529,7 +529,7 @@ router.get('/guild/treasury/history', (req: any, res) => {
 // --- Гильд-войны ---
 
 // Проверить, в войне ли гильдия (с авто-закрытием просроченных)
-function isGuildAtWar(guildId: number): any | null {
+async function isGuildAtWar(guildId: number): any | null {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
     // Авто-отмена просроченных pending войн
     db.prepare(

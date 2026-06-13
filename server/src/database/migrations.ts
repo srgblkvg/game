@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 
-export function runMigrations(db: InstanceType<typeof Database>) {
+async function runMigrations(db: InstanceType<typeof Database>) {
   // Блокировка аккаунта (failedLogins, lockedUntil)
   for (const col of [
     'failedLogins INTEGER DEFAULT 0',
@@ -386,7 +386,7 @@ export function runMigrations(db: InstanceType<typeof Database>) {
 
   // Генерируем счета существующим игрокам
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  function genCode(): string {
+  async function genCode(): string {
       let code = '';
       for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
       return code;

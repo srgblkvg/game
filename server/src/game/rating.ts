@@ -5,7 +5,7 @@ import type Database from 'better-sqlite3';
  *   Новый = Старый + K × (Результат − Ожидание)
  *   Ожидание = 1 / (1 + 10^((R_оппонента − R_игрока) / 400))
  */
-export function calcElo(playerElo: number, opponentElo: number, playerWon: boolean, level: number): number {
+async function calcElo(playerElo: number, opponentElo: number, playerWon: boolean, level: number): number {
     const k = level <= 10 ? 40 : level <= 25 ? 30 : level <= 50 ? 20 : 15;
     const expected = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
     const result = playerWon ? 1 : 0;
@@ -15,7 +15,7 @@ export function calcElo(playerElo: number, opponentElo: number, playerWon: boole
 /**
  * Декай рейтинга за неактивность в PvP
  */
-export function applyDecay(db: InstanceType<typeof Database>, userId: number, lastPvpTime: number, elo: number): number {
+async function applyDecay(db: InstanceType<typeof Database>, userId: number, lastPvpTime: number, elo: number): number {
     const now = Math.floor(Date.now() / 1000);
     if (!lastPvpTime) return elo;
 
@@ -41,7 +41,7 @@ export function applyDecay(db: InstanceType<typeof Database>, userId: number, la
  * Начисление PvE-рейтинга
  * Возвращает { eloAdded, newElo }
  */
-export function addPveRating(
+async function addPveRating(
     db: InstanceType<typeof Database>,
     userId: number,
     amount: number,
@@ -72,7 +72,7 @@ export function addPveRating(
 /**
  * Проверка и сброс сезона при необходимости
  */
-export function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
+async function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
     const season = await db.prepareGet("SELECT * FROM seasons WHERE status = 'active' LIMIT 1")() as any;
     if (!season) return false;
 

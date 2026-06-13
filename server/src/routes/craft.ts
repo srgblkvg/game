@@ -7,7 +7,7 @@ const router = Router();
 // Все маршруты крафта требуют полный доступ
 // router.use('/craft', requireFullAccess); // отключено для гостей
 
-function isCraftItem(item: any): boolean {
+async function isCraftItem(item: any): boolean {
     return item?.type === 'material' || item?.type === 'craft_item';
 }
 
