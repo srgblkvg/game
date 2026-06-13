@@ -36,7 +36,7 @@ import actionsRoutes from './routes/actions';
 import collectionsRoutes from './routes/collections';
 import adminCollectionsRoutes from './routes/adminCollections';
 
-export function setupRoutes(app: Express) {
+export async function setupRoutes(app: Express) {
   // Публичные маршруты
   app.use('/api', authRoutes);
   app.use('/api', adminAuthRoutes);

@@ -25,7 +25,7 @@ const clients = new Map<number, WebSocket>();
 const onlineUsers = new Map<number, OnlineUser>();
 
 // ---------- Рассылка ----------
-function broadcast(type: string, data: any, exceptUserId?: number) {
+async function broadcast(type: string, data: any, exceptUserId?: number) {
   const payload = JSON.stringify({ type, ...data });
   clients.forEach((ws, userId) => {
     if (userId !== exceptUserId && ws.readyState === WebSocket.OPEN) {
@@ -36,27 +36,27 @@ function broadcast(type: string, data: any, exceptUserId?: number) {
 
 export { broadcast };
 
-function sendToUser(userId: number, payload: object) {
+async function sendToUser(userId: number, payload: object) {
   const ws = clients.get(userId);
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
   }
 }
 
-function notifyUserOnline(user: OnlineUser) {
+async function notifyUserOnline(user: OnlineUser) {
   broadcast('userOnline', { user });
 }
 
-function notifyUserOffline(userId: number) {
+async function notifyUserOffline(userId: number) {
   broadcast('userOffline', { userId });
 }
 
 // ---------- Heartbeat ----------
-function heartbeat(ws: WebSocket & { isAlive?: boolean }) {
+async function heartbeat(ws: WebSocket & { isAlive?: boolean }) {
   ws.isAlive = true;
 }
 
-export function setupWebSocket(server: any) {
+export async function setupWebSocket(server: any) {
   const wss = new WebSocketServer({ server });
 
   // Интервал проверки живых соединений
