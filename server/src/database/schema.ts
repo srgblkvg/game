@@ -371,7 +371,7 @@ export async function runSchema() {
       CREATE TABLE IF NOT EXISTS login_logs (
         id SERIAL PRIMARY KEY,
         userId INTEGER,
-        username TEXT NOT NULL,
+        username TEXT,
         ip TEXT NOT NULL,
         success INTEGER DEFAULT 0,
         createdAt TEXT DEFAULT (TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'))

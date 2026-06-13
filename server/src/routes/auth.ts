@@ -6,7 +6,6 @@ import db from '../database';
 import { registerSchema, loginSchema, verifyEmailSchema } from '../validation';
 import { JWT_SECRET } from '../env';
 import { auditRegister, auditLoginSuccess, auditLoginFailure, auditAccountLocked } from '../audit';
-import logger from '../logger';
 import { sendVerificationCode } from '../email';
 import { applyDecay, checkSeasonReset } from '../game/rating';
 import { currentStats } from '../game/stats';
@@ -150,8 +149,6 @@ router.post('/login', async (req, res) => {
 
     // Ищем пользователя по email или username
     const userRow: any = await db.prepareGet('SELECT id, passwordHash, failedLogins, lockedUntil, bannedUntil FROM users WHERE username = ? OR email = ?')(login, login);
-    console.log('[LOGIN]', login, '→ found:', !!userRow, 'hash:', typeof userRow?.passwordHash);
-    logger.info({ login, found: !!userRow, hasHash: !!userRow?.passwordHash, hashLen: userRow?.passwordHash?.length, hashPrefix: userRow?.passwordHash?.substring(0, 7) }, 'LOGIN_DEBUG');
     if (userRow && userRow.lockedUntil > now) {
       const mins = Math.ceil((userRow.lockedUntil - now) / 60);
       auditAccountLocked(login, req.ip);
