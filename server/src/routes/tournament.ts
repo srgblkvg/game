@@ -465,7 +465,7 @@ router.get('/tournament', async (req, res) => {
             ORDER BY t.id DESC LIMIT ? OFFSET ?
         `).all(limit, offset) as any[];
 
-        const result = completed.map(async (t) => {
+        const result = await Promise.all(completed.map(async (t) => {
             const participants = await db.prepare(
                 'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?'
             ).all(t.id) as any[];
@@ -479,10 +479,10 @@ router.get('/tournament', async (req, res) => {
                 })),
                 top3: participants
                     .filter((p: any) => p.snapshotStats)
-                    .map(async (p) => ({ ...JSON.parse(p.snapshotStats), username: p.username }))
+                    .map((p) => ({ ...JSON.parse(p.snapshotStats), username: p.username }))
                     .sort((a: any, b: any) => a.place - b.place),
             };
-        });
+        }));
 
         return res.json({ tournaments: result, total, page, totalPages: Math.ceil(total / limit), userLevel: user.level, tab: 'completed' });
     }
@@ -511,7 +511,7 @@ router.get('/tournament', async (req, res) => {
 
     const allTournaments = [...updated];
 
-    const result = allTournaments.map(async (t) => {
+    const result = await Promise.all(allTournaments.map(async (t) => {
         const participants = await db.prepare(
             'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?'
         ).all(t.id) as any[];
@@ -525,7 +525,7 @@ router.get('/tournament', async (req, res) => {
             minLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.minLevel; })() : t.minLevel,
             maxLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.maxLevel; })() : t.maxLevel,
             participantCount: participants.length,
-            participants: participants.map(async (p) => ({
+            participants: participants.map((p) => ({
                 id: p.userId,
                 username: p.username,
                 goldenTicket: p.goldenTicket,
@@ -533,7 +533,7 @@ router.get('/tournament', async (req, res) => {
                 snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
             })),
             myRegistration: myReg || null,
-            matches: matches.map(async (m) => ({
+            matches: await Promise.all(matches.map(async (m) => ({
                 ...m,
                 player1Name: m.player1Id
                     ? (await db.prepare('SELECT username FROM users WHERE id = ?').get(m.player1Id) as any)?.username
@@ -545,9 +545,9 @@ router.get('/tournament', async (req, res) => {
                     ? (await db.prepare('SELECT username FROM users WHERE id = ?').get(m.winnerId) as any)?.username
                     : null,
                 log: m.log ? JSON.parse(m.log) : null,
-            })),
+            }))),
         };
-    });
+    }));
 
     // Сортировка: сначала доступные игроку, затем по registrationEnd
     result.sort((a: any, b: any) => {
