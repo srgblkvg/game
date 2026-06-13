@@ -9,16 +9,25 @@ import { setupRoutes } from './setupRoutes';
 import { setupWebSocket } from './websocket';
 import { PORT } from './env';
 import logger from './logger';
+import { initDB } from './database';
 
 const app = express();
 
-// Статические файлы (аватары)
-app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
+async function start() {
+  await initDB();
 
-setupMiddleware(app);
-setupRoutes(app);
+  app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
-const server = http.createServer(app);
-setupWebSocket(server);
+  setupMiddleware(app);
+  setupRoutes(app);
 
-server.listen(PORT, () => logger.info(`Server started on port ${PORT}`));
+  const server = http.createServer(app);
+  setupWebSocket(server);
+
+  server.listen(PORT, () => logger.info(`Server started on port ${PORT}`));
+}
+
+start().catch(err => {
+  console.error('Failed to start:', err);
+  process.exit(1);
+});
