@@ -43,12 +43,12 @@ router.get('/images', async (req, res) => {
 
 // ---------- Предметы ----------
 router.get('/items', async (req, res) => {
-    const items = await db.manyOrNone(`
+    const items = await db.prepare(`
         SELECT i.*, r.name as rarity_name, r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         ORDER BY i.id DESC
-    `);
+    `).all();
     res.json(items);
 });
 
@@ -57,7 +57,7 @@ router.post('/items', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
     const { name, slot, rarity_id, bonuses, extra, image, cost } = parsed.data;
-    await db.none('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)', [name, slot, rarity_id, JSON.stringify(bonuses || {}]), JSON.stringify(extra || {}), image || null, cost ?? null);
+    await db.prepare('INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)').run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, cost ?? null);
     res.json({ success: true });
 });
 
@@ -66,12 +66,12 @@ router.put('/items/:id', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные предмета', issues: parsed.error.issues });
 
     const { name, slot, rarity_id, bonuses, extra, image, cost } = parsed.data;
-    await db.none('UPDATE items SET name=?, slot=?, rarity_id=?, bonuses=?, extra=?, image=?, cost=? WHERE id=?', [name, slot, rarity_id, JSON.stringify(bonuses || {}]), JSON.stringify(extra || {}), image || null, cost ?? null, req.params.id);
+    await db.prepare('UPDATE items SET name=?, slot=?, rarity_id=?, bonuses=?, extra=?, image=?, cost=? WHERE id=?').run(name, slot, rarity_id, JSON.stringify(bonuses || {}), JSON.stringify(extra || {}), image || null, cost ?? null, req.params.id);
     res.json({ success: true });
 });
 
 router.delete('/items/:id', async (req, res) => {
-    await db.none('DELETE FROM items WHERE id = ?', [req.params.id]);
+    await db.prepare('DELETE FROM items WHERE id = ?').run(req.params.id);
     res.json({ success: true });
 });
 
@@ -86,7 +86,7 @@ router.get('/users', async (req, res) => {
     if (filter === 'guests') query += ' WHERE isGuest = 1';
     else if (filter === 'players') query += ' WHERE isGuest = 0';
     query += ' ORDER BY lastLoginAt DESC NULLS LAST';
-    const users = await db.manyOrNone(query).all();
+    const users = await db.prepare(query).all();
     res.json(users);
 });
 
@@ -100,10 +100,10 @@ router.post('/ban-user', async (req, res) => {
     const seconds = duration * multiplier;
     const bannedUntil = Math.floor(Date.now() / 1000) + seconds;
 
-    const user = await db.oneOrNone('SELECT id, username FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
-    await db.none('UPDATE users SET bannedUntil = ? WHERE id = ?', [bannedUntil, userId]);
+    await db.prepare('UPDATE users SET bannedUntil = ? WHERE id = ?').run(bannedUntil, userId);
     res.json({ success: true, bannedUntil, message: `${user.username} забанен на ${duration} ${unit}` });
 });
 
@@ -112,25 +112,25 @@ router.post('/unban-user', async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'Требуется userId' });
 
-    await db.none('UPDATE users SET bannedUntil = 0 WHERE id = ?', [userId]);
+    await db.prepare('UPDATE users SET bannedUntil = 0 WHERE id = ?').run(userId);
     res.json({ success: true, message: 'Игрок разбанен' });
 });
 
 // Удаление игрока
 router.delete('/users/:id', async (req, res) => {
     const userId = parseInt(req.params.id);
-    const user = await db.oneOrNone('SELECT id, username FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
     // Каскадное удаление
-    await db.none('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?', [userId, userId]);
-    await db.none('DELETE FROM job_history WHERE userId = ?', [userId]);
-    await db.none('DELETE FROM chat_messages WHERE senderId = ?', [userId]);
-    await db.none('DELETE FROM login_logs WHERE userId = ?', [userId]);
-    await db.none('DELETE FROM auction_lots WHERE sellerId = ?', [userId]);
-    await db.none('DELETE FROM tournament_participants WHERE userId = ?', [userId]);
-    await db.none('DELETE FROM order_members WHERE userId = ?', [userId]);
-    await db.none('DELETE FROM users WHERE id = ?', [userId]);
+    await db.prepare('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?').run(userId, userId);
+    await db.prepare('DELETE FROM job_history WHERE userId = ?').run(userId);
+    await db.prepare('DELETE FROM chat_messages WHERE senderId = ?').run(userId);
+    await db.prepare('DELETE FROM login_logs WHERE userId = ?').run(userId);
+    await db.prepare('DELETE FROM auction_lots WHERE sellerId = ?').run(userId);
+    await db.prepare('DELETE FROM tournament_participants WHERE userId = ?').run(userId);
+    await db.prepare('DELETE FROM order_members WHERE userId = ?').run(userId);
+    await db.prepare('DELETE FROM users WHERE id = ?').run(userId);
 
     res.json({ success: true, message: `Игрок ${user.username} (ID ${userId}) удалён` });
 });
@@ -149,10 +149,10 @@ router.post('/add-money', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
     const { userId, amount } = parsed.data;
-    const user = await db.oneOrNone('SELECT id, money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT id, money FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     const newMoney = user.money + amount;
-    await db.none('UPDATE users SET money = ? WHERE id = ?', [newMoney, userId]);
+    await db.prepare('UPDATE users SET money = ? WHERE id = ?').run(newMoney, userId);
     res.json({ success: true, newMoney });
 });
 
@@ -162,17 +162,17 @@ router.post('/reset-timers', async (req, res) => {
 
     const { all, userId } = parsed.data;
     if (all) {
-        await db.none('UPDATE users SET lastAttackTime = 0, protectionUntil = 0');
+        await db.prepare('UPDATE users SET lastAttackTime = 0, protectionUntil = 0').run();
         return res.json({ success: true });
     }
     if (!userId) return res.status(400).json({ error: 'userId required' });
-    await db.none('UPDATE users SET lastAttackTime = 0, protectionUntil = 0 WHERE id = ?', [userId]);
+    await db.prepare('UPDATE users SET lastAttackTime = 0, protectionUntil = 0 WHERE id = ?').run(userId);
     res.json({ success: true });
 });
 
 // Получить список редкостей
 router.get('/rarities', async (req, res) => {
-    const rarities = await db.manyOrNone('SELECT * FROM rarities ORDER BY id');
+    const rarities = await db.prepare('SELECT * FROM rarities ORDER BY id').all();
     res.json(rarities);
 });
 
@@ -182,7 +182,7 @@ router.post('/change-password', async (req, res) => {
     if (!oldPassword || !newPassword) return res.status(400).json({ error: 'Требуются старый и новый пароль' });
     if (newPassword.length < 8) return res.status(400).json({ error: 'Новый пароль должен быть минимум 8 символов' });
 
-    const admin = await db.oneOrNone('SELECT passwordHash FROM admins WHERE id = ?', [req.adminId]) as any;
+    const admin = await db.prepare('SELECT passwordHash FROM admins WHERE id = ?').get(req.adminId) as any;
     if (!admin) return res.status(404).json({ error: 'Администратор не найден' });
 
     if (!bcrypt.compareSync(oldPassword, admin.passwordHash)) {
@@ -190,7 +190,7 @@ router.post('/change-password', async (req, res) => {
     }
 
     const passwordHash = bcrypt.hashSync(newPassword, 10);
-    await db.none('UPDATE admins SET passwordHash = ? WHERE id = ?', [passwordHash, req.adminId]);
+    await db.prepare('UPDATE admins SET passwordHash = ? WHERE id = ?').run(passwordHash, req.adminId);
     res.json({ success: true });
 });
 
@@ -199,14 +199,14 @@ router.post('/premium', async (req, res) => {
     const { userId, days } = req.body;
     if (!userId || !days || days < 1) return res.status(400).json({ error: 'Требуются userId и days (>= 1)' });
 
-    const user = await db.oneOrNone('SELECT id, username, premiumUntil FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT id, username, premiumUntil FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
     const now = Math.floor(Date.now() / 1000);
     const currentUntil = Math.max(user.premiumUntil || 0, now);
     const newUntil = currentUntil + days * 86400;
 
-    await db.none('UPDATE users SET premiumUntil = ? WHERE id = ?', [newUntil, userId]);
+    await db.prepare('UPDATE users SET premiumUntil = ? WHERE id = ?').run(newUntil, userId);
     const untilDate = new Date(newUntil * 1000).toLocaleDateString('ru-RU');
 
     res.json({ success: true, premiumUntil: newUntil, message: `${user.username}: премиум до ${untilDate} (${days} дн.)` });

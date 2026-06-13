@@ -6,7 +6,7 @@ const router = Router();
 
 // Игровые
 router.get('/jobs', async (req, res) => {
-    const jobs = await db.manyOrNone('SELECT * FROM jobs');
+    const jobs = await db.prepare('SELECT * FROM jobs').all();
     res.json(jobs);
 });
 
@@ -17,11 +17,11 @@ router.post('/jobs/start', async (req, res) => {
     const userId = req.userId;
     const { jobId } = parsed.data;
 
-    const user = await db.oneOrNone('SELECT * FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.activeJob) return res.status(400).json({ error: 'Вы уже выполняете работу' });
 
-    const job = await db.oneOrNone('SELECT * FROM jobs WHERE id = ?', [jobId]) as any;
+    const job = await db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId) as any;
     if (!job) return res.status(404).json({ error: 'Job not found' });
 
     startJobForUser(user, job, res);
@@ -34,11 +34,11 @@ router.post('/jobs/start-random', async (req, res) => {
 
     if (!duration) return res.status(400).json({ error: 'Укажите длительность' });
 
-    const user = await db.oneOrNone('SELECT * FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.activeJob) return res.status(400).json({ error: 'Вы уже выполняете работу' });
 
-    const jobs = await db.manyOrNone('SELECT * FROM jobs WHERE duration = ?', [duration]) as any[];
+    const jobs = await db.prepare('SELECT * FROM jobs WHERE duration = ?').all(duration) as any[];
     if (jobs.length === 0) return res.status(404).json({ error: 'Нет подходящих работ' });
 
     const job = jobs[Math.floor(Math.random() * jobs.length)];
@@ -59,29 +59,29 @@ async function startJobForUser(user: any, job: any, res: any) {
     }
 
     const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, premiumBonus, background: job.background || null });
-    await db.none('UPDATE users SET activeJob = ? WHERE id = ?', [activeJob, user.id]);
+    await db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, user.id);
 
     res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, background: job.background || null });
 }
 
 router.get('/jobs/history', async (req, res) => {
     const userId = req.userId;
-    const history = await db.manyOrNone('SELECT * FROM job_history WHERE userId = ? ORDER BY finishedAt DESC LIMIT 10', [userId]);
+    const history = await db.prepare('SELECT * FROM job_history WHERE userId = ? ORDER BY finishedAt DESC LIMIT 10').all(userId);
     res.json(history);
 });
 
 // Отменить работу без награды
 router.post('/jobs/cancel', async (req, res) => {
     const userId = req.userId;
-    const user = await db.oneOrNone('SELECT activeJob FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT activeJob FROM users WHERE id = ?').get(userId) as any;
     if (!user || !user.activeJob) return res.status(400).json({ error: 'Нет активной работы' });
-    await db.none('UPDATE users SET activeJob = NULL WHERE id = ?', [userId]);
+    await db.prepare('UPDATE users SET activeJob = NULL WHERE id = ?').run(userId);
     res.json({ success: true });
 });
 
 // Административные
 router.get('/admin/jobs', async (req, res) => {
-    const jobs = await db.manyOrNone('SELECT * FROM jobs ORDER BY id');
+    const jobs = await db.prepare('SELECT * FROM jobs ORDER BY id').all();
     res.json(jobs);
 });
 
@@ -90,7 +90,7 @@ router.post('/admin/jobs', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные работы' });
 
     const { name, description, duration, rewardMin, rewardMax } = parsed.data;
-    await db.none('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)', [name, description || '', duration, rewardMin || 0, rewardMax || 0]);
+    await db.prepare('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)').run(name, description || '', duration, rewardMin || 0, rewardMax || 0);
     res.json({ success: true });
 });
 
@@ -99,12 +99,12 @@ router.put('/admin/jobs/:id', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные работы' });
 
     const { name, description, duration, rewardMin, rewardMax } = parsed.data;
-    await db.none('UPDATE jobs SET name=?, description=?, duration=?, rewardMin=?, rewardMax=? WHERE id=?', [name, description, duration, rewardMin, rewardMax, req.params.id]);
+    await db.prepare('UPDATE jobs SET name=?, description=?, duration=?, rewardMin=?, rewardMax=? WHERE id=?').run(name, description, duration, rewardMin, rewardMax, req.params.id);
     res.json({ success: true });
 });
 
 router.delete('/admin/jobs/:id', async (req, res) => {
-    await db.none('DELETE FROM jobs WHERE id = ?', [req.params.id]);
+    await db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
     res.json({ success: true });
 });
 

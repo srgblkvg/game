@@ -1,69 +1,124 @@
-import pgPromise from 'pg-promise';
+import pool from './pg';
 
-// CamelCase converter for result rows
-function camelKeys(row: any): any {
-  const out: any = { ...row };
-  for (const key of Object.keys(row)) {
-    const cc = key.replace(/(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid)$/i, m => m.charAt(0).toUpperCase() + m.slice(1)).replace(/taxrate$/i, 'TaxRate').replace(/verified$/i, 'Verified');
-    if (cc !== key) out[cc] = row[key];
+// Конвертирует ? в $1, $2, ...
+function pgParams(sql: string): string {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
+}
+
+// Нижний регистр для имён колонок в SQL (PG lowercases unquoted identifiers)
+// passwordHash → passwordhash, currentHp → currenthp
+// Не трогаем строковые литералы (в кавычках)
+function lowercaseSQL(sql: string): string {
+  // Разбиваем на части: строки в кавычках и всё остальное
+  // Кавычки: '...' и "..." (PG dollar-quoting не используется)
+  const parts: string[] = [];
+  let i = 0;
+  while (i < sql.length) {
+    if (sql[i] === "'") {
+      const end = sql.indexOf("'", i + 1);
+      if (end === -1) { parts.push(sql.slice(i).toLowerCase()); i = sql.length; }
+      else { parts.push(sql.slice(i, end + 1)); i = end + 1; }
+    } else if (sql[i] === '"') {
+      const end = sql.indexOf('"', i + 1);
+      if (end === -1) { parts.push(sql.slice(i).toLowerCase()); i = sql.length; }
+      else { parts.push(sql.slice(i, end + 1)); i = end + 1; }
+    } else {
+      const nextQuote = Math.min(
+        sql.indexOf("'", i) === -1 ? Infinity : sql.indexOf("'", i),
+        sql.indexOf('"', i) === -1 ? Infinity : sql.indexOf('"', i)
+      );
+      const end = nextQuote === Infinity ? sql.length : nextQuote;
+      parts.push(sql.slice(i, end).toLowerCase());
+      i = end;
+    }
   }
-  return out;
+  return parts.join('');
 }
 
-const pgp = pgPromise({
-  receive(data) {
-    if (Array.isArray(data)) data.forEach(row => camelKeys(row));
-  },
-  // Auto-convert ? placeholders to $1, $2...
-  query(e) {
-    // pg-promise automatically handles $1, $2 — we format ? → $1 here
-  },
-});
-
-const cn = {
-  host: process.env.PGHOST || 'localhost',
-  port: parseInt(process.env.PGPORT || '5432'),
-  database: process.env.PGDATABASE || 'game',
-  user: process.env.PGUSER || 'game',
-  password: process.env.PGPASSWORD || 'game123',
-  max: 20,
-};
-
-const db = pgp(cn);
-
-// Monkey-patch: auto-convert ? to $N in all queries
-const origQuery = db.query.bind(db);
-const origOneOrNone = db.oneOrNone.bind(db);
-const origManyOrNone = db.manyOrNone.bind(db);
-const origNone = db.none.bind(db);
-
-function convertQuery(sql: string): string {
-  let idx = 0;
-  return sql.replace(/\?/g, () => `$${++idx}`);
-}
-
-(db as any).query = (sql: string, params?: any[]) => origQuery(convertQuery(sql), params);
-(db as any).oneOrNone = (sql: string, params?: any[]) => origOneOrNone(convertQuery(sql), params);
-(db as any).manyOrNone = (sql: string, params?: any[]) => origManyOrNone(convertQuery(sql), params);
-(db as any).none = (sql: string, params?: any[]) => origNone(convertQuery(sql), params);
-
-// tx helper with ? conversion
-const origTx = db.tx.bind(db);
-(db as any).tx = (cb: any) => {
-  const wrappedTx = {
-    oneOrNone: (sql: string, params?: any[]) => ({} as any),
-    manyOrNone: (sql: string, params?: any[]) => ({} as any),
-    none: (sql: string, params?: any[]) => ({} as any),
-  };
-  return origTx(async (t: any) => {
-    wrappedTx.oneOrNone = (sql: string, params?: any[]) => t.oneOrNone(convertQuery(sql), params);
-    wrappedTx.manyOrNone = (sql: string, params?: any[]) => t.manyOrNone(convertQuery(sql), params);
-    wrappedTx.none = (sql: string, params?: any[]) => t.none(convertQuery(sql), params);
-    return cb(wrappedTx);
+// CamelCase ключи для результатов
+function camelRows(rows: any[]): any[] {
+  return rows.map(row => {
+    const out: any = { ...row };
+    for (const key of Object.keys(row)) {
+      if (key.match(/hash$/)) out[key.replace(/hash$/, 'Hash')] = row[key];
+      if (key.match(/hp$/)) out[key.replace(/hp$/, 'Hp')] = row[key];
+      if (key.match(/id$/)) out[key.replace(/id$/, 'Id')] = row[key];
+      if (key.match(/until$/)) out[key.replace(/until$/, 'Until')] = row[key];
+      if (key.match(/at$/)) out[key.replace(/at$/, 'At')] = row[key];
+      if (key.match(/time$/)) out[key.replace(/time$/, 'Time')] = row[key];
+      if (key.match(/name$/)) out[key.replace(/name$/, 'Name')] = row[key];
+      if (key.match(/type$/)) out[key.replace(/type$/, 'Type')] = row[key];
+      if (key.match(/count$/)) out[key.replace(/count$/, 'Count')] = row[key];
+      if (key.match(/level$/)) out[key.replace(/level$/, 'Level')] = row[key];
+      if (key.match(/slots$/)) out[key.replace(/slots$/, 'Slots')] = row[key];
+      if (key.match(/bonus$/)) out[key.replace(/bonus$/, 'Bonus')] = row[key];
+      if (key.match(/logins$/)) out[key.replace(/logins$/, 'Logins')] = row[key];
+      if (key.match(/amount$/)) out[key.replace(/amount$/, 'Amount')] = row[key];
+      if (key.match(/price$/)) out[key.replace(/price$/, 'Price')] = row[key];
+      if (key.match(/pool$/)) out[key.replace(/pool$/, 'Pool')] = row[key];
+      if (key.match(/fee$/)) out[key.replace(/fee$/, 'Fee')] = row[key];
+      if (key.match(/cost$/)) out[key.replace(/cost$/, 'Cost')] = row[key];
+      if (key.match(/won$/)) out[key.replace(/won$/, 'Won')] = row[key];
+      if (key.match(/lost$/)) out[key.replace(/lost$/, 'Lost')] = row[key];
+      if (key.match(/gained$/)) out[key.replace(/gained$/, 'Gained')] = row[key];
+      if (key.match(/rowid$/)) out[key.replace(/rowid$/, 'Rowid')] = row[key];
+      if (key.match(/taxrate$/)) out['taxRate'] = row[key];
+      if (key.match(/verified$/)) out[key.replace(/verified$/, 'Verified')] = row[key];
+    }
+    return out;
   });
-};
+}
 
-console.log('[PG] pg-promise connected');
+// PG wrapper с авто-lowercase SQL
+class DB {
+  async query(sql: string, params?: any[]): Promise<{ rows: any[]; rowCount: number }> {
+    return pool.query(lowercaseSQL(pgParams(sql)), params);
+  }
 
-export async function initDB() {}
+  prepare(sql: string) {
+    const q = lowercaseSQL(pgParams(sql));
+    return {
+      get: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows)[0]; },
+      all: async (...p: any[]) => { const r = await pool.query(q, p); return camelRows(r.rows); },
+      run: async (...p: any[]) => { const r = await pool.query(q, p); const id = r.rows?.[0]?.id; return { changes: r.rowCount ?? 0, lastInsertRowid: id ? Number(id) : undefined }; },
+    };
+  }
+
+  async exec(sql: string) {
+    await pool.query(sql);
+  }
+
+  async transaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const tx = {
+        prepare: (sql: string) => {
+          const q = lowercaseSQL(pgParams(sql));
+          return {
+            get: async (...p: any[]) => { const r = await client.query(q, p); return camelRows(r.rows)[0]; },
+            all: async (...p: any[]) => { const r = await client.query(q, p); return camelRows(r.rows); },
+            run: async (...p: any[]) => { const r = await client.query(q, p); const id = r.rows?.[0]?.id; return { changes: r.rowCount ?? 0, lastInsertRowid: id ? Number(id) : undefined }; },
+          };
+        },
+      };
+      const result = await fn(tx);
+      await client.query('COMMIT');
+      return result;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+}
+
+const db = new DB();
+
+export async function initDB() {
+  console.log('[PG] Ready (tables pre-created)');
+}
+
 export default db;

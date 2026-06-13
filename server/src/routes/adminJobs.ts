@@ -5,7 +5,7 @@ const router = Router();
 
 // Получить все работы (админка)
 router.get('/jobs', async (req, res) => {
-    const jobs = await db.manyOrNone('SELECT * FROM jobs ORDER BY duration ASC');
+    const jobs = await db.prepare('SELECT * FROM jobs ORDER BY duration ASC').all();
     res.json(jobs);
 });
 
@@ -13,7 +13,7 @@ router.get('/jobs', async (req, res) => {
 router.post('/jobs', async (req, res) => {
     const { name, description, duration, rewardMin, rewardMax, background } = req.body;
     if (!name || duration == null) return res.status(400).json({ error: 'name, duration required' });
-    await db.none('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax, background) VALUES (?, ?, ?, ?, ?, ?)', [name, description || '', duration, rewardMin || 0, rewardMax || 0, background || null]);
+    await db.prepare('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax, background) VALUES (?, ?, ?, ?, ?, ?)').run(name, description || '', duration, rewardMin || 0, rewardMax || 0, background || null);
     res.json({ success: true });
 });
 
@@ -30,13 +30,13 @@ router.put('/jobs/:id', async (req, res) => {
     if (background !== undefined) { fields.push('background=?'); values.push(background || null); }
     if (fields.length === 0) return res.status(400).json({ error: 'Нет данных для обновления' });
     values.push(req.params.id);
-    await db.none(`UPDATE jobs SET ${fields.join(',')} WHERE id=?`, [...values]);
+    await db.prepare(`UPDATE jobs SET ${fields.join(',')} WHERE id=?`).run(...values);
     res.json({ success: true });
 });
 
 // Удалить работу
 router.delete('/jobs/:id', async (req, res) => {
-    await db.none('DELETE FROM jobs WHERE id = ?', [req.params.id]);
+    await db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
     res.json({ success: true });
 });
 
@@ -44,7 +44,7 @@ router.delete('/jobs/:id', async (req, res) => {
 router.post('/finish-job', async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
-    const user = await db.oneOrNone('SELECT * FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (!user.activeJob) return res.status(400).json({ error: 'Игрок не в работе' });
 
@@ -53,8 +53,8 @@ router.post('/finish-job', async (req, res) => {
 
     const reward = jobData.reward || 0;
     const newMoney = user.money + reward;
-    await db.none('UPDATE users SET money = ?, activeJob = NULL WHERE id = ?', [newMoney, userId]);
-    await db.none('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)', [userId, jobData.jobId, jobData.name, jobData.duration, reward, new Date(jobData.startTime * 1000]).toISOString());
+    await db.prepare('UPDATE users SET money = ?, activeJob = NULL WHERE id = ?').run(newMoney, userId);
+    await db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)').run(userId, jobData.jobId, jobData.name, jobData.duration, reward, new Date(jobData.startTime * 1000).toISOString());
 
     res.json({ success: true, message: `Работа "${jobData.name}" завершена, начислено ${reward} монет.` });
 });
@@ -63,7 +63,7 @@ router.post('/finish-job', async (req, res) => {
 router.post('/finish-jobs-by-jobid', async (req, res) => {
     const { jobId } = req.body;
     if (!jobId) return res.status(400).json({ error: 'jobId required' });
-    const users = await db.manyOrNone('SELECT * FROM users WHERE activeJob IS NOT NULL') as any[];
+    const users = await db.prepare('SELECT * FROM users WHERE activeJob IS NOT NULL').all() as any[];
     let count = 0;
     for (const user of users) {
         try {
@@ -71,8 +71,8 @@ router.post('/finish-jobs-by-jobid', async (req, res) => {
             if (jobData.jobId == jobId) {
                 const reward = jobData.reward || 0;
                 const newMoney = user.money + reward;
-                await db.none('UPDATE users SET money = ?, activeJob = NULL WHERE id = ?', [newMoney, user.id]);
-                await db.none('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)', [user.id, jobData.jobId, jobData.name, jobData.duration, reward, new Date(jobData.startTime * 1000]).toISOString());
+                await db.prepare('UPDATE users SET money = ?, activeJob = NULL WHERE id = ?').run(newMoney, user.id);
+                await db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)').run(user.id, jobData.jobId, jobData.name, jobData.duration, reward, new Date(jobData.startTime * 1000).toISOString());
                 count++;
             }
         } catch { }

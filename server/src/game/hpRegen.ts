@@ -38,7 +38,7 @@ export async function applyHpRegen(user: {
     if (hp > maxHp) hp = maxHp;
 
     if (hp !== user.currentHp) {
-        await db.none('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?', [hp, now - (elapsed % HP_REGEN_SECONDS]), user.id);
+        await db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?').run(hp, now - (elapsed % HP_REGEN_SECONDS), user.id);
     }
 
     return hp;

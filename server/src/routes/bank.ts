@@ -9,7 +9,7 @@ const router = Router();
 // Получить состояние банка
 router.get('/bank', async (req, res) => {
     const userId = req.userId;
-    const user = await db.oneOrNone('SELECT money, bank, accountNumber FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.prepare('SELECT money, bank, accountNumber FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ pocket: user.money || 0, bank: user.bank || 0, accountNumber: user.accountNumber });
 });
@@ -23,15 +23,15 @@ router.post('/bank/deposit', async (req, res) => {
     const commission = Math.ceil(amount * 0.02);
     const depositAmount = amount - commission;
 
-    const txn = db.tx(async (t) => {
-        const user = await db.oneOrNone('SELECT money FROM users WHERE id = ?', [userId]) as any;
+    const txn = db.transaction(async () => {
+        const user = await db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
         if (!user) throw new Error('User not found');
         if (user.money < amount) throw new Error('Недостаточно монет');
 
-        await db.none('UPDATE users SET money = money - ?, bank = bank + ? WHERE id = ?', [amount, depositAmount, userId]);
-        await db.none('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES (?, ?, ?, ?, ?)', [userId, 'deposit', amount, commission, depositAmount]);
+        await db.prepare('UPDATE users SET money = money - ?, bank = bank + ? WHERE id = ?').run(amount, depositAmount, userId);
+        await db.prepare('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES (?, ?, ?, ?, ?)').run(userId, 'deposit', amount, commission, depositAmount);
 
-        return await db.oneOrNone('SELECT money, bank FROM users WHERE id = ?', [userId]) as any;
+        return await db.prepare('SELECT money, bank FROM users WHERE id = ?').get(userId) as any;
     });
 
     try {
@@ -48,15 +48,15 @@ router.post('/bank/withdraw', async (req, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
 
-    const txn = db.tx(async (t) => {
-        const user = await db.oneOrNone('SELECT bank FROM users WHERE id = ?', [userId]) as any;
+    const txn = db.transaction(async () => {
+        const user = await db.prepare('SELECT bank FROM users WHERE id = ?').get(userId) as any;
         if (!user) throw new Error('User not found');
         if (user.bank < amount) throw new Error('Недостаточно монет в банке');
 
-        await db.none('UPDATE users SET money = money + ?, bank = bank - ? WHERE id = ?', [amount, amount, userId]);
-        await db.none('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES (?, ?, ?, ?, ?)', [userId, 'withdraw', amount, 0, amount]);
+        await db.prepare('UPDATE users SET money = money + ?, bank = bank - ? WHERE id = ?').run(amount, amount, userId);
+        await db.prepare('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES (?, ?, ?, ?, ?)').run(userId, 'withdraw', amount, 0, amount);
 
-        return await db.oneOrNone('SELECT money, bank FROM users WHERE id = ?', [userId]) as any;
+        return await db.prepare('SELECT money, bank FROM users WHERE id = ?').get(userId) as any;
     });
 
     try {
@@ -77,26 +77,26 @@ router.post('/bank/transfer', async (req, res) => {
         return res.status(400).json({ error: 'Укажите номер счёта и сумму' });
     }
 
-    const txn = db.tx(async (t) => {
+    const txn = db.transaction(async () => {
         // Проверяем существование получателя ДО списания
-        const target = await db.oneOrNone('SELECT id, username, accountNumber FROM users WHERE accountNumber = ?', [accountNumber]) as any;
+        const target = await db.prepare('SELECT id, username, accountNumber FROM users WHERE accountNumber = ?').get(accountNumber) as any;
         if (!target) throw new Error('Счёт не найден');
         if (target.id === userId) throw new Error('Нельзя перевести самому себе');
 
         // Проверяем и списываем с банка отправителя
-        const sender = await db.oneOrNone('SELECT bank, accountNumber FROM users WHERE id = ?', [userId]) as any;
+        const sender = await db.prepare('SELECT bank, accountNumber FROM users WHERE id = ?').get(userId) as any;
         if (!sender) throw new Error('User not found');
         if (sender.bank < transferAmount) throw new Error('Недостаточно серебра в банке');
 
         const commission = Math.ceil(transferAmount * 0.02);
         const receivedAmount = transferAmount - commission;
 
-        await db.none('UPDATE users SET bank = bank - ? WHERE id = ?', [transferAmount, userId]);
-        await db.none('UPDATE users SET bank = bank + ? WHERE id = ?', [receivedAmount, target.id]);
+        await db.prepare('UPDATE users SET bank = bank - ? WHERE id = ?').run(transferAmount, userId);
+        await db.prepare('UPDATE users SET bank = bank + ? WHERE id = ?').run(receivedAmount, target.id);
 
-        await db.none('INSERT INTO transfers (fromUserId, toUserId, fromAccount, toAccount, toUsername, amount, commission, received) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [userId, target.id, sender.accountNumber, target.accountNumber, target.username, transferAmount, commission, receivedAmount]);
+        await db.prepare('INSERT INTO transfers (fromUserId, toUserId, fromAccount, toAccount, toUsername, amount, commission, received) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(userId, target.id, sender.accountNumber, target.accountNumber, target.username, transferAmount, commission, receivedAmount);
 
-        const updated = await db.oneOrNone('SELECT bank FROM users WHERE id = ?', [userId]) as any;
+        const updated = await db.prepare('SELECT bank FROM users WHERE id = ?').get(userId) as any;
         return { updated, target, commission, receivedAmount };
     });
 
