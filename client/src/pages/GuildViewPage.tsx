@@ -8,7 +8,7 @@ import Card from '../components/ui/Card';
 
 export default function GuildViewPage() {
     const { id } = useParams<{ id: string }>();
-    const { user } = useAuth();
+    const { user: _user } = useAuth();
     const navigate = useNavigate();
 
     const [guild, setGuild] = useState<any>(null);
