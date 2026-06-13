@@ -16,7 +16,7 @@ function generateCode(): string {
     return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-router.post('/register', async async (req, res) => {
+router.post('/register', async (req, res) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные', details: parsed.error.flatten() });
 
@@ -71,7 +71,7 @@ router.post('/verify-email', async (req, res) => {
 });
 
 // Повторная отправка кода подтверждения
-router.post('/resend-code', async async (req, res) => {
+router.post('/resend-code', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email обязателен' });
 

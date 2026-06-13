@@ -73,7 +73,7 @@ router.get('/yandex', async (req, res) => {
     res.redirect(url);
 });
 
-router.get('/yandex/callback', async async (req, res) => {
+router.get('/yandex/callback', async (req, res) => {
     const { code } = req.query;
     if (!code || typeof code !== 'string') {
         return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
@@ -135,7 +135,7 @@ router.get('/vk', async (req, res) => {
     res.redirect(url);
 });
 
-router.get('/vk/callback', async async (req, res) => {
+router.get('/vk/callback', async (req, res) => {
     const { code, state, device_id } = req.query;
     if (!code || typeof code !== 'string') {
         return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
