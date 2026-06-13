@@ -10,6 +10,7 @@ interface BuffsBlockProps {
     premium?: { until: number } | null;
     inventory?: any[];
     equipment?: Record<string, any>;
+    collectionCount?: number;
 }
 
 function formatTime(seconds: number) {
@@ -34,11 +35,11 @@ const drinkNames: Record<string, string> = {
     grog_small: 'Грог Моры', grog_med: 'Крепкий грог', dragon_blood: 'Кровь дракона',
 };
 
-export default function BuffsBlock({ room, drink, premium, inventory, equipment }: BuffsBlockProps) {
+export default function BuffsBlock({ room, drink, premium, inventory, equipment, collectionCount = 0 }: BuffsBlockProps) {
     const [now, setNow] = useState(Math.floor(Date.now() / 1000));
     const [collapsed, setCollapsed] = useState(true);
     const [hasCollectionItems, setHasCollectionItems] = useState(false);
-    const [collectionPercent, setCollectionPercent] = useState(0);
+    const collectionPercent = Math.round((collectionCount / 189) * 100);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -65,8 +66,6 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment 
                 setHasCollectionItems(hasAddable);
 
                 const sets = data.sets || [];
-                const totalItems = sets.reduce((sum: number, s: any) => sum + (s.totalItems || 0), 0);
-                setCollectionPercent(totalItems > 0 ? Math.round(((data.items || []).length / totalItems) * 100) : 0);
             })
             .catch(() => {});
     }, [inventory, equipment]);
