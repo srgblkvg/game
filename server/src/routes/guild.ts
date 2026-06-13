@@ -477,7 +477,7 @@ router.post('/guild/treasury/deposit', async (req: any, res) => {
     const user = await db.prepareGet('SELECT money FROM users WHERE id = ?')(userId) as any;
     if (!user || user.money < amount) return res.status(400).json({ error: 'Недостаточно серебра в кармане' });
 
-    const tx = db.transaction(() => {
+    const tx = db.transaction(async () => {
         await db.prepareRun('UPDATE users SET money = money - ? WHERE id = ?')(amount, userId);
         await db.prepareRun('UPDATE guilds SET treasury = treasury + ? WHERE id = ?')(amount, member.guildId);
         await db.prepareRun('INSERT INTO guild_treasury_log (guildId, userId, amount) VALUES (?, ?, ?)')(member.guildId, userId, amount);
