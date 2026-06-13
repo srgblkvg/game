@@ -4,14 +4,14 @@ import db from '../database';
 const router = Router();
 
 // Получить коллекцию пользователя (предметы + сеты)
-router.get('/collections', async (req, res) => {
+router.get('/collections', (req: any, res) => {
     const userId = req.userId;
     const items = db.prepare(
         'SELECT itemName, slot, rarity_id FROM collections WHERE userId = ?'
     ).all(userId) as any[];
 
     // Сеты и их статус (один JOIN вместо N+1)
-    const sets = await db.prepare(`
+    const sets = db.prepare(`
         SELECT s.*, si.item_name, si.slot,
                CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END as collected
         FROM collection_sets s
@@ -47,7 +47,7 @@ router.get('/collections', async (req, res) => {
 });
 
 // Добавить предмет в коллекцию (удаляет из инвентаря)
-router.post('/collections/add', async (req, res) => {
+router.post('/collections/add', (req: any, res) => {
     const userId = req.userId;
     const { itemName, slot, itemId } = req.body;
 
@@ -65,7 +65,7 @@ router.post('/collections/add', async (req, res) => {
     }
 
     // Удаляем из инвентаря
-    const user = await db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     const inventory = JSON.parse(user.inventory || '[]');
@@ -80,7 +80,7 @@ router.post('/collections/add', async (req, res) => {
 
     const removed = inventory.splice(itemIndex, 1)[0];
 
-    await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
 
     // Добавляем в коллекцию
     db.prepare(

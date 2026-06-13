@@ -25,7 +25,7 @@ const clients = new Map<number, WebSocket>();
 const onlineUsers = new Map<number, OnlineUser>();
 
 // ---------- Рассылка ----------
-async function broadcast(type: string, data: any, exceptUserId?: number) {
+function broadcast(type: string, data: any, exceptUserId?: number) {
   const payload = JSON.stringify({ type, ...data });
   clients.forEach((ws, userId) => {
     if (userId !== exceptUserId && ws.readyState === WebSocket.OPEN) {
@@ -36,27 +36,27 @@ async function broadcast(type: string, data: any, exceptUserId?: number) {
 
 export { broadcast };
 
-async function sendToUser(userId: number, payload: object) {
+function sendToUser(userId: number, payload: object) {
   const ws = clients.get(userId);
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
   }
 }
 
-async function notifyUserOnline(user: OnlineUser) {
+function notifyUserOnline(user: OnlineUser) {
   broadcast('userOnline', { user });
 }
 
-async function notifyUserOffline(userId: number) {
+function notifyUserOffline(userId: number) {
   broadcast('userOffline', { userId });
 }
 
 // ---------- Heartbeat ----------
-async function heartbeat(ws: WebSocket & { isAlive?: boolean }) {
+function heartbeat(ws: WebSocket & { isAlive?: boolean }) {
   ws.isAlive = true;
 }
 
-export async function setupWebSocket(server: any) {
+export function setupWebSocket(server: any) {
   const wss = new WebSocketServer({ server });
 
   // Интервал проверки живых соединений
@@ -74,7 +74,7 @@ export async function setupWebSocket(server: any) {
   });
 
   // ---------- Подключение ----------
-  wss.on('connection', async (ws: WebSocket, req) => {
+  wss.on('connection', (ws: WebSocket, req) => {
     // Инициализация heartbeat-флага
     (ws as WebSocket & { isAlive?: boolean }).isAlive = true;
     ws.on('pong', () => heartbeat(ws));
@@ -96,7 +96,7 @@ export async function setupWebSocket(server: any) {
 
     // ---------- Администратор ----------
     if (decoded.role === 'admin') {
-      const admin = await db.prepare('SELECT id, username FROM admins WHERE id = ?').get(decoded.adminId) as any;
+      const admin = db.prepare('SELECT id, username FROM admins WHERE id = ?').get(decoded.adminId) as any;
       if (!admin) {
         ws.close(1008, 'Admin not found');
         return;
@@ -120,7 +120,7 @@ export async function setupWebSocket(server: any) {
 
     // ---------- Игрок ----------
     const userId = decoded.userId;
-    const user = await db.prepare('SELECT u.id, u.username, u.level, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
+    const user = db.prepare('SELECT u.id, u.username, u.level, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
     if (!user) {
       ws.close(1008, 'User not found');
       return;
@@ -155,11 +155,11 @@ export async function setupWebSocket(server: any) {
     notifyUserOnline(onlineUser);
 
     // ---------- Обработка сообщений ----------
-    ws.on('message', async (raw) => {
+    ws.on('message', (raw) => {
       let data: any;
       try { data = JSON.parse(raw.toString()); } catch { return; }
 
-      const currentUser = await db.prepare('SELECT chatBannedUntil FROM users WHERE id = ?').get(userId) as any;
+      const currentUser = db.prepare('SELECT chatBannedUntil FROM users WHERE id = ?').get(userId) as any;
       if (currentUser && currentUser.chatBannedUntil && currentUser.chatBannedUntil > Math.floor(Date.now() / 1000)) {
         sendToUser(userId, {
           type: 'chatBanned',
@@ -185,7 +185,7 @@ export async function setupWebSocket(server: any) {
         if (!item) {
           const itemId = data.itemId;
           if (!itemId) return;
-          const currentUser = await db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
+          const currentUser = db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
           const inventory = JSON.parse(currentUser.inventory || '[]');
           item = inventory.find((i: any) => i.id == itemId);
         }
@@ -228,7 +228,7 @@ export async function setupWebSocket(server: any) {
           const privateContent = withoutCommand.slice(spaceIndex + 1).trim();
           if (!privateContent) return;
 
-          const targetUser = await db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(targetName) as any;
+          const targetUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(targetName) as any;
           if (!targetUser) {
             sendToUser(userId, { type: 'error', message: 'Пользователь не найден' });
             return;
