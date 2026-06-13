@@ -123,7 +123,7 @@ router.get('/character/me', (req: any, res) => {
 
     const now = Math.floor(Date.now() / 1000);
     const maxHp = stats.hp;
-    const currentHp = applyHpRegen({
+    let currentHp = applyHpRegen({
         id: user.id,
         currentHp: user.currentHp,
         maxHp,
@@ -131,6 +131,12 @@ router.get('/character/me', (req: any, res) => {
         roomType: user.roomType,
         roomUntil: user.roomUntil,
     });
+
+    // Если currentHp > maxHp (например после изменения бонусов) — ограничиваем
+    if (currentHp > maxHp) {
+        currentHp = maxHp;
+        db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?').run(maxHp, now, userId);
+    }
 
     const openPrivateTabs = JSON.parse(user.openPrivateTabs || '[]');
 
