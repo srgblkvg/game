@@ -9,6 +9,46 @@ function convertPlaceholders(sql: string): string {
   return sql.replace(/\?/g, () => `$${++index}`);
 }
 
+// Конвертирует ключи строк из lowercase в camelCase для совместимости с legacy кодом
+// PG возвращает колонки в lowercase, код ожидает camelCase (как в SQLite)
+// Добавляет ОБА варианта ключей в каждую строку
+function camelCaseRows(rows: any[]): any[] {
+  return rows.map(row => {
+    const out: any = { ...row }; // сохраняем оригинальные lowercase ключи
+    for (const key of Object.keys(row)) {
+      // Конвертируем snake_case или flat lowercase → camelCase
+      // currentHp → currenthp → добавляем currentHp
+      // passwordHash → passwordhash → добавляем passwordHash
+      // baseS → bases → добавляем baseS  
+      // Проходим по известным camelCase-суффиксам и добавляем их
+      if (key.match(/hash$/)) out[key.replace(/hash$/, 'Hash')] = row[key];
+      if (key.match(/hp$/)) out[key.replace(/hp$/, 'Hp')] = row[key];
+      if (key.match(/id$/)) out[key.replace(/id$/, 'Id')] = row[key];
+      if (key.match(/until$/)) out[key.replace(/until$/, 'Until')] = row[key];
+      if (key.match(/at$/)) out[key.replace(/at$/, 'At')] = row[key];
+      if (key.match(/time$/)) out[key.replace(/time$/, 'Time')] = row[key];
+      if (key.match(/name$/)) out[key.replace(/name$/, 'Name')] = row[key];
+      if (key.match(/type$/)) out[key.replace(/type$/, 'Type')] = row[key];
+      if (key.match(/count$/)) out[key.replace(/count$/, 'Count')] = row[key];
+      if (key.match(/level$/)) out[key.replace(/level$/, 'Level')] = row[key];
+      if (key.match(/slots$/)) out[key.replace(/slots$/, 'Slots')] = row[key];
+      if (key.match(/bonus$/)) out[key.replace(/bonus$/, 'Bonus')] = row[key];
+      if (key.match(/logins$/)) out[key.replace(/logins$/, 'Logins')] = row[key];
+      if (key.match(/amount$/)) out[key.replace(/amount$/, 'Amount')] = row[key];
+      if (key.match(/price$/)) out[key.replace(/price$/, 'Price')] = row[key];
+      if (key.match(/pool$/)) out[key.replace(/pool$/, 'Pool')] = row[key];
+      if (key.match(/fee$/)) out[key.replace(/fee$/, 'Fee')] = row[key];
+      if (key.match(/cost$/)) out[key.replace(/cost$/, 'Cost')] = row[key];
+      if (key.match(/won$/)) out[key.replace(/won$/, 'Won')] = row[key];
+      if (key.match(/lost$/)) out[key.replace(/lost$/, 'Lost')] = row[key];
+      if (key.match(/gained$/)) out[key.replace(/gained$/, 'Gained')] = row[key];
+      if (key.match(/rowid$/)) out[key.replace(/rowid$/, 'Rowid')] = row[key];
+      if (key.match(/taxrate$/)) out['taxRate'] = row[key];
+    }
+    return out;
+  });
+}
+
 // PG-совместимая обёртка похожая на better-sqlite3 API
 class PgWrapper {
   async query(sql: string, params?: any[]): Promise<{ rows: any[]; rowCount: number }> {
@@ -20,7 +60,8 @@ class PgWrapper {
     const converted = convertPlaceholders(sql);
     return async (...params: any[]): Promise<any | undefined> => {
       const res = await pool.query(converted, params);
-      return res.rows[0];
+      const rows = camelCaseRows(res.rows);
+      return rows[0];
     };
   }
 
@@ -29,7 +70,7 @@ class PgWrapper {
     const converted = convertPlaceholders(sql);
     return async (...params: any[]): Promise<any[]> => {
       const res = await pool.query(converted, params);
-      return res.rows;
+      return camelCaseRows(res.rows);
     };
   }
 
@@ -49,11 +90,11 @@ class PgWrapper {
     return {
       get: async (...params: any[]) => {
         const res = await pool.query(converted, params);
-        return res.rows[0];
+        return camelCaseRows(res.rows)[0];
       },
       all: async (...params: any[]) => {
         const res = await pool.query(converted, params);
-        return res.rows;
+        return camelCaseRows(res.rows);
       },
       run: async (...params: any[]) => {
         const res = await pool.query(converted, params);
