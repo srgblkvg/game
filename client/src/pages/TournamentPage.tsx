@@ -47,12 +47,6 @@ function tournamentIcon(t: any): string {
     return divisionIcons[t.division] || '🏆';
 }
 
-function canJoinOfficial(t: any, userLevel: number): boolean {
-    const levels: Record<string, [number, number]> = { copper: [1, 15], steel: [16, 35], mithril: [36, 60], adamant: [61, 999] };
-    const [min, max] = levels[t.division] || [0, 0];
-    return userLevel >= min && userLevel <= max;
-}
-
 function formatTimer(seconds: number): string {
     if (seconds <= 0) return '0 мин';
     const d = Math.floor(seconds / 86400);

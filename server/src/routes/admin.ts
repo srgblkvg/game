@@ -86,7 +86,7 @@ router.get('/users', async (req, res) => {
     if (filter === 'guests') query += ' WHERE isGuest = 1';
     else if (filter === 'players') query += ' WHERE isGuest = 0';
     query += ' ORDER BY lastLoginAt DESC NULLS LAST';
-    const users = db.prepare(query).all();
+    const users = await db.prepare(query).all();
     res.json(users);
 });
 

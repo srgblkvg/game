@@ -121,7 +121,7 @@ router.get('/bank/transfers', async (req, res) => {
     query += ' ORDER BY id DESC LIMIT ?';
     const params: any[] = filter === 'all' ? [userId, userId, limit] : [userId, limit];
 
-    res.json(db.prepare(query).all(...params));
+    res.json(await db.prepare(query).all(...params));
 });
 
 // История банковских операций

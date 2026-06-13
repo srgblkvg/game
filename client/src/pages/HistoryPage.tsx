@@ -89,7 +89,6 @@ export default function HistoryPage() {
     );
 
     const fmt = (d: any) => formatGameDateTime(d);
-    const _fmtTs = (ts: number) => new Date(ts*1000).toLocaleDateString();
 
     const renderBattleRow = (b: any) => {
         const win = b.winnerId === user.id;

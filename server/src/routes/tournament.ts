@@ -424,7 +424,7 @@ async function getOrCreateTournament(type?: string) {
     let query = "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress')";
     if (type) query += " AND type = ?";
     query += " ORDER BY id DESC";
-    return db.prepare(query).all(...params) as any[];
+    return await db.prepare(query).all(...params) as any[];
 }
 
 // ---------------------------------------------------------------------------
