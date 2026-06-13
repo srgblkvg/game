@@ -20,19 +20,19 @@ const getCraftData = db.prepare(`
 `);
 
 // Загрузить персонажа (текущего пользователя)
-router.get('/character/me', async (req, res) => {
+router.get('/character/me', (req: any, res) => {
     const userId = req.userId;
-    const user = await getUserById(db, userId);
+    const user = getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     let inventory = JSON.parse(user.inventory || '[]');
     const equipment = JSON.parse(user.equipment || '{}');
     let changed = false;
 
-    inventory = await Promise.all(inventory.map(async (item) => {
+    inventory = inventory.map((item: any) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
             if (item.rarity_id === undefined) {
-                const craftRow = await getCraftData.get(Number(item.id)) as any;
+                const craftRow = getCraftData.get(Number(item.id)) as any;
                 if (craftRow) {
                     changed = true;
                     return {
@@ -47,7 +47,7 @@ router.get('/character/me', async (req, res) => {
             }
         } else if (item.slot) {
             if (item.rarity_id === undefined) {
-                const itemRow = await getItemData.get(item.name, item.slot) as any;
+                const itemRow = getItemData.get(item.name, item.slot) as any;
                 if (itemRow) {
                     changed = true;
                     return {
@@ -61,16 +61,16 @@ router.get('/character/me', async (req, res) => {
             }
         }
         return item;
-    }));
+    });
 
     // Обогащаем экипировку
-    const { enriched: enrichedEquipment, changed: equipChanged } = await enrichEquipment(db, equipment);
+    const { enriched: enrichedEquipment, changed: equipChanged } = enrichEquipment(db, equipment);
 
     if (changed) {
-        await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+        db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
     }
     if (equipChanged) {
-        await db.prepare('UPDATE users SET equipment = ? WHERE id = ?').run(JSON.stringify(enrichedEquipment), userId);
+        db.prepare('UPDATE users SET equipment = ? WHERE id = ?').run(JSON.stringify(enrichedEquipment), userId);
     }
 
     const base = getBaseStats(user);
@@ -78,8 +78,8 @@ router.get('/character/me', async (req, res) => {
     const stats = currentStats(base, enrichedEquipment, drinkBonuses);
 
     // Бонус коллекции: +1% к основным статам за каждый предмет в коллекции
-    const collectionCount = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt;
-    const totalCollectionItems = (await db.prepare('SELECT COUNT(*) as cnt FROM collection_set_items').get() as any).cnt;
+    const collectionCount = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt;
+    const totalCollectionItems = (db.prepare('SELECT COUNT(*) as cnt FROM collection_set_items').get() as any).cnt;
     if (collectionCount > 0) {
         const bonus = 1 + collectionCount / 100;
         stats.s = Math.round(stats.s * bonus);
@@ -95,13 +95,13 @@ router.get('/character/me', async (req, res) => {
         const nowSec = Math.floor(Date.now() / 1000);
         if (nowSec >= jobData.endTime) {
             // Налог гильдии (работы)
-            const rewardAfterTax = await collectGuildTax(db, userId, jobData.reward, 'tax_job');
+            const rewardAfterTax = collectGuildTax(db, userId, jobData.reward, 'tax_job');
             const newMoney = user.money + rewardAfterTax;
             const expGain = jobData.expReward || 0;
-            const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(db, userId, expGain, user.exp, user.level, user.statPoints || 0);
-            await db.prepare('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL, totalJobMoney = totalJobMoney + ?, totalJobSeconds = totalJobSeconds + ? WHERE id = ?')
+            const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(db, userId, expGain, user.exp, user.level, user.statPoints || 0);
+            db.prepare('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL, totalJobMoney = totalJobMoney + ?, totalJobSeconds = totalJobSeconds + ? WHERE id = ?')
                 .run(newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId);
-            await db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
                 .run(userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString(), jobData.premiumBonus || 0, expGain);
             user.money = newMoney;
             user.level = newLevel;
@@ -113,7 +113,7 @@ router.get('/character/me', async (req, res) => {
 
     const now = Math.floor(Date.now() / 1000);
     const maxHp = stats.hp;
-    let currentHp = await applyHpRegen({
+    let currentHp = applyHpRegen({
         id: user.id,
         currentHp: user.currentHp,
         maxHp,
@@ -125,7 +125,7 @@ router.get('/character/me', async (req, res) => {
     // Если currentHp > maxHp (например после изменения бонусов) — ограничиваем
     if (currentHp > maxHp) {
         currentHp = maxHp;
-        await db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?').run(maxHp, now, userId);
+        db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?').run(maxHp, now, userId);
     }
 
     const openPrivateTabs = JSON.parse(user.openPrivateTabs || '[]');
@@ -159,37 +159,37 @@ router.get('/character/me', async (req, res) => {
 });
 
 // Сохранить персонажа (полное обновление)
-router.post('/character/save', async (req, res) => {
+router.post('/character/save', (req: any, res) => {
     const userId = req.userId;
     const { inventory, equipment, level, exp, money, totalBattles, wins } = req.body;
-    await db.prepare('UPDATE users SET level=?, exp=?, money=?, totalBattles=?, wins=?, inventory=?, equipment=? WHERE id=?')
+    db.prepare('UPDATE users SET level=?, exp=?, money=?, totalBattles=?, wins=?, inventory=?, equipment=? WHERE id=?')
         .run(level, exp, money, totalBattles, wins, JSON.stringify(inventory), JSON.stringify(equipment), userId);
     res.json({ success: true });
 });
 
 // Сохранение открытых вкладок приватного чата
-router.post('/character/save-tabs', async (req, res) => {
+router.post('/character/save-tabs', (req: any, res) => {
     const userId = req.userId;
     const { tabs } = req.body;
     if (!Array.isArray(tabs)) return res.status(400).json({ error: 'tabs должен быть массивом' });
-    await db.prepare('UPDATE users SET openPrivateTabs = ? WHERE id = ?').run(JSON.stringify(tabs), userId);
+    db.prepare('UPDATE users SET openPrivateTabs = ? WHERE id = ?').run(JSON.stringify(tabs), userId);
     res.json({ success: true });
 });
 
 // Поиск пользователя по нику (для перехода из чата в профиль)
-router.get('/users/find', async (req, res) => {
+router.get('/users/find', (req: any, res) => {
     const username = req.query.username as string;
     if (!username) return res.status(400).json({ error: 'Укажите username' });
-    const user = await db.prepare('SELECT id, username FROM users WHERE username = ?').get(username) as any;
+    const user = db.prepare('SELECT id, username FROM users WHERE username = ?').get(username) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     res.json(user);
 });
 
 // Поиск пользователей по части имени
-router.get('/users/search', async (req, res) => {
+router.get('/users/search', (req: any, res) => {
     const q = req.query.q as string;
     if (!q || q.length < 2) return res.json([]);
-    const users = await db.prepare(
+    const users = db.prepare(
         'SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10'
     ).all(`%${q}%`);
     res.json(users);

@@ -5,15 +5,15 @@ import { buyItemSchema } from '../validation';
 const router = Router();
 
 // Получить все предметы для магазина
-router.get('/shop/items', async (req, res) => {
-    const items = await db.prepare(`
+router.get('/shop/items', (req: any, res) => {
+    const items = db.prepare(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color, r.id as rarity_id
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         ORDER BY i.id
     `).all() as any[];
 
-    const result = items.map((item) => ({
+    const result = items.map((item: any) => ({
         ...item,
         bonuses: JSON.parse(item.bonuses || '{}'),
         extra: JSON.parse(item.extra || '{}'),
@@ -24,17 +24,17 @@ router.get('/shop/items', async (req, res) => {
 });
 
 // Купить предмет
-router.post('/shop/buy', async (req, res) => {
+router.post('/shop/buy', (req: any, res) => {
     const parsed = buyItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
     const userId = req.userId;
     const { itemId } = parsed.data;
 
-    const user = await db.prepare('SELECT money, inventory, inventorySlots FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT money, inventory, inventorySlots FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const dbItem = await db.prepare(`
+    const dbItem = db.prepare(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
@@ -68,7 +68,7 @@ router.post('/shop/buy', async (req, res) => {
 
     inventory.push(newItem);
 
-    await db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?')
+    db.prepare('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?')
         .run(price, JSON.stringify(inventory), userId);
 
     res.json({ success: true, moneyAfter: user.money - price });

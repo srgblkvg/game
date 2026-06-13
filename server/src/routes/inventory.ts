@@ -6,12 +6,12 @@ import { getUserById, getBaseStats, recalcHpOnEquip } from '../db/helpers';
 const router = Router();
 
 // Экипировка/снятие предмета
-router.post('/character/equip', async (req, res) => {
+router.post('/character/equip', (req: any, res) => {
     const userId = req.userId;
     const { slotId, itemId } = req.body;
     if (!slotId) return res.status(400).json({ error: 'slotId required' });
 
-    const user = await getUserById(db, userId);
+    const user = getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -33,7 +33,7 @@ router.post('/character/equip', async (req, res) => {
         const newHp = recalcHpOnEquip(user.currentHp, oldMaxHp, newMaxHp);
 
         const now = Math.floor(Date.now() / 1000);
-        await db.prepare('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?')
+        db.prepare('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?')
             .run(JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId);
         return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp });
     }
@@ -77,19 +77,19 @@ router.post('/character/equip', async (req, res) => {
     const newHp = recalcHpOnEquip(user.currentHp, oldStats.hp, newMaxHp);
 
     const now = Math.floor(Date.now() / 1000);
-    await db.prepare('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?')
+    db.prepare('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?')
         .run(JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId);
 
     res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp });
 });
 
 // Разобрать предмет(ы)
-router.post('/character/salvage', async (req, res) => {
+router.post('/character/salvage', (req: any, res) => {
     const userId = req.userId;
     const { itemIds } = req.body;
     if (!itemIds) return res.status(400).json({ error: 'itemIds required' });
 
-    const user = await getUserById(db, userId);
+    const user = getUserById(db, userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     let inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -108,7 +108,7 @@ router.post('/character/salvage', async (req, res) => {
         return true;
     });
 
-    const getCraftItemByRarityId = await db.prepare(`
+    const getCraftItemByRarityId = db.prepare(`
         SELECT c.id, c.name, c.rarity_id, c.type, c.image,
                r.display_name as rarity_display, r.color as rarity_color
         FROM craft_items c
@@ -140,21 +140,21 @@ router.post('/character/salvage', async (req, res) => {
         }
     }
 
-    await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
     res.json({ success: true, inventory });
 });
 
 // Расширить инвентарь
-router.post('/character/expand-inventory', async (req, res) => {
+router.post('/character/expand-inventory', (req: any, res) => {
     const userId = req.userId;
-    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const currentSlots = user.inventorySlots || 10;
     const price = 100 * Math.pow(2, currentSlots - 10);
     if (user.money < price) return res.status(400).json({ error: 'Недостаточно монет' });
 
-    await db.prepare('UPDATE users SET money = money - ?, inventorySlots = inventorySlots + 1 WHERE id = ?')
+    db.prepare('UPDATE users SET money = money - ?, inventorySlots = inventorySlots + 1 WHERE id = ?')
         .run(price, userId);
 
     res.json({ inventorySlots: currentSlots + 1, moneyAfter: user.money - price });

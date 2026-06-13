@@ -5,47 +5,47 @@ import { startJobSchema, createJobSchema } from '../validation';
 const router = Router();
 
 // Игровые
-router.get('/jobs', async (req, res) => {
-    const jobs = await db.prepare('SELECT * FROM jobs').all();
+router.get('/jobs', (req: any, res) => {
+    const jobs = db.prepare('SELECT * FROM jobs').all();
     res.json(jobs);
 });
 
-router.post('/jobs/start', async (req, res) => {
+router.post('/jobs/start', (req: any, res) => {
     const parsed = startJobSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
     const userId = req.userId;
     const { jobId } = parsed.data;
 
-    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.activeJob) return res.status(400).json({ error: 'Вы уже выполняете работу' });
 
-    const job = await db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId) as any;
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId) as any;
     if (!job) return res.status(404).json({ error: 'Job not found' });
 
     startJobForUser(user, job, res);
 });
 
 // Случайная работа по длительности
-router.post('/jobs/start-random', async (req, res) => {
+router.post('/jobs/start-random', (req: any, res) => {
     const userId = req.userId;
     const { duration } = req.body; // 600, 1800, 3600, 28800
 
     if (!duration) return res.status(400).json({ error: 'Укажите длительность' });
 
-    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.activeJob) return res.status(400).json({ error: 'Вы уже выполняете работу' });
 
-    const jobs = await db.prepare('SELECT * FROM jobs WHERE duration = ?').all(duration) as any[];
+    const jobs = db.prepare('SELECT * FROM jobs WHERE duration = ?').all(duration) as any[];
     if (jobs.length === 0) return res.status(404).json({ error: 'Нет подходящих работ' });
 
     const job = jobs[Math.floor(Math.random() * jobs.length)];
     startJobForUser(user, job, res);
 });
 
-async function startJobForUser(user: any, job: any, res: any) {
+function startJobForUser(user: any, job: any, res: any) {
     const now = Math.floor(Date.now() / 1000);
     const endTime = now + job.duration;
     let reward = Math.floor(Math.random() * (job.rewardMax - job.rewardMin + 1)) + job.rewardMin;
@@ -59,54 +59,54 @@ async function startJobForUser(user: any, job: any, res: any) {
     }
 
     const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, premiumBonus, background: job.background || null });
-    await db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, user.id);
+    db.prepare('UPDATE users SET activeJob = ? WHERE id = ?').run(activeJob, user.id);
 
     res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, background: job.background || null });
 }
 
-router.get('/jobs/history', async (req, res) => {
+router.get('/jobs/history', (req: any, res) => {
     const userId = req.userId;
-    const history = await db.prepare('SELECT * FROM job_history WHERE userId = ? ORDER BY finishedAt DESC LIMIT 10').all(userId);
+    const history = db.prepare('SELECT * FROM job_history WHERE userId = ? ORDER BY finishedAt DESC LIMIT 10').all(userId);
     res.json(history);
 });
 
 // Отменить работу без награды
-router.post('/jobs/cancel', async (req, res) => {
+router.post('/jobs/cancel', (req: any, res) => {
     const userId = req.userId;
-    const user = await db.prepare('SELECT activeJob FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT activeJob FROM users WHERE id = ?').get(userId) as any;
     if (!user || !user.activeJob) return res.status(400).json({ error: 'Нет активной работы' });
-    await db.prepare('UPDATE users SET activeJob = NULL WHERE id = ?').run(userId);
+    db.prepare('UPDATE users SET activeJob = NULL WHERE id = ?').run(userId);
     res.json({ success: true });
 });
 
 // Административные
-router.get('/admin/jobs', async (req, res) => {
-    const jobs = await db.prepare('SELECT * FROM jobs ORDER BY id').all();
+router.get('/admin/jobs', (req: any, res) => {
+    const jobs = db.prepare('SELECT * FROM jobs ORDER BY id').all();
     res.json(jobs);
 });
 
-router.post('/admin/jobs', async (req, res) => {
+router.post('/admin/jobs', (req: any, res) => {
     const parsed = createJobSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные работы' });
 
     const { name, description, duration, rewardMin, rewardMax } = parsed.data;
-    await db.prepare('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)')
+    db.prepare('INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)')
         .run(name, description || '', duration, rewardMin || 0, rewardMax || 0);
     res.json({ success: true });
 });
 
-router.put('/admin/jobs/:id', async (req, res) => {
+router.put('/admin/jobs/:id', (req: any, res) => {
     const parsed = createJobSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные работы' });
 
     const { name, description, duration, rewardMin, rewardMax } = parsed.data;
-    await db.prepare('UPDATE jobs SET name=?, description=?, duration=?, rewardMin=?, rewardMax=? WHERE id=?')
+    db.prepare('UPDATE jobs SET name=?, description=?, duration=?, rewardMin=?, rewardMax=? WHERE id=?')
         .run(name, description, duration, rewardMin, rewardMax, req.params.id);
     res.json({ success: true });
 });
 
-router.delete('/admin/jobs/:id', async (req, res) => {
-    await db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
+router.delete('/admin/jobs/:id', (req: any, res) => {
+    db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
     res.json({ success: true });
 });
 

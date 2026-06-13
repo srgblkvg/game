@@ -10,7 +10,7 @@ import { battleSchema } from '../validation';
 
 const router = Router();
 
-router.post('/battle', async (req, res) => {
+router.post('/battle', (req: any, res) => {
     const parsed = battleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные боя' });
 
@@ -18,7 +18,7 @@ router.post('/battle', async (req, res) => {
     const { opponentId } = parsed.data;
 
     const now = Math.floor(Date.now() / 1000);
-    const attacker = await db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.lastAttackTime, u.premiumUntil, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
+    const attacker = db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.lastAttackTime, u.premiumUntil, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
     if (!attacker) return res.status(404).json({ error: 'Attacker not found' });
 
     const hasPremium = (attacker.premiumUntil || 0) > now;
@@ -31,10 +31,10 @@ router.post('/battle', async (req, res) => {
 
     let defender: any;
     if (opponentId) {
-        defender = await db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(opponentId);
+        defender = db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(opponentId);
         if (!defender || defender.id == userId) return res.status(400).json({ error: 'Invalid opponent' });
     } else {
-        const others = await db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)').all(userId, now) as any[];
+        const others = db.prepare('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)').all(userId, now) as any[];
         if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены' });
         defender = others[Math.floor(Math.random() * others.length)];
     }
@@ -45,9 +45,9 @@ router.post('/battle', async (req, res) => {
     }
 
     // Актуализируем HP защитника (офлайн-реген)
-    const dCollCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(defender.id) as any).cnt || 0;
+    const dCollCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(defender.id) as any).cnt || 0;
     const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'), undefined, dCollCnt).hp;
-    const defenderCurrentHp = await applyHpRegen({
+    const defenderCurrentHp = applyHpRegen({
         id: defender.id,
         currentHp: defender.currentHp,
         maxHp: defenderMaxHp,
@@ -65,7 +65,7 @@ router.post('/battle', async (req, res) => {
         money: attacker.money,
         currentHp: attacker.currentHp ?? undefined,
         drinkBonuses: getDrinkBonuses(attacker),
-        collectionBonus: (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(attacker.id) as any).cnt || 0,
+        collectionBonus: (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(attacker.id) as any).cnt || 0,
     };
     const defenderData = {
         id: defender.id,
@@ -85,11 +85,11 @@ router.post('/battle', async (req, res) => {
 
     if (moneyStolen > 0) {
         if (attackerWins) {
-            await db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(moneyStolen, defender.id);
-            await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(moneyStolen, attacker.id);
+            db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(moneyStolen, defender.id);
+            db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(moneyStolen, attacker.id);
         } else {
-            await db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(moneyStolen, attacker.id);
-            await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(moneyStolen, defender.id);
+            db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(moneyStolen, attacker.id);
+            db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(moneyStolen, defender.id);
         }
     }
 
@@ -99,31 +99,31 @@ router.post('/battle', async (req, res) => {
     const newDefenderElo = calcElo(defender.elo || 1000, attacker.elo || 1000, !attackerWon, defender.level);
 
     // --- Обновление атакующего ---
-    const attExp = await applyExp(db, attacker.id, result.winnerId === attacker.id ? result.expGained : 0, attacker.exp, attacker.level, attacker.statPoints || 0);
+    const attExp = applyExp(db, attacker.id, result.winnerId === attacker.id ? result.expGained : 0, attacker.exp, attacker.level, attacker.statPoints || 0);
 
     // Налог гильдии (PvP)
-    const attackerMoneyAfterTax = await collectGuildTax(db, attacker.id, attackerWins ? result.moneyGained : 0, 'tax_pvp');
+    const attackerMoneyAfterTax = collectGuildTax(db, attacker.id, attackerWins ? result.moneyGained : 0, 'tax_pvp');
 
-    await db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`)
+    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`)
         .run(attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
             attackerWins ? (result.moneyGained + moneyStolen) : 0, attackerWins ? 0 : moneyStolen, attacker.id);
 
     // --- Обновление защитника ---
-    const defExp = await applyExp(db, defender.id, result.winnerId === defender.id ? result.expGained : 0, defender.exp, defender.level, defender.statPoints || 0);
+    const defExp = applyExp(db, defender.id, result.winnerId === defender.id ? result.expGained : 0, defender.exp, defender.level, defender.statPoints || 0);
 
     // Налог гильдии (PvP защитник)
-    const defenderMoneyAfterTax = await collectGuildTax(db, defender.id, !attackerWins ? result.moneyGained : 0, 'tax_pvp');
+    const defenderMoneyAfterTax = collectGuildTax(db, defender.id, !attackerWins ? result.moneyGained : 0, 'tax_pvp');
 
-    await db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`)
+    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`)
         .run(defExp.newLevel, defExp.newExp, defenderMoneyAfterTax, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
             !attackerWins ? (result.moneyGained + moneyStolen) : 0, !attackerWins ? 0 : moneyStolen, defender.id);
 
-    await db.prepare(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
+    db.prepare(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(attacker.id, defender.id, result.winnerId, JSON.stringify(result.log), JSON.stringify(result.steps),
             result.attackerHpAfter, result.defenderHpAfter, result.expGained, result.moneyGained, moneyStolen);
 
-    const updatedAttacker = await db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
+    const updatedAttacker = db.prepare('SELECT money FROM users WHERE id = ?').get(userId) as any;
 
     res.json({
         log: result.log,
@@ -148,10 +148,10 @@ router.post('/battle', async (req, res) => {
     });
 });
 
-router.get('/battles', async (req, res) => {
+router.get('/battles', (req: any, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 10;
-    const battles = await db.prepare(`
+    const battles = db.prepare(`
     SELECT b.*, 
       a.username as attackerName, ag.name as attackerGuild, a.guildId as attackerGuildId,
       d.username as defenderName, dg.name as defenderGuild, d.guildId as defenderGuildId
@@ -170,12 +170,12 @@ router.get('/battles', async (req, res) => {
 // Админка: все бои (отдельный роутер)
 export const adminRouter = Router();
 
-adminRouter.get('/battles', async (req, res) => {
+adminRouter.get('/battles', (req: any, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
-    const total = (await db.prepare('SELECT COUNT(*) as cnt FROM battles').get() as any).cnt;
-    const battles = await db.prepare(`
+    const total = (db.prepare('SELECT COUNT(*) as cnt FROM battles').get() as any).cnt;
+    const battles = db.prepare(`
         SELECT b.*, a.username as attackerName, d.username as defenderName
         FROM battles b
         JOIN users a ON b.attackerId = a.id

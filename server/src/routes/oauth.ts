@@ -29,48 +29,48 @@ setInterval(() => {
     }
 }, 5 * 60 * 1000);
 
-async function makeToken(userId: number, role: string): string {
+function makeToken(userId: number, role: string): string {
     return jwt.sign({ userId, role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
 }
 
-async function findOrCreateUser(provider: string, oauthId: string, username: string): { id: number; username: string; level: number } {
+function findOrCreateUser(provider: string, oauthId: string, username: string): { id: number; username: string; level: number } {
     const now = Math.floor(Date.now() / 1000);
-    const existing: any = await db.prepare('SELECT id, username, level FROM users WHERE oauthProvider = ? AND oauthId = ?')
+    const existing: any = db.prepare('SELECT id, username, level FROM users WHERE oauthProvider = ? AND oauthId = ?')
         .get(provider, oauthId);
     if (existing) {
         // Обновляем имя если было id... или vk_...
         if (existing.username.startsWith('vk_') || existing.username.startsWith('id')) {
             let newName = username;
             let suffix = 1;
-            while (newName !== existing.username && await db.prepare('SELECT id FROM users WHERE username = ?').get(newName)) {
+            while (newName !== existing.username && db.prepare('SELECT id FROM users WHERE username = ?').get(newName)) {
                 newName = `${username.substring(0, 17)}_${suffix}`;
                 suffix++;
             }
-            await db.prepare('UPDATE users SET username = ?, lastLoginAt = ? WHERE id = ?').run(newName, now, existing.id);
+            db.prepare('UPDATE users SET username = ?, lastLoginAt = ? WHERE id = ?').run(newName, now, existing.id);
             return { id: existing.id, username: newName, level: existing.level };
         }
         // Обновляем время последнего входа
-        await db.prepare('UPDATE users SET lastLoginAt = ? WHERE id = ?').run(now, existing.id);
+        db.prepare('UPDATE users SET lastLoginAt = ? WHERE id = ?').run(now, existing.id);
         return existing;
     }
 
     let finalUsername = username.replace(/\s+/g, '_').substring(0, 20);
     let suffix = 1;
-    while (await db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
+    while (db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
         finalUsername = `${finalUsername.substring(0, 17)}_${suffix}`;
         suffix++;
     }
 
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
     const randomHash = crypto.randomBytes(32).toString('hex');
-    const info = await db.prepare(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt)
+    const info = db.prepare(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt)
         VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male', ?)`)
         .run(finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now);
     return { id: Number(info.lastInsertRowid), username: finalUsername, level: 1 };
 }
 
 // --- Яндекс ID ---
-router.get('/yandex', async (req, res) => {
+router.get('/yandex', (_req, res) => {
     const url = `https://oauth.yandex.ru/authorize?response_type=code&client_id=${YA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI_YA)}`;
     res.redirect(url);
 });
@@ -113,7 +113,7 @@ router.get('/yandex/callback', async (req, res) => {
 
         // Логируем IP и аудит
         if (req.ip) {
-            await db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip);
+            db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip);
         }
         auditLoginSuccess(user.username, user.id, req.ip);
 
@@ -126,7 +126,7 @@ router.get('/yandex/callback', async (req, res) => {
 });
 
 // --- VK ID ---
-router.get('/vk', async (req, res) => {
+router.get('/vk', (_req, res) => {
     const verifier = crypto.randomBytes(32).toString('base64url');
     const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
     const state = crypto.randomBytes(16).toString('hex');
@@ -216,7 +216,7 @@ router.get('/vk/callback', async (req, res) => {
 
         // Логируем IP и аудит
         if (req.ip) {
-            await db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip);
+            db.prepare('INSERT INTO login_logs (userId, ip) VALUES (?, ?)').run(user.id, req.ip);
         }
         auditLoginSuccess(user.username, user.id, req.ip);
 
