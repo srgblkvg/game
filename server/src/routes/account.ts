@@ -23,8 +23,7 @@ router.post('/account/change-username', (req: any, res) => {
     // Проверяем текущий пароль
     const currentPassword = (req.body as any).currentPassword;
     if (currentPassword !== undefined) {
-        const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!valid) {
+        if (!bcrypt.compareSync(currentPassword, user.passwordHash)) {
             return res.status(400).json({ error: 'Неверный текущий пароль' });
         }
     }
