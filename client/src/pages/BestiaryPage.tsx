@@ -258,7 +258,7 @@ export default function BestiaryPage() {
     if (!character || cooldownRemaining > 0) return;
     setPhase('battle');
     const startHp = character.currentHp;
-    const pStats = calculateStats(character, (character as any).drinkBonuses, (character as any).collectionCount || 0);
+    const pStats = calculateStats(character, (character as any).drinkBonuses);
     initialHpRef.current = { player: startHp, mob: mob.hp };
     setPlayerMaxHp(pStats.hp);
     setPlayerHp(startHp);
@@ -429,7 +429,7 @@ export default function BestiaryPage() {
                 username: character.username,
                 level: character.level,
                 equipment: character.equipment,
-                stats: calculateStats(character, (character as any).drinkBonuses, (character as any).collectionCount || 0),
+                stats: calculateStats(character, (character as any).drinkBonuses),
                 currentHp: playerHp,
                 maxHp: playerMaxHp,
                 gender: character.gender || 'male',

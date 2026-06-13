@@ -14,7 +14,7 @@ interface LeftSidebarProps {
 export default function LeftSidebar({ character, onEquip, selectedItemId, highlightedSlots }: LeftSidebarProps) {
   if (!character) return null;
   const drinkBonuses = (character as any).drinkBonuses;
-  const stats = calculateStats(character, drinkBonuses, (character as any).collectionCount || 0);
+  const stats = calculateStats(character, drinkBonuses);
 
   // Реген из комнаты
   const room = (character as any).room;

@@ -83,7 +83,7 @@ export default function ArenaPage() {
             username: character.username,
             level: character.level,
             equipment: character.equipment,
-            stats: calculateStats(character, (character as any).drinkBonuses, (character as any).collectionCount || 0),
+            stats: calculateStats(character, (character as any).drinkBonuses),
             currentHp: hpLeft, maxHp: maxHpLeft,
             gender: character.gender || 'male',
             guildName: (character as any).guildName,
