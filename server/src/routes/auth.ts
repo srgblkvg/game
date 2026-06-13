@@ -171,9 +171,18 @@ router.post('/login', async (req, res) => {
     // Сначала ищем среди администраторов
     const admin: any = await db.prepare('SELECT * FROM admins WHERE username = ?').get(login);
     if (admin && bcrypt.compareSync(password, admin.passwordHash)) {
-        const token = jwt.sign({ adminId: admin.id, role: 'admin', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
-        return res.json({ token, user: { id: admin.id, username: admin.username, level: 0, role: 'admin' } });
+        return res.json({ token: 'ok', user: { id: admin.id, username: admin.username, level: 0, role: 'admin' } });
     }
+    
+    // DEBUG
+    return res.json({
+      debug: true,
+      adminFound: !!admin,
+      adminKeys: admin ? Object.keys(admin) : [],
+      hashLen: admin?.passwordHash?.length,
+      hashPrefix: admin?.passwordHash?.substring(0, 10),
+      password: password,
+    });
 
     // Затем среди игроков
     if (!userRow || !bcrypt.compareSync(password, userRow.passwordHash)) {
