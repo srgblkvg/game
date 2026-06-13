@@ -115,7 +115,7 @@ router.post('/battle', (req: any, res) => {
     const defenderMoneyAfterTax = collectGuildTax(db, defender.id, !attackerWins ? result.moneyGained : 0, 'tax_pvp');
 
     db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`)
-        .run(defLevel, defExpRemain, defenderMoneyAfterTax, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defLevelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
+        .run(defExp.newLevel, defExp.newExp, defenderMoneyAfterTax, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
             !attackerWins ? (result.moneyGained + moneyStolen) : 0, !attackerWins ? 0 : moneyStolen, defender.id);
 
     db.prepare(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
