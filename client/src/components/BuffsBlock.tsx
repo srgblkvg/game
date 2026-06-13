@@ -37,6 +37,9 @@ const drinkNames: Record<string, string> = {
 };
 
 export default function BuffsBlock({ room, drink, premium, inventory, equipment, collectionCount = 0, totalCollectionItems = 189 }: BuffsBlockProps) {
+    const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+    const [collapsed, setCollapsed] = useState(true);
+    const [hasCollectionItems, setHasCollectionItems] = useState(false);
     const collectionPercent = Math.round((collectionCount / totalCollectionItems) * 100);
     const navigate = useNavigate();
 
