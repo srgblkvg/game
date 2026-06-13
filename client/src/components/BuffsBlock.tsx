@@ -102,7 +102,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment 
                 <div className="mt-2 space-y-2">
                     {/* Временные */}
                     <div className="space-y-0.5">
-                        <div className="text-[0.65rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                        <div className="text-[0.65rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5 flex items-center justify-center gap-1">
                             <Icon icon="game-icons:hourglass" width="10" height="10" /> Временные
                         </div>
 
@@ -141,7 +141,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment 
 
                     {/* Постоянные */}
                     <div>
-                        <div className="text-[0.65rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 flex items-center gap-1">
+                        <div className="text-[0.65rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 flex items-center justify-center gap-1">
                             <Icon icon="game-icons:infinity" width="10" height="10" /> Постоянные
                         </div>
                         <div className="cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1 py-0.5" onClick={() => navigate('/collections')}>
