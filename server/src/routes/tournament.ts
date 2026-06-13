@@ -506,7 +506,7 @@ router.get('/tournament', async (req: any, res) => {
 
     const allTournaments = [...updated];
 
-    const result = allTournaments.map((t: any) => {
+    const result = await Promise.all(allTournaments.map(async (t: any) => {
         const participants = db.prepare(
             'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?'
         ).all(t.id) as any[];
@@ -542,7 +542,7 @@ router.get('/tournament', async (req: any, res) => {
                 log: m.log ? JSON.parse(m.log) : null,
             }))),
         };
-    });
+    }));
 
     // Сортировка: сначала доступные игроку, затем по registrationEnd
     result.sort((a: any, b: any) => {
