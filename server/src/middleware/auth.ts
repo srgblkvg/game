@@ -12,7 +12,7 @@ export function toggleGuestRestrictions(): boolean { guestRestrictionsDisabled =
 // Кеш для троттлинга обновления lastLoginAt (раз в 5 мин)
 const lastLoginUpdates = new Map<string, number>();
 
-export function authMiddleware(req: any, res: any, next: any) {
+export async function authMiddleware(req: any, res: any, next: any) {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Не авторизован' });
     try {
