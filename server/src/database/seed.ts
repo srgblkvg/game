@@ -424,7 +424,6 @@ async function runSeed(db: InstanceType<typeof Database>) {
       const getCatId = async (name: string): Promise<number> =>
         (await db.prepareGet('SELECT id FROM craft_recipe_categories WHERE name = ?')(name) as any).id;
       const itemCatId = await getCatId('Предметы');
-      const itemCatId = await getCatId('Предметы');
       const itemRecipes: Array<{
         name: string; description: string; cost: number;
         rarity: number; chance: number; ingredients: Array<{ name: string; qty: number }>;
