@@ -460,7 +460,7 @@ router.get('/tournament', async (req: any, res) => {
             ORDER BY t.id DESC LIMIT ? OFFSET ?
         `)(limit, offset) as any[];
 
-        const result = completed.map((t: any) => {
+        const result = completed.map(async (t) => {
             const participants = db.prepare(
                 'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?'
             ).all(t.id) as any[];

@@ -6,7 +6,7 @@ const router = Router();
 // Получить все сеты
 router.get('/collection-sets', async (_req: any, res) => {
     const sets = await db.prepareAll('SELECT * FROM collection_sets ORDER BY sort_order')();
-    const result = (sets as any[]).map((set: any) => {
+    const result = (sets as any[]).map(async (set) => {
         const items = db.prepare(
             'SELECT item_name, slot FROM collection_set_items WHERE set_id = ?'
         ).all(set.id);

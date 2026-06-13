@@ -21,7 +21,7 @@ router.get('/mobs', async (req: any, res) => {
     }
 
     // Обогащаем мобов изображениями лута
-    const enriched = mobs.map((m: any) => {
+    const enriched = mobs.map(async (m) => {
         const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
         const rarityMap: [number, string, string][] = [
             [0, 'loot_junk', 'Хлам'], [1, 'loot_common', 'Обычный'],

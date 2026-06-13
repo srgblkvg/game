@@ -107,7 +107,7 @@ router.post('/craft/execute', async (req: any, res) => {
     }
 
     // Списание ресурсов
-    let newInventory = inventory.map((item: any) => {
+    let newInventory = inventory.map(async (item) => {
         if (isCraftItem(item) && ingredientMap.has(String(item.id))) {
             const needed = ingredientMap.get(String(item.id))!;
             if (item.count > needed) {

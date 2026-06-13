@@ -29,7 +29,7 @@ router.get('/character/me', async (req: any, res) => {
     const equipment = JSON.parse(user.equipment || '{}');
     let changed = false;
 
-    inventory = inventory.map((item: any) => {
+    inventory = inventory.map(async (item) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
             if (item.rarity_id === undefined) {
                 const craftRow = getCraftData.get(Number(item.id)) as any;

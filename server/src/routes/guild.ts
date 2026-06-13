@@ -97,7 +97,7 @@ router.get('/guild/list', async (req: any, res) => {
     `)();
 
     // Дополнить war-инфой
-    const result = (guilds as any[]).map((g: any) => {
+    const result = (guilds as any[]).map(async (g) => {
         if (g.warId) {
             const war = await db.prepareGet(`SELECT gw.*, a.name as attackerName, d.name as defenderName FROM guild_wars gw JOIN guilds a ON gw.attackerGuildId = a.id JOIN guilds d ON gw.defenderGuildId = d.id WHERE gw.id = ?`)(g.warId) as any;
             if (war) {
@@ -725,7 +725,7 @@ router.get('/guild/war/details', async (req: any, res) => {
     `)(war.id, war.id, enemyGuildId, war.id) as any[];
 
     // Проверка защиты: если атаковали меньше часа назад
-    const enemyWithProtection = enemyMembers.map((m: any) => {
+    const enemyWithProtection = enemyMembers.map(async (m) => {
         let protectedUntil = null;
         if (m.lastAttackedAt) {
             const attackedTime = new Date(m.lastAttackedAt + 'Z').getTime();
