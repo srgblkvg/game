@@ -6,7 +6,7 @@ import { currentStats } from '../game/stats';
 const router = Router();
 
 // Поиск пользователя по логину
-router.get('/character/username/:username', (req: any, res) => {
+router.get('/character/username/:username', async (req, res) => {
     const { username } = req.params;
     const user = db.prepare(
         'SELECT id, username, level FROM users WHERE LOWER(username) = LOWER(?)'
@@ -16,7 +16,7 @@ router.get('/character/username/:username', (req: any, res) => {
 });
 
 // Публичный профиль игрока
-router.get('/character/public/:userId', (req: any, res) => {
+router.get('/character/public/:userId', async (req, res) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
@@ -28,7 +28,7 @@ router.get('/character/public/:userId', (req: any, res) => {
 
     const { enriched: enrichedEquipment } = enrichEquipment(db, user.equipment ? JSON.parse(user.equipment) : {});
     const base = getBaseStats(user);
-    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
+    const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enrichedEquipment, undefined, collCnt);
 
     res.json({
@@ -64,13 +64,13 @@ router.get('/character/public/:userId', (req: any, res) => {
 });
 
 // GET /users/list?ids=1,2,3
-router.get('/users/list', (req: any, res) => {
+router.get('/users/list', async (req, res) => {
     const idsParam = req.query.ids as string;
     if (!idsParam) return res.json([]);
     const ids = idsParam.split(',').map(Number).filter(n => !isNaN(n));
     if (ids.length === 0) return res.json([]);
     const placeholders = ids.map(() => '?').join(',');
-    const users = db.prepare(`SELECT id, username FROM users WHERE id IN (${placeholders})`).all(...ids);
+    const users = await db.prepare(`SELECT id, username FROM users WHERE id IN (${placeholders})`).all(...ids);
     res.json(users);
 });
 

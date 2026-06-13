@@ -96,7 +96,7 @@ export function setupWebSocket(server: any) {
 
     // ---------- Администратор ----------
     if (decoded.role === 'admin') {
-      const admin = db.prepare('SELECT id, username FROM admins WHERE id = ?').get(decoded.adminId) as any;
+      const admin = await db.prepare('SELECT id, username FROM admins WHERE id = ?').get(decoded.adminId) as any;
       if (!admin) {
         ws.close(1008, 'Admin not found');
         return;
@@ -120,7 +120,7 @@ export function setupWebSocket(server: any) {
 
     // ---------- Игрок ----------
     const userId = decoded.userId;
-    const user = db.prepare('SELECT u.id, u.username, u.level, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
+    const user = await db.prepare('SELECT u.id, u.username, u.level, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
     if (!user) {
       ws.close(1008, 'User not found');
       return;
@@ -159,7 +159,7 @@ export function setupWebSocket(server: any) {
       let data: any;
       try { data = JSON.parse(raw.toString()); } catch { return; }
 
-      const currentUser = db.prepare('SELECT chatBannedUntil FROM users WHERE id = ?').get(userId) as any;
+      const currentUser = await db.prepare('SELECT chatBannedUntil FROM users WHERE id = ?').get(userId) as any;
       if (currentUser && currentUser.chatBannedUntil && currentUser.chatBannedUntil > Math.floor(Date.now() / 1000)) {
         sendToUser(userId, {
           type: 'chatBanned',
@@ -185,7 +185,7 @@ export function setupWebSocket(server: any) {
         if (!item) {
           const itemId = data.itemId;
           if (!itemId) return;
-          const currentUser = db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
+          const currentUser = await db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
           const inventory = JSON.parse(currentUser.inventory || '[]');
           item = inventory.find((i: any) => i.id == itemId);
         }
@@ -228,7 +228,7 @@ export function setupWebSocket(server: any) {
           const privateContent = withoutCommand.slice(spaceIndex + 1).trim();
           if (!privateContent) return;
 
-          const targetUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(targetName) as any;
+          const targetUser = await db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(targetName) as any;
           if (!targetUser) {
             sendToUser(userId, { type: 'error', message: 'Пользователь не найден' });
             return;

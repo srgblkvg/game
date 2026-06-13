@@ -33,7 +33,7 @@ function nextPowerOfTwo(n: number): number {
  * Пары: 1-й с последним, 2-й с предпоследним и т.д.
  */
 function generateBracket(tournamentId: number) {
-    const participants = db.prepare(`
+    const participants = await db.prepare(`
         SELECT tp.*, u.username, u.level, u.money, u.baseS, u.baseA, u.baseD, u.baseM,
                u.equipment, u.currentHp, u.statPoints, u.tournamentElo
         FROM tournament_participants tp
@@ -44,11 +44,11 @@ function generateBracket(tournamentId: number) {
 
     if (participants.length < 2) {
         // Отмена — возврат денег для custom турниров
-        const t = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
+        const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
         if (t && t.type === 'custom') {
             // Возврат базового призового фонда создателю
             if ((t.basePool || 0) > 0) {
-                db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.basePool, t.creatorId);
+                await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.basePool, t.creatorId);
             }
             // Возврат входных взносов всем участникам
             if ((t.entryFee || 0) > 0) {
@@ -56,11 +56,11 @@ function generateBracket(tournamentId: number) {
                     'SELECT userId FROM tournament_participants WHERE tournamentId = ?'
                 ).all(tournamentId) as any[];
                 for (const p of parts) {
-                    db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.entryFee, p.userId);
+                    await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(t.entryFee, p.userId);
                 }
             }
         }
-        db.prepare('UPDATE tournaments SET status = ?, completedAt = datetime(?) WHERE id = ?').run('cancelled', new Date().toISOString(), tournamentId);
+        await db.prepare('UPDATE tournaments SET status = ?, completedAt = datetime(?) WHERE id = ?').run('cancelled', new Date().toISOString(), tournamentId);
         return;
     }
 
@@ -91,12 +91,12 @@ function generateBracket(tournamentId: number) {
         insertMatch.run(tournamentId, p1Id, p2Id);
 
         if (p1Id === null && p2Id !== null) {
-            const matchId = (db.prepare('SELECT last_insert_rowid() as id').get() as any).id;
-            db.prepare('UPDATE tournament_matches SET winnerId = ? WHERE id = ?').run(p2Id, matchId);
+            const matchId = (await db.prepare('SELECT last_insert_rowid() as id').get() as any).id;
+            await db.prepare('UPDATE tournament_matches SET winnerId = ? WHERE id = ?').run(p2Id, matchId);
         }
         if (p2Id === null && p1Id !== null) {
-            const matchId = (db.prepare('SELECT last_insert_rowid() as id').get() as any).id;
-            db.prepare('UPDATE tournament_matches SET winnerId = ? WHERE id = ?').run(p1Id, matchId);
+            const matchId = (await db.prepare('SELECT last_insert_rowid() as id').get() as any).id;
+            await db.prepare('UPDATE tournament_matches SET winnerId = ? WHERE id = ?').run(p1Id, matchId);
         }
     }
 }
@@ -106,7 +106,7 @@ function generateBracket(tournamentId: number) {
 // ---------------------------------------------------------------------------
 
 function loadPlayerForBattle(userId: number) {
-    const u = db.prepare(`
+    const u = await db.prepare(`
         SELECT id, username, level, money, baseS, baseA, baseD, baseM,
                equipment, currentHp
         FROM users WHERE id = ?
@@ -118,7 +118,7 @@ function loadPlayerForBattle(userId: number) {
 
     const { enriched } = enrichEquipment(db, equipment);
     const base = getBaseStats(u);
-    const collCnt = (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
+    const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const stats = currentStats(base, enriched, undefined, collCnt);
 
     return {
@@ -129,7 +129,7 @@ function loadPlayerForBattle(userId: number) {
         level: u.level,
         money: u.money || 0,
         currentHp: stats.hp, // всегда полное HP для турнирных боёв
-        collectionBonus: (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0,
+        collectionBonus: (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0,
     };
 }
 
@@ -139,7 +139,7 @@ function loadPlayerForBattle(userId: number) {
  */
 function resolveCurrentRound(tournamentId: number): number {
     // Находим минимальный раунд с незавершёнными матчами
-    const pendingRound = db.prepare(`
+    const pendingRound = await db.prepare(`
         SELECT round FROM tournament_matches
         WHERE tournamentId = ? AND winnerId IS NULL
         ORDER BY round LIMIT 1
@@ -148,7 +148,7 @@ function resolveCurrentRound(tournamentId: number): number {
     if (!pendingRound) return 0;
 
     const round = pendingRound.round;
-    const matches = db.prepare(`
+    const matches = await db.prepare(`
         SELECT * FROM tournament_matches
         WHERE tournamentId = ? AND round = ? AND winnerId IS NULL
     `).all(tournamentId, round) as any[];
@@ -175,7 +175,7 @@ function resolveCurrentRound(tournamentId: number): number {
 function advanceWinners(tournamentId: number, finishedRound: number) {
     const nextRound = finishedRound + 1;
 
-    const winners = db.prepare(`
+    const winners = await db.prepare(`
         SELECT winnerId FROM tournament_matches
         WHERE tournamentId = ? AND round = ? AND winnerId IS NOT NULL
         ORDER BY id
@@ -205,7 +205,7 @@ function advanceWinners(tournamentId: number, finishedRound: number) {
 // ---------------------------------------------------------------------------
 
 function finishTournament(tournamentId: number) {
-    const t = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
+    const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
     if (!t || t.status === 'completed' || t.status === 'cancelled') return;
 
     const prizePool = t.prizePool || 0;
@@ -213,13 +213,13 @@ function finishTournament(tournamentId: number) {
     // Собираем результаты: финал (последний раунд) → 1-е место,
     // проигравший в финале → 2-е место,
     // полуфиналисты → 3-е место (берём того, кто проиграл победителю)
-    const lastRound = db.prepare(`
+    const lastRound = await db.prepare(`
         SELECT MAX(round) as maxRound FROM tournament_matches WHERE tournamentId = ?
     `).get(tournamentId) as any;
     const finalRound = lastRound?.maxRound || 1;
 
     // Победитель (1-е место) — winnerId последнего матча финала
-    const finalMatches = db.prepare(`
+    const finalMatches = await db.prepare(`
         SELECT * FROM tournament_matches WHERE tournamentId = ? AND round = ?
     `).all(tournamentId, finalRound) as any[];
 
@@ -240,7 +240,7 @@ function finishTournament(tournamentId: number) {
     // 3-е место — проигравшие в полуфинале (первый, кто не чемпион и не 2-е место)
     let thirdPlaceId: number | null = null;
     if (finalRound >= 2) {
-        const semiMatches = db.prepare(`
+        const semiMatches = await db.prepare(`
             SELECT * FROM tournament_matches WHERE tournamentId = ? AND round = ?
         `).all(tournamentId, finalRound - 1) as any[];
 
@@ -281,21 +281,18 @@ function finishTournament(tournamentId: number) {
     }
 
     // Сохраняем результаты в таблицу tournament_participants
-    db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?')
-        .run(JSON.stringify({ place: 1, prize: firstPrize }), tournamentId, winnerId);
-    db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(winnerId);
+    await db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?').run(JSON.stringify({ place: 1, prize: firstPrize }), tournamentId, winnerId);
+    await db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(winnerId);
     if (secondPlaceId) {
-        db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?')
-            .run(JSON.stringify({ place: 2, prize: secondPrize }), tournamentId, secondPlaceId);
-        db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(secondPlaceId);
+        await db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?').run(JSON.stringify({ place: 2, prize: secondPrize }), tournamentId, secondPlaceId);
+        await db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(secondPlaceId);
     }
     if (thirdPlaceId) {
-        db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?')
-            .run(JSON.stringify({ place: 3, prize: thirdPrize }), tournamentId, thirdPlaceId);
-        db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(thirdPlaceId);
+        await db.prepare('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?').run(JSON.stringify({ place: 3, prize: thirdPrize }), tournamentId, thirdPlaceId);
+        await db.prepare('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?').run(thirdPlaceId);
     }
 
-    db.prepare('UPDATE tournaments SET status = ?, completedAt = datetime(?) WHERE id = ?').run('completed', new Date().toISOString(), tournamentId);
+    await db.prepare('UPDATE tournaments SET status = ?, completedAt = datetime(?) WHERE id = ?').run('completed', new Date().toISOString(), tournamentId);
 
     // --- Обновление скрытого tournamentElo для посева ---
     // Победитель +25, 2-е +15, 3-е +10, полуфиналисты +5, остальные 0
@@ -317,8 +314,7 @@ function finishTournament(tournamentId: number) {
             if (wonInR1) delta = 3; // прошёл первый раунд
             else delta = -3;        // вылетел в первом раунде
         }
-        db.prepare('UPDATE users SET tournamentElo = MAX(100, tournamentElo + ?) WHERE id = ?')
-            .run(delta, p.userId);
+        await db.prepare('UPDATE users SET tournamentElo = MAX(100, tournamentElo + ?) WHERE id = ?').run(delta, p.userId);
     }
 }
 
@@ -327,14 +323,14 @@ function finishTournament(tournamentId: number) {
 // ---------------------------------------------------------------------------
 
 function autoAdvance(tournamentId: number) {
-    const t = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
+    const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
     if (!t) return;
 
     const now = Math.floor(Date.now() / 1000);
 
     if (t.status === 'registration' && now >= t.registrationEnd) {
         // Время регистрации истекло — стартуем
-        db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', tournamentId);
+        await db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', tournamentId);
         generateBracket(tournamentId);
         autoAdvance(tournamentId);
         return;
@@ -347,9 +343,8 @@ function autoAdvance(tournamentId: number) {
             const label = t.type === 'custom' ? (t.name || 'Турнир') : (divisions.find(d => d.name === t.division)?.label || t.division);
             const secLeft = t.registrationEnd - now;
             const minLeft = Math.floor(secLeft / 60);
-            const participants = (db.prepare('SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?').get(tournamentId) as any).cnt;
-            db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)')
-                .run(0, null, `Турнир «${label}» — регистрация закроется через ${minLeft} мин! (${participants}/${MAX_PLAYERS} уч.)`);
+            const participants = (await db.prepare('SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?').get(tournamentId) as any).cnt;
+            await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)').run(0, null, `Турнир «${label}» — регистрация закроется через ${minLeft} мин! (${participants}/${MAX_PLAYERS} уч.)`);
         }
     }
 
@@ -437,9 +432,9 @@ function getOrCreateTournament(type?: string) {
 // ---------------------------------------------------------------------------
 
 // Статус турнира
-router.get('/tournament', (req: any, res) => {
+router.get('/tournament', async (req, res) => {
     const userId = req.userId;
-    const user = db.prepare('SELECT level FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepare('SELECT level FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
@@ -451,13 +446,13 @@ router.get('/tournament', (req: any, res) => {
         const limit = 20;
         const offset = (page - 1) * limit;
 
-        const total = (db.prepare(`
+        const total = (await db.prepare(`
             SELECT COUNT(*) as cnt FROM tournaments t 
             WHERE t.status = 'completed' 
             AND (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) >= 2
         `).get() as any).cnt;
 
-        const completed = db.prepare(`
+        const completed = await db.prepare(`
             SELECT t.*, (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) as participantCount
             FROM tournaments t 
             WHERE t.status = 'completed' 
@@ -536,13 +531,13 @@ router.get('/tournament', (req: any, res) => {
             matches: matches.map((m: any) => ({
                 ...m,
                 player1Name: m.player1Id
-                    ? (db.prepare('SELECT username FROM users WHERE id = ?').get(m.player1Id) as any)?.username
+                    ? (await db.prepare('SELECT username FROM users WHERE id = ?').get(m.player1Id) as any)?.username
                     : null,
                 player2Name: m.player2Id
-                    ? (db.prepare('SELECT username FROM users WHERE id = ?').get(m.player2Id) as any)?.username
+                    ? (await db.prepare('SELECT username FROM users WHERE id = ?').get(m.player2Id) as any)?.username
                     : null,
                 winnerName: m.winnerId
-                    ? (db.prepare('SELECT username FROM users WHERE id = ?').get(m.winnerId) as any)?.username
+                    ? (await db.prepare('SELECT username FROM users WHERE id = ?').get(m.winnerId) as any)?.username
                     : null,
                 log: m.log ? JSON.parse(m.log) : null,
             })),
@@ -597,11 +592,11 @@ router.get('/tournament', (req: any, res) => {
 });
 
 // Регистрация
-router.post('/tournament/register', (req: any, res) => {
+router.post('/tournament/register', async (req, res) => {
     const userId = req.userId;
     const { division, goldenTicket } = req.body;
 
-    const user = db.prepare('SELECT level, money FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepare('SELECT level, money FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     let tournament: any;
@@ -634,8 +629,8 @@ router.post('/tournament/register', (req: any, res) => {
             if (user.money < tournament.entryFee) {
                 return res.status(400).json({ error: `Недостаточно серебра для взноса (${tournament.entryFee})` });
             }
-            db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(tournament.entryFee, userId);
-            db.prepare('UPDATE tournaments SET prizePool = prizePool + ? WHERE id = ?').run(tournament.entryFee, tournament.id);
+            await db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(tournament.entryFee, userId);
+            await db.prepare('UPDATE tournaments SET prizePool = prizePool + ? WHERE id = ?').run(tournament.entryFee, tournament.id);
         }
     }
 
@@ -655,28 +650,27 @@ router.post('/tournament/register', (req: any, res) => {
 
     if (goldenTicket && tournament.type === 'official') {
         if (user.money < 1000) return res.status(400).json({ error: 'Недостаточно монет для Золотого билета (1000)' });
-        db.prepare('UPDATE users SET money = money - 1000 WHERE id = ?').run(userId);
-        db.prepare('UPDATE tournaments SET prizePool = prizePool + 800 WHERE id = ?').run(tournament.id);
+        await db.prepare('UPDATE users SET money = money - 1000 WHERE id = ?').run(userId);
+        await db.prepare('UPDATE tournaments SET prizePool = prizePool + 800 WHERE id = ?').run(tournament.id);
     }
 
-    db.prepare('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)')
-        .run(tournament.id, userId, goldenTicket ? 1 : 0);
+    await db.prepare('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)').run(tournament.id, userId, goldenTicket ? 1 : 0);
 
-    db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
+    await db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
 
     // Автостарт при заполнении
     const count = (db.prepare(
         'SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?'
     ).get(tournament.id) as any).cnt;
     if (count >= maxPlayers) {
-        db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', tournament.id);
+        await db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', tournament.id);
         generateBracket(tournament.id);
-        let tt = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournament.id) as any;
+        let tt = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournament.id) as any;
         while (tt && tt.status === 'in_progress') {
             const resolvedRound = resolveCurrentRound(tt.id);
             if (resolvedRound > 0) {
                 advanceWinners(tt.id, resolvedRound);
-                tt = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tt.id) as any;
+                tt = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tt.id) as any;
             } else break;
         }
         res.json({ success: true, started: true });
@@ -687,7 +681,7 @@ router.post('/tournament/register', (req: any, res) => {
 });
 
 // Создание самоорганизованного турнира
-router.post('/tournament/create-custom', (req: any, res) => {
+router.post('/tournament/create-custom', async (req, res) => {
     const userId = req.userId;
     const prizePool = parseInt(req.body.prizePool) || 0;
     const entryFee = parseInt(req.body.entryFee) || 0;
@@ -705,7 +699,7 @@ router.post('/tournament/create-custom', (req: any, res) => {
     const maxLvl = Math.min(999, maxLevel);
     if (minLvl > maxLvl) return res.status(400).json({ error: 'Минимальный уровень больше максимального' });
 
-    const user = db.prepare('SELECT level, money FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepare('SELECT level, money FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
@@ -713,13 +707,13 @@ router.post('/tournament/create-custom', (req: any, res) => {
 
     if (prizePool > 0) {
         if (user.money < prizePool) return res.status(400).json({ error: 'Недостаточно серебра для призового фонда' });
-        db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(prizePool, userId);
+        await db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(prizePool, userId);
     }
 
     // Создатель тоже платит входной взнос (если есть)
     if (entryFee > 0) {
         if (user.money < entryFee) return res.status(400).json({ error: 'Недостаточно серебра для входного взноса' });
-        db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(entryFee, userId);
+        await db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(entryFee, userId);
     }
 
     let result: any;
@@ -732,9 +726,8 @@ router.post('/tournament/create-custom', (req: any, res) => {
     }
 
     // Авто-регистрация создателя
-    db.prepare('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)')
-        .run(result.lastInsertRowid, userId, 0);
-    db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
+    await db.prepare('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)').run(result.lastInsertRowid, userId, 0);
+    await db.prepare('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?').run(userId);
     res.json({ success: true, tournamentId: result.lastInsertRowid });
 });
 

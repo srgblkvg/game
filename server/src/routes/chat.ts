@@ -4,10 +4,10 @@ import db from '../database';
 
 const router = Router();
 
-router.get('/chat/recent', (req: any, res) => {
+router.get('/chat/recent', async (req, res) => {
   const userId = req.userId;
   const limit = parseInt(req.query.limit as string) || 20;
-  const messages = db.prepare(`
+  const messages = await db.prepare(`
     SELECT m.*, u.username as senderName
     FROM chat_messages m
     JOIN users u ON m.senderId = u.id
@@ -30,9 +30,9 @@ router.get('/chat/recent', (req: any, res) => {
 });
 
 // Получить список собеседников, с которыми у текущего игрока были личные сообщения
-router.get('/chat/private/peers', (req: any, res) => {
+router.get('/chat/private/peers', async (req, res) => {
   const userId = req.userId;
-  const peers = db.prepare(`
+  const peers = await db.prepare(`
     SELECT DISTINCT u.id, u.username
     FROM chat_messages m
     JOIN users u ON (u.id = CASE WHEN m.senderId = ? THEN m.targetId ELSE m.senderId END)
@@ -42,11 +42,11 @@ router.get('/chat/private/peers', (req: any, res) => {
 });
 
 // Получить личные сообщения с конкретным пользователем
-router.get('/chat/private/:userId', (req: any, res) => {
+router.get('/chat/private/:userId', async (req, res) => {
   const currentUserId = req.userId;
   const otherUserId = parseInt(req.params.userId);
   const limit = parseInt(req.query.limit as string) || 100;
-  const messages = db.prepare(`
+  const messages = await db.prepare(`
     SELECT m.*, u.username as senderName
     FROM chat_messages m
     JOIN users u ON m.senderId = u.id

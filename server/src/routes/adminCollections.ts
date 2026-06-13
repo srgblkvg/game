@@ -4,8 +4,8 @@ import db from '../database';
 const router = Router();
 
 // Получить все сеты
-router.get('/collection-sets', (_req: any, res) => {
-    const sets = db.prepare('SELECT * FROM collection_sets ORDER BY sort_order').all();
+router.get('/collection-sets', async (req, res) => {
+    const sets = await db.prepare('SELECT * FROM collection_sets ORDER BY sort_order').all();
     const result = (sets as any[]).map((set: any) => {
         const items = db.prepare(
             'SELECT item_name, slot FROM collection_set_items WHERE set_id = ?'
@@ -16,7 +16,7 @@ router.get('/collection-sets', (_req: any, res) => {
 });
 
 // Создать сет
-router.post('/collection-sets', (req, res) => {
+router.post('/collection-sets', async (req, res) => {
     const { name, description, bonus_percent, sort_order, items } = req.body;
     if (!name) return res.status(400).json({ error: 'name required' });
 
@@ -39,11 +39,11 @@ router.post('/collection-sets', (req, res) => {
 });
 
 // Обновить сет
-router.put('/collection-sets/:id', (req, res) => {
+router.put('/collection-sets/:id', async (req, res) => {
     const { name, description, bonus_percent, sort_order, items } = req.body;
     const setId = Number(req.params.id);
 
-    const existing = db.prepare('SELECT id FROM collection_sets WHERE id = ?').get(setId);
+    const existing = await db.prepare('SELECT id FROM collection_sets WHERE id = ?').get(setId);
     if (!existing) return res.status(404).json({ error: 'Сет не найден' });
 
     db.prepare(
@@ -51,7 +51,7 @@ router.put('/collection-sets/:id', (req, res) => {
     ).run(name, description || '', bonus_percent || 1, sort_order || 0, setId);
 
     if (items !== undefined) {
-        db.prepare('DELETE FROM collection_set_items WHERE set_id = ?').run(setId);
+        await db.prepare('DELETE FROM collection_set_items WHERE set_id = ?').run(setId);
         if (Array.isArray(items)) {
             const insertItem = db.prepare(
                 'INSERT INTO collection_set_items (set_id, item_name, slot) VALUES (?, ?, ?)'
@@ -66,10 +66,10 @@ router.put('/collection-sets/:id', (req, res) => {
 });
 
 // Удалить сет
-router.delete('/collection-sets/:id', (req, res) => {
+router.delete('/collection-sets/:id', async (req, res) => {
     const setId = Number(req.params.id);
-    db.prepare('DELETE FROM collection_set_items WHERE set_id = ?').run(setId);
-    db.prepare('DELETE FROM collection_sets WHERE id = ?').run(setId);
+    await db.prepare('DELETE FROM collection_set_items WHERE set_id = ?').run(setId);
+    await db.prepare('DELETE FROM collection_sets WHERE id = ?').run(setId);
     res.json({ success: true });
 });
 

@@ -12,7 +12,6 @@ const config: PoolConfig = {
 
 const pool = new Pool(config);
 
-// Проверка соединения при старте
 pool.query('SELECT 1').then(() => console.log('[PG] Connected')).catch(err => {
   console.error('[PG] Connection failed:', err.message);
   process.exit(1);

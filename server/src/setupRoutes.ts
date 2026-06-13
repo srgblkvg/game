@@ -46,13 +46,13 @@ export function setupRoutes(app: Express) {
   app.use('/api', actionsRoutes);
 
   // Этажи (публичный — нужен бестиарию)
-  app.get('/api/floors', (_req: any, res) => {
+  app.get('/api/floors', async (req, res) => {
     const db = require('./database').default;
-    res.json(db.prepare('SELECT * FROM floors ORDER BY sort_order, name').all());
+    res.json(await db.prepare('SELECT * FROM floors ORDER BY sort_order, name').all());
   });
 
   // Серверное время (публичный)
-  app.get('/api/time', (_req: any, res) => {
+  app.get('/api/time', async (req, res) => {
     res.json({ now: Math.floor(Date.now() / 1000) });
   });
 
@@ -71,7 +71,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/admin', authMiddleware, requireAdmin, adminCollectionsRoutes);
 
   // Тоггл гостевых ограничений
-  app.post('/api/admin/toggle-guest', authMiddleware, requireAdmin, (req, res) => {
+  app.post('/api/admin/toggle-guest', authMiddleware, requireAdmin, async (req, res) => {
     const { toggleGuestRestrictions } = require('./middleware/auth');
     const disabled = toggleGuestRestrictions();
     res.json({ guestRestrictionsDisabled: disabled });
