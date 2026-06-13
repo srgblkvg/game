@@ -457,21 +457,21 @@ export async function runSchema() {
     // Индексы
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_users_wins ON users(wins DESC);
-      CREATE INDEX IF NOT EXISTS idx_users_chat_banned ON users(chatBannedUntil);
-      CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(senderId, createdAt);
-      CREATE INDEX IF NOT EXISTS idx_chat_messages_target ON chat_messages(targetId, createdAt);
-      CREATE INDEX IF NOT EXISTS idx_battles_attacker ON battles(attackerId, createdAt DESC);
-      CREATE INDEX IF NOT EXISTS idx_battles_defender ON battles(defenderId, createdAt DESC);
+      CREATE INDEX IF NOT EXISTS idx_users_chat_banned ON users(chatbanneduntil);
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(senderid, createdat);
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_target ON chat_messages(targetid, createdat);
+      CREATE INDEX IF NOT EXISTS idx_battles_attacker ON battles(attackerid, createdat DESC);
+      CREATE INDEX IF NOT EXISTS idx_battles_defender ON battles(defenderid, createdat DESC);
       CREATE INDEX IF NOT EXISTS idx_jobs_duration ON jobs(duration);
       CREATE INDEX IF NOT EXISTS idx_craft_items_rarity_id ON craft_items(rarity_id);
       CREATE INDEX IF NOT EXISTS idx_craft_recipe_ingredients_recipe ON craft_recipe_ingredients(recipe_id);
-      CREATE INDEX IF NOT EXISTS idx_pve_battles_user ON pve_battles(userId, createdAt DESC);
-      CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament ON tournament_matches(tournamentId, round);
-      CREATE INDEX IF NOT EXISTS idx_guild_treasury_log_guild ON guild_treasury_log(guildId, createdAt DESC);
-      CREATE INDEX IF NOT EXISTS idx_auction_lots_ends ON auction_lots(endsAt);
-      CREATE INDEX IF NOT EXISTS idx_collections_user ON collections(userId);
+      CREATE INDEX IF NOT EXISTS idx_pve_battles_user ON pve_battles(userid, createdat DESC);
+      CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament ON tournament_matches(tournamentid, round);
+      CREATE INDEX IF NOT EXISTS idx_guild_treasury_log_guild ON guild_treasury_log(guildid, createdat DESC);
+      CREATE INDEX IF NOT EXISTS idx_auction_lots_ends ON auction_lots(endsat);
+      CREATE INDEX IF NOT EXISTS idx_collections_user ON collections(userid);
       CREATE INDEX IF NOT EXISTS idx_collection_set_items_set ON collection_set_items(set_id);
-      CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(userId, createdAt DESC);
+      CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(userid, createdat DESC);
     `);
 
     console.log('[PG] Schema created');
