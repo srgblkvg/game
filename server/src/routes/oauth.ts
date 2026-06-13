@@ -106,8 +106,8 @@ router.get('/yandex/callback', async (req, res) => {
             return res.redirect(`${FRONTEND_URL}/login?error=userinfo_failed`);
         }
 
-        const user = findOrCreateUser('yandex', String(userData.id), userData.login || `yandex_${userData.id}`);
-        const jwtToken = makeToken(user.id, 'player');
+        const user = await findOrCreateUser('yandex', String(userData.id), userData.login || `yandex_${userData.id}`);
+        const jwtToken = await makeToken(user.id, 'player');
 
         // Логируем IP и аудит
         if (req.ip) {
@@ -209,8 +209,8 @@ router.get('/vk/callback', async (req, res) => {
         }
 
         if (!displayName) displayName = `id${vkUserId}`;
-        const user = findOrCreateUser('vkontakte', vkUserId, displayName);
-        const jwtToken = makeToken(user.id, 'player');
+        const user = await findOrCreateUser('vkontakte', vkUserId, displayName);
+        const jwtToken = await makeToken(user.id, 'player');
 
         // Логируем IP и аудит
         if (req.ip) {

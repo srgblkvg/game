@@ -44,6 +44,7 @@ function camelCaseRows(rows: any[]): any[] {
       if (key.match(/gained$/)) out[key.replace(/gained$/, 'Gained')] = row[key];
       if (key.match(/rowid$/)) out[key.replace(/rowid$/, 'Rowid')] = row[key];
       if (key.match(/taxrate$/)) out['taxRate'] = row[key];
+      if (key.match(/verified$/)) out[key.replace(/verified$/, 'Verified')] = row[key];
     }
     return out;
   });

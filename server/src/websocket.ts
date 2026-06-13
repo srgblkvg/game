@@ -96,7 +96,7 @@ export function setupWebSocket(server: any) {
 
     // ---------- Администратор ----------
     if (decoded.role === 'admin') {
-      const admin = db.prepare('SELECT id, username FROM admins WHERE id = ?').get(decoded.adminId) as any;
+      const admin = await db.prepare('SELECT id, username FROM admins WHERE id = ?').get(decoded.adminId) as any;
       if (!admin) {
         ws.close(1008, 'Admin not found');
         return;
@@ -112,7 +112,7 @@ export function setupWebSocket(server: any) {
 
       ws.on('message', () => { });
 
-      ws.on('close', () => {
+      ws.on('close', async () => {
         clients.delete(adminId);
       });
       return;
@@ -120,7 +120,7 @@ export function setupWebSocket(server: any) {
 
     // ---------- Игрок ----------
     const userId = decoded.userId;
-    const user = db.prepare('SELECT u.id, u.username, u.level, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
+    const user = await db.prepare('SELECT u.id, u.username, u.level, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
     if (!user) {
       ws.close(1008, 'User not found');
       return;
@@ -155,11 +155,11 @@ export function setupWebSocket(server: any) {
     notifyUserOnline(onlineUser);
 
     // ---------- Обработка сообщений ----------
-    ws.on('message', (raw) => {
+    ws.on('message', async (raw) => {
       let data: any;
       try { data = JSON.parse(raw.toString()); } catch { return; }
 
-      const currentUser = db.prepare('SELECT chatBannedUntil FROM users WHERE id = ?').get(userId) as any;
+      const currentUser = await db.prepare('SELECT chatBannedUntil FROM users WHERE id = ?').get(userId) as any;
       if (currentUser && currentUser.chatBannedUntil && currentUser.chatBannedUntil > Math.floor(Date.now() / 1000)) {
         sendToUser(userId, {
           type: 'chatBanned',
@@ -185,16 +185,16 @@ export function setupWebSocket(server: any) {
         if (!item) {
           const itemId = data.itemId;
           if (!itemId) return;
-          const currentUser = db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
+          const currentUser = await db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
           const inventory = JSON.parse(currentUser.inventory || '[]');
           item = inventory.find((i: any) => i.id == itemId);
         }
         if (!item) return;
 
-        const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, NULL, ?, ?)');
+        const stmt = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, NULL, ?, ?)');
         const itemDataJson = JSON.stringify(item);
         const itemName = sanitize(item.name);
-        const info = stmt.run(userId, `[${itemName}]`, itemDataJson);
+        const info = await stmt.run(userId, `[${itemName}]`, itemDataJson);
         const msg = {
           id: info.lastInsertRowid,
           senderId: userId,
@@ -228,7 +228,7 @@ export function setupWebSocket(server: any) {
           const privateContent = withoutCommand.slice(spaceIndex + 1).trim();
           if (!privateContent) return;
 
-          const targetUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(targetName) as any;
+          const targetUser = await db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(targetName) as any;
           if (!targetUser) {
             sendToUser(userId, { type: 'error', message: 'Пользователь не найден' });
             return;
@@ -238,9 +238,9 @@ export function setupWebSocket(server: any) {
             return;
           }
 
-          const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
+          const stmt = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
           const sanitizedPrivate = sanitize(privateContent);
-          const info = stmt.run(userId, targetUser.id, sanitizedPrivate);
+          const info = await stmt.run(userId, targetUser.id, sanitizedPrivate);
           const msg = {
             id: info.lastInsertRowid,
             senderId: userId,
@@ -259,8 +259,8 @@ export function setupWebSocket(server: any) {
 
         // Обычное сообщение в общий чат
         const sanitizedContent = sanitize(content);
-        const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, NULL, ?)');
-        const info = stmt.run(userId, sanitizedContent);
+        const stmt = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, NULL, ?)');
+        const info = await stmt.run(userId, sanitizedContent);
         const msg = {
           id: info.lastInsertRowid,
           senderId: userId,
@@ -281,8 +281,8 @@ export function setupWebSocket(server: any) {
         const targetId = data.targetUserId;
         if (!targetId) return;
         const sanitizedContent = sanitize(data.content);
-        const stmt = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
-        const info = stmt.run(userId, targetId, sanitizedContent);
+        const stmt = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)');
+        const info = await stmt.run(userId, targetId, sanitizedContent);
         const msg = {
           id: info.lastInsertRowid,
           senderId: userId,
@@ -301,7 +301,7 @@ export function setupWebSocket(server: any) {
     });
 
     // ---------- Отключение ----------
-    ws.on('close', () => {
+    ws.on('close', async () => {
       clients.delete(userId);
       onlineUsers.delete(userId);
       auditWsDisconnect(user.username, userId);

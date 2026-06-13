@@ -483,7 +483,7 @@ router.get('/tournament', async (req: any, res) => {
     }
 
     // Активные турниры
-    const tournaments = getOrCreateTournament();
+    const tournaments = await getOrCreateTournament();
 
     // Автопродвижение
     const allForAdvance = db.prepare(
