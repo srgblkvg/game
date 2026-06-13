@@ -43,6 +43,26 @@ class PgWrapper {
     };
   }
 
+  // Совместимость со старым API: db.prepare(sql).get/all/run()
+  prepare(sql: string) {
+    const converted = convertPlaceholders(sql);
+    return {
+      get: async (...params: any[]) => {
+        const res = await pool.query(converted, params);
+        return res.rows[0];
+      },
+      all: async (...params: any[]) => {
+        const res = await pool.query(converted, params);
+        return res.rows;
+      },
+      run: async (...params: any[]) => {
+        const res = await pool.query(converted, params);
+        const lastId = res.rows?.[0]?.id;
+        return { changes: res.rowCount ?? 0, lastInsertRowid: lastId ? Number(lastId) : undefined };
+      },
+    };
+  }
+
   // Прямой exec (для создания таблиц и т.д.)
   async exec(sql: string) {
     await pool.query(sql);
@@ -95,6 +115,15 @@ class PgTransaction {
       const res = await this.client.query(converted, params);
       const lastId = res.rows?.[0]?.id;
       return { changes: res.rowCount ?? 0, lastInsertRowid: lastId ? Number(lastId) : undefined };
+    };
+  }
+
+  prepare(sql: string) {
+    const converted = convertPlaceholders(sql);
+    return {
+      get: async (...params: any[]) => { const res = await this.client.query(converted, params); return res.rows[0]; },
+      all: async (...params: any[]) => { const res = await this.client.query(converted, params); return res.rows; },
+      run: async (...params: any[]) => { const res = await this.client.query(converted, params); const lastId = res.rows?.[0]?.id; return { changes: res.rowCount ?? 0, lastInsertRowid: lastId ? Number(lastId) : undefined }; },
     };
   }
 }
