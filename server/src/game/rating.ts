@@ -31,7 +31,7 @@ export async function applyDecay(db: InstanceType<typeof Database>, userId: numb
     const newElo = Math.max(100, elo - decay);
 
     if (newElo !== elo) {
-        await db.prepare('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?').run(newElo, now, userId);
+        await db.none('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?', [newElo, now, userId]);
     }
 
     return newElo;
@@ -103,12 +103,11 @@ export async function checkSeasonReset(db: InstanceType<typeof Database>): boole
                         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     const seasonName = `${monthNames[nextMonth.getMonth()]} ${nextMonth.getFullYear()}`;
 
-    await db.prepare('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)').run(
-        seasonName, nextMonth.toISOString(), endOfNext.toISOString()
+    await db.none('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)', [seasonName, nextMonth.toISOString(]), endOfNext.toISOString()
     );
 
     // Мягкий сброс ELO: Новый = 1000 + (Старый − 1000) × 0.5
-    const allUsers = await db.prepare('SELECT id, elo FROM users').all() as any[];
+    const allUsers = await db.manyOrNone('SELECT id, elo FROM users') as any[];
     const resetStmt = db.prepare('UPDATE users SET elo = ?, seasonWins = 0, seasonLosses = 0, pveRating = 0 WHERE id = ?');
     for (const u of allUsers) {
         const oldElo = u.elo || 1000;

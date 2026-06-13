@@ -17,7 +17,7 @@ router.post('/account/change-username', async (req, res) => {
     const userId = req.userId;
     const { newUsername } = parsed.data;
 
-    const user = await db.prepare('SELECT passwordHash FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT passwordHash FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     // Проверяем текущий пароль
@@ -28,11 +28,11 @@ router.post('/account/change-username', async (req, res) => {
         }
     }
 
-    const existing = await db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(newUsername, userId);
+    const existing = await db.oneOrNone('SELECT id FROM users WHERE username = ? AND id != ?', [newUsername, userId]);
     if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
 
-    const oldUser = await db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
-    await db.prepare('UPDATE users SET username = ? WHERE id = ?').run(newUsername, userId);
+    const oldUser = await db.oneOrNone('SELECT username FROM users WHERE id = ?', [userId]) as any;
+    await db.none('UPDATE users SET username = ? WHERE id = ?', [newUsername, userId]);
     if (oldUser) auditUsernameChange(userId, oldUser.username, newUsername, req.ip);
     res.json({ success: true, newUsername });
 });
@@ -41,7 +41,7 @@ router.post('/account/change-gender', async (req, res) => {
     const userId = req.userId;
     const { gender } = req.body;
     if (!['male', 'female'].includes(gender)) return res.status(400).json({ error: 'Некорректный пол' });
-    await db.prepare('UPDATE users SET gender = ? WHERE id = ?').run(gender, userId);
+    await db.none('UPDATE users SET gender = ? WHERE id = ?', [gender, userId]);
     res.json({ success: true, gender });
 });
 
@@ -52,7 +52,7 @@ router.post('/account/change-password', async (req, res) => {
     const userId = req.userId;
     const { oldPassword, newPassword } = parsed.data;
 
-    const user = await db.prepare('SELECT passwordHash FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT passwordHash FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     if (!bcrypt.compareSync(oldPassword, user.passwordHash)) {
@@ -60,8 +60,8 @@ router.post('/account/change-password', async (req, res) => {
     }
 
     const passwordHash = bcrypt.hashSync(newPassword, 10);
-    await db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(passwordHash, userId);
-    const u = await db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
+    await db.none('UPDATE users SET passwordHash = ? WHERE id = ?', [passwordHash, userId]);
+    const u = await db.oneOrNone('SELECT username FROM users WHERE id = ?', [userId]) as any;
     if (u) auditPasswordChange(userId, u.username, req.ip);
     res.json({ success: true });
 });
@@ -70,7 +70,7 @@ router.post('/account/delete', async (req, res) => {
     const userId = req.userId;
     const { currentPassword } = req.body;
 
-    const user = await db.prepare('SELECT passwordHash, username FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.oneOrNone('SELECT passwordHash, username FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     if (!bcrypt.compareSync(currentPassword, user.passwordHash)) {
@@ -78,9 +78,9 @@ router.post('/account/delete', async (req, res) => {
     }
 
     // Удаляем связанные данные
-    await db.prepare('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?').run(userId, userId);
-    await db.prepare('DELETE FROM job_history WHERE userId = ?').run(userId);
-    await db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    await db.none('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?', [userId, userId]);
+    await db.none('DELETE FROM job_history WHERE userId = ?', [userId]);
+    await db.none('DELETE FROM users WHERE id = ?', [userId]);
 
     // Отзываем токен
     const authHeader = req.headers.authorization;
@@ -118,15 +118,15 @@ router.post('/account/register-guest', async (req, res) => {
 
     const { username, password, email, code } = parsed.data;
 
-    const existing = await db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, userId);
+    const existing = await db.oneOrNone('SELECT id FROM users WHERE username = ? AND id != ?', [username, userId]);
     if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
 
-    const emailTaken = await db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, userId);
+    const emailTaken = await db.oneOrNone('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
     if (emailTaken) return res.status(400).json({ error: 'Этот email уже используется' });
 
     // Проверяем код подтверждения email
     const now = Math.floor(Date.now() / 1000);
-    const guestUser = await db.prepare('SELECT emailCode, emailCodeExpires FROM users WHERE id = ?').get(userId) as any;
+    const guestUser = await db.oneOrNone('SELECT emailCode, emailCodeExpires FROM users WHERE id = ?', [userId]) as any;
     if (!guestUser?.emailCode || guestUser.emailCodeExpires < now) {
         return res.status(400).json({ error: 'Код подтверждения недействителен или истёк. Запросите новый.' });
     }
@@ -135,7 +135,7 @@ router.post('/account/register-guest', async (req, res) => {
     }
 
     const passwordHash = bcrypt.hashSync(password, 10);
-    await db.prepare('UPDATE users SET username = ?, passwordHash = ?, email = ?, emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, isGuest = 0 WHERE id = ?').run(username, passwordHash, email, userId);
+    await db.none('UPDATE users SET username = ?, passwordHash = ?, email = ?, emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, isGuest = 0 WHERE id = ?', [username, passwordHash, email, userId]);
 
     const token = jwt.sign({ userId, role: 'player', isGuest: false, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ success: true, token, username });
@@ -165,12 +165,12 @@ router.post('/account/avatar', async (req, res) => {
     fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
 
     const avatarPath = `/uploads/avatars/${filename}`;
-    await db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarPath, userId);
+    await db.none('UPDATE users SET avatar = ? WHERE id = ?', [avatarPath, userId]);
     res.json({ success: true, avatar: avatarPath });
 });
 
 router.get('/account/avatar/:userId', async (req, res) => {
-    const user = await db.prepare('SELECT avatar FROM users WHERE id = ?').get(parseInt(req.params.userId)) as any;
+    const user = await db.oneOrNone('SELECT avatar FROM users WHERE id = ?', [parseInt(req.params.userId])) as any;
     if (!user?.avatar) return res.status(404).json({ error: 'Нет аватара' });
     res.json({ avatar: user.avatar });
 });
