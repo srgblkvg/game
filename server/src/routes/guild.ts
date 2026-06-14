@@ -923,9 +923,9 @@ router.post('/guild/war/attack', async (req, res) => {
 
     // Запись атаки
     await db.run(`
-        INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won, battleLog)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, JSON.stringify(steps)]);
+        INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won, battleLog, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, JSON.stringify(steps), new Date().toISOString().replace("T", " ").slice(0, 19)]);
 
     // Обновление счёта
     if (won) {
