@@ -43,8 +43,10 @@ async function generateBracket(tournamentId: number) {
         ORDER BY u.tournamentElo ASC
     `, [tournamentId]) as any[];
 
+    console.log(`[bracket] tid=${tournamentId} participants=${participants.length}`);
     if (participants.length < 2) {
-        // Отмена — возврат денег для custom турниров
+        console.log(`[bracket] tid=${tournamentId} SKIP < 2`);
+        // Отмена
         const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [tournamentId]) as any;
         if (t && t.type === 'custom') {
             // Возврат базового призового фонда создателю
@@ -333,6 +335,7 @@ async function autoAdvance(tournamentId: number) {
     const now = Math.floor(Date.now() / 1000);
 
     if (t.status === 'registration' && now >= t.registrationEnd) {
+        console.log(`[autoAdv] tid=${tournamentId} registration→in_progress`);
         // Время регистрации истекло — стартуем
         await db.run('UPDATE tournaments SET status = ? WHERE id = ?', ['in_progress', tournamentId]);
         await generateBracket(tournamentId);
