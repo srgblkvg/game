@@ -360,7 +360,7 @@ async function autoAdvance(tournamentId: number) {
     if (t.status === 'in_progress') {
         const resolvedRound = await resolveCurrentRound(tournamentId);
         if (resolvedRound > 0) {
-            advanceWinners(tournamentId, resolvedRound);
+            await advanceWinners(tournamentId, resolvedRound);
             await autoAdvance(tournamentId);
         }
         return;
@@ -702,7 +702,7 @@ router.post('/tournament/register', async (req, res) => {
         while (tt && tt.status === 'in_progress') {
             const resolvedRound = await resolveCurrentRound(tt.id);
             if (resolvedRound > 0) {
-                advanceWinners(tt.id, resolvedRound);
+                await advanceWinners(tt.id, resolvedRound);
                 tt = await db.one('SELECT * FROM tournaments WHERE id = ?', [tt.id]) as any;
             } else break;
         }
