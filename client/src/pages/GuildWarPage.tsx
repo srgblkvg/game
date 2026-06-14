@@ -229,7 +229,7 @@ export default function GuildWarPage() {
                                     <span className="text-[var(--color-text-muted)]">vs</span>
                                     <span>{a.defenderName}</span>
                                     <span className="text-[var(--color-text-muted)] ml-auto text-[0.6rem]">
-                                        {safeDate(a.createdAt) || new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                        {safeDate(a.createdAt)?.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) || '—'}
                                     </span>
                                 </div>
                             );

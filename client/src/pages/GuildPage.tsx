@@ -302,7 +302,7 @@ export default function GuildPage() {
                                     <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild?.name || '???'}</span>
                                 </p>
                                 <p className="text-[var(--color-text-muted)]">
-                                    Объявлена: {safeDate(war.declaredAt) || new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                    Объявлена: {safeDate(war.declaredAt)?.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) || '—'}
                                 </p>
                                 {war.acceptedAt && (
                                     <p className="text-[var(--color-text-muted)]">
