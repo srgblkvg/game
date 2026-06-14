@@ -295,11 +295,11 @@ export default function GuildPage() {
                             <div className="text-xs space-y-1">
                                 <p>
                                     <span className="text-[var(--color-text-muted)]">Атакующая:</span>{' '}
-                                    <span className="text-[var(--color-text-primary)] font-bold">{war.attackerGuild.name}</span>
+                                    <span className="text-[var(--color-text-primary)] font-bold">{war.attackerGuild?.name || '???'}</span>
                                 </p>
                                 <p>
                                     <span className="text-[var(--color-text-muted)]">Защищается:</span>{' '}
-                                    <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild.name}</span>
+                                    <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild?.name || '???'}</span>
                                 </p>
                                 <p className="text-[var(--color-text-muted)]">
                                     Объявлена: {safeDate(war.declaredAt) || new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
@@ -330,7 +330,7 @@ export default function GuildPage() {
                             )}
                             {war.status === 'pending' && war.isAttacker && (
                                 <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-2">
-                                    Ожидание ответа от лидера «{war.defenderGuild.name}»
+                                    Ожидание ответа от лидера «{war.defenderGuild?.name || '???'}»
                                 </p>
                             )}
                         </Card>
