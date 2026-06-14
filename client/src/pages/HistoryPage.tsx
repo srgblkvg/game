@@ -20,7 +20,7 @@ const LIMIT = 10;
 export default function HistoryPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages'>('all');
+    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages' | 'salary'>('all');
     const [battles, setBattles] = useState<any[]>([]);
     const [pveBattles, setPveBattles] = useState<any[]>([]);
     const [jobHistory, setJobHistory] = useState<any[]>([]);
@@ -59,10 +59,15 @@ export default function HistoryPage() {
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
     ].sort((a,b)=>b.ts-a.ts);
 
+    const salaryEntries = privateMessages
+        .filter(m => m.content?.startsWith('💰 Жалование:'))
+        .map(m => ({ id: `s-${m.id}`, type: 'salary', ts: new Date(m.createdAt).getTime(), data: m }))
+        .sort((a, b) => b.ts - a.ts);
+
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
         case 'jobs':return jobHistory;case 'tournaments':return tournamentHistory;case 'quests':return questHistory;
-        case 'messages':return privateMessages;default:return[];
+        case 'salary':return salaryEntries;case 'messages':return privateMessages;default:return[];
     }})();
 
     const totalItems = currentData.length;
@@ -75,7 +80,7 @@ export default function HistoryPage() {
     const tabs = [
         {key:'all',label:'Все'},{key:'battles',label:'PvP'},{key:'pve',label:'Охота'},
         {key:'jobs',label:'Работы'},{key:'tournaments',label:'Турниры'},{key:'quests',label:'Квесты'},
-        {key:'messages',label:'Сообщения'},
+        {key:'salary',label:'💰 Зарплата'},{key:'messages',label:'Сообщения'},
     ] as const;
 
     if(!user) return null;
@@ -178,6 +183,11 @@ export default function HistoryPage() {
                 <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{data.typeName}»</span>
                 {data.rewardXp>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.rewardXp} XP</span>}
                 <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(data.rewardMoney)}</span>
+            </EntryRow>;
+        }
+        if (type === 'salary') {
+            return <EntryRow time={fmt(data.createdAt)}>
+                <span className="text-[var(--color-accent-gold)]"><Icon icon="game-icons:cash" width="14" height="14" className="inline mr-1"/>{data.content}</span>
             </EntryRow>;
         }
         if (type === 'message') {
