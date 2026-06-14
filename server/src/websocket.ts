@@ -198,7 +198,7 @@ export async function setupWebSocket(server: any) {
           senderGuild: user.guildName || null,
           senderGuildId: user.guildId || null,
           targetId: null,
-          content: `[${itemName}]`,
+          content: `[${itemName}]` || '',
           createdAt: new Date().toISOString(),
           item: item,
           itemRarity: item.rarity_id ?? item.rarity,
@@ -244,7 +244,7 @@ export async function setupWebSocket(server: any) {
             senderId: userId,
             senderName: user.username,
             targetId: targetUser.id,
-            content: sanitizedPrivate,
+            content: sanitizedPrivate || '',
             createdAt: new Date().toISOString(),
           };
 
@@ -268,7 +268,7 @@ export async function setupWebSocket(server: any) {
           senderGuild: user.guildName || null,
           senderGuildId: user.guildId || null,
           targetId: null,
-          content: sanitizedContent,
+          content: sanitizedContent || '',
           createdAt: new Date().toISOString(),
         };
         broadcast('message', { message: msg });
@@ -292,7 +292,7 @@ export async function setupWebSocket(server: any) {
           senderGuild: user.guildName || null,
           senderGuildId: user.guildId || null,
           targetId,
-          content: sanitizedContent,
+          content: sanitizedContent || '',
           createdAt: new Date().toISOString(),
         };
         sendToUser(userId, { type: 'message', message: msg });
