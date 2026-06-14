@@ -427,8 +427,9 @@ async function getOrCreateTournament(type?: string) {
                 [div.name]
             ) as any;
             if (lastCompleted?.completedAt) {
-                const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
-                if (Date.now() < completedTime + 3600 * 1000) continue; // ещё не прошёл час
+                const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
+                  : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
+                if (Date.now() < ts + 3600 * 1000) continue;
             }
             await db.run(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -592,8 +593,9 @@ router.get('/tournament', async (req, res) => {
             [div.name]
         ) as any;
         if (lastCompleted?.completedAt) {
-            const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
-            const registrationOpensAt = completedTime + 3600 * 1000;
+            const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
+              : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
+            const registrationOpensAt = ts + 3600 * 1000;
             if (Date.now() < registrationOpensAt) {
                 upcomingOfficial.push({
                     division: div.name,
