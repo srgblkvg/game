@@ -622,8 +622,8 @@ router.post('/guild/war/declare', async (req, res) => {
     const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
 
     await db.run(
-        'INSERT INTO guild_wars (attackerGuildId, defenderGuildId, expiresAt) VALUES (?, ?, ?)',
-        [myGuildId, targetGuildId, expiresAt]
+        'INSERT INTO guild_wars (attackerGuildId, defenderGuildId, declaredAt, expiresAt) VALUES (?, ?, ?, ?)',
+        [myGuildId, targetGuildId, now.toISOString().replace('T', ' ').slice(0, 19), expiresAt]
     );
 
     const myGuild = await db.one('SELECT name FROM guilds WHERE id = ?', [myGuildId]) as any;
