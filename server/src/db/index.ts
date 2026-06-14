@@ -50,7 +50,27 @@ function camelRows(rows: any[]): any[] {
              .replace(/hpupdate$/i, 'HpUpdate')
              .replace(/^bases$/i, 'baseS').replace(/^basea$/i, 'baseA')
              .replace(/^based$/i, 'baseD').replace(/^basem$/i, 'baseM')
-             .replace(/^statpoints$/i, 'statPoints');
+             .replace(/^statpoints$/i, 'statPoints')
+             .replace(/^totalbattles$/i, 'totalBattles')
+             .replace(/^pvetotalbattles$/i, 'pveTotalBattles')
+             .replace(/^pvewins$/i, 'pveWins')
+             .replace(/^totalpvpmoneywon$/i, 'totalPvpMoneyWon')
+             .replace(/^totalpvpmoneylost$/i, 'totalPvpMoneyLost')
+             .replace(/^totalpvemoneywon$/i, 'totalPveMoneyWon')
+             .replace(/^totalpvemoneylost$/i, 'totalPveMoneyLost')
+             .replace(/^totaljobmoney$/i, 'totalJobMoney')
+             .replace(/^totaljobseconds$/i, 'totalJobSeconds')
+             .replace(/^craftcreated$/i, 'craftCreated')
+             .replace(/^craftupgraded$/i, 'craftUpgraded')
+             .replace(/^craftbroken$/i, 'craftBroken')
+             .replace(/^tournamentcount$/i, 'tournamentCount')
+             .replace(/^tournamentwins$/i, 'tournamentWins')
+             .replace(/^auctiontrades$/i, 'auctionTrades')
+             .replace(/^emailverified$/i, 'emailVerified')
+             .replace(/^isguest$/i, 'isGuest')
+             .replace(/^oauthprovider$/i, 'oauthProvider')
+             .replace(/^oauthid$/i, 'oauthId')
+             .replace(/^arenatopponentid$/i, 'arenaOpponentId');
       if (cc !== key) row[cc] = row[key];
     }
   }
