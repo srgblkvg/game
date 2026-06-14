@@ -44,7 +44,10 @@ function camelRows(rows: any[]): any[] {
              .replace(/pveattacksec$/i, 'PveAttackSec')
              .replace(/taxrate$/i, 'TaxRate')
              .replace(/verified$/i, 'Verified')
-             .replace(/hpupdate$/i, 'HpUpdate');
+             .replace(/hpupdate$/i, 'HpUpdate')
+             .replace(/^bases$/i, 'baseS').replace(/^basea$/i, 'baseA')
+             .replace(/^based$/i, 'baseD').replace(/^basem$/i, 'baseM')
+             .replace(/^statpoints$/i, 'statPoints');
       if (cc !== key) row[cc] = row[key];
     }
   }
