@@ -513,8 +513,6 @@ router.get('/tournament', async (req, res) => {
     for (const t of allForAdvance) {
         await autoAdvance(t.id);
     }
-
-    // Фильтр по типу: all (по умолчанию), official, custom
     const typeFilter = (req.query.type as string) || 'all';
     let typeCondition = '';
     const typeParams: any[] = [];
@@ -767,23 +765,3 @@ router.post('/tournament/create-custom', async (req, res) => {
 });
 
 export default router;
-
-// ── Авто-таймер: каждые 5 секунд продвигаем турниры (последовательно) ──
-let timerRunning = false;
-setInterval(async () => {
-  if (timerRunning) return;
-  timerRunning = true;
-  try {
-    const active = await db.query(
-      "SELECT id FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id",
-      []
-    ) as any[];
-    for (const t of active) {
-      await autoAdvance(t.id);
-    }
-  } catch (e: any) {
-    console.error('tournament timer err:', e?.message || e);
-  } finally {
-    timerRunning = false;
-  }
-}, 5000);
