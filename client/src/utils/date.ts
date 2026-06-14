@@ -10,3 +10,8 @@ export function safeDate(value: any): Date | null {
     }
     return null;
 }
+
+export function fmtSafeDate(value: any, options?: Intl.DateTimeFormatOptions): string {
+    const d = safeDate(value);
+    return d ? d.toLocaleString('ru-RU', options) : '—';
+}

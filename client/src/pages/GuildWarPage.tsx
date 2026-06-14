@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import BackButton from '../components/BackButton';
-import { safeDate } from '../utils/date';
+import { safeDate, fmtSafeDate } from '../utils/date';
 
 export default function GuildWarPage() {
     const { user } = useAuth();
@@ -229,7 +229,7 @@ export default function GuildWarPage() {
                                     <span className="text-[var(--color-text-muted)]">vs</span>
                                     <span>{a.defenderName}</span>
                                     <span className="text-[var(--color-text-muted)] ml-auto text-[0.6rem]">
-                                        {safeDate(a.createdAt)?.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) || '—'}
+                                        {fmtSafeDate(a.createdAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                     </span>
                                 </div>
                             );

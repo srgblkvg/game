@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getHeaders, BASE_URL } from '../../api/helpers';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { safeDate } from '../../utils/date';
+import { safeDate, fmtSafeDate } from '../../utils/date';
 
 export default function AdminFeedback() {
     const [messages, setMessages] = useState<any[]>([]);
@@ -40,7 +40,7 @@ export default function AdminFeedback() {
                                 <div>
                                     <span className="font-bold text-sm">{m.subject}</span>
                                     <span className="text-xs text-[var(--color-text-muted)] ml-2">
-                                        от {m.username} • {safeDate(m.createdAt) || new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                        от {m.username} • {fmtSafeDate(m.createdAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                     </span>
                                 </div>
                                 {!m.read && (
