@@ -32,7 +32,7 @@ setInterval(async () => {
   lastSalaryHour = now.getHours();
   try {
     const result = await db.run(
-      'UPDATE users SET bank = COALESCE(bank, 0) + pvewins WHERE pvewins > 0 AND id > 0'
+      'UPDATE users SET money = money + pvewins WHERE pvewins > 0 AND id > 0'
     );
     if (result.changes > 0) {
       logger.info(`Salary: +1×pveWins to bank for ${result.changes} players`);
@@ -43,7 +43,7 @@ setInterval(async () => {
       for (const u of paid) {
         await db.run(
           "INSERT INTO chat_messages (senderId, targetId, content, createdAt) VALUES (0, ?, ?, ?)",
-          [u.id, `💰 Жалование: +${u.pvewins} серебра (банк)`, nowISO]
+          [u.id, `💰 Жалование: +${u.pvewins} серебра`, nowISO]
         );
       }
     }
