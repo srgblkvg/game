@@ -36,6 +36,17 @@ setInterval(async () => {
     );
     if (result.changes > 0) {
       logger.info(`PvE salary: +1×pveWins silver for ${result.changes} players`);
+      // Уведомление каждому игроку в чат
+      const paid = await db.query(
+        'SELECT id, username, pvewins FROM users WHERE pvewins > 0 AND id > 0'
+      ) as any[];
+      const nowISO = new Date().toISOString();
+      for (const u of paid) {
+        await db.run(
+          "INSERT INTO chat_messages (senderId, targetId, content, createdAt) VALUES (0, ?, ?, ?)",
+          [u.id, `💰 Жалование за PvE: +${u.pvewins} серебра`, nowISO]
+        );
+      }
     }
   } catch (e: any) {
     logger.error('PvE salary error:', e?.message || e);
