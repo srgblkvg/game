@@ -1,19 +1,19 @@
 import { Router } from 'express';
 import db from '../database';
 import { getBaseStats, enrichEquipment, collectGuildTax, applyExp } from '../db/helpers';
-import { currentStats } from '../game/stats';
+import { currentStats, CharStats } from '../game/stats';
 import { addPveRating } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
 
 const router = Router();
 
 // Список всех мобов
-router.get('/mobs', (req: any, res) => {
-    const mobs = db.prepare('SELECT * FROM mobs ORDER BY level, id').all() as any[];
+router.get('/mobs', async (req, res) => {
+    const mobs = await db.prepare('SELECT * FROM mobs ORDER BY level, id').all() as any[];
 
     // Собираем изображения и названия материалов по редкостям (первое попавшееся для каждой)
     const craftInfo: Record<number, { image: string; name: string }> = {};
-    const allCraft = db.prepare('SELECT rarity_id, image, name FROM craft_items WHERE image IS NOT NULL').all() as any[];
+    const allCraft = await db.prepare('SELECT rarity_id, image, name FROM craft_items WHERE image IS NOT NULL').all() as any[];
     for (const c of allCraft) {
         if (!craftInfo[c.rarity_id] && c.image) {
             craftInfo[c.rarity_id] = { image: c.image, name: c.name };
@@ -42,7 +42,7 @@ router.get('/mobs', (req: any, res) => {
 });
 
 // Атака моба
-router.post('/mob/attack', (req: any, res) => {
+router.post('/mob/attack', async (req, res) => {
     const userId = req.userId;
     const { mobId } = req.body;
     if (!mobId) return res.status(400).json({ error: 'Не указан ID моба' });
@@ -50,7 +50,7 @@ router.post('/mob/attack', (req: any, res) => {
     const now = Math.floor(Date.now() / 1000);
 
     // Проверка кулдауна PvE (раздельный с PvP — 5 мин, премиум 2.5 мин)
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const hasPremium = (user.premiumUntil || 0) > now;
@@ -61,22 +61,23 @@ router.post('/mob/attack', (req: any, res) => {
         return res.status(400).json({ error: `До следующей атаки моба осталось ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
     }
 
-    const mob = db.prepare('SELECT * FROM mobs WHERE id = ?').get(mobId) as any;
+    const mob = await db.prepare('SELECT * FROM mobs WHERE id = ?').get(mobId) as any;
     if (!mob) return res.status(404).json({ error: 'Моб не найден' });
 
     // Статы игрока
-    const userBase = getBaseStats(user);
+    const userBase = await getBaseStats(user);
     const userEquip = JSON.parse(user.equipment || '{}');
-    const { enriched: enrichedEquip } = enrichEquipment(db, userEquip);
+    const { enriched: enrichedEquip } = await enrichEquipment(db, userEquip);
     const userStats = currentStats(userBase, enrichedEquip, getDrinkBonuses(user),
-        (db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0
+        (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0
     );
 
-    // Статы моба (s=atk, a=agi, d=def, m=mst)
+    // Статы моба (s=atk, a=agi, d=def, m=mst) — extra от статов
     const mobBase = { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst };
     const mobStats = currentStats(mobBase, {});
+    const mobExtra = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 }; // мобы без extra
 
-    // Упрощённый бой (подобно PvP, но моб — всегда defender)
+    // Полноценный бой (PvP-механики: dodge/crit/block/counter/stun)
     let hpUser = user.currentHp ?? userStats.hp;
     let hpMob = mob.hp;
     const log: string[] = [];
@@ -86,9 +87,27 @@ router.post('/mob/attack', (req: any, res) => {
 
     addStep({ type: 'info', message: `⚔ ${user.username} vs ${mob.name} (ур. ${mob.level})` });
 
-    const dodgeChance = (agility: number) => Math.max(0, agility / (agility + 50));
-    const critChance = (mst: number) => Math.min(0.8, mst / (mst + 50));
-    const critMult = (mst: number) => 1.5 + 0.5 * (mst / (mst + 50));
+    // PvP-формулы
+    const dodgeChance = (defA: number, atkM: number, defExtraDodge: number) =>
+        Math.max(0, (defA / (defA + 50)) * (1 - atkM / (atkM + 100)) + Math.min(0.5, defExtraDodge / 200));
+    const critChance = (m: number, extraCrit: number) => Math.min(0.8, m / (m + 50) + extraCrit / 200);
+    const critMult = (m: number) => 1.5 + 0.5 * (m / (m + 50));
+    const blockChance = (d: number, extraFullBlock: number) => Math.min(1, d / (d + 50) + extraFullBlock / 200);
+    const blockRed = (d: number, s: number) => {
+        const ratio = d / Math.max(1, s);
+        return Math.min(0.75, 0.5 * ratio);
+    };
+    const counterChance = (defStats: CharStats, atkStats: CharStats, defExtraCounter: number) => {
+        const sum = (defStats.m + defStats.a) + (atkStats.m + atkStats.d);
+        return Math.min(0.5, (sum > 0 ? (defStats.m + defStats.a) / sum * 0.5 : 0) + defExtraCounter / 200);
+    };
+    const stunChance = (atkStats: CharStats, defStats: CharStats) => {
+        const sum = (atkStats.s + atkStats.m) + (defStats.s + defStats.d);
+        return sum > 0 ? (atkStats.s + atkStats.m) / sum * 0.3 : 0;
+    };
+
+    let stunnedUser = false;
+    let stunnedMob = false;
 
     let turn: 'player' | 'mob' = userStats.a >= mob.agi ? 'player' : 'mob';
     addStep({ type: 'info', message: turn === 'player' ? 'Вы ходите первым' : `${mob.name} атакует первым` });
@@ -99,48 +118,116 @@ router.post('/mob/attack', (req: any, res) => {
     while (hpUser > 0 && hpMob > 0 && turns < maxTurns) {
         turns++;
         if (turn === 'player') {
+            if (stunnedUser) {
+                addStep({ type: 'stun', message: 'Вы оглушены и пропускаете ход' });
+                stunnedUser = false;
+                turn = 'mob';
+                continue;
+            }
             addStep({ type: 'attack', message: 'Вы атакуете!' });
 
-            if (Math.random() < dodgeChance(mob.agi)) {
+            if (Math.random() < dodgeChance(mob.agi, userStats.m, mobExtra.dodge)) {
                 addStep({ type: 'dodge', message: `${mob.name} уклоняется!` });
+                // mob counter
+                if (Math.random() < counterChance({ s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst, hp: mob.hp, bonuses: mobStats.bonuses, extra: mobExtra } as CharStats, userStats, mobExtra.counter)) {
+                    addStep({ type: 'counter', message: `${mob.name} контратакует!` });
+                    let cdmg = mobStats.s;
+                    if (Math.random() < critChance(mobStats.m, mobExtra.crit)) {
+                        cdmg = Math.round(cdmg * critMult(mobStats.m));
+                        addStep({ type: 'crit', message: 'Крит!' });
+                    }
+                    cdmg = Math.max(0, Math.round(cdmg));
+                    addStep({ type: 'damage', damage: cdmg, target: 'player', message: `Урон: ${cdmg}` });
+                    hpUser = Math.max(0, hpUser - cdmg);
+                }
                 turn = 'mob';
                 continue;
             }
 
+            addStep({ type: 'info', message: 'Попадание!' });
             let dmg = userStats.s > user.level
                 ? Math.floor(user.level + Math.random() * (userStats.s - user.level + 1))
                 : userStats.s;
 
-            if (Math.random() < critChance(userStats.m)) {
+            if (Math.random() < critChance(userStats.m, userStats.extra.crit)) {
                 dmg = Math.round(dmg * critMult(userStats.m));
                 addStep({ type: 'crit', message: 'Крит!' });
+            }
+
+            const mobFullBlockChance = mobExtra.fullBlock / 100;
+            if (Math.random() < mobFullBlockChance) {
+                dmg = 0;
+                addStep({ type: 'fullBlock', message: 'ПОЛНЫЙ БЛОК!' });
+            } else if (Math.random() < blockChance(mob.def, 0)) {
+                const blocked = dmg * blockRed(mob.def, userStats.s);
+                dmg -= blocked;
+                addStep({ type: 'block', message: `Блок (-${Math.round(blocked)})` });
             }
 
             dmg = Math.max(0, Math.round(dmg));
             addStep({ type: 'damage', damage: dmg, target: 'mob', message: `Урон: ${dmg}` });
             hpMob = Math.max(0, hpMob - dmg);
+
+            if (dmg > 0 && Math.random() < stunChance(userStats, { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst, hp: mob.hp, bonuses: mobStats.bonuses, extra: mobExtra } as CharStats)) {
+                stunnedMob = true;
+                addStep({ type: 'stun', message: `${mob.name} оглушён!` });
+            }
             turn = 'mob';
         } else {
+            if (stunnedMob) {
+                addStep({ type: 'stun', message: `${mob.name} оглушён и пропускает ход` });
+                stunnedMob = false;
+                turn = 'player';
+                continue;
+            }
             addStep({ type: 'attack', message: `${mob.name} атакует!` });
 
-            if (Math.random() < dodgeChance(userStats.a)) {
+            if (Math.random() < dodgeChance(userStats.a, mobStats.m, userStats.extra.dodge)) {
                 addStep({ type: 'dodge', message: 'Вы уклоняетесь!' });
+                // player counter
+                if (Math.random() < counterChance(userStats, { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst, hp: mob.hp, bonuses: mobStats.bonuses, extra: mobExtra } as CharStats, userStats.extra.counter)) {
+                    addStep({ type: 'counter', message: 'Вы контратакуете!' });
+                    let cdmg = userStats.s;
+                    if (Math.random() < critChance(userStats.m, userStats.extra.crit)) {
+                        cdmg = Math.round(cdmg * critMult(userStats.m));
+                        addStep({ type: 'crit', message: 'Крит!' });
+                    }
+                    cdmg = Math.max(0, Math.round(cdmg));
+                    addStep({ type: 'damage', damage: cdmg, target: 'mob', message: `Урон: ${cdmg}` });
+                    hpMob = Math.max(0, hpMob - cdmg);
+                }
                 turn = 'player';
                 continue;
             }
 
+            addStep({ type: 'info', message: 'Попадание!' });
             let dmg = mobStats.s > mob.level
                 ? Math.floor(mob.level + Math.random() * (mobStats.s - mob.level + 1))
                 : mobStats.s;
 
-            if (Math.random() < critChance(mobStats.m)) {
+            if (Math.random() < critChance(mobStats.m, mobExtra.crit)) {
                 dmg = Math.round(dmg * critMult(mobStats.m));
                 addStep({ type: 'crit', message: 'Крит!' });
+            }
+
+            const playerFullBlockChance = userStats.extra.fullBlock / 100;
+            if (Math.random() < playerFullBlockChance) {
+                dmg = 0;
+                addStep({ type: 'fullBlock', message: 'ПОЛНЫЙ БЛОК!' });
+            } else if (Math.random() < blockChance(userStats.d, 0)) {
+                const blocked = dmg * blockRed(userStats.d, mobStats.s);
+                dmg -= blocked;
+                addStep({ type: 'block', message: `Блок (-${Math.round(blocked)})` });
             }
 
             dmg = Math.max(0, Math.round(dmg));
             addStep({ type: 'damage', damage: dmg, target: 'player', message: `Урон: ${dmg}` });
             hpUser = Math.max(0, hpUser - dmg);
+
+            if (dmg > 0 && Math.random() < stunChance({ s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst, hp: mob.hp, bonuses: mobStats.bonuses, extra: mobExtra } as CharStats, userStats)) {
+                stunnedUser = true;
+                addStep({ type: 'stun', message: 'Вы оглушены!' });
+            }
             turn = 'player';
         }
     }
@@ -214,7 +301,7 @@ router.post('/mob/attack', (req: any, res) => {
                 } else {
                     inventory.push(materialDropped);
                 }
-                db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+                await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
 
                 addStep({ type: 'money', message: `Добыто: ${craftItem.display_name} материал` });
             }
@@ -222,7 +309,7 @@ router.post('/mob/attack', (req: any, res) => {
     }
 
     // Обновление игрока
-    const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(db, userId, expGained, user.exp, user.level, user.statPoints || 0);
+    const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(db, userId, expGained, user.exp, user.level, user.statPoints || 0);
 
     // Потеря золота при поражении: 10% от имеющегося
     let goldLost = 0;
@@ -230,7 +317,7 @@ router.post('/mob/attack', (req: any, res) => {
     if (!playerWon) {
         goldLost = Math.floor(user.money * 0.1);
         if (goldLost > 0) {
-            db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(goldLost, userId);
+            await db.prepare('UPDATE users SET money = money - ? WHERE id = ?').run(goldLost, userId);
             addStep({ type: 'money', message: `${mob.name} забирает ${goldLost} монет!` });
         }
     } else {
@@ -259,7 +346,7 @@ router.post('/mob/attack', (req: any, res) => {
             if (ratingGained > 0) {
                 addStep({ type: 'rating', message: `Рейтинг +${ratingGained}` });
             }
-            db.prepare(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`)
+            await db.prepare(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`)
                 .run(...updateValues, userId);
         }
     }
@@ -267,13 +354,13 @@ router.post('/mob/attack', (req: any, res) => {
     const newHpAfter = Math.max(0, hpUser);
 
     // Налог гильдии (PvE)
-    const goldAfterTax = collectGuildTax(db, userId, goldGained, 'tax_pve');
+    const goldAfterTax = await collectGuildTax(db, userId, goldGained, 'tax_pve');
 
-    db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`)
+    await db.prepare(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`)
         .run(newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId);
 
     // Сохраняем в историю PvE
-    db.prepare(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, premiumBonus)
+    await db.prepare(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, premiumBonus)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null, premiumBonus);
 
