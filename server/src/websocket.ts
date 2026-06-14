@@ -158,6 +158,7 @@ export async function setupWebSocket(server: any) {
 
     // ---------- Обработка сообщений ----------
     ws.on("message", async (raw) => {
+      try {
       let data: any;
       try { data = JSON.parse(raw.toString()); } catch { return; }
 
@@ -299,6 +300,7 @@ export async function setupWebSocket(server: any) {
           sendToUser(targetId, { type: 'message', message: msg });
         }
       }
+      } catch (e: any) { console.error('WS msg err:', e?.message || e); }
     });
 
     // ---------- Отключение ----------
