@@ -496,12 +496,12 @@ router.get('/tournament', async (req, res) => {
     }
 
     // Активные турниры
-    const tournaments = getOrCreateTournament();
+    const tournaments = await getOrCreateTournament();
 
     // Автопродвижение
     const allForAdvance = await db.query(
-        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress', 'completed') AND createdAt > ? ORDER BY id DESC",
-        [new Date(Date.now() - 86400000).toISOString()]
+        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress', 'completed') AND CAST(createdAt AS BIGINT) > ? ORDER BY id DESC",
+        [Math.floor(Date.now() / 1000) - 86400]
     ) as any[];
     for (const t of allForAdvance) {
         autoAdvance(t.id);
