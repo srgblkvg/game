@@ -21,7 +21,7 @@ const divisions = [
 // Брекет
 // ---------------------------------------------------------------------------
 
-function nextPowerOfTwo(n: number): number {
+async function nextPowerOfTwo(n: number): number {
     let p = 1;
     while (p < n) p *= 2;
     return p;
@@ -73,7 +73,7 @@ async function generateBracket(tournamentId: number) {
     const seeded: (typeof participants[0] | null)[] = [...participants];
     for (let i = 0; i < byes; i++) seeded.push(null);
 
-    const insertMatch = db.prepare(`
+    const insertMatch = await db.prepare(`
         INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
         VALUES (?, 1, ?, ?, NULL)
     `);
@@ -118,7 +118,7 @@ async function loadPlayerForBattle(userId: number) {
     try { equipment = JSON.parse(u.equipment || '{}'); } catch {}
 
     const { enriched } = await enrichEquipment(db, equipment);
-    const base = await getBaseStats(u);
+    const base = getBaseStats(u);
     const collCnt = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt || 0;
     const drinkBonuses = getDrinkBonuses(u);
     const stats = currentStats(base, enriched, drinkBonuses, collCnt);
@@ -156,7 +156,7 @@ async function resolveCurrentRound(tournamentId: number): number {
         WHERE tournamentId = ? AND round = ? AND winnerId IS NULL
     `).all(tournamentId, round) as any[];
 
-    const updateWinner = db.prepare('UPDATE tournament_matches SET winnerId = ?, log = ? WHERE id = ?');
+    const updateWinner = await db.prepare('UPDATE tournament_matches SET winnerId = ?, log = ? WHERE id = ?');
 
     for (const match of matches) {
         if (!match.player1Id || !match.player2Id) continue; // bye уже обработан
@@ -190,7 +190,7 @@ async function advanceWinners(tournamentId: number, finishedRound: number) {
         return;
     }
 
-    const insertMatch = db.prepare(`
+    const insertMatch = await db.prepare(`
         INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
         VALUES (?, ?, ?, ?, NULL)
     `);
@@ -468,21 +468,21 @@ router.get('/tournament', async (req, res) => {
             ORDER BY t.id DESC LIMIT ? OFFSET ?
         `).all(limit, offset) as any[];
 
-        const result = completed.map((t: any) => {
-            const participants = db.prepare(
+        const result = completed.map(async (t) => {
+            const participants = await db.prepare(
                 'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?'
             ).all(t.id) as any[];
             return {
                 ...t,
                 participantCount: participants.length,
-                participants: participants.map((p: any) => ({
+                participants: participants.map((p) => ({
                     id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
                     guildName: p.guildName, guildId: p.guildId,
                     snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
                 })),
                 top3: participants
                     .filter((p: any) => p.snapshotStats)
-                    .map((p: any) => ({ ...JSON.parse(p.snapshotStats), username: p.username }))
+                    .map(async (p) => ({ ...JSON.parse(p.snapshotStats), username: p.username }))
                     .sort((a: any, b: any) => a.place - b.place),
             };
         });
@@ -494,7 +494,7 @@ router.get('/tournament', async (req, res) => {
     const tournaments = getOrCreateTournament();
 
     // Автопродвижение
-    const allForAdvance = db.prepare(
+    const allForAdvance = await db.prepare(
         "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress', 'completed') AND createdAt > ? ORDER BY id DESC"
     ).all(new Date(Date.now() - 86400000).toISOString()) as any[];
     for (const t of allForAdvance) {
@@ -508,18 +508,18 @@ router.get('/tournament', async (req, res) => {
     if (typeFilter === 'official') { typeCondition = "AND type = 'official'"; }
     else if (typeFilter === 'custom') { typeCondition = "AND type = 'custom'"; }
 
-    const updated = db.prepare(
+    const updated = await db.prepare(
         `SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ${typeCondition} ORDER BY id DESC`
     ).all(...typeParams) as any[];
 
     const allTournaments = [...updated];
 
-    const result = allTournaments.map((t: any) => {
-        const participants = db.prepare(
+    const result = allTournaments.map(async (t) => {
+        const participants = await db.prepare(
             'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?'
         ).all(t.id) as any[];
         const myReg = participants.find((p: any) => p.userId === userId);
-        const matches = db.prepare(
+        const matches = await db.prepare(
             'SELECT * FROM tournament_matches WHERE tournamentId = ? ORDER BY round, id'
         ).all(t.id) as any[];
 
@@ -528,7 +528,7 @@ router.get('/tournament', async (req, res) => {
             minLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.minLevel; })() : t.minLevel,
             maxLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.maxLevel; })() : t.maxLevel,
             participantCount: participants.length,
-            participants: participants.map((p: any) => ({
+            participants: participants.map(async (p) => ({
                 id: p.userId,
                 username: p.username,
                 goldenTicket: p.goldenTicket,
@@ -536,16 +536,16 @@ router.get('/tournament', async (req, res) => {
                 snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
             })),
             myRegistration: myReg || null,
-            matches: matches.map((m: any) => ({
+            matches: matches.map(async (m) => ({
                 ...m,
                 player1Name: m.player1Id
-                    ? (db.prepare('SELECT username FROM users WHERE id = ?').get(m.player1Id) as any)?.username
+                    ? (await db.prepare('SELECT username FROM users WHERE id = ?').get(m.player1Id) as any)?.username
                     : null,
                 player2Name: m.player2Id
-                    ? (db.prepare('SELECT username FROM users WHERE id = ?').get(m.player2Id) as any)?.username
+                    ? (await db.prepare('SELECT username FROM users WHERE id = ?').get(m.player2Id) as any)?.username
                     : null,
                 winnerName: m.winnerId
-                    ? (db.prepare('SELECT username FROM users WHERE id = ?').get(m.winnerId) as any)?.username
+                    ? (await db.prepare('SELECT username FROM users WHERE id = ?').get(m.winnerId) as any)?.username
                     : null,
                 log: m.log ? JSON.parse(m.log) : null,
             })),
@@ -568,11 +568,11 @@ router.get('/tournament', async (req, res) => {
     // Предстоящие официальные турниры (ждём час после завершения)
     const upcomingOfficial: any[] = [];
     for (const div of divisions) {
-        const hasActive = db.prepare(
+        const hasActive = await db.prepare(
             "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress') AND type = 'official'"
         ).get(div.name);
         if (hasActive) continue;
-        const lastCompleted = db.prepare(
+        const lastCompleted = await db.prepare(
             "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1"
         ).get(div.name) as any;
         if (lastCompleted?.completedAt) {
@@ -593,7 +593,7 @@ router.get('/tournament', async (req, res) => {
 
     res.json({ tournaments: result, userLevel: user.level, tab: 'active', typeFilter,
         upcomingOfficial,
-        warnings: db.prepare(
+        warnings: await db.prepare(
             "SELECT id, division, type, registrationEnd FROM tournaments WHERE status = 'registration' AND registrationEnd > ? AND registrationEnd <= ?"
         ).all(now, now + 300) as any[]
     });
@@ -615,14 +615,14 @@ router.post('/tournament/register', async (req, res) => {
         if (user.level < div.minLevel || user.level > div.maxLevel) {
             return res.status(400).json({ error: `Ваш уровень не подходит для дивизиона «${div.label}»` });
         }
-        tournament = db.prepare(
+        tournament = await db.prepare(
             "SELECT * FROM tournaments WHERE division = ? AND status = 'registration' AND type = 'official'"
         ).get(division) as any;
     } else {
         // Кастомный турнир по ID
         const tournamentId = req.body.tournamentId;
         if (!tournamentId) return res.status(400).json({ error: 'Укажите tournamentId или division' });
-        tournament = db.prepare(
+        tournament = await db.prepare(
             "SELECT * FROM tournaments WHERE id = ? AND status = 'registration' AND type = 'custom'"
         ).get(tournamentId) as any;
         if (!tournament) return res.status(400).json({ error: 'Турнир не найден или регистрация закрыта' });
@@ -644,7 +644,7 @@ router.post('/tournament/register', async (req, res) => {
 
     if (!tournament) return res.status(400).json({ error: 'Регистрация закрыта' });
 
-    const existing = db.prepare(
+    const existing = await db.prepare(
         'SELECT id FROM tournament_participants WHERE tournamentId = ? AND userId = ?'
     ).get(tournament.id, userId) as any;
     if (existing) return res.status(400).json({ error: 'Вы уже зарегистрированы' });
@@ -727,7 +727,7 @@ router.post('/tournament/create-custom', async (req, res) => {
 
     let result: any;
     try {
-        result = db.prepare(
+        result = await db.prepare(
             'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool) VALUES (?, ?, ?, ?, ?, datetime(?), ?, ?, ?, ?, ?, ?, ?)'
         ).run('custom', 'registration', now, regEnd, prizePool + entryFee, new Date().toISOString(), 'custom', userId, entryFee, name, minLvl, maxLvl, prizePool);
     } catch (e: any) {

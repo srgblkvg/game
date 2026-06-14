@@ -7,7 +7,7 @@ import db from '../database';
  * Реген: 1 HP каждые 10 сек (базовый), ускорение от комнаты:
  *   closet=×3, bed=×10, chamber=×50
  */
-export function applyHpRegen(user: {
+export async function applyHpRegen(user: {
     id: number;
     currentHp: number;
     maxHp: number;
@@ -38,7 +38,7 @@ export function applyHpRegen(user: {
     if (hp > maxHp) hp = maxHp;
 
     if (hp !== user.currentHp) {
-        db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?')
+        await db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?')
             .run(hp, now - (elapsed % HP_REGEN_SECONDS), user.id);
     }
 

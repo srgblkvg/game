@@ -18,12 +18,12 @@ export function getItemDataStmt(db: DB) {
 
 // --- Данные пользователя ---
 
-export function getUserById(db: DB, userId: number) {
-  return db.prepare('SELECT u.*, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
+export async function getUserById(db: DB, userId: number) {
+  return await db.prepare('SELECT u.*, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?').get(userId) as any;
 }
 
-export function getUserWithStats(db: DB, userId: number) {
-  return db.prepare(
+export async function getUserWithStats(db: DB, userId: number) {
+  return await db.prepare(
     'SELECT u.id, u.username, u.level, u.money, u.exp, u.totalBattles, u.wins, u.inventory, u.equipment, u.currentHp, u.lastHpUpdate, u.lastAttackTime, u.protectionUntil, u.inventorySlots, u.activeJob, u.chatBannedUntil, u.openPrivateTabs, u.gender, u.statPoints, u.baseS, u.baseA, u.baseD, u.baseM, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?'
   ).get(userId) as any;
 }
@@ -45,14 +45,14 @@ export function getMaxHp(stats: { hp?: number; s: number; a: number; d: number; 
 
 // --- Экипировка ---
 
-export function enrichEquipment(db: DB, equipment: Record<string, any>): { enriched: Record<string, any>; changed: boolean } {
+export async function enrichEquipment(db: DB, equipment: Record<string, any>): Promise<{ enriched: Record<string, any>; changed: boolean }> {
   const stmt = getItemDataStmt(db);
   let changed = false;
   const enriched: Record<string, any> = {};
 
   for (const [slotId, item] of Object.entries(equipment)) {
     if (item && item.slot && item.rarity_id === undefined) {
-      const row = stmt.get(item.name, item.slot) as any;
+      const row = await stmt.get(item.name, item.slot) as any;
       if (row) {
         changed = true;
         enriched[slotId] = {
@@ -81,35 +81,33 @@ export function recalcHpOnEquip(currentHp: number, oldMaxHp: number, newMaxHp: n
 
 // --- Деньги ---
 
-export function transferMoney(db: DB, fromUserId: number, toUserId: number, amount: number) {
-  const stmt = db.prepare('UPDATE users SET money = money - ? WHERE id = ? AND money >= ?');
-  const result = stmt.run(amount, fromUserId, amount);
+export async function transferMoney(db: DB, fromUserId: number, toUserId: number, amount: number) {
+  const result = await db.prepare('UPDATE users SET money = money - ? WHERE id = ? AND money >= ?').run(amount, fromUserId, amount);
   if (result.changes === 0) return false;
-  db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(amount, toUserId);
+  await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(amount, toUserId);
   return true;
 }
 
-export function addMoney(db: DB, userId: number, amount: number) {
-  db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(amount, userId);
+export async function addMoney(db: DB, userId: number, amount: number) {
+  await db.prepare('UPDATE users SET money = money + ? WHERE id = ?').run(amount, userId);
 }
 
-export function spendMoney(db: DB, userId: number, amount: number): boolean {
-  const result = db.prepare('UPDATE users SET money = money - ? WHERE id = ? AND money >= ?').run(amount, userId, amount);
+export async function spendMoney(db: DB, userId: number, amount: number): Promise<boolean> {
+  const result = await db.prepare('UPDATE users SET money = money - ? WHERE id = ? AND money >= ?').run(amount, userId, amount);
   return result.changes > 0;
 }
 
 // --- Налог гильдии ---
-// Вызывает внутри транзакции. Возвращает сумму после вычета налога.
-export function collectGuildTax(db: DB, userId: number, income: number, source: string): number {
+export async function collectGuildTax(db: DB, userId: number, income: number, source: string): Promise<number> {
   if (income <= 0) return income;
-  const member = db.prepare('SELECT gm.guildId, g.taxRate FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?').get(userId) as any;
+  const member = await db.prepare('SELECT gm.guildId, g.taxRate FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?').get(userId) as any;
   if (!member || !member.taxRate || member.taxRate <= 0) return income;
 
   const tax = Math.max(1, Math.floor(income * member.taxRate / 100));
   if (tax <= 0) return income;
 
-  db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(tax, member.guildId);
-  db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)').run(member.guildId, userId, tax, source);
+  await db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(tax, member.guildId);
+  await db.prepare('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)').run(member.guildId, userId, tax, source);
   return income - tax;
 }
 

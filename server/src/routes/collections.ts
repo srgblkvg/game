@@ -4,14 +4,14 @@ import db from '../database';
 const router = Router();
 
 // Получить коллекцию пользователя (предметы + сеты)
-router.get('/collections', (req: any, res) => {
+router.get('/collections', async (req, res) => {
     const userId = req.userId;
-    const items = db.prepare(
+    const items = await db.prepare(
         'SELECT itemName, slot, rarity_id FROM collections WHERE userId = ?'
     ).all(userId) as any[];
 
     // Сеты и их статус (один JOIN вместо N+1)
-    const sets = db.prepare(`
+    const sets = await db.prepare(`
         SELECT s.*, si.item_name, si.slot,
                CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END as collected
         FROM collection_sets s
@@ -47,7 +47,7 @@ router.get('/collections', (req: any, res) => {
 });
 
 // Добавить предмет в коллекцию (удаляет из инвентаря)
-router.post('/collections/add', (req: any, res) => {
+router.post('/collections/add', async (req, res) => {
     const userId = req.userId;
     const { itemName, slot, itemId } = req.body;
 
@@ -56,7 +56,7 @@ router.post('/collections/add', (req: any, res) => {
     }
 
     // Проверяем что предмет ещё не в коллекции
-    const existing = db.prepare(
+    const existing = await db.prepare(
         'SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ?'
     ).get(userId, itemName, slot);
 
@@ -65,7 +65,7 @@ router.post('/collections/add', (req: any, res) => {
     }
 
     // Удаляем из инвентаря
-    const user = db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.prepare('SELECT inventory FROM users WHERE id = ?').get(userId) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     const inventory = JSON.parse(user.inventory || '[]');
@@ -80,10 +80,10 @@ router.post('/collections/add', (req: any, res) => {
 
     const removed = inventory.splice(itemIndex, 1)[0];
 
-    db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
 
     // Добавляем в коллекцию
-    db.prepare(
+    await db.prepare(
         'INSERT INTO collections (userId, itemName, slot, rarity_id) VALUES (?, ?, ?, ?)'
     ).run(userId, itemName, slot, removed.rarity_id || 0);
 

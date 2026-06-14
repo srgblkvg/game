@@ -5,8 +5,8 @@ import { broadcast } from '../websocket';
 const router = Router();
 
 // Все сообщения (для админки)
-router.get('/messages', (req: any, res) => {
-    const messages = db.prepare(`
+router.get('/messages', async (req, res) => {
+    const messages = await db.prepare(`
     SELECT m.*, s.username as senderName, t.username as targetName
     FROM chat_messages m
     JOIN users s ON m.senderId = s.id
@@ -15,7 +15,7 @@ router.get('/messages', (req: any, res) => {
     LIMIT 200
   `).all();
 
-    const result = messages.map((m: any) => {
+    const result = messages.map((m) => {
         if (m.item_data) {
             try {
                 const item = JSON.parse(m.item_data);
@@ -29,31 +29,31 @@ router.get('/messages', (req: any, res) => {
 });
 
 // Удалить одно сообщение
-router.delete('/messages/:id', (req: any, res) => {
+router.delete('/messages/:id', async (req, res) => {
     const { id } = req.params;
-    db.prepare('DELETE FROM chat_messages WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM chat_messages WHERE id = ?').run(id);
     res.json({ success: true });
 });
 
 // Удалить все сообщения
-router.delete('/messages', (req: any, res) => {
-    db.prepare('DELETE FROM chat_messages').run();
+router.delete('/messages', async (req, res) => {
+    await db.prepare('DELETE FROM chat_messages').run();
     res.json({ success: true });
 });
 
 // Заблокировать игрока в чате на N минут
-router.post('/ban-chat', (req: any, res) => {
+router.post('/ban-chat', async (req, res) => {
     const { userId, minutes } = req.body;
     if (!userId || !minutes) return res.status(400).json({ error: 'userId и minutes обязательны' });
     const banUntil = Math.floor(Date.now() / 1000) + minutes * 60;
-    db.prepare('UPDATE users SET chatBannedUntil = ? WHERE id = ?').run(banUntil, userId);
+    await db.prepare('UPDATE users SET chatBannedUntil = ? WHERE id = ?').run(banUntil, userId);
     res.json({ success: true, banUntil });
 });
 
 // Список забаненных в чате
-router.get('/banned', (req: any, res) => {
+router.get('/banned', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
-    const users = db.prepare(`
+    const users = await db.prepare(`
     SELECT id, username, chatBannedUntil
     FROM users
     WHERE chatBannedUntil > ?
@@ -63,18 +63,18 @@ router.get('/banned', (req: any, res) => {
 });
 
 // Разбанить игрока
-router.post('/unban', (req: any, res) => {
+router.post('/unban', async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
-    db.prepare('UPDATE users SET chatBannedUntil = 0 WHERE id = ?').run(userId);
+    await db.prepare('UPDATE users SET chatBannedUntil = 0 WHERE id = ?').run(userId);
     res.json({ success: true });
 });
 
 // Системное сообщение в чат (от system id=0)
-router.post('/system-message', (req: any, res) => {
+router.post('/system-message', async (req, res) => {
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'content обязателен' });
-    const info = db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)').run(0, null, content);
+    const info = await db.prepare('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)').run(0, null, content);
     const msg = {
         id: info.lastInsertRowid,
         senderId: 0,
