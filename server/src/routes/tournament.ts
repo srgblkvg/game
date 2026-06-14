@@ -760,3 +760,20 @@ router.post('/tournament/create-custom', async (req, res) => {
 });
 
 export default router;
+
+// ── Авто-таймер: каждые 10 секунд продвигаем активные турниры ──
+const activeAutoAdvance = new Set<number>();
+setInterval(async () => {
+  try {
+    const active = await db.query(
+      "SELECT id FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id",
+      []
+    ) as any[];
+    for (const t of active) {
+      if (!activeAutoAdvance.has(t.id)) {
+        activeAutoAdvance.add(t.id);
+        autoAdvance(t.id).finally(() => activeAutoAdvance.delete(t.id));
+      }
+    }
+  } catch (e: any) { console.error('tournament auto-advance err:', e?.message || e); }
+}, 10000);
