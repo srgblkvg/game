@@ -116,7 +116,11 @@ router.get('/bank/transfers', async (req, res) => {
     query += ' ORDER BY id DESC LIMIT ?';
     const params: any[] = filter === 'all' ? [userId, userId, limit] : [userId, limit];
 
-    res.json(await db.query(query, params));
+    const result = await db.query(query, params);
+    res.json(result.map((r: any) => ({
+        ...r,
+        createdAt: typeof r.createdAt === 'string' && /^\d+$/.test(r.createdAt) ? Number(r.createdAt) : (r.createdAt ? Math.floor(new Date(r.createdAt).getTime() / 1000) : r.createdAt)
+    })));
 });
 
 // История банковских операций
@@ -130,7 +134,11 @@ router.get('/bank/operations', async (req, res) => {
     else if (filter === 'withdraw') query += " AND type = 'withdraw'";
     query += ' ORDER BY id DESC LIMIT ?';
 
-    res.json(await db.query(query, [userId, limit]));
+    const result2 = await db.query(query, [userId, limit]);
+    res.json(result2.map((r: any) => ({
+        ...r,
+        createdAt: typeof r.createdAt === 'string' && /^\d+$/.test(r.createdAt) ? Number(r.createdAt) : (r.createdAt ? Math.floor(new Date(r.createdAt).getTime() / 1000) : r.createdAt)
+    })));
 });
 
 export default router;
