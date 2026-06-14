@@ -59,8 +59,8 @@ router.get('/guild/my', async (req, res) => {
         const defenderGuild = await db.one('SELECT id, name FROM guilds WHERE id = ?', [war.defenderGuildId]) as any;
         warInfo = {
             id: war.id,
-            attackerGuild,
-            defenderGuild,
+            attackerGuild: attackerGuild || { id: war.attackerGuildId, name: `Гильдия #${war.attackerGuildId}` },
+            defenderGuild: defenderGuild || { id: war.defenderGuildId, name: `Гильдия #${war.defenderGuildId}` },
             status: war.status,
             declaredAt: war.declaredAt,
             acceptedAt: war.acceptedAt,
@@ -223,8 +223,8 @@ router.get('/guild/:id', async (req, res) => {
         const defenderGuild = await db.one('SELECT id, name FROM guilds WHERE id = ?', [war.defenderGuildId]) as any;
         warInfo = {
             id: war.id,
-            attackerGuild,
-            defenderGuild,
+            attackerGuild: attackerGuild || { id: war.attackerGuildId, name: `Гильдия #${war.attackerGuildId}` },
+            defenderGuild: defenderGuild || { id: war.defenderGuildId, name: `Гильдия #${war.defenderGuildId}` },
             status: war.status,
             declaredAt: war.declaredAt,
             acceptedAt: war.acceptedAt,
