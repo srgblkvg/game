@@ -38,7 +38,7 @@ function camelRows(rows: any[]): any[] {
 
     for (const key of Object.keys(row)) {
       let cc = key.replace(
-        /(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses|pvp|bankvisit|max|min|job|order|image|chance|battles|money|created|upgraded|broken|seconds)$/i,
+        /(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses|pvp|bankvisit|max|min|job|order|image|chance|battles|money|created|upgraded|broken|seconds|xp)$/i,
         m => m.charAt(0).toUpperCase() + m.slice(1)
       );
       cc = cc.replace(/attacktime$/i, 'AttackTime')
@@ -70,6 +70,7 @@ function camelRows(rows: any[]): any[] {
              .replace(/^isguest$/i, 'isGuest')
              .replace(/^oauthprovider$/i, 'oauthProvider')
              .replace(/^oauthid$/i, 'oauthId')
+             .replace(/^rewardxp$/i, 'rewardXp')
              .replace(/^arenatopponentid$/i, 'arenaOpponentId');
       if (cc !== key) row[cc] = row[key];
     }
