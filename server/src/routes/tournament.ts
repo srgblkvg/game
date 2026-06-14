@@ -479,6 +479,9 @@ router.get('/tournament', async (req, res) => {
             ) as any[];
             return {
                 ...t,
+                createdAt: Number(t.createdAt) || t.createdAt,
+                completedAt: Number(t.completedAt) || t.completedAt,
+                registrationEnd: Number(t.registrationEnd) || t.registrationEnd,
                 participantCount: participants.length,
                 participants: participants.map((p) => ({
                     id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
