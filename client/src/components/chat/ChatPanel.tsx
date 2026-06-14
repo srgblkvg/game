@@ -349,7 +349,7 @@ export default function ChatPanel() {
     }, [addTab]);
 
     const renderMessageContent = useCallback((msg: ChatMessage) => {
-        const parts = msg.content.split(/(@\w+)/g);
+        const parts = (msg.content || '').split(/(@\w+)/g);
         const acceptInvite = async () => {
             try {
                 await fetch(`${BASE_URL}/guild/accept-invite`, {
