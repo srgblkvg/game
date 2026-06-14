@@ -921,11 +921,16 @@ router.post('/guild/war/attack', async (req, res) => {
     const log = result.log;
     const steps = result.steps;
 
+
+    // В гильдийских войнах деньги не снимаются — убираем шаги кражи
+    const warSteps = steps.filter((s: any) => s.type !== "money");
+    const warLog = warSteps.map((s: any) => s.message);
+
     // Запись атаки
     await db.run(`
         INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won, battleLog, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, JSON.stringify(steps), new Date().toISOString().replace("T", " ").slice(0, 19)]);
+    `, [war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, JSON.stringify(warSteps), new Date().toISOString().replace("T", " ").slice(0, 19)]);
 
     // Обновление счёта
     if (won) {
@@ -936,8 +941,8 @@ router.post('/guild/war/attack', async (req, res) => {
     res.json({
         success: true,
         won,
-        log,
-        steps,
+        log: warLog,
+        steps: warSteps,
         finalAttackerHp: result.attackerHpAfter,
         finalDefenderHp: result.defenderHpAfter,
     });
