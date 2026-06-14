@@ -13,14 +13,17 @@ const pool = new Pool({
 // PG lowercases all unquoted identifiers → we rebuild camelCase from lowercase
 function camelRows(rows: any[]): any[] {
   for (const row of rows) {
-    // Convert PG bigint strings to numbers
+    // Convert PG bigint strings to numbers (only if > 2^31 — actual bigints from COUNT/SUM)
     for (const key of Object.keys(row)) {
       if (typeof row[key] === 'string' && /^\d+$/.test(row[key])) {
         const n = parseInt(row[key], 10);
-        if (n <= Number.MAX_SAFE_INTEGER) row[key] = n;
+        // Only convert if it's actually a bigint (COUNT/SUM aggregate returns string)
+        // or if the column name suggests it's numeric (id, count, level, etc.)
+        if (n > 2147483647 || /^(id|count|level|cnt|total|sum|amount|price|cost|fee|rate|score|elo|rating|hp|exp|gold|money|slots|points|duration|chance|round|year|month|day|hour|min|sec|limit|offset|page|rank)$/i.test(key)) {
+          row[key] = n;
+        }
       }
     }
-    // Null → empty string for JSON/text columns
     const nullFields = ['inventory','equipment','activejob','openprivatetabs','snapshot',
       'log','item_data','bonuses','extra'];
     for (const k of nullFields) {
