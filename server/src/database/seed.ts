@@ -1,25 +1,24 @@
-import type Database from 'better-sqlite3';
+import { db, pool } from '../db/index';
 
-export function runSeed(db: InstanceType<typeof Database>) {
+export async function runSeed() {
   // Начальные редкости
-  const rarityCount = (db.prepare('SELECT COUNT(*) as cnt FROM rarities').get() as any).cnt;
+  const rarityCount = (await db.one('SELECT COUNT(*) as cnt FROM rarities') as any).cnt;
   if (rarityCount === 0) {
-    const insertRarity = db.prepare('INSERT INTO rarities (id, name, display_name, color) VALUES (?, ?, ?, ?)');
-    insertRarity.run(0, 'junk', 'Хлам', '#888888');
-    insertRarity.run(1, 'common', 'Обычный', '#cccccc');
-    insertRarity.run(2, 'uncommon', 'Необычный', '#2ecc71');
-    insertRarity.run(3, 'rare', 'Редкий', '#3498db');
-    insertRarity.run(4, 'epic', 'Эпический', '#9b59b6');
-    insertRarity.run(5, 'legendary', 'Легендарный', '#f1c40f');
-    insertRarity.run(6, 'mythic', 'Мифический', '#e74c3c');
+    const INSERT_RARITY = 'INSERT INTO rarities (id, name, display_name, color) VALUES (?, ?, ?, ?)';
+    await db.run(INSERT_RARITY, [0, 'junk', 'Хлам', '#888888']);
+    await db.run(INSERT_RARITY, [1, 'common', 'Обычный', '#cccccc']);
+    await db.run(INSERT_RARITY, [2, 'uncommon', 'Необычный', '#2ecc71']);
+    await db.run(INSERT_RARITY, [3, 'rare', 'Редкий', '#3498db']);
+    await db.run(INSERT_RARITY, [4, 'epic', 'Эпический', '#9b59b6']);
+    await db.run(INSERT_RARITY, [5, 'legendary', 'Легендарный', '#f1c40f']);
+    await db.run(INSERT_RARITY, [6, 'mythic', 'Мифический', '#e74c3c']);
   }
 
   // Начальные предметы (189 предметов — по 21 на каждый слот)
-  const itemCount = (db.prepare('SELECT COUNT(*) as cnt FROM items').get() as any).cnt;
+  const itemCount = (await db.one('SELECT COUNT(*) as cnt FROM items') as any).cnt;
   if (itemCount === 0) {
-    const insert = db.prepare(
-      'INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    );
+    const INSERT_ITEM =
+      'INSERT INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES (?, ?, ?, ?, ?, ?, ?)';
 
     const allItems: Array<{
       name: string;
@@ -244,24 +243,17 @@ export function runSeed(db: InstanceType<typeof Database>) {
       const color = rarityColorNames[item.rarity_id] || 'gray';
       const image = `${folder}/${folder}_${color}.webp`;
 
-      insert.run(
-        item.name,
-        item.slot,
-        item.rarity_id,
-        JSON.stringify(item.bonuses),
-        JSON.stringify(item.extra),
-        image,
-        item.cost
+      await db.run(INSERT_ITEM,
+        [item.name, item.slot, item.rarity_id, JSON.stringify(item.bonuses), JSON.stringify(item.extra), image, item.cost]
       );
     }
   }
 
   // Начальные работы (20 работ) — добавляем только если таблица пуста
-  const jobCount = (db.prepare('SELECT COUNT(*) as c FROM jobs').get() as any).c;
+  const jobCount = (await db.one('SELECT COUNT(*) as c FROM jobs') as any).c;
   if (jobCount === 0) {
-  const insertJob = db.prepare(
-    'INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)'
-  );
+  const INSERT_JOB =
+    'INSERT INTO jobs (name, description, duration, rewardMin, rewardMax) VALUES (?, ?, ?, ?, ?)';
 
   const jobs: Array<{ name: string; description: string; duration: number; rewardMin: number; rewardMax: number }> = [
       // 🏰 На территории замка — 10 минут
@@ -291,50 +283,50 @@ export function runSeed(db: InstanceType<typeof Database>) {
     ];
 
   for (const job of jobs) {
-    insertJob.run(job.name, job.description, job.duration, job.rewardMin, job.rewardMax);
+    await db.run(INSERT_JOB, [job.name, job.description, job.duration, job.rewardMin, job.rewardMax]);
   }
   }
 
   // Начальные названия характеристик
-  const statCount = (db.prepare('SELECT COUNT(*) as cnt FROM stat_names').get() as any).cnt;
+  const statCount = (await db.one('SELECT COUNT(*) as cnt FROM stat_names') as any).cnt;
   if (statCount === 0) {
-    const insert = db.prepare('INSERT INTO stat_names (name, nameRu) VALUES (?, ?)');
+    const INSERT_STAT = 'INSERT INTO stat_names (name, nameRu) VALUES (?, ?)';
     const stats = [
       ['s', 'Сила'], ['a', 'Ловкость'], ['d', 'Защита'], ['m', 'Мастерство'],
       ['crit', 'Крит'], ['dodge', 'Уклонение'], ['counter', 'Контрудар'],
       ['fullBlock', 'Полный блок'], ['block', 'Блок'],
     ];
-    for (const [name, nameRu] of stats) insert.run(name, nameRu);
+    for (const [name, nameRu] of stats) await db.run(INSERT_STAT, [name, nameRu]);
   }
 
   // Начальные ресурсы (материалы + камни улучшения)
-  const craftItemCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_items').get() as any).cnt;
+  const craftItemCount = (await db.one('SELECT COUNT(*) as cnt FROM craft_items') as any).cnt;
   if (craftItemCount === 0) {
-    const insertCraft = db.prepare('INSERT INTO craft_items (name, rarity_id, type, image) VALUES (?, ?, ?, ?)');
+    const INSERT_CRAFT = 'INSERT INTO craft_items (name, rarity_id, type, image) VALUES (?, ?, ?, ?)';
     // Материалы (type='craft')
     const materialNames = ['Пыль забвения', 'Осколок скорби', 'Фрагмент ужаса', 'Эссенция мрака', 'Сердцевина бездны', 'Искра погибели', 'Слеза вечности'];
-    materialNames.forEach((name, i) => insertCraft.run(name, i, 'craft', null));
+    for (let i = 0; i < materialNames.length; i++) await db.run(INSERT_CRAFT, [materialNames[i], i, 'craft', null]);
     // Камни улучшения (type='upgrade')
     const stoneNames = ['Камень улучшения (Хлам)', 'Камень улучшения (Обычный)', 'Камень улучшения (Необычный)', 'Камень улучшения (Редкий)', 'Камень улучшения (Эпический)', 'Камень улучшения (Легендарный)', 'Камень улучшения (Мифический)'];
-    stoneNames.forEach((name, i) => insertCraft.run(name, i, 'upgrade', null));
+    for (let i = 0; i < stoneNames.length; i++) await db.run(INSERT_CRAFT, [stoneNames[i], i, 'upgrade', null]);
   }
 
   // Начальные категории рецептов
-  const catCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_recipe_categories').get() as any).cnt;
+  const catCount = (await db.one('SELECT COUNT(*) as cnt FROM craft_recipe_categories') as any).cnt;
   if (catCount === 0) {
-    db.prepare('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)').run('Материалы', 1);
-    db.prepare('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)').run('Улучшения', 2);
+    await db.run('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)', ['Материалы', 1]);
+    await db.run('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)', ['Улучшения', 2]);
   }
 
   // Категория «Предметы» (добавляем если нет)
-  try { db.prepare('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)').run('Предметы', 3); } catch {}
+  try { await db.run('INSERT INTO craft_recipe_categories (name, sort_order) VALUES (?, ?)', ['Предметы', 3]); } catch {}
 
   // Начальные шансы улучшения (по редкости и уровню)
-  const upgradeChanceCount = (db.prepare('SELECT COUNT(*) as cnt FROM upgrade_chances').get() as any).cnt;
+  const upgradeChanceCount = (await db.one('SELECT COUNT(*) as cnt FROM upgrade_chances') as any).cnt;
   // Если данных нет или только одна редкость — перезаполняем все
   if (upgradeChanceCount < 70) {
-    db.exec('DELETE FROM upgrade_chances');
-    const insertUpgrade = db.prepare('INSERT OR REPLACE INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?)');
+    await db.run('DELETE FROM upgrade_chances');
+    const INSERT_UPGRADE = 'INSERT INTO upgrade_chances (level, rarity_id, chance, money_cost) VALUES (?, ?, ?, ?) ON CONFLICT (level, rarity_id) DO UPDATE SET chance = EXCLUDED.chance, money_cost = EXCLUDED.money_cost';
     const chances: number[] = [100, 90, 70, 50, 25, 10, 5, 3, 2, 1];
     const costs: Record<number, number[]> = {
       0: [5, 8, 15, 25, 40, 60, 90, 130, 200, 300],        // Хлам
@@ -347,27 +339,25 @@ export function runSeed(db: InstanceType<typeof Database>) {
     };
     for (let rarity = 0; rarity <= 6; rarity++) {
       for (let lvl = 0; lvl < 10; lvl++) {
-        insertUpgrade.run(lvl + 1, rarity, chances[lvl], costs[rarity][lvl]);
+        await db.run(INSERT_UPGRADE, [lvl + 1, rarity, chances[lvl], costs[rarity][lvl]]);
       }
     }
   }
 
   // Начальные рецепты крафта (материалы + камни улучшения)
-  const recipeCount = (db.prepare('SELECT COUNT(*) as cnt FROM craft_recipes').get() as any).cnt;
+  const recipeCount = (await db.one('SELECT COUNT(*) as cnt FROM craft_recipes') as any).cnt;
   if (recipeCount === 0) {
-    const insertRecipe = db.prepare(
-      'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    );
-    const insertIngredient = db.prepare(
-      'INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)'
-    );
-    const getCraftItemId = (name: string): number =>
-      (db.prepare('SELECT id FROM craft_items WHERE name = ?').get(name) as any).id;
-    const getCatId = (name: string): number =>
-      (db.prepare('SELECT id FROM craft_recipe_categories WHERE name = ?').get(name) as any).id;
+    const INSERT_RECIPE =
+      'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
+    const INSERT_INGREDIENT =
+      'INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)';
+    const getCraftItemId = async (name: string): Promise<number> =>
+      (await db.one('SELECT id FROM craft_items WHERE name = ?', [name]) as any).id;
+    const getCatId = async (name: string): Promise<number> =>
+      (await db.one('SELECT id FROM craft_recipe_categories WHERE name = ?', [name]) as any).id;
 
-    const matCatId = getCatId('Материалы');
-    const upgCatId = getCatId('Улучшения');
+    const matCatId = await getCatId('Материалы');
+    const upgCatId = await getCatId('Улучшения');
 
     // Рецепты улучшения материалов (раздел «Материалы»)
     const materialRecipes: Array<{
@@ -402,30 +392,28 @@ export function runSeed(db: InstanceType<typeof Database>) {
     ];
 
     for (const r of allRecipes) {
-      const info = insertRecipe.run(r.name, r.description, r.cost, 'craft_item', getCraftItemId(r.result), r.chance, r.categoryId);
+      const info = await db.run(INSERT_RECIPE, [r.name, r.description, r.cost, 'craft_item', await getCraftItemId(r.result), r.chance, r.categoryId]);
       const recipeId = info.lastInsertRowid;
       for (const ing of r.ingredients) {
-        insertIngredient.run(recipeId, getCraftItemId(ing.name), ing.qty);
+        await db.run(INSERT_INGREDIENT, [recipeId, await getCraftItemId(ing.name), ing.qty]);
       }
     }
   }
 
   // Рецепты случайных предметов (всегда проверяем, добавляем если нет)
   {
-    const itemRecipeCount = (db.prepare("SELECT COUNT(*) as cnt FROM craft_recipes WHERE result_type = 'random_item'").get() as any).cnt;
+    const itemRecipeCount = (await db.one("SELECT COUNT(*) as cnt FROM craft_recipes WHERE result_type = 'random_item'") as any).cnt;
     if (itemRecipeCount === 0) {
-      const insertRecipe = db.prepare(
-        'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      );
-      const insertIngredient = db.prepare(
-        'INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)'
-      );
-      const getCraftItemId = (name: string): number =>
-        (db.prepare('SELECT id FROM craft_items WHERE name = ?').get(name) as any).id;
-      const getCatId = (name: string): number =>
-        (db.prepare('SELECT id FROM craft_recipe_categories WHERE name = ?').get(name) as any).id;
+      const INSERT_RECIPE =
+        'INSERT INTO craft_recipes (name, description, money_cost, result_type, result_id, success_chance, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
+      const INSERT_INGREDIENT =
+        'INSERT INTO craft_recipe_ingredients (recipe_id, craft_item_id, quantity) VALUES (?, ?, ?)';
+      const getCraftItemId = async (name: string): Promise<number> =>
+        (await db.one('SELECT id FROM craft_items WHERE name = ?', [name]) as any).id;
+      const getCatId = async (name: string): Promise<number> =>
+        (await db.one('SELECT id FROM craft_recipe_categories WHERE name = ?', [name]) as any).id;
 
-      const itemCatId = getCatId('Предметы');
+      const itemCatId = await getCatId('Предметы');
       const itemRecipes: Array<{
         name: string; description: string; cost: number;
         rarity: number; chance: number; ingredients: Array<{ name: string; qty: number }>;
@@ -439,21 +427,21 @@ export function runSeed(db: InstanceType<typeof Database>) {
         { name: 'Случайный предмет (Мифический)', description: 'Создать случайный предмет Мифического качества', cost: 4000, rarity: 6, chance: 50, ingredients: [{ name: 'Слеза вечности', qty: 1 }] },
       ];
       for (const r of itemRecipes) {
-        const info = insertRecipe.run(r.name, r.description, r.cost, 'random_item', r.rarity, r.chance, itemCatId);
+        const info = await db.run(INSERT_RECIPE, [r.name, r.description, r.cost, 'random_item', r.rarity, r.chance, itemCatId]);
         const recipeId = info.lastInsertRowid;
         for (const ing of r.ingredients) {
-          insertIngredient.run(recipeId, getCraftItemId(ing.name), ing.qty);
+          await db.run(INSERT_INGREDIENT, [recipeId, await getCraftItemId(ing.name), ing.qty]);
         }
       }
     }
   }
 
   // Мобы (PvE бестиарий)
-  const mobCount = (db.prepare('SELECT COUNT(*) as cnt FROM mobs').get() as any).cnt;
+  const mobCount = (await db.one('SELECT COUNT(*) as cnt FROM mobs') as any).cnt;
   if (mobCount === 0) {
-    const insertMob = db.prepare(`INSERT INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max,
+    const INSERT_MOB = `INSERT INTO mobs (name, level, hp, atk, agi, def, mst, xp, gold_min, gold_max,
       loot_junk, loot_common, loot_uncommon, loot_rare, loot_epic, loot_legendary, loot_mythic, location)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     const mobs = [
       // Уровни 1-5 (Склеп)
@@ -494,24 +482,24 @@ export function runSeed(db: InstanceType<typeof Database>) {
       ['Смерть', 100, 1400, 260, 100, 220, 110, 2, 400, 800, 0, 0, 0, 0, 0, 0.3, 0.7, 'Врата Бездны'],
     ];
 
-    for (const m of mobs) insertMob.run(...m);
+    for (const m of mobs) await db.run(INSERT_MOB, m);
   }
 
   // Стандартные сеты коллекций (7 редкостей)
-  const collectionSetCount = (db.prepare('SELECT COUNT(*) as cnt FROM collection_sets').get() as any).cnt;
+  const collectionSetCount = (await db.one('SELECT COUNT(*) as cnt FROM collection_sets') as any).cnt;
   if (collectionSetCount === 0) {
     const allSlots = ['helmet', 'chest', 'gloves', 'boots', 'weapon1', 'shield', 'amulet', 'ring', 'belt'];
     const raritySetNames = ['Коллекция Хлама', 'Коллекция Обычных', 'Коллекция Необычных', 'Коллекция Редких', 'Коллекция Эпических', 'Коллекция Легендарных', 'Коллекция Мифических'];
-    const insertSet = db.prepare('INSERT INTO collection_sets (name, description, bonus_percent, sort_order) VALUES (?, ?, ?, ?)');
-    const insertSetItem = db.prepare('INSERT INTO collection_set_items (set_id, item_name, slot) VALUES (?, ?, ?)');
+    const INSERT_SET = 'INSERT INTO collection_sets (name, description, bonus_percent, sort_order) VALUES (?, ?, ?, ?)';
+    const INSERT_SET_ITEM = 'INSERT INTO collection_set_items (set_id, item_name, slot) VALUES (?, ?, ?)';
 
     for (let rarity = 0; rarity <= 6; rarity++) {
-      const info = insertSet.run(raritySetNames[rarity], `Все предметы редкости ${rarity}`, rarity + 1, rarity + 1);
+      const info = await db.run(INSERT_SET, [raritySetNames[rarity], `Все предметы редкости ${rarity}`, rarity + 1, rarity + 1]);
       const setId = info.lastInsertRowid as number;
 
-      const rarityItems = db.prepare('SELECT name, slot FROM items WHERE rarity_id = ?').all(rarity) as any[];
+      const rarityItems = await db.query('SELECT name, slot FROM items WHERE rarity_id = ?', [rarity]) as any[];
       for (const item of rarityItems) {
-        insertSetItem.run(setId, item.name, item.slot);
+        await db.run(INSERT_SET_ITEM, [setId, item.name, item.slot]);
       }
     }
   }

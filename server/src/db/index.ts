@@ -1,0 +1,116 @@
+import { Pool, PoolClient } from 'pg';
+
+const pool = new Pool({
+  host: process.env.PGHOST || 'localhost',
+  port: parseInt(process.env.PGPORT || '5432'),
+  database: process.env.PGDATABASE || 'game',
+  user: process.env.PGUSER || 'game',
+  password: process.env.PGPASSWORD || 'game123',
+  max: 20,
+});
+
+// Suffix-based camelCase converter — adds camelCase keys for common patterns
+// PG lowercases all unquoted identifiers → we rebuild camelCase from lowercase
+function camelRows(rows: any[]): any[] {
+  for (const row of rows) {
+    // Convert PG bigint strings to numbers
+    for (const key of Object.keys(row)) {
+      if (typeof row[key] === 'string' && /^\d+$/.test(row[key])) {
+        const n = parseInt(row[key], 10);
+        if (n <= Number.MAX_SAFE_INTEGER) row[key] = n;
+      }
+    }
+    // Null → empty string for JSON/text columns
+    const nullFields = ['inventory','equipment','activejob','openprivatetabs','snapshot',
+      'log','item_data','bonuses','extra'];
+    for (const k of nullFields) {
+      if (row[k] === null) row[k] = '';
+    }
+    // Special: inventory defaults to '[]', equipment to '{}'
+    if (row.inventory === '') row.inventory = '[]';
+    if (row.equipment === '') row.equipment = '{}';
+    // Re-apply after null checks
+    if (row.inventory === null) row.inventory = '[]';
+    if (row.equipment === null) row.equipment = '{}';
+
+    for (const key of Object.keys(row)) {
+      let cc = key.replace(
+        /(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses|pvp|bankvisit|max|min|job|order|image|chance)$/i,
+        m => m.charAt(0).toUpperCase() + m.slice(1)
+      );
+      cc = cc.replace(/attacktime$/i, 'AttackTime')
+             .replace(/pveattacktime$/i, 'PveAttackTime')
+             .replace(/attacksec$/i, 'AttackSec')
+             .replace(/pveattacksec$/i, 'PveAttackSec')
+             .replace(/taxrate$/i, 'TaxRate')
+             .replace(/verified$/i, 'Verified')
+             .replace(/hpupdate$/i, 'HpUpdate');
+      if (cc !== key) row[cc] = row[key];
+    }
+  }
+  return rows;
+}
+
+// Convert ? placeholders to $1, $2, ...
+function pgParams(sql: string): string {
+  let i = 0;
+  return sql.replace(/\?/g, () => `$${++i}`);
+}
+
+export const db = {
+  /** Query multiple rows — returns array with camelCase keys */
+  async query(sql: string, params?: any[]): Promise<any[]> {
+    const q = pgParams(sql);
+    const r = await pool.query(q, params || []);
+    return camelRows(r.rows);
+  },
+
+  /** Query one row — returns row with camelCase keys or null */
+  async one(sql: string, params?: any[]): Promise<any | null> {
+    const rows = await db.query(sql, params);
+    return rows[0] || null;
+  },
+
+  /** Execute INSERT/UPDATE/DELETE — returns { changes, lastInsertRowid } */
+  async run(sql: string, params?: any[]): Promise<{ changes: number; lastInsertRowid: number }> {
+    const q = pgParams(sql);
+    const isInsert = /^\s*INSERT\s+/i.test(q);
+    if (isInsert) {
+      // Try to get RETURNING id, but gracefully handle tables without 'id' column
+      try {
+        const returningQuery = q.replace(/;?\s*$/, '') + ' RETURNING id';
+        const r = await pool.query(returningQuery, params || []);
+        return { changes: r.rowCount || 0, lastInsertRowid: r.rows[0]?.id || 0 };
+      } catch {
+        // Table has no 'id' column (composite key) — fall back to simple insert
+        const r = await pool.query(q, params || []);
+        return { changes: r.rowCount || 0, lastInsertRowid: 0 };
+      }
+    }
+    const r = await pool.query(q, params || []);
+    return { changes: r.rowCount || 0, lastInsertRowid: 0 };
+  },
+
+  /** Raw pool.query — no camelCase, no ? conversion. For special cases. */
+  async raw(sql: string, params?: any[]) {
+    return pool.query(sql, params || []);
+  },
+
+  /** Transaction with client passed to callback */
+  async tx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await fn(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  },
+};
+
+export { pool };

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import db from '../database';
+import { db } from '../db/index';
 import logger from '../logger';
 import { authMiddleware } from '../middleware/auth';
 
@@ -9,9 +9,10 @@ const router = Router();
 router.get('/pve-battles', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 50;
-    const battles = await db.prepare(
-        'SELECT * FROM pve_battles WHERE userId = ? ORDER BY createdAt DESC LIMIT ?'
-    ).all(userId, limit);
+    const battles = await db.query(
+        'SELECT * FROM pve_battles WHERE userId = ? ORDER BY createdAt DESC LIMIT ?',
+        [userId, limit]
+    );
     res.json(battles);
 });
 
@@ -20,13 +21,13 @@ router.get('/tournament-history', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 50;
 
-    const tournaments = await db.prepare(`
+    const tournaments = await db.query(`
         SELECT t.*, tp.snapshotStats
         FROM tournament_participants tp
         JOIN tournaments t ON tp.tournamentId = t.id
         WHERE tp.userId = ? AND t.status IN ('completed', 'cancelled')
         ORDER BY t.id DESC LIMIT ?
-    `).all(userId, limit);
+    `, [userId, limit]);
 
     res.json(tournaments);
 });
@@ -35,9 +36,10 @@ router.get('/tournament-history', authMiddleware, async (req, res) => {
 router.get('/quest-history', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 30;
-    res.json(await db.prepare(
-        'SELECT * FROM quest_history WHERE userId = ? ORDER BY id DESC LIMIT ?'
-    ).all(userId, limit));
+    res.json(await db.query(
+        'SELECT * FROM quest_history WHERE userId = ? ORDER BY id DESC LIMIT ?',
+        [userId, limit]
+    ));
 });
 
 // Приём клиентских ошибок

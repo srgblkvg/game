@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import db from '../database';
+import { db } from '../db/index';
 
 const router = Router();
 
@@ -12,12 +12,12 @@ const DIVISIONS = [
 
 // Получить все турниры
 router.get('/tournaments', async (req, res) => {
-    const tournaments = await db.prepare(`
+    const tournaments = await db.query(`
         SELECT t.*, 
             (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) as participantCount
         FROM tournaments t 
         ORDER BY t.id DESC
-    `).all();
+    `, []);
     res.json({ tournaments, divisions: DIVISIONS });
 });
 
@@ -30,15 +30,17 @@ router.post('/tournaments', async (req, res) => {
     if (!div) return res.status(400).json({ error: 'Неизвестный дивизион' });
 
     // Проверяем, нет ли уже активного турнира в этом дивизионе
-    const existing = await db.prepare(
-        "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress')"
-    ).get(division) as any;
+    const existing = await db.one(
+        "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress')",
+        [division]
+    ) as any;
     if (existing) return res.status(400).json({ error: 'В этом дивизионе уже есть активный турнир' });
 
     const now = Math.floor(Date.now() / 1000);
-    await db.prepare(
-        'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(division, status || 'registration', registrationStart || now, registrationEnd || (now + 86400), prizePool || div.basePool, now);
+    await db.run(
+        'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [division, status || 'registration', registrationStart || now, registrationEnd || (now + 86400), prizePool || div.basePool, now]
+    );
 
     res.json({ success: true });
 });
@@ -48,17 +50,18 @@ router.put('/tournaments/:id', async (req, res) => {
     const { division, status, registrationStart, registrationEnd, prizePool } = req.body;
     const id = req.params.id;
 
-    const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id) as any;
+    const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [id]) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });
 
-    await db.prepare(
-        'UPDATE tournaments SET status=?, registrationStart=?, registrationEnd=?, prizePool=? WHERE id=?'
-    ).run(
-        status || t.status,
-        registrationStart ?? t.registrationStart,
-        registrationEnd ?? t.registrationEnd,
-        prizePool ?? t.prizePool,
-        id
+    await db.run(
+        'UPDATE tournaments SET status=?, registrationStart=?, registrationEnd=?, prizePool=? WHERE id=?',
+        [
+            status || t.status,
+            registrationStart ?? t.registrationStart,
+            registrationEnd ?? t.registrationEnd,
+            prizePool ?? t.prizePool,
+            id
+        ]
     );
 
     res.json({ success: true });
@@ -67,27 +70,27 @@ router.put('/tournaments/:id', async (req, res) => {
 // Удалить турнир
 router.delete('/tournaments/:id', async (req, res) => {
     const id = req.params.id;
-    await db.prepare('DELETE FROM tournament_participants WHERE tournamentId = ?').run(id);
-    await db.prepare('DELETE FROM tournament_matches WHERE tournamentId = ?').run(id);
-    await db.prepare('DELETE FROM tournaments WHERE id = ?').run(id);
+    await db.run('DELETE FROM tournament_participants WHERE tournamentId = ?', [id]);
+    await db.run('DELETE FROM tournament_matches WHERE tournamentId = ?', [id]);
+    await db.run('DELETE FROM tournaments WHERE id = ?', [id]);
     res.json({ success: true });
 });
 
 // Принудительно завершить турнир (сменить статус на completed)
 router.post('/tournaments/:id/finish', async (req, res) => {
     const id = req.params.id;
-    const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id) as any;
+    const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [id]) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });
-    await db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('completed', id);
+    await db.run('UPDATE tournaments SET status = ? WHERE id = ?', ['completed', id]);
     res.json({ success: true, message: `Турнир «${t.division}» завершён` });
 });
 
 // Запустить турнир (in_progress)
 router.post('/tournaments/:id/start', async (req, res) => {
     const id = req.params.id;
-    const t = await db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id) as any;
+    const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [id]) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });
-    await db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run('in_progress', id);
+    await db.run('UPDATE tournaments SET status = ? WHERE id = ?', ['in_progress', id]);
     res.json({ success: true, message: `Турнир «${t.division}» запущен` });
 });
 

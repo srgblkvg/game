@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import db from '../database';
+import { db } from '../db/index';
 import { currentStats, isSlotCompatible } from '../game/stats';
 import { getUserById, getBaseStats, recalcHpOnEquip } from '../db/helpers';
 
@@ -11,7 +11,7 @@ router.post('/character/equip', async (req, res) => {
     const { slotId, itemId } = req.body;
     if (!slotId) return res.status(400).json({ error: 'slotId required' });
 
-    const user = await getUserById(db, userId);
+    const user = await getUserById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -33,8 +33,8 @@ router.post('/character/equip', async (req, res) => {
         const newHp = recalcHpOnEquip(user.currentHp, oldMaxHp, newMaxHp);
 
         const now = Math.floor(Date.now() / 1000);
-        await db.prepare('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?')
-            .run(JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId);
+        await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
+            [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
         return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp });
     }
 
@@ -77,8 +77,8 @@ router.post('/character/equip', async (req, res) => {
     const newHp = recalcHpOnEquip(user.currentHp, oldStats.hp, newMaxHp);
 
     const now = Math.floor(Date.now() / 1000);
-    await db.prepare('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?')
-        .run(JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId);
+    await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
+        [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
 
     res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp });
 });
@@ -89,7 +89,7 @@ router.post('/character/salvage', async (req, res) => {
     const { itemIds } = req.body;
     if (!itemIds) return res.status(400).json({ error: 'itemIds required' });
 
-    const user = await getUserById(db, userId);
+    const user = await getUserById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     let inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -108,16 +108,14 @@ router.post('/character/salvage', async (req, res) => {
         return true;
     });
 
-    const getCraftItemByRarityId = await db.prepare(`
-        SELECT c.id, c.name, c.rarity_id, c.type, c.image,
-               r.display_name as rarity_display, r.color as rarity_color
-        FROM craft_items c
-        JOIN rarities r ON c.rarity_id = r.id
-        WHERE c.rarity_id = ?
-    `);
-
     for (const mat of materialsToAdd) {
-        const craftItem = getCraftItemByRarityId.get(mat.rarity_id) as any;
+        const craftItem = await db.one(`
+            SELECT c.id, c.name, c.rarity_id, c.type, c.image,
+                   r.display_name as rarity_display, r.color as rarity_color
+            FROM craft_items c
+            JOIN rarities r ON c.rarity_id = r.id
+            WHERE c.rarity_id = ?
+        `, [mat.rarity_id]) as any;
         if (!craftItem) continue;
 
         const existingCraft = inventory.find(
@@ -140,22 +138,22 @@ router.post('/character/salvage', async (req, res) => {
         }
     }
 
-    await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
     res.json({ success: true, inventory });
 });
 
 // Расширить инвентарь
 router.post('/character/expand-inventory', async (req, res) => {
     const userId = req.userId;
-    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const currentSlots = user.inventorySlots || 10;
     const price = 100 * Math.pow(2, currentSlots - 10);
     if (user.money < price) return res.status(400).json({ error: 'Недостаточно монет' });
 
-    await db.prepare('UPDATE users SET money = money - ?, inventorySlots = inventorySlots + 1 WHERE id = ?')
-        .run(price, userId);
+    await db.run('UPDATE users SET money = money - ?, inventorySlots = inventorySlots + 1 WHERE id = ?',
+        [price, userId]);
 
     res.json({ inventorySlots: currentSlots + 1, moneyAfter: user.money - price });
 });

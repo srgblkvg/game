@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import db from '../database';
+import { db } from '../db/index';
 import { collectGuildTax } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { getDrinkBonuses } from '../game/drinks';
@@ -8,21 +8,21 @@ import { getUserById, getBaseStats, enrichEquipment, applyExp } from '../db/help
 
 const router = Router();
 
-const getItemData = db.prepare(`
+const ITEM_DATA_SQL = `
     SELECT i.rarity_id, i.image, r.display_name as rarity_display, r.color as rarity_color
     FROM items i JOIN rarities r ON i.rarity_id = r.id
     WHERE i.name = ? AND i.slot = ?
-`);
-const getCraftData = db.prepare(`
+`;
+const CRAFT_DATA_SQL = `
     SELECT c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color
     FROM craft_items c JOIN rarities r ON c.rarity_id = r.id
     WHERE c.id = ?
-`);
+`;
 
 // Загрузить персонажа (текущего пользователя)
 router.get('/character/me', async (req, res) => {
     const userId = req.userId;
-    const user = await getUserById(db, userId);
+    const user = await getUserById(userId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     let inventory = JSON.parse(user.inventory || '[]');
@@ -32,7 +32,7 @@ router.get('/character/me', async (req, res) => {
     inventory = await Promise.all(inventory.map(async (item) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
             if (item.rarity_id === undefined) {
-                const craftRow = await getCraftData.get(Number(item.id)) as any;
+                const craftRow = await db.one(CRAFT_DATA_SQL, [Number(item.id)]) as any;
                 if (craftRow) {
                     changed = true;
                     return {
@@ -47,7 +47,7 @@ router.get('/character/me', async (req, res) => {
             }
         } else if (item.slot) {
             if (item.rarity_id === undefined) {
-                const itemRow = await getItemData.get(item.name, item.slot) as any;
+                const itemRow = await db.one(ITEM_DATA_SQL, [item.name, item.slot]) as any;
                 if (itemRow) {
                     changed = true;
                     return {
@@ -64,13 +64,13 @@ router.get('/character/me', async (req, res) => {
     }));
 
     // Обогащаем экипировку
-    const { enriched: enrichedEquipment, changed: equipChanged } = await enrichEquipment(db, equipment);
+    const { enriched: enrichedEquipment, changed: equipChanged } = await enrichEquipment(equipment);
 
     if (changed) {
-        await db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), userId);
+        await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
     }
     if (equipChanged) {
-        await db.prepare('UPDATE users SET equipment = ? WHERE id = ?').run(JSON.stringify(enrichedEquipment), userId);
+        await db.run('UPDATE users SET equipment = ? WHERE id = ?', [JSON.stringify(enrichedEquipment), userId]);
     }
 
     const base = getBaseStats(user);
@@ -78,8 +78,8 @@ router.get('/character/me', async (req, res) => {
     const stats = currentStats(base, enrichedEquipment, drinkBonuses);
 
     // Бонус коллекции: +1% к основным статам за каждый предмет в коллекции
-    const collectionCount = (await db.prepare('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?').get(userId) as any).cnt;
-    const totalCollectionItems = (await db.prepare('SELECT COUNT(*) as cnt FROM collection_set_items').get() as any).cnt;
+    const collectionCount = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt;
+    const totalCollectionItems = (await db.one('SELECT COUNT(*) as cnt FROM collection_set_items') as any).cnt;
     if (collectionCount > 0) {
         const bonus = 1 + collectionCount / 100;
         stats.s = Math.round(stats.s * bonus);
@@ -95,14 +95,14 @@ router.get('/character/me', async (req, res) => {
         const nowSec = Math.floor(Date.now() / 1000);
         if (nowSec >= jobData.endTime) {
             // Налог гильдии (работы)
-            const rewardAfterTax = await collectGuildTax(db, userId, jobData.reward, 'tax_job');
+            const rewardAfterTax = await collectGuildTax(userId, jobData.reward, 'tax_job');
             const newMoney = user.money + rewardAfterTax;
             const expGain = jobData.expReward || 0;
-            const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(db, userId, expGain, user.exp, user.level, user.statPoints || 0);
-            await db.prepare('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL, totalJobMoney = totalJobMoney + ?, totalJobSeconds = totalJobSeconds + ? WHERE id = ?')
-                .run(newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId);
-            await db.prepare('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-                .run(userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString(), jobData.premiumBonus || 0, expGain);
+            const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(userId, expGain, user.exp, user.level, user.statPoints || 0);
+            await db.run('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL, totalJobMoney = totalJobMoney + ?, totalJobSeconds = totalJobSeconds + ? WHERE id = ?',
+                [newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId]);
+            await db.run('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString(), jobData.premiumBonus || 0, expGain]);
             user.money = newMoney;
             user.level = newLevel;
             user.statPoints = newStatPoints;
@@ -125,7 +125,7 @@ router.get('/character/me', async (req, res) => {
     // Если currentHp > maxHp (например после изменения бонусов) — ограничиваем
     if (currentHp > maxHp) {
         currentHp = maxHp;
-        await db.prepare('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?').run(maxHp, now, userId);
+        await db.run('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?', [maxHp, now, userId]);
     }
 
     const openPrivateTabs = JSON.parse(user.openPrivateTabs || '[]');
@@ -162,8 +162,8 @@ router.get('/character/me', async (req, res) => {
 router.post('/character/save', async (req, res) => {
     const userId = req.userId;
     const { inventory, equipment, level, exp, money, totalBattles, wins } = req.body;
-    await db.prepare('UPDATE users SET level=?, exp=?, money=?, totalBattles=?, wins=?, inventory=?, equipment=? WHERE id=?')
-        .run(level, exp, money, totalBattles, wins, JSON.stringify(inventory), JSON.stringify(equipment), userId);
+    await db.run('UPDATE users SET level=?, exp=?, money=?, totalBattles=?, wins=?, inventory=?, equipment=? WHERE id=?',
+        [level, exp, money, totalBattles, wins, JSON.stringify(inventory), JSON.stringify(equipment), userId]);
     res.json({ success: true });
 });
 
@@ -172,7 +172,7 @@ router.post('/character/save-tabs', async (req, res) => {
     const userId = req.userId;
     const { tabs } = req.body;
     if (!Array.isArray(tabs)) return res.status(400).json({ error: 'tabs должен быть массивом' });
-    await db.prepare('UPDATE users SET openPrivateTabs = ? WHERE id = ?').run(JSON.stringify(tabs), userId);
+    await db.run('UPDATE users SET openPrivateTabs = ? WHERE id = ?', [JSON.stringify(tabs), userId]);
     res.json({ success: true });
 });
 
@@ -180,7 +180,7 @@ router.post('/character/save-tabs', async (req, res) => {
 router.get('/users/find', async (req, res) => {
     const username = req.query.username as string;
     if (!username) return res.status(400).json({ error: 'Укажите username' });
-    const user = await db.prepare('SELECT id, username FROM users WHERE username = ?').get(username) as any;
+    const user = await db.one('SELECT id, username FROM users WHERE username = ?', [username]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     res.json(user);
 });
@@ -189,9 +189,10 @@ router.get('/users/find', async (req, res) => {
 router.get('/users/search', async (req, res) => {
     const q = req.query.q as string;
     if (!q || q.length < 2) return res.json([]);
-    const users = await db.prepare(
-        'SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10'
-    ).all(`%${q}%`);
+    const users = await db.query(
+        'SELECT id, username, level FROM users WHERE username LIKE ? AND id > 0 LIMIT 10',
+        [`%${q}%`]
+    );
     res.json(users);
 });
 

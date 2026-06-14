@@ -48,8 +48,8 @@ export function runBattle(
 ): BattleResult {
   const statsA = currentStats(attacker.base, attacker.equipment, attacker.drinkBonuses, attacker.collectionBonus);
   const statsD = currentStats(defender.base, defender.equipment, defender.drinkBonuses, defender.collectionBonus);
-  let hpA = attacker.currentHp ?? statsA.hp;
-  let hpD = defender.currentHp ?? statsD.hp;
+  let hpA = (attacker.currentHp != null && attacker.currentHp > 0) ? attacker.currentHp : statsA.hp;
+  let hpD = (defender.currentHp != null && defender.currentHp > 0) ? defender.currentHp : statsD.hp;
   let stunnedA = false;
   let stunnedD = false;
   const log: string[] = [];

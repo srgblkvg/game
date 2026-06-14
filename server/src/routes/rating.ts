@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import db from '../database';
+import { db } from '../db/index';
 
 const router = Router();
 
 // Звания по ELO
-async function getRank(elo: number): { name: string; icon: string; color: string } {
+function getRank(elo: number): { name: string; icon: string; color: string } {
     if (elo >= 2100) return { name: 'Смерть', icon: '👑', color: '#ff4040' };
     if (elo >= 1900) return { name: 'Вечность', icon: '♦♦♦', color: '#20c0c0' };
     if (elo >= 1700) return { name: 'Бездна', icon: '♦♦', color: '#c02020' };
@@ -23,17 +23,17 @@ router.get('/rating', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
 
-    const total = (await db.prepare('SELECT COUNT(*) as cnt FROM users WHERE id > 0').get() as any).cnt;
-    const users = await db.prepare(`
+    const total = (await db.one('SELECT COUNT(*) as cnt FROM users WHERE id > 0', []) as any).cnt;
+    const users = await db.query(`
         SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, g.name as guildName, u.guildId
         FROM users u
         LEFT JOIN guilds g ON u.guildId = g.id
         WHERE u.id > 0
         ORDER BY u.elo DESC
         LIMIT ? OFFSET ?
-    `).all(limit, offset) as any[];
+    `, [limit, offset]) as any[];
 
-    const result = users.map(async (u) => ({
+    const result = users.map((u) => ({
         ...u,
         elo: u.elo || 1000,
         rank: getRank(u.elo || 1000),
@@ -47,13 +47,14 @@ router.get('/my-position', async (req, res) => {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: 'Не авторизован' });
 
-    const user = await db.prepare('SELECT elo FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.one('SELECT elo FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
     const elo = user.elo || 1000;
-    const position = (await db.prepare(
-        'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND (elo > ? OR (elo = ? AND id < ?))'
-    ).get(elo, elo, userId) as any).cnt + 1;
+    const position = (await db.one(
+        'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND (elo > ? OR (elo = ? AND id < ?))',
+        [elo, elo, userId]
+    ) as any).cnt + 1;
 
     res.json({ position });
 });

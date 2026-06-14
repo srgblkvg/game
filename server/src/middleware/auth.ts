@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../env';
 import { isTokenRevoked } from '../tokenBlacklist';
-import db from '../database';
+import { db } from '../db/index';
 
 // Временное отключение гостевых ограничений (тестирование)
 let guestRestrictionsDisabled = false;
@@ -33,7 +33,7 @@ export async function authMiddleware(req: any, res: any, next: any) {
             const last = lastLoginUpdates.get(key) || 0;
             if (now - last > 300) {
                 lastLoginUpdates.set(key, now);
-                await db.prepare('UPDATE users SET lastLoginAt = ? WHERE id = ?').run(now, decoded.userId);
+                await db.run('UPDATE users SET lastLoginAt = ? WHERE id = ?', [now, decoded.userId]);
             }
         }
 

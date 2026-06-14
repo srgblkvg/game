@@ -1,6 +1,7 @@
 import { Express } from 'express';
-import { authMiddleware, requireAdmin, requirePlayer, requireFullAccess } from './middleware/auth';
+import { authMiddleware, requireAdmin, requirePlayer, requireFullAccess, toggleGuestRestrictions } from './middleware/auth';
 import { guestCooldown } from './middleware/guestCooldown';
+import { db } from './db/index';
 import authRoutes from './routes/auth';
 import adminAuthRoutes from './routes/adminAuth';
 import adminRoutes from './routes/admin';
@@ -46,9 +47,8 @@ export function setupRoutes(app: Express) {
   app.use('/api', actionsRoutes);
 
   // Этажи (публичный — нужен бестиарию)
-  app.get('/api/floors', (_req: any, res) => {
-    const db = require('./database').default;
-    res.json(db.prepare('SELECT * FROM floors ORDER BY sort_order, name').all());
+  app.get('/api/floors', async (_req: any, res) => {
+    res.json(await db.query('SELECT * FROM floors ORDER BY sort_order, name'));
   });
 
   // Серверное время (публичный)
@@ -72,7 +72,6 @@ export function setupRoutes(app: Express) {
 
   // Тоггл гостевых ограничений
   app.post('/api/admin/toggle-guest', authMiddleware, requireAdmin, (req, res) => {
-    const { toggleGuestRestrictions } = require('./middleware/auth');
     const disabled = toggleGuestRestrictions();
     res.json({ guestRestrictionsDisabled: disabled });
   });

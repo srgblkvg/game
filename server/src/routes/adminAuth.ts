@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import db from '../database';
+import { db } from '../db/index';
 
 const router = Router();
 
 // Проверить, есть ли хоть один администратор (в таблице admins)
 router.get('/admin/check', async (req, res) => {
-    const admin = await db.prepare('SELECT id FROM admins LIMIT 1').get();
+    const admin = await db.one('SELECT id FROM admins LIMIT 1', []);
     res.json({ exists: !!admin });
 });
 
@@ -16,11 +16,11 @@ router.post('/admin/register', async (req, res) => {
     if (!username || !password) return res.status(400).json({ error: 'Требуются логин и пароль' });
 
     // Проверяем, что администраторов ещё нет
-    const existingAdmin = await db.prepare('SELECT id FROM admins LIMIT 1').get();
+    const existingAdmin = await db.one('SELECT id FROM admins LIMIT 1', []);
     if (existingAdmin) return res.status(400).json({ error: 'Администратор уже существует' });
 
     const passwordHash = bcrypt.hashSync(password, 10);
-    await db.prepare('INSERT INTO admins (username, passwordHash) VALUES (?, ?)').run(username, passwordHash);
+    await db.run('INSERT INTO admins (username, passwordHash) VALUES (?, ?)', [username, passwordHash]);
 
     res.json({ success: true });
 });

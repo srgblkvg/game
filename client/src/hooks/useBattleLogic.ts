@@ -278,6 +278,8 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             totalBattles: character.totalBattles + 1,
             wins: battleResult.winnerId === userId ? character.wins + 1 : character.wins,
         });
+        // Полное обновление с сервера (ELO, рейтинги, etc.)
+        import('../api/character').then(m => m.fetchCharacter().then(setCharacter).catch(() => {}));
     };
 
     return {

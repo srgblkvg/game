@@ -8,8 +8,8 @@ const GUEST_COOLDOWN_MS = 0; // задержка отключена
 /**
  * Замедляет гостевые запросы — не чаще 1 действия в 5 секунд.
  */
-export function guestCooldown(req: any, res: Response, next: NextFunction) {
-    if (isGuestRestrictionsDisabled()) return next();
+export async function guestCooldown(req: any, res: Response, next: NextFunction) {
+    if (await isGuestRestrictionsDisabled()) return next();
     if (!req.isGuest) return next();
 
     const userId = req.userId;

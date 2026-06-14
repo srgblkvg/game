@@ -1,4 +1,4 @@
-import type Database from 'better-sqlite3';
+import { db } from '../db/index';
 
 /**
  * Расчёт нового ELO по формуле:
@@ -15,7 +15,7 @@ export function calcElo(playerElo: number, opponentElo: number, playerWon: boole
 /**
  * Декай рейтинга за неактивность в PvP
  */
-export async function applyDecay(db: InstanceType<typeof Database>, userId: number, lastPvpTime: number, elo: number): number {
+export async function applyDecay(userId: number, lastPvpTime: number, elo: number): Promise<number> {
     const now = Math.floor(Date.now() / 1000);
     if (!lastPvpTime) return elo;
 
@@ -31,7 +31,7 @@ export async function applyDecay(db: InstanceType<typeof Database>, userId: numb
     const newElo = Math.max(100, elo - decay);
 
     if (newElo !== elo) {
-        await db.prepare('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?').run(newElo, now, userId);
+        await db.run('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?', [newElo, now, userId]);
     }
 
     return newElo;
@@ -42,16 +42,16 @@ export async function applyDecay(db: InstanceType<typeof Database>, userId: numb
  * Возвращает { eloAdded, newElo }
  */
 export async function addPveRating(
-    db: InstanceType<typeof Database>,
     userId: number,
     amount: number,
     pveRating: number,
     elo: number,
     cooldownCheck: (user: any) => boolean,
-): { eloAdded: number; newElo: number } | null {
-    const user = await db.prepare(
-        'SELECT lastPveRatingTime, lastBossKillDate, pveRating, elo FROM users WHERE id = ?'
-    ).get(userId) as any;
+): Promise<{ eloAdded: number; newElo: number } | null> {
+    const user = await db.one(
+        'SELECT lastPveRatingTime, lastBossKillDate, pveRating, elo FROM users WHERE id = ?',
+        [userId]
+    );
     if (!user) return null;
 
     if (!cooldownCheck(user)) return null;
@@ -72,8 +72,8 @@ export async function addPveRating(
 /**
  * Проверка и сброс сезона при необходимости
  */
-export async function checkSeasonReset(db: InstanceType<typeof Database>): boolean {
-    const season = await db.prepare("SELECT * FROM seasons WHERE status = 'active' LIMIT 1").get() as any;
+export async function checkSeasonReset(): Promise<boolean> {
+    const season = await db.one("SELECT * FROM seasons WHERE status = 'active' LIMIT 1");
     if (!season) return false;
 
     const now = new Date();
@@ -81,20 +81,19 @@ export async function checkSeasonReset(db: InstanceType<typeof Database>): boole
     if (now < endDate) return false;
 
     // Сезон закончился — архивируем топ-10
-    const top10 = await db.prepare(
+    const top10 = await db.query(
         'SELECT id, username, elo FROM users ORDER BY elo DESC LIMIT 10'
-    ).all() as any[];
-
-    const insertHof = await db.prepare(
-        'INSERT INTO hall_of_fame (seasonId, userId, rank, elo, title) VALUES (?, ?, ?, ?, ?)'
     );
 
     for (let i = 0; i < top10.length; i++) {
-        insertHof.run(season.id, top10[i].id, i + 1, top10[i].elo, null);
+        await db.run(
+            'INSERT INTO hall_of_fame (seasonId, userId, rank, elo, title) VALUES (?, ?, ?, ?, ?)',
+            [season.id, top10[i].id, i + 1, top10[i].elo, null]
+        );
     }
 
     // Закрываем старый сезон
-    await db.prepare("UPDATE seasons SET status = 'finished' WHERE id = ?").run(season.id);
+    await db.run("UPDATE seasons SET status = 'finished' WHERE id = ?", [season.id]);
 
     // Создаём новый
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -103,17 +102,16 @@ export async function checkSeasonReset(db: InstanceType<typeof Database>): boole
                         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     const seasonName = `${monthNames[nextMonth.getMonth()]} ${nextMonth.getFullYear()}`;
 
-    await db.prepare('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)').run(
+    await db.run('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)', [
         seasonName, nextMonth.toISOString(), endOfNext.toISOString()
-    );
+    ]);
 
     // Мягкий сброс ELO: Новый = 1000 + (Старый − 1000) × 0.5
-    const allUsers = await db.prepare('SELECT id, elo FROM users').all() as any[];
-    const resetStmt = await db.prepare('UPDATE users SET elo = ?, seasonWins = 0, seasonLosses = 0, pveRating = 0 WHERE id = ?');
+    const allUsers = await db.query('SELECT id, elo FROM users');
     for (const u of allUsers) {
         const oldElo = u.elo || 1000;
         const newElo = Math.round(1000 + (oldElo - 1000) * 0.5);
-        resetStmt.run(newElo, u.id);
+        await db.run('UPDATE users SET elo = ?, seasonWins = 0, seasonLosses = 0, pveRating = 0 WHERE id = ?', [newElo, u.id]);
     }
 
     return true;

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import db from '../database';
+import { db } from '../db/index';
 
 const router = Router();
 export const adminFeedbackRouter = Router();
@@ -11,12 +11,13 @@ router.post('/feedback', async (req, res) => {
     if (!subject || !subject.trim()) return res.status(400).json({ error: 'Укажите тему' });
     if (!message || !message.trim()) return res.status(400).json({ error: 'Введите сообщение' });
 
-    const user = await db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
+    const user = await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(400).json({ error: 'Пользователь не найден' });
 
-    await db.prepare(
-        'INSERT INTO feedback_messages (userId, username, subject, message) VALUES (?, ?, ?, ?)'
-    ).run(userId, user.username, subject.trim(), message.trim());
+    await db.run(
+        'INSERT INTO feedback_messages (userId, username, subject, message) VALUES (?, ?, ?, ?)',
+        [userId, user.username, subject.trim(), message.trim()]
+    );
 
     res.json({ success: true, message: 'Обращение отправлено' });
 });
@@ -27,10 +28,11 @@ adminFeedbackRouter.get('/feedback', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const offset = (page - 1) * limit;
 
-    const total = (await db.prepare('SELECT COUNT(*) as cnt FROM feedback_messages').get() as any).cnt;
-    const messages = await db.prepare(
-        'SELECT * FROM feedback_messages ORDER BY id DESC LIMIT ? OFFSET ?'
-    ).all(limit, offset);
+    const total = (await db.one('SELECT COUNT(*) as cnt FROM feedback_messages', []) as any).cnt;
+    const messages = await db.query(
+        'SELECT * FROM feedback_messages ORDER BY id DESC LIMIT ? OFFSET ?',
+        [limit, offset]
+    );
 
     res.json({ messages, total, page, totalPages: Math.ceil(total / limit) });
 });
@@ -38,7 +40,7 @@ adminFeedbackRouter.get('/feedback', async (req, res) => {
 // Админ: отметить прочитанным
 adminFeedbackRouter.post('/feedback/read', async (req, res) => {
     const { id } = req.body;
-    await db.prepare('UPDATE feedback_messages SET read = 1 WHERE id = ?').run(id);
+    await db.run('UPDATE feedback_messages SET read = 1 WHERE id = ?', [id]);
     res.json({ success: true });
 });
 
