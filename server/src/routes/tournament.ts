@@ -377,9 +377,10 @@ async function autoAdvance(tournamentId: number) {
                 [t.division]
             ) as any;
             if (lastCompleted?.completedAt) {
-                const completedTime = new Date(lastCompleted.completedAt + 'Z').getTime();
-                const oneHourLater = completedTime + 3600 * 1000;
-                if (Date.now() < oneHourLater) return; // ещё не время
+                const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
+                  : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
+                const oneHourLater = ts + 3600 * 1000;
+                if (Date.now() < oneHourLater) return;
             }
             const divConfig = divisions.find(d => d.name === t.division)!;
             const now2 = Math.floor(Date.now() / 1000);
@@ -764,19 +765,22 @@ router.post('/tournament/create-custom', async (req, res) => {
 
 export default router;
 
-// ── Авто-таймер: каждые 10 секунд продвигаем активные турниры ──
-const activeAutoAdvance = new Set<number>();
+// ── Авто-таймер: каждые 5 секунд продвигаем турниры (последовательно) ──
+let timerRunning = false;
 setInterval(async () => {
+  if (timerRunning) return;
+  timerRunning = true;
   try {
     const active = await db.query(
       "SELECT id FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id",
       []
     ) as any[];
     for (const t of active) {
-      if (!activeAutoAdvance.has(t.id)) {
-        activeAutoAdvance.add(t.id);
-        autoAdvance(t.id).finally(() => activeAutoAdvance.delete(t.id));
-      }
+      await autoAdvance(t.id);
     }
-  } catch (e: any) { console.error('tournament auto-advance err:', e?.message || e); }
-}, 10000);
+  } catch (e: any) {
+    console.error('tournament timer err:', e?.message || e);
+  } finally {
+    timerRunning = false;
+  }
+}, 5000);
