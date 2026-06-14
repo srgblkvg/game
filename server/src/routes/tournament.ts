@@ -317,7 +317,7 @@ async function finishTournament(tournamentId: number) {
             if (wonInR1) delta = 3; // прошёл первый раунд
             else delta = -3;        // вылетел в первом раунде
         }
-        await db.run('UPDATE users SET tournamentElo = MAX(100, tournamentElo + ?) WHERE id = ?',
+        await db.run('UPDATE users SET tournamentElo = GREATEST(100, tournamentElo + ?) WHERE id = ?',
             [delta, p.userId]);
     }
 }
