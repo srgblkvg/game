@@ -158,11 +158,19 @@ export default function HistoryPage() {
         if (type === 'tournament') {
             const ss = data.snapshotStats?JSON.parse(data.snapshotStats):null;
             const canc = data.status==='cancelled';
-            return <EntryRow time={fmt(typeof data.createdAt==='number'?data.createdAt*1000:data.createdAt)}>
+            const top3 = data.top3 || [];
+            return <EntryRow time={fmt(typeof data.createdAt==='number'?data.createdAt*1000:data.createdAt)} onClick={()=>navigate('/tournament?tab=completed')}>
+                <div>
                 <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{data.division==='custom'?data.name||'Турнир':data.division}»{canc?' отменён':' завершён'}</span>
                 {canc?<span className="text-[var(--color-text-muted)] ml-1">Не набралось игроков</span>:
-                ss?<span className="text-[var(--color-accent-success)] font-bold ml-1">{ss.place}-е место {ss.prize>0?formatMoney(ss.prize):'без приза'}</span>:
-                <span className="text-[var(--color-text-muted)] ml-1">Участие</span>}
+                <div className="mt-1">
+                {ss?<span className="text-[var(--color-accent-success)] font-bold">{ss.place}-е место {ss.prize>0?formatMoney(ss.prize):'без приза'}</span>:
+                <span className="text-[var(--color-text-muted)]">Участие</span>}
+                {top3.length>0 && <div className="flex gap-2 mt-0.5 text-[0.6rem] text-[var(--color-text-muted)]">
+                    {top3.map((p:any,i:number)=><span key={i} className={i===0?'text-[var(--color-accent-gold)]':i===1?'text-[var(--color-accent-info)]':'text-[var(--color-accent-danger)]'}>{['🥇','🥈','🥉'][i]} {p.username}</span>)}
+                </div>}
+                </div>}
+                </div>
             </EntryRow>;
         }
         if (type === 'quest') {
