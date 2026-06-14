@@ -36,6 +36,8 @@ export function useLongPress(
     return {
         onTouchStart: start,
         onTouchEnd: end,
-        onTouchMove: end, // отменяем при перемещении пальца
+        onTouchMove: end,
+        onMouseDown: start,
+        onMouseUp: end,
     };
 }

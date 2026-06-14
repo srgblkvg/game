@@ -69,7 +69,6 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
             onMouseLeave={isTouchDevice ? undefined : onHideTooltip}
             {...longPress}
             onContextMenu={(e) => e.preventDefault()}
-            onClick={canAdd ? (() => onAdd()) : undefined}
         >
             {getItemImage(item) ? (
                 <img src={getItemImage(item)!} alt={item.name} className="w-full h-full object-contain"
