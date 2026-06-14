@@ -500,8 +500,8 @@ router.get('/tournament', async (req, res) => {
 
     // Автопродвижение
     const allForAdvance = await db.query(
-        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress', 'completed') AND CAST(createdAt AS BIGINT) > ? ORDER BY id DESC",
-        [Math.floor(Date.now() / 1000) - 86400]
+        "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC",
+        []
     ) as any[];
     for (const t of allForAdvance) {
         autoAdvance(t.id);
