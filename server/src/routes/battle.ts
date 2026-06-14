@@ -46,7 +46,7 @@ router.post('/battle', async (req, res) => {
 
     // Актуализируем HP защитника (офлайн-реген)
     const dCollCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [defender.id]) as any).cnt || 0;
-    const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'), undefined, dCollCnt).hp;
+    const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'), getDrinkBonuses(defender), dCollCnt).hp;
     const defenderCurrentHp = await applyHpRegen({
         id: defender.id,
         currentHp: defender.currentHp,

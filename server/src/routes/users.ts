@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { getBaseStats, enrichEquipment } from '../db/helpers';
 import { currentStats } from '../game/stats';
+import { getDrinkBonuses } from '../game/drinks';
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router.get('/character/public/:userId', async (req, res) => {
     const { enriched: enrichedEquipment } = await enrichEquipment(user.equipment ? JSON.parse(user.equipment) : {});
     const base = getBaseStats(user);
     const collCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt || 0;
-    const stats = currentStats(base, enrichedEquipment, undefined, collCnt);
+    const stats = currentStats(base, enrichedEquipment, getDrinkBonuses(user), collCnt);
 
     res.json({
         id: user.id,
