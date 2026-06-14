@@ -336,7 +336,7 @@ async function autoAdvance(tournamentId: number) {
         // Время регистрации истекло — стартуем
         await db.run('UPDATE tournaments SET status = ? WHERE id = ?', ['in_progress', tournamentId]);
         await generateBracket(tournamentId);
-        autoAdvance(tournamentId);
+        await autoAdvance(tournamentId);
         return;
     }
 
@@ -358,7 +358,7 @@ async function autoAdvance(tournamentId: number) {
         const resolvedRound = await resolveCurrentRound(tournamentId);
         if (resolvedRound > 0) {
             advanceWinners(tournamentId, resolvedRound);
-            autoAdvance(tournamentId);
+            await autoAdvance(tournamentId);
         }
         return;
     }
@@ -508,7 +508,7 @@ router.get('/tournament', async (req, res) => {
         []
     ) as any[];
     for (const t of allForAdvance) {
-        autoAdvance(t.id);
+        await autoAdvance(t.id);
     }
 
     // Фильтр по типу: all (по умолчанию), official, custom
@@ -694,7 +694,7 @@ router.post('/tournament/register', async (req, res) => {
     ) as any).cnt;
     if (count >= maxPlayers) {
         await db.run('UPDATE tournaments SET status = ? WHERE id = ?', ['in_progress', tournament.id]);
-        generateBracket(tournament.id);
+        await generateBracket(tournament.id);
         let tt = await db.one('SELECT * FROM tournaments WHERE id = ?', [tournament.id]) as any;
         while (tt && tt.status === 'in_progress') {
             const resolvedRound = await resolveCurrentRound(tt.id);
