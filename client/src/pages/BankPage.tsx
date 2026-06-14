@@ -55,7 +55,7 @@ export default function BankPage() {
         try { const d = await api('/bank/transfer',{accountNumber:transferAccount.trim().toUpperCase(),amount:amt}); setBank(d.bank); setTransferAccount(''); setTransferAmount(''); setMessage(d.message); setError(''); loadTransfers(); } catch(e:any){setError(e.message)}
     };
 
-    const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>new Date(b.createdAt+'Z').getTime()-new Date(a.createdAt+'Z').getTime()).slice(0,20);
+    const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>new Date(b.createdAt * 1000).getTime()-new Date(a.createdAt * 1000).getTime()).slice(0,20);
 
     return (
         <div className="max-w-md mx-auto px-4 py-4">
@@ -71,8 +71,8 @@ export default function BankPage() {
                 <h3 className="font-bold text-sm mb-2">История операций</h3>
                 {allHistory.length===0 ? <p className="text-xs text-[var(--color-text-muted)]">Нет операций</p> :
                 <div className="space-y-2">{allHistory.map((h:any)=>{
-                    if (h._type==='transfer') { const out = h.fromUserId===user?.id; return <div key={'t'+h.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?h.amount:h.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${h.toAccount}`:`от ${h.fromAccount}`}{h.commission>0&&out?`, ком. ${h.commission}`:''}</span><span className="ml-auto text-[var(--color-text-muted)]">{new Date(h.createdAt+'Z').toLocaleString()}</span></div></div>; }
-                    return <div key={'o'+h.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={h.type==='deposit'?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}>{h.type==='deposit'?'📥':'📤'} {formatMoney(h.amount)}</span>{h.commission>0&&<span className="text-[var(--color-text-muted)]">ком. {formatMoney(h.commission)}</span>}<span className="ml-auto text-[var(--color-text-muted)]">{new Date(h.createdAt+'Z').toLocaleString()}</span></div></div>;
+                    if (h._type==='transfer') { const out = h.fromUserId===user?.id; return <div key={'t'+h.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?h.amount:h.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${h.toAccount}`:`от ${h.fromAccount}`}{h.commission>0&&out?`, ком. ${h.commission}`:''}</span><span className="ml-auto text-[var(--color-text-muted)]">{new Date(h.createdAt * 1000).toLocaleString()}</span></div></div>; }
+                    return <div key={'o'+h.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={h.type==='deposit'?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}>{h.type==='deposit'?'📥':'📤'} {formatMoney(h.amount)}</span>{h.commission>0&&<span className="text-[var(--color-text-muted)]">ком. {formatMoney(h.commission)}</span>}<span className="ml-auto text-[var(--color-text-muted)]">{new Date(h.createdAt * 1000).toLocaleString()}</span></div></div>;
                 })}</div>}
             </Card>}
 
