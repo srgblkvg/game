@@ -7,6 +7,7 @@ export function formatGameTime(date: string | number | Date): string {
     const d = typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') && !date.includes('T')
         ? new Date(date + 'Z')
         : new Date(date);
+    if (isNaN(d.getTime())) return "N/A";
     const h = d.getUTCHours().toString().padStart(2, '0');
     const m = d.getUTCMinutes().toString().padStart(2, '0');
     return `${h}:${m}`;
@@ -17,9 +18,11 @@ export function formatGameTime(date: string | number | Date): string {
  * Строки без часового пояса считаются UTC
  */
 export function formatGameDateTime(date: string | number | Date): string {
+    if (date === null || date === undefined || date === "") return "—";
     const d = typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') && !date.includes('T')
         ? new Date(date + 'Z')
         : new Date(date);
+    if (isNaN(d.getTime())) return "N/A";
     const day = d.getUTCDate().toString().padStart(2, '0');
     const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
     const h = d.getUTCHours().toString().padStart(2, '0');

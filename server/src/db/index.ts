@@ -68,6 +68,7 @@ function camelRows(rows: any[]): any[] {
              .replace(/^auctiontrades$/i, 'auctionTrades')
              .replace(/^emailverified$/i, 'emailVerified')
              .replace(/^isguest$/i, 'isGuest')
+             .replace(/([a-z])guildid$/i, "$1GuildId")
              .replace(/^oauthprovider$/i, 'oauthProvider')
              .replace(/^oauthid$/i, 'oauthId')
              .replace(/^rewardxp$/i, 'rewardXp')

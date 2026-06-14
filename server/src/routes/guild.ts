@@ -729,7 +729,7 @@ router.get('/guild/war/details', async (req, res) => {
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id AND won = 0) as attacksLost,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id AND won = 0) as timesAttacked
         FROM guild_members gm JOIN users u ON gm.userId = u.id
-        WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt FROM guild_wars WHERE id = ?)
+        WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt::timestamptz FROM guild_wars WHERE id = ?)
         ORDER BY gm.rank DESC, u.level DESC
     `, [war.id, war.id, war.id, war.id, myGuildId, war.id]) as any[];
 
@@ -740,7 +740,7 @@ router.get('/guild/war/details', async (req, res) => {
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as timesAttacked,
             (SELECT MAX(createdAt) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as lastAttackedAt
         FROM guild_members gm JOIN users u ON gm.userId = u.id
-        WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt FROM guild_wars WHERE id = ?)
+        WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt::timestamptz FROM guild_wars WHERE id = ?)
         ORDER BY u.level DESC
     `, [war.id, war.id, enemyGuildId, war.id]) as any[];
 
