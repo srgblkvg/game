@@ -479,7 +479,7 @@ router.get('/tournament', async (req, res) => {
             ) as any[];
             return {
                 ...t,
-                createdAt: Number(t.createdAt) || t.createdAt,
+                createdAt: Number(t.createdAt) || (t.createdAt ? t.createdAt.replace(' ', 'T') + 'Z' : t.createdAt),
                 completedAt: Number(t.completedAt) || t.completedAt,
                 registrationEnd: Number(t.registrationEnd) || t.registrationEnd,
                 participantCount: participants.length,
