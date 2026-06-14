@@ -167,7 +167,6 @@ router.get('/vk/callback', async (req, res) => {
             body: new URLSearchParams(bodyParams),
         });
         const tokenData: any = await tokenRes.json();
-        console.log('VK_TOKEN_RESPONSE:', JSON.stringify(tokenData));
         if (!tokenRes.ok) {
             logger.error({ tokenData, pkce: !!pkce }, 'VK token exchange failed');
             return res.redirect(`${FRONTEND_URL}/login?error=token_failed`);
