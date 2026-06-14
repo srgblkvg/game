@@ -335,7 +335,7 @@ async function autoAdvance(tournamentId: number) {
     if (t.status === 'registration' && now >= t.registrationEnd) {
         // Время регистрации истекло — стартуем
         await db.run('UPDATE tournaments SET status = ? WHERE id = ?', ['in_progress', tournamentId]);
-        generateBracket(tournamentId);
+        await generateBracket(tournamentId);
         autoAdvance(tournamentId);
         return;
     }
