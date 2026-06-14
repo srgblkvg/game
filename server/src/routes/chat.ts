@@ -17,13 +17,14 @@ router.get('/chat/recent', async (req, res) => {
   `, [userId, userId, limit]);
 
   const result = messages.map((m) => {
+    const msg = { ...m, content: m.content || '' };
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);
-        return { ...m, item, itemRarity: item.rarity };
+        return { ...msg, item, itemRarity: item.rarity ?? item.rarity_id };
       } catch { }
     }
-    return m;
+    return msg;
   });
 
   res.json(result.reverse());
@@ -56,13 +57,14 @@ router.get('/chat/private/:userId', async (req, res) => {
   `, [currentUserId, otherUserId, otherUserId, currentUserId, limit]);
 
   const result = messages.map((m) => {
+    const msg = { ...m, content: m.content || '' };
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);
-        return { ...m, item, itemRarity: item.rarity };
+        return { ...msg, item, itemRarity: item.rarity ?? item.rarity_id };
       } catch { }
     }
-    return m;
+    return msg;
   });
 
   res.json(result.reverse());
