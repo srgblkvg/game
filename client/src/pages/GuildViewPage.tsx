@@ -140,17 +140,17 @@ export default function GuildViewPage() {
                             <div className="text-xs space-y-1">
                                 <p>
                                     <span className="text-[var(--color-text-muted)]">Атакующая:</span>{' '}
-                                    <span className="text-[var(--color-text-primary)] font-bold">{war.attackerGuild.name}</span>
+                                    <span className="text-[var(--color-text-primary)] font-bold">{war.attackerGuild?.name || '???'}</span>
                                 </p>
                                 <p>
                                     <span className="text-[var(--color-text-muted)]">Защищается:</span>{' '}
-                                    <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild.name}</span>
+                                    <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild?.name || '???'}</span>
                                 </p>
                                 <p className="text-[var(--color-text-muted)]">
-                                    Объявлена: {new Date(war.declaredAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                    Объявлена: {new Date(war.declaredAt * 1000).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                 </p>
                                 <p className="text-[var(--color-text-muted)]">
-                                    Окончание: {new Date(war.expiresAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                    Окончание: {new Date(war.expiresAt * 1000).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                 </p>
                             </div>
                         </Card>

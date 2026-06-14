@@ -8,6 +8,7 @@ import { useServerTime } from '../contexts/ServerTimeContext';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchBattles, fetchCharacter } from '../api';
+import { safeDate } from '../utils/date';
 import { formatGameTime } from '../utils/time';
 import Button from './ui/Button';
 
@@ -109,7 +110,7 @@ export default function Header() {
             fetchBattles(1)
                 .then((battles: any[]) => {
                     if (battles.length > 0) {
-                        const lastBattleTime = new Date(battles[0].createdAt + 'Z').getTime();
+                        const lastBattleTime = safeDate(battles[0].createdAt) || new Date().getTime();
                         if (lastBattleTime > lastSeen) {
                             setHasNewBattles(true);
                         }

@@ -6,6 +6,7 @@ import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
+import { safeDate } from '../utils/date';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
@@ -301,15 +302,15 @@ export default function GuildPage() {
                                     <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild.name}</span>
                                 </p>
                                 <p className="text-[var(--color-text-muted)]">
-                                    Объявлена: {new Date(war.declaredAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                    Объявлена: {safeDate(war.declaredAt) || new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                 </p>
                                 {war.acceptedAt && (
                                     <p className="text-[var(--color-text-muted)]">
-                                        Принята: {new Date(war.acceptedAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                        Принята: {safeDate(war.acceptedAt) || new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                     </p>
                                 )}
                                 <p className="text-[var(--color-text-muted)]">
-                                    Окончание: {new Date(war.expiresAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                    Окончание: {safeDate(war.expiresAt) || new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                                 </p>
                                 {war.status === 'active' && (
                                     <p className="text-[0.65rem] mt-1" style={{color: 'var(--color-war-active-text)'}}>💰 Казна заморожена до конца войны</p>
@@ -454,7 +455,7 @@ export default function GuildPage() {
                                                                 +{h.amount.toLocaleString()}
                                                                 {h.type?.startsWith('tax') && <span className="text-[0.55rem] ml-0.5">налог</span>}
                                                             </span>
-                                                            <span className="text-[var(--color-text-muted)]">{new Date(h.createdAt + 'Z').toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
+                                                            <span className="text-[var(--color-text-muted)]">{safeDate(h.createdAt) || new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
                                                         </div>
                                                     ))}
                                                 </div>

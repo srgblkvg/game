@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import CharacterCard from '../components/CharacterCard';
 import { fetchPublicProfile } from '../api/character';
 import Button from '../components/ui/Button';
+import { safeDate } from '../utils/date';
 import { formatMoney } from '../utils/money';
 
 export default function ProfilePage() {
@@ -111,7 +112,7 @@ export default function ProfilePage() {
                     {/* Дата регистрации */}
                     {profile.createdAt && (
                         <h3 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-3">
-                            📅 Регистрация: {new Date(profile.createdAt + 'Z').toLocaleDateString()}
+                            📅 Регистрация: {safeDate(profile.createdAt) || new Date().toLocaleDateString()}
                         </h3>
                     )}
                 </div>
