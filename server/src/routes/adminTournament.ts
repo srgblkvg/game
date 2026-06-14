@@ -81,7 +81,7 @@ router.post('/tournaments/:id/finish', async (req, res) => {
     const id = req.params.id;
     const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [id]) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });
-    await db.run('UPDATE tournaments SET status = ? WHERE id = ?', ['completed', id]);
+    await db.run('UPDATE tournaments SET status = ?, completedAt = ? WHERE id = ?', ['completed', new Date().toISOString(), id]);
     res.json({ success: true, message: `Турнир «${t.division}» завершён` });
 });
 
