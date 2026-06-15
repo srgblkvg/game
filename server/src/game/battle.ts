@@ -7,6 +7,12 @@ export interface BattleStep {
   message: string;
   damage?: number;
   amount?: number;
+  hp1?: number;
+  hp2?: number;
+  maxHp1?: number;
+  maxHp2?: number;
+  stats1?: any;
+  stats2?: any;
 }
 
 interface BattleResult {
@@ -60,7 +66,14 @@ export function runBattle(
     log.push(step.message);
   };
 
-  addStep({ type: 'info', message: `⚔ ${attacker.name} vs ${defender.name}` });
+  const maxHpA = statsA.hp;
+  const maxHpD = statsD.hp;
+  addStep({ type: 'info', message: `⚔ ${attacker.name} vs ${defender.name}`, hp1: hpA, hp2: hpD, maxHp1: maxHpA, maxHp2: maxHpD,
+    stats1: { name: attacker.name, level: attacker.level, S: statsA.s, A: statsA.a, D: statsA.d, M: statsA.m, HP: maxHpA,
+      drinks: attacker.drinkBonuses, collection: attacker.collectionBonus },
+    stats2: { name: defender.name, level: defender.level, S: statsD.s, A: statsD.a, D: statsD.d, M: statsD.m, HP: maxHpD,
+      drinks: defender.drinkBonuses, collection: defender.collectionBonus }
+  });
   let turn: 'A' | 'D' = statsA.a >= statsD.a ? 'A' : 'D';
   addStep({ type: 'info', message: `${turn === 'A' ? attacker.name : defender.name} ходит первым` });
 
@@ -87,8 +100,8 @@ export function runBattle(
             addStep({ type: 'crit', actor: 'defender', message: `Крит!` });
           }
           cdmg = Math.max(0, Math.round(cdmg));
-          addStep({ type: 'damage', actor: 'defender', target: 'attacker', damage: cdmg, message: `Урон: ${cdmg}` });
           hpA = Math.max(0, hpA - cdmg);
+          addStep({ type: 'damage', actor: 'defender', target: 'attacker', damage: cdmg, message: `Урон: ${cdmg}`, hp1: hpA, hp2: hpD, maxHp1: maxHpA, maxHp2: maxHpD });
         }
         turn = 'D';
         continue;
@@ -113,8 +126,8 @@ export function runBattle(
         addStep({ type: 'block', actor: 'defender', message: `Блок (-${Math.round(blocked)})` });
       }
       dmg = Math.max(0, Math.round(dmg));
-      addStep({ type: 'damage', actor: 'attacker', target: 'defender', damage: dmg, message: `Урон: ${dmg}` });
       hpD = Math.max(0, hpD - dmg);
+      addStep({ type: 'damage', actor: 'attacker', target: 'defender', damage: dmg, message: `Урон: ${dmg}`, hp1: hpA, hp2: hpD, maxHp1: maxHpA, maxHp2: maxHpD });
       if (dmg > 0 && Math.random() < stunChance(statsA, statsD)) {
         stunnedD = true;
         addStep({ type: 'stun', actor: 'defender', message: `${defender.name} оглушён!` });
@@ -140,8 +153,8 @@ export function runBattle(
             addStep({ type: 'crit', actor: 'attacker', message: `Крит!` });
           }
           cdmg = Math.max(0, Math.round(cdmg));
-          addStep({ type: 'damage', actor: 'attacker', target: 'defender', damage: cdmg, message: `Урон: ${cdmg}` });
           hpD = Math.max(0, hpD - cdmg);
+          addStep({ type: 'damage', actor: 'attacker', target: 'defender', damage: cdmg, message: `Урон: ${cdmg}`, hp1: hpA, hp2: hpD, maxHp1: maxHpA, maxHp2: maxHpD });
         }
         turn = 'A';
         continue;
@@ -165,8 +178,8 @@ export function runBattle(
         addStep({ type: 'block', actor: 'attacker', message: `Блок (-${Math.round(blocked)})` });
       }
       dmg = Math.max(0, Math.round(dmg));
-      addStep({ type: 'damage', actor: 'defender', target: 'attacker', damage: dmg, message: `Урон: ${dmg}` });
       hpA = Math.max(0, hpA - dmg);
+      addStep({ type: 'damage', actor: 'defender', target: 'attacker', damage: dmg, message: `Урон: ${dmg}`, hp1: hpA, hp2: hpD, maxHp1: maxHpA, maxHp2: maxHpD });
       if (dmg > 0 && Math.random() < stunChance(statsD, statsA)) {
         stunnedA = true;
         addStep({ type: 'stun', actor: 'attacker', message: `${attacker.name} оглушён!` });
