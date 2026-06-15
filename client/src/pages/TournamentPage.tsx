@@ -379,7 +379,7 @@ export default function TournamentPage() {
                                     {tournamentIcon(t)} {tournamentLabel(t)}
                                     {t.type === 'custom' && <span className="text-xs text-[var(--color-accent-purple)] ml-1">игрок</span>}
                                 </h3>
-                                <span className="text-xs text-[var(--color-text-muted)]">{fmtSafeDate(t.createdAt, { day:'2-digit', month:'2-digit', year:'2-digit' })}</span>
+                                <span className="text-xs text-[var(--color-text-muted)]">{fmtSafeDate(t.completedAt || t.createdAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
                             </div>
                             <div className="text-xs text-[var(--color-text-muted)] mb-1">
                                 <span>Участников: {t.participantCount}</span>
