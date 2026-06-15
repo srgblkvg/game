@@ -494,7 +494,7 @@ router.post('/guild/treasury/deposit', async (req, res) => {
         const result = await db.tx(async (client) => {
             await client.query('UPDATE users SET money = money - $1 WHERE id = $2', [amount, userId]);
             await client.query('UPDATE guilds SET treasury = treasury + $1 WHERE id = $2', [amount, member.guildId]);
-            await client.query('INSERT INTO guild_treasury_log (guildId, userId, amount) VALUES ($1, $2, $3)', [member.guildId, userId, amount]);
+            await client.query('INSERT INTO guild_treasury_log (guildId, userId, amount, createdat) VALUES ($1, $2, $3, NOW())', [member.guildId, userId, amount]);
             const r = await client.query('SELECT treasury FROM guilds WHERE id = $1', [member.guildId]);
             return r[0];
         });
@@ -576,8 +576,8 @@ async function isGuildAtWar(guildId: number): any | null {
                 await db.run('UPDATE guilds SET treasury = treasury + ? WHERE id = ?', [loserTreasury, winnerId]);
                 await db.run('UPDATE guilds SET treasury = 0 WHERE id = ?', [loserId]);
                 // Запись в лог казны
-                await db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)', [winnerId, 0, loserTreasury, 'war_win']);
-                await db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)', [loserId, 0, -loserTreasury, 'war_loss']);
+                await db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type, createdat) VALUES (?, ?, ?, ?, ?)', [winnerId, 0, loserTreasury, 'war_win', new Date().toISOString()]);
+                await db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type, createdat) VALUES (?, ?, ?, ?, ?)', [loserId, 0, -loserTreasury, 'war_loss', new Date().toISOString()]);
             }
         }
 
