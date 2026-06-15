@@ -87,6 +87,7 @@ async function generateBracket(tournamentId: number) {
 
         if (p1Id === null && p2Id === null) continue;
 
+        try {
         const info = await db.run(`
             INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
             VALUES (?, 1, ?, ?, NULL)
@@ -100,6 +101,7 @@ async function generateBracket(tournamentId: number) {
             const matchRow = { id: info.lastInsertRowid };
             await db.run('UPDATE tournament_matches SET winnerId = ? WHERE id = ?', [p1Id, matchRow.id]);
         }
+        } catch(e: any) { console.error('[bracket] INSERT ERROR:', e.message); }
     }
 }
 
