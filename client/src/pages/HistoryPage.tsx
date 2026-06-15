@@ -45,7 +45,7 @@ export default function HistoryPage() {
                 
             ]);
             setBattles(Array.isArray(b)?b:[]); setJobHistory(Array.isArray(jh)?jh:[]);
-            setPrivateMessages([...(Array.isArray(pm)?pm:[]), ...(Array.isArray(sys)?sys:[])]); setPveBattles(Array.isArray(pve)?pve:[]);
+            setPrivateMessages(Array.isArray(pm)?pm:[]); setPveBattles(Array.isArray(pve)?pve:[]);
             setTournamentHistory(Array.isArray(th)?th:[]); setQuestHistory(Array.isArray(qh)?qh:[]);
         } catch(e){console.error(e)} finally {setLoading(false)}
     }, [user]);
