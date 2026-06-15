@@ -25,7 +25,7 @@ export default function HistoryPage() {
     const [pveBattles, setPveBattles] = useState<any[]>([]);
     const [jobHistory, setJobHistory] = useState<any[]>([]);
     const [privateMessages, setPrivateMessages] = useState<any[]>([]);
-    const [sysMessages, setSysMessages] = useState<any[]>([]);
+    
     const [tournamentHistory, setTournamentHistory] = useState<any[]>([]);
     const [questHistory, setQuestHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,13 +36,13 @@ export default function HistoryPage() {
     const loadData = useCallback(async () => {
         if (!user) return; setLoading(true);
         try {
-            const [b, jh, pm, pve, th, qh, sys] = await Promise.all([
+            const [b, jh, pm, pve, th, qh] = await Promise.all([
                 fetchBattles(100).catch(()=>[]), fetchJobHistory().catch(()=>[]),
                 fetchAllPrivateMessagesNew().then(msgs=>(msgs as any[]).filter(m=>m.targetId===user.id)).catch(()=>[]),
                 fetch(`${BASE_URL}/log/pve-battles?limit=100`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/tournament-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/quest-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
-                fetch(`${BASE_URL}/chat/system`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
+                
             ]);
             setBattles(Array.isArray(b)?b:[]); setJobHistory(Array.isArray(jh)?jh:[]);
             setPrivateMessages([...(Array.isArray(pm)?pm:[]), ...(Array.isArray(sys)?sys:[])]); setPveBattles(Array.isArray(pve)?pve:[]);
@@ -61,9 +61,7 @@ export default function HistoryPage() {
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
     ].sort((a,b)=>b.ts-a.ts);
 
-    const salaryEntries = sysMessages
-        .map(m => ({ id: `s-${m.id}`, type: 'salary', ts: new Date(m.createdAt || m.createdat).getTime(), data: m }))
-        .sort((a, b) => b.ts - a.ts);
+
 
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
@@ -81,7 +79,7 @@ export default function HistoryPage() {
     const tabs = [
         {key:'all',label:'Все'},{key:'battles',label:'PvP'},{key:'pve',label:'Охота'},
         {key:'jobs',label:'Работы'},{key:'tournaments',label:'Турниры'},{key:'quests',label:'Квесты'},
-        {key:'salary',label:'💰 Зарплата'},{key:'messages',label:'Сообщения'},
+        {key:'messages',label:'Сообщения'},
     ] as const;
 
     if(!user) return null;
@@ -186,11 +184,7 @@ export default function HistoryPage() {
                 <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(data.rewardMoney)}</span>
             </EntryRow>;
         }
-        if (type === 'salary') {
-            return <EntryRow time={fmt(data.createdAt || data.createdat)}>
-                <span className="text-[var(--color-accent-gold)]"><Icon icon="game-icons:cash" width="14" height="14" className="inline mr-1"/>{data.content || data.message || ''}</span>
-            </EntryRow>;
-        }
+
         if (type === 'message') {
             return <EntryRow time={fmt(data.createdAt)}>
                 <span className="text-[var(--color-accent-purple)]"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{data.senderName}: {data.content}</span>
