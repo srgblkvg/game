@@ -393,6 +393,34 @@ export default function TournamentPage() {
                                     ))}
                                 </div>
                             )}
+                            {t.matches && t.matches.length > 0 && (
+                                <details className="mt-2 text-xs">
+                                    <summary className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] select-none">
+                                        {"📋 Турнирная сетка (" + t.matches.length + " боёв)"}
+                                    </summary>
+                                    <div className="mt-1.5 space-y-0.5">
+                                        {(() => {
+                                            const byRound: Record<number, any[]> = {};
+                                            t.matches.forEach((m: any) => {
+                                                if (!byRound[m.round]) byRound[m.round] = [];
+                                                byRound[m.round].push(m);
+                                            });
+                                            return Object.keys(byRound).map(Number).sort((a,b)=>a-b).map(r => (
+                                                <div key={r}>
+                                                    <div className="text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">Раунд {r}</div>
+                                                    {byRound[r].map((m: any) => (
+                                                        <div key={m.id} className="flex items-center gap-1 py-0.5 border-b border-[var(--color-border-light)]">
+                                                            <span className={m.winnerId === m.player1Id ? "font-bold text-[var(--color-accent-success)]" : "text-[var(--color-text-muted)]"}>{m.player1Name || "bye"}</span>
+                                                            <span className="text-[var(--color-text-muted)]">vs</span>
+                                                            <span className={m.winnerId === m.player2Id ? "font-bold text-[var(--color-accent-success)]" : "text-[var(--color-text-muted)]"}>{m.player2Name || "bye"}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                </details>
+                            )}
                         </Card>
                     ))}
                     {data.totalPages > 1 && (

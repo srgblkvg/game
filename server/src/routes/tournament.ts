@@ -490,12 +490,23 @@ router.get('/tournament', async (req, res) => {
                 'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?',
                 [t.id]
             ) as any[];
-            return {
+            const matches = await db.query(
+                    'SELECT * FROM tournament_matches WHERE tournamentId = ? ORDER BY round, id',
+                    [t.id]
+                ) as any[];
+                const matchesWithNames = await Promise.all(matches.map(async (m: any) => ({
+                    ...m,
+                    player1Name: m.player1Id ? (await db.one('SELECT username FROM users WHERE id = ?', [m.player1Id]) as any)?.username : null,
+                    player2Name: m.player2Id ? (await db.one('SELECT username FROM users WHERE id = ?', [m.player2Id]) as any)?.username : null,
+                    winnerName: m.winnerId ? (await db.one('SELECT username FROM users WHERE id = ?', [m.winnerId]) as any)?.username : null,
+                })));
+                return {
                 ...t,
                 createdAt: typeof t.createdAt === 'string' && /^\d+$/.test(t.createdAt) ? Number(t.createdAt) : (t.createdAt ? Math.floor(new Date(t.createdAt).getTime() / 1000) : 0),
                 completedAt: Number(t.completedAt) || t.completedAt,
                 registrationEnd: Number(t.registrationEnd) || t.registrationEnd,
                 participantCount: participants.length,
+                matches: matchesWithNames,
             maxPlayers: t.maxPlayers || MAX_PLAYERS,
                 participants: participants.map((p) => ({
                     id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
