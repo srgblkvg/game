@@ -496,7 +496,7 @@ router.post('/guild/treasury/deposit', async (req, res) => {
             await client.query('UPDATE guilds SET treasury = treasury + $1 WHERE id = $2', [amount, member.guildId]);
             await client.query('INSERT INTO guild_treasury_log (guildId, userId, amount, createdat) VALUES ($1, $2, $3, NOW())', [member.guildId, userId, amount]);
             const r = await client.query('SELECT treasury FROM guilds WHERE id = $1', [member.guildId]);
-            return r[0];
+            return r.rows[0];
         });
         res.json({ success: true, treasury: result.treasury });
     } catch (e: any) {
