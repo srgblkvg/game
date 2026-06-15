@@ -9,16 +9,33 @@ const pool = new Pool({
   max: 20,
 });
 
-// Suffix-based camelCase converter — adds camelCase keys for common patterns
-// PG lowercases all unquoted identifiers → we rebuild camelCase from lowercase
+// Transform camelCase SQL identifiers to lowercase for PostgreSQL
+// PG is case-sensitive for unquoted identifiers (folds to lowercase).
+// SQLite was case-insensitive. This finds camelCase words in SQL
+// (column refs, table aliases) and lowercases them, preserving string literals.
+function pgLowerIdentifiers(sql: string): string {
+  // Temporarily remove single-quoted string literals to avoid corrupting data
+  const strings: string[] = [];
+  let cleaned = sql.replace(/'[^']*'/g, (m) => {
+    strings.push(m);
+    return '__STR_' + (strings.length - 1) + '__';
+  });
+
+  // Replace camelCase words (lowercase letter followed by uppercase) with lowercase
+  cleaned = cleaned.replace(/\b([a-z]+[A-Z][a-zA-Z0-9]*)\b/g, (m) => m.toLowerCase());
+
+  // Restore string literals
+  return cleaned.replace(/__STR_(\d+)__/g, (_, i) => strings[parseInt(i)]);
+}
+
+// Suffix-based camelCase converter - adds camelCase keys for common patterns
+// PG lowercases all unquoted identifiers -> we rebuild camelCase from lowercase
 function camelRows(rows: any[]): any[] {
   for (const row of rows) {
-    // Convert PG bigint strings to numbers (only if > 2^31 — actual bigints from COUNT/SUM)
+    // Convert PG bigint strings to numbers (only if > 2^31 - actual bigints from COUNT/SUM)
     for (const key of Object.keys(row)) {
       if (typeof row[key] === 'string' && /^\d+$/.test(row[key])) {
         const n = parseInt(row[key], 10);
-        // Only convert if it's actually a bigint (COUNT/SUM aggregate returns string)
-        // or if the column name suggests it's numeric (id, count, level, etc.)
         if (n > 2147483647 || /^(id|count|level|cnt|total|sum|amount|price|cost|fee|rate|score|elo|rating|hp|exp|gold|money|slots|points|duration|chance|round|year|month|day|hour|min|sec|limit|offset|page|rank)$/i.test(key)) {
           row[key] = n;
         }
@@ -38,7 +55,7 @@ function camelRows(rows: any[]): any[] {
 
     for (const key of Object.keys(row)) {
       let cc = key.replace(
-        /(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses|pvp|bankvisit|max|min|job|order|image|chance|battles|money|created|upgraded|broken|seconds|xp|end|start|elo|score|number)$/i,
+        /(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses|pvp|bankvisit|max|min|job|order|image|chance|battles|money|created|upgraded|broken|seconds|xp|end|start|elo|score|number|players|ticket|stats|place|tag|text|chat|from|guild|role|last|first|ip|url|path|size|width|height|color|tier|slot|icon)$/i,
         m => m.charAt(0).toUpperCase() + m.slice(1)
       );
       cc = cc.replace(/attacktime$/i, 'AttackTime')
@@ -68,7 +85,7 @@ function camelRows(rows: any[]): any[] {
              .replace(/^auctiontrades$/i, 'auctionTrades')
              .replace(/^emailverified$/i, 'emailVerified')
              .replace(/^isguest$/i, 'isGuest')
-             .replace(/([a-z])guildid$/i, "$1GuildId")
+             .replace(/([a-z])guildid$/i, '$1GuildId')
              .replace(/^oauthprovider$/i, 'oauthProvider')
              .replace(/^oauthid$/i, 'oauthId')
              .replace(/^rewardxp$/i, 'rewardXp')
@@ -83,26 +100,26 @@ function camelRows(rows: any[]): any[] {
 // Convert ? placeholders to $1, $2, ...
 function pgParams(sql: string): string {
   let i = 0;
-  return sql.replace(/\?/g, () => `$${++i}`);
+  return sql.replace(/\?/g, () => '$' + (++i));
 }
 
 export const db = {
-  /** Query multiple rows — returns array with camelCase keys */
+  /** Query multiple rows - returns array with camelCase keys */
   async query(sql: string, params?: any[]): Promise<any[]> {
-    const q = pgParams(sql);
+    const q = pgParams(pgLowerIdentifiers(sql));
     const r = await pool.query(q, params || []);
     return camelRows(r.rows);
   },
 
-  /** Query one row — returns row with camelCase keys or null */
+  /** Query one row - returns row with camelCase keys or null */
   async one(sql: string, params?: any[]): Promise<any | null> {
     const rows = await db.query(sql, params);
     return rows[0] || null;
   },
 
-  /** Execute INSERT/UPDATE/DELETE — returns { changes, lastInsertRowid } */
+  /** Execute INSERT/UPDATE/DELETE - returns { changes, lastInsertRowid } */
   async run(sql: string, params?: any[]): Promise<{ changes: number; lastInsertRowid: number }> {
-    const q = pgParams(sql);
+    const q = pgParams(pgLowerIdentifiers(sql));
     const isInsert = /^\s*INSERT\s+/i.test(q);
     if (isInsert) {
       // Try to get RETURNING id, but gracefully handle tables without 'id' column
@@ -111,7 +128,7 @@ export const db = {
         const r = await pool.query(returningQuery, params || []);
         return { changes: r.rowCount || 0, lastInsertRowid: r.rows[0]?.id || 0 };
       } catch {
-        // Table has no 'id' column (composite key) — fall back to simple insert
+        // Table has no 'id' column (composite key) - fall back to simple insert
         const r = await pool.query(q, params || []);
         return { changes: r.rowCount || 0, lastInsertRowid: 0 };
       }
@@ -120,7 +137,7 @@ export const db = {
     return { changes: r.rowCount || 0, lastInsertRowid: 0 };
   },
 
-  /** Raw pool.query — no camelCase, no ? conversion. For special cases. */
+  /** Raw pool.query - no camelCase, no ? conversion. For special cases. */
   async raw(sql: string, params?: any[]) {
     return pool.query(sql, params || []);
   },

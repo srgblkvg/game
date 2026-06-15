@@ -15,8 +15,8 @@ router.post('/feedback', async (req, res) => {
     if (!user) return res.status(400).json({ error: 'Пользователь не найден' });
 
     await db.run(
-        'INSERT INTO feedback_messages (userId, username, subject, message) VALUES (?, ?, ?, ?)',
-        [userId, user.username, subject.trim(), message.trim()]
+        'INSERT INTO feedback_messages (userid, username, subject, message, createdat) VALUES (?, ?, ?, ?, ?)',
+        [userId, user.username, subject.trim(), message.trim(), new Date().toISOString()]
     );
 
     res.json({ success: true, message: 'Обращение отправлено' });
