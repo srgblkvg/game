@@ -187,8 +187,10 @@ export default function HistoryPage() {
             </EntryRow>;
         }
         if (type === 'salary') {
-            return <EntryRow time={fmt(data.createdAt)}>
-                <span className="text-[var(--color-accent-gold)]"><Icon icon="game-icons:cash" width="14" height="14" className="inline mr-1"/>{data.content}</span>
+            const txt = data.content || data.message || '';
+            const ts = data.createdAt || data.created_at || data.createdat;
+            return <EntryRow time={ts ? fmt(ts) : '—'}>
+                <span className="text-[var(--color-accent-gold)]"><Icon icon="game-icons:cash" width="14" height="14" className="inline mr-1"/>{txt || '(пусто)'}</span>
             </EntryRow>;
         }
         if (type === 'message') {
