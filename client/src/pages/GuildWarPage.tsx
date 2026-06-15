@@ -6,7 +6,16 @@ import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import BackButton from '../components/BackButton';
-import { safeDate, fmtSafeDate } from '../utils/date';
+import { fmtSafeDate } from '../utils/date';
+
+function countdown(until: string | null): string {
+    if (!until) return '';
+    const sec = Math.max(0, Math.ceil((new Date(until).getTime() - Date.now()) / 1000));
+    if (sec <= 0) return '';
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `0:${String(s).padStart(2, '0')}`;
+}
 
 export default function GuildWarPage() {
     const { user } = useAuth();
@@ -16,8 +25,13 @@ export default function GuildWarPage() {
     const [tab, setTab] = useState<'enemies' | 'allies'>('enemies');
     const [battleLog, setBattleLog] = useState<string[]>([]);
     const [battleResult, setBattleResult] = useState<any>(null);
+    const [tick, setTick] = useState(0);
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
+    useEffect(() => {
+        const iv = setInterval(() => setTick(t => t + 1), 1000);
+        return () => clearInterval(iv);
+    }, []);
 
     const api = async (url: string, body?: any) => {
         const r = await fetch(`${BASE_URL}${url}`, { method: body ? 'POST' : 'GET', headers: getHeaders(), body: body ? JSON.stringify(body) : undefined });
@@ -66,12 +80,7 @@ export default function GuildWarPage() {
 
     const myScore = data.myGuildId === data.attackerGuildId ? data.attackerScore : data.defenderScore;
     const enemyScore = data.myGuildId === data.attackerGuildId ? data.defenderScore : data.attackerScore;
-    const formatTime = (iso: string) => {
-        if (!iso) return '—';
-        const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
-        if (isNaN(d.getTime())) return '—';
-        return d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-    };
+    const attackCd = countdown(data.attackCooldownUntil);
 
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
@@ -97,7 +106,7 @@ export default function GuildWarPage() {
                     </div>
                 </div>
                 <p className="text-[0.6rem] text-[var(--color-text-muted)] text-center mt-1">
-                    Окончание: {formatTime(data.expiresAt)}
+                    Окончание: {fmtSafeDate(data.expiresAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                 </p>
             </Card>
 
@@ -121,12 +130,17 @@ export default function GuildWarPage() {
             )}
 
             {/* Инфо о кулдауне и лимитах */}
-            <div className="text-xs text-[var(--color-text-muted)] mb-3 flex gap-4 flex-wrap">
+            <div className="text-xs text-[var(--color-text-muted)] mb-3 flex gap-4 flex-wrap items-center">
                 <span>Мои атаки: {data.myAttackCount}/3</span>
-                {data.attackCooldownUntil && (
-                    <span className="text-[var(--color-accent-warning)]">Кулдаун до: {formatTime(data.attackCooldownUntil)}</span>
+                {attackCd && (
+                    <span className="text-[var(--color-accent-warning)] font-bold">⚔️ Кулдаун: {attackCd}</span>
                 )}
-                {data.canAttack && <span className="text-[var(--color-accent-success)]">Можно атаковать</span>}
+                {!attackCd && data.myAttackCount >= 3 && (
+                    <span className="text-[var(--color-accent-danger)]">Лимит атак исчерпан</span>
+                )}
+                {!attackCd && data.myAttackCount < 3 && (
+                    <span className="text-[var(--color-accent-success)]">Можно атаковать</span>
+                )}
             </div>
 
             {/* Вкладки */}
@@ -157,15 +171,11 @@ export default function GuildWarPage() {
             {tab === 'enemies' && (
                 <div className="space-y-1">
                     {data.enemyMembers.map((m: any) => {
-                        const hasProtection = !!m.protectedUntil;
-                        const maxAttacks = m.timesAttacked >= 3;
-                        const cantAttack = hasProtection || maxAttacks || !data.canAttack;
-                        let protectionText = '';
-                        if (hasProtection) {
-                            const protEnd = new Date(m.protectedUntil);
-                            const mins = Math.ceil((protEnd.getTime() - Date.now()) / 60000);
-                            protectionText = `🛡️ ${mins}м`;
-                        }
+                        const protCd = countdown(m.protectedUntil);
+                        const myLimit = data.myAttackCount >= 3;
+                        const defLimit = (m.timesAttacked || 0) >= 3;
+                        const hasCooldown = !!attackCd;
+                        const cantAttack = !!protCd || defLimit || myLimit || hasCooldown;
                         return (
                             <Card key={m.id} className="flex items-center justify-between py-2 px-3">
                                 <div className="flex items-center gap-2">
@@ -174,14 +184,21 @@ export default function GuildWarPage() {
                                         {m.username}
                                     </span>
                                     <span className="text-[var(--color-text-muted)] text-[0.6rem]">ур.{m.level}</span>
-                                    {hasProtection && (
-                                        <span className="text-[0.55rem] text-[var(--color-accent-info)]">{protectionText}</span>
-                                    )}
-                                    <span className="text-[0.55rem] text-[var(--color-text-muted)]">{m.timesAttacked}/3</span>
+                                    <span className="text-[0.55rem] text-[var(--color-text-muted)]">{m.timesAttacked || 0}/3</span>
                                 </div>
-                                <Button variant="danger" size="xs" disabled={cantAttack} onClick={() => handleAttack(m.id, m.username)}>
-                                    ⚔️
-                                </Button>
+                                <div className="flex items-center gap-1.5">
+                                    {protCd && (
+                                        <span className="text-[0.55rem] text-[var(--color-accent-info)]">🛡️{protCd}</span>
+                                    )}
+                                    <Button
+                                        variant="danger"
+                                        size="xs"
+                                        disabled={cantAttack}
+                                        onClick={() => handleAttack(m.id, m.username)}
+                                    >
+                                        {hasCooldown ? `⏳${attackCd}` : protCd ? `🛡️${protCd}` : myLimit ? '⛔' : defLimit ? '🔒' : '⚔️'}
+                                    </Button>
+                                </div>
                             </Card>
                         );
                     })}
@@ -203,7 +220,7 @@ export default function GuildWarPage() {
                             <div className="flex items-center gap-2 text-[0.6rem]">
                                 <span className="text-[var(--color-accent-success)]">{m.attacksWon || 0}🏆</span>
                                 <span className="text-[var(--color-accent-danger)]">{m.attacksLost || 0}💀</span>
-                                <span className="text-[var(--color-text-muted)]">({m.attacksWon||0}/{m.attacksLost||0}/{m.attacksMade||0})</span>
+                                <span className="text-[var(--color-text-muted)]">{m.attacksMade || 0}/3</span>
                             </div>
                         </Card>
                     ))}

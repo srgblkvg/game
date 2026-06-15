@@ -55,7 +55,7 @@ function camelRows(rows: any[]): any[] {
 
     for (const key of Object.keys(row)) {
       let cc = key.replace(
-        /(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses|pvp|bankvisit|max|min|job|order|image|chance|battles|money|created|upgraded|broken|seconds|xp|end|start|elo|score|number|players|ticket|stats|place|tag|text|chat|from|guild|role|last|first|ip|url|path|size|width|height|color|tier|slot|icon)$/i,
+        /(hash|hp|id|until|at|time|name|type|count|level|slots|bonus|logins|amount|price|pool|fee|cost|won|lost|gained|rowid|data|wins|losses|pvp|bankvisit|max|min|job|order|image|chance|battles|money|created|upgraded|broken|seconds|xp|end|start|elo|score|number|players|ticket|stats|place|tag|text|chat|from|guild|role|last|first|ip|url|path|size|width|height|color|tier|slot|icon|attacked|made)$/i,
         m => m.charAt(0).toUpperCase() + m.slice(1)
       );
       cc = cc.replace(/attacktime$/i, 'AttackTime')
