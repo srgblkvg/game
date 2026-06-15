@@ -150,7 +150,7 @@ export default function BracketTree({ matches }: { matches: Match[] }) {
   const rounds = Object.keys(byRound).map(Number).sort((a, b) => a - b);
 
   return (
-    <div className="py-1">
+    <div className="py-1 overflow-x-auto">
       {selectedMatch && (
         <BattleLog 
           log={selectedMatch.log} 
@@ -168,7 +168,7 @@ export default function BracketTree({ matches }: { matches: Match[] }) {
         return (
           <div key={r} className="mb-2">
             <div className="text-[0.6rem] text-[var(--color-text-muted)] mb-1 ml-1">{label}</div>
-            <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+            <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(120px, 1fr))` }}>
               {matchesInRound.map(m => (
                 <div key={m.id} 
                   className={`bg-[var(--color-bg-card)] border rounded px-2 py-1 text-[0.65rem] cursor-pointer hover:border-[var(--color-accent-info)] transition-colors ${
