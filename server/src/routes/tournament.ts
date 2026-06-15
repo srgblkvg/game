@@ -396,7 +396,7 @@ async function autoAdvance(tournamentId: number) {
             const divConfig = divisions.find(d => d.name === t.division)!;
             const now2 = Math.floor(Date.now() / 1000);
             await db.run(
-                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?)',
                 [t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, new Date().toISOString(), MAX_PLAYERS]
             );
         }
@@ -440,7 +440,7 @@ async function getOrCreateTournament(type?: string) {
                 if (Date.now() < ts + 3600 * 1000) continue;
             }
             await db.run(
-                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, new Date().toISOString(), 'official', MAX_PLAYERS]
             );
         }
