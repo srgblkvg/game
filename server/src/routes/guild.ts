@@ -542,7 +542,7 @@ router.get('/guild/treasury/history', async (req, res) => {
 
 // Проверить, в войне ли гильдия (с авто-закрытием просроченных)
 async function isGuildAtWar(guildId: number): any | null {
-    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const now = new Date().toISOString();
     // Авто-отмена просроченных pending войн
     await db.run(
         `UPDATE guild_wars SET status = 'cancelled', endedAt = ? WHERE status = 'pending' AND expiresAt <= ?`,
@@ -619,11 +619,11 @@ router.post('/guild/war/declare', async (req, res) => {
     if (theirWar) return res.status(400).json({ error: 'Целевая гильдия уже участвует в войне' });
 
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
 
     await db.run(
         'INSERT INTO guild_wars (attackerGuildId, defenderGuildId, declaredAt, expiresAt) VALUES (?, ?, ?, ?)',
-        [myGuildId, targetGuildId, now.toISOString().replace('T', ' ').slice(0, 19), expiresAt]
+        [myGuildId, targetGuildId, now.toISOString(), expiresAt]
     );
 
     const myGuild = await db.one('SELECT name FROM guilds WHERE id = ?', [myGuildId]) as any;
@@ -663,10 +663,10 @@ router.post('/guild/war/respond', async (req, res) => {
     ) as any;
     if (!war) return res.status(404).json({ error: 'Нет входящих объявлений войны' });
 
-    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const now = new Date().toISOString();
 
     if (accept) {
-        const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+        const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         await db.run('UPDATE guild_wars SET status = ?, acceptedAt = ?, expiresAt = ? WHERE id = ?', ['active', now, newExpiresAt, war.id]);
         res.json({ success: true, message: 'Война принята! Казна заморожена на 24 часа.' });
     } else {
@@ -734,7 +734,7 @@ router.get('/guild/war/details', async (req, res) => {
     `, [war.id, war.id, war.id, war.id, myGuildId, war.id]) as any[];
 
     // Участники вражеской гильдии (с проверкой защиты, только до войны)
-    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const now = new Date().toISOString();
     const enemyMembers = await db.query(`
         SELECT u.id, u.username, u.level,
             (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as timesAttacked,
@@ -930,7 +930,7 @@ router.post('/guild/war/attack', async (req, res) => {
     await db.run(`
         INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won, battleLog, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, JSON.stringify(warSteps), new Date().toISOString().replace("T", " ").slice(0, 19)]);
+    `, [war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, JSON.stringify(warSteps), new Date().toISOString()]);
 
     // Обновление счёта
     if (won) {
