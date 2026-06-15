@@ -397,7 +397,7 @@ async function autoAdvance(tournamentId: number) {
             const now2 = Math.floor(Date.now() / 1000);
             await db.run(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
-                [t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, new Date().toISOString()]
+                [t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, new Date().toISOString(), MAX_PLAYERS]
             );
         }
     }
@@ -441,7 +441,7 @@ async function getOrCreateTournament(type?: string) {
             }
             await db.run(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, new Date().toISOString(), 'official']
+                [div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, new Date().toISOString(), 'official', MAX_PLAYERS]
             );
         }
     }
@@ -496,6 +496,7 @@ router.get('/tournament', async (req, res) => {
                 completedAt: Number(t.completedAt) || t.completedAt,
                 registrationEnd: Number(t.registrationEnd) || t.registrationEnd,
                 participantCount: participants.length,
+            maxPlayers: t.maxPlayers || MAX_PLAYERS,
                 participants: participants.map((p) => ({
                     id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
                     guildName: p.guildName, guildId: p.guildId,
@@ -551,6 +552,7 @@ router.get('/tournament', async (req, res) => {
             minLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.minLevel; })() : t.minLevel,
             maxLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.maxLevel; })() : t.maxLevel,
             participantCount: participants.length,
+            maxPlayers: t.maxPlayers || MAX_PLAYERS,
             participants: participants.map((p) => ({
                 id: p.userId,
                 username: p.username,
@@ -760,8 +762,8 @@ router.post('/tournament/create-custom', async (req, res) => {
     let result: any;
     try {
         result = await db.run(
-            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            ['custom', 'registration', now, regEnd, prizePool + entryFee, new Date().toISOString(), 'custom', userId, entryFee, name, minLvl, maxLvl, prizePool]
+            'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            ['custom', 'registration', now, regEnd, prizePool + entryFee, new Date().toISOString(), 'custom', userId, entryFee, name, minLvl, maxLvl, prizePool, players]
         );
     } catch (e: any) {
         return res.status(500).json({ error: 'Ошибка создания турнира: ' + e.message });
