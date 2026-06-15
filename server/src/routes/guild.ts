@@ -748,7 +748,7 @@ router.get('/guild/war/details', async (req, res) => {
     const enemyWithProtection = enemyMembers.map((m) => {
         let protectedUntil = null;
         if (m.lastAttackedAt) {
-            const attackedTime = new Date(m.lastAttackedAt + 'Z').getTime();
+            const attackedTime = new Date(m.lastAttackedAt.endsWith("Z") ? m.lastAttackedAt : m.lastAttackedAt + "Z").getTime();
             const protectionEnd = attackedTime + 60 * 60 * 1000;
             if (protectionEnd > Date.now()) {
                 protectedUntil = new Date(protectionEnd).toISOString();
