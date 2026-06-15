@@ -6,9 +6,11 @@ export function safeDate(value: any): Date | null {
     if (typeof value === 'number') return new Date(value * 1000);
     if (typeof value === 'string') {
         if (/^\d+$/.test(value)) return new Date(Number(value) * 1000);
-        // Проверяем, есть ли уже таймзона (Z, +00, +00:00, -05 и т.д.)
-        const hasTZ = value.endsWith('Z') || /[+-]\d{2}/.test(value.slice(-6));
-        return new Date(value.replace(' ', 'T') + (hasTZ ? '' : 'Z'));
+        // Нормализуем: +00 → +00:00, пробел → T, затем Z если нет таймзоны
+        let s = value.replace(' ', 'T');
+        s = s.replace(/([+-]\d{2})$/, '$1:00');  // +00 → +00:00
+        const hasTZ = s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s);
+        return new Date(s + (hasTZ ? '' : 'Z'));
     }
     return null;
 }
