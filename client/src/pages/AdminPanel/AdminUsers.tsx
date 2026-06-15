@@ -187,7 +187,7 @@ export default function AdminUsers() {
             if (diffSec < 3600) return `${Math.floor(diffSec / 60)}м`;
             if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}ч`;
             if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}д`;
-            return new Date(value * 1000).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+            return fmtSafeDate(value, { day:'2-digit', month:'2-digit' });
         }
         // Строка даты — старые записи (парсим как UTC чтобы избежать сдвига)
         const d = new Date(String(value).replace(' ', 'T') + 'Z');
@@ -363,7 +363,7 @@ export default function AdminUsers() {
                                 <div>OAuth: {user.oauthProvider || 'Нет'}</div>
                                 <div>Регистрация: {user.createdAt || '—'}</div>
                                 <div>Посл. вход: {user.lastLoginAt || '—'}</div>
-                                <div>Бан до: {user.bannedUntil ? new Date(user.bannedUntil * 1000).toLocaleString('ru-RU') : 'Нет'}</div>
+                                <div>Бан до: {user.bannedUntil ? fmtSafeDate(user.bannedUntil) : 'Нет'}</div>
                             </div>
                         </div>
                     );

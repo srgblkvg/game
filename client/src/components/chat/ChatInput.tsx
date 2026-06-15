@@ -121,7 +121,7 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
         <div className="p-2 bg-[var(--color-bg-card)]">
             {isBanned && (
                 <div className="text-[var(--color-accent-danger)] text-[0.8rem] mb-1 text-center">
-                    Вы заблокированы в чате до {new Date(bannedUntil! * 1000).toLocaleString('ru-RU', { timeZone: 'UTC' })}
+                    Вы заблокированы в чате до {fmtSafeDate(bannedUntil!)}
                 </div>
             )}
             {chatError && !isBanned && (

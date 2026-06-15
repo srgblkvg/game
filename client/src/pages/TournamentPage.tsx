@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
+import { fmtSafeDate } from '../utils/date';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
@@ -377,7 +378,7 @@ export default function TournamentPage() {
                                     {tournamentIcon(t)} {tournamentLabel(t)}
                                     {t.type === 'custom' && <span className="text-xs text-[var(--color-accent-purple)] ml-1">игрок</span>}
                                 </h3>
-                                <span className="text-xs text-[var(--color-text-muted)]">{new Date(t.createdAt * 1000).toLocaleDateString('ru-RU')}</span>
+                                <span className="text-xs text-[var(--color-text-muted)]">{fmtSafeDate(t.createdAt, { day:'2-digit', month:'2-digit', year:'2-digit' })}</span>
                             </div>
                             <div className="text-xs text-[var(--color-text-muted)] mb-1">
                                 <span>Участников: {t.participantCount}</span>

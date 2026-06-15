@@ -34,7 +34,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function formatDate(ts: number): string {
     if (!ts) return '—';
-    return new Date(ts * 1000).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return fmtSafeDate(ts, { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
 }
 
 export default function AdminTournaments() {
@@ -68,7 +68,7 @@ export default function AdminTournaments() {
 
     const startEdit = (t: Tournament) => {
         const toLocal = (ts: number) => {
-            const d = new Date(ts * 1000);
+            const d = safeDate(ts);
             return d.toISOString().slice(0, 16);
         };
         setForm({

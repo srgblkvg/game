@@ -1,0 +1,15 @@
+--- client/src/pages/GuildViewPage.tsx
++++ client/src/pages/GuildViewPage.tsx
+@@ -148,10 +149,10 @@
+                             {war && war.status === 'active' && (
+                                 <>
+                                     <p className="text-sm text-[var(--color-accent-warning)]">
+-                                    Объявлена: {new Date(war.declaredAt * 1000).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
++                                    Объявлена: {fmtSafeDate(war.declaredAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                 </p>
+                                 <p className="text-sm text-[var(--color-accent-danger)]">
+-                                    Окончание: {new Date(war.expiresAt * 1000).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
++                                    Окончание: {fmtSafeDate(war.expiresAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                                 </p>
+                                 <p className="text-xs text-[var(--color-text-muted)]">
+                                     Счёт: атакующие {war.attackerScore || 0} – защитники {war.defenderScore || 0}

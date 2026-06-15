@@ -77,7 +77,7 @@ export default function AdminChat() {
                                 <tr key={u.id} className="border-b border-[var(--color-border-light)]">
                                     <td className="p-1">{u.id}</td>
                                     <td className="p-1">{u.username}</td>
-                                    <td className="p-1">{new Date(u.chatBannedUntil * 1000).toLocaleString()}</td>
+                                    <td className="p-1">{fmtSafeDate(u.chatBannedUntil)}</td>
                                     <td className="p-1">
                                         <Button variant="success" size="xs" onClick={() => handleUnban(u.id)}>Разбанить</Button>
                                     </td>

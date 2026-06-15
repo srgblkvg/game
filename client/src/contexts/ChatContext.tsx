@@ -120,7 +120,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     setOnlineUsers(prev => prev.filter(u => u.id !== data.userId));
                 } else if (data.type === 'chatBanned') {
                     setBannedUntil(data.until);
-                    setChatError(`Вы заблокированы в чате до ${new Date(data.until * 1000).toLocaleString()}`);
+                    setChatError(`Вы заблокированы в чате до ${fmtSafeDate(data.until)}`);
                 } else if (data.type === 'error') {
                     setChatError(data.message);
                 }

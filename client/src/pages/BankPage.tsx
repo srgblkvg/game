@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
+import { fmtSafeDate, safeDate } from '../utils/date';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -55,7 +56,7 @@ export default function BankPage() {
         try { const d = await api('/bank/transfer',{accountNumber:transferAccount.trim().toUpperCase(),amount:amt}); setBank(d.bank); setTransferAccount(''); setTransferAmount(''); setMessage(d.message); setError(''); loadTransfers(); } catch(e:any){setError(e.message)}
     };
 
-    const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>new Date(b.createdAt * 1000).getTime()-new Date(a.createdAt * 1000).getTime()).slice(0,20);
+    const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>(safeDate(b.createdAt)?.getTime()||0)-(safeDate(a.createdAt)?.getTime()||0)).slice(0,20);
 
     return (
         <div className="max-w-md mx-auto px-4 py-4">
@@ -71,8 +72,8 @@ export default function BankPage() {
                 <h3 className="font-bold text-sm mb-2">История операций</h3>
                 {allHistory.length===0 ? <p className="text-xs text-[var(--color-text-muted)]">Нет операций</p> :
                 <div className="space-y-2">{allHistory.map((h:any)=>{
-                    if (h._type==='transfer') { const out = h.fromUserId===user?.id; return <div key={'t'+h.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?h.amount:h.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${h.toAccount}`:`от ${h.fromAccount}`}{h.commission>0&&out?`, ком. ${h.commission}`:''}</span><span className="ml-auto text-[var(--color-text-muted)]">{new Date(h.createdAt * 1000).toLocaleString()}</span></div></div>; }
-                    return <div key={'o'+h.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={h.type==='deposit'?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}>{h.type==='deposit'?'📥':'📤'} {formatMoney(h.amount)}</span>{h.commission>0&&<span className="text-[var(--color-text-muted)]">ком. {formatMoney(h.commission)}</span>}<span className="ml-auto text-[var(--color-text-muted)]">{new Date(h.createdAt * 1000).toLocaleString()}</span></div></div>;
+                    if (h._type==='transfer') { const out = h.fromUserId===user?.id; return <div key={'t'+h.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?h.amount:h.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${h.toAccount}`:`от ${h.fromAccount}`}{h.commission>0&&out?`, ком. ${h.commission}`:''}</span><span className="ml-auto text-[var(--color-text-muted)]">{fmtSafeDate(h.createdAt)}</span></div></div>; }
+                    return <div key={'o'+h.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={h.type==='deposit'?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}>{h.type==='deposit'?'📥':'📤'} {formatMoney(h.amount)}</span>{h.commission>0&&<span className="text-[var(--color-text-muted)]">ком. {formatMoney(h.commission)}</span>}<span className="ml-auto text-[var(--color-text-muted)]">{fmtSafeDate(h.createdAt)}</span></div></div>;
                 })}</div>}
             </Card>}
 
@@ -87,7 +88,7 @@ export default function BankPage() {
                     <h3 className="font-bold text-sm mb-2">История вкладов</h3>
                     <div className="flex gap-2 mb-3">{(['all','deposit','withdraw'] as const).map(f => <Button key={f} variant={opsTab===f?'primary':'secondary'} size="xs" onClick={()=>{setOpsTab(f);loadOperations(f);}}>{f==='all'?'Все':f==='deposit'?'Пополнение':'Снятие'}</Button>)}</div>
                     {operations.length===0 ? <p className="text-xs text-[var(--color-text-muted)]">Нет операций</p> :
-                    <div className="space-y-2">{operations.map((o:any)=><div key={o.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={o.type==='deposit'?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}>{o.type==='deposit'?'📥':'📤'} {formatMoney(o.amount)}</span>{o.commission>0&&<span className="text-[var(--color-text-muted)]">ком. {formatMoney(o.commission)}</span>}<span className="ml-auto text-[var(--color-text-muted)]">{new Date(o.createdAt * 1000).toLocaleString()}</span></div><div className="text-[var(--color-text-muted)]">{o.type==='deposit'?`Зачислено: ${formatMoney(o.result)}`:`Получено: ${formatMoney(o.result)}`}</div></div>)}</div>}
+                    <div className="space-y-2">{operations.map((o:any)=><div key={o.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={o.type==='deposit'?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}>{o.type==='deposit'?'📥':'📤'} {formatMoney(o.amount)}</span>{o.commission>0&&<span className="text-[var(--color-text-muted)]">ком. {formatMoney(o.commission)}</span>}<span className="ml-auto text-[var(--color-text-muted)]">{fmtSafeDate(o.createdAt)}</span></div><div className="text-[var(--color-text-muted)]">{o.type==='deposit'?`Зачислено: ${formatMoney(o.result)}`:`Получено: ${formatMoney(o.result)}`}</div></div>)}</div>}
                 </Card>
                 <Card><h3 className="font-bold text-sm mb-2">Правила</h3><ul className="text-xs text-[var(--color-text-muted)] space-y-1"><li>• Пополнение: комиссия 2%</li><li>• Снятие: без комиссии</li><li>• Серебро в банке защищено от PvP</li></ul></Card>
             </>}
@@ -104,7 +105,7 @@ export default function BankPage() {
                     <h3 className="font-bold text-sm mb-2">История переводов</h3>
                     <div className="flex gap-2 mb-3">{(['all','in','out'] as const).map(f => <Button key={f} variant={historyTab===f?'primary':'secondary'} size="xs" onClick={()=>{setHistoryTab(f);loadTransfers(f);}}>{f==='all'?'Все':f==='in'?'Входящие':'Исходящие'}</Button>)}</div>
                     {transfers.length===0 ? <p className="text-xs text-[var(--color-text-muted)]">Нет переводов</p> :
-                    <div className="space-y-2">{transfers.map((t:any)=>{const out=t.fromUserId===user?.id;return<div key={t.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?t.amount:t.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${t.toAccount}`:`от ${t.fromAccount}`}</span><span className="ml-auto text-[var(--color-text-muted)]">{new Date(t.createdAt * 1000).toLocaleString()}</span></div><div className="text-[var(--color-text-muted)]">{out?`Кому: ${t.toUsername}`:`От: счёт ${t.fromAccount}`}{t.commission>0&&out?`, ком. ${t.commission}`:''}</div></div>})}</div>}
+                    <div className="space-y-2">{transfers.map((t:any)=>{const out=t.fromUserId===user?.id;return<div key={t.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?t.amount:t.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${t.toAccount}`:`от ${t.fromAccount}`}</span><span className="ml-auto text-[var(--color-text-muted)]">{fmtSafeDate(t.createdAt)}</span></div><div className="text-[var(--color-text-muted)]">{out?`Кому: ${t.toUsername}`:`От: счёт ${t.fromAccount}`}{t.commission>0&&out?`, ком. ${t.commission}`:''}</div></div>})}</div>}
                 </Card>
                 <Card><h3 className="font-bold text-sm mb-2">Правила</h3><ul className="text-xs text-[var(--color-text-muted)] space-y-1"><li>• Перевод с банковского счёта на счёт</li><li>• Комиссия 2%</li><li>• Мгновенное зачисление</li></ul></Card>
             </>}
