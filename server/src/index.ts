@@ -43,7 +43,7 @@ setInterval(async () => {
       for (const u of paid) {
         await db.run(
           "INSERT INTO chat_messages (senderId, targetId, content, createdAt) VALUES (0, ?, ?, ?)",
-          [u.id, `💰 Жалование: +${u.pvewins} серебра`, nowISO]
+          [u.id, `💰 Жалование: +${u.pveWins || u.pvewins} серебра`, nowISO]
         );
       }
     }
