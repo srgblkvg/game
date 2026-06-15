@@ -109,7 +109,7 @@ export async function collectGuildTax(userId: number, income: number, source: st
   if (tax <= 0) return income;
 
   await db.run('UPDATE guilds SET treasury = treasury + ? WHERE id = ?', [tax, member.guildId]);
-  await db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type) VALUES (?, ?, ?, ?)', [member.guildId, userId, tax, source]);
+  await db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type, createdat) VALUES (?, ?, ?, ?, ?)', [member.guildId, userId, tax, source, new Date().toISOString()]);
   return income - tax;
 }
 
