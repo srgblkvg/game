@@ -69,38 +69,31 @@ async function generateBracket(tournamentId: number) {
 
     const n = participants.length;
     const slots = nextPowerOfTwo(n);
-    const byes = slots - n;
+    const byes = slots - n;  // сколько игроков проходят без боя
+    const playInRound1 = n - byes;  // сколько играют в 1-м раунде
 
-    // Строим массив: реальные игроки + добивка null до степени 2
-    const seeded: (typeof participants[0] | null)[] = [...participants];
-    for (let i = 0; i < byes; i++) seeded.push(null);
+    console.log('[bracket] n=' + n + ' slots=' + slots + ' byes=' + byes + ' playR1=' + playInRound1);
 
-    const half = slots / 2;
-    console.log('[bracket] slots=' + slots + ' half=' + half + ' byes=' + byes);
-    for (let i = 0; i < half; i++) {
-        console.log('[bracket] LOOP i=' + i);
-        // Соседние пары: 1-2, 3-4, 5-6...
-        const p1 = seeded[i * 2];
-        const p2 = seeded[i * 2 + 1];
-
-        const p1Id = getUserId(p1);
-        const p2Id = getUserId(p2);
-
-        if (p1Id === null && p2Id === null) continue;
-
-        const ins = await pool.query(
-            'INSERT INTO tournament_matches (tournamentid, round, player1id, player2id) VALUES ($1, 1, $2, $3) RETURNING id',
-            [tournamentId, p1Id, p2Id]
+    // Сильнейшие (первые byes в отсортированном по ELO массиве) получают bye
+    for (let i = 0; i < byes; i++) {
+        const p = participants[i];
+        await pool.query(
+            'INSERT INTO tournament_matches (tournamentid, round, player1id, player2id, winnerid) VALUES ($1, 1, $2, NULL, $2) RETURNING id',
+            [tournamentId, p.userid]
         );
-        const matchId = ins.rows[0].id;
-        console.log('[bracket] INSERTED match', matchId, p1Id, 'vs', p2Id);
+        console.log('[bracket] bye: userid=' + p.userid + ' -> round 2');
+    }
 
-        if (p1Id === null && p2Id !== null) {
-            await pool.query('UPDATE tournament_matches SET winnerid = $1 WHERE id = $2', [p2Id, matchId]);
-        }
-        if (p2Id === null && p1Id !== null) {
-            await pool.query('UPDATE tournament_matches SET winnerid = $1 WHERE id = $2', [p1Id, matchId]);
-        }
+    // Остальные играют попарно (соседние по ELO)
+    for (let i = 0; i < playInRound1 / 2; i++) {
+        const p1 = participants[byes + i * 2];
+        const p2 = participants[byes + i * 2 + 1];
+
+        await pool.query(
+            'INSERT INTO tournament_matches (tournamentid, round, player1id, player2id) VALUES ($1, 1, $2, $3) RETURNING id',
+            [tournamentId, p1.userid, p2.userid]
+        );
+        console.log('[bracket] R1: ' + p1.userid + ' vs ' + p2.userid);
     }
 }
 
