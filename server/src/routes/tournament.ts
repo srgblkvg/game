@@ -499,6 +499,7 @@ router.get('/tournament', async (req, res) => {
                     player1Name: m.player1Id ? (await db.one('SELECT username FROM users WHERE id = ?', [m.player1Id]) as any)?.username : null,
                     player2Name: m.player2Id ? (await db.one('SELECT username FROM users WHERE id = ?', [m.player2Id]) as any)?.username : null,
                     winnerName: m.winnerId ? (await db.one('SELECT username FROM users WHERE id = ?', [m.winnerId]) as any)?.username : null,
+                    log: m.log ? (() => { try { return JSON.parse(m.log); } catch { return m.log; } })() : null,
                 })));
                 return {
                 ...t,
