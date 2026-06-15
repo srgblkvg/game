@@ -87,17 +87,17 @@ async function generateBracket(tournamentId: number) {
 
         if (p1Id === null && p2Id === null) continue;
 
-        await db.run(`
+        const info = await db.run(`
             INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
             VALUES (?, 1, ?, ?, NULL)
         `, [tournamentId, p1Id, p2Id]);
 
         if (p1Id === null && p2Id !== null) {
-            const matchRow = await db.one('SELECT last_insert_rowid() as id', []) as any;
+            const matchRow = { id: info.lastInsertRowid };
             await db.run('UPDATE tournament_matches SET winnerId = ? WHERE id = ?', [p2Id, matchRow.id]);
         }
         if (p2Id === null && p1Id !== null) {
-            const matchRow = await db.one('SELECT last_insert_rowid() as id', []) as any;
+            const matchRow = { id: info.lastInsertRowid };
             await db.run('UPDATE tournament_matches SET winnerId = ? WHERE id = ?', [p1Id, matchRow.id]);
         }
     }
@@ -185,7 +185,7 @@ async function advanceWinners(tournamentId: number, finishedRound: number) {
 
     if (winners.length < 2) {
         // Турнир завершён — остался один победитель
-        finishTournament(tournamentId);
+        await finishTournament(tournamentId);
         return;
     }
 
@@ -193,7 +193,7 @@ async function advanceWinners(tournamentId: number, finishedRound: number) {
     const n = winners.length;
     const half = Math.floor(n / 2);
     for (let i = 0; i < half; i++) {
-        await db.run(`
+        const info = await db.run(`
             INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
             VALUES (?, ?, ?, ?, NULL)
         `, [tournamentId, nextRound, winners[i * 2].winnerId, winners[i * 2 + 1].winnerId]);
@@ -358,6 +358,13 @@ async function autoAdvance(tournamentId: number) {
     }
 
     if (t.status === 'in_progress') {
+        const matchCount = (await db.one('SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = ?', [tournamentId]) as any).cnt;
+        if (matchCount === 0) {
+            console.log('[autoAdv] tid=' + tournamentId + ' in_progress but 0 matches - regenerating bracket');
+            await generateBracket(tournamentId);
+            await autoAdvance(tournamentId);
+            return;
+        }
         const resolvedRound = await resolveCurrentRound(tournamentId);
         if (resolvedRound > 0) {
             await advanceWinners(tournamentId, resolvedRound);
