@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db/index';
+import { db, pool } from '../db/index';
 import { runBattle } from '../game/battle';
 import { getBaseStats, enrichEquipment, addMoney } from '../db/helpers';
 import { currentStats } from '../game/stats';
@@ -21,7 +21,7 @@ const divisions = [
 // Брекет
 // ---------------------------------------------------------------------------
 
-async function nextPowerOfTwo(n: number): number {
+function nextPowerOfTwo(n: number): number {
     let p = 1;
     while (p < n) p *= 2;
     return p;
@@ -34,14 +34,13 @@ async function nextPowerOfTwo(n: number): number {
  * Пары: 1-й с последним, 2-й с предпоследним и т.д.
  */
 async function generateBracket(tournamentId: number) {
-    const participants = await db.query(`
-        SELECT tp.*, u.username, u.level, u.money, u.baseS, u.baseA, u.baseD, u.baseM,
-               u.equipment, u.currentHp, u.statPoints, u.tournamentElo
-        FROM tournament_participants tp
-        JOIN users u ON tp.userId = u.id
-        WHERE tp.tournamentId = ?
-        ORDER BY u.tournamentElo ASC
-    `, [tournamentId]) as any[];
+    // Используем прямой SQL через pool для надёжности
+    const partRows = await pool.query(
+        `SELECT tp.userid, u.tournamentelo FROM tournament_participants tp JOIN users u ON tp.userid = u.id WHERE tp.tournamentid = $1 ORDER BY u.tournamentelo ASC`,
+        [tournamentId]
+    );
+    const participants = partRows.rows;
+    const getUserId = (p: any) => p ? p.userid : null;
 
     console.log(`[bracket] tid=${tournamentId} participants=${participants.length}`);
     if (participants.length < 2) {
@@ -77,31 +76,31 @@ async function generateBracket(tournamentId: number) {
     for (let i = 0; i < byes; i++) seeded.push(null);
 
     const half = slots / 2;
+    console.log('[bracket] slots=' + slots + ' half=' + half + ' byes=' + byes);
     for (let i = 0; i < half; i++) {
+        console.log('[bracket] LOOP i=' + i);
         // Соседние пары: 1-2, 3-4, 5-6...
         const p1 = seeded[i * 2];
         const p2 = seeded[i * 2 + 1];
 
-        const p1Id = p1 ? p1.userId : null;
-        const p2Id = p2 ? p2.userId : null;
+        const p1Id = getUserId(p1);
+        const p2Id = getUserId(p2);
 
         if (p1Id === null && p2Id === null) continue;
 
-        try {
-        const info = await db.run(`
-            INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
-            VALUES (?, 1, ?, ?, NULL)
-        `, [tournamentId, p1Id, p2Id]);
+        const ins = await pool.query(
+            'INSERT INTO tournament_matches (tournamentid, round, player1id, player2id) VALUES ($1, 1, $2, $3) RETURNING id',
+            [tournamentId, p1Id, p2Id]
+        );
+        const matchId = ins.rows[0].id;
+        console.log('[bracket] INSERTED match', matchId, p1Id, 'vs', p2Id);
 
         if (p1Id === null && p2Id !== null) {
-            const matchRow = { id: info.lastInsertRowid };
-            await db.run('UPDATE tournament_matches SET winnerId = ? WHERE id = ?', [p2Id, matchRow.id]);
+            await pool.query('UPDATE tournament_matches SET winnerid = $1 WHERE id = $2', [p2Id, matchId]);
         }
         if (p2Id === null && p1Id !== null) {
-            const matchRow = { id: info.lastInsertRowid };
-            await db.run('UPDATE tournament_matches SET winnerId = ? WHERE id = ?', [p1Id, matchRow.id]);
+            await pool.query('UPDATE tournament_matches SET winnerid = $1 WHERE id = $2', [p1Id, matchId]);
         }
-        } catch(e: any) { console.error('[bracket] INSERT ERROR:', e.message); }
     }
 }
 
