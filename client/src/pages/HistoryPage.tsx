@@ -38,7 +38,7 @@ export default function HistoryPage() {
         try {
             const [b, jh, pm, pve, th, qh] = await Promise.all([
                 fetchBattles(100).catch(()=>[]), fetchJobHistory().catch(()=>[]),
-                fetchAllPrivateMessagesNew().then(msgs=>(msgs as any[]).filter(m=>m.targetId===user.id)).catch(()=>[]),
+                fetchAllPrivateMessagesNew().catch(()=>[]),
                 fetch(`${BASE_URL}/log/pve-battles?limit=100`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/tournament-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/quest-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
