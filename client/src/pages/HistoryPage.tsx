@@ -25,6 +25,7 @@ export default function HistoryPage() {
     const [pveBattles, setPveBattles] = useState<any[]>([]);
     const [jobHistory, setJobHistory] = useState<any[]>([]);
     const [privateMessages, setPrivateMessages] = useState<any[]>([]);
+    const [sysMessages, setSysMessages] = useState<any[]>([]);
     const [tournamentHistory, setTournamentHistory] = useState<any[]>([]);
     const [questHistory, setQuestHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -35,7 +36,7 @@ export default function HistoryPage() {
     const loadData = useCallback(async () => {
         if (!user) return; setLoading(true);
         try {
-            const [b, jh, pm, pve, th, qh, sys] = await Promise.all([
+            const [b, jh, pm, pve, th, qh, sysMsgs] = await Promise.all([
                 fetchBattles(100).catch(()=>[]), fetchJobHistory().catch(()=>[]),
                 fetchAllPrivateMessagesNew().then(msgs=>(msgs as any[]).filter(m=>m.targetId===user.id)).catch(()=>[]),
                 fetch(`${BASE_URL}/log/pve-battles?limit=100`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
@@ -60,9 +61,8 @@ export default function HistoryPage() {
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
     ].sort((a,b)=>b.ts-a.ts);
 
-    const salaryEntries = privateMessages
-        .filter(m => m.content?.startsWith('💰'))
-        .map(m => ({ id: `s-${m.id}`, type: 'salary', ts: new Date(m.createdAt).getTime(), data: m }))
+    const salaryEntries = sysMessages
+        .map(m => ({ id: `s-${m.id}`, type: 'salary', ts: new Date(m.createdAt || m.createdat).getTime(), data: m }))
         .sort((a, b) => b.ts - a.ts);
 
     const currentData = (()=>{switch(tab){
@@ -187,10 +187,8 @@ export default function HistoryPage() {
             </EntryRow>;
         }
         if (type === 'salary') {
-            const txt = data.content || data.message || '';
-            const ts = data.createdAt || data.created_at || data.createdat;
-            return <EntryRow time={ts ? fmt(ts) : '—'}>
-                <span className="text-[var(--color-accent-gold)]"><Icon icon="game-icons:cash" width="14" height="14" className="inline mr-1"/>{txt || '(пусто)'}</span>
+            return <EntryRow time={fmt(data.createdAt || data.createdat)}>
+                <span className="text-[var(--color-accent-gold)]"><Icon icon="game-icons:cash" width="14" height="14" className="inline mr-1"/>{data.content || data.message || ''}</span>
             </EntryRow>;
         }
         if (type === 'message') {
