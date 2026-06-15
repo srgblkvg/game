@@ -196,7 +196,7 @@ export default function GuildWarPage() {
                                         disabled={cantAttack}
                                         onClick={() => handleAttack(m.id, m.username)}
                                     >
-                                        {hasCooldown ? `⏳${attackCd}` : protCd ? `🛡️${protCd}` : myLimit ? '⛔' : defLimit ? '🔒' : '⚔️'}
+                                        {hasCooldown ? `⏳${attackCd}` : protCd ? "🛡️" : myLimit ? '⛔' : defLimit ? '🔒' : '⚔️'}
                                     </Button>
                                 </div>
                             </Card>
