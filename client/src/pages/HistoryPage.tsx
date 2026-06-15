@@ -20,12 +20,11 @@ const LIMIT = 10;
 export default function HistoryPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages' >('all');
+    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages'>('all');
     const [battles, setBattles] = useState<any[]>([]);
     const [pveBattles, setPveBattles] = useState<any[]>([]);
     const [jobHistory, setJobHistory] = useState<any[]>([]);
     const [privateMessages, setPrivateMessages] = useState<any[]>([]);
-    
     const [tournamentHistory, setTournamentHistory] = useState<any[]>([]);
     const [questHistory, setQuestHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -38,11 +37,10 @@ export default function HistoryPage() {
         try {
             const [b, jh, pm, pve, th, qh] = await Promise.all([
                 fetchBattles(100).catch(()=>[]), fetchJobHistory().catch(()=>[]),
-                fetchAllPrivateMessagesNew().catch(()=>[]),
+                fetchAllPrivateMessagesNew().then(msgs=>(msgs as any[]).filter(m=>m.targetId===user.id)).catch(()=>[]),
                 fetch(`${BASE_URL}/log/pve-battles?limit=100`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/tournament-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/quest-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
-                
             ]);
             setBattles(Array.isArray(b)?b:[]); setJobHistory(Array.isArray(jh)?jh:[]);
             setPrivateMessages(Array.isArray(pm)?pm:[]); setPveBattles(Array.isArray(pve)?pve:[]);
@@ -60,8 +58,6 @@ export default function HistoryPage() {
         ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt).getTime(),data:q})),
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
     ].sort((a,b)=>b.ts-a.ts);
-
-
 
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
@@ -184,7 +180,6 @@ export default function HistoryPage() {
                 <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(data.rewardMoney)}</span>
             </EntryRow>;
         }
-
         if (type === 'message') {
             return <EntryRow time={fmt(data.createdAt)}>
                 <span className="text-[var(--color-accent-purple)]"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{data.senderName}: {data.content}</span>
