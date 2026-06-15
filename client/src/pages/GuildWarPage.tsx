@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
+import { renderBattleLog } from '../utils/battleLog';
 import Card from '../components/ui/Card';
 import BackButton from '../components/BackButton';
 import { fmtSafeDate } from '../utils/date';
@@ -23,7 +24,7 @@ export default function GuildWarPage() {
     const [data, setData] = useState<any>(null);
     const [error, setError] = useState('');
     const [tab, setTab] = useState<'enemies' | 'allies'>('enemies');
-    const [battleLog, setBattleLog] = useState<string[]>([]);
+    const [battleLog, setBattleLog] = useState<any[]>([]);
     const [battleResult, setBattleResult] = useState<any>(null);
     const [now, setNow] = useState(Date.now());
 
@@ -51,7 +52,7 @@ export default function GuildWarPage() {
         if (!confirm(`Атаковать ${targetName}?`)) return;
         try {
             const d = await api('/guild/war/attack', { targetId });
-            setBattleLog(d.log);
+            setBattleLog(d.log || d.steps || []);
             setBattleResult(d);
             load();
         } catch (e: any) { setError(e.message); }
@@ -121,10 +122,8 @@ export default function GuildWarPage() {
                         </h3>
                         <Button variant="secondary" size="xs" onClick={() => { setBattleLog([]); setBattleResult(null); }}>✕</Button>
                     </div>
-                    <div className="text-xs space-y-1 max-h-60 overflow-y-auto">
-                        {battleLog.map((line, i) => (
-                            <p key={i} className="text-[var(--color-text-muted)]">{line}</p>
-                        ))}
+                    <div className="max-h-60 overflow-y-auto">
+                        {renderBattleLog(battleLog)}
                     </div>
                 </Card>
             )}

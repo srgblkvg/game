@@ -79,12 +79,24 @@ router.post('/mob/attack', async (req, res) => {
     // Упрощённый бой (подобно PvP, но моб — всегда defender)
     let hpUser = user.currentHp ?? userStats.hp;
     let hpMob = mob.hp;
+    const maxHpUser = userStats.hp;
+    const maxHpMob = mob.hp;
     const log: string[] = [];
     const steps: any[] = [];
 
-    const addStep = (step: any) => { steps.push(step); log.push(step.message); };
+    const addStep = (step: any) => {
+        step.hp1 = hpUser;
+        step.hp2 = hpMob;
+        step.maxHp1 = maxHpUser;
+        step.maxHp2 = maxHpMob;
+        steps.push(step);
+        log.push(step.message);
+    };
 
-    addStep({ type: 'info', message: `⚔ ${user.username} vs ${mob.name} (ур. ${mob.level})` });
+    addStep({ type: 'info', message: `⚔ ${user.username} vs ${mob.name} (ур. ${mob.level})`,
+        stats1: { name: user.username, level: user.level, S: userStats.s, A: userStats.a, D: userStats.d, M: userStats.m, HP: maxHpUser },
+        stats2: { name: mob.name, level: mob.level, S: mob.agi, A: mob.agi, D: mob.def, M: 0, HP: maxHpMob }
+    });
 
     const dodgeChance = (agility: number) => Math.max(0, agility / (agility + 50));
     const critChance = (mst: number) => Math.min(0.8, mst / (mst + 50));
