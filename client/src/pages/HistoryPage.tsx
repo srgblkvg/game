@@ -35,15 +35,16 @@ export default function HistoryPage() {
     const loadData = useCallback(async () => {
         if (!user) return; setLoading(true);
         try {
-            const [b, jh, pm, pve, th, qh] = await Promise.all([
+            const [b, jh, pm, pve, th, qh, sys] = await Promise.all([
                 fetchBattles(100).catch(()=>[]), fetchJobHistory().catch(()=>[]),
                 fetchAllPrivateMessagesNew().then(msgs=>(msgs as any[]).filter(m=>m.targetId===user.id)).catch(()=>[]),
                 fetch(`${BASE_URL}/log/pve-battles?limit=100`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/tournament-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/quest-history?limit=50`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
+                fetch(`${BASE_URL}/chat/system`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
             ]);
             setBattles(Array.isArray(b)?b:[]); setJobHistory(Array.isArray(jh)?jh:[]);
-            setPrivateMessages(Array.isArray(pm)?pm:[]); setPveBattles(Array.isArray(pve)?pve:[]);
+            setPrivateMessages([...(Array.isArray(pm)?pm:[]), ...(Array.isArray(sys)?sys:[])]); setPveBattles(Array.isArray(pve)?pve:[]);
             setTournamentHistory(Array.isArray(th)?th:[]); setQuestHistory(Array.isArray(qh)?qh:[]);
         } catch(e){console.error(e)} finally {setLoading(false)}
     }, [user]);
@@ -60,7 +61,7 @@ export default function HistoryPage() {
     ].sort((a,b)=>b.ts-a.ts);
 
     const salaryEntries = privateMessages
-        .filter(m => m.content?.startsWith('💰 Жалование:'))
+        .filter(m => m.content?.startsWith('💰'))
         .map(m => ({ id: `s-${m.id}`, type: 'salary', ts: new Date(m.createdAt).getTime(), data: m }))
         .sort((a, b) => b.ts - a.ts);
 

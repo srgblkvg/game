@@ -70,4 +70,20 @@ router.get('/chat/private/:userId', async (req, res) => {
   res.json(result.reverse());
 });
 
+
+// Системные сообщения (зарплата и т.д.)
+router.get('/chat/system', async (req, res) => {
+    try {
+        const userId = (req as any).userId;
+        if (!userId) return res.status(401).json({ error: 'Не авторизован' });
+        const msgs = await db.query(
+            "SELECT * FROM chat_messages WHERE senderId = ? AND targetId = ? AND content LIKE ? ORDER BY id DESC LIMIT 50",
+            [0, userId, '💰%']
+        ) as any[];
+        res.json(msgs);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 export default router;
