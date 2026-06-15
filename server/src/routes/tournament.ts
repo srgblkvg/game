@@ -486,7 +486,7 @@ router.get('/tournament', async (req, res) => {
             FROM tournaments t 
             WHERE t.status = 'completed' 
             AND (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) >= 2
-            ORDER BY t.completedAt DESC LIMIT ? OFFSET ?
+            ORDER BY COALESCE(t.completedAt, t.createdAt) DESC LIMIT ? OFFSET ?
         `, [limit, offset]) as any[];
 
         const result = await Promise.all(completed.map(async (t) => {
