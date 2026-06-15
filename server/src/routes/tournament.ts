@@ -201,6 +201,13 @@ async function advanceWinners(tournamentId: number, finishedRound: number) {
             VALUES (?, ?, ?, ?, NULL)
         `, [tournamentId, nextRound, winners[i * 2].winnerId, winners[i * 2 + 1].winnerId]);
     }
+    // Нечётный победитель — проходит автоматом (bye)
+    if (n % 2 === 1) {
+        await db.run(`
+            INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
+            VALUES (?, ?, ?, NULL, ?)
+        `, [tournamentId, nextRound, winners[n - 1].winnerId, winners[n - 1].winnerId]);
+    }
 }
 
 // ---------------------------------------------------------------------------
