@@ -20,7 +20,7 @@ const LIMIT = 10;
 export default function HistoryPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages' | 'salary'>('all');
+    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages' >('all');
     const [battles, setBattles] = useState<any[]>([]);
     const [pveBattles, setPveBattles] = useState<any[]>([]);
     const [jobHistory, setJobHistory] = useState<any[]>([]);
@@ -66,7 +66,7 @@ export default function HistoryPage() {
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
         case 'jobs':return jobHistory;case 'tournaments':return tournamentHistory;case 'quests':return questHistory;
-        case 'salary':return salaryEntries;case 'messages':return privateMessages;default:return[];
+        case 'messages':return privateMessages;default:return[];
     }})();
 
     const totalItems = currentData.length;
