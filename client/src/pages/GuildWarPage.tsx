@@ -8,9 +8,9 @@ import Card from '../components/ui/Card';
 import BackButton from '../components/BackButton';
 import { fmtSafeDate } from '../utils/date';
 
-function countdown(until: string | null): string {
+function countdown(until: string | null, now: number): string {
     if (!until) return '';
-    const sec = Math.max(0, Math.ceil((new Date(until).getTime() - Date.now()) / 1000));
+    const sec = Math.max(0, Math.ceil((new Date(until).getTime() - now) / 1000));
     if (sec <= 0) return '';
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -25,11 +25,11 @@ export default function GuildWarPage() {
     const [tab, setTab] = useState<'enemies' | 'allies'>('enemies');
     const [battleLog, setBattleLog] = useState<string[]>([]);
     const [battleResult, setBattleResult] = useState<any>(null);
-    const [tick, setTick] = useState(0);
+    const [now, setNow] = useState(Date.now());
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
     useEffect(() => {
-        const iv = setInterval(() => setTick(t => t + 1), 1000);
+        const iv = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(iv);
     }, []);
 
@@ -80,7 +80,7 @@ export default function GuildWarPage() {
 
     const myScore = data.myGuildId === data.attackerGuildId ? data.attackerScore : data.defenderScore;
     const enemyScore = data.myGuildId === data.attackerGuildId ? data.defenderScore : data.attackerScore;
-    const attackCd = countdown(data.attackCooldownUntil);
+    const attackCd = countdown(data.attackCooldownUntil, now);
 
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
@@ -171,7 +171,7 @@ export default function GuildWarPage() {
             {tab === 'enemies' && (
                 <div className="space-y-1">
                     {data.enemyMembers.map((m: any) => {
-                        const protCd = countdown(m.protectedUntil);
+                        const protCd = countdown(m.protectedUntil, now);
                         const myLimit = data.myAttackCount >= 3;
                         const defLimit = (m.timesAttacked || 0) >= 3;
                         const hasCooldown = !!attackCd;
