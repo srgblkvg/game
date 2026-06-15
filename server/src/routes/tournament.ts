@@ -166,7 +166,9 @@ async function resolveCurrentRound(tournamentId: number): number {
         if (!p1 || !p2) continue;
 
         const result = runBattle(p1, p2);
-        await db.run('UPDATE tournament_matches SET winnerId = ?, log = ? WHERE id = ?', [result.winnerId, JSON.stringify(result.steps), match.id]);
+        // В турнирах серебро не воруем — убираем money-шаги из лога
+        const tourSteps = result.steps.filter((s: any) => s.type !== 'money');
+        await db.run('UPDATE tournament_matches SET winnerId = ?, log = ? WHERE id = ?', [result.winnerId, JSON.stringify(tourSteps), match.id]);
     }
 
     return round;
@@ -248,12 +250,14 @@ async function finishTournament(tournamentId: number) {
         for (const sm of semiMatches) {
             if (!sm.winnerId) continue;
             const loser = sm.player1Id === sm.winnerId ? sm.player2Id : sm.player1Id;
+            console.log('[finish] semi loser:', loser, 'winnerId:', winnerId, 'secondPlaceId:', secondPlaceId);
             if (loser && loser !== winnerId && loser !== secondPlaceId) {
                 thirdPlaceId = loser;
                 break;
             }
         }
     }
+    console.log('[finish] tid=' + tournamentId + ' prizes: 1st=' + winnerId + ' 2nd=' + secondPlaceId + ' 3rd=' + thirdPlaceId + ' pool=' + prizePool);
 
     // Распределение призов
     let firstPrize: number, secondPrize: number, thirdPrize: number;
