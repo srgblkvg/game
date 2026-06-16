@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Icon } from '@iconify/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
 import { useGlobalChat } from '../../contexts/ChatContext';
@@ -20,6 +20,7 @@ export default function ChatPanel() {
     const { character, setCharacter } = useGame();
     const auth = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const userId = user?.id!;
     const currentUsername = character?.username || user?.username || '';
     const isPlayer = user?.role === 'player';
@@ -120,26 +121,15 @@ export default function ChatPanel() {
 
     const panelRef = useRef<HTMLDivElement>(null);
 
-    // Автоматическое скрытие чата при клике/тапе/скролле вне панели
+    // Сворачивать чат при переходе на другую страницу
+    useEffect(() => { setIsPanelOpen(false); }, [location.pathname]);
+
+    // Сворачивать чат при открытии правой панели
     useEffect(() => {
-        const handleInteraction = (e: Event) => {
-            if (!isPanelOpen) return;
-            const target = e.target as HTMLElement;
-            if (panelRef.current && !panelRef.current.contains(target)) {
-                setIsPanelOpen(false);
-            }
-        };
-
-        document.addEventListener('click', handleInteraction);
-        document.addEventListener('touchstart', handleInteraction, { passive: true });
-        document.addEventListener('scroll', handleInteraction, { capture: true });
-
-        return () => {
-            document.removeEventListener('click', handleInteraction);
-            document.removeEventListener('touchstart', handleInteraction);
-            document.removeEventListener('scroll', handleInteraction, { capture: true });
-        };
-    }, [isPanelOpen]);
+        const handler = () => setIsPanelOpen(false);
+        window.addEventListener('closeChatPanel', handler);
+        return () => window.removeEventListener('closeChatPanel', handler);
+    }, []);
 
     // Инициализация вкладок из данных персонажа
     useEffect(() => {
