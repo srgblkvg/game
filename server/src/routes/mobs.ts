@@ -21,6 +21,11 @@ router.get('/mobs', async (req, res) => {
     }
 
     // Обогащаем мобов изображениями лута
+    // Получаем инфо о камне улучшения (хлам)
+    const junkStone = await db.one(
+        "SELECT image, name FROM craft_items WHERE name = 'Камень улучшения (Хлам)'"
+    ) as any;
+
     const enriched = mobs.map((m) => {
         const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
         const rarityMap: [number, string, string][] = [
@@ -34,6 +39,10 @@ router.get('/mobs', async (req, res) => {
             if (chance > 0 && craftInfo[r]) {
                 lootImages.push({ rarity: r, name: craftInfo[r].name, image: craftInfo[r].image, chance });
             }
+        }
+        // Камень улучшения (Хлам) — 5% у всех мобов
+        if (junkStone) {
+            lootImages.push({ rarity: -1, name: junkStone.name, image: junkStone.image, chance: 5 });
         }
         return { ...m, lootImages };
     });
@@ -239,6 +248,7 @@ router.post('/mob/attack', async (req, res) => {
                 "SELECT id, name, rarity_id, type, image FROM craft_items WHERE name = 'Камень улучшения (Хлам)'"
             ) as any;
             if (junkStone) {
+                const inventory = JSON.parse(user.inventory || '[]');
                 const stoneDrop = {
                     type: 'craft_item',
                     id: junkStone.id,
