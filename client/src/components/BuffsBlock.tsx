@@ -83,9 +83,9 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     ].filter(Boolean).join(', ');
 
     return (
-        <Card className="mt-4 w-full">
+        <Card className="mt-4 w-full overflow-hidden">
             <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setCollapsed(!collapsed)}>
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="text-xs flex-shrink-0">{collapsed ? '▶' : '▼'}</span>
                     <h3 className="font-bold text-sm flex-shrink-0">Усиления</h3>
                     {hasCollectionItems && <span className="w-2 h-2 rounded-full bg-[#2ecc71] flex-shrink-0" />}
