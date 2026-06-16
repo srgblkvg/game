@@ -372,18 +372,18 @@ export default function BestiaryPage() {
                       <div>
                         <span className="text-[var(--color-accent-purple)] text-[10px]">Лут:</span>
                         <div className="flex flex-wrap gap-1 mt-0.5">
-                          {info.lootImages.map((l: any) => {
+                          {info.lootImages.map((l: any, idx: number) => {
                             const item = {
                               name: l.name,
-                              rarity_id: l.rarity,
+                              rarity_id: Math.max(0, l.rarity),
                               image: l.image,
                               type: 'craft_item',
-                              rarity_display: rarityNames[l.rarity],
-                              rarity_color: rarityColors[l.rarity],
+                              rarity_display: rarityNames[Math.max(0, l.rarity)] || l.name,
+                              rarity_color: rarityColors[Math.max(0, l.rarity)] || '#888888',
                             };
                             return (
                               <div
-                                key={l.rarity}
+                                key={l.name || idx}
                                 className="relative w-7 h-7 flex items-center justify-center cursor-default"
                                 onMouseEnter={(e) => setTooltipData({ item, x: e.clientX, y: e.clientY })}
                                 onMouseMove={(e) => setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}

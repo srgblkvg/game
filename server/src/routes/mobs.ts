@@ -42,7 +42,7 @@ router.get('/mobs', async (req, res) => {
         }
         // Камень улучшения (Хлам) — 5% у всех мобов
         if (junkStone) {
-            lootImages.push({ rarity: -1, name: junkStone.name, image: junkStone.image, chance: 5 });
+            lootImages.push({ rarity: -1, name: junkStone.name, image: junkStone.image, chance: 0.05 });
         }
         return { ...m, lootImages };
     });
