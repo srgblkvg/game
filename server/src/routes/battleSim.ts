@@ -13,7 +13,7 @@ router.get('/players/search', authMiddleware, async (req, res) => {
     try {
         const rows = await db.query(
             `SELECT id, username, level FROM users
-             WHERE username ILIKE $1 AND "isGuest" = 0
+             WHERE username ILIKE ? AND isGuest = 0
              ORDER BY level DESC LIMIT 8`,
             [`%${q}%`]
         );
@@ -29,13 +29,13 @@ router.get('/players/:id/loadout', authMiddleware, async (req, res) => {
     try {
         const user = await db.one(
             `SELECT id, username, level, bases, basea, based, basem, equipment, activedrink
-             FROM users WHERE id = $1`,
+             FROM users WHERE id = ?`,
             [id]
         ) as any;
         if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
         const collCnt = await db.one(
-            'SELECT COUNT(*) as cnt FROM collections WHERE userid = $1', [id]
+            'SELECT COUNT(*) as cnt FROM collections WHERE userid = ?', [id]
         ) as any;
 
         let drinkBonuses = null;
@@ -76,16 +76,16 @@ router.post('/battle-sim', authMiddleware, async (req, res) => {
     try {
         const u1 = await db.one(
             `SELECT id, username, level, bases, basea, based, basem, equipment, activedrink
-             FROM users WHERE id = $1`, [id1]
+             FROM users WHERE id = ?`, [id1]
         ) as any;
         const u2 = await db.one(
             `SELECT id, username, level, bases, basea, based, basem, equipment, activedrink
-             FROM users WHERE id = $2`, [id2]
+             FROM users WHERE id = ?`, [id2]
         ) as any;
         if (!u1 || !u2) return res.status(404).json({ error: 'Игрок не найден' });
 
-        const c1 = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userid = $1', [id1]) as any;
-        const c2 = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userid = $1', [id2]) as any;
+        const c1 = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userid = ?', [id1]) as any;
+        const c2 = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userid = ?', [id2]) as any;
 
         const buildPlayer = (u: any, collCnt: number) => {
             let drinks = null;
