@@ -27,12 +27,12 @@ interface BattleResult {
 }
 
 const dodgeChance = (defA: number, atkM: number, defExtraDodge: number) =>
-  Math.max(0, (defA / (defA + 300)) * (1 - atkM / (atkM + 100)) + Math.min(0.5, defExtraDodge / 300));
+  Math.max(0, (defA / (defA + 500)) * (1 - atkM / (atkM + 100)) + Math.min(0.5, defExtraDodge / 300));
 
-const critChance = (m: number, extraCrit: number) => Math.min(0.8, m / (m + 300) + extraCrit / 300);
+const critChance = (m: number, extraCrit: number) => Math.min(0.8, m / (m + 500) + extraCrit / 300);
 const critMult = (m: number) => 1.5 + 0.5 * (m / (m + 50));
 
-const blockChance = (d: number, extraFullBlock: number) => Math.min(1, d / (d + 300) + extraFullBlock / 300);
+const blockChance = (d: number, extraFullBlock: number) => Math.min(1, d / (d + 500) + extraFullBlock / 300);
 const blockRed = (d: number, s: number) => {
   const ratio = d / Math.max(1, s);
   return Math.min(0.75, 0.5 * ratio);
