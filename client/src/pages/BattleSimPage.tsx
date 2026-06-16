@@ -104,10 +104,10 @@ export default function BattleSimPage() {
 
     const dmgRange = (S: number, level: number) => S <= level ? { min: S, max: S } : { min: level, max: S };
     const critM = (m: number) => 1.5 + 0.5 * (m / (m + 50));
-    const bC = (d: number, extraFB: number) => Math.min(1, d / (d + 150) + extraFB / 300);
+    const bC = (d: number, extraFB: number) => Math.min(1, d / (d + 300) + extraFB / 300);
     const bR = (d: number, s: number) => Math.min(0.75, 0.5 * (d / Math.max(1, s)));
-    const dC = (a: number, ed: number) => Math.max(0, Math.min(0.95, a / (a + 150) + ed / 300));
-    const cC = (m: number, ec: number) => Math.min(0.8, m / (m + 150) + ec / 300);
+    const dC = (a: number, ed: number) => Math.max(0, Math.min(0.95, a / (a + 300) + ed / 300));
+    const cC = (m: number, ec: number) => Math.min(0.8, m / (m + 300) + ec / 300);
     const fB = (efb: number) => Math.min(1, efb / 300);
 
     const renderPlayerCard = (p: PlayerInfo) => {
