@@ -129,16 +129,20 @@ export default function BestiaryPage() {
         }
       }
     }
-    // Предметы: максимальный шанс и редкость по этажу
-    let itemDropChance = 0;
-    let itemDropRarity = 0;
+    // Предметы: собираем таблицу дропа по этажу (макс шанс по каждой редкости)
+    const itemDropMap = new Map<number, { chance: number; image: string }>();
     for (const m of fm) {
-        if (m.itemDropChance > itemDropChance) {
-            itemDropChance = m.itemDropChance;
-            itemDropRarity = m.itemDropRarity;
+        if (m.itemDropTable) {
+            for (const it of m.itemDropTable) {
+                const prev = itemDropMap.get(it.rarity);
+                if (!prev || it.chance > prev.chance) {
+                    itemDropMap.set(it.rarity, { chance: it.chance, image: m.itemImages?.[it.rarity] || '' });
+                }
+            }
         }
     }
-    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootImages, itemDropChance, itemDropRarity };
+    const itemDropTable = Array.from(itemDropMap.entries()).map(([rarity, info]) => ({ rarity, ...info }));
+    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootImages, itemDropTable };
   };
 
   // --- Animation helpers (same as useBattleLogic) ---
@@ -410,10 +414,21 @@ export default function BestiaryPage() {
                         </div>
                       </div>
                     )}
-                    {info.itemDropChance > 0 && (
-                      <p className="text-[var(--color-accent-gold)] text-[10px]">
-                        🎲 Предмет: {(info.itemDropChance * 100).toFixed(0)}% — {rarityNames[info.itemDropRarity] || '?'}
-                      </p>
+                    {info.itemDropTable.length > 0 && (
+                      <div>
+                        <span className="text-[var(--color-accent-gold)] text-[10px]">🎲 Предметы:</span>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {info.itemDropTable.map((it: any) => (
+                            <div key={it.rarity} className="relative w-7 h-7 flex items-center justify-center cursor-default"
+                              title={`${rarityNames[it.rarity]}: ${(it.chance * 100).toFixed(1)}%`}>
+                              <img src={it.image} alt="" className="w-5 h-5 object-contain rounded opacity-80" />
+                              <span className="absolute bottom-0 right-0 text-[7px] text-white px-0.5 rounded-sm leading-none bg-black/65">
+                                {(it.chance * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                   {disabled && (

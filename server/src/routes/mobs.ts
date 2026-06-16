@@ -7,24 +7,46 @@ import { getDrinkBonuses } from '../game/drinks';
 
 const router = Router();
 
-// Шанс дропа предмета в зависимости от уровня моба
-function getItemDropChance(level: number): number {
-    if (level <= 15) return 0.02;
-    if (level <= 30) return 0.03;
-    if (level <= 50) return 0.04;
-    if (level <= 70) return 0.04;
-    if (level <= 90) return 0.05;
-    return 0.05;
-}
-
-// Редкость дропаемого предмета
-function getItemDropRarity(level: number): number {
-    if (level <= 15) return 0;   // Хлам
-    if (level <= 30) return 1;   // Обычный
-    if (level <= 50) return 2;   // Необычный
-    if (level <= 70) return 3;   // Редкий
-    if (level <= 90) return 4;   // Эпический
-    return 5;                     // Легендарный
+// Шансы дропа предметов по редкостям в зависимости от уровня моба
+// Возвращает массив {rarity, chance} — сумма всех chance = общий шанс дропа
+function getItemDropTable(level: number): { rarity: number; chance: number }[] {
+    // Базовые шансы: растут с уровнем, но всегда низкие
+    const base = 0.015; // 1.5% база для всех
+    const table: { rarity: number; chance: number }[] = [];
+    
+    if (level <= 10) {
+        table.push({ rarity: 0, chance: 0.02 }); // Хлам 2%
+        table.push({ rarity: 1, chance: 0.005 }); // Обычный 0.5%
+    } else if (level <= 25) {
+        table.push({ rarity: 0, chance: 0.02 });
+        table.push({ rarity: 1, chance: 0.015 }); // Обычный 1.5%
+        table.push({ rarity: 2, chance: 0.005 }); // Необычный 0.5%
+    } else if (level <= 45) {
+        table.push({ rarity: 0, chance: 0.02 });
+        table.push({ rarity: 1, chance: 0.02 });
+        table.push({ rarity: 2, chance: 0.015 }); // Необычный 1.5%
+        table.push({ rarity: 3, chance: 0.005 }); // Редкий 0.5%
+    } else if (level <= 65) {
+        table.push({ rarity: 1, chance: 0.02 });
+        table.push({ rarity: 2, chance: 0.02 });
+        table.push({ rarity: 3, chance: 0.015 }); // Редкий 1.5%
+        table.push({ rarity: 4, chance: 0.005 }); // Эпик 0.5%
+    } else if (level <= 85) {
+        table.push({ rarity: 2, chance: 0.02 });
+        table.push({ rarity: 3, chance: 0.02 });
+        table.push({ rarity: 4, chance: 0.015 }); // Эпик 1.5%
+        table.push({ rarity: 5, chance: 0.005 }); // Легендарный 0.5%
+    } else if (level <= 100) {
+        table.push({ rarity: 3, chance: 0.02 });
+        table.push({ rarity: 4, chance: 0.02 });
+        table.push({ rarity: 5, chance: 0.02 }); // Легендарный 2%
+        table.push({ rarity: 6, chance: 0.005 }); // Мифический 0.5%
+    } else {
+        table.push({ rarity: 4, chance: 0.02 });
+        table.push({ rarity: 5, chance: 0.02 });
+        table.push({ rarity: 6, chance: 0.015 }); // Мифический 1.5%
+    }
+    return table;
 }
 
 // Список всех мобов
@@ -64,9 +86,15 @@ router.get('/mobs', async (req, res) => {
         if (junkStone) {
             lootImages.push({ rarity: -1, name: junkStone.name, image: junkStone.image, chance: 0.05 });
         }
-        const itemChance = getItemDropChance(m.level);
-        const itemRarity = getItemDropRarity(m.level);
-        return { ...m, lootImages, itemDropChance: itemChance, itemDropRarity: itemRarity };
+        const itemTable = getItemDropTable(m.level);
+        // Картинки предметов по редкостям (первое попавшееся для каждой)
+        const itemImages: Record<number, string> = {};
+        for (const it of itemTable) {
+            if (!itemImages[it.rarity] && craftInfo[it.rarity]) {
+                itemImages[it.rarity] = craftInfo[it.rarity].image;
+            }
+        }
+        return { ...m, lootImages, itemDropTable: itemTable, itemImages };
     });
 
     res.json(enriched);
@@ -295,31 +323,33 @@ router.post('/mob/attack', async (req, res) => {
             }
         }
 
-        // Случайный предмет в зависимости от уровня моба
-        const itemDropChance = getItemDropChance(mob.level);
-        if (itemDropChance > 0 && Math.random() < itemDropChance) {
-            const itemRarity = getItemDropRarity(mob.level);
-            const randomItem = await db.one(
-                'SELECT i.*, r.display_name, r.color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.rarity_id = ? ORDER BY RANDOM() LIMIT 1',
-                [itemRarity]
-            ) as any;
-            if (randomItem) {
-                const inv = JSON.parse(user.inventory || '[]');
-                const drop = {
-                    id: Date.now() + Math.random(),
-                    name: randomItem.name,
-                    slot: randomItem.slot,
-                    rarity_id: randomItem.rarity_id,
-                    rarity_display: randomItem.display_name,
-                    rarity_color: randomItem.color,
-                    bonuses: JSON.parse(randomItem.bonuses || '{}'),
-                    extra: JSON.parse(randomItem.extra || '{}'),
-                    image: randomItem.image || null,
-                };
-                inv.push(drop);
-                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inv), userId]);
-                itemDropped = drop;
-                addStep({ type: 'money', message: `Добыто: ${randomItem.display_name} предмет — ${randomItem.name}` });
+        // Случайный предмет — каждый уровень редкости проверяется отдельно
+        const itemTable = getItemDropTable(mob.level);
+        for (const entry of itemTable) {
+            if (Math.random() < entry.chance) {
+                const randomItem = await db.one(
+                    'SELECT i.*, r.display_name, r.color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.rarity_id = ? ORDER BY RANDOM() LIMIT 1',
+                    [entry.rarity]
+                ) as any;
+                if (randomItem) {
+                    const inv = JSON.parse(user.inventory || '[]');
+                    const drop = {
+                        id: Date.now() + Math.random(),
+                        name: randomItem.name,
+                        slot: randomItem.slot,
+                        rarity_id: randomItem.rarity_id,
+                        rarity_display: randomItem.display_name,
+                        rarity_color: randomItem.color,
+                        bonuses: JSON.parse(randomItem.bonuses || '{}'),
+                        extra: JSON.parse(randomItem.extra || '{}'),
+                        image: randomItem.image || null,
+                    };
+                    inv.push(drop);
+                    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inv), userId]);
+                    itemDropped = drop;
+                    addStep({ type: 'money', message: `Добыто: ${randomItem.display_name} предмет — ${randomItem.name}` });
+                    break; // только 1 предмет за бой
+                }
             }
         }
     }
