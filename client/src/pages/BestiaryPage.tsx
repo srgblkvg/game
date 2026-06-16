@@ -280,9 +280,19 @@ export default function BestiaryPage() {
       const result = await attackMob(mob.id);
       setBattleSteps(result.steps || []);
       setBattleResult(result);
-      if (result.materialDropped) {
-        showAcquire(result.materialDropped, 1, 'Добыто');
+      // Дропы с задержкой
+      const drops: any[] = [];
+      if (result.materialDropped) drops.push(result.materialDropped);
+      if (result.itemDropped) drops.push(result.itemDropped);
+      // Камень улучшения мог выпасть вместе с материалом (тогда он только в steps)
+      const hasStoneInSteps = result.steps?.some((s: any) => s.message?.includes('Камень улучшения'));
+      const hasStoneInMaterial = result.materialDropped?.itemType === 'upgrade';
+      if (hasStoneInSteps && !hasStoneInMaterial) {
+        drops.push({ name: 'Камень улучшения (Хлам)', rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888', count: 1, type: 'craft_item', itemType: 'upgrade' });
       }
+      drops.forEach((d: any, i: number) => {
+        setTimeout(() => showAcquire(d, 1, 'Добыто'), i * 400);
+      });
       const fresh = await fetchCharacter();
       setCharacter(fresh);
       setCooldownRemaining((fresh as any)?.pveCooldownSec ?? 300);
