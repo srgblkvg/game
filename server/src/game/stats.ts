@@ -99,6 +99,8 @@ export function currentStats(
             counter: extra.counter || 0,
             fullBlock: extra.fullBlock || 0,
         },
+        drinks: drinkBonuses || { s: 0, a: 0, d: 0, m: 0 },
+        collection: collectionBonus || 0,
     };
 }
 
