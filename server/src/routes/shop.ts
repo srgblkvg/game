@@ -4,6 +4,25 @@ import { buyItemSchema } from '../validation';
 
 const router = Router();
 
+// Получить все предметы (для коллекций)
+router.get('/items', async (req, res) => {
+    const items = await db.query(`
+        SELECT i.*, r.display_name as rarity_display, r.color as rarity_color, r.id as rarity_id
+        FROM items i
+        JOIN rarities r ON i.rarity_id = r.id
+        ORDER BY i.id
+    `, []) as any[];
+
+    const result = items.map((item) => ({
+        ...item,
+        bonuses: JSON.parse(item.bonuses || '{}'),
+        extra: JSON.parse(item.extra || '{}'),
+        price: item.cost ?? Math.floor(100 * Math.pow(10, item.rarity_id)),
+    }));
+
+    res.json(result);
+});
+
 // Получить все предметы для магазина
 router.get('/shop/items', async (req, res) => {
     const items = await db.query(`

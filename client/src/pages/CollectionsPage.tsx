@@ -99,7 +99,7 @@ export default function CollectionsPage() {
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/shop/items', { headers: getHeaders() }).then(r => r.json()),
+            fetch('/api/items', { headers: getHeaders() }).then(r => r.json()),
             fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
             fetch('/api/collections', { headers: getHeaders() }).then(r => r.json()),
         ])
