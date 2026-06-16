@@ -224,10 +224,9 @@ export default function BattleSimPage() {
                                 <div className="bg-[var(--color-bg-primary)] border-x border-b border-[var(--color-border-default)] rounded-b p-2 text-xs max-h-80 overflow-y-auto">
                                     {b.steps.reduce((acc: any[], s, i) => {
                                         const prev = b.steps[i - 1];
-                                        const isNewTurn = s.type === 'atk';
+                                        const isNewTurn = s.type === 'attack';
                                         const isEnd = s.type === 'end';
-                                        // Insert divider before each turn and before the end
-                                        if (isNewTurn && prev && prev.type !== 'init' && prev.type !== 'info') {
+                                        if (isNewTurn && prev && prev.type !== 'info' && prev.type !== 'info') {
                                             acc.push({ type: 'divider' });
                                         }
                                         if (isEnd && prev) {
@@ -240,18 +239,18 @@ export default function BattleSimPage() {
                                             return <div key={`d${i}`} className="border-t border-[var(--color-border-default)] my-1.5 opacity-50" />;
                                         }
                                         const colors: Record<string,string> = {
-                                            atk:'#f9e2af', dodge:'#89b4fa', counter:'#f5c2e7', crit:'#f38ba8',
-                                            block:'#a6e3a1', fullBlock:'#a6e3a1', stun:'#cba6f7', dmg:'#f38ba8',
-                                            end:'#f9e2af', init:'#b4befe', info:'#6c7086'
+                                            attack:'#f9e2af', dodge:'#89b4fa', counter:'#f5c2e7', crit:'#f38ba8',
+                                            block:'#a6e3a1', fullBlock:'#a6e3a1', stun:'#cba6f7', damage:'#f38ba8',
+                                            end:'#f9e2af', info:'#6c7086', money:'#f9e2af'
                                         };
-                                        const bg = s.type === 'atk'
+                                        const bg = s.type === 'attack'
                                             ? s.actor === 'attacker' ? 'rgba(249,226,175,0.06)' : 'rgba(245,194,231,0.06)'
                                             : undefined;
                                         return (
                                             <div key={i} className="py-0.5 px-1" style={{ color: colors[s.type] || '#6c7086', background: bg }}>
                                                 {s.message}
-                                                {s.hA != null && s.hD != null && (
-                                                    <span className="text-[var(--color-text-muted)] ml-2">[{s.aName}: {s.hA} | {s.dName}: {s.hD}]</span>
+                                                {s.hp1 != null && s.hp2 != null && (
+                                                    <span className="text-[var(--color-text-muted)] ml-2">[{s.actor === 'attacker' ? '⚔' : '🛡'}: {s.hp1}/{s.maxHp1} | {s.hp2}/{s.maxHp2}]</span>
                                                 )}
                                             </div>
                                         );
