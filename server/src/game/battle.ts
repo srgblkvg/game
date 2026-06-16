@@ -43,24 +43,24 @@ const counterChance = (defStats: CharStats, atkStats: CharStats, defExtraCounter
   return Math.min(0.5, (sum > 0 ? (defStats.m + defStats.a) / sum * 0.5 : 0) + defExtraCounter / 300);
 };
 
-// Смешанное распределение урона: 1% мин, 98% ~центр(70%), 1% макс
-function rollDamage(S: number): number {
+// Смешанное распределение урона: 1% мин(level), 98% ~центр(70%), 1% макс(S)
+function rollDamage(S: number, level: number): number {
   const roll = Math.random();
   let factor: number;
   if (roll < 0.01) {
-    factor = 0.01; // 1% — минимум
+    factor = 0; // минимум = level
   } else if (roll > 0.99) {
-    factor = 1.0;  // 1% — максимум
+    factor = 1; // максимум = S
   } else {
     // 98% — треугольное распределение с пиком в 0.7
     const u = (Math.random() + Math.random()) / 2;
     if (u < 0.5) {
-      factor = 0.01 + (u / 0.5) * (0.7 - 0.01);
+      factor = (u / 0.5) * 0.7;
     } else {
-      factor = 0.7 + ((u - 0.5) / 0.5) * (1.0 - 0.7);
+      factor = 0.7 + ((u - 0.5) / 0.5) * 0.3;
     }
   }
-  return Math.round(S * factor);
+  return Math.round(level + factor * (S - level));
 };
 
 const stunChance = (atkStats: CharStats, defStats: CharStats) => {
@@ -129,7 +129,7 @@ export function runBattle(
 
       // Попадание
       addStep({ type: 'info', message: `Попадание!` });
-      let dmg = rollDamage(statsA.s);
+      let dmg = rollDamage(statsA.s, attacker.level);
       if (Math.random() < critChance(statsA.m, statsA.extra.crit)) {
         dmg *= critMult(statsA.m);
         addStep({ type: 'crit', actor: 'attacker', message: `Крит!` });
@@ -179,7 +179,7 @@ export function runBattle(
       }
 
       addStep({ type: 'info', message: `Попадание!` });
-      let dmg = rollDamage(statsD.s);
+      let dmg = rollDamage(statsD.s, defender.level);
       if (Math.random() < critChance(statsD.m, statsD.extra.crit)) {
         dmg *= critMult(statsD.m);
         addStep({ type: 'crit', actor: 'defender', message: `Крит!` });
