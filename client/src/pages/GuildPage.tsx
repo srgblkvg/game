@@ -48,6 +48,9 @@ export default function GuildPage() {
 
     // Гильд-войны
     const [war, setWar] = useState<any>(null);
+
+    // Попап подтверждения
+    const [confirmPopup, setConfirmPopup] = useState<{ message: string; onConfirm: () => void } | null>(null);
     const [warMessage, setWarMessage] = useState('');
     const [showWarRules, setShowWarRules] = useState(false);
 
@@ -133,13 +136,18 @@ export default function GuildPage() {
     };
 
     const handleLeave = async () => {
-        if (!confirm('Покинуть гильдию?')) return;
-        try {
-            await api('/guild/leave', {});
-            setGuild(null); setMembers([]);
-            const fresh = await fetchCharacter(); setCharacter(fresh);
-            load();
-        } catch (e: any) { setError(e.message); }
+        setConfirmPopup({
+            message: 'Покинуть гильдию?',
+            onConfirm: async () => {
+                setConfirmPopup(null);
+                try {
+                    await api('/guild/leave', {});
+                    setGuild(null); setMembers([]);
+                    const fresh = await fetchCharacter(); setCharacter(fresh);
+                    load();
+                } catch (e: any) { setError(e.message); }
+            }
+        });
     };
 
     const handleRequest = async (requestId: number, accept: boolean) => {
@@ -151,12 +159,17 @@ export default function GuildPage() {
     };
 
     const handleKick = async (targetId: number, username: string) => {
-        if (!confirm(`Исключить ${username} из гильдии?`)) return;
-        try {
-            await api('/guild/kick', { targetId });
-            setMessage(`${username} исключён`);
-            load();
-        } catch (e: any) { setError(e.message); }
+        setConfirmPopup({
+            message: `Исключить ${username} из гильдии?`,
+            onConfirm: async () => {
+                setConfirmPopup(null);
+                try {
+                    await api('/guild/kick', { targetId });
+                    setMessage(`${username} исключён`);
+                    load();
+                } catch (e: any) { setError(e.message); }
+            }
+        });
     };
 
     const handleRole = async (targetId: number, username: string, rank: string) => {
@@ -632,6 +645,19 @@ export default function GuildPage() {
                         </Card>
                     ))}
                 </>
+            )}
+            {/* Попап подтверждения */}
+            {confirmPopup && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmPopup(null)} />
+                    <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border-default)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+                        <p className="text-sm mb-4">{confirmPopup.message}</p>
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="secondary" size="xs" onClick={() => setConfirmPopup(null)}>Отмена</Button>
+                            <Button variant="danger" size="xs" onClick={confirmPopup.onConfirm}>Подтвердить</Button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
