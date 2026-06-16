@@ -363,12 +363,12 @@ export async function runSeed() {
       name: string; description: string; cost: number;
       result: string; chance: number; ingredients: Array<{ name: string; qty: number }>;
     }> = [
-      { name: 'Пыль забвения → Осколок скорби', description: '5 Пыли забвения в 1 Осколок скорби', cost: 5, result: 'Осколок скорби', chance: 80, ingredients: [{ name: 'Пыль забвения', qty: 5 }] },
-      { name: 'Осколок скорби → Фрагмент ужаса', description: '5 Осколков скорби в 1 Фрагмент ужаса', cost: 20, result: 'Фрагмент ужаса', chance: 75, ingredients: [{ name: 'Осколок скорби', qty: 5 }] },
-      { name: 'Фрагмент ужаса → Эссенция мрака', description: '5 Фрагментов ужаса в 1 Эссенцию мрака', cost: 75, result: 'Эссенция мрака', chance: 70, ingredients: [{ name: 'Фрагмент ужаса', qty: 5 }] },
-      { name: 'Эссенция мрака → Сердцевина бездны', description: '5 Эссенций мрака в 1 Сердцевину бездны', cost: 250, result: 'Сердцевина бездны', chance: 65, ingredients: [{ name: 'Эссенция мрака', qty: 5 }] },
-      { name: 'Сердцевина бездны → Искра погибели', description: '7 Сердцевин бездны в 1 Искру погибели', cost: 875, result: 'Искра погибели', chance: 60, ingredients: [{ name: 'Сердцевина бездны', qty: 7 }] },
-      { name: 'Искра погибели → Слеза вечности', description: '9 Искр погибели в 1 Слезу вечности', cost: 3000, result: 'Слеза вечности', chance: 50, ingredients: [{ name: 'Искра погибели', qty: 9 }] },
+      { name: 'Пыль забвения → Осколок скорби', description: '15 Пыли забвения в 1 Осколок скорби', cost: 5, result: 'Осколок скорби', chance: 80, ingredients: [{ name: 'Пыль забвения', qty: 15 }] },
+      { name: 'Осколок скорби → Фрагмент ужаса', description: '15 Осколков скорби в 1 Фрагмент ужаса', cost: 20, result: 'Фрагмент ужаса', chance: 75, ingredients: [{ name: 'Осколок скорби', qty: 15 }] },
+      { name: 'Фрагмент ужаса → Эссенция мрака', description: '15 Фрагментов ужаса в 1 Эссенцию мрака', cost: 75, result: 'Эссенция мрака', chance: 70, ingredients: [{ name: 'Фрагмент ужаса', qty: 15 }] },
+      { name: 'Эссенция мрака → Сердцевина бездны', description: '15 Эссенций мрака в 1 Сердцевину бездны', cost: 250, result: 'Сердцевина бездны', chance: 65, ingredients: [{ name: 'Эссенция мрака', qty: 15 }] },
+      { name: 'Сердцевина бездны → Искра погибели', description: '21 Сердцевина бездны в 1 Искру погибели', cost: 875, result: 'Искра погибели', chance: 60, ingredients: [{ name: 'Сердцевина бездны', qty: 21 }] },
+      { name: 'Искра погибели → Слеза вечности', description: '27 Искр погибели в 1 Слезу вечности', cost: 3000, result: 'Слеза вечности', chance: 50, ingredients: [{ name: 'Искра погибели', qty: 27 }] },
     ];
 
     const allRecipes = [
