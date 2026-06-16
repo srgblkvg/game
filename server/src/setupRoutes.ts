@@ -36,6 +36,7 @@ import adminGameRoutes from './routes/adminGame';
 import actionsRoutes from './routes/actions';
 import collectionsRoutes from './routes/collections';
 import adminCollectionsRoutes from './routes/adminCollections';
+import battleSimRoutes from './routes/battleSim';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -78,6 +79,7 @@ export function setupRoutes(app: Express) {
 
   // Игровые маршруты (только для игроков) + замедление гостей
   app.use('/api', authMiddleware, requirePlayer, guestCooldown);
+  app.use('/api', battleSimRoutes);  // симулятор боёв
   app.use('/api', characterRoutes);
   app.use('/api', inventoryRoutes);
   app.use('/api', usersRoutes);

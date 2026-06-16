@@ -34,6 +34,7 @@ const GuildRatingPage = lazy(() => import('./pages/GuildRatingPage'));
 const GuildWarPage = lazy(() => import('./pages/GuildWarPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
+const BattleSimPage = lazy(() => import('./pages/BattleSimPage'));
 
 function Loading() {
   return (
@@ -85,6 +86,7 @@ function App() {
             <Route path="/feedback" element={user?.role === 'player' ? <FeedbackPage /> : <Navigate to="/login" />} />
             <Route path="/collections" element={user?.role === 'player' ? <CollectionsPage /> : <Navigate to="/login" />} />
             <Route path="/guild/:id" element={user?.role === 'player' ? <GuildViewPage /> : <Navigate to="/login" />} />
+            <Route path="/battle-sim" element={user?.role === 'player' || user?.role === 'admin' ? <BattleSimPage /> : <Navigate to="/login" />} />
             <Route path="/admin/register" element={<AdminRegisterPage />} />
             <Route path="/adminpanel" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} />
             <Route path="*" element={<Navigate to="/" />} />
