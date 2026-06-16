@@ -115,7 +115,7 @@ export default function CraftPage() {
         if (isCraftItem(item) && item.itemType !== 'upgrade') return;
         setTooltipData(null);
         const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
-        if (freeSlotIndex === -1) { alert('Все слоты заняты'); return; }
+        if (freeSlotIndex === -1) { setErrorPopup('Все слоты заняты'); return; }
         setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = item; return n; });
     }, [craftSlots]);
 
@@ -123,10 +123,10 @@ export default function CraftPage() {
         if (!isCraftItem(mat)) return;
         setTooltipData(null);
         const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
-        if (freeSlotIndex === -1) { alert('Все слоты заняты'); return; }
+        if (freeSlotIndex === -1) { setErrorPopup('Все слоты заняты'); return; }
         const used = materialUsage[mat.id] || 0;
         const totalAvailable = getOriginalCraftItemCount(mat.id);
-        if (used >= totalAvailable) { alert('Нет доступных ресурсов этого типа'); return; }
+        if (used >= totalAvailable) { setErrorPopup('Нет доступных ресурсов этого типа'); return; }
         setMaterialUsage(prev => ({ ...prev, [mat.id]: (prev[mat.id] || 0) + 1 }));
         setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = { ...mat, count: 1 }; return n; });
     }, [craftSlots, materialUsage, character.inventory]);
@@ -190,7 +190,7 @@ export default function CraftPage() {
         setCraftSlots(Array(9).fill(null));
         setMaterialUsage({});
         const canCraft = recipe.ingredients.every((ing: any) => getOriginalCraftItemCount(ing.craft_item_id) >= ing.quantity);
-        if (!canCraft) { alert('Недостаточно необходимых ресурсов'); return; }
+        if (!canCraft) { setErrorPopup('Недостаточно необходимых ресурсов'); return; }
         const newSlots: (any | null)[] = [];
         const newUsage: Record<string, number> = {};
         recipe.ingredients.forEach((ing: any) => {
