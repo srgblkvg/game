@@ -446,6 +446,10 @@ export default function ChatPanel() {
 
     return (
         <>
+            {/* Оверлей — затемняет контент, но не закрывает чат */}
+            {isPanelOpen && (
+                <div className="fixed inset-0 z-[999] bg-black/40" />
+            )}
             <div
                 ref={panelRef}
                 className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] bg-[var(--color-bg-secondary)]/85 backdrop-blur-[12px] border-t-2 border-[var(--color-border-light)] ${visible ? 'flex' : 'hidden'} ${dragging ? '' : 'transition-[height] duration-150'}`}
