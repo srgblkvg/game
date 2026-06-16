@@ -102,7 +102,7 @@ export default function BattleSimPage() {
         return () => document.removeEventListener('click', h);
     }, []);
 
-    const dmgRange = (S: number, level: number) => S <= level ? { min: S, max: S } : { min: level, max: S };
+    const dmgRange = (S: number) => ({ min: Math.round(S * 0.01), max: S, med: Math.round(S * 0.707) });
     const critM = (m: number) => 1.5 + 0.5 * (m / (m + 50));
     const bC = (d: number, extraFB: number) => Math.min(1, d / (d + 500) + extraFB / 300);
     const bR = (d: number, s: number) => Math.min(0.75, 0.5 * (d / Math.max(1, s)));
@@ -113,9 +113,10 @@ export default function BattleSimPage() {
     const renderPlayerCard = (p: PlayerInfo) => {
         if (!p) return <Card className="p-3 text-center text-sm text-[var(--color-text-muted)]">Игрок не выбран</Card>;
         const st = p.stats;
-        const dmg = dmgRange(st.s, p.level);
+        const dmg = dmgRange(st.s);
         const cm = critM(st.m);
         const maxCrit = Math.round(dmg.max * cm);
+        const medCrit = Math.round(dmg.med * cm);
         const extraFB = st.extra?.fullBlock || 0;
         const extraDodge = st.extra?.dodge || 0;
         const extraCrit = st.extra?.crit || 0;
@@ -141,7 +142,7 @@ export default function BattleSimPage() {
                     </tbody>
                 </table>
                 <div className="mt-2 text-[var(--color-text-muted)]">
-                    <div>⚔ Урон: <b className="text-[var(--color-text-primary)]">{dmg.min}–{dmg.max}</b> | Крит ×{cm.toFixed(2)} (макс <b>{maxCrit}</b>) | Шанс крита: <b>{critPct}%</b></div>
+                    <div>⚔ Урон: <b className="text-[var(--color-text-primary)]">{dmg.min} – {dmg.med} – {dmg.max}</b> | Крит ×{cm.toFixed(2)} (медиана {medCrit}) | Шанс крита: <b>{critPct}%</b></div>
                     <div>🛡 Блок: <b>{blockPct}%</b> (−{blockAmt}%) | Полный блок: <b>{fullBPct}%</b> | Уклон: <b>{dodgePct}%</b></div>
                     <div>Экстра: crit+{st.extra?.crit||0} dodge+{st.extra?.dodge||0} counter+{st.extra?.counter||0} fullBlock+{fullBPct}</div>
                 </div>

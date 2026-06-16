@@ -109,9 +109,8 @@ export function runBattle(
 
       // Попадание
       addStep({ type: 'info', message: `Попадание!` });
-      let dmg = statsA.s > attacker.level
-        ? Math.floor(attacker.level + Math.random() * (statsA.s - attacker.level + 1))
-        : statsA.s;
+      const factor = 0.01 + Math.sqrt(Math.random()) * 0.99;
+      let dmg = Math.round(statsA.s * factor);
       if (Math.random() < critChance(statsA.m, statsA.extra.crit)) {
         dmg *= critMult(statsA.m);
         addStep({ type: 'crit', actor: 'attacker', message: `Крит!` });
@@ -161,9 +160,8 @@ export function runBattle(
       }
 
       addStep({ type: 'info', message: `Попадание!` });
-      let dmg = statsD.s > defender.level
-        ? Math.floor(defender.level + Math.random() * (statsD.s - defender.level + 1))
-        : statsD.s;
+      const factor = 0.01 + Math.sqrt(Math.random()) * 0.99;
+      let dmg = Math.round(statsD.s * factor);
       if (Math.random() < critChance(statsD.m, statsD.extra.crit)) {
         dmg *= critMult(statsD.m);
         addStep({ type: 'crit', actor: 'defender', message: `Крит!` });
