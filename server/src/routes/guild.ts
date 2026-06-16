@@ -408,6 +408,10 @@ router.post('/guild/leave', async (req, res) => {
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
+    // Нельзя покинуть гильдию во время войны
+    const war = await isGuildAtWar(member.guildId);
+    if (war) return res.status(400).json({ error: 'Нельзя покинуть гильдию во время войны' });
+
     if (member.rank === 'leader') {
         const otherMembers = await db.one('SELECT COUNT(*) as cnt FROM guild_members WHERE guildId = ? AND userId != ?', [member.guildId, userId]) as any;
         if (otherMembers.cnt > 0) return res.status(400).json({ error: 'Передайте лидерство другому члену перед выходом' });
