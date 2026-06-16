@@ -8,43 +8,40 @@ import { getDrinkBonuses } from '../game/drinks';
 const router = Router();
 
 // Шансы дропа предметов по редкостям в зависимости от уровня моба
-// Возвращает массив {rarity, chance} — сумма всех chance = общий шанс дропа
 function getItemDropTable(level: number): { rarity: number; chance: number }[] {
-    // Базовые шансы: растут с уровнем, но всегда низкие
-    const base = 0.015; // 1.5% база для всех
     const table: { rarity: number; chance: number }[] = [];
     
     if (level <= 10) {
-        table.push({ rarity: 0, chance: 0.02 }); // Хлам 2%
-        table.push({ rarity: 1, chance: 0.005 }); // Обычный 0.5%
+        table.push({ rarity: 0, chance: 0.20 }); // Хлам 20%
+        table.push({ rarity: 1, chance: 0.05 }); // Обычный 5%
     } else if (level <= 25) {
-        table.push({ rarity: 0, chance: 0.02 });
-        table.push({ rarity: 1, chance: 0.015 }); // Обычный 1.5%
-        table.push({ rarity: 2, chance: 0.005 }); // Необычный 0.5%
+        table.push({ rarity: 0, chance: 0.20 });
+        table.push({ rarity: 1, chance: 0.15 }); // Обычный 15%
+        table.push({ rarity: 2, chance: 0.05 }); // Необычный 5%
     } else if (level <= 45) {
-        table.push({ rarity: 0, chance: 0.02 });
-        table.push({ rarity: 1, chance: 0.02 });
-        table.push({ rarity: 2, chance: 0.015 }); // Необычный 1.5%
-        table.push({ rarity: 3, chance: 0.005 }); // Редкий 0.5%
+        table.push({ rarity: 0, chance: 0.20 });
+        table.push({ rarity: 1, chance: 0.20 });
+        table.push({ rarity: 2, chance: 0.15 }); // Необычный 15%
+        table.push({ rarity: 3, chance: 0.05 }); // Редкий 5%
     } else if (level <= 65) {
-        table.push({ rarity: 1, chance: 0.02 });
-        table.push({ rarity: 2, chance: 0.02 });
-        table.push({ rarity: 3, chance: 0.015 }); // Редкий 1.5%
-        table.push({ rarity: 4, chance: 0.005 }); // Эпик 0.5%
+        table.push({ rarity: 1, chance: 0.20 });
+        table.push({ rarity: 2, chance: 0.20 });
+        table.push({ rarity: 3, chance: 0.15 }); // Редкий 15%
+        table.push({ rarity: 4, chance: 0.05 }); // Эпик 5%
     } else if (level <= 85) {
-        table.push({ rarity: 2, chance: 0.02 });
-        table.push({ rarity: 3, chance: 0.02 });
-        table.push({ rarity: 4, chance: 0.015 }); // Эпик 1.5%
-        table.push({ rarity: 5, chance: 0.005 }); // Легендарный 0.5%
+        table.push({ rarity: 2, chance: 0.20 });
+        table.push({ rarity: 3, chance: 0.20 });
+        table.push({ rarity: 4, chance: 0.15 }); // Эпик 15%
+        table.push({ rarity: 5, chance: 0.05 }); // Легендарный 5%
     } else if (level <= 100) {
-        table.push({ rarity: 3, chance: 0.02 });
-        table.push({ rarity: 4, chance: 0.02 });
-        table.push({ rarity: 5, chance: 0.02 }); // Легендарный 2%
-        table.push({ rarity: 6, chance: 0.005 }); // Мифический 0.5%
+        table.push({ rarity: 3, chance: 0.20 });
+        table.push({ rarity: 4, chance: 0.20 });
+        table.push({ rarity: 5, chance: 0.20 }); // Легендарный 20%
+        table.push({ rarity: 6, chance: 0.05 }); // Мифический 5%
     } else {
-        table.push({ rarity: 4, chance: 0.02 });
-        table.push({ rarity: 5, chance: 0.02 });
-        table.push({ rarity: 6, chance: 0.015 }); // Мифический 1.5%
+        table.push({ rarity: 4, chance: 0.20 });
+        table.push({ rarity: 5, chance: 0.20 });
+        table.push({ rarity: 6, chance: 0.15 }); // Мифический 15%
     }
     return table;
 }
@@ -87,14 +84,7 @@ router.get('/mobs', async (req, res) => {
             lootImages.push({ rarity: -1, name: junkStone.name, image: junkStone.image, chance: 0.05 });
         }
         const itemTable = getItemDropTable(m.level);
-        // Картинки предметов по редкостям (первое попавшееся для каждой)
-        const itemImages: Record<number, string> = {};
-        for (const it of itemTable) {
-            if (!itemImages[it.rarity] && craftInfo[it.rarity]) {
-                itemImages[it.rarity] = craftInfo[it.rarity].image;
-            }
-        }
-        return { ...m, lootImages, itemDropTable: itemTable, itemImages };
+        return { ...m, lootImages, itemDropTable: itemTable };
     });
 
     res.json(enriched);

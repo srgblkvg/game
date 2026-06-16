@@ -130,18 +130,18 @@ export default function BestiaryPage() {
       }
     }
     // Предметы: собираем таблицу дропа по этажу (макс шанс по каждой редкости)
-    const itemDropMap = new Map<number, { chance: number; image: string }>();
+    const itemDropMap = new Map<number, number>();
     for (const m of fm) {
         if (m.itemDropTable) {
             for (const it of m.itemDropTable) {
                 const prev = itemDropMap.get(it.rarity);
-                if (!prev || it.chance > prev.chance) {
-                    itemDropMap.set(it.rarity, { chance: it.chance, image: m.itemImages?.[it.rarity] || '' });
+                if (!prev || it.chance > prev) {
+                    itemDropMap.set(it.rarity, it.chance);
                 }
             }
         }
     }
-    const itemDropTable = Array.from(itemDropMap.entries()).map(([rarity, info]) => ({ rarity, ...info }));
+    const itemDropTable = Array.from(itemDropMap.entries()).map(([rarity, chance]) => ({ rarity, chance }));
     return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootImages, itemDropTable };
   };
 
@@ -421,9 +421,10 @@ export default function BestiaryPage() {
                           {info.itemDropTable.map((it: any) => (
                             <div key={it.rarity} className="relative w-7 h-7 flex items-center justify-center cursor-default"
                               title={`${rarityNames[it.rarity]}: ${(it.chance * 100).toFixed(1)}%`}>
-                              <img src={it.image} alt="" className="w-5 h-5 object-contain rounded opacity-80" />
+                              <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold"
+                                style={{ backgroundColor: rarityColors[it.rarity] || '#888', color: '#fff' }}>?</div>
                               <span className="absolute bottom-0 right-0 text-[7px] text-white px-0.5 rounded-sm leading-none bg-black/65">
-                                {(it.chance * 100).toFixed(1)}%
+                                {(it.chance * 100).toFixed(0)}%
                               </span>
                             </div>
                           ))}
