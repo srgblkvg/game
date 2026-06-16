@@ -129,7 +129,16 @@ export default function BestiaryPage() {
         }
       }
     }
-    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootImages };
+    // Предметы: максимальный шанс и редкость по этажу
+    let itemDropChance = 0;
+    let itemDropRarity = 0;
+    for (const m of fm) {
+        if (m.itemDropChance > itemDropChance) {
+            itemDropChance = m.itemDropChance;
+            itemDropRarity = m.itemDropRarity;
+        }
+    }
+    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootImages, itemDropChance, itemDropRarity };
   };
 
   // --- Animation helpers (same as useBattleLogic) ---
@@ -400,6 +409,11 @@ export default function BestiaryPage() {
                           })}
                         </div>
                       </div>
+                    )}
+                    {info.itemDropChance > 0 && (
+                      <p className="text-[var(--color-accent-gold)] text-[10px]">
+                        🎲 Предмет: {(info.itemDropChance * 100).toFixed(0)}% — {rarityNames[info.itemDropRarity] || '?'}
+                      </p>
                     )}
                   </div>
                   {disabled && (

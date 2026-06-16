@@ -7,6 +7,26 @@ import { getDrinkBonuses } from '../game/drinks';
 
 const router = Router();
 
+// Шанс дропа предмета в зависимости от уровня моба
+function getItemDropChance(level: number): number {
+    if (level <= 15) return 0.02;
+    if (level <= 30) return 0.03;
+    if (level <= 50) return 0.04;
+    if (level <= 70) return 0.04;
+    if (level <= 90) return 0.05;
+    return 0.05;
+}
+
+// Редкость дропаемого предмета
+function getItemDropRarity(level: number): number {
+    if (level <= 15) return 0;   // Хлам
+    if (level <= 30) return 1;   // Обычный
+    if (level <= 50) return 2;   // Необычный
+    if (level <= 70) return 3;   // Редкий
+    if (level <= 90) return 4;   // Эпический
+    return 5;                     // Легендарный
+}
+
 // Список всех мобов
 router.get('/mobs', async (req, res) => {
     const mobs = await db.query('SELECT * FROM mobs ORDER BY level, id', []) as any[];
@@ -44,7 +64,9 @@ router.get('/mobs', async (req, res) => {
         if (junkStone) {
             lootImages.push({ rarity: -1, name: junkStone.name, image: junkStone.image, chance: 0.05 });
         }
-        return { ...m, lootImages };
+        const itemChance = getItemDropChance(m.level);
+        const itemRarity = getItemDropRarity(m.level);
+        return { ...m, lootImages, itemDropChance: itemChance, itemDropRarity: itemRarity };
     });
 
     res.json(enriched);
@@ -189,6 +211,7 @@ router.post('/mob/attack', async (req, res) => {
 
     // Шанс дропа материала (~35%)
     let materialDropped: any = null;
+    let itemDropped: any = null;
     if (playerWon) {
         const dropRoll: number = Math.random();
         if (dropRoll < 0.35) {
@@ -271,6 +294,34 @@ router.post('/mob/attack', async (req, res) => {
                 addStep({ type: 'money', message: 'Добыто: Камень улучшения (Хлам)' });
             }
         }
+
+        // Случайный предмет в зависимости от уровня моба
+        const itemDropChance = getItemDropChance(mob.level);
+        if (itemDropChance > 0 && Math.random() < itemDropChance) {
+            const itemRarity = getItemDropRarity(mob.level);
+            const randomItem = await db.one(
+                'SELECT i.*, r.display_name, r.color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.rarity_id = ? ORDER BY RANDOM() LIMIT 1',
+                [itemRarity]
+            ) as any;
+            if (randomItem) {
+                const inv = JSON.parse(user.inventory || '[]');
+                const drop = {
+                    id: Date.now() + Math.random(),
+                    name: randomItem.name,
+                    slot: randomItem.slot,
+                    rarity_id: randomItem.rarity_id,
+                    rarity_display: randomItem.display_name,
+                    rarity_color: randomItem.color,
+                    bonuses: JSON.parse(randomItem.bonuses || '{}'),
+                    extra: JSON.parse(randomItem.extra || '{}'),
+                    image: randomItem.image || null,
+                };
+                inv.push(drop);
+                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inv), userId]);
+                itemDropped = drop;
+                addStep({ type: 'money', message: `Добыто: ${randomItem.display_name} предмет — ${randomItem.name}` });
+            }
+        }
     }
 
     // Обновление игрока
@@ -341,6 +392,7 @@ router.post('/mob/attack', async (req, res) => {
         newExp,
         levelsGained,
         materialDropped,
+        itemDropped,
         hpAfter: newHpAfter,
         mob: { id: mob.id, name: mob.name, level: mob.level, hp: mob.hp },
     });
