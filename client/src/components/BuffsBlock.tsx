@@ -76,21 +76,25 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     const hasPremium = premium && premium.until > now;
     const activeCount = [hasRoom, hasDrink, hasPremium].filter(Boolean).length;
 
-    const activeList = [
-        hasRoom && `🏠 ${roomNames[room!.type] || room!.type}`,
-        hasDrink && `🍺 ${drinkNames[drink!.type] || drink!.type}`,
-        hasPremium && '⭐ Премиум',
-    ].filter(Boolean).join(', ');
+    const activeIcons = [
+        hasRoom && roomIcons[room!.type] || 'game-icons:wooden-crate',
+        hasDrink && 'game-icons:beer-bottle',
+        hasPremium && 'game-icons:star-formation',
+    ].filter(Boolean) as string[];
 
     return (
-        <Card className="mt-4 w-full overflow-hidden">
+        <Card className="mt-4 w-full">
             <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setCollapsed(!collapsed)}>
-                <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xs flex-shrink-0">{collapsed ? '▶' : '▼'}</span>
                     <h3 className="font-bold text-sm flex-shrink-0">Усиления</h3>
                     {hasCollectionItems && <span className="w-2 h-2 rounded-full bg-[#2ecc71] flex-shrink-0" />}
-                    {collapsed && activeList && (
-                        <span className="text-xs text-[var(--color-text-muted)] truncate">{activeList}</span>
+                    {collapsed && activeIcons.length > 0 && (
+                        <span className="flex items-center gap-0.5 flex-shrink-0">
+                            {activeIcons.map((icon, i) => (
+                                <Icon key={i} icon={icon} width="12" height="12" className="text-[var(--color-accent-gold)]" />
+                            ))}
+                        </span>
                     )}
                 </div>
                 <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0 ml-2">
