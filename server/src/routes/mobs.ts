@@ -232,6 +232,35 @@ router.post('/mob/attack', async (req, res) => {
                 addStep({ type: 'money', message: `Добыто: ${craftItem.display_name} материал` });
             }
         }
+
+        // 5% шанс на Камень улучшения (Хлам) при победе
+        if (Math.random() < 0.05) {
+            const junkStone = await db.one(
+                "SELECT id, name, rarity_id, type, image FROM craft_items WHERE name = 'Камень улучшения (Хлам)'"
+            ) as any;
+            if (junkStone) {
+                const stoneDrop = {
+                    type: 'craft_item',
+                    id: junkStone.id,
+                    name: junkStone.name,
+                    rarity_id: junkStone.rarity_id,
+                    rarity_display: 'Хлам',
+                    rarity_color: '#888888',
+                    count: 1,
+                    itemType: junkStone.type || 'upgrade',
+                    image: junkStone.image || null,
+                };
+                const existing2 = inventory.find((i: any) => i.type === 'craft_item' && i.id === junkStone.id);
+                if (existing2) {
+                    existing2.count = (existing2.count || 0) + 1;
+                } else {
+                    inventory.push(stoneDrop);
+                }
+                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+                materialDropped = materialDropped || stoneDrop;
+                addStep({ type: 'money', message: 'Добыто: Камень улучшения (Хлам)' });
+            }
+        }
     }
 
     // Обновление игрока
