@@ -8,8 +8,8 @@ interface Props {
 export default function CraftPopup({ result, onDone }: Props) {
     const [phase, setPhase] = useState<'fill' | 'result' | 'done'>('fill');
     const [progress, setProgress] = useState(0);
+    // Захватываем onDone только при первом рендере, чтобы не терять замыкание
     const onDoneRef = useRef(onDone);
-    onDoneRef.current = onDone;
 
     // Анимация заполнения: успех — до 100%, провал — до 45%
     useEffect(() => {
