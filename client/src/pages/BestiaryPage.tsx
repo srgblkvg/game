@@ -366,7 +366,7 @@ export default function BestiaryPage() {
               const disabled = cooldownRemaining > 0;
               const bg = floorBgMap.get(floor);
               return (
-                <Card key={floor} className={`cursor-pointer hover:border-[var(--color-accent-info)] transition-colors relative overflow-hidden ${disabled ? 'opacity-50' : ''}`}
+                <Card key={floor} className={`cursor-pointer hover:border-[var(--color-accent-info)] transition-colors relative overflow-hidden min-w-0 ${disabled ? 'opacity-50' : ''}`}
                   onClick={() => !disabled && selectFloor(floor)}
                   style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
                   <div className="relative z-10 bg-[var(--color-overlay-text)] rounded-lg p-2 -m-2">
