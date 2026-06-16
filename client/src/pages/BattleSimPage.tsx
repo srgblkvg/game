@@ -102,7 +102,7 @@ export default function BattleSimPage() {
         return () => document.removeEventListener('click', h);
     }, []);
 
-    const dmgRange = (S: number) => ({ min: Math.round(S * 0.01), max: S, med: Math.round(S * 0.707) });
+    const dmgRange = (S: number, level: number) => ({ min: level, med: Math.round(level + 0.7 * (S - level)), max: S });
     const critM = (m: number) => 1.5 + 0.5 * (m / (m + 50));
     const bC = (d: number, extraFB: number) => Math.min(1, d / (d + 500) + extraFB / 300);
     const bR = (d: number, s: number) => Math.min(0.75, 0.5 * (d / Math.max(1, s)));
@@ -113,7 +113,7 @@ export default function BattleSimPage() {
     const renderPlayerCard = (p: PlayerInfo) => {
         if (!p) return <Card className="p-3 text-center text-sm text-[var(--color-text-muted)]">Игрок не выбран</Card>;
         const st = p.stats;
-        const dmg = dmgRange(st.s);
+        const dmg = dmgRange(st.s, p.level);
         const cm = critM(st.m);
         const maxCrit = Math.round(dmg.max * cm);
         const medCrit = Math.round(dmg.med * cm);
