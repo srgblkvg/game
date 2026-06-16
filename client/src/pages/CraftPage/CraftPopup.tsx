@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface Props {
     result: { success: boolean; label: string };
@@ -6,30 +6,40 @@ interface Props {
 }
 
 export default function CraftPopup({ result, onDone }: Props) {
-    const [phase, setPhase] = useState<'fill' | 'result'>('fill');
+    const [phase, setPhase] = useState<'fill' | 'result' | 'done'>('fill');
     const [progress, setProgress] = useState(0);
+    const onDoneRef = useRef(onDone);
+    onDoneRef.current = onDone;
 
     // Анимация заполнения: успех — до 100%, провал — до 45%
     useEffect(() => {
         const target = result.success ? 100 : 45;
-        const duration = 1800; // ~2 секунды
+        const duration = 1800;
         const start = Date.now();
+        let done = false;
 
         const tick = () => {
+            if (done) return;
             const elapsed = Date.now() - start;
             const pct = Math.min(100, (elapsed / duration) * target);
             setProgress(pct);
             if (elapsed < duration) {
                 requestAnimationFrame(tick);
             } else {
+                done = true;
                 setProgress(target);
                 setPhase('result');
-                // Автозакрытие через 1.5 сек
-                setTimeout(onDone, 1500);
+                setTimeout(() => {
+                    setPhase('done');
+                    onDoneRef.current();
+                }, 1500);
             }
         };
         requestAnimationFrame(tick);
-    }, [result.success, onDone]);
+        return () => { done = true; };
+    }, [result.success]);
+
+    if (phase === 'done') return null;
 
     const barColor = result.success
         ? 'bg-[var(--color-accent-success)]'
