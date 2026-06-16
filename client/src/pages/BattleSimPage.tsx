@@ -104,10 +104,11 @@ export default function BattleSimPage() {
 
     const dmgRange = (S: number, level: number) => S <= level ? { min: S, max: S } : { min: level, max: S };
     const critM = (m: number) => 1.5 + 0.5 * (m / (m + 50));
-    const bC = (d: number) => Math.min(1, d / (d + 50));
+    const bC = (d: number, extraFB: number) => Math.min(1, d / (d + 50) + extraFB / 300);
     const bR = (d: number, s: number) => Math.min(0.75, 0.5 * (d / Math.max(1, s)));
-    const dC = (a: number) => Math.max(0, a / (a + 50));
+    const dC = (a: number, ed: number) => Math.max(0, Math.min(0.95, a / (a + 50) + ed / 300));
     const cC = (m: number, ec: number) => Math.min(0.8, m / (m + 50) + ec / 300);
+    const fB = (efb: number) => Math.min(1, efb / 300);
 
     const renderPlayerCard = (p: PlayerInfo) => {
         if (!p) return <Card className="p-3 text-center text-sm text-[var(--color-text-muted)]">Игрок не выбран</Card>;
@@ -115,11 +116,14 @@ export default function BattleSimPage() {
         const dmg = dmgRange(st.s, p.level);
         const cm = critM(st.m);
         const maxCrit = Math.round(dmg.max * cm);
-        const blockPct = Math.round(bC(st.d) * 100);
+        const extraFB = st.extra?.fullBlock || 0;
+        const extraDodge = st.extra?.dodge || 0;
+        const extraCrit = st.extra?.crit || 0;
+        const blockPct = Math.round(bC(st.d, extraFB) * 100);
         const blockAmt = Math.round(bR(st.d, st.s) * 100);
-        const dodgePct = Math.round(dC(st.a) * 100);
-        const critPct = Math.round(cC(st.m, st.extra?.crit || 0) * 100);
-        const fullBPct = st.extra?.fullBlock || 0;
+        const dodgePct = Math.round(dC(st.a, extraDodge) * 100);
+        const critPct = Math.round(cC(st.m, extraCrit) * 100);
+        const fullBPct = Math.round(fB(extraFB) * 100);
 
         return (
             <Card className="p-3 text-xs">
