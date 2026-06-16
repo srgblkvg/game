@@ -133,76 +133,44 @@ export default function ShopPage() {
             {loading ? (
                 <p className="text-[var(--color-text-muted)]">Загрузка...</p>
             ) : (
-                <div className="space-y-2">
-                    {groupSlots.length === 0 && searchQuery && (
+                <div>
+                    {filteredItems.length === 0 && searchQuery && (
                         <p className="text-[var(--color-text-muted)] text-sm text-center py-4">Ничего не найдено</p>
                     )}
-                    {groupSlots.map(slot => {
-                        const slotItems = grouped[slot];
-                        const count = slotItems.length;
-                        const isExpanded = expandedSlots.has(slot);
+                    <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
+                        {filteredItems.map((item: any) => {
+                            const price = item.cost ?? item.price ?? 100 * Math.pow(10, item.rarity_id);
+                            const canAfford = character.money >= price;
+                            const color = getRarityColor(item);
 
-                        return (
-                            <Card key={slot} className="overflow-hidden">
+                            return (
                                 <div
-                                    className="flex items-center justify-between cursor-pointer select-none py-1"
-                                    onClick={() => toggleSlot(slot)}
+                                    key={item.id}
+                                    className="rounded-xl p-2 sm:p-3 flex flex-col border-2 border-solid bg-[var(--color-bg-card)] shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                                    style={{ borderColor: color }}
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm">{isExpanded ? '▼' : '▶'}</span>
-                                        <h3 className="font-bold text-sm">
-                                            {slotLabels[slot] || slot}
-                                        </h3>
-                                        <span className="text-xs text-[var(--color-text-muted)]">({count})</span>
+                                    <div className="flex-1">
+                                        <ItemStats item={item} imageSize={40} />
+                                    </div>
+
+                                    <div className="mt-2">
+                                        <div className="text-center text-[0.7rem] sm:text-xs text-[var(--color-text-secondary)] mb-1">
+                                            Цена: {formatMoney(price)}
+                                        </div>
+                                        <Button
+                                            variant={canAfford ? 'success' : 'secondary'}
+                                            size="xs"
+                                            fullWidth
+                                            onClick={() => handleBuy(item.id)}
+                                            disabled={!canAfford}
+                                        >
+                                            Купить
+                                        </Button>
                                     </div>
                                 </div>
-
-                                {isExpanded && (
-                                    <>
-                                    {slot === 'ring' && (
-                                        <p className="text-xs text-[var(--color-accent-warning)] bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mt-2">
-                                            ⚠️ Нельзя надеть два одинаковых кольца.
-                                        </p>
-                                    )}
-                                    <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(150px,1fr))] mt-2 pt-2 border-t border-[var(--color-border-light)]">
-                                        {slotItems.map((item: any) => {
-                                            const price = item.cost ?? item.price ?? 100 * Math.pow(10, item.rarity_id);
-                                            const canAfford = character.money >= price;
-                                            const color = getRarityColor(item);
-
-                                            return (
-                                                <div
-                                                    key={item.id}
-                                                    className="rounded-xl p-2 sm:p-3 flex flex-col border-2 border-solid bg-[var(--color-bg-card)] shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
-                                                    style={{ borderColor: color }}
-                                                >
-                                                    <div className="flex-1">
-                                                        <ItemStats item={item} imageSize={40} />
-                                                    </div>
-
-                                                    <div className="mt-2">
-                                                        <div className="text-center text-[0.7rem] sm:text-xs text-[var(--color-text-secondary)] mb-1">
-                                                            Цена: {formatMoney(price)}
-                                                        </div>
-                                                        <Button
-                                                            variant={canAfford ? 'success' : 'secondary'}
-                                                            size="xs"
-                                                            fullWidth
-                                                            onClick={() => handleBuy(item.id)}
-                                                            disabled={!canAfford}
-                                                        >
-                                                            Купить
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    </>
-                                )}
-                            </Card>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 
