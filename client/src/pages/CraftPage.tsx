@@ -31,7 +31,7 @@ export default function CraftPage() {
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const [recipes, setRecipes] = useState<any[]>([]);
     const [crafting, setCrafting] = useState(false);
-    const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string } | null>(null);
+    const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string; acquire?: { item: any; count: number; msg: string } } | null>(null);
     const { showAcquire } = useAcquire();
     const [upgradeInfo, setUpgradeInfo] = useState<{
         item: any; stone: any; nextLevel: number; chance: number; cost: number;
@@ -240,8 +240,7 @@ export default function CraftPage() {
             setMaterialUsage({});
             const itemName = activeRecipe.result?.name || 'Предмет';
             if (data.success) {
-                setCraftAnim({ success: true, label: itemName });
-                showAcquire(activeRecipe.result, 1, 'Создано');
+                setCraftAnim({ success: true, label: itemName, acquire: { item: activeRecipe.result, count: 1, msg: 'Создано' } });
             } else {
                 setCraftAnim({ success: false, label: itemName });
             }
@@ -261,8 +260,7 @@ export default function CraftPage() {
             setMaterialUsage({});
             const itemName = upgradeInfo.item?.name || 'Предмет';
             if (data.success) {
-                setCraftAnim({ success: true, label: `+${upgradeInfo.nextLevel} ${itemName}` });
-                showAcquire(upgradeInfo.item, 1, `Улучшено до +${upgradeInfo.nextLevel}`);
+                setCraftAnim({ success: true, label: `+${upgradeInfo.nextLevel} ${itemName}`, acquire: { item: upgradeInfo.item, count: 1, msg: `Улучшено до +${upgradeInfo.nextLevel}` } });
             } else {
                 setCraftAnim({ success: false, label: itemName });
             }
@@ -485,7 +483,10 @@ export default function CraftPage() {
 
             {/* Попап крафта с анимацией */}
             {craftAnim && (
-                <CraftPopup result={craftAnim} onDone={() => setCraftAnim(null)} />
+                <CraftPopup result={craftAnim} onDone={() => {
+                    if (craftAnim.acquire) showAcquire(craftAnim.acquire.item, craftAnim.acquire.count, craftAnim.acquire.msg);
+                    setCraftAnim(null);
+                }} />
             )}
         </div>
     );
