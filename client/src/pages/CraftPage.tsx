@@ -32,6 +32,7 @@ export default function CraftPage() {
     const [recipes, setRecipes] = useState<any[]>([]);
     const [crafting, setCrafting] = useState(false);
     const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string; acquire?: { item: any; count: number; msg: string } } | null>(null);
+    const [errorPopup, setErrorPopup] = useState<string | null>(null);
     const { showAcquire } = useAcquire();
     const [upgradeInfo, setUpgradeInfo] = useState<{
         item: any; stone: any; nextLevel: number; chance: number; cost: number;
@@ -245,7 +246,7 @@ export default function CraftPage() {
                 setCraftAnim({ success: false, label: itemName });
             }
         } catch (err: any) {
-            alert(err.message);
+            setErrorPopup(err.message);
         } finally { setCrafting(false); }
     };
 
@@ -265,7 +266,7 @@ export default function CraftPage() {
                 setCraftAnim({ success: false, label: itemName });
             }
         } catch (err: any) {
-            alert(err.message);
+            setErrorPopup(err.message);
         } finally { setCrafting(false); }
     };
 
@@ -451,7 +452,7 @@ export default function CraftPage() {
                                         const fresh = await fetchCharacter();
                                         setCharacter(fresh);
                                     } else {
-                                        alert(data.error || 'Ошибка');
+                                        setErrorPopup(data.error || 'Ошибка');
                                     }
                                 }
                                 setCraftSlots(prev => prev.map(s => {
@@ -461,7 +462,7 @@ export default function CraftPage() {
                                     return s;
                                 }));
                                 setMaterialUsage({});
-                            } catch (err: any) { alert(err.message); }
+                            } catch (err: any) { setErrorPopup(err.message); }
                         }}>
                             Разобрать
                         </Button>
@@ -487,6 +488,17 @@ export default function CraftPage() {
                     if (craftAnim.acquire) showAcquire(craftAnim.acquire.item, craftAnim.acquire.count, craftAnim.acquire.msg);
                     setCraftAnim(null);
                 }} />
+            )}
+
+            {/* Попап ошибки */}
+            {errorPopup && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setErrorPopup(null)} />
+                    <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-accent-danger)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center">
+                        <p className="text-sm text-[var(--color-accent-danger)] mb-4">{errorPopup}</p>
+                        <Button variant="secondary" size="xs" onClick={() => setErrorPopup(null)}>OK</Button>
+                    </div>
+                </div>
             )}
         </div>
     );
