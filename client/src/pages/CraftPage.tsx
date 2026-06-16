@@ -20,6 +20,7 @@ import { formatMoney } from '../utils/money';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import RecipeList from './CraftPage/RecipeList';
+import CraftPopup from './CraftPage/CraftPopup';
 
 export default function CraftPage() {
     const { user } = useAuth();
@@ -30,6 +31,7 @@ export default function CraftPage() {
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const [recipes, setRecipes] = useState<any[]>([]);
     const [crafting, setCrafting] = useState(false);
+    const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string } | null>(null);
     const { showAcquire } = useAcquire();
     const [upgradeInfo, setUpgradeInfo] = useState<{
         item: any; stone: any; nextLevel: number; chance: number; cost: number;
@@ -236,8 +238,12 @@ export default function CraftPage() {
             setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
             setCraftSlots(Array(9).fill(null));
             setMaterialUsage({});
-            if (data.success && activeRecipe.result) {
+            const itemName = activeRecipe.result?.name || 'Предмет';
+            if (data.success) {
+                setCraftAnim({ success: true, label: itemName });
                 showAcquire(activeRecipe.result, 1, 'Создано');
+            } else {
+                setCraftAnim({ success: false, label: itemName });
             }
         } catch (err: any) {
             alert(err.message);
@@ -253,10 +259,12 @@ export default function CraftPage() {
             setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
             setCraftSlots(Array(9).fill(null));
             setMaterialUsage({});
-            if (data.success && upgradeInfo.item) {
+            const itemName = upgradeInfo.item?.name || 'Предмет';
+            if (data.success) {
+                setCraftAnim({ success: true, label: `+${upgradeInfo.nextLevel} ${itemName}` });
                 showAcquire(upgradeInfo.item, 1, `Улучшено до +${upgradeInfo.nextLevel}`);
-            } else if (!data.success) {
-                alert('Предмет разрушен при улучшении!');
+            } else {
+                setCraftAnim({ success: false, label: itemName });
             }
         } catch (err: any) {
             alert(err.message);
@@ -474,6 +482,11 @@ export default function CraftPage() {
             </div>
 
             {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
+
+            {/* Попап крафта с анимацией */}
+            {craftAnim && (
+                <CraftPopup result={craftAnim} onDone={() => setCraftAnim(null)} />
+            )}
         </div>
     );
 }
