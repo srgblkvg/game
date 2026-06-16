@@ -107,7 +107,7 @@ export default function BattleSimPage() {
     const bC = (d: number) => Math.min(1, d / (d + 50));
     const bR = (d: number, s: number) => Math.min(0.75, 0.5 * (d / Math.max(1, s)));
     const dC = (a: number) => Math.max(0, a / (a + 50));
-    const cC = (m: number, ec: number) => Math.min(0.8, m / (m + 50) + ec / 200);
+    const cC = (m: number, ec: number) => Math.min(0.8, m / (m + 50) + ec / 300);
 
     const renderPlayerCard = (p: PlayerInfo) => {
         if (!p) return <Card className="p-3 text-center text-sm text-[var(--color-text-muted)]">Игрок не выбран</Card>;

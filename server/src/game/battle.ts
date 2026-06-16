@@ -27,12 +27,12 @@ interface BattleResult {
 }
 
 const dodgeChance = (defA: number, atkM: number, defExtraDodge: number) =>
-  Math.max(0, (defA / (defA + 50)) * (1 - atkM / (atkM + 100)) + Math.min(0.5, defExtraDodge / 200));
+  Math.max(0, (defA / (defA + 50)) * (1 - atkM / (atkM + 100)) + Math.min(0.5, defExtraDodge / 300));
 
-const critChance = (m: number, extraCrit: number) => Math.min(0.8, m / (m + 50) + extraCrit / 200);
+const critChance = (m: number, extraCrit: number) => Math.min(0.8, m / (m + 50) + extraCrit / 300);
 const critMult = (m: number) => 1.5 + 0.5 * (m / (m + 50));
 
-const blockChance = (d: number, extraFullBlock: number) => Math.min(1, d / (d + 50) + extraFullBlock / 200);
+const blockChance = (d: number, extraFullBlock: number) => Math.min(1, d / (d + 50) + extraFullBlock / 300);
 const blockRed = (d: number, s: number) => {
   const ratio = d / Math.max(1, s);
   return Math.min(0.75, 0.5 * ratio);
@@ -40,7 +40,7 @@ const blockRed = (d: number, s: number) => {
 
 const counterChance = (defStats: CharStats, atkStats: CharStats, defExtraCounter: number) => {
   const sum = (defStats.m + defStats.a) + (atkStats.m + atkStats.d);
-  return Math.min(0.5, (sum > 0 ? (defStats.m + defStats.a) / sum * 0.5 : 0) + defExtraCounter / 200);
+  return Math.min(0.5, (sum > 0 ? (defStats.m + defStats.a) / sum * 0.5 : 0) + defExtraCounter / 300);
 };
 
 const stunChance = (atkStats: CharStats, defStats: CharStats) => {
@@ -116,7 +116,7 @@ export function runBattle(
         dmg *= critMult(statsA.m);
         addStep({ type: 'crit', actor: 'attacker', message: `Крит!` });
       }
-      const fullBlockChance = statsD.extra.fullBlock / 100;
+      const fullBlockChance = statsD.extra.fullBlock / 300;
       if (Math.random() < fullBlockChance) {
         dmg = 0;
         addStep({ type: 'fullBlock', actor: 'defender', message: `ПОЛНЫЙ БЛОК!` });
@@ -168,7 +168,7 @@ export function runBattle(
         dmg *= critMult(statsD.m);
         addStep({ type: 'crit', actor: 'defender', message: `Крит!` });
       }
-      const fullBlockChance = statsA.extra.fullBlock / 100;
+      const fullBlockChance = statsA.extra.fullBlock / 300;
       if (Math.random() < fullBlockChance) {
         dmg = 0;
         addStep({ type: 'fullBlock', actor: 'attacker', message: `ПОЛНЫЙ БЛОК!` });
