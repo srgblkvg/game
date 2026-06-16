@@ -10,6 +10,7 @@ router.get('/shop/items', async (req, res) => {
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color, r.id as rarity_id
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
+        WHERE i.sellable = true
         ORDER BY i.id
     `, []) as any[];
 
