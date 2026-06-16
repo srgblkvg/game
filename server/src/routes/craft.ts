@@ -224,12 +224,10 @@ router.post('/craft/upgrade', async (req, res) => {
     const [itemSlot, stoneSlot] = slots;
 
     if (!itemSlot || isCraftItem(itemSlot) || !stoneSlot || !isCraftItem(stoneSlot) || stoneSlot.itemType !== 'upgrade') {
-        return res.status(400).json({ error: 'Положите предмет и камень усиления того же качества' });
+        return res.status(400).json({ error: 'Положите предмет и камень усиления' });
     }
 
-    if (itemSlot.rarity_id !== stoneSlot.rarity_id) {
-        return res.status(400).json({ error: 'Редкость камня должна совпадать с редкостью предмета' });
-    }
+    // Камень любой редкости может улучшать предмет любой редкости
 
     const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -249,7 +247,7 @@ router.post('/craft/upgrade', async (req, res) => {
     const stone = inventory[stoneIndex];
     if (stone.count < 1) return res.status(400).json({ error: 'Недостаточно камней усиления' });
 
-    const upgradeData = await db.one('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?', [targetLevel, stoneSlot.rarity_id]) as any;
+    const upgradeData = await db.one('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?', [targetLevel, itemSlot.rarity_id]) as any;
     if (!upgradeData) {
         return res.status(400).json({ error: 'Нет данных для этого уровня улучшения. Свяжитесь с администратором.' });
     }

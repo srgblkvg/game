@@ -96,7 +96,7 @@ export default function CraftPage() {
         if (items.length !== 1 || stones.length !== 1) { setUpgradeInfo(null); return; }
         const item = items[0];
         const stone = stones[0];
-        if (item.rarity_id !== stone.rarity_id) { setUpgradeInfo(null); return; }
+        // Камень любой редкости улучшает предмет
         const nextLevel = (item.upgradeLevel || 0) + 1;
         fetchUpgradeInfo(nextLevel, item.rarity_id)
             .then((data: any) => setUpgradeInfo({ item, stone, nextLevel, chance: data.chance, cost: data.money_cost }))

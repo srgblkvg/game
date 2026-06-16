@@ -357,38 +357,22 @@ export async function runSeed() {
       (await db.one('SELECT id FROM craft_recipe_categories WHERE name = ?', [name]) as any).id;
 
     const matCatId = await getCatId('Материалы');
-    const upgCatId = await getCatId('Улучшения');
 
     // Рецепты улучшения материалов (раздел «Материалы»)
     const materialRecipes: Array<{
       name: string; description: string; cost: number;
       result: string; chance: number; ingredients: Array<{ name: string; qty: number }>;
     }> = [
-      { name: 'Пыль забвения → Осколок скорби', description: '5 Пыли забвения в 1 Осколок скорби', cost: 20, result: 'Осколок скорби', chance: 80, ingredients: [{ name: 'Пыль забвения', qty: 5 }] },
-      { name: 'Осколок скорби → Фрагмент ужаса', description: '5 Осколков скорби в 1 Фрагмент ужаса', cost: 80, result: 'Фрагмент ужаса', chance: 75, ingredients: [{ name: 'Осколок скорби', qty: 5 }] },
-      { name: 'Фрагмент ужаса → Эссенция мрака', description: '5 Фрагментов ужаса в 1 Эссенцию мрака', cost: 300, result: 'Эссенция мрака', chance: 70, ingredients: [{ name: 'Фрагмент ужаса', qty: 5 }] },
-      { name: 'Эссенция мрака → Сердцевина бездны', description: '5 Эссенций мрака в 1 Сердцевину бездны', cost: 1000, result: 'Сердцевина бездны', chance: 65, ingredients: [{ name: 'Эссенция мрака', qty: 5 }] },
-      { name: 'Сердцевина бездны → Искра погибели', description: '7 Сердцевин бездны в 1 Искру погибели', cost: 3500, result: 'Искра погибели', chance: 60, ingredients: [{ name: 'Сердцевина бездны', qty: 7 }] },
-      { name: 'Искра погибели → Слеза вечности', description: '9 Искр погибели в 1 Слезу вечности', cost: 12000, result: 'Слеза вечности', chance: 50, ingredients: [{ name: 'Искра погибели', qty: 9 }] },
-    ];
-
-    // Рецепты создания камней улучшения (раздел «Улучшения»)
-    const stoneRecipes: Array<{
-      name: string; description: string; cost: number;
-      result: string; chance: number; ingredients: Array<{ name: string; qty: number }>;
-    }> = [
-      { name: 'Камень улучшения (Хлам)', description: '2 Пыли забвения в Камень улучшения (Хлам)', cost: 10, result: 'Камень улучшения (Хлам)', chance: 90, ingredients: [{ name: 'Пыль забвения', qty: 2 }] },
-      { name: 'Камень улучшения (Обычный)', description: '2 Осколка скорби в Камень улучшения (Обычный)', cost: 30, result: 'Камень улучшения (Обычный)', chance: 85, ingredients: [{ name: 'Осколок скорби', qty: 2 }] },
-      { name: 'Камень улучшения (Необычный)', description: '3 Фрагмента ужаса в Камень улучшения (Необычный)', cost: 80, result: 'Камень улучшения (Необычный)', chance: 80, ingredients: [{ name: 'Фрагмент ужаса', qty: 3 }] },
-      { name: 'Камень улучшения (Редкий)', description: '3 Эссенции мрака в Камень улучшения (Редкий)', cost: 250, result: 'Камень улучшения (Редкий)', chance: 75, ingredients: [{ name: 'Эссенция мрака', qty: 3 }] },
-      { name: 'Камень улучшения (Эпический)', description: '4 Сердцевины бездны в Камень улучшения (Эпический)', cost: 800, result: 'Камень улучшения (Эпический)', chance: 70, ingredients: [{ name: 'Сердцевина бездны', qty: 4 }] },
-      { name: 'Камень улучшения (Легендарный)', description: '5 Искр погибели в Камень улучшения (Легендарный)', cost: 2500, result: 'Камень улучшения (Легендарный)', chance: 65, ingredients: [{ name: 'Искра погибели', qty: 5 }] },
-      { name: 'Камень улучшения (Мифический)', description: '7 Слёз вечности в Камень улучшения (Мифический)', cost: 8000, result: 'Камень улучшения (Мифический)', chance: 50, ingredients: [{ name: 'Слеза вечности', qty: 7 }] },
+      { name: 'Пыль забвения → Осколок скорби', description: '5 Пыли забвения в 1 Осколок скорби', cost: 5, result: 'Осколок скорби', chance: 80, ingredients: [{ name: 'Пыль забвения', qty: 5 }] },
+      { name: 'Осколок скорби → Фрагмент ужаса', description: '5 Осколков скорби в 1 Фрагмент ужаса', cost: 20, result: 'Фрагмент ужаса', chance: 75, ingredients: [{ name: 'Осколок скорби', qty: 5 }] },
+      { name: 'Фрагмент ужаса → Эссенция мрака', description: '5 Фрагментов ужаса в 1 Эссенцию мрака', cost: 75, result: 'Эссенция мрака', chance: 70, ingredients: [{ name: 'Фрагмент ужаса', qty: 5 }] },
+      { name: 'Эссенция мрака → Сердцевина бездны', description: '5 Эссенций мрака в 1 Сердцевину бездны', cost: 250, result: 'Сердцевина бездны', chance: 65, ingredients: [{ name: 'Эссенция мрака', qty: 5 }] },
+      { name: 'Сердцевина бездны → Искра погибели', description: '7 Сердцевин бездны в 1 Искру погибели', cost: 875, result: 'Искра погибели', chance: 60, ingredients: [{ name: 'Сердцевина бездны', qty: 7 }] },
+      { name: 'Искра погибели → Слеза вечности', description: '9 Искр погибели в 1 Слезу вечности', cost: 3000, result: 'Слеза вечности', chance: 50, ingredients: [{ name: 'Искра погибели', qty: 9 }] },
     ];
 
     const allRecipes = [
       ...materialRecipes.map(r => ({ ...r, categoryId: matCatId })),
-      ...stoneRecipes.map(r => ({ ...r, categoryId: upgCatId })),
     ];
 
     for (const r of allRecipes) {
