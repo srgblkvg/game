@@ -357,6 +357,7 @@ CREATE TABLE IF NOT EXISTS pve_battles (
   goldGained INTEGER DEFAULT 0,
   goldLost INTEGER DEFAULT 0,
   materialDropped TEXT,
+  itemsDropped TEXT,
   createdAt TIMESTAMPTZ DEFAULT NOW(),
   premiumBonus INTEGER DEFAULT 0
 );

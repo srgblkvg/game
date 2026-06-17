@@ -229,7 +229,7 @@ router.post('/mob/attack', async (req, res) => {
 
     // Шанс дропа материала (~35%)
     let materialDropped: any = null;
-    let itemDropped: any = null;
+    let itemsDropped: any[] = [];
     if (playerWon) {
         const dropRoll: number = Math.random();
         if (dropRoll < 0.35) {
@@ -336,9 +336,8 @@ router.post('/mob/attack', async (req, res) => {
                     };
                     inv.push(drop);
                     await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inv), userId]);
-                    itemDropped = drop;
+                    itemsDropped.push(drop);
                     addStep({ type: 'money', message: `Добыто: ${randomItem.display_name} предмет — ${randomItem.name}` });
-                    break; // только 1 предмет за бой
                 }
             }
         }
@@ -396,9 +395,9 @@ router.post('/mob/attack', async (req, res) => {
         [newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId]);
 
     // Сохраняем в историю PvE
-    await db.run(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, premiumBonus)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null, premiumBonus]);
+    await db.run(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, itemsDropped, premiumBonus)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null, itemsDropped.length > 0 ? JSON.stringify(itemsDropped) : null, premiumBonus]);
 
     res.json({
         log,
@@ -412,7 +411,7 @@ router.post('/mob/attack', async (req, res) => {
         newExp,
         levelsGained,
         materialDropped,
-        itemDropped,
+        itemsDropped,
         hpAfter: newHpAfter,
         mob: { id: mob.id, name: mob.name, level: mob.level, hp: mob.hp },
     });

@@ -283,7 +283,7 @@ export default function BestiaryPage() {
       // Дропы с задержкой
       const drops: any[] = [];
       if (result.materialDropped) drops.push(result.materialDropped);
-      if (result.itemDropped) drops.push(result.itemDropped);
+      if (result.itemsDropped?.length) drops.push(...result.itemsDropped);
       // Камень улучшения мог выпасть вместе с материалом (тогда он только в steps)
       const hasStoneInSteps = result.steps?.some((s: any) => s.message?.includes('Камень улучшения'));
       const hasStoneInMaterial = result.materialDropped?.itemType === 'upgrade';
