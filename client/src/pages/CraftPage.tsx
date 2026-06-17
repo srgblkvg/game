@@ -116,8 +116,15 @@ export default function CraftPage() {
         setTooltipData(null);
         const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
         if (freeSlotIndex === -1) { setErrorPopup('Все слоты заняты'); return; }
-        setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = item; return n; });
-    }, [craftSlots]);
+        if (isCraftItem(item)) {
+            const used = materialUsage[item.id] || 0;
+            if (used >= getOriginalCraftItemCount(item.id)) { setErrorPopup('Нет доступных ресурсов этого типа'); return; }
+            setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
+            setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = { ...item, count: 1 }; return n; });
+        } else {
+            setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = item; return n; });
+        }
+    }, [craftSlots, materialUsage, character.inventory]);
 
     const handleMaterialClick = useCallback((mat: any) => {
         if (!isCraftItem(mat)) return;
@@ -150,7 +157,7 @@ export default function CraftPage() {
         let item = displayInventory.find((i: any) => i.id === numericItemId);
         if (!item) item = character.inventory.find((i: any) => i.id == numericItemId && isCraftItem(i));
         if (!item) return;
-        if (isCraftItem(item) && item.itemType !== 'upgrade') {
+        if (isCraftItem(item)) {
             const used = materialUsage[item.id] || 0;
             if (used >= getOriginalCraftItemCount(item.id)) return;
             setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
