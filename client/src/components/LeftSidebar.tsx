@@ -42,7 +42,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         side="left"
         showHealth
         showExp
-        regenRate={regenRate}
+        regenRate={effectiveRoom && effectiveRoom.until > serverTime ? (effectiveRoom.type === 'closet' ? 3 : effectiveRoom.type === 'bed' ? 10 : 50) : 1}
         readOnly={false}
         onEquip={onEquip}
         availableItems={character.inventory}
@@ -50,7 +50,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         highlightedSlots={highlightedSlots}
       />
       <StatAllocation />
-      <BuffsBlock room={character.room} drink={character.drink} premium={character.premium} inventory={character.inventory} equipment={character.equipment} collectionCount={character.collectionCount || 0} totalCollectionItems={character.totalCollectionItems || 189} />
+      <BuffsBlock room={effectiveRoom} drink={character.drink} premium={character.premium} inventory={character.inventory} equipment={character.equipment} collectionCount={character.collectionCount || 0} totalCollectionItems={character.totalCollectionItems || 189} />
     </div>
   );
 }

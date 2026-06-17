@@ -22,7 +22,7 @@ router.get('/arena/opponent', async (req, res) => {
 
     // Если не смена — проверяем закреплённого соперника
     if (!change && user.arenaOpponentId) {
-        const saved = await db.one('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.gender, u.avatar, u.activeDrink, u.drinkUntil, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)', [user.arenaOpponentId, now]) as any;
+        const saved = await db.one('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.gender, u.avatar, u.activeDrink, u.drinkUntil, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)', [user.arenaOpponentId, now, user.guildId || 0]) as any;
         if (saved) {
             // Проверяем, соответствует ли сохранённый соперник запрошенной сложности
             const matchesDifficulty =
@@ -58,8 +58,8 @@ router.get('/arena/opponent', async (req, res) => {
 
     // Подбор соперников по сложности
     let opponents = await db.query(
-        'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.avatar, u.activeDrink, u.drinkUntil, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)',
-        [userId, now]
+        'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.avatar, u.activeDrink, u.drinkUntil, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)',
+        [userId, now, user.guildId || 0]
     ) as any[];
 
     const diffLabel = difficulty === 'easy' ? 'ниже вашего' : difficulty === 'hard' ? 'выше вашего' : 'равным вашему';
@@ -125,14 +125,14 @@ router.post('/arena/enter', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректный запрос' });
 
     const userId = req.userId;
-    const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT money, guildId FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.money < 10) return res.status(400).json({ error: 'Недостаточно монет (нужно 10 бронзы)' });
 
     const now = Math.floor(Date.now() / 1000);
     const count = (await db.one(
-        'SELECT COUNT(*) as cnt FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)',
-        [userId, now]
+        'SELECT COUNT(*) as cnt FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?) AND (guildId IS NULL OR guildId != ?)',
+        [userId, now, user.guildId || 0]
     ) as any).cnt;
     if (count === 0) return res.status(400).json({ error: 'Нет доступных соперников' });
 
@@ -143,10 +143,11 @@ router.post('/arena/enter', async (req, res) => {
 // Проверка наличия соперников
 router.get('/arena/check-opponent', async (req, res) => {
     const userId = req.userId;
+    const user = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]) as any;
     const now = Math.floor(Date.now() / 1000);
     const count = (await db.one(
-        'SELECT COUNT(*) as cnt FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?)',
-        [userId, now]
+        'SELECT COUNT(*) as cnt FROM users WHERE id != ? AND (protectionUntil IS NULL OR protectionUntil < ?) AND (guildId IS NULL OR guildId != ?)',
+        [userId, now, user?.guildId || 0]
     ) as any).cnt;
     if (count === 0) return res.status(404).json({ error: 'Нет доступных соперников' });
     res.json({ available: true });
