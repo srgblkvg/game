@@ -756,21 +756,31 @@ export default function GuildPage() {
 
 // Компонент заданий гильдии
 function GuildQuestBlock({ guildId, myRank }: { guildId: number; myRank: string }) {
-    const [quest, setQuest] = useState<any>(null);
+    const [activeQuest, setActiveQuest] = useState<any>(null);
+    const [options, setOptions] = useState<any[] | null>(null);
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState('');
 
-    useEffect(() => {
+    const load = () => {
         fetch('/api/guild/quest', { headers: getHeaders() })
-            .then(r => r.json()).then(d => setQuest(d.quest)).catch(() => {});
-    }, [guildId]);
+            .then(r => r.json()).then(d => {
+                setActiveQuest(d.activeQuest);
+                setOptions(d.options);
+            }).catch(() => {});
+    };
 
-    const handleReroll = async () => {
+    useEffect(() => { load(); }, [guildId]);
+
+    const handleTake = async (opt: any) => {
         setLoading(true);
         try {
-            const r = await fetch('/api/guild/quest/reroll', { method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' } });
+            const r = await fetch('/api/guild/quest/take', {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify(opt),
+            });
             const d = await r.json();
-            if (r.ok) { setQuest(d.quest); setMsg('Новое задание!'); }
+            if (r.ok) { load(); setMsg(d.message); }
             else setMsg(d.error);
         } catch { setMsg('Ошибка'); }
         setLoading(false);
@@ -779,15 +789,18 @@ function GuildQuestBlock({ guildId, myRank }: { guildId: number; myRank: string 
     const handleClaim = async () => {
         setLoading(true);
         try {
-            const r = await fetch('/api/guild/quest/claim', { method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' } });
+            const r = await fetch('/api/guild/quest/claim', {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+            });
             const d = await r.json();
-            if (r.ok) { setQuest(null); setMsg(d.message); }
+            if (r.ok) { load(); setMsg(d.message); }
             else setMsg(d.error);
         } catch { setMsg('Ошибка'); }
         setLoading(false);
     };
 
-    if (!quest && myRank !== 'leader') return null;
+    if (!activeQuest && !options && myRank !== 'leader') return null;
 
     return (
         <Card className="mb-4">
@@ -796,41 +809,51 @@ function GuildQuestBlock({ guildId, myRank }: { guildId: number; myRank: string 
                 Задание гильдии
             </h3>
             {msg && <p className="text-xs text-[var(--color-accent-success)] mb-2">{msg}</p>}
-            {quest ? (
+
+            {activeQuest ? (
                 <div>
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium">{quest.typeName}</span>
-                        <span className="text-[0.6rem] text-[var(--color-text-muted)]">{quest.difficultyLabel}</span>
+                        <span className="text-xs font-medium">{activeQuest.typeName}</span>
+                        <span className="text-[0.6rem] text-[var(--color-text-muted)]">{activeQuest.difficultyLabel}</span>
                     </div>
-                    <p className="text-xs text-[var(--color-text-muted)] mb-2">{quest.description}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">{activeQuest.description}</p>
                     <div className="mb-1">
                         <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
-                            <span>Прогресс: {quest.progress}/{quest.requirement}</span>
-                            <span>Награда: +{quest.rewardXp} XP гильдии</span>
+                            <span>Прогресс: {activeQuest.progress}/{activeQuest.requirement}</span>
+                            <span>Награда: +{activeQuest.rewardXp} XP гильдии</span>
                         </div>
                         <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
                             <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all"
-                                style={{ width: `${Math.min(100, (quest.progress / quest.requirement) * 100)}%` }} />
+                                style={{ width: `${Math.min(100, (activeQuest.progress / activeQuest.requirement) * 100)}%` }} />
                         </div>
                     </div>
-                    {myRank === 'leader' && (
-                        <div className="flex gap-2 mt-2">
-                            {quest.progress >= quest.requirement ? (
-                                <Button variant="primary" size="xs" onClick={handleClaim} disabled={loading}>Забрать награду</Button>
-                            ) : (
-                                <Button variant="secondary" size="xs" onClick={handleReroll} disabled={loading}>Сменить задание</Button>
-                            )}
-                        </div>
+                    {myRank === 'leader' && activeQuest.progress >= activeQuest.requirement && (
+                        <Button variant="primary" size="xs" onClick={handleClaim} disabled={loading} className="mt-2">Забрать награду</Button>
                     )}
                 </div>
-            ) : (
+            ) : options ? (
                 <div>
-                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Нет активного задания</p>
-                    {myRank === 'leader' && (
-                        <Button variant="primary" size="xs" onClick={handleReroll} disabled={loading}>Взять задание</Button>
-                    )}
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Выберите задание:</p>
+                    <div className="space-y-2">
+                        {options.map((opt, i) => (
+                            <div key={i} className="border border-[var(--color-border-light)] rounded-lg p-2 hover:bg-[var(--color-bg-hover)] transition-colors">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs font-medium">{opt.typeName}</span>
+                                    <span className="text-[0.6rem] text-[var(--color-text-muted)]">{opt.difficultyLabel}</span>
+                                </div>
+                                <p className="text-xs text-[var(--color-text-muted)] mb-1">{opt.description}</p>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[0.6rem] text-[var(--color-accent-gold)]">+{opt.rewardXp} XP гильдии</span>
+                                    {myRank === 'leader' && (
+                                        <Button variant="primary" size="xs" onClick={() => handleTake(opt)} disabled={loading}>Взять</Button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {myRank !== 'leader' && <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">Ожидайте выбора лидера</p>}
                 </div>
-            )}
+            ) : null}
         </Card>
     );
 }

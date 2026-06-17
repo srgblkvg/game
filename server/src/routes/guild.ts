@@ -1012,90 +1012,112 @@ const GUILD_QUEST_DIFFICULTIES = {
     hard:   { label: '⭐⭐⭐ Сложный', xpMin: 7, xpMax: 10, reqMult: 8 },
 } as const;
 
-// Получить активное задание гильдии
+// Получить задания гильдии (3 случайных на выбор)
 router.get('/guild/quest', async (req, res) => {
     const userId = req.userId;
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
-    const quest = await db.one(
+    // Активное задание
+    const activeQuest = await db.one(
         "SELECT * FROM guild_quests WHERE guildId = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
         [member.guildId]
     ) as any;
 
-    if (!quest) return res.json({ quest: null });
+    if (activeQuest) {
+        // Обновить прогресс
+        const snap = JSON.parse(activeQuest.snapshot || '{}');
+        const members = await db.query('SELECT userId FROM guild_members WHERE guildId = ?', [member.guildId]) as any[];
+        const userIds = members.map((m: any) => m.userId);
 
-    // Обновить прогресс
-    const snap = JSON.parse(quest.snapshot || '{}');
-    const members = await db.query('SELECT userId FROM guild_members WHERE guildId = ?', [member.guildId]) as any[];
-    const userIds = members.map((m: any) => m.userId);
-
-    let currentValue = 0;
-    if (quest.questType === 'donate') {
-        const g = await db.one('SELECT treasury FROM guilds WHERE id = ?', [member.guildId]) as any;
-        currentValue = (g?.treasury || 0) - (snap.treasury || 0);
-    } else {
-        const field = GUILD_QUEST_INFO[quest.questType as GuildQuestType]?.snapshotFields;
-        if (field && userIds.length > 0) {
-            const rows = await db.query(
-                `SELECT SUM(${field}) as total FROM users WHERE id IN (${userIds.map(() => '?').join(',')})`,
-                userIds
-            ) as any[];
-            currentValue = (rows[0]?.total || 0) - (snap[field] || 0);
+        let currentValue = 0;
+        if (activeQuest.questType === 'donate') {
+            const g = await db.one('SELECT treasury FROM guilds WHERE id = ?', [member.guildId]) as any;
+            currentValue = (g?.treasury || 0) - (snap.treasury || 0);
+        } else {
+            const field = GUILD_QUEST_INFO[activeQuest.questType as GuildQuestType]?.snapshotFields;
+            if (field && userIds.length > 0) {
+                const placeholders = userIds.map(() => '?').join(',');
+                const rows = await db.query(
+                    `SELECT SUM("${field}") as total FROM users WHERE id IN (${placeholders})`,
+                    userIds
+                ) as any[];
+                currentValue = (rows[0]?.total || 0) - (snap[field] || 0);
+            }
         }
+
+        const newProgress = Math.min(currentValue, activeQuest.requirement);
+        if (newProgress !== activeQuest.progress) {
+            await db.run('UPDATE guild_quests SET progress = ? WHERE id = ?', [newProgress, activeQuest.id]);
+            activeQuest.progress = newProgress;
+        }
+
+        const info = GUILD_QUEST_INFO[activeQuest.questType as GuildQuestType];
+        return res.json({
+            activeQuest: {
+                ...activeQuest,
+                typeName: info?.name || activeQuest.questType,
+                description: info?.desc(activeQuest.requirement) || '',
+                difficultyLabel: GUILD_QUEST_DIFFICULTIES[activeQuest.difficulty as keyof typeof GUILD_QUEST_DIFFICULTIES]?.label || activeQuest.difficulty,
+            },
+            options: null
+        });
     }
 
-    const newProgress = Math.min(currentValue, quest.requirement);
-    if (newProgress !== quest.progress) {
-        await db.run('UPDATE guild_quests SET progress = ? WHERE id = ?', [newProgress, quest.id]);
-        quest.progress = newProgress;
+    // Нет активного — генерируем 3 варианта
+    const options: any[] = [];
+    const usedTypes = new Set<string>();
+    for (let i = 0; i < 3; i++) {
+        const availableTypes = GUILD_QUEST_TYPES.filter(t => !usedTypes.has(t));
+        if (availableTypes.length === 0) break;
+        const questType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+        usedTypes.add(questType);
+
+        const diffs = Object.keys(GUILD_QUEST_DIFFICULTIES);
+        const difficulty = diffs[Math.floor(Math.random() * diffs.length)] as keyof typeof GUILD_QUEST_DIFFICULTIES;
+        const d = GUILD_QUEST_DIFFICULTIES[difficulty];
+        const rewardXp = Math.floor(Math.random() * (d.xpMax - d.xpMin + 1)) + d.xpMin;
+        const baseReqs: Record<string, number> = { pve: 50, pvp: 10, craft: 10, donate: 500, jobs: 1800 };
+        const requirement = (baseReqs[questType] || 50) * d.reqMult;
+        const info = GUILD_QUEST_INFO[questType];
+
+        options.push({
+            questType, difficulty, requirement, rewardXp,
+            typeName: info.name, description: info.desc(requirement),
+            difficultyLabel: d.label,
+        });
     }
 
-    const info = GUILD_QUEST_INFO[quest.questType as GuildQuestType];
-    res.json({
-        quest: {
-            ...quest,
-            typeName: info?.name || quest.questType,
-            description: info?.desc(quest.requirement) || '',
-            difficultyLabel: GUILD_QUEST_DIFFICULTIES[quest.difficulty as keyof typeof GUILD_QUEST_DIFFICULTIES]?.label || quest.difficulty,
-        }
-    });
+    res.json({ activeQuest: null, options });
 });
 
-// Взять/обновить задание (лидер)
-router.post('/guild/quest/reroll', async (req, res) => {
+// Взять задание (лидер выбирает из предложенных)
+router.post('/guild/quest/take', async (req, res) => {
     const userId = req.userId;
+    const { questType, difficulty, requirement, rewardXp } = req.body;
+
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может управлять заданиями' });
 
-    // Завершить текущее
+    if (!questType || !difficulty || !requirement || !rewardXp) return res.status(400).json({ error: 'Выберите задание' });
+
+    // Отменяем текущее активное
     await db.run("UPDATE guild_quests SET status = 'cancelled' WHERE guildId = ? AND status = 'active'", [member.guildId]);
 
-    // Сгенерировать новое
-    const types = [...GUILD_QUEST_TYPES];
-    const questType = types[Math.floor(Math.random() * types.length)];
-    const diffs = Object.keys(GUILD_QUEST_DIFFICULTIES);
-    const difficulty = diffs[Math.floor(Math.random() * diffs.length)] as keyof typeof GUILD_QUEST_DIFFICULTIES;
-    const d = GUILD_QUEST_DIFFICULTIES[difficulty];
-    const rewardXp = Math.floor(Math.random() * (d.xpMax - d.xpMin + 1)) + d.xpMin;
-
-    // Требование зависит от типа и сложности
-    const baseReqs: Record<string, number> = { pve: 50, pvp: 10, craft: 10, donate: 500, jobs: 1800 };
-    const requirement = (baseReqs[questType] || 50) * d.reqMult;
-
-    // Снапшот текущих значений гильдии
+    // Снапшот
     const members = await db.query('SELECT userId FROM guild_members WHERE guildId = ?', [member.guildId]) as any[];
     const userIds = members.map((m: any) => m.userId);
     const snapshot: any = {};
 
+    const placeholders = userIds.map(() => '?').join(',');
     if (questType === 'donate') {
         const g = await db.one('SELECT treasury FROM guilds WHERE id = ?', [member.guildId]) as any;
         snapshot.treasury = g?.treasury || 0;
     } else if (userIds.length > 0) {
-        const field = GUILD_QUEST_INFO[questType]?.snapshotFields;
+        const field = GUILD_QUEST_INFO[questType as GuildQuestType]?.snapshotFields;
         if (field) {
             const rows = await db.query(
-                `SELECT SUM(${field}) as total FROM users WHERE id IN (${userIds.map(() => '?').join(',')})`,
+                `SELECT SUM("${field}") as total FROM users WHERE id IN (${placeholders})`,
                 userIds
             ) as any[];
             snapshot[field] = rows[0]?.total || 0;
@@ -1107,11 +1129,7 @@ router.post('/guild/quest/reroll', async (req, res) => {
         [member.guildId, questType, difficulty, requirement, rewardXp, JSON.stringify(snapshot)]
     );
 
-    const info = GUILD_QUEST_INFO[questType];
-    res.json({
-        success: true,
-        quest: { questType, difficulty, requirement, rewardXp, typeName: info.name, description: info.desc(requirement), difficultyLabel: d.label }
-    });
+    res.json({ success: true, message: 'Задание взято!' });
 });
 
 // Забрать награду (лидер)
