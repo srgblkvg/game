@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getHeaders } from '../api/helpers';
-import { getItemImage, getRarityColor } from '../utils/itemUtils';
+import { getItemImage } from '../utils/itemUtils';
 import ItemTooltip from '../components/ItemTooltip';
 import { useLongPress } from '../hooks/useLongPress';
 
@@ -131,14 +131,15 @@ export default function CollectionsPage() {
     }, []);
 
     const handleAddToCollection = (shopItem: ShopItem) => {
+        const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot);
+        if (matching.length === 0) {
+            setMessage('Нет подходящих предметов в инвентаре');
+            return;
+        }
         setSelectedShopItem(shopItem);
-        setSelectedInvItem(null);
-        setShowConfirm(false);
+        setSelectedInvItem(matching[0]);
+        setShowConfirm(true);
     };
-
-    const matchingInventory = selectedShopItem
-        ? inventoryItems.filter(inv => inv.name === selectedShopItem.name && inv.slot === selectedShopItem.slot)
-        : [];
 
     const handleConfirm = async () => {
         if (!selectedInvItem || !selectedShopItem) return;
@@ -229,36 +230,6 @@ export default function CollectionsPage() {
 
             {items.length === 0 && !loading && (
                 <p className="text-sm text-[var(--color-text-muted)] text-center py-10">Предметы не найдены</p>
-            )}
-
-            {/* Modal: select item */}
-            {selectedShopItem && !showConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSelectedShopItem(null)}>
-                    <div className="bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-border-default)] p-4 w-80 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <h3 className="font-bold text-sm mb-2">Выберите предмет: {selectedShopItem.name}</h3>
-                        {matchingInventory.length === 0 ? (
-                            <p className="text-xs text-[var(--color-text-muted)]">Нет подходящих предметов в инвентаре</p>
-                        ) : (
-                            <div className="space-y-1">
-                                {matchingInventory.map(inv => (
-                                    <div key={inv.id} className="flex items-center gap-2 p-2 rounded-lg border border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)]"
-                                        onClick={() => { setSelectedInvItem(inv); setShowConfirm(true); }}>
-                                        {inv.image ? <img src={inv.image} alt={inv.name} className="w-8 h-8 object-contain" />
-                                            : <div className="w-8 h-8 rounded bg-[var(--color-bg-input)]" />}
-                                        <div>
-                                            <p className="text-xs font-medium">{inv.name}</p>
-                                            <p className="text-[0.6rem] text-[var(--color-text-muted)]" style={{ color: getRarityColor(inv) }}>
-                                                {inv.rarity_display || 'Редкость ' + inv.rarity_id}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        <button className="mt-3 w-full text-xs py-1.5 rounded-lg border border-[var(--color-border-light)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]"
-                            onClick={() => setSelectedShopItem(null)}>Отмена</button>
-                    </div>
-                </div>
             )}
 
             {/* Modal: confirm */}
