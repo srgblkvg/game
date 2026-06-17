@@ -5,6 +5,7 @@ import { currentStats } from '../game/stats';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
 import { getUserById, getBaseStats, enrichEquipment, applyExp } from '../db/helpers';
+import { updateGuildQuestProgress } from './guild';
 
 const router = Router();
 
@@ -103,6 +104,8 @@ router.get('/character/me', async (req, res) => {
                 [newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId]);
             await db.run('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString(), jobData.premiumBonus || 0, expGain]);
+            // Guild quest progress — track job seconds
+            if (user.guildId) { updateGuildQuestProgress(user.guildId).catch(e => console.error('guildQuest jobs:', e.message)); }
             user.money = newMoney;
             user.level = newLevel;
             user.statPoints = newStatPoints;

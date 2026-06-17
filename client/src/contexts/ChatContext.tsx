@@ -124,6 +124,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     setChatError(`Вы заблокированы в чате до ${fmtSafeDate(data.until)}`);
                 } else if (data.type === 'error') {
                     setChatError(data.message);
+                } else if (data.type === 'guildQuestProgress') {
+                    window.dispatchEvent(new CustomEvent('guildQuestProgress', { detail: data.activeQuest }));
                 }
             } catch (e) {
                 console.error('WebSocket message error', e);

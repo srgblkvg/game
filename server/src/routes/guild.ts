@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { broadcast } from '../websocket';
+import { broadcast, sendToGuild } from '../websocket';
 import { getDrinkBonuses } from '../game/drinks';
 import { runBattle } from '../game/battle';
 import { getBaseStats, enrichEquipment } from '../db/helpers';
@@ -532,6 +532,8 @@ router.post('/guild/treasury/deposit', async (req, res) => {
             return r.rows[0];
         });
         res.json({ success: true, treasury: result.treasury });
+        // Guild quest progress — track donations
+        updateGuildQuestProgress(member.guildId).catch(e => console.error('guildQuest donate:', e.message));
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
@@ -1013,56 +1015,62 @@ const GUILD_QUEST_DIFFICULTIES = {
     hard:   { label: '⭐⭐⭐ Сложный', xpMin: 7, xpMax: 10, reqMult: 8 },
 } as const;
 
+/** Обновить прогресс активного квеста гильдии и разослать по WS */
+export async function updateGuildQuestProgress(guildId: number) {
+    const activeQuest = await db.one(
+        "SELECT * FROM guild_quests WHERE guildId = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
+        [guildId]
+    ) as any;
+    if (!activeQuest) return;
+
+    const snap = JSON.parse(activeQuest.snapshot || '{}');
+    const members = await db.query('SELECT userId FROM guild_members WHERE guildId = ?', [guildId]) as any[];
+    const userIds = members.map((m: any) => m.userId);
+
+    let currentValue = 0;
+    if (activeQuest.questType === 'donate') {
+        const g = await db.one('SELECT treasury FROM guilds WHERE id = ?', [guildId]) as any;
+        currentValue = (g?.treasury || 0) - (snap.treasury || 0);
+    } else {
+        const field = GUILD_QUEST_INFO[activeQuest.questType as GuildQuestType]?.snapshotFields;
+        if (field && userIds.length > 0) {
+            const placeholders = userIds.map(() => '?').join(',');
+            const rows = await db.query(
+                `SELECT SUM(\"${field}\") as total FROM users WHERE id IN (${placeholders})`,
+                userIds
+            ) as any[];
+            currentValue = (rows[0]?.total || 0) - (snap[field] || 0);
+        }
+    }
+
+    const newProgress = Math.min(currentValue, activeQuest.requirement);
+    if (newProgress !== activeQuest.progress) {
+        await db.run('UPDATE guild_quests SET progress = ? WHERE id = ?', [newProgress, activeQuest.id]);
+        activeQuest.progress = newProgress;
+    }
+
+    const info = GUILD_QUEST_INFO[activeQuest.questType as GuildQuestType];
+    const questData = {
+        ...activeQuest,
+        typeName: info?.name || activeQuest.questType,
+        description: info?.desc(activeQuest.requirement) || '',
+        difficultyLabel: GUILD_QUEST_DIFFICULTIES[activeQuest.difficulty as keyof typeof GUILD_QUEST_DIFFICULTIES]?.label || activeQuest.difficulty,
+    };
+
+    sendToGuild(guildId, { type: 'guildQuestProgress', activeQuest: questData });
+    return questData;
+}
+
 // Получить задания гильдии (3 случайных на выбор)
 router.get('/guild/quest', async (req, res) => {
     const userId = req.userId;
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!member) return res.status(400).json({ error: 'Вы не в гильдии' });
 
-    // Активное задание
-    const activeQuest = await db.one(
-        "SELECT * FROM guild_quests WHERE guildId = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
-        [member.guildId]
-    ) as any;
-
-    if (activeQuest) {
-        // Обновить прогресс
-        const snap = JSON.parse(activeQuest.snapshot || '{}');
-        const members = await db.query('SELECT userId FROM guild_members WHERE guildId = ?', [member.guildId]) as any[];
-        const userIds = members.map((m: any) => m.userId);
-
-        let currentValue = 0;
-        if (activeQuest.questType === 'donate') {
-            const g = await db.one('SELECT treasury FROM guilds WHERE id = ?', [member.guildId]) as any;
-            currentValue = (g?.treasury || 0) - (snap.treasury || 0);
-        } else {
-            const field = GUILD_QUEST_INFO[activeQuest.questType as GuildQuestType]?.snapshotFields;
-            if (field && userIds.length > 0) {
-                const placeholders = userIds.map(() => '?').join(',');
-                const rows = await db.query(
-                    `SELECT SUM("${field}") as total FROM users WHERE id IN (${placeholders})`,
-                    userIds
-                ) as any[];
-                currentValue = (rows[0]?.total || 0) - (snap[field] || 0);
-            }
-        }
-
-        const newProgress = Math.min(currentValue, activeQuest.requirement);
-        if (newProgress !== activeQuest.progress) {
-            await db.run('UPDATE guild_quests SET progress = ? WHERE id = ?', [newProgress, activeQuest.id]);
-            activeQuest.progress = newProgress;
-        }
-
-        const info = GUILD_QUEST_INFO[activeQuest.questType as GuildQuestType];
-        return res.json({
-            activeQuest: {
-                ...activeQuest,
-                typeName: info?.name || activeQuest.questType,
-                description: info?.desc(activeQuest.requirement) || '',
-                difficultyLabel: GUILD_QUEST_DIFFICULTIES[activeQuest.difficulty as keyof typeof GUILD_QUEST_DIFFICULTIES]?.label || activeQuest.difficulty,
-            },
-            options: null
-        });
+    // Активное задание — обновить прогресс и вернуть
+    const questData = await updateGuildQuestProgress(member.guildId);
+    if (questData) {
+        return res.json({ activeQuest: questData, options: null });
     }
 
     // Нет активного — генерируем 3 варианта

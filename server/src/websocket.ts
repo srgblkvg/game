@@ -19,6 +19,7 @@ interface OnlineUser {
   username: string;
   level: number;
   guildName?: string | null;
+  guildId?: number | null;
 }
 
 const clients = new Map<number, WebSocket>();
@@ -41,6 +42,18 @@ async function sendToUser(userId: number, payload: object) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
   }
+}
+
+export async function sendToGuild(guildId: number, payload: object) {
+  const msg = JSON.stringify(payload);
+  onlineUsers.forEach((user, userId) => {
+    if (user.guildId === guildId) {
+      const ws = clients.get(userId);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(msg);
+      }
+    }
+  });
 }
 
 async function notifyUserOnline(user: OnlineUser) {
@@ -135,7 +148,7 @@ export async function setupWebSocket(server: any) {
     }
 
     clients.set(userId, ws);
-    const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, guildName: user.guildName || null };
+    const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, guildName: user.guildName || null, guildId: user.guildId || null };
     onlineUsers.set(userId, onlineUser);
     auditWsConnect(user.username, user.id);
 

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { updateGuildQuestProgress } from './guild';
 import { currentStats } from '../game/stats';
 import { getBaseStats, collectGuildTax, applyExp } from '../db/helpers';
 import { runBattle } from '../game/battle';
@@ -117,6 +118,12 @@ router.post('/battle', async (req, res) => {
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
         [defExp.newLevel, defExp.newExp, defenderMoneyAfterTax, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
             !attackerWins ? (result.moneyGained + moneyStolen) : 0, !attackerWins ? 0 : moneyStolen, defender.id]);
+
+    // Guild quest progress — track PvP wins
+    const w = await db.one('SELECT guildId FROM users WHERE id = ?', [result.winnerId]);
+    if (w?.guildId) {
+        updateGuildQuestProgress(w.guildId).catch(e => console.error('guildQuest PvP:', e.message));
+    }
 
     await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

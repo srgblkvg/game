@@ -4,6 +4,7 @@ import { getBaseStats, enrichEquipment, collectGuildTax, applyExp } from '../db/
 import { currentStats } from '../game/stats';
 import { addPveRating } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
+import { updateGuildQuestProgress } from './guild';
 
 const router = Router();
 
@@ -396,6 +397,14 @@ router.post('/mob/attack', async (req, res) => {
 
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`,
         [newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId]);
+
+    // Обновление прогресса гильдейского квеста (PvE)
+    if (playerWon) {
+        const userGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
+        if (userGuild?.guildId) {
+            updateGuildQuestProgress(userGuild.guildId).catch(e => console.error('guildQuest PvE:', e.message));
+        }
+    }
 
     // Сохраняем в историю PvE
     await db.run(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, itemsDropped, premiumBonus)

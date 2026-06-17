@@ -771,6 +771,16 @@ function GuildQuestBlock({ guildId, myRank }: { guildId: number; myRank: string 
 
     useEffect(() => { load(); }, [guildId]);
 
+    // Live guild quest progress via WebSocket
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail) setActiveQuest(detail);
+        };
+        window.addEventListener('guildQuestProgress', handler);
+        return () => window.removeEventListener('guildQuestProgress', handler);
+    }, []);
+
     const handleTake = async (opt: any) => {
         setLoading(true);
         try {
