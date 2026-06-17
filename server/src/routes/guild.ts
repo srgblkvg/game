@@ -231,8 +231,9 @@ router.post('/guild/chat', async (req, res) => {
 });
 
 // Публичная информация о гильдии
-router.get('/guild/:id', async (req, res) => {
+router.get('/guild/:id', async (req, res, next) => {
     const guildId = parseInt(req.params.id);
+    if (isNaN(guildId)) return next();
     const guild = await db.one('SELECT g.*, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?', [guildId]) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
 

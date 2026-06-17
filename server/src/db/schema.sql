@@ -308,6 +308,20 @@ CREATE TABLE IF NOT EXISTS guild_war_attacks (
   battleLog TEXT
 );
 
+-- ====== guild_quests ======
+CREATE TABLE IF NOT EXISTS guild_quests (
+  id SERIAL PRIMARY KEY,
+  guildId INTEGER NOT NULL,
+  questType TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  requirement INTEGER NOT NULL,
+  progress INTEGER DEFAULT 0,
+  rewardXp INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'active',
+  snapshot TEXT DEFAULT '{}',
+  createdAt TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ====== orders ======
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
