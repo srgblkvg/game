@@ -282,7 +282,32 @@ export default function GuildPage() {
                             </div>
                         </div>
                         {guild.myRank === 'leader' ? (
-                            <div className="mb-2">
+                            <div className="mb-2 space-y-2">
+                                <div className="flex items-center gap-2">
+                                    {guild.image ? (
+                                        <img src={guild.image} alt="Герб" className="w-12 h-12 object-cover rounded border border-[var(--color-border-light)]" />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded border border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[var(--color-text-muted)] text-[0.5rem]">герб</div>
+                                    )}
+                                    <label className="text-xs cursor-pointer text-[var(--color-accent-info)] hover:underline">
+                                        Загрузить герб
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            const reader = new FileReader();
+                                            reader.onload = () => {
+                                                const dataUrl = reader.result as string;
+                                                setGuild((prev: any) => prev ? { ...prev, image: dataUrl } : prev);
+                                                fetch('/api/guild/settings', {
+                                                    method: 'POST',
+                                                    headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ image: dataUrl }),
+                                                }).catch(() => {});
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }} />
+                                    </label>
+                                </div>
                                 <textarea
                                     value={guild.description || ''}
                                     onChange={(e) => setGuild((prev: any) => prev ? { ...prev, description: e.target.value } : prev)}
@@ -301,7 +326,10 @@ export default function GuildPage() {
                                 />
                             </div>
                         ) : (
-                            guild.description && <p className="text-xs text-[var(--color-text-muted)] mb-2">{guild.description}</p>
+                            <div className="mb-2">
+                                {guild.image && <img src={guild.image} alt="Герб" className="w-12 h-12 object-cover rounded border border-[var(--color-border-light)] mb-1" />}
+                                {guild.description && <p className="text-xs text-[var(--color-text-muted)]">{guild.description}</p>}
+                            </div>
                         )}
                         <p className="text-xs text-[var(--color-text-muted)]">
                             Тип: {guild.joinType === 'open' ? 'Открытая' : guild.joinType === 'request' ? 'По заявке' : 'По приглашению'}

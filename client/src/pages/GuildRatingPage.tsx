@@ -64,12 +64,17 @@ export default function GuildRatingPage() {
                         {isExpanded && (
                             <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
                                 <div className="flex justify-between items-start">
-                                    <div className="flex items-start gap-2 cursor-pointer flex-1 min-w-0" onClick={() => navigate(`/guild/${g.id}`)}>
+                                    <div className="flex items-start gap-3 cursor-pointer flex-1 min-w-0" onClick={() => navigate(`/guild/${g.id}`)}>
+                                        {(g.image || g.description) ? (
+                                            <div className="flex-shrink-0 border-2 border-[var(--color-accent-gold)] rounded-lg p-2 bg-[var(--color-bg-card)]" style={{ minWidth: 80, maxWidth: 120 }}>
+                                                {g.image && <img src={g.image} alt="Герб" className="w-full h-auto object-contain rounded mb-1" />}
+                                                {g.description && <p className="text-[0.6rem] text-[var(--color-text-secondary)] italic text-center leading-tight">{'«'}{g.description}{'»'}</p>}
+                                            </div>
+                                        ) : null}
                                         <div className="text-xs text-[var(--color-text-muted)] space-y-0.5">
                                             <p>Уровень: {g.level}</p>
                                             <p>Участники: {g.memberCount}/20</p>
                                             <p>Казна: {(g.treasury || 0).toLocaleString()} серебра</p>
-                                            {g.description && <p className="text-[var(--color-text-secondary)] italic">{'«'}{g.description}{'»'}</p>}
                                             <p>
                                                 Лидер:{' '}
                                                 <span

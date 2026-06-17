@@ -247,7 +247,8 @@ CREATE TABLE IF NOT EXISTS guilds (
   exp INTEGER DEFAULT 0,
   treasury INTEGER DEFAULT 0,
   createdAt TIMESTAMPTZ DEFAULT NOW(),
-  taxRate INTEGER DEFAULT 0
+  taxRate INTEGER DEFAULT 0,
+  image TEXT
 );
 
 -- ====== guild_members ======
