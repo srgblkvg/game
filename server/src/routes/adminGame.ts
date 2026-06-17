@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { checkSeasonReset } from '../game/rating';
 
 const router = Router();
 
@@ -78,6 +79,22 @@ router.put('/floors/:id', async (req, res) => {
 router.delete('/floors/:id', async (req, res) => {
     await db.run('DELETE FROM floors WHERE id=?', [req.params.id]);
     res.json({ success: true });
+});
+
+// ---------- Сезоны ----------
+router.get('/seasons', async (req, res) => {
+    const seasons = await db.query('SELECT * FROM seasons ORDER BY id DESC LIMIT 10', []);
+    res.json(seasons);
+});
+
+router.post('/seasons/finish', async (req, res) => {
+    const didReset = await checkSeasonReset();
+    if (didReset) {
+        const active = await db.one("SELECT * FROM seasons WHERE status = 'active' LIMIT 1") as any;
+        res.json({ success: true, message: `Сезон завершён. Новый сезон: ${active?.name || '?'}`, season: active });
+    } else {
+        res.json({ success: false, message: 'Нет активного сезона для завершения' });
+    }
 });
 
 export default router;

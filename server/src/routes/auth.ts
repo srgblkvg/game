@@ -7,7 +7,7 @@ import { registerSchema, loginSchema, verifyEmailSchema } from '../validation';
 import { JWT_SECRET } from '../env';
 import { auditRegister, auditLoginSuccess, auditLoginFailure, auditAccountLocked } from '../audit';
 import { sendVerificationCode } from '../email';
-import { applyDecay, checkSeasonReset } from '../game/rating';
+import { applyDecay } from '../game/rating';
 import { currentStats } from '../game/stats';
 
 const router = Router();
@@ -201,12 +201,11 @@ router.post('/login', async (req, res) => {
     await db.run('UPDATE users SET failedLogins = 0, lockedUntil = 0, lastLoginAt = ? WHERE id = ?', [now, userRow.id]);
     auditLoginSuccess(login, userRow.id, req.ip);
 
-    // Декай рейтинга и проверка сезона
+    // Декай рейтинга
     const ratingUser: any = await db.one('SELECT elo, lastPvpTime FROM users WHERE id = ?', [userRow.id]);
     if (ratingUser) {
         applyDecay(userRow.id, ratingUser.lastPvpTime || 0, ratingUser.elo || 1000);
     }
-    checkSeasonReset();
 
     // Логируем IP
     if (req.ip) {
