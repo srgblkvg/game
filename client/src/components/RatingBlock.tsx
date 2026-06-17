@@ -11,14 +11,24 @@ export default function RatingBlock() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetchRating(1, 5).then(data => setPlayers(data.users)).catch(console.error);
+        const load = () => {
+            fetchRating(1, 5).then(data => setPlayers(data.users)).catch(console.error);
+        };
+        load();
+        const interval = setInterval(load, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
-        fetch(`${BASE_URL}/guild/list`, { headers: getHeaders() })
-            .then(res => res.json())
-            .then(data => setGuilds((data || []).slice(0, 5)))
-            .catch(console.error);
+        const load = () => {
+            fetch(`${BASE_URL}/guild/list`, { headers: getHeaders() })
+                .then(res => res.json())
+                .then(data => setGuilds((data || []).slice(0, 5)))
+                .catch(console.error);
+        };
+        load();
+        const interval = setInterval(load, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const trophy = <Icon icon="game-icons:trophy" width="18" height="18" />;
