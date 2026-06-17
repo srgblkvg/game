@@ -378,6 +378,9 @@ export default function GuildPage() {
                         )}
                     </Card>
 
+                    {/* Задания гильдии */}
+                    <GuildQuestBlock guildId={guild.id} myRank={guild.myRank} />
+
                     {/* Блок войны */}
                     {war && (
                         <Card className="mb-4 border-l-4 border-l-red-500">
@@ -748,5 +751,86 @@ export default function GuildPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+// Компонент заданий гильдии
+function GuildQuestBlock({ guildId, myRank }: { guildId: number; myRank: string }) {
+    const [quest, setQuest] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [msg, setMsg] = useState('');
+
+    useEffect(() => {
+        fetch('/api/guild/quest', { headers: getHeaders() })
+            .then(r => r.json()).then(d => setQuest(d.quest)).catch(() => {});
+    }, [guildId]);
+
+    const handleReroll = async () => {
+        setLoading(true);
+        try {
+            const r = await fetch('/api/guild/quest/reroll', { method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' } });
+            const d = await r.json();
+            if (r.ok) { setQuest(d.quest); setMsg('Новое задание!'); }
+            else setMsg(d.error);
+        } catch { setMsg('Ошибка'); }
+        setLoading(false);
+    };
+
+    const handleClaim = async () => {
+        setLoading(true);
+        try {
+            const r = await fetch('/api/guild/quest/claim', { method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' } });
+            const d = await r.json();
+            if (r.ok) { setQuest(null); setMsg(d.message); }
+            else setMsg(d.error);
+        } catch { setMsg('Ошибка'); }
+        setLoading(false);
+    };
+
+    if (!quest && myRank !== 'leader') return null;
+
+    return (
+        <Card className="mb-4">
+            <h3 className="font-bold text-sm mb-2 flex items-center gap-2">
+                <Icon icon="game-icons:scroll-unfurled" width="16" height="16" />
+                Задание гильдии
+            </h3>
+            {msg && <p className="text-xs text-[var(--color-accent-success)] mb-2">{msg}</p>}
+            {quest ? (
+                <div>
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium">{quest.typeName}</span>
+                        <span className="text-[0.6rem] text-[var(--color-text-muted)]">{quest.difficultyLabel}</span>
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">{quest.description}</p>
+                    <div className="mb-1">
+                        <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
+                            <span>Прогресс: {quest.progress}/{quest.requirement}</span>
+                            <span>Награда: +{quest.rewardXp} XP гильдии</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                            <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all"
+                                style={{ width: `${Math.min(100, (quest.progress / quest.requirement) * 100)}%` }} />
+                        </div>
+                    </div>
+                    {myRank === 'leader' && (
+                        <div className="flex gap-2 mt-2">
+                            {quest.progress >= quest.requirement ? (
+                                <Button variant="primary" size="xs" onClick={handleClaim} disabled={loading}>Забрать награду</Button>
+                            ) : (
+                                <Button variant="secondary" size="xs" onClick={handleReroll} disabled={loading}>Сменить задание</Button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Нет активного задания</p>
+                    {myRank === 'leader' && (
+                        <Button variant="primary" size="xs" onClick={handleReroll} disabled={loading}>Взять задание</Button>
+                    )}
+                </div>
+            )}
+        </Card>
     );
 }
