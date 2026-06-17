@@ -50,9 +50,9 @@ export default function HomePage() {
     } catch (err: any) { alert(err.message); }
   };
 
-  if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
-
   const _st = useServerTime();
+
+  if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
   const attackCooldownSec = character.attackCooldownSec ?? getRemaining((character.lastAttackTime || 0) + 300);
   const canAttack = attackCooldownSec <= 0;
   const pveCooldownSec = character.pveCooldownSec ?? getRemaining((character.lastPveAttackTime || 0) + 300);
