@@ -13,11 +13,11 @@ interface LeftSidebarProps {
 
 export default function LeftSidebar({ character, onEquip, selectedItemId, highlightedSlots }: LeftSidebarProps) {
   if (!character) return null;
-  const drinkBonuses = (character as any).drinkBonuses;
-  const stats = calculateStats(character, drinkBonuses, (character as any).collectionCount || 0);
+  const drinkBonuses = character.drinkBonuses;
+  const stats = calculateStats(character, drinkBonuses, character.collectionCount || 0);
 
   // Реген из комнаты
-  const room = (character as any).room;
+  const room = character.room;
   const now = Math.floor(Date.now() / 1000);
   let regenRate = 1;
   if (room && room.until > now) {
@@ -38,13 +38,13 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
           equipment: character.equipment,
           stats: stats,
           gender: character.gender,
-          guildName: (character as any).guildName,
-          guildId: (character as any).guildId,
-          avatar: (character as any).avatar || null,
+          guildName: character.guildName,
+          guildId: character.guildId,
+          avatar: character.avatar || null,
           baseStats: stats.baseStats,
           equipmentBonuses: stats.equipmentBonuses,
           extraStats: stats.extraStats,
-          collectionBonus: (character as any).collectionCount || 0,
+          collectionBonus: character.collectionCount || 0,
         }}
         side="left"
         showHealth
@@ -57,7 +57,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         highlightedSlots={highlightedSlots}
       />
       <StatAllocation />
-      <BuffsBlock room={(character as any).room} drink={(character as any).drink} premium={(character as any).premium} inventory={character.inventory} equipment={character.equipment} collectionCount={(character as any).collectionCount || 0} totalCollectionItems={(character as any).totalCollectionItems || 189} />
+      <BuffsBlock room={character.room} drink={character.drink} premium={character.premium} inventory={character.inventory} equipment={character.equipment} collectionCount={character.collectionCount || 0} totalCollectionItems={character.totalCollectionItems || 189} />
     </div>
   );
 }

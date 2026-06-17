@@ -52,10 +52,10 @@ export default function HomePage() {
   if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
 
   const nowSec = Math.floor(Date.now() / 1000);
-  const attackCooldownSec = (character as any).attackCooldownSec ?? Math.max(0, 300 - (nowSec - (character.lastAttackTime || 0)));
+  const attackCooldownSec = character.attackCooldownSec ?? Math.max(0, 300 - (nowSec - (character.lastAttackTime || 0)));
   const canAttack = attackCooldownSec <= 0;
-  const pveCooldownSec = (character as any).pveCooldownSec ?? Math.max(0, 300 - (nowSec - ((character as any).lastPveAttackTime || 0)));
-  const bankCooldownSec = Math.max(0, 1800 - (nowSec - ((character as any).lastBankVisit || 0)));
+  const pveCooldownSec = character.pveCooldownSec ?? Math.max(0, 300 - (nowSec - (character.lastPveAttackTime || 0)));
+  const bankCooldownSec = Math.max(0, 1800 - (nowSec - (character.lastBankVisit || 0)));
 
   return (
     <div className="px-4 py-4">

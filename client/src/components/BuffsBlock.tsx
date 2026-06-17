@@ -77,9 +77,9 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     const activeCount = [hasRoom, hasDrink, hasPremium].filter(Boolean).length;
 
     const activeIcons = [
-        hasRoom && roomIcons[room!.type] || 'game-icons:wooden-crate',
-        hasDrink && 'game-icons:beer-bottle',
-        hasPremium && 'game-icons:star-formation',
+        hasRoom ? (roomIcons[room!.type] || 'game-icons:wooden-crate') : '',
+        hasDrink ? 'game-icons:beer-bottle' : '',
+        hasPremium ? 'game-icons:star-formation' : '',
     ].filter(Boolean) as string[];
 
     return (

@@ -60,6 +60,23 @@ export interface Character {
   openPrivateTabs?: number[];
   gender?: string;
   statPoints?: number;
+  // Активные баффы (сервер возвращает)
+  drink?: { type: string; until: number } | null;
+  room?: { type: string; until: number } | null;
+  premium?: { until: number } | null;
+  drinkBonuses?: { s: number; a: number; d: number; m: number };
+  collectionCount?: number;
+  totalCollectionItems?: number;
+  attackCooldownSec?: number;
+  pveCooldownSec?: number;
+  lastPveAttackTime?: number;
+  lastBankVisit?: number;
+  bank?: number;
+  guildId?: number | null;
+  guildName?: string | null;
+  avatar?: string | null;
+  elo?: number;
+  pveRating?: number;
 }
 
 interface GameContextType {
