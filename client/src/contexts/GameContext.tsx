@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface GameItem {
   id?: string | number;
@@ -60,7 +60,6 @@ export interface Character {
   openPrivateTabs?: number[];
   gender?: string;
   statPoints?: number;
-  // Активные баффы (сервер возвращает)
   drink?: { type: string; until: number } | null;
   room?: { type: string; until: number } | null;
   premium?: { until: number } | null;
@@ -82,14 +81,23 @@ export interface Character {
 interface GameContextType {
   character: Character | null;
   setCharacter: React.Dispatch<React.SetStateAction<Character | null>>;
+  serverTime: number;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [character, setCharacter] = useState<Character | null>(null);
+  const [serverTime, setServerTime] = useState(Math.floor(Date.now() / 1000));
+
+  useEffect(() => {
+    const handler = (e: Event) => setServerTime((e as CustomEvent).detail);
+    window.addEventListener('serverTick', handler as EventListener);
+    return () => window.removeEventListener('serverTick', handler as EventListener);
+  }, []);
+
   return (
-    <GameContext.Provider value={{ character, setCharacter }}>
+    <GameContext.Provider value={{ character, setCharacter, serverTime }}>
       {children}
     </GameContext.Provider>
   );

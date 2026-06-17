@@ -8,11 +8,11 @@ import MainBar from '../components/MainBar';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { getCompatibleSlots } from '../utils/itemUtils';
-import { useServerTime, getRemaining } from '../hooks/useServerTime';
+import { getRemaining } from '../hooks/useServerTime';
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { character, setCharacter } = useGame();
+  const { character, setCharacter, serverTime } = useGame();
   const navigate = useNavigate();
   const [noOpponentModal, setNoOpponentModal] = useState<string | null>(null);
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string | null>(null);
@@ -50,7 +50,6 @@ export default function HomePage() {
     } catch (err: any) { alert(err.message); }
   };
 
-  const _st = useServerTime();
 
   if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
   const attackCooldownSec = character.attackCooldownSec ?? getRemaining((character.lastAttackTime || 0) + 300);
