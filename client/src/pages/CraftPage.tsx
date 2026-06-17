@@ -137,9 +137,7 @@ export default function CraftPage() {
         setTooltipData(null);
         if (e.shiftKey) { e.stopPropagation(); sendItemLink(item.id, item); return; }
         if (isCraftItem(item)) {
-            if (item.itemType !== 'upgrade') {
-                setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
-            }
+            setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
         }
         setCraftSlots(prev => { const n = [...prev]; n[index] = null; return n; });
     };
@@ -179,9 +177,7 @@ export default function CraftPage() {
         const item = craftSlots[slotIndex];
         if (!item) return;
         if (isCraftItem(item)) {
-            if (item.itemType !== 'upgrade') {
-                setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
-            }
+            setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
         }
         setCraftSlots(prev => { const n = [...prev]; n[slotIndex] = null; return n; });
     };
