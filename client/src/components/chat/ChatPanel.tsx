@@ -276,12 +276,6 @@ export default function ChatPanel() {
 
     const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
-    const handleReplyPublic = useCallback(() => {
-        if (!contextMenu) return;
-        setPendingMention('@' + contextMenu.username + ' ');
-        closeContextMenu();
-    }, [contextMenu, closeContextMenu]);
-
     const handleClearPending = useCallback(() => setPendingMention(null), []);
 
     const handleWhisper = useCallback(async () => {
@@ -365,7 +359,7 @@ export default function ChatPanel() {
         return (
             <div>
                 <div>
-                    {parts.map((part, i) => {
+                    {parts.map((part: string, i: number) => {
                         if (part.startsWith('@')) {
                             const name = part.slice(1);
                             const isSelfMention = name.toLowerCase() === currentUsername.toLowerCase();

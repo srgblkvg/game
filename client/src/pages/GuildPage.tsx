@@ -6,7 +6,7 @@ import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
-import { safeDate, fmtSafeDate } from '../utils/date';
+import { fmtSafeDate } from '../utils/date';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
@@ -51,7 +51,6 @@ export default function GuildPage() {
 
     // Попап подтверждения
     const [confirmPopup, setConfirmPopup] = useState<{ message: string; onConfirm: () => void } | null>(null);
-    const [warMessage, setWarMessage] = useState('');
     const [showWarRules, setShowWarRules] = useState(false);
 
     // Динамический поиск в истории казны
@@ -188,7 +187,7 @@ export default function GuildPage() {
         } catch (e: any) { setError(e.message); }
     };
 
-    const clearMessages = () => { setMessage(''); setError(''); setWarMessage(''); };
+    const clearMessages = () => { setMessage(''); setError(''); };
 
     // Гильд-войны: объявить войну
     const handleDeclareWar = async (targetGuildId: number, targetGuildName: string) => {

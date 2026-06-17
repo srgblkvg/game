@@ -80,8 +80,6 @@ export default function TournamentPage() {
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user, tab, completedPage]);
 
-    const _isGuest = user?.isGuest || false;
-
     const load = async () => {
         try {
             let url: string;

@@ -1,5 +1,4 @@
 import { Icon } from '@iconify/react';
-import { useState } from 'react';
 
 const stepColors: Record<string, string> = {
   damage: 'var(--color-accent-danger)', crit: 'var(--color-text-accent)', dodge: 'var(--color-accent-info)',
@@ -83,7 +82,7 @@ export function renderBattleLog(steps: BattleStep[], compact?: boolean) {
               <span className="tabular-nums">{initStep.hp2}/{maxHp2}</span>
             </div>
             <div className="h-1.5 bg-[var(--color-bg-hover)] rounded-full overflow-hidden">
-              <div className="h-full bg-[var(--color-accent-danger)] rounded-full" style={{ width: `${Math.max(0, initStep.hp2 / maxHp2 * 100)}%` }} />
+              <div className="h-full bg-[var(--color-accent-danger)] rounded-full" style={{ width: `${Math.max(0, (initStep.hp2 ?? 0) / maxHp2 * 100)}%` }} />
             </div>
           </div>
         </div>

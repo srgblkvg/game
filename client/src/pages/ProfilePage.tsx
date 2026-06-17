@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import CharacterCard from '../components/CharacterCard';
 import { fetchPublicProfile } from '../api/character';
 import Button from '../components/ui/Button';
-import { safeDate, fmtSafeDate } from '../utils/date';
+import { fmtSafeDate } from '../utils/date';
 import { formatMoney } from '../utils/money';
 
 export default function ProfilePage() {

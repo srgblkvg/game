@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getHeaders, BASE_URL } from '../../api/helpers';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { safeDate, fmtSafeDate } from '../../utils/date';
+import { fmtSafeDate } from '../../utils/date';
 
 export default function AdminFeedback() {
     const [messages, setMessages] = useState<any[]>([]);

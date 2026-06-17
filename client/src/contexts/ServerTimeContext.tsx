@@ -8,7 +8,7 @@ const ServerTimeContext = createContext<ServerTimeContextType>({ now: Math.floor
 
 export function ServerTimeProvider({ children }: { children: ReactNode }) {
     const [offset, setOffset] = useState<number>(0);
-    const [tick, setTick] = useState(0);
+    const [, forceTick] = useState(0);
 
     useEffect(() => {
         fetch('/api/time')
@@ -18,7 +18,7 @@ export function ServerTimeProvider({ children }: { children: ReactNode }) {
     }, []);
 
     useEffect(() => {
-        const t = setInterval(() => setTick(n => n + 1), 1000);
+        const t = setInterval(() => forceTick(n => n + 1), 1000);
         return () => clearInterval(t);
     }, []);
 

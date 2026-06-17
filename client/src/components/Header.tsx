@@ -110,7 +110,7 @@ export default function Header() {
             fetchBattles(1)
                 .then((battles: any[]) => {
                     if (battles.length > 0) {
-                        const lastBattleTime = safeDate(battles[0].createdAt) || new Date().getTime();
+                        const lastBattleTime = safeDate(battles[0].createdAt)?.getTime() ?? Date.now();
                         if (lastBattleTime > lastSeen) {
                             setHasNewBattles(true);
                         }

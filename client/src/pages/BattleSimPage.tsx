@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -115,7 +115,6 @@ export default function BattleSimPage() {
         const st = p.stats;
         const dmg = dmgRange(st.s, p.level);
         const cm = critM(st.m);
-        const maxCrit = Math.round(dmg.max * cm);
         const medCrit = Math.round(dmg.med * cm);
         const extraFB = st.extra?.fullBlock || 0;
         const extraDodge = st.extra?.dodge || 0;

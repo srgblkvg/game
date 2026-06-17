@@ -38,13 +38,12 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
           equipment: character.equipment,
           stats: stats,
           gender: character.gender,
-          guildName: character.guildName,
-          guildId: character.guildId,
+          guildName: character.guildName ?? undefined,
+          guildId: character.guildId ?? undefined,
           avatar: character.avatar || null,
           baseStats: stats.baseStats,
           equipmentBonuses: stats.equipmentBonuses,
           extraStats: stats.extraStats,
-          collectionBonus: character.collectionCount || 0,
         }}
         side="left"
         showHealth

@@ -23,7 +23,7 @@ export default function Modal({
 
   const dynamicStyle: React.CSSProperties = {
     '--modal-border': borderColor,
-  };
+  } as React.CSSProperties;
   if (width) {
     dynamicStyle.width = width;
     dynamicStyle.maxWidth = width;

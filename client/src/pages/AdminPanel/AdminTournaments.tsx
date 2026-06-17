@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchAdminTournaments, createAdminTournament, updateAdminTournament, deleteAdminTournament, startAdminTournament, finishAdminTournament } from '../../api/admin';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-import { fmtSafeDate } from "../../utils/date";
+import { fmtSafeDate, safeDate } from "../../utils/date";
 import { inputClass, selectClass } from '../../utils/formStyles';
 
 interface Tournament {
@@ -70,7 +70,7 @@ export default function AdminTournaments() {
     const startEdit = (t: Tournament) => {
         const toLocal = (ts: number) => {
             const d = safeDate(ts);
-            return d.toISOString().slice(0, 16);
+            return d?.toISOString().slice(0, 16) ?? '';
         };
         setForm({
             division: t.division,

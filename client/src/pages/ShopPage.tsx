@@ -10,14 +10,12 @@ import { formatMoney } from '../utils/money';
 import { getRarityColor } from '../utils/itemUtils';
 import ItemStats from '../components/ItemStats';
 import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
 
 const slotLabels: Record<string, string> = {
     weapon1: 'Оружие', shield: 'Щит', ring: 'Кольцо', helmet: 'Шлем',
     chest: 'Нагрудник', gloves: 'Перчатки', boots: 'Ботинки', amulet: 'Амулет', belt: 'Пояс',
 };
 
-const slotOrder = ['weapon1', 'shield', 'helmet', 'chest', 'gloves', 'boots', 'amulet', 'ring', 'belt'];
 
 const statNames: Record<string, string> = {
     s: 'сила', a: 'ловкость', d: 'защита', m: 'мастерство',
@@ -33,8 +31,6 @@ export default function ShopPage() {
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set());
-
     useEffect(() => {
         if (!user) { navigate('/login'); return; }
         fetchShopItems().then(setItems).catch(console.error).finally(() => setLoading(false));
@@ -49,14 +45,6 @@ export default function ShopPage() {
         } catch (e: any) {
             setMessage(e.message);
         }
-    };
-
-    const toggleSlot = (slot: string) => {
-        setExpandedSlots(prev => {
-            const next = new Set(prev);
-            if (next.has(slot)) next.delete(slot); else next.add(slot);
-            return next;
-        });
     };
 
     // Умный поиск
@@ -90,9 +78,6 @@ export default function ShopPage() {
         grouped[slot].push(item);
     }
 
-    const groupSlots = slotOrder.filter(s => grouped[s]?.length).concat(
-        Object.keys(grouped).filter(s => !slotOrder.includes(s))
-    );
 
     if (!user || !character) return null;
 

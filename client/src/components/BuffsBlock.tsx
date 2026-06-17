@@ -65,8 +65,6 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
                     invItem.name && invItem.slot && !collSet.has(`${invItem.name}|${invItem.slot}`) && !equippedNames.has(`${invItem.name}|${invItem.slot}`)
                 );
                 setHasCollectionItems(hasAddable);
-
-                const sets = data.sets || [];
             })
             .catch(() => {});
     }, [inventory, equipment]);

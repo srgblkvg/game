@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { getHeaders } from '../api/helpers';
-import { useAuth } from '../contexts/AuthContext';
 import { formatMoney } from '../utils/money';
 
 interface TournamentInfo {
@@ -71,8 +70,6 @@ export default function TournamentBanner() {
     const [warnings, setWarnings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    const { user } = useAuth();
-    const isGuest = user?.isGuest || false;
 
     useEffect(() => {
         const token = localStorage.getItem('token');

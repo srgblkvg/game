@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Autocomplete from './Autocomplete';
 import type { OnlineUser } from './types';
+import { fmtSafeDate } from '../../utils/date';
 
 interface ChatInputProps {
     isPrivate: boolean;

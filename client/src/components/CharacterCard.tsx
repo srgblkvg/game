@@ -56,9 +56,6 @@ export default function CharacterCard({
   const expPercent = showExpBar ? Math.min(100, (expValue / expNeeded) * 100) : 0;
   const isWeapon2Blocked = char.equipment['weapon1']?.name?.includes('двуручн');
 
-  const maxNickLength = 0; // больше не используется — CSS truncate
-  const truncate = (nick: string) => nick; // CSS обрезает
-
   const cardWidth = isVerySmall ? '110px' : isMobile ? '150px' : '200px';
   const cardMargin = isVerySmall ? '2px' : isMobile ? '10px' : '20px';
   const frameHeight = isVerySmall ? '140px' : isMobile ? '180px' : '240px';
@@ -139,7 +136,7 @@ export default function CharacterCard({
       style={{ width: cardWidth, minWidth: cardWidth, margin: cardMargin }}>
       {/* Имя и уровень */}
       <div className="w-full text-center mb-2">
-        <h2 className="overflow-hidden text-ellipsis whitespace-nowrap max-w-full" style={{ margin: '0 0 -4px 0', fontSize: fontSizeName, lineHeight: '1.1' }}>{truncate(char.username)}</h2>
+        <h2 className="overflow-hidden text-ellipsis whitespace-nowrap max-w-full" style={{ margin: '0 0 -4px 0', fontSize: fontSizeName, lineHeight: '1.1' }}>{char.username}</h2>
         <div className="h-[0.75rem]">
           <GuildTag guildName={(char as any).guildName} guildId={(char as any).guildId} hideNoGuild={hideNoGuild} />
         </div>

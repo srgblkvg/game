@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { fmtSafeDate } from '../utils/date';
 
 interface ChatMessage {
     id: number;

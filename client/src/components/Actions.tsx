@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
-import { useAuth } from '../contexts/AuthContext';
 import { getHeaders } from '../api/helpers';
 
 interface ActionsProps {
@@ -22,9 +21,8 @@ interface ActionCard {
     buttonText: string;
 }
 
-export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, hasActiveJob }: ActionsProps) {
+export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob }: ActionsProps) {
     const navigate = useNavigate();
-    const { user } = useAuth();
     const [cards, setCards] = useState<ActionCard[]>([]);
 
     useEffect(() => {

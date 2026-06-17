@@ -12,7 +12,6 @@ import { formatMoney } from '../utils/money';
 
 export default function BankPage() {
     const { user } = useAuth();
-    const isGuest = user?.isGuest || false;
     const navigate = useNavigate();
 
     const [tab, setTab] = useState<'info' | 'deposit' | 'transfer'>('info');

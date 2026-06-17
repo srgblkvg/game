@@ -5,7 +5,7 @@ export interface OnlineUser {
     guildName?: string | null;
 }
 
-interface ChatMessage {
+export interface ChatMessage {
     id: number;
     senderId: number;
     senderName: string;
