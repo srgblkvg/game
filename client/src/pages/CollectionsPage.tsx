@@ -59,10 +59,10 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
         <div
             className={`relative aspect-square rounded-lg border bg-[var(--color-bg-secondary)] flex flex-col items-center justify-center p-1 transition-colors select-none ${
                 owned && !collected
-                    ? 'border-[#2ecc71] opacity-100'
+                    ? 'border-2 border-[#2ecc71] opacity-100'
                     : collected
-                        ? 'border-[var(--color-border-light)] opacity-100'
-                        : 'border-[var(--color-border-light)] opacity-40 grayscale'
+                        ? 'border border-[var(--color-border-light)] opacity-100'
+                        : 'border border-[var(--color-border-light)] opacity-40 grayscale'
             } ${canAdd ? 'cursor-pointer hover:border-[var(--color-accent-info)]' : ''}`}
             title={item.name}
             onMouseEnter={isTouchDevice ? undefined : onShowTooltip}
