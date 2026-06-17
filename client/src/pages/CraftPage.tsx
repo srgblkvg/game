@@ -453,6 +453,7 @@ export default function CraftPage() {
                                 if (itemsToSalvage.length > 0) {
                                     const result = await salvageItems(itemsToSalvage.map(s => s.id));
                                     setCharacter({ ...character, inventory: result.inventory });
+                                    showAcquire({ name: 'Разбор', rarity_id: 0 }, itemsToSalvage.length, 'Предметы разобраны');
                                 }
                                 // Разбор камней
                                 for (const stone of stonesToDisassemble) {
