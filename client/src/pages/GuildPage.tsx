@@ -281,7 +281,28 @@ export default function GuildPage() {
                                 <Button variant="secondary" size="xs" onClick={handleLeave}>Покинуть</Button>
                             </div>
                         </div>
-                        {guild.description && <p className="text-xs text-[var(--color-text-muted)] mb-2">{guild.description}</p>}
+                        {guild.myRank === 'leader' ? (
+                            <div className="mb-2">
+                                <textarea
+                                    value={guild.description || ''}
+                                    onChange={(e) => setGuild((prev: any) => prev ? { ...prev, description: e.target.value } : prev)}
+                                    onBlur={async () => {
+                                        try {
+                                            await fetch('/api/guild/settings', {
+                                                method: 'POST',
+                                                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ description: guild.description || '' }),
+                                            });
+                                        } catch {}
+                                    }}
+                                    placeholder="Описание гильдии..."
+                                    rows={2}
+                                    className="w-full text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-2 py-1 text-[var(--color-text-primary)] resize-none"
+                                />
+                            </div>
+                        ) : (
+                            guild.description && <p className="text-xs text-[var(--color-text-muted)] mb-2">{guild.description}</p>
+                        )}
                         <p className="text-xs text-[var(--color-text-muted)]">
                             Тип: {guild.joinType === 'open' ? 'Открытая' : guild.joinType === 'request' ? 'По заявке' : 'По приглашению'}
                             {guild.myRank === 'leader' && ' • Вы лидер'}

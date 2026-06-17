@@ -122,15 +122,25 @@ router.get('/guild/list', async (req, res) => {
 // Обновить настройки гильдии (только лидер)
 router.post('/guild/settings', async (req, res) => {
     const userId = req.userId;
-    const { joinType } = req.body;
+    const { joinType, description } = req.body;
 
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может менять настройки' });
 
-    if (!['open', 'request', 'invite'].includes(joinType)) return res.status(400).json({ error: 'Неверный тип: open, request, invite' });
+    if (joinType && !['open', 'request', 'invite'].includes(joinType)) return res.status(400).json({ error: 'Неверный тип: open, request, invite' });
 
-    await db.run('UPDATE guilds SET joinType = ? WHERE id = ?', [joinType, member.guildId]);
-    res.json({ success: true, joinType, message: `Тип гильдии изменён на «${joinType === 'open' ? 'открытая' : joinType === 'request' ? 'по заявке' : 'закрытая (по приглашению)'}»` });
+    if (joinType) {
+        await db.run('UPDATE guilds SET joinType = ? WHERE id = ?', [joinType, member.guildId]);
+    }
+    if (description !== undefined) {
+        await db.run('UPDATE guilds SET description = ? WHERE id = ?', [description, member.guildId]);
+    }
+
+    const updated = await db.one('SELECT joinType, description FROM guilds WHERE id = ?', [member.guildId]) as any;
+    const typeMsg = joinType ? `Тип: «${joinType === 'open' ? 'открытая' : joinType === 'request' ? 'по заявке' : 'закрытая'}»` : '';
+    const descMsg = description !== undefined ? 'Описание обновлено' : '';
+    const msg = [typeMsg, descMsg].filter(Boolean).join('. ');
+    res.json({ success: true, ...updated, message: msg || 'Настройки обновлены' });
 });
 
 // Заявки на вступление (для лидера/офицеров)

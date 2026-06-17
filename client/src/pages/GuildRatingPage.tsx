@@ -69,6 +69,7 @@ export default function GuildRatingPage() {
                                             <p>Уровень: {g.level}</p>
                                             <p>Участники: {g.memberCount}/20</p>
                                             <p>Казна: {(g.treasury || 0).toLocaleString()} серебра</p>
+                                            {g.description && <p className="text-[var(--color-text-secondary)] italic">{'«'}{g.description}{'»'}</p>}
                                             <p>
                                                 Лидер:{' '}
                                                 <span
