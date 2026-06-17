@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 
 interface GameItem {
   id?: string | number;
@@ -86,9 +86,29 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | null>(null);
 
+// HP regen snapshot: { hp, time } — обновляется при setCharacter
+let _hpSnapshot = { hp: 100, time: Math.floor(Date.now() / 1000) };
+
+/** Вычислить текущий HP с учётом регенерации (1% maxHp/сек) */
+export function getRegenHp(currentHp: number, maxHp: number, serverTime: number): number {
+  const elapsed = serverTime - _hpSnapshot.time;
+  if (elapsed <= 0) return Math.min(currentHp, maxHp);
+  const regen = Math.floor(elapsed * maxHp * 0.01);
+  return Math.min(maxHp, _hpSnapshot.hp + regen);
+}
+
 export function GameProvider({ children }: { children: ReactNode }) {
   const [character, setCharacter] = useState<Character | null>(null);
   const [serverTime, setServerTime] = useState(Math.floor(Date.now() / 1000));
+  const charRef = useRef(character);
+
+  // Обновляем снапшот HP при изменении character
+  useEffect(() => {
+    if (character && character !== charRef.current) {
+      _hpSnapshot = { hp: character.currentHp, time: serverTime };
+      charRef.current = character;
+    }
+  }, [character, serverTime]);
 
   useEffect(() => {
     const handler = (e: Event) => setServerTime((e as CustomEvent).detail);

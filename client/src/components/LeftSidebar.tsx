@@ -2,7 +2,7 @@ import CharacterCard from './CharacterCard';
 import StatAllocation from './StatAllocation';
 import BuffsBlock from './BuffsBlock';
 import { calculateStats } from '../utils/stats';
-import type { Character } from '../contexts/GameContext';
+import { useGame, getRegenHp, type Character } from '../contexts/GameContext';
 
 interface LeftSidebarProps {
   character: Character;
@@ -13,8 +13,10 @@ interface LeftSidebarProps {
 
 export default function LeftSidebar({ character, onEquip, selectedItemId, highlightedSlots }: LeftSidebarProps) {
   if (!character) return null;
+  const { serverTime } = useGame();
   const drinkBonuses = character.drinkBonuses;
   const stats = calculateStats(character, drinkBonuses, character.collectionCount || 0);
+  const regenHp = getRegenHp(character.currentHp, stats.hp, serverTime);
 
   // Реген из комнаты
   const room = character.room;
@@ -33,7 +35,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
           username: character.username,
           level: character.level,
           exp: character.exp,
-          currentHp: character.currentHp,
+          currentHp: regenHp,
           maxHp: stats.hp,
           equipment: character.equipment,
           stats: stats,
