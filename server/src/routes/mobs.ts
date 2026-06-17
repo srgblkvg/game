@@ -278,6 +278,7 @@ router.post('/mob/attack', async (req, res) => {
                     inventory.push(materialDropped);
                 }
                 await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+                user.inventory = JSON.stringify(inventory);
 
                 addStep({ type: 'money', message: `Добыто: ${craftItem.display_name} материал` });
             }
@@ -309,6 +310,7 @@ router.post('/mob/attack', async (req, res) => {
                 }
                 await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
                 materialDropped = materialDropped || stoneDrop;
+                user.inventory = JSON.stringify(inventory);
                 addStep({ type: 'money', message: 'Добыто: Камень улучшения (Хлам)' });
             }
         }
@@ -337,6 +339,7 @@ router.post('/mob/attack', async (req, res) => {
                     inv.push(drop);
                     await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inv), userId]);
                     itemsDropped.push(drop);
+                    user.inventory = JSON.stringify(inv);
                     addStep({ type: 'money', message: `Добыто: ${randomItem.display_name} предмет — ${randomItem.name}` });
                 }
             }
