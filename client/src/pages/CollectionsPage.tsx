@@ -68,6 +68,7 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
             onMouseEnter={isTouchDevice ? undefined : onShowTooltip}
             onMouseLeave={isTouchDevice ? undefined : onHideTooltip}
             {...longPress}
+            onClick={canAdd ? onAdd : undefined}
             onContextMenu={(e) => e.preventDefault()}
         >
             {getItemImage(item) ? (
