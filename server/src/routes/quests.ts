@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { applyExp } from '../db/helpers';
+import { sendToUser } from '../websocket';
 
 const router = Router();
 
@@ -186,6 +187,7 @@ router.post('/tavern/quests/take', async (req, res) => {
         ['active', snapshot, questId]);
 
     res.json({ success: true });
+    sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests take WS:', e.message));
 });
 
 // Сдать квест
@@ -230,6 +232,50 @@ router.post('/tavern/quests/claim', async (req, res) => {
 
     const updated = await db.one('SELECT money, exp, level, statPoints FROM users WHERE id = ?', [userId]) as any;
     res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: quest.rewardMoney, money: updated.money, exp: updated.exp, level: updated.level, statPoints: updated.statPoints, levelsGained });
+    sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests claim WS:', e.message));
 });
+
+/** Рассчитать и отправить обновлённые daily-квесты через WS */
+export async function sendDailyQuestsUpdate(userId: number) {
+    const today = await getToday();
+    const quests = await db.query(
+        'SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id',
+        [userId, today]
+    ) as any[];
+
+    if (quests.length === 0) return;
+
+    for (const q of quests) {
+        if (q.status === 'active') {
+            const prog = await getProgress(userId, q.snapshot, q.questType);
+            if (prog !== q.progress) {
+                await db.run('UPDATE daily_quests SET progress = ? WHERE id = ?', [Math.min(prog, q.requirement), q.id]);
+                q.progress = Math.min(prog, q.requirement);
+            }
+        }
+    }
+
+    const active = quests.filter((q: any) => q.status === 'active');
+    sendToUser(userId, {
+        type: 'dailyQuests',
+        quests: quests.filter((q: any) => q.status !== 'claimed').map((q: any) => {
+            const qt = q.questType as QuestType;
+            const info = QUEST_INFO[qt];
+            return {
+                ...q,
+                typeName: info.name,
+                typeIcon: info.icon,
+                description: info.desc(q.requirement, q.difficulty),
+                difficultyLabel: DIFFICULTIES[q.difficulty as keyof typeof DIFFICULTIES]?.label || q.difficulty,
+                snapshot: undefined,
+            };
+        }),
+        activeCount: active.length,
+        completedToday: quests.filter((q: any) => q.status === 'claimed').length,
+        canTake: active.length < 3 && (active.length + quests.filter((q: any) => q.status === 'claimed').length) < 5,
+        dailyLimit: 5,
+        maxActive: 3,
+    });
+}
 
 export default router;

@@ -6,6 +6,7 @@ import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
 import { getUserById, getBaseStats, enrichEquipment, applyExp } from '../db/helpers';
 import { updateGuildQuestProgress } from './guild';
+import { sendDailyQuestsUpdate } from './quests';
 
 const router = Router();
 
@@ -106,6 +107,8 @@ router.get('/character/me', async (req, res) => {
                 [userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString(), jobData.premiumBonus || 0, expGain]);
             // Guild quest progress — track job seconds
             if (user.guildId) { updateGuildQuestProgress(user.guildId).catch(e => console.error('guildQuest jobs:', e.message)); }
+            // Daily quests — track job seconds
+            sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests jobs:', e.message));
             user.money = newMoney;
             user.level = newLevel;
             user.statPoints = newStatPoints;

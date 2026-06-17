@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
-import { getHeaders } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 
 const questIcons: Record<string, string> = { hunt: '🗡️', arena: '⚔️', job: '🌍', craft: '⚒️', auction: '💰' };
@@ -10,19 +9,20 @@ const guildQuestIcons: Record<string, string> = { pve: '🗡️', pvp: '⚔️',
 export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: string | null) => void }) {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [quests, setQuests] = useState<any>(null);
+    const [dailyQuests, setDailyQuests] = useState<any[]>([]);
     const [guildQuest, setGuildQuest] = useState<any>(null);
 
+    // Первичная загрузка через HTTP (один раз при логине)
     useEffect(() => {
         if (user) {
-            loadQuests();
-            loadGuildQuest();
-            const i = setInterval(loadQuests, 10000);
-            return () => clearInterval(i);
+            fetch('/api/tavern/quests', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+                .then(r => r.json()).then(d => setDailyQuests(d.quests || [])).catch(() => {});
+            fetch('/api/guild/quest', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+                .then(r => r.json()).then(d => { if (d.activeQuest) setGuildQuest(d.activeQuest); }).catch(() => {});
         }
     }, [user]);
 
-    // WS live updates for guild quest
+    // WS live updates — guild quest
     useEffect(() => {
         const handler = (e: Event) => {
             const detail = (e as CustomEvent).detail;
@@ -32,20 +32,17 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
         return () => window.removeEventListener('guildQuestProgress', handler);
     }, []);
 
-    const loadQuests = async () => {
-        try { setQuests(await (await fetch('/api/tavern/quests', { headers: getHeaders() })).json()); } catch { }
-    };
+    // WS live updates — daily quests
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const data = (e as CustomEvent).detail;
+            if (data?.quests) setDailyQuests(data.quests);
+        };
+        window.addEventListener('dailyQuests', handler);
+        return () => window.removeEventListener('dailyQuests', handler);
+    }, []);
 
-    const loadGuildQuest = async () => {
-        try {
-            const r = await fetch('/api/guild/quest', { headers: getHeaders() });
-            if (r.status === 400) { setGuildQuest(null); return; } // not in guild
-            const d = await r.json();
-            setGuildQuest(d.activeQuest);
-        } catch { }
-    };
-
-    const active = (quests?.quests || []).filter((q: any) => q.status === 'active');
+    const active = dailyQuests.filter((q: any) => q.status === 'active');
     const hasGuild = !!guildQuest;
     const hasPersonal = active.length > 0;
 
@@ -78,7 +75,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                                     <div key={q.id} className="cursor-pointer hover:opacity-80 transition-opacity"
                                         onClick={() => q.progress >= q.requirement ? navigate('/tavern?tab=quests') : onHighlight?.(q.questType)}>
                                         <div className="flex items-center gap-1 text-xs">
-                                            <span>{questIcons[q.questType]}</span>
+                                            <span>{questIcons[q.questType] || q.typeIcon}</span>
                                             <span className="font-medium">{q.typeName}</span>
                                             <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-auto">{q.progress}/{q.requirement}</span>
                                         </div>

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
+import { sendDailyQuestsUpdate } from './quests';
 
 const router = Router();
 
@@ -174,6 +175,10 @@ router.post('/auction/buyout', async (req, res) => {
     await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
 
+    // Daily quests — track auction trades
+    sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests auction:', e.message));
+    sendDailyQuestsUpdate(lot.sellerId).catch(e => console.error('dailyQuests auction:', e.message));
+
     res.json({ success: true });
 });
 
@@ -237,6 +242,10 @@ router.post('/auction/buy-partial', async (req, res) => {
     // Списываем деньги покупателю и начисляем продавцу
     await db.run('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [cost, JSON.stringify(inventory), userId]);
     await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+
+    // Daily quests — track auction trades
+    sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests auction:', e.message));
+    sendDailyQuestsUpdate(lot.sellerId).catch(e => console.error('dailyQuests auction:', e.message));
 
     res.json({ success: true, cost, remaining: remainingCount });
 });

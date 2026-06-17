@@ -126,6 +126,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     setChatError(data.message);
                 } else if (data.type === 'guildQuestProgress') {
                     window.dispatchEvent(new CustomEvent('guildQuestProgress', { detail: data.activeQuest }));
+                } else if (data.type === 'dailyQuests') {
+                    window.dispatchEvent(new CustomEvent('dailyQuests', { detail: data }));
                 }
             } catch (e) {
                 console.error('WebSocket message error', e);
