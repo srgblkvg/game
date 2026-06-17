@@ -89,8 +89,8 @@ const GameContext = createContext<GameContextType | null>(null);
 // HP regen snapshot: { hp, time } — обновляется при setCharacter
 let _hpSnapshot = { hp: 100, time: Math.floor(Date.now() / 1000) };
 
-/** Вычислить текущий HP с учётом регенерации (1 HP / 10 сек, ×rate от комнаты/премиума) */
-export function getRegenHp(currentHp: number, maxHp: number, serverTime: number, roomType?: string | null, roomUntil?: number, premiumUntil?: number): number {
+/** Вычислить текущий HP с учётом регенерации (1 HP / 10 сек, ×rate от комнаты) */
+export function getRegenHp(currentHp: number, maxHp: number, serverTime: number, roomType?: string | null, roomUntil?: number): number {
   const elapsed = serverTime - _hpSnapshot.time;
   if (elapsed <= 0) return Math.min(currentHp, maxHp);
 
@@ -100,8 +100,6 @@ export function getRegenHp(currentHp: number, maxHp: number, serverTime: number,
     if (roomType === 'closet') regenRate = 3;
     else if (roomType === 'bed') regenRate = 10;
     else if (roomType === 'chamber') regenRate = 50;
-  } else if (premiumUntil && premiumUntil > serverTime) {
-    regenRate = 3; // Премиум = чулан
   }
 
   const regenAmount = Math.floor(elapsed / 10) * regenRate;

@@ -16,17 +16,9 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
   const { serverTime } = useGame();
   const drinkBonuses = character.drinkBonuses;
   const stats = calculateStats(character, drinkBonuses, character.collectionCount || 0);
-  const regenHp = getRegenHp(character.currentHp, stats.hp, serverTime, character.room?.type, character.room?.until, character.premium?.until);
-
-  // Реген из комнаты
-  const room = character.room;
-  const now = Math.floor(Date.now() / 1000);
-  let regenRate = 1;
-  if (room && room.until > now) {
-    if (room.type === 'closet') regenRate = 3;
-    else if (room.type === 'bed') regenRate = 10;
-    else if (room.type === 'chamber') regenRate = 50;
-  }
+  // Премиум активирует комнату «Чулан», если нет своей
+  const effectiveRoom = character.room || ((character.premium?.until || 0) > serverTime ? { type: 'closet' as const, until: character.premium!.until } : null);
+  const regenHp = getRegenHp(character.currentHp, stats.hp, serverTime, effectiveRoom?.type, effectiveRoom?.until);
 
   return (
     <div className="w-full sm:w-auto flex flex-col items-center sm:items-start">
