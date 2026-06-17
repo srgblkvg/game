@@ -287,6 +287,36 @@ export default function GuildPage() {
                             {guild.myRank === 'leader' && ' • Вы лидер'}
                             {guild.myRank === 'officer' && ' • Вы офицер'}
                         </p>
+                        {guild.myRank === 'leader' && (
+                            <div className="mt-2 flex items-center gap-2">
+                                <span className="text-xs text-[var(--color-text-muted)]">Тип:</span>
+                                <select
+                                    value={guild.joinType}
+                                    onChange={async (e) => {
+                                        const newType = e.target.value;
+                                        try {
+                                            const res = await fetch('/api/guild/settings', {
+                                                method: 'POST',
+                                                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ joinType: newType }),
+                                            });
+                                            const d = await res.json();
+                                            if (res.ok) {
+                                                setGuild((prev: any) => prev ? { ...prev, joinType: newType } : prev);
+                                                setMessage(d.message);
+                                            } else {
+                                                setError(d.error);
+                                            }
+                                        } catch { setError('Ошибка сети'); }
+                                    }}
+                                    className="text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-2 py-1 text-[var(--color-text-primary)]"
+                                >
+                                    <option value="open">Открытая</option>
+                                    <option value="request">По заявке</option>
+                                    <option value="invite">По приглашению</option>
+                                </select>
+                            </div>
+                        )}
                     </Card>
 
                     {/* Блок войны */}

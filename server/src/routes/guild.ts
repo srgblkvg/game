@@ -119,6 +119,20 @@ router.get('/guild/list', async (req, res) => {
     res.json(result);
 });
 
+// Обновить настройки гильдии (только лидер)
+router.post('/guild/settings', async (req, res) => {
+    const userId = req.userId;
+    const { joinType } = req.body;
+
+    const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
+    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может менять настройки' });
+
+    if (!['open', 'request', 'invite'].includes(joinType)) return res.status(400).json({ error: 'Неверный тип: open, request, invite' });
+
+    await db.run('UPDATE guilds SET joinType = ? WHERE id = ?', [joinType, member.guildId]);
+    res.json({ success: true, joinType, message: `Тип гильдии изменён на «${joinType === 'open' ? 'открытая' : joinType === 'request' ? 'по заявке' : 'закрытая (по приглашению)'}»` });
+});
+
 // Заявки на вступление (для лидера/офицеров)
 router.get('/guild/requests', async (req, res) => {
     const userId = req.userId;
