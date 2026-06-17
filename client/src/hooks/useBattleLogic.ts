@@ -70,7 +70,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
                 return;
             }
             setOpponent(data);
-            const pStats = calculateStats(character, (character as any).drinkBonuses);
+            const pStats = calculateStats(character, (character as any).drinkBonuses, (character as any).collectionCount || 0);
             setMaxHpLeft(pStats.hp);
             setHpLeft(character.currentHp);
             setMaxHpRight(data.stats.hp);
