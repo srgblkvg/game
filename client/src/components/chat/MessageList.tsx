@@ -138,8 +138,8 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                             style={{ color: getRarityColor(msg.itemRarity ?? 0) }}
                                             className={`px-[10px] py-[6px] font-bold cursor-pointer text-[0.82rem] break-words shadow-[0_1px_2px_rgba(0,0,0,0.3)] ${
                                                 isOwn
-                                                    ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] border border-[rgba(255,255,255,0.08)]'
-                                                    : `rounded-[12px_12px_12px_4px] ${isPrivate ? 'bg-[#2d1f3d]' : 'bg-[var(--color-bg-card)]'} border border-[rgba(255,255,255,0.04)]`
+                                                    ? 'rounded-[12px_12px_4px_12px] bg-[var(--color-chat-own-bg)] border border-[rgba(255,255,255,0.08)]'
+                                                    : `rounded-[12px_12px_12px_4px] ${isPrivate ? 'bg-[var(--color-chat-private-bg)]' : 'bg-[var(--color-chat-public-bg)]'} border border-[rgba(255,255,255,0.04)]`
                                             }`}
                                             onMouseEnter={(e) =>
                                                 setTooltipData({ item: msg.item, x: e.clientX, y: e.clientY })
@@ -161,13 +161,13 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                             key={msg.id}
                                             className={`px-3 py-[7px] break-words shadow-[0_1px_3px_rgba(0,0,0,0.35)] text-[0.85rem] leading-[1.4] ${
                                                 isOwn
-                                                    ? 'rounded-[12px_12px_4px_12px] bg-[linear-gradient(135deg,#3b5998,#4a6fa5)] text-[#eaeaea] border border-[rgba(255,255,255,0.08)]'
+                                                    ? 'rounded-[12px_12px_4px_12px] bg-[var(--color-chat-own-bg)] text-[var(--color-chat-own-text)] border border-[rgba(255,255,255,0.08)]'
                                                     : `rounded-[12px_12px_12px_4px] border border-[rgba(255,255,255,0.04)] ${
                                                         isGuild
-                                                            ? 'bg-[#1a3a1a] text-[var(--color-accent-success)]'
+                                                            ? 'bg-[var(--color-chat-guild-bg)] text-[var(--color-chat-guild-text)]'
                                                             : isPrivate
-                                                                ? 'bg-[#2d1f3d] text-[var(--color-accent-purple)]'
-                                                                : 'bg-[var(--color-bg-card)] text-[var(--color-text-primary)]'
+                                                                ? 'bg-[var(--color-chat-private-bg)] text-[var(--color-chat-private-text)]'
+                                                                : 'bg-[var(--color-chat-public-bg)] text-[var(--color-chat-public-text)]'
                                                     }`
                                             }`}
                                         >

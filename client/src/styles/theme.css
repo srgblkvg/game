@@ -50,6 +50,16 @@ html {
   --color-rarity-legendary: #f1c40f;
   --color-rarity-mythic: #e74c3c;
 
+  /* Чат — полупрозрачные фоны */
+  --color-chat-own-bg: rgba(59, 89, 152, 0.75);
+  --color-chat-own-text: #eaeaea;
+  --color-chat-guild-bg: rgba(46, 204, 113, 0.12);
+  --color-chat-guild-text: #2ecc71;
+  --color-chat-private-bg: rgba(155, 89, 182, 0.12);
+  --color-chat-private-text: #c39bdb;
+  --color-chat-public-bg: rgba(42, 42, 62, 0.6);
+  --color-chat-public-text: #eee;
+
   /* Тени */
   --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.8);
 }
@@ -93,6 +103,16 @@ html {
   --color-rarity-epic: #7b3f9e;
   --color-rarity-legendary: #b8860b;
   --color-rarity-mythic: #b71c1c;
+
+  /* Чат — полупрозрачные фоны (светлая тема) */
+  --color-chat-own-bg: rgba(59, 89, 152, 0.7);
+  --color-chat-own-text: #eaeaea;
+  --color-chat-guild-bg: rgba(26, 122, 58, 0.12);
+  --color-chat-guild-text: #1a7a3a;
+  --color-chat-private-bg: rgba(123, 63, 158, 0.1);
+  --color-chat-private-text: #7b3f9e;
+  --color-chat-public-bg: rgba(253, 250, 243, 0.75);
+  --color-chat-public-text: #2c1810;
 
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
