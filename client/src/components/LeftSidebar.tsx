@@ -16,7 +16,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
   const { serverTime } = useGame();
   const drinkBonuses = character.drinkBonuses;
   const stats = calculateStats(character, drinkBonuses, character.collectionCount || 0);
-  const regenHp = getRegenHp(character.currentHp, stats.hp, serverTime);
+  const regenHp = getRegenHp(character.currentHp, stats.hp, serverTime, character.room?.type, character.room?.until);
 
   // Реген из комнаты
   const room = character.room;

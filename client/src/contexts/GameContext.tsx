@@ -89,12 +89,21 @@ const GameContext = createContext<GameContextType | null>(null);
 // HP regen snapshot: { hp, time } — обновляется при setCharacter
 let _hpSnapshot = { hp: 100, time: Math.floor(Date.now() / 1000) };
 
-/** Вычислить текущий HP с учётом регенерации (1% maxHp/сек) */
-export function getRegenHp(currentHp: number, maxHp: number, serverTime: number): number {
+/** Вычислить текущий HP с учётом регенерации (1 HP / 10 сек, ×rate от комнаты) */
+export function getRegenHp(currentHp: number, maxHp: number, serverTime: number, roomType?: string | null, roomUntil?: number): number {
   const elapsed = serverTime - _hpSnapshot.time;
   if (elapsed <= 0) return Math.min(currentHp, maxHp);
-  const regen = Math.floor(elapsed * maxHp * 0.01);
-  return Math.min(maxHp, _hpSnapshot.hp + regen);
+
+  // Базовый реген: 1 HP каждые 10 секунд
+  let regenRate = 1;
+  if (roomType && roomUntil && roomUntil > serverTime) {
+    if (roomType === 'closet') regenRate = 3;
+    else if (roomType === 'bed') regenRate = 10;
+    else if (roomType === 'chamber') regenRate = 50;
+  }
+
+  const regenAmount = Math.floor(elapsed / 10) * regenRate;
+  return Math.min(maxHp, _hpSnapshot.hp + regenAmount);
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
