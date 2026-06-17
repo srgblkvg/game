@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getHeaders } from '../api/helpers';
 import { getItemImage } from '../utils/itemUtils';
 import ItemTooltip from '../components/ItemTooltip';
@@ -97,6 +97,7 @@ export default function CollectionsPage() {
     const [selectedInvItem, setSelectedInvItem] = useState<InventoryItem | null>(null);
     const [showConfirm, setShowConfirm] = useState(false);
     const [message, setMessage] = useState('');
+    const confirmOpenTime = useRef(0);
 
     useEffect(() => {
         Promise.all([
@@ -140,6 +141,7 @@ export default function CollectionsPage() {
         setSelectedShopItem(shopItem);
         setSelectedInvItem(matching[0]);
         setShowConfirm(true);
+        confirmOpenTime.current = Date.now();
     };
 
     const handleConfirm = async () => {
@@ -235,7 +237,7 @@ export default function CollectionsPage() {
 
             {/* Modal: confirm */}
             {showConfirm && selectedShopItem && selectedInvItem && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => { setShowConfirm(false); setSelectedInvItem(null); }}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => { if (Date.now() - confirmOpenTime.current > 400) { setShowConfirm(false); setSelectedInvItem(null); } }}>
                     <div className="bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-border-default)] p-4 w-80" onClick={e => e.stopPropagation()}>
                         <h3 className="font-bold text-sm mb-2 text-[var(--color-accent-danger)]">Подтверждение</h3>
                         <p className="text-xs mb-3">
