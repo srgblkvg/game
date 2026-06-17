@@ -74,7 +74,7 @@ export default function BestiaryPage() {
   }, []);
 
   const updateCooldown = useCallback(() => {
-    const remaining = getRemaining(((character as any)?.lastPveAttackTime || 0) + 300);
+    const remaining = getRemaining(((character as any)?.lastPveAttackTime || 0) + (((character as any)?.premium?.until || 0) > serverTime ? 150 : 300));
     setCooldownRemaining(remaining);
     if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null; }
     if (remaining > 0) {
@@ -297,7 +297,7 @@ export default function BestiaryPage() {
       });
       const fresh = await fetchCharacter();
       setCharacter(fresh);
-      setCooldownRemaining(getRemaining(((fresh as any)?.lastPveAttackTime || 0) + 300));
+      setCooldownRemaining(getRemaining(((fresh as any)?.lastPveAttackTime || 0) + (((fresh as any)?.premium?.until || 0) > serverTime ? 150 : 300)));
       if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
       cooldownTimerRef.current = window.setInterval(() => {
         setCooldownRemaining(prev => {

@@ -59,15 +59,15 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                 {/* Гильдия */}
                 {hasGuild && (
                     <div>
-                        <div className="text-[0.6rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Гильдия:</div>
+                        <div className="text-[0.6rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Гильдия:</div>
                         <GuildQuestItem quest={guildQuest} onNavigate={() => navigate('/guild')} />
                     </div>
                 )}
 
                 {/* Личные */}
                 {hasPersonal && (
-                    <div>
-                        <div className="text-[0.6rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Личные:</div>
+                    <div className={hasGuild ? 'mt-4 pt-3 border-t border-[var(--color-border-default)]' : ''}>
+                        <div className="text-[0.6rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Личные:</div>
                         <div className="space-y-1.5">
                             {active.map((q: any) => {
                                 const pct = Math.round((q.progress / q.requirement) * 100);
@@ -105,10 +105,6 @@ function GuildQuestItem({ quest, onNavigate }: { quest: any; onNavigate: () => v
                 <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-auto">{quest.progress}/{quest.requirement}</span>
             </div>
             <p className="text-[0.65rem] text-[var(--color-text-muted)] leading-tight">{quest.description}</p>
-            <div className="flex items-center gap-1 text-[0.6rem] text-[var(--color-text-muted)]">
-                <span>{quest.difficultyLabel}</span>
-                <span>· +{quest.rewardXp} XP</span>
-            </div>
             <div className="h-1 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
                 <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all" style={{ width: `${pct}%` }} />
             </div>
