@@ -36,7 +36,7 @@ router.post('/guild/create', async (req, res) => {
 router.get('/guild/my', async (req, res) => {
     const userId = req.userId;
     const member = await db.one(
-        'SELECT gm.*, g.name, g.description, g.joinType, g.level, g.exp, g.leaderId, g.treasury, g.taxRate, g.createdAt FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?',
+        'SELECT gm.*, g.name, g.description, g.image, g.joinType, g.level, g.exp, g.leaderId, g.treasury, g.taxRate, g.createdAt FROM guild_members gm JOIN guilds g ON gm.guildId = g.id WHERE gm.userId = ?',
         [userId]
     ) as any;
     if (!member) return res.json({ guild: null });
@@ -74,6 +74,7 @@ router.get('/guild/my', async (req, res) => {
             id: member.guildId,
             name: member.name,
             description: member.description,
+            image: member.image,
             joinType: member.joinType,
             level: member.level,
             exp: member.exp,

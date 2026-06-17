@@ -285,9 +285,9 @@ export default function GuildPage() {
                             <div className="mb-2 space-y-2">
                                 <div className="flex items-center gap-2">
                                     {guild.image ? (
-                                        <img src={guild.image} alt="Герб" className="w-12 h-12 object-cover rounded border border-[var(--color-border-light)]" />
+                                        <img src={guild.image} alt="Герб" className="w-12 h-12 object-cover rounded border-2 border-[var(--color-accent-gold)]" />
                                     ) : (
-                                        <div className="w-12 h-12 rounded border border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[var(--color-text-muted)] text-[0.5rem]">герб</div>
+                                        <div className="w-12 h-12 rounded border-2 border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[var(--color-text-muted)] text-[0.5rem]">герб</div>
                                     )}
                                     <label className="text-xs cursor-pointer text-[var(--color-accent-info)] hover:underline">
                                         Загрузить герб
@@ -327,7 +327,7 @@ export default function GuildPage() {
                             </div>
                         ) : (
                             <div className="mb-2">
-                                {guild.image && <img src={guild.image} alt="Герб" className="w-12 h-12 object-cover rounded border border-[var(--color-border-light)] mb-1" />}
+                                {guild.image && <img src={guild.image} alt="Герб" className="w-12 h-12 object-cover rounded border-2 border-[var(--color-accent-gold)] mb-1" />}
                                 {guild.description && <p className="text-xs text-[var(--color-text-muted)]">{guild.description}</p>}
                             </div>
                         )}
