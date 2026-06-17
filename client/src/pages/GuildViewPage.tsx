@@ -90,19 +90,26 @@ export default function GuildViewPage() {
                         ← Рейтинг гильдий
                     </Button>
                     <Card className="mb-4">
-                        <h1 className="font-bold text-lg flex items-center gap-2">
-                            🏚️ {guild.name}
-                            <span className="text-xs text-[var(--color-text-muted)] font-normal">ур.{guild.level}</span>
-                        </h1>
-                        {guild.description && (
-                            <p className="text-xs text-[var(--color-text-muted)] mt-1">{guild.description}</p>
-                        )}
-                        <div className="flex gap-4 mt-2 text-xs text-[var(--color-text-muted)]">
-                            <span>👑 {guild.leaderName}</span>
-                            <span>👥 {guild.memberCount} уч.</span>
-                            <span>
-                                {guild.joinType === 'open' ? '🔓 Открытая' : guild.joinType === 'request' ? '📝 По заявке' : '🔒 По приглашению'}
-                            </span>
+                        <div className="flex items-start gap-3">
+                            {guild.image && (
+                                <img src={guild.image} alt="Герб" className="w-16 h-16 object-cover rounded border-2 border-[var(--color-accent-gold)] flex-shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <h1 className="font-bold text-lg flex items-center gap-2">
+                                    🏚️ {guild.name}
+                                    <span className="text-xs text-[var(--color-text-muted)] font-normal">ур.{guild.level}</span>
+                                </h1>
+                                {guild.description && (
+                                    <p className="text-xs text-[var(--color-text-muted)] mt-1">{guild.description}</p>
+                                )}
+                                <div className="flex gap-4 mt-2 text-xs text-[var(--color-text-muted)] flex-wrap">
+                                    <span>👑 {guild.leaderName}</span>
+                                    <span>👥 {guild.memberCount} уч.</span>
+                                    <span>
+                                        {guild.joinType === 'open' ? '🔓 Открытая' : guild.joinType === 'request' ? '📝 По заявке' : '🔒 По приглашению'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         {!isMember && (
                             <div className="mt-3 flex gap-2">
