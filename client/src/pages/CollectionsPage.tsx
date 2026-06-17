@@ -59,7 +59,7 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
         <div
             className={`relative aspect-square rounded-lg border bg-[var(--color-bg-secondary)] flex flex-col items-center justify-center p-1 transition-colors select-none ${
                 owned && !collected
-                    ? 'border-2 border-[#2ecc71] opacity-100'
+                    ? 'border-2 border-[#2ecc71] opacity-100 shadow-[0_0_8px_rgba(46,204,113,0.5)]'
                     : collected
                         ? 'border border-[var(--color-border-light)] opacity-100'
                         : 'border border-[var(--color-border-light)] opacity-40 grayscale'
