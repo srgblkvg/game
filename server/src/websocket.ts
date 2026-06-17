@@ -82,8 +82,14 @@ export async function setupWebSocket(server: any) {
     });
   }, HEARTBEAT_INTERVAL * 1000);
 
+  // Интервал serverTick — раз в секунду для клиентских таймеров
+  const tickInterval = setInterval(() => {
+    broadcast('serverTick', { time: Math.floor(Date.now() / 1000) });
+  }, 1000);
+
   wss.on('close', () => {
     clearInterval(interval);
+    clearInterval(tickInterval);
   });
 
   // ---------- Подключение ----------

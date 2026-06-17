@@ -10,6 +10,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { getHeaders } from '../api/helpers';
+import { useServerTime, getRemaining, formatRemaining } from '../hooks/useServerTime';
 
 const durations = [
     { label: '10 мин', value: 600, icon: 'game-icons:stopwatch' },
@@ -28,7 +29,7 @@ export default function JobsPage() {
     const [showCancel, setShowCancel] = useState(false);
     const [cancelling, setCancelling] = useState(false);
     const prevActiveJob = useRef(character?.activeJob);
-    const intervalRef = useRef<number | null>(null);
+    const serverTime = useServerTime();
 
     useEffect(() => {
         if (!user) { navigate('/login'); return; }
@@ -37,24 +38,16 @@ export default function JobsPage() {
     useEffect(() => {
         const activeJob = character?.activeJob;
         if (activeJob) {
-            setRemaining(Math.max(0, activeJob.endTime - Math.floor(Date.now() / 1000)));
+            setRemaining(getRemaining(activeJob.endTime));
         } else {
             setRemaining(null);
         }
-    }, [character]);
+    }, [character, serverTime]);
 
     useEffect(() => {
         if (prevActiveJob.current && !character?.activeJob) navigate('/');
         prevActiveJob.current = character?.activeJob;
     }, [character?.activeJob, navigate]);
-
-    useEffect(() => {
-        if (!user) return;
-        intervalRef.current = window.setInterval(() => {
-            fetchCharacter().then(setCharacter).catch(console.error);
-        }, 1000);
-        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [user, setCharacter]);
 
     const handleStart = async (duration: number) => {
         setLoading(true);
@@ -84,21 +77,6 @@ export default function JobsPage() {
         }
     };
 
-    useEffect(() => {
-        if (remaining === null || remaining <= 0) return;
-        const timer = setInterval(() => {
-            setRemaining(prev => (prev === null || prev <= 1) ? 0 : prev - 1);
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [remaining]);
-
-    const formatTime = (sec: number) => {
-        const h = Math.floor(sec / 3600);
-        const m = Math.floor((sec % 3600) / 60);
-        const s = sec % 60;
-        return `${h}ч ${m}м ${s}с`;
-    };
-
     if (!user || !character) return null;
 
     const activeJob = character.activeJob;
@@ -112,7 +90,7 @@ export default function JobsPage() {
                 <div className="relative z-10 bg-[var(--color-overlay-text)] rounded-lg p-3 -m-3">
                     <h2 className="text-xl font-bold mb-3"><Icon icon="game-icons:hourglass" width="18" height="18" className="inline mr-1"/>Выполняется работа</h2>
                     <p className="text-lg">{activeJob.name}</p>
-                    <p className="text-[var(--color-text-secondary)]">Осталось: {formatTime(remaining)}</p>
+                    <p className="text-[var(--color-text-secondary)]">Осталось: {formatRemaining(remaining)}</p>
                     <p className="text-[var(--color-text-accent)]">Награда: {formatMoney((activeJob as any).rewardMin || activeJob.reward)}–{formatMoney((activeJob as any).rewardMax || activeJob.reward)}{(activeJob as any).premiumBonus > 0 ? <span style={{color:'#f1c40f'}}> (+{(activeJob as any).premiumBonus} премиум)</span> : null}</p>
                     <p className="text-[var(--color-accent-purple)]">Опыт: +{activeJob.expReward || 0}</p>
                     <Button variant="secondary" size="sm" className="mt-4" onClick={() => setShowCancel(true)}>Отменить работу</Button>

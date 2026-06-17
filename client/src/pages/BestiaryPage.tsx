@@ -6,6 +6,7 @@ import { fetchMobs, attackMob } from '../api/mobs';
 import { fetchCharacter } from '../api/character';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
+import { useServerTime, getRemaining } from '../hooks/useServerTime';
 import { useAcquire } from '../contexts/AcquireContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -28,6 +29,7 @@ const rarityTextColors: Record<number, string> = {
 export default function BestiaryPage() {
   const { user } = useAuth();
   const { character, setCharacter } = useGame();
+  const serverTime = useServerTime();
   const navigate = useNavigate();
   const { showAcquire } = useAcquire();
 
@@ -72,7 +74,7 @@ export default function BestiaryPage() {
   }, []);
 
   const updateCooldown = useCallback(() => {
-    const remaining = (character as any)?.pveCooldownSec ?? Math.max(0, 300 - (Math.floor(Date.now() / 1000) - ((character as any)?.lastPveAttackTime || 0)));
+    const remaining = (character as any)?.pveCooldownSec ?? getRemaining(((character as any)?.lastPveAttackTime || 0) + 300);
     setCooldownRemaining(remaining);
     if (cooldownTimerRef.current) { clearInterval(cooldownTimerRef.current); cooldownTimerRef.current = null; }
     if (remaining > 0) {
@@ -84,7 +86,7 @@ export default function BestiaryPage() {
         });
       }, 1000);
     }
-  }, [character]);
+  }, [character, serverTime]);
 
   useEffect(() => { return () => { if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current); }; }, []);
 
@@ -295,7 +297,7 @@ export default function BestiaryPage() {
       });
       const fresh = await fetchCharacter();
       setCharacter(fresh);
-      setCooldownRemaining((fresh as any)?.pveCooldownSec ?? 300);
+      setCooldownRemaining((fresh as any)?.pveCooldownSec ?? getRemaining(((fresh as any)?.lastPveAttackTime || 0) + 300));
       if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
       cooldownTimerRef.current = window.setInterval(() => {
         setCooldownRemaining(prev => {
