@@ -8,6 +8,7 @@ import MainBar from '../components/MainBar';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { getCompatibleSlots } from '../utils/itemUtils';
+import { useServerTime, getRemaining } from '../hooks/useServerTime';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -51,11 +52,11 @@ export default function HomePage() {
 
   if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
 
-  const nowSec = Math.floor(Date.now() / 1000);
-  const attackCooldownSec = character.attackCooldownSec ?? Math.max(0, 300 - (nowSec - (character.lastAttackTime || 0)));
+  const _st = useServerTime();
+  const attackCooldownSec = character.attackCooldownSec ?? getRemaining((character.lastAttackTime || 0) + 300);
   const canAttack = attackCooldownSec <= 0;
-  const pveCooldownSec = character.pveCooldownSec ?? Math.max(0, 300 - (nowSec - (character.lastPveAttackTime || 0)));
-  const bankCooldownSec = Math.max(0, 1800 - (nowSec - (character.lastBankVisit || 0)));
+  const pveCooldownSec = character.pveCooldownSec ?? getRemaining((character.lastPveAttackTime || 0) + 300);
+  const bankCooldownSec = getRemaining((character.lastBankVisit || 0) + 1800);
 
   return (
     <div className="px-4 py-4">
