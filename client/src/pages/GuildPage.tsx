@@ -275,6 +275,16 @@ export default function GuildPage() {
                             <div>
                                 <h2 className="font-bold text-lg">🏚️ {guild.name}</h2>
                                 <p className="text-xs text-[var(--color-text-muted)]">Уровень {guild.level} • {guild.memberCount} участников</p>
+                                <div className="mt-1">
+                                    <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
+                                        <span>Опыт гильдии</span>
+                                        <span>{guild.exp || 0} / {100 * Math.pow(2, (guild.level || 1) - 1)}</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                        <div className="h-full bg-[var(--color-accent-gold)] rounded-full transition-all duration-500"
+                                            style={{ width: `${Math.min(100, ((guild.exp || 0) / (100 * Math.pow(2, (guild.level || 1) - 1))) * 100)}%` }} />
+                                    </div>
+                                </div>
                             </div>
                             <div className="flex gap-1">
                                 <Button variant="secondary" size="xs" onClick={() => navigate('/guild/rating')}>Рейтинг гильдий</Button>
