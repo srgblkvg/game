@@ -209,7 +209,7 @@ router.get('/craft/upgrade-info/:level/:rarity', async (req, res) => {
     const rarity = Number(req.params.rarity);
     const data = await db.one('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?', [level, rarity]) as any;
     if (!data) return res.status(404).json({ error: 'Данные об уровне не найдены' });
-    res.json(data);
+    res.json({ chance: data.chance, money_cost: Math.max(1, Math.floor(data.money_cost / 4)) });
 });
 
 // Улучшение предмета
@@ -253,9 +253,10 @@ router.post('/craft/upgrade', async (req, res) => {
     }
 
     const { chance, money_cost } = upgradeData;
+    const actualCost = Math.max(1, Math.floor(money_cost / 4));
 
-    if (user.money < money_cost) {
-        return res.status(400).json({ error: `Недостаточно денег. Требуется ${money_cost}` });
+    if (user.money < actualCost) {
+        return res.status(400).json({ error: `Недостаточно денег. Требуется ${actualCost}` });
     }
 
     let newInventory = [...inventory];
@@ -267,7 +268,7 @@ router.post('/craft/upgrade', async (req, res) => {
         newInventory.splice(stoneIndex, 1);
     }
 
-    const newMoney = user.money - money_cost;
+    const newMoney = user.money - actualCost;
 
     const success = Math.random() * 100 < chance;
 
@@ -293,43 +294,50 @@ router.post('/craft/upgrade', async (req, res) => {
         await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });
     } else {
-        // Неудача: предмет разрушается, выдаём материал
-        const itemIdx = newInventory.findIndex((i: any) => i.id === itemSlot.id && !isCraftItem(i));
-        if (itemIdx !== -1) {
-            const destroyedItem = newInventory[itemIdx];
-            const rarityId = destroyedItem.rarity_id || 0;
+        // Неудача
+        // Предмет ломается только если он уже +7 или выше
+        if (currentLevel >= 7) {
+            const itemIdx = newInventory.findIndex((i: any) => i.id === itemSlot.id && !isCraftItem(i));
+            if (itemIdx !== -1) {
+                const destroyedItem = newInventory[itemIdx];
+                const rarityId = destroyedItem.rarity_id || 0;
 
-            const craftItem = await db.one(`
-        SELECT c.id, c.name, c.rarity_id, c.type, c.image,
-               r.display_name as rarity_display, r.color as rarity_color
-        FROM craft_items c
-        JOIN rarities r ON c.rarity_id = r.id
-        WHERE c.rarity_id = ? AND c.type = 'craft'
-      `, [rarityId]) as any;
+                const craftItem = await db.one(`
+            SELECT c.id, c.name, c.rarity_id, c.type, c.image,
+                   r.display_name as rarity_display, r.color as rarity_color
+            FROM craft_items c
+            JOIN rarities r ON c.rarity_id = r.id
+            WHERE c.rarity_id = ? AND c.type = 'craft'
+          `, [rarityId]) as any;
 
-            if (craftItem) {
-                const existingCraft = newInventory.find((i: any) => isCraftItem(i) && i.id === craftItem.id);
-                if (existingCraft) {
-                    existingCraft.count += 1;
-                } else {
-                    newInventory.push({
-                        type: 'craft_item',
-                        id: craftItem.id,
-                        name: craftItem.name,
-                        rarity_id: craftItem.rarity_id,
-                        rarity_display: craftItem.rarity_display,
-                        rarity_color: craftItem.rarity_color,
-                        count: 1,
-                        itemType: craftItem.type || 'craft',
-                        image: craftItem.image || null,
-                    });
+                if (craftItem) {
+                    const existingCraft = newInventory.find((i: any) => isCraftItem(i) && i.id === craftItem.id);
+                    if (existingCraft) {
+                        existingCraft.count += 1;
+                    } else {
+                        newInventory.push({
+                            type: 'craft_item',
+                            id: craftItem.id,
+                            name: craftItem.name,
+                            rarity_id: craftItem.rarity_id,
+                            rarity_display: craftItem.rarity_display,
+                            rarity_color: craftItem.rarity_color,
+                            count: 1,
+                            itemType: craftItem.type || 'craft',
+                            image: craftItem.image || null,
+                        });
+                    }
                 }
+                newInventory.splice(itemIdx, 1);
             }
-            newInventory.splice(itemIdx, 1);
-        }
 
-        await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
-        return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача! Предмет разрушен.' });
+            await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
+            return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача! Предмет разрушен.' });
+        } else {
+            // До +7 — просто неудача, предмет остаётся, камень и деньги списаны
+            await db.run('UPDATE users SET inventory = ?, money = ? WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
+            return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача! Предмет не улучшен.' });
+        }
     }
 });
 
