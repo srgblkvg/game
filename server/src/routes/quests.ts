@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { applyExp } from '../db/helpers';
 
 const router = Router();
 
@@ -202,8 +203,15 @@ router.post('/tavern/quests/claim', async (req, res) => {
         return res.status(400).json({ error: `Прогресс: ${prog}/${quest.requirement}` });
     }
 
-    await db.run('UPDATE users SET money = money + ?, exp = exp + ? WHERE id = ?',
-        [quest.rewardMoney, quest.rewardXp, userId]);
+    await db.run('UPDATE users SET money = money + ? WHERE id = ?',
+        [quest.rewardMoney, userId]);
+
+    // Получаем текущие exp/level для applyExp
+    const user = await db.one('SELECT exp, level, statPoints FROM users WHERE id = ?', [userId]) as any;
+    const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(userId, quest.rewardXp, user.exp, user.level, user.statPoints || 0);
+    await db.run('UPDATE users SET exp = ?, level = ?, statPoints = ? WHERE id = ?',
+        [newExp, newLevel, newStatPoints, userId]);
+
     await db.run('UPDATE daily_quests SET status = ?, progress = ? WHERE id = ?',
         ['claimed', quest.requirement, questId]);
 
@@ -220,8 +228,8 @@ router.post('/tavern/quests/claim', async (req, res) => {
     await db.run('INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [userId, quest.questType, newDiff, newReq, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(await getSnapshot(userId)), today]);
 
-    const updated = await db.one('SELECT money, exp FROM users WHERE id = ?', [userId]) as any;
-    res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: quest.rewardMoney, money: updated.money, exp: updated.exp });
+    const updated = await db.one('SELECT money, exp, level, statPoints FROM users WHERE id = ?', [userId]) as any;
+    res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: quest.rewardMoney, money: updated.money, exp: updated.exp, level: updated.level, statPoints: updated.statPoints, levelsGained });
 });
 
 export default router;
