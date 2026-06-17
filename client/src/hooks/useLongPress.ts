@@ -19,24 +19,28 @@ export function useLongPress(
         [onLongPress, delay]
     );
 
+    const cancel = useCallback(() => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    }, []);
+
     const end = useCallback(
         (e: React.TouchEvent | React.MouseEvent) => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-                timerRef.current = null;
-            }
+            cancel();
             if (!isLongPress.current && onClick) {
                 onClick(e as React.MouseEvent);
             }
             isLongPress.current = false;
         },
-        [onClick]
+        [onClick, cancel]
     );
 
     return {
         onTouchStart: start,
         onTouchEnd: end,
-        onTouchMove: end,
+        onTouchMove: cancel,
         onMouseDown: start,
         onMouseUp: end,
     };
