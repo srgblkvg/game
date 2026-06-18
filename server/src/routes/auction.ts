@@ -112,26 +112,33 @@ router.post('/auction/bid', async (req, res) => {
     const { lotId, amount } = req.body;
     if (!lotId || !amount) return res.status(400).json({ error: 'Нет данных' });
 
-    const now = Math.floor(Date.now() / 1000);
-    const lot = await db.one('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?', [lotId, now]) as any;
-    if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
-    if (lot.sellerId === userId) return res.status(400).json({ error: 'Нельзя ставить на свой лот' });
+    try {
+        await db.tx(async (client) => {
+            const now = Math.floor(Date.now() / 1000);
+            const lot = (await client.query('SELECT * FROM auction_lots WHERE id = $1 AND endsAt > $2 FOR UPDATE', [lotId, now])).rows[0] as any;
+            if (!lot) throw new Error('Лот не найден или истёк');
+            if (lot.sellerid === userId) throw new Error('Нельзя ставить на свой лот');
 
-    const minBid = lot.currentBid ? lot.currentBid + Math.max(1, Math.floor(lot.currentBid * 0.05)) : lot.startPrice;
-    if (amount < minBid) return res.status(400).json({ error: `Мин. ставка: ${minBid} 🥇` });
+            const currentBid = lot.currentbid ? parseInt(lot.currentbid) : null;
+            const minBid = currentBid ? currentBid + Math.max(1, Math.floor(currentBid * 0.05)) : parseInt(lot.startprice);
+            if (amount < minBid) throw new Error(`Мин. ставка: ${minBid} 🥇`);
 
-    const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
-    if (!user || user.money < amount) return res.status(400).json({ error: 'Недостаточно монет' });
+            const user = (await client.query('SELECT money FROM users WHERE id = $1', [userId])).rows[0] as any;
+            if (!user || user.money < amount) throw new Error('Недостаточно монет');
 
-    // Возврат денег предыдущему лидеру
-    if (lot.currentBidderId) {
-        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
+            // Возврат денег предыдущему лидеру
+            if (lot.currentbidderid) {
+                await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [currentBid, lot.currentbidderid]);
+            }
+
+            await client.query('UPDATE users SET money = money - $1 WHERE id = $2', [amount, userId]);
+            await client.query('UPDATE auction_lots SET currentBid = $1, currentBidderId = $2 WHERE id = $3', [amount, userId, lotId]);
+        });
+
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(400).json({ error: e.message });
     }
-
-    await db.run('UPDATE users SET money = money - ? WHERE id = ?', [amount, userId]);
-    await db.run('UPDATE auction_lots SET currentBid = ?, currentBidderId = ? WHERE id = ?', [amount, userId, lotId]);
-
-    res.json({ success: true });
 });
 
 // Выкуп (buyout) — полный выкуп лота
