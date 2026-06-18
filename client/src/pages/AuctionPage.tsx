@@ -125,8 +125,10 @@ export default function AuctionPage() {
         } catch (e: any) { setError(e.message); }
     };
 
-    const handleBid = async (lotId: number, amount: string) => {
-        try { await api('/auction/bid', { lotId, amount: parseInt(amount) }); setMessage('Ставка сделана!'); setBidAmount(prev => { const n = { ...prev }; delete n[lotId]; return n; }); load(); const fresh = await fetchCharacter(); setCharacter(fresh); }
+    const handleBid = async (lotId: number, amount: string, minBid: number) => {
+        const amt = parseInt(amount);
+        if (!amt || amt < minBid) { setError(`Мин. ставка: ${formatMoney(minBid)}`); return; }
+        try { await api('/auction/bid', { lotId, amount: amt }); setMessage('Ставка сделана!'); setBidAmount(prev => { const n = { ...prev }; delete n[lotId]; return n; }); load(); const fresh = await fetchCharacter(); setCharacter(fresh); }
         catch (e: any) { setError(e.message); }
     };
 
@@ -446,7 +448,7 @@ export default function AuctionPage() {
                                 value={bidAmount[lot.id] || ''}
                                 onChange={e => setBidAmount({ ...bidAmount, [lot.id]: e.target.value })}
                                 className={inputClass + ' w-24'} min={minBid} />
-                            <Button variant="primary" size="xs" onClick={() => handleBid(lot.id, bidAmount[lot.id] || '0')}>Ставка</Button>
+                            <Button variant="primary" size="xs" onClick={() => handleBid(lot.id, bidAmount[lot.id] || '0', minBid)}>Ставка</Button>
                             {lot.buyoutPrice && (
                                 <Button variant="danger" size="xs" onClick={() => handleBuyout(lot.id)}>Выкуп</Button>
                             )}
