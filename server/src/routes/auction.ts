@@ -112,6 +112,7 @@ router.post('/auction/sell', async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [userId, JSON.stringify(sellItemData), totalStartPrice, totalBuyoutPrice, null, dur, endsAt, now]);
 
+    broadcast('auction_changed', {});
     res.json({ success: true, listingFee });
 });
 

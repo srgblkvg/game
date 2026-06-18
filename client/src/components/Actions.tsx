@@ -24,14 +24,23 @@ interface ActionCard {
 export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob }: ActionsProps) {
     const navigate = useNavigate();
     const [cards, setCards] = useState<ActionCard[]>([]);
-    const [auctionBadge, setAuctionBadge] = useState((window as any).__auctionBadge || 0);
+    const [auctionBadge, setAuctionBadge] = useState(0);
 
-    // Слушаем обновление глобального бейджа
+    // Читаем глобальный бейдж на каждом рендере
     useEffect(() => {
-        const handler = () => setAuctionBadge((window as any).__auctionBadge || 0);
+        const check = () => {
+            const val = (window as any).__auctionBadge || 0;
+            if (val !== auctionBadge) setAuctionBadge(val);
+        };
+        check();
+        const handler = () => { check(); };
         window.addEventListener('auctionBadge', handler);
-        return () => window.removeEventListener('auctionBadge', handler);
-    }, []);
+        const interval = setInterval(check, 2000); // fallback-опрос
+        return () => {
+            window.removeEventListener('auctionBadge', handler);
+            clearInterval(interval);
+        };
+    }, [auctionBadge]);
 
     useEffect(() => {
         fetch('/api/actions', { headers: getHeaders() })
