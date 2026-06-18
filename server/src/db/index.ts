@@ -95,6 +95,7 @@ function camelRows(rows: any[]): any[] {
              .replace(/^accountnumber$/i, 'accountNumber')
              .replace(/^fromaccount$/i, 'fromAccount')
              .replace(/^toaccount$/i, 'toAccount')
+             .replace(/^currentbiddername$/i, 'currentBidderName')
              .replace(/^arenatopponentid$/i, 'arenaOpponentId');
       if (cc !== key) row[cc] = row[key];
     }

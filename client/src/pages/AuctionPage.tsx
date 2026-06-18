@@ -424,7 +424,7 @@ export default function AuctionPage() {
                                 <p className="text-xs">
                                     Старт: {formatMoney(lot.startPrice)}
                                     {isStack && <span className="text-[var(--color-accent-info)]"> ({formatMoney(pricePerItem)} / шт)</span>}
-                                    {lot.currentBid && <> • Ставка: {formatMoney(lot.currentBid)}{lot.currentBidderName && <> ({lot.currentBidderName})</>}</>}
+                                    {lot.currentBid && <> • Ставка: {formatMoney(lot.currentBid)}{(lot.currentBidderName || lot.currentbiddername) && <> ({(lot.currentBidderName || lot.currentbiddername)})</>}</>}
                                 </p>
                                 {lot.buyoutPrice && (
                                     <p className="text-xs">
