@@ -97,7 +97,7 @@ export default function NotificationToast() {
                     onClick={() => dismiss(t.id)}
                 >
                     <Icon
-                        icon={iconMap[t.type] || 'game-icons:bell'}
+                        icon={iconMap[t.type] || 'game-icons:ringing-bell'}
                         width="18" height="18"
                         className="mt-0.5 shrink-0"
                         style={{ color: colorMap[t.type] || '#888' }}

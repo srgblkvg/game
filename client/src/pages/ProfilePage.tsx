@@ -106,7 +106,7 @@ export default function ProfilePage() {
                         ⚒️ Ремесло
                     </h3>
                     <StatItem icon="game-icons:anvil" label="Создано" value={profile.craftCreated || 0} />
-                    <StatItem icon="game-icons:arrow-up" label="Улучшено" value={profile.craftUpgraded || 0} />
+                    <StatItem icon="game-icons:arrow-dunk" label="Улучшено" value={profile.craftUpgraded || 0} />
                     <StatItem icon="game-icons:broken-shield" label="Сломано" value={profile.craftBroken || 0} />
 
                     {/* Дата регистрации */}

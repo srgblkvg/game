@@ -15,7 +15,7 @@ const stepIcons: Record<string, string> = {
   block: 'game-icons:shield',
   fullBlock: 'game-icons:shield',
   counter: 'game-icons:backward-time',
-  stun: 'game-icons:dizzy',
+  stun: 'game-icons:knockout',
   end: 'game-icons:trophy',
   money: 'game-icons:cash',
 };

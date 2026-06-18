@@ -12,7 +12,7 @@ const SECTIONS = [
 
 const ICONS = [
     'game-icons:death-skull', 'game-icons:swap-bag', 'game-icons:crossed-swords',
-    'game-icons:buy-card', 'game-icons:bank', 'game-icons:anvil', 'game-icons:auction',
+    'game-icons:buy-card', 'game-icons:bank', 'game-icons:anvil', 'game-icons:pay-money',
     'game-icons:drink-me', 'game-icons:castle', 'game-icons:notebook',
 ];
 
