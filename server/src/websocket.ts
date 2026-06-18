@@ -55,7 +55,6 @@ const notificationQueues = new Map<number, Notification[]>();
 
 /** Добавить уведомление пользователю — отправится на ближайшем serverTick */
 export function pushNotification(userId: number, notification: Omit<Notification, 'id' | 'createdAt'>) {
-  if (!clients.has(userId)) return; // офлайн — не копим
   const queue = notificationQueues.get(userId) || [];
   queue.push({
     ...notification,
