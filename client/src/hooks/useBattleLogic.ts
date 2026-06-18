@@ -98,6 +98,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     const handleStartBattle = async () => {
         if (!opponent) return;
         setLoading(true);
+        window.dispatchEvent(new CustomEvent('battleStart')); // ДО запроса — блокируем WS balance
         try {
             const result = await startBattle(opponent.id);
             setHpLeft(character.currentHp);
@@ -106,7 +107,6 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             setBattleResult(result);
             setCurrentStep(-1);
             // Деньги/опыт обновятся в finishBattle после анимации
-            window.dispatchEvent(new CustomEvent('battleStart'));
         } catch (e: any) {
             setModalMessage(e.message);
         } finally {

@@ -295,11 +295,11 @@ export default function BestiaryPage() {
     setPlayerMaxHp(pStats.hp);
     setPlayerHp(startHp);
     setLoading(true);
+    window.dispatchEvent(new CustomEvent('battleStart')); // ДО запроса — блокируем WS balance
     try {
       const result = await attackMob(mob.id);
       setBattleSteps(result.steps || []);
       setBattleResult(result);
-      window.dispatchEvent(new CustomEvent('battleStart'));
       // Дропы с задержкой
       const drops: any[] = [];
       if (result.materialDropped) drops.push(result.materialDropped);
