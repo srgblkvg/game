@@ -127,23 +127,16 @@ export default function Header() {
         }, 30000); // 30 сек вместо 10 — баланс идёт через WS
 
         // Баланс через WS — мгновенное обновление money (кроме времени боя)
-        let battling = false;
-        const onBattleStart = () => { battling = true; };
-        const onBattleEnd = () => { battling = false; };
         const onBalance = (e: Event) => {
-            if (battling) return; // не обновляем во время анимации боя
+            if ((window as any).__battling) return; // не обновляем во время анимации боя
             const { money } = (e as CustomEvent).detail;
             if (money !== undefined) {
                 setCharacter((prev: any) => prev ? { ...prev, money } : prev);
             }
         };
-        window.addEventListener('battleStart', onBattleStart);
-        window.addEventListener('battleEnd', onBattleEnd);
         window.addEventListener('balance', onBalance);
         return () => {
             clearInterval(interval);
-            window.removeEventListener('battleStart', onBattleStart);
-            window.removeEventListener('battleEnd', onBattleEnd);
             window.removeEventListener('balance', onBalance);
         };
     }, [user, setCharacter]);

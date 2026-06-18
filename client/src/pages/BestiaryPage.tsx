@@ -269,6 +269,7 @@ export default function BestiaryPage() {
         setPendingDrops([]);
       }
       window.dispatchEvent(new CustomEvent('battleEnd'));
+      (window as any).__battling = false;
     }
   }, [currentStep, battleSteps.length, pendingCharacter, pendingDrops, setCharacter, showAcquire]);
   useEffect(() => { return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
@@ -296,6 +297,7 @@ export default function BestiaryPage() {
     setPlayerHp(startHp);
     setLoading(true);
     window.dispatchEvent(new CustomEvent('battleStart')); // ДО запроса — блокируем WS balance
+    (window as any).__battling = true;
     try {
       const result = await attackMob(mob.id);
       setBattleSteps(result.steps || []);
@@ -352,6 +354,7 @@ export default function BestiaryPage() {
       setPendingDrops([]);
     }
     window.dispatchEvent(new CustomEvent('battleEnd'));
+    (window as any).__battling = false;
   };
 
   const toggleSpeed = () => {

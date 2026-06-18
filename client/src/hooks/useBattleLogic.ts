@@ -98,7 +98,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     const handleStartBattle = async () => {
         if (!opponent) return;
         setLoading(true);
-        window.dispatchEvent(new CustomEvent('battleStart')); // ДО запроса — блокируем WS balance
+        (window as any).__battling = true; // блокируем WS balance
         try {
             const result = await startBattle(opponent.id);
             setHpLeft(character.currentHp);
@@ -256,6 +256,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             setHpRight(Math.max(0, battleResult.hpDefenderAfter ?? 0));
         }
         window.dispatchEvent(new CustomEvent('battleEnd'));
+        (window as any).__battling = false;
     };
 
     const toggleSpeed = () => {
@@ -281,6 +282,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         // Полное обновление с сервера (ELO, рейтинги, etc.)
         import('../api/character').then(m => m.fetchCharacter().then(setCharacter).catch(() => {}));
         window.dispatchEvent(new CustomEvent('battleEnd'));
+        (window as any).__battling = false;
     };
 
     return {

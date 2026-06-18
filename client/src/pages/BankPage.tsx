@@ -33,6 +33,7 @@ export default function BankPage() {
     // Баланс через WS —实时 обновление
     useEffect(() => {
         const onBalance = (e: Event) => {
+            if ((window as any).__battling) return;
             const { money, bank: wsBank } = (e as CustomEvent).detail;
             if (money !== undefined) setPocket(money);
             if (wsBank !== undefined) setBank(wsBank);
