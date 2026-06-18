@@ -12,6 +12,7 @@ import Card from '../components/ui/Card';
 import ItemTooltip from '../components/ItemTooltip';
 import { inputClass } from '../utils/formStyles';
 import { formatMoney } from '../utils/money';
+import { fmtSafeDate } from '../utils/date';
 import { getItemImage } from '../utils/itemUtils';
 
 // Мин. цены по редкости (копия серверного priceFloor)
@@ -32,7 +33,8 @@ export default function AuctionPage() {
     const [lots, setLots] = useState<any[]>([]);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const [tab, setTab] = useState<'buy' | 'sell'>('buy');
+    const [tab, setTab] = useState<'buy' | 'sell' | 'history'>('buy');
+    const [history, setHistory] = useState<any[]>([]);
 
     // Sell form
     const [sellItemId, setSellItemId] = useState('');
@@ -54,6 +56,11 @@ export default function AuctionPage() {
     const load = async () => {
         try { const res = await fetch(`${BASE_URL}/auction`, { headers: getHeaders() }); setLots(await res.json()); }
         catch (e: any) { setError(e.message); }
+    };
+
+    const loadHistory = async () => {
+        try { const res = await fetch(`${BASE_URL}/auction/history?limit=50`, { headers: getHeaders() }); setHistory(await res.json()); }
+        catch {}
     };
 
     const api = async (url: string, body?: any) => {
@@ -223,6 +230,7 @@ export default function AuctionPage() {
             <div className="flex gap-2 mb-4">
                 <Button variant={tab === 'buy' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('buy'); clearMessages(); }}>Покупка</Button>
                 <Button variant={tab === 'sell' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('sell'); clearMessages(); }}>Продажа</Button>
+                <Button variant={tab === 'history' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('history'); loadHistory(); clearMessages(); }}>История</Button>
             </div>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
@@ -378,6 +386,38 @@ export default function AuctionPage() {
                     <p className="text-xs text-[var(--color-text-muted)] mb-2">Комиссия 5% от стартовой цены</p>
                     <Button variant="danger" size="sm" onClick={handleSell}>Выставить (5% комиссия)</Button>
                 </Card>
+            )}
+
+            {tab === 'history' && (
+                <div>
+                    {history.length === 0 ? (
+                        <p className="text-sm text-[var(--color-text-muted)]">Нет завершённых сделок</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {history.map((h: any) => {
+                                const isBuyer = h.buyerId === user?.id;
+                                const itemData = h.itemData ? (typeof h.itemData === 'string' ? JSON.parse(h.itemData) : h.itemData) : null;
+                                return (
+                                    <Card key={h.id} className="text-xs">
+                                        <div className="flex items-center gap-2">
+                                            <span className={isBuyer ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}>
+                                                {isBuyer ? '📥 Куплено' : '📤 Продано'}
+                                            </span>
+                                            <span className="font-medium">{h.itemName}</span>
+                                            {itemData?.count > 1 && <span className="text-[var(--color-text-muted)]">x{itemData.count}</span>}
+                                            <span className="ml-auto font-bold">{formatMoney(h.price)}</span>
+                                        </div>
+                                        <div className="text-[var(--color-text-muted)] mt-0.5">
+                                            {isBuyer ? <>У {h.sellerName}</> : <>{h.buyerName}</>}
+                                            {h.commission > 0 && <> • ком. {formatMoney(h.commission)}</>}
+                                            <span className="ml-2">{fmtSafeDate(h.createdAt)}</span>
+                                        </div>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             )}
 
             {tab === 'buy' && lots.length === 0 && (

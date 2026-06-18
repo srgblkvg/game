@@ -5,8 +5,17 @@ import { markDirty } from '../websocket';
 
 const router = Router();
 
-// Все маршруты аукциона требуют полный доступ
-// router.use('/auction', requireFullAccess); // отключено для гостей
+// Таблица истории сделок
+db.run(`CREATE TABLE IF NOT EXISTS auction_history (
+    id SERIAL PRIMARY KEY,
+    sellerId INTEGER NOT NULL,
+    buyerId INTEGER NOT NULL,
+    itemName TEXT NOT NULL,
+    itemData TEXT,
+    price INTEGER NOT NULL,
+    commission INTEGER DEFAULT 0,
+    createdAt TEXT NOT NULL
+)`).catch(() => {});
 
 // Мин. цены по редкости
 const priceFloor: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
@@ -189,6 +198,12 @@ router.post('/auction/buyout', async (req, res) => {
     markDirty(userId, 'quests');
     markDirty(lot.sellerId, 'quests');
 
+    // Запись в историю
+    const buyItemData = JSON.parse(lot.itemData);
+    await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [lot.sellerId, userId, buyItemData.name || 'Предмет', lot.itemData, lot.buyoutPrice, commission, new Date().toISOString()]);
+
     res.json({ success: true });
 });
 
@@ -257,6 +272,11 @@ router.post('/auction/buy-partial', async (req, res) => {
     markDirty(userId, 'quests');
     markDirty(lot.sellerId, 'quests');
 
+    // Запись в историю
+    await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [lot.sellerId, userId, itemData.name || 'Предмет', JSON.stringify(singleItem), cost, commission, new Date().toISOString()]);
+
     res.json({ success: true, cost, remaining: remainingCount });
 });
 
@@ -295,6 +315,24 @@ router.post('/auction/cancel', async (req, res) => {
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
 
     res.json({ success: true, message: 'Лот снят с аукциона' });
+});
+
+// История сделок
+router.get('/auction/history', async (req, res) => {
+    const userId = req.userId;
+    const limit = parseInt(req.query.limit as string) || 30;
+
+    const history = await db.query(`
+        SELECT h.*, s.username as sellerName, b.username as buyerName
+        FROM auction_history h
+        JOIN users s ON h.sellerId = s.id
+        JOIN users b ON h.buyerId = b.id
+        WHERE h.sellerId = ? OR h.buyerId = ?
+        ORDER BY h.id DESC
+        LIMIT ?
+    `, [userId, userId, limit]);
+
+    res.json(history);
 });
 
 export default router;
