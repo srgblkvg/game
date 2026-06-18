@@ -62,7 +62,7 @@ function camelRows(rows: any[]): any[] {
              .replace(/pveattacktime$/i, 'PveAttackTime')
              .replace(/attacksec$/i, 'AttackSec')
              .replace(/pveattacksec$/i, 'PveAttackSec')
-             .replace(/taxrate$/i, 'TaxRate')
+             .replace(/taxrate$/i, 'taxRate')
              .replace(/verified$/i, 'Verified')
              .replace(/hpupdate$/i, 'HpUpdate')
              .replace(/^bases$/i, 'baseS').replace(/^basea$/i, 'baseA')

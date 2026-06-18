@@ -324,7 +324,7 @@ router.post('/guild/invite', async (req, res) => {
     ) as any;
     if (existing) {
         const now = Math.floor(Date.now() / 1000);
-        const inviteTime = Math.floor(new Date(existing.createdAt + 'Z').getTime() / 1000);
+        const inviteTime = Math.floor(new Date(existing.createdAt).getTime() / 1000);
         const elapsed = now - inviteTime;
         if (elapsed < 3600) {
             const remaining = Math.ceil((3600 - elapsed) / 60);
