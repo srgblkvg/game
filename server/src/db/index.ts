@@ -93,6 +93,8 @@ function camelRows(rows: any[]): any[] {
              .replace(/^oauthid$/i, 'oauthId')
              .replace(/^rewardxp$/i, 'rewardXp')
              .replace(/^accountnumber$/i, 'accountNumber')
+             .replace(/^fromaccount$/i, 'fromAccount')
+             .replace(/^toaccount$/i, 'toAccount')
              .replace(/^arenatopponentid$/i, 'arenaOpponentId');
       if (cc !== key) row[cc] = row[key];
     }

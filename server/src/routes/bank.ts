@@ -91,9 +91,18 @@ router.post('/bank/transfer', async (req, res) => {
             if (target.id === userId) throw new Error('Нельзя перевести самому себе');
 
             // Проверяем и списываем с банка отправителя
-            const sender = (await client.query('SELECT bank, accountnumber FROM users WHERE id = $1', [userId])).rows[0] as any;
+            let sender = (await client.query('SELECT bank, accountnumber FROM users WHERE id = $1', [userId])).rows[0] as any;
             if (!sender) throw new Error('User not found');
             if (sender.bank < transferAmount) throw new Error('Недостаточно серебра в банке');
+
+            // Авто-генерация номера счёта отправителя, если нет
+            if (!sender.accountnumber) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let acc = '';
+                for (let i = 0; i < 6; i++) acc += chars[Math.floor(Math.random() * chars.length)];
+                await client.query('UPDATE users SET accountnumber = $1 WHERE id = $2', [acc, userId]);
+                sender = { ...sender, accountnumber: acc };
+            }
 
             const commission = Math.ceil(transferAmount * 0.02);
             const receivedAmount = transferAmount - commission;
