@@ -9,8 +9,18 @@ const router = Router();
 // Получить состояние банка
 router.get('/bank', async (req, res) => {
     const userId = req.userId;
-    const user = await db.one('SELECT money, bank, accountNumber FROM users WHERE id = ?', [userId]) as any;
+    let user = await db.one('SELECT money, bank, accountNumber FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Авто-генерация номера счёта, если ещё нет
+    if (!user.accountNumber) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let accNum = '';
+        for (let i = 0; i < 6; i++) accNum += chars[Math.floor(Math.random() * chars.length)];
+        await db.run('UPDATE users SET accountNumber = ? WHERE id = ?', [accNum, userId]);
+        user.accountNumber = accNum;
+    }
+
     res.json({ pocket: user.money || 0, bank: user.bank || 0, accountNumber: user.accountNumber });
 });
 
@@ -81,7 +91,7 @@ router.post('/bank/transfer', async (req, res) => {
             if (target.id === userId) throw new Error('Нельзя перевести самому себе');
 
             // Проверяем и списываем с банка отправителя
-            const sender = (await client.query('SELECT bank, accountNumber FROM users WHERE id = $1', [userId])).rows[0] as any;
+            const sender = (await client.query('SELECT bank, accountnumber FROM users WHERE id = $1', [userId])).rows[0] as any;
             if (!sender) throw new Error('User not found');
             if (sender.bank < transferAmount) throw new Error('Недостаточно серебра в банке');
 
@@ -92,7 +102,7 @@ router.post('/bank/transfer', async (req, res) => {
             await client.query('UPDATE users SET bank = bank + $1 WHERE id = $2', [receivedAmount, target.id]);
 
             await client.query('INSERT INTO transfers (fromUserId, toUserId, fromAccount, toAccount, toUsername, amount, commission, received) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-                [userId, target.id, sender.accountNumber, target.accountNumber, target.username, transferAmount, commission, receivedAmount]);
+                [userId, target.id, sender.accountnumber, target.accountnumber, target.username, transferAmount, commission, receivedAmount]);
 
             const updated = (await client.query('SELECT bank FROM users WHERE id = $1', [userId])).rows[0] as any;
             return { updated, target, commission, receivedAmount };
