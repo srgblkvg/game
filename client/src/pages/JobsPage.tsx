@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
-import { startRandomJob, fetchCharacter } from '../api';
+import { startRandomJob } from '../api';
 import { formatMoney } from '../utils/money';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
