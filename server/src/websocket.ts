@@ -184,10 +184,11 @@ async function sendServerTick(userId: number, time: number) {
 
   // Статы (money, bank) — всегда, лёгкий запрос
   try {
-    const stats = await db.one('SELECT money, bank FROM users WHERE id = ?', [userId]) as any;
+    const stats = await db.one('SELECT money, bank, COALESCE(auction_sales, 0) as auctionSales FROM users WHERE id = ?', [userId]) as any;
     if (stats) {
       payload.money = stats.money || 0;
       payload.bank = stats.bank || 0;
+      payload.auctionSales = stats.auctionsales ?? stats.auctionSales ?? 0;
     }
   } catch {} // не критично
 

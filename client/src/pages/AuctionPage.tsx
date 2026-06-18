@@ -53,6 +53,13 @@ export default function AuctionPage() {
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
 
+    // Сброс бейджа при заходе на аукцион
+    useEffect(() => {
+        localStorage.setItem('auctionBadge', '0');
+        window.dispatchEvent(new CustomEvent('auctionBadge'));
+        fetch(`${BASE_URL}/auction/reset-badge`, { method: 'POST', headers: getHeaders() }).catch(() => {});
+    }, []);
+
     // Живое обновление аукциона через WS
     useEffect(() => {
         const handler = () => load();

@@ -128,9 +128,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     window.dispatchEvent(new CustomEvent('guildQuestProgress', { detail: data.activeQuest }));
                 } else if (data.type === 'auction_changed') {
                     window.dispatchEvent(new CustomEvent('auctionChanged'));
-                } else if (data.type === 'auction_badge') {
-                    (window as any).__auctionBadge = ((window as any).__auctionBadge || 0) + (data.count || 1);
-                    window.dispatchEvent(new CustomEvent('auctionBadge'));
                 } else if (data.type === 'dailyQuests') {
                     window.dispatchEvent(new CustomEvent('dailyQuests', { detail: data }));
                 } else if (data.type === 'serverTick') {
@@ -139,6 +136,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     // Баланс — всегда
                     if (data.money !== undefined) {
                         window.dispatchEvent(new CustomEvent('balance', { detail: { money: data.money, bank: data.bank } }));
+                    }
+                    // Бейдж аукциона — с сервера
+                    if (data.auctionSales !== undefined) {
+                        const prev = parseInt(localStorage.getItem('auctionBadge') || '0');
+                        if (data.auctionSales !== prev) {
+                            localStorage.setItem('auctionBadge', String(data.auctionSales));
+                            window.dispatchEvent(new CustomEvent('auctionBadge'));
+                        }
                     }
                     // Квесты — если сервер прислал обновление
                     if (data.quests) {
@@ -151,12 +156,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     // Уведомления — если есть
                     if (data.notifications && data.notifications.length > 0) {
                         window.dispatchEvent(new CustomEvent('notifications', { detail: data.notifications }));
-                        // Бейдж аукциона — считаем auction_sold
-                        const auctionSold = data.notifications.filter((n: any) => n.type === 'auction_sold').length;
-                        if (auctionSold > 0) {
-                            (window as any).__auctionBadge = ((window as any).__auctionBadge || 0) + auctionSold;
-                            window.dispatchEvent(new CustomEvent('auctionBadge'));
-                        }
                     }
                 }
             } catch (e) {

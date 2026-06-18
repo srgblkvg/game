@@ -17,6 +17,9 @@ db.run(`CREATE TABLE IF NOT EXISTS auction_history (
     createdAt TEXT NOT NULL
 )`).catch(() => {});
 
+// Колонка непрочитанных продаж на аукционе
+db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auction_sales INTEGER DEFAULT 0`).catch(() => {});
+
 // Мин. цены по редкости
 const priceFloor: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
 
@@ -210,6 +213,7 @@ router.post('/auction/buyout', async (req, res) => {
     const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
     pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} выкупил «${buyItemData.name || 'Предмет'}» за ${lot.buyoutPrice}🥇` });
     sendToUser(lot.sellerId, { type: 'auction_badge', count: 1 });
+    await db.run('UPDATE users SET auction_sales = COALESCE(auction_sales, 0) + 1 WHERE id = ?', [lot.sellerId]);
 
     broadcast('auction_changed', {});
     res.json({ success: true });
@@ -324,6 +328,13 @@ router.post('/auction/cancel', async (req, res) => {
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
 
     res.json({ success: true, message: 'Лот снят с аукциона' });
+});
+
+// Сброс бейджа при заходе на аукцион
+router.post('/auction/reset-badge', async (req, res) => {
+    const userId = req.userId;
+    await db.run('UPDATE users SET auction_sales = 0 WHERE id = ?', [userId]);
+    res.json({ success: true });
 });
 
 // История сделок

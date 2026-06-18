@@ -24,22 +24,18 @@ interface ActionCard {
 export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob }: ActionsProps) {
     const navigate = useNavigate();
     const [cards, setCards] = useState<ActionCard[]>([]);
-    const [auctionBadge, setAuctionBadge] = useState(0);
+    const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
 
-    // Читаем глобальный бейдж на каждом рендере
+    // Бейдж аукциона через localStorage + событие
     useEffect(() => {
         const check = () => {
-            const val = (window as any).__auctionBadge || 0;
+            const val = parseInt(localStorage.getItem('auctionBadge') || '0');
             if (val !== auctionBadge) setAuctionBadge(val);
         };
         check();
-        const handler = () => { check(); };
+        const handler = () => check();
         window.addEventListener('auctionBadge', handler);
-        const interval = setInterval(check, 2000); // fallback-опрос
-        return () => {
-            window.removeEventListener('auctionBadge', handler);
-            clearInterval(interval);
-        };
+        return () => window.removeEventListener('auctionBadge', handler);
     }, [auctionBadge]);
 
     useEffect(() => {
@@ -65,7 +61,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 МИР
                     </h2>
-                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => { (window as any).__auctionBadge = 0; setAuctionBadge(0); }} />
+                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} />
                 </div>
             )}
             {castleCards.length > 0 && (
@@ -73,7 +69,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle" width="14" height="14" />🏰 Площадь
                     </h2>
-                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => { (window as any).__auctionBadge = 0; setAuctionBadge(0); }} />
+                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} />
                 </div>
             )}
         </div>
