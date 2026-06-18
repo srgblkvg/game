@@ -73,7 +73,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle" width="14" height="14" />🏰 Площадь
                     </h2>
-                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} />
+                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => { (window as any).__auctionBadge = 0; setAuctionBadge(0); }} />
                 </div>
             )}
         </div>
