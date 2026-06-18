@@ -66,7 +66,7 @@ export default function JobsPage() {
                     expReward: result.expReward || 0,
                     rewardMin: result.rewardMin,
                     rewardMax: result.rewardMax,
-                    // background: result.background || null,
+                    background: result.background || null,
                 },
             });
             setRemaining(result.endTime - Math.floor(Date.now() / 1000));
