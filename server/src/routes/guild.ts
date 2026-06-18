@@ -779,14 +779,14 @@ router.get('/guild/war/details', async (req, res) => {
         ORDER BY u.level DESC
     `, [war.id, war.id, enemyGuildId, war.id]) as any[];
 
-    // Проверка защиты: если атаковали меньше часа назад
+    // Проверка защиты: если атаковали меньше часа назад — возвращаем unixtime окончания защиты
     const enemyWithProtection = enemyMembers.map((m) => {
         let protectedUntil = null;
         if (m.lastAttackedAt) {
-            const attackedTime = new Date(m.lastAttackedAt.endsWith("Z") ? m.lastAttackedAt : m.lastAttackedAt + "Z").getTime();
+            const attackedTime = new Date(m.lastAttackedAt).getTime();
             const protectionEnd = attackedTime + 60 * 60 * 1000;
             if (protectionEnd > Date.now()) {
-                protectedUntil = new Date(protectionEnd).toISOString();
+                protectedUntil = Math.floor(protectionEnd / 1000);
             }
         }
         return { ...m, protectedUntil };
@@ -817,18 +817,18 @@ router.get('/guild/war/details', async (req, res) => {
         [war.id, userId]
     ) as any;
 
-    // Время последней моей атаки
+    // Время последней моей атаки — кулдаун 5 минут (unixtime)
     const myLastAttack = await db.one(
         'SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?',
         [war.id, userId]
     ) as any;
 
-    let attackCooldownUntil = null;
+    let attackCooldownUntil: number | null = null;
     if (myLastAttack?.lastAt) {
-        const lastTime = new Date(myLastAttack.lastAt + 'Z').getTime();
+        const lastTime = new Date(myLastAttack.lastAt).getTime();
         const cooldownEnd = lastTime + 5 * 60 * 1000;
         if (cooldownEnd > Date.now()) {
-            attackCooldownUntil = new Date(cooldownEnd).toISOString();
+            attackCooldownUntil = Math.floor(cooldownEnd / 1000);
         }
     }
 
@@ -900,7 +900,7 @@ router.post('/guild/war/attack', async (req, res) => {
         [war.id, userId]
     ) as any;
     if (lastAttack?.lastAt) {
-        const lastTime = new Date(lastAttack.lastAt + 'Z').getTime();
+        const lastTime = new Date(lastAttack.lastAt).getTime();
         if (Date.now() - lastTime < 5 * 60 * 1000) {
             return res.status(400).json({ error: 'Атаковать можно раз в 5 минут' });
         }
@@ -912,7 +912,7 @@ router.post('/guild/war/attack', async (req, res) => {
         [war.id, targetId]
     ) as any;
     if (lastDefend?.lastAt) {
-        const lastTime = new Date(lastDefend.lastAt + 'Z').getTime();
+        const lastTime = new Date(lastDefend.lastAt).getTime();
         if (Date.now() - lastTime < 60 * 60 * 1000) {
             return res.status(400).json({ error: 'У игрока защита после атаки (1 час)' });
         }

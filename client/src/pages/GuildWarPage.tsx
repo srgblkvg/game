@@ -10,9 +10,9 @@ import BackButton from '../components/BackButton';
 import { fmtSafeDate } from '../utils/date';
 import { useServerTime } from '../hooks/useServerTime';
 
-function countdown(until: string | null, serverTime: number): string {
-    if (!until) return '';
-    const sec = Math.max(0, Math.ceil((new Date(until).getTime() / 1000) - serverTime));
+function countdown(untilSec: number | null, serverTime: number): string {
+    if (!untilSec) return '';
+    const sec = Math.max(0, untilSec - serverTime);
     if (sec <= 0) return '';
     const m = Math.floor(sec / 60);
     const s = sec % 60;
