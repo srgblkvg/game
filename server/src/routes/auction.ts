@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
-import { markDirty, pushNotification, broadcast } from '../websocket';
+import { markDirty, pushNotification, broadcast, sendToUser } from '../websocket';
 
 const router = Router();
 
@@ -205,9 +205,10 @@ router.post('/auction/buyout', async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [lot.sellerId, userId, buyItemData.name || 'Предмет', lot.itemData, lot.buyoutPrice, commission, new Date().toISOString()]);
 
-    // Уведомление продавцу
+    // Уведомление продавцу — прямой WS + toast
     const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
     pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} выкупил «${buyItemData.name || 'Предмет'}» за ${lot.buyoutPrice}🥇` });
+    sendToUser(lot.sellerId, { type: 'auction_badge', count: 1 });
 
     broadcast('auction_changed', {});
     res.json({ success: true });

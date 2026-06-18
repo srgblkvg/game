@@ -128,6 +128,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     window.dispatchEvent(new CustomEvent('guildQuestProgress', { detail: data.activeQuest }));
                 } else if (data.type === 'auction_changed') {
                     window.dispatchEvent(new CustomEvent('auctionChanged'));
+                } else if (data.type === 'auction_badge') {
+                    (window as any).__auctionBadge = ((window as any).__auctionBadge || 0) + (data.count || 1);
+                    window.dispatchEvent(new CustomEvent('auctionBadge'));
                 } else if (data.type === 'dailyQuests') {
                     window.dispatchEvent(new CustomEvent('dailyQuests', { detail: data }));
                 } else if (data.type === 'serverTick') {
