@@ -409,6 +409,7 @@ export default function AuctionPage() {
                                         </div>
                                         <div className="text-[var(--color-text-muted)] mt-0.5">
                                             {isBuyer ? <>У {h.sellerName}</> : <>{h.buyerName}</>}
+                                            {!isBuyer && <> купил у вас</>}
                                             {h.commission > 0 && <> • ком. {formatMoney(h.commission)}</>}
                                             <span className="ml-2">{fmtSafeDate(h.createdAt)}</span>
                                         </div>
