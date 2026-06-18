@@ -51,6 +51,7 @@ export default function BestiaryPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
   const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
+  const [pendingCharacter, setPendingCharacter] = useState<any>(null);
 
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
@@ -254,6 +255,13 @@ export default function BestiaryPage() {
 
   useEffect(() => { if (battleSteps.length > 0 && currentStepRef.current === -1) startAuto(); return () => stopAuto(); }, [battleSteps, startAuto, stopAuto]);
   useEffect(() => { if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0) stopAuto(); }, [currentStep, battleSteps.length, stopAuto]);
+  // Применяем отложенное обновление персонажа после завершения анимации боя
+  useEffect(() => {
+    if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0 && pendingCharacter) {
+      setCharacter(pendingCharacter);
+      setPendingCharacter(null);
+    }
+  }, [currentStep, battleSteps.length, pendingCharacter, setCharacter]);
   useEffect(() => { return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
 
   const selectFloor = async (floor: string) => {
@@ -296,7 +304,8 @@ export default function BestiaryPage() {
         setTimeout(() => showAcquire(d, 1, 'Добыто'), i * 400);
       });
       const fresh = await fetchCharacter();
-      setCharacter(fresh);
+      // Не обновляем character сразу — откладываем до конца анимации
+      setPendingCharacter(fresh);
       setCooldownRemaining(getRemaining(((fresh as any)?.lastPveAttackTime || 0) + (((fresh as any)?.premium?.until || 0) > serverTime ? 150 : 300)));
       if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
       cooldownTimerRef.current = window.setInterval(() => {
@@ -320,6 +329,11 @@ export default function BestiaryPage() {
     if (battleResult) {
       setPlayerHp(Math.max(0, battleResult.hpAfter ?? 0));
       setMobHp(Math.max(0, battleResult.mobHpAfter ?? 0));
+    }
+    // Применяем отложенное обновление персонажа
+    if (pendingCharacter) {
+      setCharacter(pendingCharacter);
+      setPendingCharacter(null);
     }
   };
 

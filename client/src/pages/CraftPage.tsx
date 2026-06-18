@@ -31,7 +31,7 @@ export default function CraftPage() {
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const [recipes, setRecipes] = useState<any[]>([]);
     const [crafting, setCrafting] = useState(false);
-    const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string; acquire?: { item: any; count: number; msg: string } } | null>(null);
+    const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string; acquire?: { item: any; count: number; msg: string }; pendingData?: any } | null>(null);
     const [errorPopup, setErrorPopup] = useState<string | null>(null);
     const { showAcquire } = useAcquire();
     const [upgradeInfo, setUpgradeInfo] = useState<{
@@ -239,14 +239,13 @@ export default function CraftPage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
-            setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
             setCraftSlots(Array(9).fill(null));
             setMaterialUsage({});
             const itemName = activeRecipe.result?.name || 'Предмет';
             if (data.success) {
-                setCraftAnim({ success: true, label: itemName, acquire: { item: activeRecipe.result, count: 1, msg: 'Создано' } });
+                setCraftAnim({ success: true, label: itemName, acquire: { item: activeRecipe.result, count: 1, msg: 'Создано' }, pendingData: data });
             } else {
-                setCraftAnim({ success: false, label: itemName });
+                setCraftAnim({ success: false, label: itemName, pendingData: data });
             }
         } catch (err: any) {
             setErrorPopup(err.message);
@@ -259,14 +258,13 @@ export default function CraftPage() {
         try {
             const slots = craftSlots.filter(Boolean);
             const data = await upgradeItem(slots);
-            setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
             setCraftSlots(Array(9).fill(null));
             setMaterialUsage({});
             const itemName = upgradeInfo.item?.name || 'Предмет';
             if (data.success) {
-                setCraftAnim({ success: true, label: `+${upgradeInfo.nextLevel} ${itemName}`, acquire: { item: upgradeInfo.item, count: 1, msg: `Улучшено до +${upgradeInfo.nextLevel}` } });
+                setCraftAnim({ success: true, label: `+${upgradeInfo.nextLevel} ${itemName}`, acquire: { item: upgradeInfo.item, count: 1, msg: `Улучшено до +${upgradeInfo.nextLevel}` }, pendingData: data });
             } else {
-                setCraftAnim({ success: false, label: itemName });
+                setCraftAnim({ success: false, label: itemName, pendingData: data });
             }
         } catch (err: any) {
             setErrorPopup(err.message);
@@ -503,6 +501,10 @@ export default function CraftPage() {
             {/* Попап крафта с анимацией */}
             {craftAnim && (
                 <CraftPopup result={craftAnim} onDone={() => {
+                    // Применяем изменения персонажа ПОСЛЕ анимации
+                    if (craftAnim.pendingData) {
+                        setCharacter({ ...character, inventory: craftAnim.pendingData.inventory, money: craftAnim.pendingData.moneyAfter });
+                    }
                     if (craftAnim.acquire) showAcquire(craftAnim.acquire.item, craftAnim.acquire.count, craftAnim.acquire.msg);
                     setCraftAnim(null);
                 }} />
