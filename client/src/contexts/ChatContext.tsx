@@ -131,6 +131,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 } else if (data.type === 'serverTick') {
                     // Время — всегда
                     window.dispatchEvent(new CustomEvent('serverTick', { detail: data.time }));
+                    // Баланс — всегда
+                    if (data.money !== undefined) {
+                        window.dispatchEvent(new CustomEvent('balance', { detail: { money: data.money, bank: data.bank } }));
+                    }
                     // Квесты — если сервер прислал обновление
                     if (data.quests) {
                         window.dispatchEvent(new CustomEvent('dailyQuests', { detail: data.quests }));

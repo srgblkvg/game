@@ -183,6 +183,15 @@ async function sendServerTick(userId: number, time: number) {
   const flags = userDirtyFlags.get(userId);
   const payload: any = { type: 'serverTick', time };
 
+  // Статы (money, bank) — всегда, лёгкий запрос
+  try {
+    const stats = await db.one('SELECT money, bank FROM users WHERE id = ?', [userId]) as any;
+    if (stats) {
+      payload.money = stats.money || 0;
+      payload.bank = stats.bank || 0;
+    }
+  } catch {} // не критично
+
   if (flags && flags.size > 0) {
     if (flags.has('quests')) {
       const questData = await computeQuestData(userId);

@@ -30,6 +30,17 @@ export default function BankPage() {
 
     useEffect(() => { if (!user) navigate('/login'); else { loadBank(); loadTransfers(); loadOperations(); } }, [user]);
 
+    // Баланс через WS —实时 обновление
+    useEffect(() => {
+        const onBalance = (e: Event) => {
+            const { money, bank: wsBank } = (e as CustomEvent).detail;
+            if (money !== undefined) setPocket(money);
+            if (wsBank !== undefined) setBank(wsBank);
+        };
+        window.addEventListener('balance', onBalance);
+        return () => window.removeEventListener('balance', onBalance);
+    }, []);
+
     const loadBank = async () => { try { const r = await fetch(`${BASE_URL}/bank`,{headers:getHeaders()}); const d = await r.json(); setPocket(d.pocket); setBank(d.bank); setAccountNumber(d.accountNumber||''); } catch{} };
     const loadTransfers = async (f='all') => { try { setTransfers(await (await fetch(`${BASE_URL}/bank/transfers?filter=${f}&limit=20`,{headers:getHeaders()})).json()); } catch{} };
     const loadOperations = async (f='all') => { try { setOperations(await (await fetch(`${BASE_URL}/bank/operations?filter=${f}&limit=20`,{headers:getHeaders()})).json()); } catch{} };

@@ -124,9 +124,20 @@ export default function Header() {
         const interval = setInterval(() => {
             checkForNewBattles();
             fetchCharacter().then(setCharacter).catch(console.error);
-        }, 10000);
+        }, 30000); // 30 сек вместо 10 — баланс идёт через WS
 
-        return () => clearInterval(interval);
+        // Баланс через WS — мгновенное обновление money
+        const onBalance = (e: Event) => {
+            const { money } = (e as CustomEvent).detail;
+            if (money !== undefined) {
+                setCharacter((prev: any) => prev ? { ...prev, money } : prev);
+            }
+        };
+        window.addEventListener('balance', onBalance);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('balance', onBalance);
+        };
     }, [user, setCharacter]);
 
     useEffect(() => {
