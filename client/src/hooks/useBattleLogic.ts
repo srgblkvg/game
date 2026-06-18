@@ -105,9 +105,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             setBattleSteps(result.steps || result.log);
             setBattleResult(result);
             setCurrentStep(-1);
-            if (result.moneyAfter !== undefined) {
-                setCharacter({ ...character, money: result.moneyAfter });
-            }
+            // Деньги/опыт обновятся в finishBattle после анимации
         } catch (e: any) {
             setModalMessage(e.message);
         } finally {

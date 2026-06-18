@@ -52,6 +52,7 @@ export default function BestiaryPage() {
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
   const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
   const [pendingCharacter, setPendingCharacter] = useState<any>(null);
+  const [pendingDrops, setPendingDrops] = useState<any[]>([]);
 
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
@@ -255,13 +256,20 @@ export default function BestiaryPage() {
 
   useEffect(() => { if (battleSteps.length > 0 && currentStepRef.current === -1) startAuto(); return () => stopAuto(); }, [battleSteps, startAuto, stopAuto]);
   useEffect(() => { if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0) stopAuto(); }, [currentStep, battleSteps.length, stopAuto]);
-  // Применяем отложенное обновление персонажа после завершения анимации боя
+  // Применяем отложенное обновление персонажа и дропы после завершения анимации боя
   useEffect(() => {
     if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0 && pendingCharacter) {
       setCharacter(pendingCharacter);
       setPendingCharacter(null);
+      // Показываем дропы с задержкой
+      if (pendingDrops.length > 0) {
+        pendingDrops.forEach((d: any, i: number) => {
+          setTimeout(() => showAcquire(d, 1, 'Добыто'), i * 400);
+        });
+        setPendingDrops([]);
+      }
     }
-  }, [currentStep, battleSteps.length, pendingCharacter, setCharacter]);
+  }, [currentStep, battleSteps.length, pendingCharacter, pendingDrops, setCharacter, showAcquire]);
   useEffect(() => { return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
 
   const selectFloor = async (floor: string) => {
@@ -300,9 +308,8 @@ export default function BestiaryPage() {
       if (hasStoneInSteps && !hasStoneInMaterial) {
         drops.push({ name: 'Камень улучшения (Хлам)', rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888', count: 1, type: 'craft_item', itemType: 'upgrade' });
       }
-      drops.forEach((d: any, i: number) => {
-        setTimeout(() => showAcquire(d, 1, 'Добыто'), i * 400);
-      });
+      // Дропы будут показаны после завершения анимации
+      setPendingDrops(drops);
       const fresh = await fetchCharacter();
       // Не обновляем character сразу — откладываем до конца анимации
       setPendingCharacter(fresh);
@@ -334,6 +341,13 @@ export default function BestiaryPage() {
     if (pendingCharacter) {
       setCharacter(pendingCharacter);
       setPendingCharacter(null);
+    }
+    // Показываем дропы
+    if (pendingDrops.length > 0) {
+      pendingDrops.forEach((d: any, i: number) => {
+        setTimeout(() => showAcquire(d, 1, 'Добыто'), i * 400);
+      });
+      setPendingDrops([]);
     }
   };
 
