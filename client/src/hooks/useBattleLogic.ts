@@ -255,6 +255,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             setHpLeft(Math.max(0, battleResult.hpAfter ?? 0));
             setHpRight(Math.max(0, battleResult.hpDefenderAfter ?? 0));
         }
+        window.dispatchEvent(new CustomEvent('battleEnd'));
     };
 
     const toggleSpeed = () => {
