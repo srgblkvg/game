@@ -51,8 +51,6 @@ export default function BestiaryPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
   const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
-  const [pendingCharacter, setPendingCharacter] = useState<any>(null);
-  const [pendingDrops, setPendingDrops] = useState<any[]>([]);
 
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
@@ -62,6 +60,8 @@ export default function BestiaryPage() {
   const currentStepRef = useRef(-1);
   const speedRef = useRef(1);
   const initialHpRef = useRef({ player: 0, mob: 0 });
+  const pendingCharRef = useRef<any>(null);
+  const pendingDropsRef = useRef<any[]>([]);
 
   useEffect(() => { currentStepRef.current = currentStep; }, [currentStep]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
@@ -207,11 +207,26 @@ export default function BestiaryPage() {
   const scrollLog = useCallback(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, []);
   const stopAuto = useCallback(() => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } }, []);
 
+  const applyPending = useCallback(() => {
+    if (pendingCharRef.current) {
+      setCharacter(pendingCharRef.current);
+      pendingCharRef.current = null;
+    }
+    if (pendingDropsRef.current.length > 0) {
+      pendingDropsRef.current.forEach((d: any, i: number) => {
+        setTimeout(() => showAcquire(d, 1, 'Добыто'), i * 400);
+      });
+      pendingDropsRef.current = [];
+    }
+    window.dispatchEvent(new CustomEvent('battleEnd'));
+    (window as any).__battling = false;
+  }, [setCharacter, showAcquire]);
+
   const nextStep = useCallback(async () => {
     if (stepLock.current) return;
     const steps = stepsRef.current;
     const next = currentStepRef.current + 1;
-    if (next >= steps.length) { stopAuto(); return; }
+    if (next >= steps.length) { stopAuto(); applyPending(); return; }
     stepLock.current = true;
     const step = steps[next];
     currentStepRef.current = next;
@@ -256,22 +271,6 @@ export default function BestiaryPage() {
 
   useEffect(() => { if (battleSteps.length > 0 && currentStepRef.current === -1) startAuto(); return () => stopAuto(); }, [battleSteps, startAuto, stopAuto]);
   useEffect(() => { if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0) stopAuto(); }, [currentStep, battleSteps.length, stopAuto]);
-  // Применяем отложенное обновление персонажа и дропы после завершения анимации боя
-  useEffect(() => {
-    if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0 && pendingCharacter) {
-      setCharacter(pendingCharacter);
-      setPendingCharacter(null);
-      // Показываем дропы с задержкой
-      if (pendingDrops.length > 0) {
-        pendingDrops.forEach((d: any, i: number) => {
-          setTimeout(() => showAcquire(d, 1, 'Добыто'), i * 400);
-        });
-        setPendingDrops([]);
-      }
-      window.dispatchEvent(new CustomEvent('battleEnd'));
-      (window as any).__battling = false;
-    }
-  }, [currentStep, battleSteps.length, pendingCharacter, pendingDrops, setCharacter, showAcquire]);
   useEffect(() => { return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
 
   const selectFloor = async (floor: string) => {
@@ -313,10 +312,10 @@ export default function BestiaryPage() {
         drops.push({ name: 'Камень улучшения (Хлам)', rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888', count: 1, type: 'craft_item', itemType: 'upgrade' });
       }
       // Дропы будут показаны после завершения анимации
-      setPendingDrops(drops);
+      pendingDropsRef.current = drops;
       const fresh = await fetchCharacter();
       // Не обновляем character сразу — откладываем до конца анимации
-      setPendingCharacter(fresh);
+      pendingCharRef.current = fresh;
       setCooldownRemaining(getRemaining(((fresh as any)?.lastPveAttackTime || 0) + (((fresh as any)?.premium?.until || 0) > serverTime ? 150 : 300)));
       if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
       cooldownTimerRef.current = window.setInterval(() => {
@@ -341,20 +340,8 @@ export default function BestiaryPage() {
       setPlayerHp(Math.max(0, battleResult.hpAfter ?? 0));
       setMobHp(Math.max(0, battleResult.mobHpAfter ?? 0));
     }
-    // Применяем отложенное обновление персонажа
-    if (pendingCharacter) {
-      setCharacter(pendingCharacter);
-      setPendingCharacter(null);
-    }
-    // Показываем дропы
-    if (pendingDrops.length > 0) {
-      pendingDrops.forEach((d: any, i: number) => {
-        setTimeout(() => showAcquire(d, 1, 'Добыто'), i * 400);
-      });
-      setPendingDrops([]);
-    }
-    window.dispatchEvent(new CustomEvent('battleEnd'));
-    (window as any).__battling = false;
+    // Применяем отложенное обновление персонажа и дропы
+    applyPending();
   };
 
   const toggleSpeed = () => {
