@@ -53,6 +53,13 @@ export default function AuctionPage() {
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
 
+    // Живое обновление аукциона через WS
+    useEffect(() => {
+        const handler = () => load();
+        window.addEventListener('auctionChanged', handler);
+        return () => window.removeEventListener('auctionChanged', handler);
+    }, []);
+
     const load = async () => {
         try { const res = await fetch(`${BASE_URL}/auction`, { headers: getHeaders() }); setLots(await res.json()); }
         catch (e: any) { setError(e.message); }

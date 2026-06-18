@@ -150,9 +150,8 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                         </div>
                     </div>
                     {card.title === 'Аукцион' && (auctionBadge ?? 0) > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full text-white text-[0.55rem] font-bold flex items-center justify-center shadow">
-                            {auctionBadge ?? 0}
-                        </span>
+                        <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-yellow-400 rounded-full shadow animate-pulse"
+                            title="Лот продан!" />
                     )}
                     </div>
                 );

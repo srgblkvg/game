@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
-import { markDirty, pushNotification } from '../websocket';
+import { markDirty, pushNotification, broadcast } from '../websocket';
 
 const router = Router();
 
@@ -144,6 +144,7 @@ router.post('/auction/bid', async (req, res) => {
             await client.query('UPDATE auction_lots SET currentBid = $1, currentBidderId = $2 WHERE id = $3', [amount, userId, lotId]);
         });
 
+        broadcast('auction_changed', { lotId });
         res.json({ success: true });
     } catch (e: any) {
         res.status(400).json({ error: e.message });
@@ -208,6 +209,7 @@ router.post('/auction/buyout', async (req, res) => {
     const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
     pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} выкупил «${buyItemData.name || 'Предмет'}» за ${lot.buyoutPrice}🥇` });
 
+    broadcast('auction_changed', {});
     res.json({ success: true });
 });
 
@@ -281,6 +283,7 @@ router.post('/auction/buy-partial', async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [lot.sellerId, userId, itemData.name || 'Предмет', JSON.stringify(singleItem), cost, commission, new Date().toISOString()]);
 
+    broadcast('auction_changed', {});
     res.json({ success: true, cost, remaining: remainingCount });
 });
 
