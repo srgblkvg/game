@@ -25,6 +25,14 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
     const isDisabled = isBanned;
     const disabledPlaceholder = isGuest ? 'Чат недоступен для гостей' : 'Чат заблокирован';
 
+    // При ошибке валидации — восстанавливаем последний отправленный текст
+    useEffect(() => {
+        if (chatError && (window as any).__lastChatInput) {
+            setInput((window as any).__lastChatInput);
+            (window as any).__lastChatInput = null;
+        }
+    }, [chatError]);
+
     useEffect(() => {
         if (pendingMention && !isBanned) {
             setInput(prev => prev + pendingMention);
@@ -92,6 +100,7 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
                 onSend(trimmed);
                 setInput('');
                 setAutocomplete(null);
+                (window as any).__lastChatInput = trimmed; // сохраняем на случай ошибки
             }
             return;
         }
@@ -115,6 +124,7 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
             onSend(trimmed);
             setInput('');
             setAutocomplete(null);
+            (window as any).__lastChatInput = trimmed;
         }
     };
 
