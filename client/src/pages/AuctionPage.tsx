@@ -126,7 +126,7 @@ export default function AuctionPage() {
     };
 
     const handleBid = async (lotId: number, amount: string) => {
-        try { await api('/auction/bid', { lotId, amount: parseInt(amount) }); setMessage('Ставка сделана!'); load(); const fresh = await fetchCharacter(); setCharacter(fresh); }
+        try { await api('/auction/bid', { lotId, amount: parseInt(amount) }); setMessage('Ставка сделана!'); setBidAmount(prev => { const n = { ...prev }; delete n[lotId]; return n; }); load(); const fresh = await fetchCharacter(); setCharacter(fresh); }
         catch (e: any) { setError(e.message); }
     };
 
@@ -422,7 +422,7 @@ export default function AuctionPage() {
                                 <p className="text-xs">
                                     Старт: {formatMoney(lot.startPrice)}
                                     {isStack && <span className="text-[var(--color-accent-info)]"> ({formatMoney(pricePerItem)} / шт)</span>}
-                                    {lot.currentBid && <> • Ставка: {formatMoney(lot.currentBid)}</>}
+                                    {lot.currentBid && <> • Ставка: {formatMoney(lot.currentBid)}{lot.currentBidderName && <> ({lot.currentBidderName})</>}</>}
                                 </p>
                                 {lot.buyoutPrice && (
                                     <p className="text-xs">
