@@ -26,10 +26,17 @@ export default function RightSidebar() {
         <>
             <button
                 onClick={() => { setOpen(!open); if (!open) window.dispatchEvent(new CustomEvent('closeChatPanel')); }}
-                className="fixed right-3 top-16 z-[45] w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] shadow-lg cursor-pointer"
+                className={`fixed right-3 top-16 z-[45] flex items-center gap-1.5 rounded-full border shadow-lg cursor-pointer transition-all duration-300 ${
+                    open
+                        ? 'w-8 h-8 bg-[var(--color-bg-secondary)] border-[var(--color-border-default)] justify-center'
+                        : 'px-3 py-1.5 bg-[var(--color-bg-secondary)] border-[var(--color-border-default)] hover:border-[var(--color-accent-warning)]'
+                }`}
                 title={open ? 'Скрыть панель' : 'Боевой журнал'}
             >
-                <Icon icon={open ? 'mdi:close' : 'game-icons:crossed-swords'} width="16" height="16" />
+                <span className={`transition-transform duration-300 ${open ? 'rotate-90' : ''}`}>
+                    <Icon icon={open ? 'mdi:close' : 'game-icons:crossed-swords'} width="16" height="16" className="text-[var(--color-text-muted)]" />
+                </span>
+                {!open && <span className="text-xs font-bold text-[var(--color-text-primary)] whitespace-nowrap">Боевой журнал</span>}
             </button>
 
             {/* Оверлей */}
