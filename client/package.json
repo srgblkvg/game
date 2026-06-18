@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@iconify-json/game-icons": "^1.2.4",
-    "@iconify-json/mdi": "^1.2.3",
     "@iconify/react": "^6.0.2",
     "@tailwindcss/vite": "^4.3.0",
     "react": "^19.2.5",

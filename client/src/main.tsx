@@ -10,12 +10,10 @@ import { ServerTimeProvider } from './contexts/ServerTimeContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { addCollection } from '@iconify/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
-import mdiIcons from '@iconify-json/mdi/icons.json';
 import './styles/theme.css';
 
 // Регистрируем иконки локально (без API-запросов)
 addCollection(gameIcons);
-addCollection(mdiIcons);
 
 // Отправка непойманных ошибок на сервер
 window.onerror = (message, source, lineno, colno, error) => {

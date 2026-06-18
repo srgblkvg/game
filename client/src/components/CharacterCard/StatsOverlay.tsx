@@ -66,7 +66,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
       <div style={{ padding, fontSize }} className={overlayClass + ' bg-[var(--color-bg-card)]/95'}>
         <div className="flex items-center gap-1 mb-1">
           <Icon
-            icon="mdi:swap-horizontal"
+            icon="game-icons:swap"
             width={iconSize} height={iconSize}
             className="cursor-pointer text-[var(--color-accent-info)] hover:text-[var(--color-text-accent)]"
             onClick={handleFlip}
@@ -134,7 +134,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
       {hasBonuses && (
         <div className="flex justify-end mb-0.5">
           <Icon
-            icon="mdi:swap-horizontal"
+            icon="game-icons:swap"
             width={iconSize} height={iconSize}
             className="cursor-pointer text-[var(--color-accent-info)] hover:text-[var(--color-text-accent)]"
             onClick={handleFlip}

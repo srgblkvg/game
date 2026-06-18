@@ -18,7 +18,7 @@ const iconMap: Record<string, string> = {
     auction_won: 'game-icons:cash',
     auction_outbid: 'game-icons:cash',
     auction_sold: 'game-icons:cash',
-    system: 'mdi:information-outline',
+    system: 'game-icons:info',
 };
 
 const colorMap: Record<string, string> = {
@@ -97,7 +97,7 @@ export default function NotificationToast() {
                     onClick={() => dismiss(t.id)}
                 >
                     <Icon
-                        icon={iconMap[t.type] || 'mdi:bell-outline'}
+                        icon={iconMap[t.type] || 'game-icons:bell'}
                         width="18" height="18"
                         className="mt-0.5 shrink-0"
                         style={{ color: colorMap[t.type] || '#888' }}
@@ -112,7 +112,7 @@ export default function NotificationToast() {
                         className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] leading-none mt-0.5"
                         onClick={(e) => { e.stopPropagation(); dismiss(t.id); }}
                     >
-                        <Icon icon="mdi:close" width="14" height="14" />
+                        <Icon icon="game-icons:cross-mark" width="14" height="14" />
                     </button>
                 </div>
             ))}

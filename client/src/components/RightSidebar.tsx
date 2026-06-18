@@ -34,7 +34,7 @@ export default function RightSidebar() {
                 title={open ? 'Скрыть панель' : 'Боевой журнал'}
             >
                 <span className={`transition-transform duration-300 ${open ? 'rotate-90' : ''}`}>
-                    <Icon icon={open ? 'mdi:close' : 'game-icons:scroll-unfurled'} width="16" height="16" className="text-[var(--color-text-muted)]" />
+                    <Icon icon={open ? 'game-icons:cross-mark' : 'game-icons:scroll-unfurled'} width="16" height="16" className="text-[var(--color-text-muted)]" />
                 </span>
                 {!open && <span className="text-xs font-bold text-[var(--color-text-primary)] whitespace-nowrap">Боевой журнал</span>}
             </button>
