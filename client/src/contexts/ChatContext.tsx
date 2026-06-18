@@ -151,6 +151,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     // Уведомления — если есть
                     if (data.notifications && data.notifications.length > 0) {
                         window.dispatchEvent(new CustomEvent('notifications', { detail: data.notifications }));
+                        // Бейдж аукциона — считаем auction_sold
+                        const auctionSold = data.notifications.filter((n: any) => n.type === 'auction_sold').length;
+                        if (auctionSold > 0) {
+                            (window as any).__auctionBadge = ((window as any).__auctionBadge || 0) + auctionSold;
+                            window.dispatchEvent(new CustomEvent('auctionBadge'));
+                        }
                     }
                 }
             } catch (e) {
