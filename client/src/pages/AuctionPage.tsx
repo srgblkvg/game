@@ -399,19 +399,20 @@ export default function AuctionPage() {
                                 const itemData = h.itemData ? (typeof h.itemData === 'string' ? JSON.parse(h.itemData) : h.itemData) : null;
                                 return (
                                     <Card key={h.id} className="text-xs">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 flex-wrap">
                                             <span className={isBuyer ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}>
                                                 {isBuyer ? '📥 Куплено' : '📤 Продано'}
                                             </span>
                                             <span className="font-medium">{h.itemName}</span>
                                             {itemData?.count > 1 && <span className="text-[var(--color-text-muted)]">x{itemData.count}</span>}
-                                            <span className="ml-auto font-bold">{formatMoney(h.price)}</span>
+                                            <span>за</span>
+                                            <span className="font-bold">{formatMoney(h.price)}</span>
+                                            <span className="text-[var(--color-text-muted)]">—</span>
+                                            <span className="text-[var(--color-text-muted)]">Продавец {h.sellerName}, покупатель {h.buyerName}</span>
                                         </div>
                                         <div className="text-[var(--color-text-muted)] mt-0.5">
-                                            {isBuyer ? <>У {h.sellerName}</> : <>{h.buyerName}</>}
-                                            {!isBuyer && <> купил у вас</>}
-                                            {h.commission > 0 && <> • ком. {formatMoney(h.commission)}</>}
-                                            <span className="ml-2">{fmtSafeDate(h.createdAt)}</span>
+                                            {h.commission > 0 && <>ком. {formatMoney(h.commission)} • </>}
+                                            {fmtSafeDate(h.createdAt)}
                                         </div>
                                     </Card>
                                 );
