@@ -106,6 +106,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             setBattleResult(result);
             setCurrentStep(-1);
             // Деньги/опыт обновятся в finishBattle после анимации
+            window.dispatchEvent(new CustomEvent('battleStart'));
         } catch (e: any) {
             setModalMessage(e.message);
         } finally {
@@ -278,6 +279,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         });
         // Полное обновление с сервера (ELO, рейтинги, etc.)
         import('../api/character').then(m => m.fetchCharacter().then(setCharacter).catch(() => {}));
+        window.dispatchEvent(new CustomEvent('battleEnd'));
     };
 
     return {

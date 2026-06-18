@@ -268,6 +268,7 @@ export default function BestiaryPage() {
         });
         setPendingDrops([]);
       }
+      window.dispatchEvent(new CustomEvent('battleEnd'));
     }
   }, [currentStep, battleSteps.length, pendingCharacter, pendingDrops, setCharacter, showAcquire]);
   useEffect(() => { return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
@@ -298,6 +299,7 @@ export default function BestiaryPage() {
       const result = await attackMob(mob.id);
       setBattleSteps(result.steps || []);
       setBattleResult(result);
+      window.dispatchEvent(new CustomEvent('battleStart'));
       // Дропы с задержкой
       const drops: any[] = [];
       if (result.materialDropped) drops.push(result.materialDropped);
@@ -349,6 +351,7 @@ export default function BestiaryPage() {
       });
       setPendingDrops([]);
     }
+    window.dispatchEvent(new CustomEvent('battleEnd'));
   };
 
   const toggleSpeed = () => {
