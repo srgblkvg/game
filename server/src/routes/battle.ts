@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { updateGuildQuestProgress } from './guild';
-import { sendDailyQuestsUpdate } from './quests';
+import { markDirty } from '../websocket';
 import { currentStats } from '../game/stats';
 import { getBaseStats, collectGuildTax, applyExp } from '../db/helpers';
 import { runBattle } from '../game/battle';
@@ -126,7 +126,7 @@ router.post('/battle', async (req, res) => {
         updateGuildQuestProgress(w.guildId).catch(e => console.error('guildQuest PvP:', e.message));
     }
 
-    sendDailyQuestsUpdate(result.winnerId).catch(e => console.error('dailyQuests PvP:', e.message));
+    markDirty(result.winnerId, 'quests');
 
     await db.run(`INSERT INTO battles
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

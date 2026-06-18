@@ -22,8 +22,49 @@ interface OnlineUser {
   guildId?: number | null;
 }
 
+export interface Notification {
+  type: 'quest_complete' | 'level_up' | 'battle_result' | 'guild_event' | 'auction_won' | 'auction_outbid' | 'system';
+  message: string;
+  data?: any;
+  id: number; // уникальный id для дедупликации на клиенте
+  createdAt: number;
+}
+
 const clients = new Map<number, WebSocket>();
 const onlineUsers = new Map<number, OnlineUser>();
+
+// ---------- Dirty-флаги для serverTick ----------
+type DirtyType = 'quests' | 'rating' | 'notifications';
+const userDirtyFlags = new Map<number, Set<DirtyType>>();
+
+let _notificationSeq = 0;
+
+/** Пометить пользователя — на следующем serverTick ему отправятся свежие данные */
+export function markDirty(userId: number, ...types: DirtyType[]) {
+  if (!clients.has(userId)) return;
+  let flags = userDirtyFlags.get(userId);
+  if (!flags) {
+    flags = new Set();
+    userDirtyFlags.set(userId, flags);
+  }
+  for (const t of types) flags.add(t);
+}
+
+/** Очередь уведомлений на отправку через serverTick */
+const notificationQueues = new Map<number, Notification[]>();
+
+/** Добавить уведомление пользователю — отправится на ближайшем serverTick */
+export function pushNotification(userId: number, notification: Omit<Notification, 'id' | 'createdAt'>) {
+  if (!clients.has(userId)) return; // офлайн — не копим
+  const queue = notificationQueues.get(userId) || [];
+  queue.push({
+    ...notification,
+    id: ++_notificationSeq,
+    createdAt: Math.floor(Date.now() / 1000),
+  });
+  notificationQueues.set(userId, queue);
+  markDirty(userId, 'notifications');
+}
 
 // ---------- Рассылка ----------
 async function broadcast(type: string, data: any, exceptUserId?: number) {
@@ -43,6 +84,8 @@ async function sendToUser(userId: number, payload: object) {
     ws.send(JSON.stringify(payload));
   }
 }
+
+export { sendToUser };
 
 export async function sendToGuild(guildId: number, payload: object) {
   const msg = JSON.stringify(payload);
@@ -69,6 +112,101 @@ async function heartbeat(ws: WebSocket & { isAlive?: boolean }) {
   ws.isAlive = true;
 }
 
+// ---------- Вычислялки для serverTick ----------
+
+import { getToday, getProgress, QUEST_INFO, DIFFICULTIES } from './game/questData';
+
+async function computeQuestData(userId: number) {
+  const today = await getToday();
+  const quests = await db.query(
+    'SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id',
+    [userId, today]
+  ) as any[];
+
+  if (quests.length === 0) return null;
+
+  for (const q of quests) {
+    if (q.status === 'active') {
+      const prog = await getProgress(userId, q.snapshot, q.questType);
+      if (prog !== q.progress) {
+        await db.run('UPDATE daily_quests SET progress = ? WHERE id = ?', [Math.min(prog, q.requirement), q.id]);
+        q.progress = Math.min(prog, q.requirement);
+      }
+    }
+  }
+
+  const active = quests.filter((q: any) => q.status === 'active');
+  const typeQuest: any = QUEST_INFO;
+  const typeDiff: any = DIFFICULTIES;
+
+  return {
+    quests: quests.filter((q: any) => q.status !== 'claimed').map((q: any) => {
+      const qt = q.questType as any;
+      const info = typeQuest[qt];
+      return {
+        ...q,
+        typeName: info?.name,
+        typeIcon: info?.icon,
+        description: info?.desc ? info.desc(q.requirement, q.difficulty) : '',
+        difficultyLabel: typeDiff[q.difficulty]?.label || q.difficulty,
+        snapshot: undefined,
+      };
+    }),
+    activeCount: active.length,
+    completedToday: quests.filter((q: any) => q.status === 'claimed').length,
+    canTake: active.length < 3 && (active.length + quests.filter((q: any) => q.status === 'claimed').length) < 5,
+    dailyLimit: 5,
+    maxActive: 3,
+  };
+}
+
+import { getRank } from './routes/rating';
+
+async function computeRatingData(userId: number) {
+  const user = await db.one('SELECT elo FROM users WHERE id = ?', [userId]) as any;
+  if (!user) return null;
+  const elo = user.elo || 1000;
+  const position = (await db.one(
+    'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND (elo > ? OR (elo = ? AND id < ?))',
+    [elo, elo, userId]
+  ) as any).cnt + 1;
+  const total = (await db.one('SELECT COUNT(*) as cnt FROM users WHERE id > 0', []) as any).cnt;
+  const rank = getRank(elo);
+  return { elo, position, total, rank };
+}
+
+// ---------- serverTick: персональные данные каждому ----------
+async function sendServerTick(userId: number, time: number) {
+  const ws = clients.get(userId);
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+  const flags = userDirtyFlags.get(userId);
+  const payload: any = { type: 'serverTick', time };
+
+  if (flags && flags.size > 0) {
+    if (flags.has('quests')) {
+      const questData = await computeQuestData(userId);
+      if (questData) payload.quests = questData;
+      flags.delete('quests');
+    }
+    if (flags.has('rating')) {
+      const ratingData = await computeRatingData(userId);
+      if (ratingData) payload.rating = ratingData;
+      flags.delete('rating');
+    }
+    if (flags.has('notifications')) {
+      const queue = notificationQueues.get(userId);
+      if (queue && queue.length > 0) {
+        payload.notifications = queue.splice(0, queue.length);
+      }
+      flags.delete('notifications');
+    }
+    if (flags.size === 0) userDirtyFlags.delete(userId);
+  }
+
+  ws.send(JSON.stringify(payload));
+}
+
 export async function setupWebSocket(server: any) {
   const wss = new WebSocketServer({ server });
 
@@ -82,9 +220,13 @@ export async function setupWebSocket(server: any) {
     });
   }, HEARTBEAT_INTERVAL * 1000);
 
-  // Интервал serverTick — раз в секунду для клиентских таймеров
+  // Интервал serverTick — раз в секунду, персональные данные каждому пользователю
   const tickInterval = setInterval(() => {
-    broadcast('serverTick', { time: Math.floor(Date.now() / 1000) });
+    const time = Math.floor(Date.now() / 1000);
+    // Отправляем персонально каждому (не broadcast — у каждого свои квесты/рейтинг/уведомления)
+    clients.forEach((_, userId) => {
+      sendServerTick(userId, time).catch(e => console.error('serverTick err:', e?.message));
+    });
   }, 1000);
 
   wss.on('close', () => {
@@ -132,6 +274,8 @@ export async function setupWebSocket(server: any) {
 
       ws.on("close", async () => {
         clients.delete(adminId);
+        userDirtyFlags.delete(adminId);
+        notificationQueues.delete(adminId);
       });
       return;
     }
@@ -157,6 +301,9 @@ export async function setupWebSocket(server: any) {
     const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, guildName: user.guildName || null, guildId: user.guildId || null };
     onlineUsers.set(userId, onlineUser);
     auditWsConnect(user.username, user.id);
+
+    // При подключении помечаем квесты + рейтинг — отправятся на первом же тике
+    markDirty(userId, 'quests', 'rating');
 
     // Отправляем текущий список онлайна
     ws.send(JSON.stringify({
@@ -326,6 +473,8 @@ export async function setupWebSocket(server: any) {
     ws.on("close", async () => {
       clients.delete(userId);
       onlineUsers.delete(userId);
+      userDirtyFlags.delete(userId);
+      notificationQueues.delete(userId);
       auditWsDisconnect(user.username, userId);
       notifyUserOffline(userId);
     });

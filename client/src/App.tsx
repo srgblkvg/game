@@ -8,6 +8,7 @@ import AdminRegisterPage from './pages/AdminRegisterPage';
 import ChatPanel from './components/chat/ChatPanel';
 import Header from './components/Header';
 import RightSidebar from './components/RightSidebar';
+import NotificationToast from './components/NotificationToast';
 import ScrollToTop from './components/ScrollToTop';
 import MetrikaTracker from './components/MetrikaTracker';
 
@@ -53,6 +54,7 @@ function App() {
       <MetrikaTracker />
       <Header />
       {user?.role === 'player' && <RightSidebar />}
+      <NotificationToast />
       <div style={{
         maxWidth: '1024px',
         margin: '0 auto',

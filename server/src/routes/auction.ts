@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
-import { sendDailyQuestsUpdate } from './quests';
+import { markDirty } from '../websocket';
 
 const router = Router();
 
@@ -176,8 +176,8 @@ router.post('/auction/buyout', async (req, res) => {
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
 
     // Daily quests — track auction trades
-    sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests auction:', e.message));
-    sendDailyQuestsUpdate(lot.sellerId).catch(e => console.error('dailyQuests auction:', e.message));
+    markDirty(userId, 'quests');
+    markDirty(lot.sellerId, 'quests');
 
     res.json({ success: true });
 });
@@ -244,8 +244,8 @@ router.post('/auction/buy-partial', async (req, res) => {
     await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
 
     // Daily quests — track auction trades
-    sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests auction:', e.message));
-    sendDailyQuestsUpdate(lot.sellerId).catch(e => console.error('dailyQuests auction:', e.message));
+    markDirty(userId, 'quests');
+    markDirty(lot.sellerId, 'quests');
 
     res.json({ success: true, cost, remaining: remainingCount });
 });

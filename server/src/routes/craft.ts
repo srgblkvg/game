@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
-import { sendDailyQuestsUpdate } from './quests';
+import { markDirty } from '../websocket';
 
 const router = Router();
 
@@ -200,7 +200,7 @@ router.post('/craft/execute', async (req, res) => {
         await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftCreated = craftCreated + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
         if (u?.guildId) { updateGuildQuestProgress(u.guildId).catch(e => console.error('guildQuest craft:', e.message)); }
-        sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests craft:', e.message));
+        markDirty(userId, 'quests');
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: 'Предмет создан!' });
     } else {
         await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
@@ -295,14 +295,14 @@ router.post('/craft/upgrade', async (req, res) => {
                 [newMoney, JSON.stringify(newInventory), newElo, ratingBonus, userId]);
             const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
             if (u?.guildId) { updateGuildQuestProgress(u.guildId).catch(e => console.error('guildQuest craft:', e.message)); }
-            sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests craft:', e.message));
+            markDirty(userId, 'quests');
             return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, eloAdded: ratingBonus, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` });
         }
 
         await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
         if (u?.guildId) { updateGuildQuestProgress(u.guildId).catch(e => console.error('guildQuest craft:', e.message)); }
-        sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests craft:', e.message));
+        markDirty(userId, 'quests');
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });
     } else {
         // Неудача

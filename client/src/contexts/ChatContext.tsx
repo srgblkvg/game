@@ -129,7 +129,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 } else if (data.type === 'dailyQuests') {
                     window.dispatchEvent(new CustomEvent('dailyQuests', { detail: data }));
                 } else if (data.type === 'serverTick') {
+                    // Время — всегда
                     window.dispatchEvent(new CustomEvent('serverTick', { detail: data.time }));
+                    // Квесты — если сервер прислал обновление
+                    if (data.quests) {
+                        window.dispatchEvent(new CustomEvent('dailyQuests', { detail: data.quests }));
+                    }
+                    // Рейтинг — если сервер прислал
+                    if (data.rating) {
+                        window.dispatchEvent(new CustomEvent('rating', { detail: data.rating }));
+                    }
+                    // Уведомления — если есть
+                    if (data.notifications && data.notifications.length > 0) {
+                        window.dispatchEvent(new CustomEvent('notifications', { detail: data.notifications }));
+                    }
                 }
             } catch (e) {
                 console.error('WebSocket message error', e);

@@ -4,7 +4,7 @@ import { db } from '../db/index';
 const router = Router();
 
 // Звания по ELO
-function getRank(elo: number): { name: string; icon: string; color: string } {
+export function getRank(elo: number): { name: string; icon: string; color: string } {
     if (elo >= 2100) return { name: 'Смерть', icon: '👑', color: '#ff4040' };
     if (elo >= 1900) return { name: 'Вечность', icon: '♦♦♦', color: '#20c0c0' };
     if (elo >= 1700) return { name: 'Бездна', icon: '♦♦', color: '#c02020' };

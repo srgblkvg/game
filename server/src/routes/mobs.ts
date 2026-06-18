@@ -5,7 +5,7 @@ import { currentStats } from '../game/stats';
 import { addPveRating } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
 import { updateGuildQuestProgress } from './guild';
-import { sendDailyQuestsUpdate } from './quests';
+import { markDirty } from '../websocket';
 
 const router = Router();
 
@@ -409,7 +409,7 @@ router.post('/mob/attack', async (req, res) => {
 
     // Обновление ежедневных квестов (PvE)
     if (playerWon) {
-        sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests PvE:', e.message));
+        markDirty(userId, 'quests');
     }
 
     // Сохраняем в историю PvE

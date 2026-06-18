@@ -6,7 +6,7 @@ import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
 import { getUserById, getBaseStats, enrichEquipment, applyExp } from '../db/helpers';
 import { updateGuildQuestProgress } from './guild';
-import { sendDailyQuestsUpdate } from './quests';
+import { markDirty } from '../websocket';
 
 const router = Router();
 
@@ -108,7 +108,7 @@ router.get('/character/me', async (req, res) => {
             // Guild quest progress — track job seconds
             if (user.guildId) { updateGuildQuestProgress(user.guildId).catch(e => console.error('guildQuest jobs:', e.message)); }
             // Daily quests — track job seconds
-            sendDailyQuestsUpdate(userId).catch(e => console.error('dailyQuests jobs:', e.message));
+            markDirty(userId, 'quests');
             user.money = newMoney;
             user.level = newLevel;
             user.statPoints = newStatPoints;
