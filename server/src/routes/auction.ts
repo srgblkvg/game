@@ -327,10 +327,9 @@ router.get('/auction/history', async (req, res) => {
         FROM auction_history h
         JOIN users s ON h.sellerId = s.id
         JOIN users b ON h.buyerId = b.id
-        WHERE h.sellerId = ? OR h.buyerId = ?
         ORDER BY h.id DESC
         LIMIT ?
-    `, [userId, userId, limit]);
+    `, [limit]);
 
     res.json(history);
 });
