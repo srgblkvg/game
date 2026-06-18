@@ -27,9 +27,9 @@ export default function RightSidebar() {
             <button
                 onClick={() => { setOpen(!open); if (!open) window.dispatchEvent(new CustomEvent('closeChatPanel')); }}
                 className="fixed right-3 top-16 z-[45] w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] shadow-lg cursor-pointer"
-                title={open ? 'Скрыть панель' : 'Показать панель'}
+                title={open ? 'Скрыть панель' : 'Боевой журнал'}
             >
-                <Icon icon={open ? 'mdi:close' : 'mdi:menu'} width="16" height="16" />
+                <Icon icon={open ? 'mdi:close' : 'game-icons:crossed-swords'} width="16" height="16" />
             </button>
 
             {/* Оверлей */}
