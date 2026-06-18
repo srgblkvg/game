@@ -47,6 +47,12 @@ router.get('/collections', async (req, res) => {
     res.json({ items, sets: setsWithStatus });
 });
 
+// Все предметы из collection_set_items (для клиентской проверки «можно добавить»)
+router.get('/collections/set-items', async (req, res) => {
+    const items = await db.query('SELECT item_name, slot FROM collection_set_items') as any[];
+    res.json(items);
+});
+
 // Добавить предмет в коллекцию (удаляет из инвентаря)
 router.post('/collections/add', async (req, res) => {
     const userId = req.userId;

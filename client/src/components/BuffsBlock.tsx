@@ -49,11 +49,20 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     }, []);
 
     useEffect(() => {
-        fetch('/api/collections', { headers: getHeaders() })
-            .then(r => r.json())
-            .then((data: any) => {
+        // Загружаем и коллекцию, и все предметы сетов для точного matching
+        Promise.all([
+            fetch('/api/collections', { headers: getHeaders() }).then(r => r.json()),
+            fetch('/api/collections/set-items', { headers: getHeaders() }).then(r => r.json()),
+        ])
+            .then(([data, setItemsData]: [any, any]) => {
                 const collSet = new Set<string>();
                 for (const c of (data.items || [])) collSet.add(`${c.itemName}|${c.slot}`);
+
+                // Все возможные предметы коллекций (из collection_set_items)
+                const validSet = new Set<string>();
+                for (const si of (setItemsData || [])) {
+                    if (si.item_name && si.slot) validSet.add(`${si.item_name}|${si.slot}`);
+                }
 
                 const inv = inventory || [];
                 const eq = equipment || {};
@@ -61,9 +70,11 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
                 for (const slot of Object.values(eq)) {
                     if ((slot as any)?.name && (slot as any)?.slot) equippedNames.add(`${(slot as any).name}|${(slot as any).slot}`);
                 }
-                const hasAddable = inv.some((invItem: any) =>
-                    invItem.name && invItem.slot && !collSet.has(`${invItem.name}|${invItem.slot}`) && !equippedNames.has(`${invItem.name}|${invItem.slot}`)
-                );
+                const hasAddable = inv.some((invItem: any) => {
+                    if (!invItem.name || !invItem.slot) return false;
+                    const key = `${invItem.name}|${invItem.slot}`;
+                    return validSet.has(key) && !collSet.has(key) && !equippedNames.has(key);
+                });
                 setHasCollectionItems(hasAddable);
             })
             .catch(() => {});
