@@ -24,19 +24,13 @@ interface ActionCard {
 export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob }: ActionsProps) {
     const navigate = useNavigate();
     const [cards, setCards] = useState<ActionCard[]>([]);
-    const [auctionBadge, setAuctionBadge] = useState(0);
+    const [auctionBadge, setAuctionBadge] = useState((window as any).__auctionBadge || 0);
 
-    // Слушаем уведомления о продаже лотов
+    // Слушаем обновление глобального бейджа
     useEffect(() => {
-        const handler = (e: Event) => {
-            const notifs = (e as CustomEvent).detail;
-            if (Array.isArray(notifs)) {
-                const sold = notifs.filter((n: any) => n.type === 'auction_sold').length;
-                if (sold > 0) setAuctionBadge(prev => prev + sold);
-            }
-        };
-        window.addEventListener('notifications', handler);
-        return () => window.removeEventListener('notifications', handler);
+        const handler = () => setAuctionBadge((window as any).__auctionBadge || 0);
+        window.addEventListener('auctionBadge', handler);
+        return () => window.removeEventListener('auctionBadge', handler);
     }, []);
 
     useEffect(() => {
@@ -62,7 +56,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 МИР
                     </h2>
-                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => setAuctionBadge(0)} />
+                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => { (window as any).__auctionBadge = 0; setAuctionBadge(0); }} />
                 </div>
             )}
             {castleCards.length > 0 && (
