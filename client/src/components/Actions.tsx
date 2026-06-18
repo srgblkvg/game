@@ -24,6 +24,20 @@ interface ActionCard {
 export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob }: ActionsProps) {
     const navigate = useNavigate();
     const [cards, setCards] = useState<ActionCard[]>([]);
+    const [auctionBadge, setAuctionBadge] = useState(0);
+
+    // Слушаем уведомления о продаже лотов
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const notifs = (e as CustomEvent).detail;
+            if (Array.isArray(notifs)) {
+                const sold = notifs.filter((n: any) => n.type === 'auction_sold').length;
+                if (sold > 0) setAuctionBadge(prev => prev + sold);
+            }
+        };
+        window.addEventListener('notifications', handler);
+        return () => window.removeEventListener('notifications', handler);
+    }, []);
 
     useEffect(() => {
         fetch('/api/actions', { headers: getHeaders() })
@@ -48,7 +62,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 МИР
                     </h2>
-                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} />
+                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => setAuctionBadge(0)} />
                 </div>
             )}
             {castleCards.length > 0 && (
@@ -63,9 +77,9 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     );
 }
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, onAuctionClick }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
-    navigate: (path: string) => void; hasActiveJob?: boolean;
+    navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; onAuctionClick?: () => void;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
     const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
@@ -135,12 +149,17 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             <div className="mt-auto">
                                 {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="xs" fullWidth disabled={disabled}
-                                    onClick={() => { if (card.path) navigate(card.path); }}>
+                                    onClick={() => { if (card.path) { if (card.title === 'Аукцион' && onAuctionClick) onAuctionClick(); navigate(card.path); } }}>
                                     {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
                                 </Button>
                             </div>
                         </div>
                     </div>
+                    {card.title === 'Аукцион' && auctionBadge > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full text-white text-[0.55rem] font-bold flex items-center justify-center shadow">
+                            {auctionBadge}
+                        </span>
+                    )}
                     </div>
                 );
             })}

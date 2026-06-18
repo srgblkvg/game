@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 
 interface Notification {
     id: number;
-    type: 'quest_complete' | 'level_up' | 'battle_result' | 'guild_event' | 'auction_won' | 'auction_outbid' | 'system';
+    type: 'quest_complete' | 'level_up' | 'battle_result' | 'guild_event' | 'auction_won' | 'auction_outbid' | 'auction_sold' | 'system';
     message: string;
     data?: any;
     createdAt: number;
@@ -17,6 +17,7 @@ const iconMap: Record<string, string> = {
     guild_event: 'game-icons:castle',
     auction_won: 'game-icons:cash',
     auction_outbid: 'game-icons:cash',
+    auction_sold: 'game-icons:cash',
     system: 'mdi:information-outline',
 };
 
@@ -27,6 +28,7 @@ const colorMap: Record<string, string> = {
     guild_event: '#c040f0',
     auction_won: '#40f040',
     auction_outbid: '#f08040',
+    auction_sold: '#f0c040',
     system: '#888888',
 };
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
-import { markDirty } from '../websocket';
+import { markDirty, pushNotification } from '../websocket';
 
 const router = Router();
 
@@ -203,6 +203,10 @@ router.post('/auction/buyout', async (req, res) => {
     await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [lot.sellerId, userId, buyItemData.name || 'Предмет', lot.itemData, lot.buyoutPrice, commission, new Date().toISOString()]);
+
+    // Уведомление продавцу
+    const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
+    pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} выкупил «${buyItemData.name || 'Предмет'}» за ${lot.buyoutPrice}🥇` });
 
     res.json({ success: true });
 });

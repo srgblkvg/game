@@ -23,7 +23,7 @@ interface OnlineUser {
 }
 
 export interface Notification {
-  type: 'quest_complete' | 'level_up' | 'battle_result' | 'guild_event' | 'auction_won' | 'auction_outbid' | 'system';
+  type: 'quest_complete' | 'level_up' | 'battle_result' | 'guild_event' | 'auction_won' | 'auction_outbid' | 'auction_sold' | 'system';
   message: string;
   data?: any;
   id: number; // уникальный id для дедупликации на клиенте
