@@ -431,8 +431,15 @@ async function getOrCreateTournament(type?: string) {
 
     // Для дивизионов без активного турнира — создаём новый official с 30-мин окном
     // (но не раньше чем через час после завершения предыдущего)
+    // и только если есть игроки этого уровня
     for (const div of divisions) {
         if (!activeByDivision[div.name]) {
+            // Проверяем: есть ли игроки в этом дивизионе
+            const playerCount = (await db.one(
+                'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND level >= ? AND level <= ?',
+                [div.minLevel, div.maxLevel]
+            ) as any).cnt;
+            if (playerCount === 0) continue; // нет игроков — не создаём турнир
             // Проверяем: когда завершился последний турнир этого дивизиона
             const lastCompleted = await db.one(
                 "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1",
