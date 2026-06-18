@@ -431,6 +431,7 @@ router.post('/mob/attack', async (req, res) => {
         materialDropped,
         itemsDropped,
         hpAfter: newHpAfter,
+        mobHpAfter: hpMob,
         mob: { id: mob.id, name: mob.name, level: mob.level, hp: mob.hp },
     });
 });

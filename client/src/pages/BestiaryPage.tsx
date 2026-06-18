@@ -319,7 +319,7 @@ export default function BestiaryPage() {
     // Set final HP from battle result
     if (battleResult) {
       setPlayerHp(Math.max(0, battleResult.hpAfter ?? 0));
-      setMobHp(Math.max(0, battleResult.hpDefenderAfter ?? 0));
+      setMobHp(Math.max(0, battleResult.mobHpAfter ?? 0));
     }
   };
 
