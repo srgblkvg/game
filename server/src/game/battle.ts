@@ -213,7 +213,7 @@ export function runBattle(
   if (winnerId === attacker.id) {
     if (defender.level > attacker.level) expGained = 2;
     else if (defender.level === attacker.level) expGained = 1;
-    moneyGained = 10;
+    moneyGained = 0; // базовая награда убрана — только ограбление
   } else {
     if (attacker.level > defender.level) expGained = 2;
     else if (attacker.level === defender.level) expGained = 1;
