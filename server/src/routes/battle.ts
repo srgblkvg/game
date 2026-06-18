@@ -128,7 +128,7 @@ router.post('/battle', async (req, res) => {
 
     markDirty(result.winnerId, 'quests');
 
-    await db.run(`INSERT INTO battles
+    await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [attacker.id, defender.id, result.winnerId, JSON.stringify(result.log), JSON.stringify(result.steps),
             result.attackerHpAfter, result.defenderHpAfter, result.expGained, result.moneyGained, moneyStolen]);
