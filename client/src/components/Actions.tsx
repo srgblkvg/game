@@ -25,6 +25,8 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const navigate = useNavigate();
     const [cards, setCards] = useState<ActionCard[]>([]);
     const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
+    const [guildBadge, setGuildBadge] = useState(parseInt(localStorage.getItem('guildBadge') || '0'));
+    const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
 
     // Бейдж аукциона через localStorage + событие
     useEffect(() => {
@@ -37,6 +39,30 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         window.addEventListener('auctionBadge', handler);
         return () => window.removeEventListener('auctionBadge', handler);
     }, [auctionBadge]);
+
+    // Бейдж гильдии
+    useEffect(() => {
+        const check = () => {
+            const val = parseInt(localStorage.getItem('guildBadge') || '0');
+            if (val !== guildBadge) setGuildBadge(val);
+        };
+        check();
+        const handler = () => check();
+        window.addEventListener('guildBadge', handler);
+        return () => window.removeEventListener('guildBadge', handler);
+    }, [guildBadge]);
+
+    // Бейдж банка
+    useEffect(() => {
+        const check = () => {
+            const val = parseInt(localStorage.getItem('bankBadge') || '0');
+            if (val !== bankBadge) setBankBadge(val);
+        };
+        check();
+        const handler = () => check();
+        window.addEventListener('bankBadge', handler);
+        return () => window.removeEventListener('bankBadge', handler);
+    }, [bankBadge]);
 
     useEffect(() => {
         fetch('/api/actions', { headers: getHeaders() })
@@ -61,7 +87,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 МИР
                     </h2>
-                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} />
+                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} />
                 </div>
             )}
             {castleCards.length > 0 && (
@@ -69,16 +95,16 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle" width="14" height="14" />🏰 Площадь
                     </h2>
-                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} />
+                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} />
                 </div>
             )}
         </div>
     );
 }
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, onAuctionClick }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, onAuctionClick, onGuildClick, onBankClick }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
-    navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; onAuctionClick?: () => void;
+    navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
     const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
@@ -139,7 +165,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                 return (
                     <div key={i} className="relative group" id={`action-card-${card.title}`}>
                         <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
-                        <div className="absolute inset-0 bg-cover bg-center opacity-20" style={bgStyle} />
+                        <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
                         <div className="relative w-full flex flex-col flex-1">
                             <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                                 <Icon icon={card.icon} width="14" height="14" />{card.title}
@@ -148,7 +174,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             <div className="mt-auto">
                                 {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="xs" fullWidth disabled={disabled}
-                                    onClick={() => { if (card.path) { if (card.title === 'Аукцион' && onAuctionClick) onAuctionClick(); navigate(card.path); } }}>
+                                    onClick={() => { if (card.path) { if (card.title === 'Аукцион' && onAuctionClick) onAuctionClick(); if (card.title === 'Гильдия' && onGuildClick) onGuildClick(); if (card.title === 'Банк' && onBankClick) onBankClick(); navigate(card.path); } }}>
                                     {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
                                 </Button>
                             </div>
@@ -157,6 +183,16 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                     {card.title === 'Аукцион' && (auctionBadge ?? 0) > 0 && (
                         <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 rounded-full text-white text-[0.55rem] font-bold flex items-center justify-center px-1 shadow">
                             {auctionBadge ?? 0}
+                        </span>
+                    )}
+                    {card.title === 'Гильдия' && (guildBadge ?? 0) > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 rounded-full text-white text-[0.55rem] font-bold flex items-center justify-center px-1 shadow">
+                            {guildBadge ?? 0}
+                        </span>
+                    )}
+                    {card.title === 'Банк' && (bankBadge ?? 0) > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 rounded-full text-white text-[0.55rem] font-bold flex items-center justify-center px-1 shadow">
+                            {bankBadge ?? 0}
                         </span>
                     )}
                     </div>
@@ -205,7 +241,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
         <div className="perspective-600">
             <div className={`relative w-full transition-transform duration-400 [transform-style:preserve-3d] ${flipped ? 'rotate-y-180' : ''}`} id={`action-card-${card.title}`}>
                 <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all backface-hidden ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
-                <div className="absolute inset-0 bg-cover bg-center opacity-20" style={bgStyle} />
+                <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
                 <div className="relative w-full flex flex-col flex-1">
                     <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                         <Icon icon={card.icon} width="14" height="14" />{card.title}
@@ -236,7 +272,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
         </div>
         {modalMsg && (
             <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-                <div className="bg-[var(--color-accent-danger)]/20 text-[var(--color-accent-danger)] border border-[var(--color-accent-danger)]/40 rounded-lg px-6 py-3 shadow-2xl text-sm font-medium animate-pulse">
+                <div className="bg-[var(--color-accent-danger)]/20 text-white border border-[var(--color-accent-danger)]/40 rounded-lg px-6 py-3 shadow-2xl text-sm font-medium animate-pulse">
                     {modalMsg}
                 </div>
             </div>

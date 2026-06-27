@@ -3,6 +3,7 @@ import { db, pool } from '../db/index';
 import { runBattle } from '../game/battle';
 import { getBaseStats, enrichEquipment, addMoney } from '../db/helpers';
 import { currentStats } from '../game/stats';
+import { broadcast } from '../events';
 import { getDrinkBonuses } from '../game/drinks';
 
 const router = Router();
@@ -135,7 +136,7 @@ async function loadPlayerForBattle(userId: number) {
  * Разрешить все незавершённые матчи текущего раунда.
  * Возвращает номер разрешённого раунда (или 0 если ничего не сделано).
  */
-async function resolveCurrentRound(tournamentId: number): Promise<number> {
+export async function resolveCurrentRound(tournamentId: number): Promise<number> {
     // Находим минимальный раунд с незавершёнными матчами
     const pendingRound = await db.one(`
         SELECT round FROM tournament_matches
@@ -796,6 +797,7 @@ router.post('/tournament/create-custom', async (req, res) => {
     await db.run('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)',
         [result.lastInsertRowid, userId, 0]);
     await db.run('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?', [userId]);
+    broadcast('tournamentCreated', { tournamentId: result.lastInsertRowid, name });
     res.json({ success: true, tournamentId: result.lastInsertRowid });
 });
 

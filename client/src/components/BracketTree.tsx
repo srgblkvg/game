@@ -71,6 +71,7 @@ function BattleLog({ log, player1, player2, onClose }: { log: any; player1: stri
                   <div className="text-[var(--color-accent-info)]">🍺 S:{stats1.drinks.s||0} A:{stats1.drinks.a||0} D:{stats1.drinks.d||0} M:{stats1.drinks.m||0}</div>
                 ) : null}
                 {stats1.collection ? <div className="text-[var(--color-accent-purple)]">📚 +{stats1.collection}%</div> : null}
+                {stats1.guildBonus ? <div className="text-[var(--color-accent-warning)]">🏰 ×Гильдия +{stats1.guildBonus}%</div> : null}
               </div>
               <div className="text-right">
                 <div className="font-bold text-[var(--color-accent-danger)]">{stats2.name}</div>
@@ -80,6 +81,7 @@ function BattleLog({ log, player1, player2, onClose }: { log: any; player1: stri
                   <div className="text-[var(--color-accent-info)]">🍺 S:{stats2.drinks.s||0} A:{stats2.drinks.a||0} D:{stats2.drinks.d||0} M:{stats2.drinks.m||0}</div>
                 ) : null}
                 {stats2.collection ? <div className="text-[var(--color-accent-purple)]">📚 +{stats2.collection}%</div> : null}
+                {stats2.guildBonus ? <div className="text-[var(--color-accent-warning)]">🏰 ×Гильдия +{stats2.guildBonus}%</div> : null}
               </div>
             </div>
           </div>

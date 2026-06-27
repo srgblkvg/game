@@ -17,5 +17,10 @@ export function safeDate(value: any): Date | null {
 
 export function fmtSafeDate(value: any, options?: Intl.DateTimeFormatOptions): string {
     const d = safeDate(value);
-    return d ? d.toLocaleString('ru-RU', options) : '—';
+    if (!d) return '—';
+    try {
+        return d.toLocaleString('ru-RU', { timeZone: 'UTC', ...options });
+    } catch {
+        return d.toLocaleString('ru-RU', options);
+    }
 }

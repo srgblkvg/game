@@ -21,17 +21,35 @@ export function getRank(elo: number): { name: string; icon: string; color: strin
 router.get('/rating', async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
+    const search = (req.query.search as string) || '';
+    const minElo = parseInt(req.query.minElo as string) || 0;
+    const maxElo = parseInt(req.query.maxElo as string) || 0;
     const offset = (page - 1) * limit;
 
-    const total = (await db.one('SELECT COUNT(*) as cnt FROM users WHERE id > 0', []) as any).cnt;
+    let whereClause = 'WHERE u.id > 0';
+    const params: any[] = [];
+    if (search) {
+        whereClause += ' AND u.username ILIKE ?';
+        params.push(`%${search}%`);
+    }
+    if (minElo > 0) {
+        whereClause += ' AND u.elo >= ?';
+        params.push(minElo);
+    }
+    if (maxElo > 0) {
+        whereClause += ' AND u.elo <= ?';
+        params.push(maxElo);
+    }
+
+    const total = (await db.one(`SELECT COUNT(*) as cnt FROM users u ${whereClause}`, params) as any).cnt;
     const users = await db.query(`
         SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, g.name as guildName, u.guildId
         FROM users u
         LEFT JOIN guilds g ON u.guildId = g.id
-        WHERE u.id > 0
+        ${whereClause}
         ORDER BY u.elo DESC
         LIMIT ? OFFSET ?
-    `, [limit, offset]) as any[];
+    `, [...params, limit, offset]) as any[];
 
     const result = users.map((u) => ({
         ...u,
@@ -52,7 +70,7 @@ router.get('/my-position', async (req, res) => {
 
     const elo = user.elo || 1000;
     const position = (await db.one(
-        'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND (elo > ? OR (elo = ? AND id < ?))',
+        'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND isGuest = 0 AND (elo > ? OR (elo = ? AND id < ?))',
         [elo, elo, userId]
     ) as any).cnt + 1;
 

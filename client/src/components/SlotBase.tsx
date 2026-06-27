@@ -1,6 +1,6 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
-import { getRarityColor, getItemImage } from '../utils/itemUtils';
+import { getRarityColor, getItemImage, getRarityClass } from '../utils/itemUtils';
 
 interface SlotBaseProps {
   item: any;
@@ -55,7 +55,8 @@ export default function SlotBase({
         backgroundColor: title ? 'var(--color-bg-input)' : 'var(--color-bg-input)',
       };
 
-  const slotClassName = `w-[44px] h-[44px] rounded flex items-center justify-center relative font-bold text-[var(--color-text-muted)] text-[0.65rem] ${item ? 'cursor-pointer' : 'cursor-default'}`;
+  const rarityClass = getRarityClass(item);
+  const slotClassName = `w-[44px] h-[44px] rounded flex items-center justify-center relative font-bold text-[var(--color-text-muted)] text-[0.65rem] ${rarityClass} ${item ? 'cursor-pointer' : 'cursor-default'}`;
   const slotStyle: React.CSSProperties = {
     ...bgStyle,
     ...style,

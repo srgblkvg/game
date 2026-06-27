@@ -1,4 +1,3 @@
-// Test script for bot API
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
@@ -9,12 +8,10 @@ const token = jwt.sign({ adminId: 1, role: 'admin', jti: crypto.randomUUID() }, 
 const BASE = 'http://localhost:3001/api/admin';
 
 async function test() {
-  // Status
   console.log('=== Status ===');
   let res = await fetch(`${BASE}/bots`, { headers: { Authorization: `Bearer ${token}` } });
   console.log(JSON.stringify(await res.json(), null, 2));
 
-  // Start 2 bots
   console.log('\n=== Start 2 bots ===');
   res = await fetch(`${BASE}/bots/start`, {
     method: 'POST',
@@ -23,18 +20,15 @@ async function test() {
   });
   console.log(JSON.stringify(await res.json(), null, 2));
 
-  // Wait and check status
   await new Promise(r => setTimeout(r, 6000));
   console.log('\n=== Status after 6s ===');
   res = await fetch(`${BASE}/bots`, { headers: { Authorization: `Bearer ${token}` } });
   console.log(JSON.stringify(await res.json(), null, 2));
 
-  // Stop
   console.log('\n=== Stop ===');
   res = await fetch(`${BASE}/bots/stop`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
   console.log(JSON.stringify(await res.json(), null, 2));
 
-  // Final status
   console.log('\n=== Final Status ===');
   res = await fetch(`${BASE}/bots`, { headers: { Authorization: `Bearer ${token}` } });
   console.log(JSON.stringify(await res.json(), null, 2));

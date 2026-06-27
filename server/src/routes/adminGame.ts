@@ -58,7 +58,17 @@ router.get('/mob-locations', async (req, res) => {
 
 // ---------- Этажи ----------
 router.get('/floors', async (req, res) => {
-    res.json(await db.query('SELECT * FROM floors ORDER BY sort_order, name', []));
+    const rows = await db.query('SELECT * FROM floors ORDER BY sort_order, name') as any[];
+    const DIFF_MAP: Record<string,number> = {
+        'Склеп':0,'Подземелье':0,'Катакомбы':0,'Деревня Пепла':0,
+        'Лес Черепов':1,'Старый Тракт':1,'Ядовитые луга':1,'Первый ярус':1,
+        'Гнилая Топь':2,'Чёрный Монастырь':2,'Башня Плакальщиц':2,'Некрополь Королей':2,
+        'Бездонный Овраг':3,'Врата Бездны':3,
+    };
+    const DIFF_LABELS = ['Легко','Нормально','Сложно','Ад'];
+    const DIFF_ICONS = ['🟢','🟡','🟠','🔴'];
+    const result = rows.map(r => ({...r, difficulty: DIFF_MAP[r.name] ?? 0}));
+    res.json({ floors: result, groups: DIFF_LABELS.map((label,i) => ({label, icon: DIFF_ICONS[i], difficulty: i})) });
 });
 
 router.post('/floors', async (req, res) => {

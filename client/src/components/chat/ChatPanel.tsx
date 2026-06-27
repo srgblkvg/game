@@ -41,10 +41,15 @@ export default function ChatPanel() {
     useEffect(() => {
         if (isPanelOpen) {
             document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
         }
-        return () => { document.body.style.overflow = ''; };
+        return () => {
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        };
     }, [isPanelOpen]);
 
     const { messages, onlineUsers, addMessages, sendPublic, sendPrivate, bannedUntil, chatError, setChatError } = useGlobalChat();
@@ -98,7 +103,7 @@ export default function ChatPanel() {
         const lastReadGeneral = getLastRead(LS_GENERAL);
         const lastReadGuild = getLastRead(LS_GUILD);
         setUnreadGeneral(messages.filter(m => m.senderId !== userId && m.targetId === null && m.id > lastReadGeneral).length);
-        setUnreadGuild(messages.filter(m => m.senderId !== userId && m.targetId !== null && m.targetId < 0 && m.id > lastReadGuild).length);
+        setUnreadGuild(guildId !== null ? messages.filter(m => m.senderId !== userId && m.targetId !== null && m.targetId < 0 && m.id > lastReadGuild).length : 0);
         const priv = new Map<number, number>();
         // Only auto-open tabs for messages that just arrived (not historical)
         const newMsgs = messages.slice(prevMsgCount.current);
@@ -239,7 +244,7 @@ export default function ChatPanel() {
         // /g — гильд-чат
         if (cleanedText.startsWith('/g ')) {
             const content = cleanedText.slice(3).trim();
-            const gid = guildId || (character as any)?.guildId;
+            const gid = guildId || character?.guildId;
             if (!content || !gid) return;
             fetch(`${BASE_URL}/guild/chat`, {
                 method: 'POST', headers: getHeaders(),
@@ -251,8 +256,8 @@ export default function ChatPanel() {
         }
 
         if (privateChatWith === null) {
-            if (guildChatActive && (guildId || (character as any)?.guildId)) {
-                const gid = guildId || (character as any)?.guildId;
+            if (guildChatActive && (guildId || character?.guildId)) {
+                const gid = guildId || character?.guildId;
                 console.log('[guild-chat] sending to guild', gid, cleanedText);
                 fetch(`${BASE_URL}/guild/chat`, {
                     method: 'POST', headers: getHeaders(),

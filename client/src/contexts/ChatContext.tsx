@@ -1,264 +1,177 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import { fmtSafeDate } from '../utils/date';
 
-interface ChatMessage {
-    id: number;
-    senderId: number;
-    senderName: string;
-    targetId: number | null;
-    content: string;
-    createdAt: string;
-    item?: any;
-    itemRarity?: number;
-}
-
-interface OnlineUser {
-    id: number;
-    username: string;
-    level: number;
-}
-
+interface ChatMessage { id: number; senderId: number; senderName: string; targetId: number | null; content: string; createdAt: string; item?: any; itemRarity?: number; }
+interface OnlineUser { id: number; username: string; level: number; }
 interface ChatContextType {
-    messages: ChatMessage[];
-    onlineUsers: OnlineUser[];
-    addMessages: (msgs: ChatMessage[]) => void;
-    sendPublic: (content: string) => void;
-    sendPrivate: (targetUserId: number, content: string) => void;
-    sendItemLink: (itemId: string, itemData?: any) => void;
-    bannedUntil: number | null;
-    chatError: string | null;
-    setChatError: (msg: string | null) => void;
+  messages: ChatMessage[]; onlineUsers: OnlineUser[];
+  addMessages: (msgs: ChatMessage[]) => void;
+  sendPublic: (content: string) => void; sendPrivate: (targetUserId: number, content: string) => void;
+  sendItemLink: (itemId: string, itemData?: any) => void;
+  bannedUntil: number | null; chatError: string | null; setChatError: (msg: string | null) => void;
 }
-
 const ChatContext = createContext<ChatContextType | null>(null);
-
-export function useGlobalChat() {
-    const ctx = useContext(ChatContext);
-    if (!ctx) throw new Error('useGlobalChat must be inside ChatProvider');
-    return ctx;
-}
+export function useGlobalChat() { const ctx = useContext(ChatContext); if (!ctx) throw new Error('useGlobalChat'); return ctx; }
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-    const { token } = useAuth();
+  const { token } = useAuth();
+  const [messages, setMessages] = useState<ChatMessage[]>(() => { try { const c = localStorage.getItem('chat_messages'); return c ? JSON.parse(c) : []; } catch { return []; } });
+  useEffect(() => { try { localStorage.setItem('chat_messages', JSON.stringify(messages.slice(-100))); } catch {} }, [messages]);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [bannedUntil, setBannedUntil] = useState<number | null>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-    const [messages, setMessages] = useState<ChatMessage[]>(() => {
+  // Подключение WebSocket
+  useEffect(() => {
+    if (!token) return;
+
+    const connect = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log('[WS] connected');
+      };
+
+      ws.onmessage = (event) => {
         try {
-            const cached = localStorage.getItem('chat_messages');
-            return cached ? JSON.parse(cached) : [];
-        } catch { return []; }
-    });
-
-    // Кешируем сообщения в localStorage (все типы)
-    useEffect(() => {
-        try { localStorage.setItem('chat_messages', JSON.stringify(messages.slice(-100))); } catch {}
-    }, [messages]);
-    const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
-    const [bannedUntil, setBannedUntil] = useState<number | null>(null);
-    const [chatError, setChatError] = useState<string | null>(null);
-
-    const wsRef = useRef<WebSocket | null>(null);
-    const reconnectTimerRef = useRef<number | null>(null);
-    const mountedRef = useRef(false);
-    const lastTokenRef = useRef<string | null>(null);
-
-    const reconnectAttemptsRef = useRef(0);
-    const maxReconnectAttempts = 10;
-    const reconnectBaseDelay = 1000; // 1 секунда
-
-    const closeSocket = useCallback(() => {
-        if (reconnectTimerRef.current) {
-            clearTimeout(reconnectTimerRef.current);
-            reconnectTimerRef.current = null;
-        }
-        if (wsRef.current) {
-            wsRef.current.onclose = null;
-            if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
-                wsRef.current.close();
-            }
-            wsRef.current = null;
-        }
-    }, []);
-
-    const connect = useCallback(() => {
-        if (!token) return;
-        if (wsRef.current) {
-            closeSocket();
-        }
-
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const wsUrl = `${protocol}://${window.location.host}/ws?token=${token}`;
-        const socket = new WebSocket(wsUrl);
-        wsRef.current = socket;
-
-        socket.onopen = () => {
-            reconnectAttemptsRef.current = 0; // сброс при успешном подключении
-        };
-
-        socket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'onlineUsers') {
-                    setOnlineUsers(data.users);
-                } else if (data.type === 'message') {
-                    setMessages(prev => {
-                        if (prev.some(m => m.id === data.message.id)) return prev;
-                        const next = [...prev, data.message];
-                        // Ограничиваем размер массива – храним последние 300 сообщений
-                        if (next.length > 300) {
-                            return next.slice(-300);
-                        }
-                        return next;
-                    });
-                } else if (data.type === 'userOnline') {
-                    setOnlineUsers(prev => {
-                        if (!prev.find(u => u.id === data.user.id)) {
-                            return [...prev, data.user];
-                        }
-                        return prev;
-                    });
-                } else if (data.type === 'userOffline') {
-                    setOnlineUsers(prev => prev.filter(u => u.id !== data.userId));
-                } else if (data.type === 'chatBanned') {
-                    setBannedUntil(data.until);
-                    setChatError(`Вы заблокированы в чате до ${fmtSafeDate(data.until)}`);
-                } else if (data.type === 'error') {
-                    setChatError(data.message);
-                } else if (data.type === 'guildQuestProgress') {
-                    window.dispatchEvent(new CustomEvent('guildQuestProgress', { detail: data.activeQuest }));
-                } else if (data.type === 'auction_changed') {
-                    window.dispatchEvent(new CustomEvent('auctionChanged'));
-                } else if (data.type === 'dailyQuests') {
-                    window.dispatchEvent(new CustomEvent('dailyQuests', { detail: data }));
-                } else if (data.type === 'serverTick') {
-                    // Время — всегда
-                    window.dispatchEvent(new CustomEvent('serverTick', { detail: data.time }));
-                    // Баланс — всегда
-                    if (data.money !== undefined) {
-                        window.dispatchEvent(new CustomEvent('balance', { detail: { money: data.money, bank: data.bank } }));
-                    }
-                    // Бейдж аукциона — с сервера
-                    if (data.auctionSales !== undefined) {
-                        const prev = parseInt(localStorage.getItem('auctionBadge') || '0');
-                        if (data.auctionSales !== prev) {
-                            localStorage.setItem('auctionBadge', String(data.auctionSales));
-                            window.dispatchEvent(new CustomEvent('auctionBadge'));
-                        }
-                    }
-                    // Квесты — если сервер прислал обновление
-                    if (data.quests) {
-                        window.dispatchEvent(new CustomEvent('dailyQuests', { detail: data.quests }));
-                    }
-                    // Рейтинг — если сервер прислал
-                    if (data.rating) {
-                        window.dispatchEvent(new CustomEvent('rating', { detail: data.rating }));
-                    }
-                    // Уведомления — если есть
-                    if (data.notifications && data.notifications.length > 0) {
-                        window.dispatchEvent(new CustomEvent('notifications', { detail: data.notifications }));
-                    }
+          const data = JSON.parse(event.data);
+          switch (data.type) {
+            case 'serverTick': {
+              const time = data.time || Math.floor(Date.now() / 1000);
+              window.dispatchEvent(new CustomEvent('serverTick', { detail: time }));
+              window.dispatchEvent(new CustomEvent('balance', { detail: { money: data.money, bank: data.bank || 0 } }));
+              // Уведомления
+              if (data.notifications && data.notifications.length > 0) {
+                window.dispatchEvent(new CustomEvent('notifications', { detail: data.notifications }));
+              }
+              // Квесты
+              if (data.quests) {
+                window.dispatchEvent(new CustomEvent('questsUpdate', { detail: data.quests }));
+              }
+              // Рейтинг
+              if (data.rating) {
+                window.dispatchEvent(new CustomEvent('ratingUpdate', { detail: data.rating }));
+              }
+              // Аукцион: непрочитанные продажи
+              if (data.auctionSales !== undefined) {
+                localStorage.setItem('auctionBadge', String(data.auctionSales));
+                window.dispatchEvent(new CustomEvent('auctionBadge'));
+              }
+              // Гильдия: заявки + приглашения + война (не растёт если просмотрено)
+              if (data.guildBadge !== undefined) {
+                const cur = parseInt(localStorage.getItem('guildBadge') || '0');
+                const seen = parseInt(localStorage.getItem('guildBadgeSeen') || '0');
+                if (data.guildBadge > seen) {
+                  localStorage.setItem('guildBadge', String(data.guildBadge));
+                  window.dispatchEvent(new CustomEvent('guildBadge'));
+                } else if (data.guildBadge <= seen && cur !== 0) {
+                  localStorage.setItem('guildBadge', '0');
+                  window.dispatchEvent(new CustomEvent('guildBadge'));
                 }
-            } catch (e) {
-                console.error('WebSocket message error', e);
+              }
+              // Банк: входящие переводы
+              if (data.bankTransfers !== undefined) {
+                localStorage.setItem('bankBadge', String(data.bankTransfers));
+                window.dispatchEvent(new CustomEvent('bankBadge'));
+              }
+              break;
             }
-        };
-
-        socket.onclose = () => {
-            if (!mountedRef.current || !token || lastTokenRef.current !== token) return;
-            reconnectAttemptsRef.current++;
-            if (reconnectAttemptsRef.current > maxReconnectAttempts) {
-                console.error('Достигнуто максимальное число попыток переподключения WebSocket');
-                return;
-            }
-            const delay = Math.min(reconnectBaseDelay * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
-            reconnectTimerRef.current = window.setTimeout(() => connect(), delay);
-        };
-
-        socket.onerror = () => { };
-    }, [token, closeSocket]);
-
-    useEffect(() => {
-        mountedRef.current = true;
-
-        if (token) {
-            if (token !== lastTokenRef.current) {
-                setMessages([]);
-                setOnlineUsers([]);
-                setBannedUntil(null);
-                setChatError(null);
-                closeSocket();
-                lastTokenRef.current = token;
-                connect();
-            } else {
-                if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-                    connect();
+            case 'message': {
+              const msg = data.message;
+              if (msg) {
+                setMessages(p => p.some(m => m.id === msg.id) ? p : [...p, msg].slice(-300));
+                // ЛС-уведомление для сводки
+                if (msg.targetId && msg.targetId > 0) {
+                  window.dispatchEvent(new CustomEvent('privateMessage', { detail: msg }));
                 }
+              }
+              break;
             }
-        } else {
-            closeSocket();
-            lastTokenRef.current = null;
-            setMessages([]);
-            setOnlineUsers([]);
-            setBannedUntil(null);
-            setChatError(null);
-        }
-
-        return () => {
-            mountedRef.current = false;
-            if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-        };
-    }, [token, connect, closeSocket]);
-
-    useEffect(() => {
-        if (bannedUntil === null) return;
-        const now = Date.now() / 1000;
-        if (now >= bannedUntil) {
-            setBannedUntil(null);
-            setChatError(null);
-            return;
-        }
-        const remaining = (bannedUntil - now) * 1000;
-        const timer = setTimeout(() => {
-            setBannedUntil(null);
-            setChatError(null);
-        }, remaining + 100);
-        return () => clearTimeout(timer);
-    }, [bannedUntil]);
-
-    const addMessages = useCallback((newMessages: ChatMessage[]) => {
-        setMessages(prev => {
-            const existingIds = new Set(prev.map(m => m.id));
-            const unique = newMessages.filter(m => !existingIds.has(m.id));
-            if (unique.length === 0) return prev;
-            const combined = [...prev, ...unique];
-            if (combined.length > 300) {
-                return combined.slice(-300);
+            case 'onlineUsers': {
+              setOnlineUsers(data.users || []);
+              break;
             }
-            return combined;
-        });
-    }, []);
+            case 'userOnline': {
+              const u = data.user;
+              if (u) setOnlineUsers(p => p.some(o => o.id === u.id) ? p : [...p, u]);
+              break;
+            }
+            case 'userOffline': {
+              setOnlineUsers(p => p.filter(o => o.id !== data.userId));
+              break;
+            }
+            case 'chatBanned': {
+              setBannedUntil(data.until || null);
+              break;
+            }
+            case 'auction_changed': {
+              window.dispatchEvent(new CustomEvent('auctionChanged'));
+              break;
+            }
+            case 'guildQuestProgress': {
+              if (data.activeQuest) {
+                window.dispatchEvent(new CustomEvent('guildQuestProgress', { detail: data.activeQuest }));
+              }
+              break;
+            }
+            case 'tournamentCreated': {
+              window.dispatchEvent(new CustomEvent('tournamentUpdated'));
+              break;
+            }
+            case 'error': {
+              setChatError(data.message || 'Ошибка');
+              break;
+            }
+          }
+        } catch {}
+      };
 
-    const sendPublic = useCallback((content: string) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'public', content }));
-        }
-    }, []);
+      ws.onclose = () => {
+        console.log('[WS] disconnected, reconnect in 3s');
+        wsRef.current = null;
+        reconnectTimer.current = setTimeout(connect, 3000);
+      };
 
-    const sendPrivate = useCallback((targetUserId: number, content: string) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'private', targetUserId, content }));
-        }
-    }, []);
+      ws.onerror = () => {
+        ws.close();
+      };
+    };
 
-    const sendItemLink = useCallback((itemId: string, itemData?: any) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'itemLink', itemId, itemData }));
-        }
-    }, []);
+    connect();
 
-    return (
-        <ChatContext.Provider value={{ messages, onlineUsers, addMessages, sendPublic, sendPrivate, sendItemLink, bannedUntil, chatError, setChatError }}>
-            {children}
-        </ChatContext.Provider>
-    );
+    return () => {
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (wsRef.current) {
+        wsRef.current.onclose = null; // prevent reconnect
+        wsRef.current.close();
+      }
+    };
+  }, [token]);
+
+  // Автоснятие бана
+  useEffect(() => { if (bannedUntil === null) return; const n = Date.now() / 1000; if (n >= bannedUntil) { setBannedUntil(null); setChatError(null); return; }
+    const t = setTimeout(() => { setBannedUntil(null); setChatError(null); }, (bannedUntil - n) * 1000 + 100); return () => clearTimeout(t);
+  }, [bannedUntil]);
+
+  // Отправка сообщений через WS
+  const sendWs = useCallback((data: object) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(data));
+    } else {
+      setChatError('Нет соединения с сервером');
+    }
+  }, []);
+
+  const sendPublic = useCallback((content: string) => sendWs({ type: 'public', content }), [sendWs]);
+  const sendPrivate = useCallback((targetUserId: number, content: string) => sendWs({ type: 'private', targetUserId, content }), [sendWs]);
+  const sendItemLink = useCallback((itemId: string, itemData?: any) => sendWs({ type: 'itemLink', itemId, itemData }), [sendWs]);
+  const addMessages = useCallback((n: ChatMessage[]) => { setMessages(p => { const ids = new Set(p.map(m => m.id)); const u = n.filter(m => !ids.has(m.id)); return u.length ? [...p, ...u].slice(-300) : p; }); }, []);
+
+  return (<ChatContext.Provider value={{ messages, onlineUsers, addMessages, sendPublic, sendPrivate, sendItemLink, bannedUntil, chatError, setChatError }}>{children}</ChatContext.Provider>);
 }

@@ -19,6 +19,19 @@ export default function RatingBlock() {
         return () => clearInterval(interval);
     }, []);
 
+    // WS live update — рейтинг игрока
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const data = (e as CustomEvent).detail;
+            if (data) {
+                // Обновляем данные игроков при изменении рейтинга
+                fetchRating(1, 5).then(d => setPlayers(d.users)).catch(() => {});
+            }
+        };
+        window.addEventListener('ratingUpdate', handler);
+        return () => window.removeEventListener('ratingUpdate', handler);
+    }, []);
+
     useEffect(() => {
         const load = () => {
             fetch(`${BASE_URL}/guild/list`, { headers: getHeaders() })
@@ -35,7 +48,7 @@ export default function RatingBlock() {
     const castle = <Icon icon="game-icons:castle" width="18" height="18" />;
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
             {/* Рейтинг гильдий */}
             <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative">
                 <h3

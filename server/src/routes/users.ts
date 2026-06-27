@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { getBaseStats, enrichEquipment } from '../db/helpers';
-import { currentStats } from '../game/stats';
-import { getDrinkBonuses } from '../game/drinks';
+import { enrichEquipment, addMoney, buildPlayerStats } from '../db/helpers';
+import { getGuildBonus } from '../game/guildBuildings';
 
 const router = Router();
 
@@ -29,10 +28,9 @@ router.get('/character/public/:userId', async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
+    const guildBonus = await getGuildBonus(userId, 'arena');
     const { enriched: enrichedEquipment } = await enrichEquipment(user.equipment ? JSON.parse(user.equipment) : {});
-    const base = getBaseStats(user);
-    const collCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt || 0;
-    const stats = currentStats(base, enrichedEquipment, getDrinkBonuses(user), collCnt);
+    const stats = await buildPlayerStats(user, 'arena');
 
     res.json({
         id: user.id,
@@ -76,6 +74,18 @@ router.get('/users/list', async (req, res) => {
     const placeholders = ids.map(() => '?').join(',');
     const users = await db.query(`SELECT id, username FROM users WHERE id IN (${placeholders})`, ids);
     res.json(users);
+});
+
+// Онлайн пользователи (замена WebSocket) — последние 5 минут активности
+router.get('/users/online', async (req, res) => {
+    try {
+        const cutoff = Math.floor(Date.now() / 1000) - 300;
+        const users = await db.query(
+            'SELECT id, username, level FROM users WHERE lastAction > ? ORDER BY username LIMIT 50',
+            [cutoff]
+        ) as any[];
+        res.json(users);
+    } catch { res.json([]); }
 });
 
 export default router;

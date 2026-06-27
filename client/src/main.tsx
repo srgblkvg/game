@@ -12,6 +12,19 @@ import { addCollection } from '@iconify/react';
 import gameIcons from './icons-filtered.json';
 import './styles/theme.css';
 
+// VK Bridge init (для игр ВКонтакте)
+declare global {
+  interface Window {
+    vkBridge?: any;
+  }
+}
+
+if (window.vkBridge) {
+  window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
+  // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
+  document.documentElement.classList.add('vk-iframe');
+}
+
 // Регистрируем иконки локально (без API-запросов)
 addCollection(gameIcons);
 

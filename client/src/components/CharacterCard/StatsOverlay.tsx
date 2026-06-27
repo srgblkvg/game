@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Icon } from '@iconify/react';
+import { PRIMARY_STATS, STAT_LABELS, type StatRecord } from '../../utils/stats';
 
 interface StatsOverlayProps {
-  stats: { s: number; a: number; d: number; m: number };
+  stats: StatRecord;
   compact?: boolean | 'mobile' | 'verySmall';
   baseStats?: { s: number; a: number; d: number; m: number };
   equipmentBonuses?: { s: number; a: number; d: number; m: number };
   extraStats?: { crit: number; dodge: number; counter: number; fullBlock: number };
   collectionBonus?: number;
+  guildBonus?: number;
+  buildings?: { type: string; icon: string; label: string; level: number; bonus: number }[];
 }
 
 const STAT_ICONS: Record<string, string> = {
@@ -31,11 +34,7 @@ const BONUS_LABELS: Record<string, string> = {
   'fullBlock': 'Блок',
 };
 
-const STAT_LABELS: Record<string, string> = {
-  's': 'Сила', 'a': 'Ловкость', 'd': 'Защита', 'm': 'Мастерство',
-};
-
-export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus }: StatsOverlayProps) {
+export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, guildBonus, buildings }: StatsOverlayProps) {
   const [flipped, setFlipped] = useState(false);
   const [animating, setAnimating] = useState(false);
   const isMobile = compact === 'mobile' || compact === 'verySmall';
@@ -47,7 +46,9 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
   const tdStyle = 'text-left overflow-hidden text-ellipsis whitespace-nowrap pr-[2px]';
 
   const hasBonuses = baseStats && equipmentBonuses;
-  const bonusKeys = ['s', 'a', 'd', 'm'] as const;
+  const hasExtra = collectionBonus || guildBonus || (buildings && buildings.filter(b => b.bonus > 0).length > 0);
+  const showFlip = hasBonuses || hasExtra;
+  const bonusKeys = PRIMARY_STATS;
 
   const handleFlip = () => {
     setAnimating(true);
@@ -61,7 +62,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
     animating ? 'opacity-0 scale-90' : 'opacity-100 scale-100'
   }`;
 
-  if (flipped && hasBonuses) {
+  if (flipped && showFlip) {
     return (
       <div style={{ padding, fontSize }} className={overlayClass + ' bg-[var(--color-bg-card)]/95'}>
         <div className="flex items-center gap-1 mb-1">
@@ -116,22 +117,43 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                 </tr>
               </>
             )}
+            {guildBonus && guildBonus > 0 && (
+              <>
+                <tr><td colSpan={2}><div className="border-t border-[var(--color-border-light)] my-0.5" /></td></tr>
+                <tr>
+                  <td className={tdStyle}>
+                    <Icon icon="game-icons:castle" width={iconSize} height={iconSize} className="inline mr-0.5 text-[var(--color-accent-warning)]" />
+                    Гильдия
+                  </td>
+                  <td className="text-right pl-[2px] text-[var(--color-accent-warning)]">+{guildBonus}%</td>
+                </tr>
+              </>
+            )}
+            {buildings && buildings.filter(b => b.bonus > 0).length > 0 && (
+              <>
+                <tr><td colSpan={2}><div className="border-t border-[var(--color-border-light)] my-0.5" /></td></tr>
+                {buildings.filter(b => b.bonus > 0).map(b => (
+                  <tr key={b.type}>
+                    <td className={tdStyle}>
+                      <span className="inline mr-1">{b.icon}</span>
+                      {b.label}
+                    </td>
+                    <td className="text-right pl-[2px] text-[var(--color-accent-info)]">+{b.bonus}%</td>
+                  </tr>
+                ))}
+              </>
+            )}
           </tbody>
         </table>
       </div>
     );
   }
 
-  const rows = [
-    ['Сила', stats.s],
-    ['Ловкость', stats.a],
-    ['Защита', stats.d],
-    ['Мастерство', stats.m],
-  ];
+  const rows = PRIMARY_STATS.map(k => [STAT_LABELS[k], stats[k]] as const);
 
   return (
     <div style={{ padding, fontSize }} className={overlayClass + ' bg-[var(--color-bg-card)]/70'}>
-      {hasBonuses && (
+      {showFlip && (
         <div className="flex justify-end mb-0.5">
           <Icon
             icon="game-icons:expand"

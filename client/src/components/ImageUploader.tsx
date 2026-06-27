@@ -94,10 +94,11 @@ export default function ImageUploader({ currentUrl, folder, onUploaded, label, c
                 ) : (
                     <div className="grid grid-cols-4 gap-2 max-h-[50vh] overflow-y-auto">
                         {gallery.map(url => (
-                            <img key={url} src={url} alt=""
-                                className={`w-full aspect-square object-cover rounded cursor-pointer border-2 hover:border-[var(--color-accent-info)] transition-colors ${preview === url ? 'border-[var(--color-accent-info)]' : 'border-transparent'}`}
-                                onClick={() => selectFromGallery(url)}
-                            />
+                            <div key={url}
+                                className={`relative w-full pb-[100%] rounded cursor-pointer border-2 hover:border-[var(--color-accent-info)] transition-colors overflow-hidden ${preview === url ? 'border-[var(--color-accent-info)]' : 'border-transparent'}`}
+                                onClick={() => selectFromGallery(url)}>
+                                <img src={url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                            </div>
                         ))}
                     </div>
                 )}

@@ -1,6 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { startBattle } from '../api';
-import { calculateStats } from '../utils/stats';
 
 function showEffectText(side: 'left' | 'right', text: string, color = '#f1c40f') {
     const overlay = document.getElementById(`effect-${side}`);
@@ -11,11 +10,11 @@ function showEffectText(side: 'left' | 'right', text: string, color = '#f1c40f')
     overlay.addEventListener('animationend', () => overlay.classList.remove('show'), { once: true });
 }
 
-function showDamageNumber(side: 'left' | 'right', dmg: number) {
+function showDamageNumber(side: 'left' | 'right', dmg: number, isCrit = false) {
     const card = document.getElementById(`fighter-${side}`);
     if (!card) return;
     const float = document.createElement('div');
-    float.className = 'damage-float';
+    float.className = `damage-float${isCrit ? ' crit-damage' : ''}`;
     float.textContent = `-${dmg}`;
     card.appendChild(float);
     float.addEventListener('animationend', () => float.remove());
@@ -70,8 +69,10 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
                 return;
             }
             setOpponent(data);
-            const pStats = calculateStats(character, (character as any).drinkBonuses, (character as any).collectionCount || 0);
-            setMaxHpLeft(pStats.hp);
+            const pStats = character.stats;
+            if (pStats) {
+              setMaxHpLeft(pStats.hp);
+            }
             setHpLeft(character.currentHp);
             setMaxHpRight(data.stats.hp);
             setHpRight(data.stats.hp);
@@ -114,7 +115,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         }
     };
 
-    const executeStep = useCallback((step: any) => {
+    const executeStep = useCallback((step: any, stepIndex: number) => {
         // Рамки со слотами (для анимаций)
         const leftFrame = document.getElementById('fighter-left');
         const rightFrame = document.getElementById('fighter-right');
@@ -122,13 +123,24 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         const leftCard = document.querySelector('.fighter-card.left') as HTMLElement;
         const rightCard = document.querySelector('.fighter-card.right') as HTMLElement;
 
+        // Проверяем: был ли крит перед этим damage-шагом
+        const isCritDamage = step.type === 'damage' && battleSteps[stepIndex - 1]?.type === 'crit';
+
         if (step.type === 'damage' && step.damage) {
             if (step.target === 'attacker') {
                 setHpLeft(prev => Math.max(0, prev - step.damage));
-                showDamageNumber('left', step.damage);
+                showDamageNumber('left', step.damage, isCritDamage);
             } else {
                 setHpRight(prev => Math.max(0, prev - step.damage));
-                showDamageNumber('right', step.damage);
+                showDamageNumber('right', step.damage, isCritDamage);
+            }
+            // Screen shake при крит-уроне
+            if (isCritDamage) {
+                const arena = document.querySelector('[data-battle-arena]');
+                if (arena) {
+                    (arena as HTMLElement).style.animation = 'screen-shake 0.5s ease-out';
+                    setTimeout(() => (arena as HTMLElement).style.animation = '', 500);
+                }
             }
         }
 
@@ -151,8 +163,15 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         } else if (step.type === 'dodge') {
             const side = step.actor === 'attacker' ? 'left' : 'right';
             const frame = side === 'left' ? leftFrame : rightFrame;
+            const card = side === 'left' ? leftCard : rightCard;
+            if (card) card.style.zIndex = '20';
+            if (frame) frame.style.filter = ''; // сброс blur перед dodging
             frame?.classList.add('dodging');
-            setTimeout(() => frame?.classList.remove('dodging'), 500);
+            setTimeout(() => {
+                frame?.classList.remove('dodging');
+                frame!.style.filter = '';
+                if (card) card.style.zIndex = '';
+            }, 550);
             showEffectText(side, 'УКЛОНЕНИЕ!', '#f1c40f');
         } else if (step.type === 'counter') {
             const side = step.actor === 'attacker' ? 'left' : 'right';
@@ -180,21 +199,30 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         } else if (step.type === 'crit') {
             const side = step.actor === 'attacker' ? 'left' : 'right';
             const frame = side === 'left' ? leftFrame : rightFrame;
-            frame?.classList.add('attacking');
-            setTimeout(() => frame?.classList.remove('attacking'), 600);
+            const card = side === 'left' ? leftCard : rightCard;
+            if (card) card.style.zIndex = '20';
+            // Снимаем attacking чтобы не конфликтовало с critting
+            frame?.classList.remove('attacking');
+            frame?.classList.add('critting');
+            setTimeout(() => {
+                frame?.classList.remove('critting');
+                frame!.style.filter = '';
+                frame!.style.outline = '';
+                if (card) card.style.zIndex = '';
+            }, 800);
             showEffectText(side, 'КРИТ!', '#e74c3c');
         } else if (step.type === 'stun') {
             const side = step.actor === 'attacker' ? 'left' : 'right';
             const frame = side === 'left' ? leftFrame : rightFrame;
             frame?.classList.add('stunned');
-            setTimeout(() => frame?.classList.remove('stunned'), 1000);
-            showEffectText(side, 'ОГЛУШЁН', '#f1c40f');
+            setTimeout(() => frame?.classList.remove('stunned'), 800);
+            showEffectText(side, 'ОГЛУШЁН!', '#f1c40f');
         }
 
         if (logContainerRef.current) {
             logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
         }
-    }, []);
+    }, [battleSteps]);
 
     const nextStep = useCallback(async () => {
         if (stepLock.current) return;
@@ -206,7 +234,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         }
         stepLock.current = true;
         setCurrentStep(next);
-        executeStep(battleSteps[next]);
+        executeStep(battleSteps[next], next);
         // extra pause after damage so HP bar animates before next step
         const isDamage = battleSteps[next]?.type === 'damage';
         await new Promise(r => setTimeout(r, (isDamage ? 1000 : 700) / speedRef.current));

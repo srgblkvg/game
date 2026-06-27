@@ -14,6 +14,7 @@ export async function applyHpRegen(user: {
     lastHpUpdate: number;
     roomType?: string | null;
     roomUntil?: number;
+    premiumUntil?: number;
 }): Promise<number> {
     const now = Math.floor(Date.now() / 1000);
     const HP_REGEN_SECONDS = 10;
@@ -21,10 +22,14 @@ export async function applyHpRegen(user: {
     const maxHp = user.maxHp;
 
     let regenRate = 1;
+    // Премиум даёт чулан (×3), если нет лучшей комнаты
+    const hasPremium = (user.premiumUntil || 0) > now;
     if (user.roomType && (user.roomUntil || 0) > now) {
         if (user.roomType === 'closet') regenRate = 3;
         else if (user.roomType === 'bed') regenRate = 10;
         else if (user.roomType === 'chamber') regenRate = 50;
+    } else if (hasPremium) {
+        regenRate = 3; // премиум = чулан
     }
 
     const elapsed = now - (user.lastHpUpdate || now);

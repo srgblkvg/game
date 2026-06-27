@@ -66,6 +66,7 @@ export default function JobsPage() {
                     expReward: result.expReward || 0,
                     rewardMin: result.rewardMin,
                     rewardMax: result.rewardMax,
+                    premiumBonus: result.premiumBonus || 0,
                     background: result.background || null,
                 },
             });

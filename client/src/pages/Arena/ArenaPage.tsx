@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGame } from '../../contexts/GameContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBattleLogic } from '../../hooks/useBattleLogic';
-import { calculateStats } from '../../utils/stats';
+import { toCharCardData } from '../../utils/character';
 import CharacterCard from '../../components/CharacterCard';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -72,24 +72,17 @@ export default function ArenaPage() {
   );
 
   return (
+    !character?.stats ? (
+      <div className="flex items-center justify-center min-h-screen text-[var(--color-text-muted)]">Загрузка...</div>
+    ) : (
     <div className="px-4 py-4 min-h-screen">
       <BackButton />
             <h1 className="text-center text-xl font-bold mb-4"><Icon icon='game-icons:crossed-swords' width="22" height="22" className="inline mr-2"/>Арена</h1>
 
       {/* Карточки бойцов */}
-      <div className="flex justify-between sm:justify-center gap-2 sm:gap-8 my-4 px-1 sm:px-0">
+      <div data-battle-arena className="flex justify-between sm:justify-center gap-2 sm:gap-8 my-4 px-1 sm:px-0">
         <CharacterCard
-          char={{
-            username: character.username,
-            level: character.level,
-            equipment: character.equipment,
-            stats: calculateStats(character, (character as any).drinkBonuses, (character as any).collectionCount || 0),
-            currentHp: hpLeft, maxHp: maxHpLeft,
-            gender: character.gender || 'male',
-            guildName: (character as any).guildName,
-            guildId: (character as any).guildId,
-            avatar: (character as any).avatar || null,
-          }}
+          char={toCharCardData(character, { currentHp: hpLeft, maxHp: maxHpLeft })}
           side="left"
           showHealth={isBattleActive}
           showExp={false}
@@ -197,5 +190,6 @@ export default function ArenaPage() {
         </Modal>
       )}
     </div>
+    )
   );
 }

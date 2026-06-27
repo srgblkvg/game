@@ -20,6 +20,7 @@ export default function SlotSelectionModal({ slotId, onClose, onEquip }: SlotSel
                 inventory: data.inventory,
                 equipment: data.equipment,
                 currentHp: data.currentHp ?? Math.max(1, character.currentHp),
+                stats: data.stats ?? character.stats,
             });
             onClose();
             onEquip?.();

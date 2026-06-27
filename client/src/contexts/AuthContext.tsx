@@ -34,7 +34,7 @@ function parseUserFromToken(token: string): User | null {
         const payload = JSON.parse(atob(token.split('.')[1]));
         return {
             id: payload.adminId || payload.userId,
-            username: '',
+            username: payload.username || '',
             level: payload.role === 'admin' ? 0 : 1,
             role: payload.role,
             gender: payload.gender || 'male',

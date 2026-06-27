@@ -5,6 +5,7 @@ import { db } from './db/index';
 import { wsPublicMessageSchema, wsPrivateMessageSchema, wsItemLinkSchema } from './validation';
 import { isGuestRestrictionsDisabled } from './middleware/auth';
 import { auditWsConnect, auditWsDisconnect } from './audit';
+import { on } from './events';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -40,7 +41,7 @@ const userDirtyFlags = new Map<number, Set<DirtyType>>();
 let _notificationSeq = 0;
 
 /** Пометить пользователя — на следующем serverTick ему отправятся свежие данные */
-export function markDirty(userId: number, ...types: DirtyType[]) {
+function _markDirty(userId: number, ...types: DirtyType[]) {
   if (!clients.has(userId)) return;
   let flags = userDirtyFlags.get(userId);
   if (!flags) {
@@ -54,7 +55,7 @@ export function markDirty(userId: number, ...types: DirtyType[]) {
 const notificationQueues = new Map<number, Notification[]>();
 
 /** Добавить уведомление пользователю — отправится на ближайшем serverTick */
-export function pushNotification(userId: number, notification: Omit<Notification, 'id' | 'createdAt'>) {
+function _pushNotification(userId: number, notification: Omit<Notification, 'id' | 'createdAt'>) {
   const queue = notificationQueues.get(userId) || [];
   queue.push({
     ...notification,
@@ -62,11 +63,11 @@ export function pushNotification(userId: number, notification: Omit<Notification
     createdAt: Math.floor(Date.now() / 1000),
   });
   notificationQueues.set(userId, queue);
-  markDirty(userId, 'notifications');
+  _markDirty(userId, 'notifications');
 }
 
 // ---------- Рассылка ----------
-async function broadcast(type: string, data: any, exceptUserId?: number) {
+async function _broadcast(type: string, data: any, exceptUserId?: number) {
   const payload = JSON.stringify({ type, ...data });
   clients.forEach((ws, userId) => {
     if (userId !== exceptUserId && ws.readyState === WebSocket.OPEN) {
@@ -75,18 +76,14 @@ async function broadcast(type: string, data: any, exceptUserId?: number) {
   });
 }
 
-export { broadcast };
-
-async function sendToUser(userId: number, payload: object) {
+async function _sendToUser(userId: number, payload: object) {
   const ws = clients.get(userId);
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
   }
 }
 
-export { sendToUser };
-
-export async function sendToGuild(guildId: number, payload: object) {
+async function _sendToGuild(guildId: number, payload: object) {
   const msg = JSON.stringify(payload);
   onlineUsers.forEach((user, userId) => {
     if (user.guildId === guildId) {
@@ -99,11 +96,11 @@ export async function sendToGuild(guildId: number, payload: object) {
 }
 
 async function notifyUserOnline(user: OnlineUser) {
-  broadcast('userOnline', { user });
+  _broadcast('userOnline', { user });
 }
 
 async function notifyUserOffline(userId: number) {
-  broadcast('userOffline', { userId });
+  _broadcast('userOffline', { userId });
 }
 
 // ---------- Heartbeat ----------
@@ -174,50 +171,25 @@ async function computeRatingData(userId: number) {
   return { elo, position, total, rank };
 }
 
-// ---------- serverTick: персональные данные каждому ----------
-async function sendServerTick(userId: number, time: number) {
-  const ws = clients.get(userId);
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-  const flags = userDirtyFlags.get(userId);
-  const payload: any = { type: 'serverTick', time };
-
-  // Статы (money, bank) — всегда, лёгкий запрос
-  try {
-    const stats = await db.one('SELECT money, bank, COALESCE(auction_sales, 0) as auctionSales FROM users WHERE id = ?', [userId]) as any;
-    if (stats) {
-      payload.money = stats.money || 0;
-      payload.bank = stats.bank || 0;
-      payload.auctionSales = stats.auctionsales ?? stats.auctionSales ?? 0;
-    }
-  } catch {} // не критично
-
-  if (flags && flags.size > 0) {
-    if (flags.has('quests')) {
-      const questData = await computeQuestData(userId);
-      if (questData) payload.quests = questData;
-      flags.delete('quests');
-    }
-    if (flags.has('rating')) {
-      const ratingData = await computeRatingData(userId);
-      if (ratingData) payload.rating = ratingData;
-      flags.delete('rating');
-    }
-    if (flags.has('notifications')) {
-      const queue = notificationQueues.get(userId);
-      if (queue && queue.length > 0) {
-        payload.notifications = queue.splice(0, queue.length);
-      }
-      flags.delete('notifications');
-    }
-    if (flags.size === 0) userDirtyFlags.delete(userId);
-  }
-
-  ws.send(JSON.stringify(payload));
-}
-
 export async function setupWebSocket(server: any) {
   const wss = new WebSocketServer({ server });
+
+  // ── Подписка на EventBus ──
+  on('markDirty', (e) => {
+    if (e.type === 'markDirty') _markDirty(e.userId, ...e.flags);
+  });
+  on('pushNotification', (e) => {
+    if (e.type === 'pushNotification') _pushNotification(e.userId, e.notification);
+  });
+  on('broadcast', (e) => {
+    if (e.type === 'broadcast') _broadcast(e.eventType, e.data, e.exceptUserId);
+  });
+  on('sendToUser', (e) => {
+    if (e.type === 'sendToUser') _sendToUser(e.userId, e.payload);
+  });
+  on('sendToGuild', (e) => {
+    if (e.type === 'sendToGuild') _sendToGuild(e.guildId, e.payload);
+  });
 
   // Интервал проверки живых соединений
   const interval = setInterval(() => {
@@ -229,13 +201,84 @@ export async function setupWebSocket(server: any) {
     });
   }, HEARTBEAT_INTERVAL * 1000);
 
-  // Интервал serverTick — раз в секунду, персональные данные каждому пользователю
-  const tickInterval = setInterval(() => {
+  // Интервал serverTick — батчинг: один запрос на всех
+  let tickCount = 0;
+  const tickInterval = setInterval(async () => {
     const time = Math.floor(Date.now() / 1000);
-    // Отправляем персонально каждому (не broadcast — у каждого свои квесты/рейтинг/уведомления)
-    clients.forEach((_, userId) => {
-      sendServerTick(userId, time).catch(e => console.error('serverTick err:', e?.message));
-    });
+    const userIds = Array.from(clients.keys());
+    if (userIds.length === 0) return;
+    tickCount++;
+
+    try {
+      const placeholders = userIds.map(() => '?').join(',');
+      const rows = await db.query(
+        `SELECT u.id, u.money, u.bank, u.guildId,
+                COALESCE(u.auction_sales, 0) as auctionSales,
+                COALESCE(u.bank_transfers, 0) as bankTransfers
+         FROM users u WHERE u.id IN (${placeholders})`,
+        userIds
+      ) as any[];
+      const batch = new Map<number, any>();
+      for (const r of rows) batch.set(r.id, r);
+
+      const guildIds = new Set<number>();
+      for (const r of rows) {
+        if (r.guildid) guildIds.add(r.guildid);
+      }
+
+      let guildBadges = new Map<number, number>();
+      if (guildIds.size > 0 && tickCount % 3 === 0) {
+        const gPlaceholders = Array.from(guildIds).map(() => '?').join(',');
+        const gRows = await db.query(
+          `SELECT guildId,
+                  SUM(CASE WHEN invitedBy = 0 AND status = 'pending' THEN 1 ELSE 0 END) as requests,
+                  SUM(CASE WHEN invitedBy != 0 AND status = 'pending' THEN 1 ELSE 0 END) as invites
+           FROM guild_invites WHERE guildId IN (${gPlaceholders}) GROUP BY guildId`,
+          Array.from(guildIds)
+        ) as any[];
+        for (const g of gRows) {
+          guildBadges.set(g.guildid, (g.requests || 0) + (g.invites || 0));
+        }
+      }
+
+      for (const userId of userIds) {
+        const ws = clients.get(userId);
+        if (!ws || ws.readyState !== WebSocket.OPEN) continue;
+        const stats = batch.get(userId);
+        const payload: any = { type: 'serverTick', time };
+        if (stats) {
+          payload.money = stats.money || 0;
+          payload.bank = stats.bank || 0;
+          payload.auctionSales = stats.auctionsales ?? stats.auctionSales ?? 0;
+          payload.bankTransfers = stats.banktransfers ?? stats.bankTransfers ?? 0;
+          if (stats.guildid && tickCount % 3 === 0) {
+            const gb = guildBadges.get(stats.guildid) || 0;
+            if (gb > 0) payload.guildBadge = gb;
+          }
+        }
+        // Грязные данные (квесты/рейтинг/уведомления) — per-user
+        const flags = userDirtyFlags.get(userId);
+        if (flags && flags.size > 0) {
+          if (flags.has('quests')) {
+            try { const q = await computeQuestData(userId); if (q) payload.quests = q; } catch {}
+            flags.delete('quests');
+          }
+          if (flags.has('rating')) {
+            try { const r = await computeRatingData(userId); if (r) payload.rating = r; } catch {}
+            flags.delete('rating');
+          }
+          if (flags.has('notifications')) {
+            const queue = notificationQueues.get(userId);
+            if (queue && queue.length > 0) payload.notifications = queue.splice(0, queue.length);
+            flags.delete('notifications');
+          }
+          if (flags.size === 0) userDirtyFlags.delete(userId);
+        }
+        ws.send(JSON.stringify(payload));
+      }
+    } catch (e: any) {
+      console.error('tick batch err:', e?.message);
+    }
   }, 1000);
 
   wss.on('close', () => {
@@ -307,12 +350,12 @@ export async function setupWebSocket(server: any) {
     }
 
     clients.set(userId, ws);
-    const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, guildName: user.guildName || null, guildId: user.guildId || null };
+    const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, guildName: user.guildname || user.guildName || null, guildId: user.guildid || user.guildId || null };
     onlineUsers.set(userId, onlineUser);
     auditWsConnect(user.username, user.id);
 
     // При подключении помечаем квесты + рейтинг — отправятся на первом же тике
-    markDirty(userId, 'quests', 'rating');
+    _markDirty(userId, 'quests', 'rating');
 
     // Отправляем текущий список онлайна
     ws.send(JSON.stringify({
@@ -339,7 +382,7 @@ export async function setupWebSocket(server: any) {
 
       const currentUser = await db.one('SELECT chatBannedUntil FROM users WHERE id = ?', [userId]);
       if (currentUser && currentUser.chatBannedUntil && currentUser.chatBannedUntil > Math.floor(Date.now() / 1000)) {
-        sendToUser(userId, {
+        _sendToUser(userId, {
           type: 'chatBanned',
           until: currentUser.chatBannedUntil,
         });
@@ -348,6 +391,7 @@ export async function setupWebSocket(server: any) {
 
       // Отправка предмета в чат
       if (data.type === 'itemLink') {
+
         const parsed = wsItemLinkSchema.safeParse(data);
         if (!parsed.success) return;
         let item = data.itemData;
@@ -378,15 +422,15 @@ export async function setupWebSocket(server: any) {
           item: item,
           itemRarity: item.rarity_id ?? item.rarity,
         };
-        broadcast('message', { message: msg });
+        _broadcast('message', { message: msg });
         return;
       }
 
       if (data.type === 'public') {
         const parsed = wsPublicMessageSchema.safeParse(data);
         if (!parsed.success) {
-          const err = parsed.error.issues[0]?.message || 'Некорректное сообщение';
-          sendToUser(userId, { type: 'error', message: err });
+          const err = (parsed.error as any).issues?.[0]?.message || (parsed.error as any).errors?.[0]?.message || 'Некорректное сообщение';
+          _sendToUser(userId, { type: 'error', message: err });
           return;
         }
         const content: string = data.content.trim();
@@ -402,11 +446,11 @@ export async function setupWebSocket(server: any) {
 
           const targetUser = await db.one('SELECT id FROM users WHERE LOWER(username) = ?', [targetName]);
           if (!targetUser) {
-            sendToUser(userId, { type: 'error', message: 'Пользователь не найден' });
+            _sendToUser(userId, { type: 'error', message: 'Пользователь не найден' });
             return;
           }
           if (targetUser.id === userId) {
-            sendToUser(userId, { type: 'error', message: 'Нельзя отправить личное сообщение самому себе' });
+            _sendToUser(userId, { type: 'error', message: 'Нельзя отправить личное сообщение самому себе' });
             return;
           }
 
@@ -424,9 +468,9 @@ export async function setupWebSocket(server: any) {
             createdAt: new Date().toISOString(),
           };
 
-          sendToUser(userId, { type: 'message', message: msg });
+          _sendToUser(userId, { type: 'message', message: msg });
           if (clients.has(targetUser.id)) {
-            sendToUser(targetUser.id, { type: 'message', message: msg });
+            _sendToUser(targetUser.id, { type: 'message', message: msg });
           }
           return;
         }
@@ -447,12 +491,12 @@ export async function setupWebSocket(server: any) {
           content: sanitizedContent || '',
           createdAt: new Date().toISOString(),
         };
-        broadcast('message', { message: msg });
+        _broadcast('message', { message: msg });
       } else if (data.type === 'private') {
         const parsed = wsPrivateMessageSchema.safeParse(data);
         if (!parsed.success) {
-          const err = parsed.error.issues[0]?.message || 'Некорректное сообщение';
-          sendToUser(userId, { type: 'error', message: err });
+          const err = (parsed.error as any).issues?.[0]?.message || (parsed.error as any).errors?.[0]?.message || 'Некорректное сообщение';
+          _sendToUser(userId, { type: 'error', message: err });
           return;
         }
         const targetId = data.targetUserId;
@@ -472,9 +516,9 @@ export async function setupWebSocket(server: any) {
           content: sanitizedContent || '',
           createdAt: new Date().toISOString(),
         };
-        sendToUser(userId, { type: 'message', message: msg });
+        _sendToUser(userId, { type: 'message', message: msg });
         if (targetId !== userId) {
-          sendToUser(targetId, { type: 'message', message: msg });
+          _sendToUser(targetId, { type: 'message', message: msg });
         }
       }
       } catch (e: any) { console.error('WS msg err:', e?.message || e); }

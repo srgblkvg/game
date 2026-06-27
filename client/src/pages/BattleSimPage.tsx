@@ -10,7 +10,12 @@ interface PlayerInfo {
     id: number; username: string; level: number;
     base: { s: number; a: number; d: number; m: number };
     stats: { s: number; a: number; d: number; m: number; hp: number; bonuses: any; extra: any; drinks: any; collection: number };
+    statsWithoutGuild?: { s: number; a: number; d: number; m: number; hp: number; bonuses: any; extra: any; drinks: any; collection: number };
     collectionBonus: number; drinkBonuses: any;
+    guildBonus?: number;
+    guildId?: number | null;
+    context?: string;
+    contextLabel?: string;
 }
 
 interface Suggestion { id: number; username: string; level: number; }
@@ -21,6 +26,15 @@ interface BattleResult {
     steps: { type: string; message: string; hA?: number; hD?: number; aName?: string; dName?: string }[];
 }
 
+type BattleContext = 'arena' | 'tournament' | 'war_attack' | 'war_defense';
+
+const CONTEXTS: { value: BattleContext; label: string; icon: string }[] = [
+    { value: 'arena', label: 'Арена', icon: 'game-icons:crossed-swords' },
+    { value: 'tournament', label: 'Турнир', icon: 'game-icons:trophy' },
+    { value: 'war_attack', label: 'Война гильдий (атака)', icon: 'game-icons:battered-axe' },
+    { value: 'war_defense', label: 'Война гильдий (защита)', icon: 'game-icons:shield' },
+];
+
 export default function BattleSimPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -30,10 +44,11 @@ export default function BattleSimPage() {
     const [p2Input, setP2Input] = useState('');
     const [p1, setP1] = useState<PlayerInfo | null>(null);
     const [p2, setP2] = useState<PlayerInfo | null>(null);
+    const [context, setContext] = useState<BattleContext>('arena');
     const [suggestions, setSuggestions] = useState<{ p1: Suggestion[]; p2: Suggestion[] }>({ p1: [], p2: [] });
     const [battleCount, setBattleCount] = useState(100);
     const [battles, setBattles] = useState<BattleResult[]>([]);
-    const [summary, setSummary] = useState<{ wins1: number; wins2: number; avgEffects: number } | null>(null);
+    const [summary, setSummary] = useState<{ wins1: number; wins2: number; avgEffects: number; contextLabel: string } | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [openBattle, setOpenBattle] = useState<number | null>(null);
@@ -70,11 +85,32 @@ export default function BattleSimPage() {
         if (num === 1) { setP1Input(s.username); setSuggestions(s => ({ ...s, p1: [] })); }
         else { setP2Input(s.username); setSuggestions(s => ({ ...s, p2: [] })); }
         try {
-            const r = await fetch(`${BASE_URL}/players/${s.id}/loadout`, { headers: getHeaders() });
+            const r = await fetch(`${BASE_URL}/players/${s.id}/loadout?context=${context}`, { headers: getHeaders() });
             const d = await r.json();
             if (num === 1) setP1(d); else setP2(d);
         } catch (e: any) { setError(e.message); }
     };
+
+    // Reload player info when context changes
+    useEffect(() => {
+        const reload = async () => {
+            if (p1) {
+                try {
+                    const r = await fetch(`${BASE_URL}/players/${p1.id}/loadout?context=${context}`, { headers: getHeaders() });
+                    const d = await r.json();
+                    setP1(d);
+                } catch {}
+            }
+            if (p2) {
+                try {
+                    const r = await fetch(`${BASE_URL}/players/${p2.id}/loadout?context=${context}`, { headers: getHeaders() });
+                    const d = await r.json();
+                    setP2(d);
+                } catch {}
+            }
+        };
+        reload();
+    }, [context]);
 
     const runSim = async () => {
         if (!p1 || !p2) return;
@@ -82,12 +118,12 @@ export default function BattleSimPage() {
         try {
             const r = await fetch(`${BASE_URL}/battle-sim`, {
                 method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id1: p1.id, id2: p2.id, battles: battleCount }),
+                body: JSON.stringify({ id1: p1.id, id2: p2.id, battles: battleCount, context }),
             });
             const d = await r.json();
             if (!r.ok) throw new Error(d.error);
             setBattles(d.battles);
-            setSummary({ wins1: d.wins1, wins2: d.wins2, avgEffects: d.avgEffects });
+            setSummary({ wins1: d.wins1, wins2: d.wins2, avgEffects: d.avgEffects, contextLabel: d.contextLabel });
         } catch (e: any) { setError(e.message); }
         finally { setLoading(false); }
     };
@@ -125,9 +161,14 @@ export default function BattleSimPage() {
         const critPct = Math.round(cC(st.m, extraCrit) * 100);
         const fullBPct = Math.round(fB(extraFB) * 100);
 
+        const guildPct = p.guildBonus ? `+${p.guildBonus}%` : null;
+
         return (
             <Card className="p-3 text-xs">
-                <h3 className="text-sm font-bold text-[var(--color-accent-purple)] mb-2">{p.username} (ур.{p.level})</h3>
+                <h3 className="text-sm font-bold text-[var(--color-accent-purple)] mb-2">
+                    {p.username} (ур.{p.level})
+                    {p.guildId && <span className="text-[var(--color-accent-warning)] ml-1">🏰</span>}
+                </h3>
                 <table className="w-full border-collapse">
                     <thead><tr className="text-[var(--color-text-muted)]">
                         <td></td><td className="text-right">S</td><td className="text-right">A</td><td className="text-right">D</td><td className="text-right">M</td><td className="text-right">HP</td>
@@ -137,17 +178,25 @@ export default function BattleSimPage() {
                         <tr className="text-[var(--color-accent-success)]"><td>+ Экип</td><td className="text-right">{st.bonuses?.s||0}</td><td className="text-right">{st.bonuses?.a||0}</td><td className="text-right">{st.bonuses?.d||0}</td><td className="text-right">{st.bonuses?.m||0}</td><td className="text-right">{(st.bonuses?.s||0)+(st.bonuses?.a||0)+(st.bonuses?.d||0)+(st.bonuses?.m||0)}</td></tr>
                         <tr className="text-[var(--color-accent-warning)]"><td>+ Напитки</td><td className="text-right">{st.drinks?.s||0}</td><td className="text-right">{st.drinks?.a||0}</td><td className="text-right">{st.drinks?.d||0}</td><td className="text-right">{st.drinks?.m||0}</td><td className="text-right">{(st.drinks?.s||0)+(st.drinks?.a||0)+(st.drinks?.d||0)+(st.drinks?.m||0)}</td></tr>
                         <tr className="text-[var(--color-accent-purple)]"><td>× Колл ({st.collection||0})</td><td colSpan={4} className="text-right">{st.collection>0?`×${(1+st.collection/100).toFixed(2)}`:''}</td><td className="text-right">{st.collection>0?`+${st.collection}%`:''}</td></tr>
+                        {guildPct && (
+                            <tr className="text-[var(--color-accent-warning)]"><td>× Гильдия ({guildPct})</td><td colSpan={4} className="text-right">×{(1+(p.guildBonus||0)/100).toFixed(2)}</td><td className="text-right">{guildPct}</td></tr>
+                        )}
                         <tr className="font-bold border-t border-[var(--color-border-default)]"><td>ИТОГО</td><td className="text-right">{st.s}</td><td className="text-right">{st.a}</td><td className="text-right">{st.d}</td><td className="text-right">{st.m}</td><td className="text-right text-[var(--color-accent-pink)]">{st.hp}</td></tr>
+                        {p.statsWithoutGuild && (
+                            <tr className="text-[var(--color-text-muted)] text-[10px]"><td>Без гильдии</td><td className="text-right">{p.statsWithoutGuild.s}</td><td className="text-right">{p.statsWithoutGuild.a}</td><td className="text-right">{p.statsWithoutGuild.d}</td><td className="text-right">{p.statsWithoutGuild.m}</td><td className="text-right">{p.statsWithoutGuild.hp}</td></tr>
+                        )}
                     </tbody>
                 </table>
                 <div className="mt-2 text-[var(--color-text-muted)]">
                     <div>⚔ Урон: <b className="text-[var(--color-text-primary)]">{dmg.min} – {dmg.med} – {dmg.max}</b> | Крит ×{cm.toFixed(2)} (медиана {medCrit}) | Шанс крита: <b>{critPct}%</b></div>
                     <div>🛡 Блок: <b>{blockPct}%</b> (−{blockAmt}%) | Полный блок: <b>{fullBPct}%</b> | Уклон: <b>{dodgePct}%</b></div>
-                    <div>Экстра: crit+{st.extra?.crit||0} dodge+{st.extra?.dodge||0} counter+{st.extra?.counter||0} fullBlock+{fullBPct}</div>
+                    <div>Экстра: crit+{st.extra?.crit||0} dodge+{st.extra?.dodge||0} counter+{st.extra?.counter||0} fullBlock+{st.extra?.fullBlock||0}</div>
                 </div>
             </Card>
         );
     };
+
+    const ctx = CONTEXTS.find(c => c.value === context)!;
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -184,6 +233,25 @@ export default function BattleSimPage() {
                 </div>
             </div>
 
+            {/* Location / Context selector */}
+            <div className="mb-4">
+                <span className="text-sm mr-2 text-[var(--color-text-muted)]">Локация:</span>
+                <div className="inline-flex gap-1 flex-wrap">
+                    {CONTEXTS.map(c => (
+                        <button key={c.value}
+                            onClick={() => setContext(c.value)}
+                            className={`px-3 py-1.5 rounded text-xs border transition-colors ${
+                                context === c.value
+                                    ? 'bg-[var(--color-accent-purple)] text-white border-[var(--color-accent-purple)]'
+                                    : 'bg-[var(--color-bg-secondary)] border-[var(--color-border-default)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-card)]'
+                            }`}
+                        >
+                            <Icon icon={c.icon} width="14" height="14" className="inline mr-1"/>{c.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4 mb-4">
                 {renderPlayerCard(p1!)}
                 {renderPlayerCard(p2!)}
@@ -202,7 +270,10 @@ export default function BattleSimPage() {
 
             {summary && (
                 <Card className="p-4 mb-4">
-                    <h3 className="font-bold mb-2">Результаты ({battleCount} боёв)</h3>
+                    <h3 className="font-bold mb-2">
+                        <Icon icon={ctx.icon} width="16" height="16" className="inline mr-1"/>
+                        Результаты ({battleCount} боёв) — {summary.contextLabel}
+                    </h3>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div><b>{p1?.username}</b>: побед <span className="text-[var(--color-accent-success)]">{summary.wins1}</span> ({(summary.wins1/battleCount*100).toFixed(1)}%)</div>
                         <div><b>{p2?.username}</b>: побед <span className="text-[var(--color-accent-success)]">{summary.wins2}</span> ({(summary.wins2/battleCount*100).toFixed(1)}%)</div>

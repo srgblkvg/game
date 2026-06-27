@@ -26,8 +26,7 @@ export default function AccountPage() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Гостевая регистрация
-    const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
-    const [guestUsername, setGuestUsername] = useState('');
+const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
     const [guestEmail, setGuestEmail] = useState('');
     const [guestPassword, setGuestPassword] = useState('');
     const [guestShowPassword, setGuestShowPassword] = useState(false);
@@ -40,7 +39,7 @@ export default function AccountPage() {
 
     const handleRegisterGuest = async () => {
         setGuestMsg('');
-        if (!guestUsername || !guestEmail || !guestPassword) {
+        if (!guestEmail || !guestPassword) {
             setGuestMsg('Заполните все поля');
             return;
         }
@@ -71,7 +70,7 @@ export default function AccountPage() {
         setGuestMsg('');
         try {
             setGuestLoading(true);
-            const result = await registerGuest(guestUsername, guestPassword, guestEmail, guestCode);
+            const result = await registerGuest(guestEmail, guestPassword, guestEmail, guestCode);
             localStorage.setItem('token', result.token);
             loginUser({ id: user.id, username: result.username, level: user.level, role: 'player', isGuest: false }, result.token);
             setGuestMsg('Аккаунт успешно создан!');
@@ -124,6 +123,16 @@ export default function AccountPage() {
             <h2 className="text-xl font-bold mb-4">Аккаунт</h2>
             <p className="mb-4">Текущее имя: <strong>{character?.username || user.username}</strong></p>
 
+            {user.isGuest && (
+                <Card className="mb-4 border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-gold)]/5">
+                    <p className="text-sm text-[var(--color-accent-gold)] mb-2">🎁 Привяжите почту или OAuth — получите <b>3 дня премиума</b>!</p>
+                    <div className="flex gap-2">
+                        <a href="/api/oauth/yandex" className="text-xs px-2 py-1 rounded bg-[#FC3F1D] text-white no-underline">Яндекс ID</a>
+                        <a href="/api/oauth/vk" className="text-xs px-2 py-1 rounded bg-[#0077FF] text-white no-underline">VK ID</a>
+                    </div>
+                </Card>
+            )}
+
             {/* Аватар */}
             {user.role === 'player' && (
                 <Card className="mb-4">
@@ -174,7 +183,7 @@ export default function AccountPage() {
                             <p className="text-sm text-[var(--color-text-muted)] mb-2">
                                 Код отправлен на <span className="text-[var(--color-text-primary)]">{guestEmail}</span>
                             </p>
-                            <p className="text-xs text-[var(--color-accent-warning)] bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mb-3">
+                            <p className="text-xs text-white bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mb-3">
                                 ⚠ Письмо может попасть в спам. Если не пришло — проверьте папку «Спам».
                             </p>
                             <input
@@ -207,13 +216,6 @@ export default function AccountPage() {
                                 Создайте постоянный аккаунт — все накопленные ресурсы сохранятся.
                             </p>
                             <input
-                                type="text"
-                                placeholder="Логин"
-                                value={guestUsername}
-                                onChange={e => setGuestUsername(e.target.value)}
-                                className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
-                            />
-                            <input
                                 type="email"
                                 placeholder="Email"
                                 value={guestEmail}
@@ -237,7 +239,7 @@ export default function AccountPage() {
                                 </button>
                             </div>
                             <p className="text-xs text-[var(--color-text-muted)] mb-3">Минимум 8 символов, цифра и спецсимвол</p>
-                            <Button variant="danger" fullWidth onClick={handleRegisterGuest} disabled={!guestUsername || !guestEmail || !guestPassword || guestLoading}>
+                            <Button variant="danger" fullWidth onClick={handleRegisterGuest} disabled={!guestEmail || !guestPassword || guestLoading}>
                                 {guestLoading ? '...' : 'Зарегистрироваться'}
                             </Button>
                             {guestMsg && <p className="text-[var(--color-accent-danger)] mt-2 text-sm">{guestMsg}</p>}

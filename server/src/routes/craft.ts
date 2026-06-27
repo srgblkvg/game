@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
-import { markDirty } from '../websocket';
+import { markDirty } from '../events';
 
 const router = Router();
 

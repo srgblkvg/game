@@ -66,7 +66,7 @@ router.post('/verify-email', async (req, res) => {
 
     await db.run('UPDATE users SET emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, lastLoginAt = ? WHERE id = ?', [now, user.id]);
 
-    const token = jwt.sign({ userId: user.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ userId: user.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
     auditRegister(user.username, user.id, req.ip);
     res.json({ token, user: { id: user.id, username: user.username, level: 1, role: 'player' } });
 });
@@ -123,7 +123,20 @@ router.post('/resend-code', async (req, res) => {
 // Гостевой вход — без регистрации, ограниченный доступ
 router.post('/guest', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
-    const guestId = `Гость_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+    const nickname = (req.body?.nickname || '').trim();
+    
+    if (nickname) {
+        const existingUser = await db.one('SELECT id, isGuest FROM users WHERE username = ?', [nickname]).catch(() => null) as any;
+        if (existingUser) {
+            if (!existingUser.isGuest) return res.status(400).json({ error: 'Этот никнейм уже занят зарегистрированным пользователем' });
+            // Гость с таким ником — входим в существующий аккаунт
+            const token = jwt.sign({ userId: existingUser.id, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
+            auditLoginSuccess(nickname, existingUser.id, req.ip);
+            return res.json({ token, user: { id: existingUser.id, username: nickname, level: 1, role: 'player', isGuest: true, gender: 'male' } });
+        }
+    }
+    
+    const guestId = nickname || `Гость_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
 
     await db.run(`INSERT INTO users (username, passwordHash, currentHp, lastHpUpdate, level, gender, isGuest, emailVerified, exp, money)
@@ -131,7 +144,7 @@ router.post('/guest', async (req, res) => {
         [guestId, startHp, now]);
 
     const user: any = await db.one('SELECT id FROM users WHERE username = ?', [guestId]);
-    const token = jwt.sign({ userId: user.id, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ userId: user.id, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
 
     auditLoginSuccess(guestId, user.id, req.ip);
     if (req.ip) {
@@ -173,7 +186,7 @@ router.post('/login', async (req, res) => {
     // Сначала ищем среди администраторов
     const admin: any = await db.one('SELECT * FROM admins WHERE username = ?', [login]);
     if (admin && bcrypt.compareSync(password, admin.passwordHash)) {
-        const token = jwt.sign({ adminId: admin.id, role: 'admin', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign({ adminId: admin.id, role: 'admin', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
         return res.json({ token, user: { id: admin.id, username: admin.username, level: 0, role: 'admin' } });
     }
 
@@ -212,7 +225,7 @@ router.post('/login', async (req, res) => {
         try { await db.run('INSERT INTO login_logs (userId, ip) VALUES (?, ?)', [userRow.id, req.ip]); } catch {}
     }
 
-    const token = jwt.sign({ userId: userRow.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ userId: userRow.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
     const fullUser: any = await db.one('SELECT gender FROM users WHERE id = ?', [userRow.id]);
     res.json({ token, user: { id: userRow.id, username: userRow.username, level: userRow.level, role: 'player', gender: fullUser?.gender || 'male' } });
 });

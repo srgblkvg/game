@@ -1,4 +1,32 @@
 import { db } from '../db/index';
+import { StatRecord, sumStats } from '../game/stats';
+
+// ── Общие поля пользователя для боевых запросов ──
+// ЕДИНСТВЕННОЕ место правки при добавлении поля в users
+
+/** Поля для PvP боя (attacker/defender/arena opponent) */
+export const USER_BATTLE_FIELDS = `
+  u.id, u.username, u.level, u.exp, u.elo, u.seasonWins, u.seasonLosses,
+  u.baseS, u.baseA, u.baseD, u.baseM,
+  u.equipment, u.money, u.currentHp, u.lastAttackTime,
+  u.activeDrink, u.drinkUntil, u.premiumUntil,
+  u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate,
+  u.inventorySlots, u.guildId, u.oauthProvider, u.oauthId
+`;
+
+/** Поля с присоединением гильдии */
+export const USER_BATTLE_FIELDS_GUILD = `
+  ${USER_BATTLE_FIELDS}, g.name as guildName
+`;
+
+/** Поля для арены (добавляет arenaOpponentId, убирает exp и лишнее) */
+export const USER_ARENA_FIELDS_GUILD = `
+  u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses,
+  u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money,
+  u.inventorySlots, u.lastAttackTime, u.arenaOpponentId,
+  u.activeDrink, u.drinkUntil, u.guildId,
+  u.gender, u.avatar, g.name as guildName
+`;
 
 // --- Подготовленные запросы (ленивая инициализация) ---
 
@@ -29,7 +57,7 @@ export async function getUserWithStats(userId: number) {
 
 // --- Статы (чистые функции) ---
 
-export function getBaseStats(user: any) {
+export function getBaseStats(user: any): StatRecord {
   return {
     s: user.baseS ?? 5,
     a: user.baseA ?? 5,
@@ -38,11 +66,16 @@ export function getBaseStats(user: any) {
   };
 }
 
-export function getMaxHp(stats: { hp?: number; s: number; a: number; d: number; m: number }) {
-  return stats.hp ?? (stats.s + stats.a + stats.d + stats.m);
+export function getMaxHp(stats: { hp?: number } & StatRecord) {
+  return stats.hp ?? sumStats(stats);
 }
 
 // --- Экипировка ---
+
+export function parseEquipment(eq?: string | null): Record<string, any> {
+    try { return eq ? JSON.parse(eq) : {}; }
+    catch { return {}; }
+}
 
 export async function enrichEquipment(equipment: Record<string, any>): Promise<{ enriched: Record<string, any>; changed: boolean }> {
   const sql = getItemSQL();
@@ -111,6 +144,25 @@ export async function collectGuildTax(userId: number, income: number, source: st
   await db.run('UPDATE guilds SET treasury = treasury + ? WHERE id = ?', [tax, member.guildId]);
   await db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type, createdat) VALUES (?, ?, ?, ?, ?)', [member.guildId, userId, tax, source, new Date().toISOString()]);
   return income - tax;
+}
+
+// --- Статы персонажа (хелпер для всех роутов) ---
+
+import { getDrinkBonuses } from '../game/drinks';
+import { getGuildBonus } from '../game/guildBuildings';
+import { currentStats, CharStats } from '../game/stats';
+
+type BattleContext = 'arena' | 'tournament' | 'pve' | 'war_attack' | 'war_defense';
+
+/** Собрать полные статы игрока со ВСЕМИ бонусами — ЕДИНСТВЕННОЕ место */
+export async function buildPlayerStats(userRow: any, context: BattleContext): Promise<CharStats> {
+  const base = getBaseStats(userRow);
+  const equip = JSON.parse(userRow.equipment || '{}');
+  const drinks = getDrinkBonuses(userRow);
+  const r = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userRow.id]);
+  const collCnt = r?.cnt || 0;
+  const gb = await getGuildBonus(userRow.id, context);
+  return currentStats(base, equip, drinks, collCnt, gb);
 }
 
 // --- Уровни (чистые функции) ---

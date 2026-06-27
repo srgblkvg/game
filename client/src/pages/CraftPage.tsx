@@ -501,7 +501,6 @@ export default function CraftPage() {
             {/* Попап крафта с анимацией */}
             {craftAnim && (
                 <CraftPopup result={craftAnim} onDone={() => {
-                    // Применяем изменения персонажа ПОСЛЕ анимации
                     if (craftAnim.pendingData) {
                         setCharacter({ ...character, inventory: craftAnim.pendingData.inventory, money: craftAnim.pendingData.moneyAfter });
                     }

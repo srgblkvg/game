@@ -12,3 +12,5 @@ if (!process.env.JWT_SECRET) {
 
 export const JWT_SECRET = process.env.JWT_SECRET!;
 export const PORT = parseInt(process.env.PORT || '3001', 10);
+export const YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID || '';
+export const YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY || '';

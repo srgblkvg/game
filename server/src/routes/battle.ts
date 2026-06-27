@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { updateGuildQuestProgress } from './guild';
-import { markDirty } from '../websocket';
-import { currentStats } from '../game/stats';
-import { getBaseStats, collectGuildTax, applyExp } from '../db/helpers';
+import { markDirty } from '../events';
+import { sendLeaderboardLevel } from '../vkLeaderboard';
+import { getBaseStats, buildPlayerStats, USER_BATTLE_FIELDS_GUILD, applyExp } from '../db/helpers';
 import { runBattle } from '../game/battle';
 import { calcElo } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
+import { getGuildBonus } from '../game/guildBuildings';
 import { battleSchema } from '../validation';
 
 const router = Router();
@@ -20,7 +21,7 @@ router.post('/battle', async (req, res) => {
     const { opponentId } = parsed.data;
 
     const now = Math.floor(Date.now() / 1000);
-    const attacker = await db.one('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.lastAttackTime, u.premiumUntil, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?', [userId]) as any;
+    const attacker = await db.one(`SELECT ${USER_BATTLE_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?`, [userId]) as any;
     if (!attacker) return res.status(404).json({ error: 'Attacker not found' });
 
     const hasPremium = (attacker.premiumUntil || 0) > now;
@@ -33,10 +34,10 @@ router.post('/battle', async (req, res) => {
 
     let defender: any;
     if (opponentId) {
-        defender = await db.one('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?', [opponentId]);
+        defender = await db.one(`SELECT ${USER_BATTLE_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?`, [opponentId]);
         if (!defender || defender.id == userId) return res.status(400).json({ error: 'Invalid opponent' });
     } else {
-        const others = await db.query('SELECT u.id, u.username, u.level, u.exp, u.currentHp, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money, u.inventorySlots, u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)', [userId, now]) as any[];
+        const others = await db.query(`SELECT ${USER_BATTLE_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)`, [userId, now]) as any[];
         if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены' });
         defender = others[Math.floor(Math.random() * others.length)];
     }
@@ -47,8 +48,9 @@ router.post('/battle', async (req, res) => {
     }
 
     // Актуализируем HP защитника (офлайн-реген)
-    const dCollCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [defender.id]) as any).cnt || 0;
-    const defenderMaxHp = currentStats(getBaseStats(defender), JSON.parse(defender.equipment || '{}'), getDrinkBonuses(defender), dCollCnt).hp;
+    const dGuildBonus = await getGuildBonus(defender.id, 'arena');
+    const defenderStats = await buildPlayerStats(defender, 'arena');
+    const defenderMaxHp = defenderStats.hp;
     const defenderCurrentHp = await applyHpRegen({
         id: defender.id,
         currentHp: defender.currentHp,
@@ -56,6 +58,7 @@ router.post('/battle', async (req, res) => {
         lastHpUpdate: defender.lastHpUpdate || 0,
         roomType: defender.roomType,
         roomUntil: defender.roomUntil,
+        premiumUntil: defender.premiumUntil,
     });
 
     const attackerData = {
@@ -68,6 +71,7 @@ router.post('/battle', async (req, res) => {
         currentHp: attacker.currentHp ?? undefined,
         drinkBonuses: getDrinkBonuses(attacker),
         collectionBonus: (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [attacker.id]) as any).cnt || 0,
+        guildBonus: await getGuildBonus(attacker.id, 'arena'),
     };
     const defenderData = {
         id: defender.id,
@@ -78,22 +82,13 @@ router.post('/battle', async (req, res) => {
         money: defender.money,
         currentHp: defenderCurrentHp,
         drinkBonuses: getDrinkBonuses(defender),
-        collectionBonus: dCollCnt,
+        collectionBonus: defenderStats.collection || 0,
+        guildBonus: dGuildBonus,
     };
 
     const result = runBattle(attackerData, defenderData);
     const moneyStolen = result.steps.find((s: any) => s.type === 'money')?.amount || 0;
     const attackerWins = result.winnerId === attacker.id;
-
-    if (moneyStolen > 0) {
-        if (attackerWins) {
-            await db.run('UPDATE users SET money = money - ? WHERE id = ?', [moneyStolen, defender.id]);
-            await db.run('UPDATE users SET money = money + ? WHERE id = ?', [moneyStolen, attacker.id]);
-        } else {
-            await db.run('UPDATE users SET money = money - ? WHERE id = ?', [moneyStolen, attacker.id]);
-            await db.run('UPDATE users SET money = money + ? WHERE id = ?', [moneyStolen, defender.id]);
-        }
-    }
 
     // --- Расчёт ELO ---
     const attackerWon = result.winnerId === attacker.id;
@@ -103,22 +98,28 @@ router.post('/battle', async (req, res) => {
     // --- Обновление атакующего ---
     const attExp = await applyExp(attacker.id, result.winnerId === attacker.id ? result.expGained : 0, attacker.exp, attacker.level, attacker.statPoints || 0);
 
-    // Налог гильдии (PvP)
-    const attackerMoneyAfterTax = await collectGuildTax(attacker.id, attackerWins ? result.moneyGained : 0, 'tax_pvp');
-
+    const attackerMoneyDelta = attackerWins ? moneyStolen : -moneyStolen;
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`,
-        [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
-            attackerWins ? (result.moneyGained + moneyStolen) : 0, attackerWins ? 0 : moneyStolen, attacker.id]);
+        [attExp.newLevel, attExp.newExp, attackerMoneyDelta, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
+            attackerWins ? moneyStolen : 0, attackerWins ? 0 : moneyStolen, attacker.id]);
+
+    // VK Leaderboard — атакующий
+    if (attExp.levelsGained > 0 && attacker.oauthProvider === 'vk' && attacker.oauthId) {
+        sendLeaderboardLevel(attacker.id, attExp.newLevel, String(attacker.oauthId)).catch(() => {});
+    }
 
     // --- Обновление защитника ---
     const defExp = await applyExp(defender.id, result.winnerId === defender.id ? result.expGained : 0, defender.exp, defender.level, defender.statPoints || 0);
 
-    // Налог гильдии (PvP защитник)
-    const defenderMoneyAfterTax = await collectGuildTax(defender.id, !attackerWins ? result.moneyGained : 0, 'tax_pvp');
-
+    const defenderMoneyDelta = !attackerWins ? moneyStolen : -moneyStolen;
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
-        [defExp.newLevel, defExp.newExp, defenderMoneyAfterTax, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
-            !attackerWins ? (result.moneyGained + moneyStolen) : 0, !attackerWins ? 0 : moneyStolen, defender.id]);
+        [defExp.newLevel, defExp.newExp, defenderMoneyDelta, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
+            !attackerWins ? moneyStolen : 0, !attackerWins ? 0 : moneyStolen, defender.id]);
+
+    // VK Leaderboard — защитник
+    if (defExp.levelsGained > 0 && defender.oauthProvider === 'vk' && defender.oauthId) {
+        sendLeaderboardLevel(defender.id, defExp.newLevel, String(defender.oauthId)).catch(() => {});
+    }
 
     // Guild quest progress — track PvP wins
     const w = await db.one('SELECT guildId FROM users WHERE id = ?', [result.winnerId]);
@@ -142,7 +143,7 @@ router.post('/battle', async (req, res) => {
         hpAfter: result.attackerHpAfter,
         hpDefenderAfter: result.defenderHpAfter,
         expGained: result.winnerId === attacker.id ? result.expGained : 0,
-        moneyGained: attackerWins ? (result.moneyGained + moneyStolen) : 0,
+        moneyGained: attackerWins ? moneyStolen : 0,
         newLevel: attExp.newLevel,
         newExp: attExp.newExp,
         levelsGained: attExp.levelsGained,
@@ -150,7 +151,7 @@ router.post('/battle', async (req, res) => {
             name: defenderData.name,
             level: defenderData.level,
             equipment: defenderData.equipment,
-            stats: currentStats(defenderData.base, defenderData.equipment, defenderData.drinkBonuses, defenderData.collectionBonus),
+            stats: defenderStats,
         },
         moneyAfter: updatedAttacker.money,
         moneyStolen,

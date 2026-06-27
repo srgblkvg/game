@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { fetchRating } from '../api/character';
@@ -18,7 +18,36 @@ export default function RatingPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [showInfo, setShowInfo] = useState(false);
     const [initialPageSet, setInitialPageSet] = useState(false);
+    const [search, setSearch] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const [minElo, setMinElo] = useState(0);
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
     const navigate = useNavigate();
+
+    // Живой поиск с задержкой 300мс
+    useEffect(() => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            setSearch(searchInput);
+            setPage(1);
+        }, 300);
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    }, [searchInput]);
+
+    // Звания для фильтра
+    const rankFilters = [
+        { label: 'Все звания', min: 0 },
+        { label: '👑 Смерть (2100+)', min: 2100 },
+        { label: '♦♦♦ Вечность (1900+)', min: 1900 },
+        { label: '♦♦ Бездна (1700+)', min: 1700 },
+        { label: '♦ Погибель (1500+)', min: 1500 },
+        { label: '▪▪▪ Кошмар (1300+)', min: 1300 },
+        { label: '▪▪ Кровь (1100+)', min: 1100 },
+        { label: '▪ Тень (900+)', min: 900 },
+        { label: '••• Шёпот (600+)', min: 600 },
+        { label: '•• Кость (300+)', min: 300 },
+        { label: '• Пепел (0+)', min: 0 },
+    ];
 
     // Найти страницу с текущим игроком
     useEffect(() => {
@@ -37,16 +66,43 @@ export default function RatingPage() {
 
     useEffect(() => {
         if (!initialPageSet) return;
-        fetchRating(page, LIMIT).then(data => {
+        fetchRating(page, LIMIT, search, minElo).then(data => {
             setPlayers(data.users);
             setTotalPages(Math.ceil(data.total / LIMIT));
         }).catch(console.error);
-    }, [page, initialPageSet]);
+    }, [page, initialPageSet, search, minElo]);
 
     return (
         <div className="max-w-xl mx-auto px-4 py-4">
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2"/>Рейтинг игроков</h2>
+
+            {/* Поиск + фильтр */}
+            <div className="flex gap-2 mb-4">
+                <input
+                    type="text"
+                    placeholder="Поиск по нику..."
+                    value={searchInput}
+                    onChange={e => setSearchInput(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm"
+                />
+                {searchInput && (
+                    <Button size="sm" variant="danger" onClick={() => { setSearchInput(''); setSearch(''); }}>
+                        ✕
+                    </Button>
+                )}
+            </div>
+            <div className="mb-4">
+                <select
+                    value={minElo}
+                    onChange={e => { setMinElo(parseInt(e.target.value)); setPage(1); }}
+                    className="w-full px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm"
+                >
+                    {rankFilters.map(r => (
+                        <option key={r.min} value={r.min}>{r.label}</option>
+                    ))}
+                </select>
+            </div>
 
             {/* Инструкция */}
             <Card className="mb-4">

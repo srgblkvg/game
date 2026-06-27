@@ -5,8 +5,8 @@ import { db } from '../db/index';
 
 // Временное отключение гостевых ограничений (тестирование)
 let guestRestrictionsDisabled = false;
-export async function isGuestRestrictionsDisabled() { return guestRestrictionsDisabled; }
-export async function setGuestRestrictionsDisabled(v: boolean) { guestRestrictionsDisabled = v; }
+export async function isGuestRestrictionsDisabled(): Promise<boolean> { return guestRestrictionsDisabled; }
+export async function setGuestRestrictionsDisabled(v: boolean): Promise<void> { guestRestrictionsDisabled = v; }
 export async function toggleGuestRestrictions(): Promise<boolean> { guestRestrictionsDisabled = !guestRestrictionsDisabled; return guestRestrictionsDisabled; }
 
 // Кеш для троттлинга обновления lastLoginAt (раз в 5 мин)
@@ -35,6 +35,8 @@ export async function authMiddleware(req: any, res: any, next: any) {
                 lastLoginUpdates.set(key, now);
                 await db.run('UPDATE users SET lastLoginAt = ? WHERE id = ?', [now, decoded.userId]);
             }
+            // lastAction для /users/online — без троттлинга
+            db.run('UPDATE users SET lastAction = ? WHERE id = ?', [now, decoded.userId]).catch(() => {});
         }
 
         next();

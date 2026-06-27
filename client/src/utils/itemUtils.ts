@@ -20,6 +20,11 @@ export function getRarityColor(item: any): string {
     return item?.rarity_color || (item?.rarity_id != null ? rarityColors[item.rarity_id] : undefined) || '#888';
 }
 
+const rarityClasses = ['rarity-junk', 'rarity-common', 'rarity-uncommon', 'rarity-rare', 'rarity-epic', 'rarity-legendary', 'rarity-mythic'];
+export function getRarityClass(item: any): string {
+    return item?.rarity_id != null ? rarityClasses[item.rarity_id] || '' : '';
+}
+
 function ensureLeadingSlash(path: string): string {
     return path.startsWith('/') ? path : `/${path}`;
 }

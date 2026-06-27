@@ -66,14 +66,14 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
 
                 const inv = inventory || [];
                 const eq = equipment || {};
-                const equippedNames = new Set<string>();
+                const equippedIds = new Set<unknown>();
                 for (const slot of Object.values(eq)) {
-                    if ((slot as any)?.name && (slot as any)?.slot) equippedNames.add(`${(slot as any).name}|${(slot as any).slot}`);
+                    if ((slot as any)?.id != null) equippedIds.add((slot as any).id);
                 }
                 const hasAddable = inv.some((invItem: any) => {
                     if (!invItem.name || !invItem.slot) return false;
                     const key = `${invItem.name}|${invItem.slot}`;
-                    return validSet.has(key) && !collSet.has(key) && !equippedNames.has(key);
+                    return validSet.has(key) && !collSet.has(key) && !equippedIds.has(invItem.id);
                 });
                 setHasCollectionItems(hasAddable);
             })

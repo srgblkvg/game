@@ -1,12 +1,13 @@
-require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const http = require("http");
+
+require("dotenv").config();
 const token = jwt.sign({ userId: 31, username: "test", role: "player" }, process.env.JWT_SECRET);
 
 http.get({
   hostname: "localhost", port: 3001,
   path: "/api/auction",
-  headers: { Authorization: *** " + token }
+  headers: { Authorization: "Bearer " + token }
 }, res => {
   let d = "";
   res.on("data", c => d += c);

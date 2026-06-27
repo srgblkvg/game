@@ -1,60 +1,88 @@
 import type { Character } from '../contexts/GameContext';
 
-export interface StatBreakdown {
-  s: number; a: number; d: number; m: number;
+// ── Реестр статов (синхронизирован с сервером) ──
+export const PRIMARY_STATS = ['s', 'a', 'd', 'm'] as const;
+export type PrimaryStat = typeof PRIMARY_STATS[number];
+
+// Русские названия для UI
+export const STAT_LABELS: Record<string, string> = {
+  s: 'Сила',
+  a: 'Ловкость',
+  d: 'Защита',
+  m: 'Мастерство',
+};
+
+export type StatRecord = { s: number; a: number; d: number; m: number };
+export type ExtraRecord = { crit: number; dodge: number; counter: number; fullBlock: number };
+
+// ── Хелперы ──
+
+export function sumStats(s: StatRecord): number {
+  return (s.s || 0) + (s.a || 0) + (s.m || 0);
+}
+
+export function addStats(a: StatRecord, b: StatRecord): StatRecord {
+  return { s: a.s + b.s, a: a.a + b.a, d: a.d + b.d, m: a.m + b.m };
+}
+
+// ── Совместимость со старым кодом ──
+
+export interface StatBreakdown extends StatRecord {
   hp: number;
-  baseStats: { s: number; a: number; d: number; m: number };
-  equipmentBonuses: { s: number; a: number; d: number; m: number };
-  extraStats: { crit: number; dodge: number; counter: number; fullBlock: number };
+  baseStats: StatRecord;
+  equipmentBonuses: StatRecord;
+  extraStats: ExtraRecord;
 }
 
 export function calculateStats(
   char: Character,
-  drinkBonuses?: { s: number; a: number; d: number; m: number },
-  collectionBonus?: number
+  drinkBonuses?: StatRecord,
+  collectionBonus?: number,
+  guildBonus?: number
 ): StatBreakdown {
-  const sums = { s: 0, a: 0, d: 0, m: 0 };
-  const extra = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
+  const sums: StatRecord = { s: 0, a: 0, d: 0, m: 0 };
+  const extra: ExtraRecord = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
 
   for (const item of Object.values(char.equipment)) {
     if (item.bonuses) {
       const level = item.upgradeLevel || 0;
       const multiplier = 1 + level * 0.1;
-      for (const k of Object.keys(item.bonuses)) {
-        sums[k as keyof typeof sums] += Math.round(item.bonuses[k as keyof typeof item.bonuses] * multiplier);
+      for (const k of PRIMARY_STATS) {
+        sums[k] += Math.round((item.bonuses[k] || 0) * multiplier);
       }
     }
     if (item.extra) {
       for (const k of Object.keys(item.extra)) {
         if (k === 'stamReg') continue;
-        extra[k as keyof typeof extra] += item.extra[k as keyof typeof item.extra] || 0;
+        if (k in extra) extra[k as keyof ExtraRecord] += item.extra[k as keyof ExtraRecord] || 0;
       }
     }
   }
 
-  // Применяем бонусы напитков
   if (drinkBonuses) {
-    sums.s += drinkBonuses.s || 0;
-    sums.a += drinkBonuses.a || 0;
-    sums.d += drinkBonuses.d || 0;
-    sums.m += drinkBonuses.m || 0;
+    for (const k of PRIMARY_STATS) {
+      sums[k] += drinkBonuses[k] || 0;
+    }
   }
 
-  const s = char.baseStats.s + sums.s;
-  const a = char.baseStats.a + sums.a;
-  const d = char.baseStats.d + sums.d;
-  const m = char.baseStats.m + sums.m;
-  const hp = s + a + d + m;
+  let st = addStats(char.baseStats, sums);
 
   if (collectionBonus && collectionBonus > 0) {
-    const mult = 1 + collectionBonus / 100;
-    return {
-      s: Math.round(s * mult), a: Math.round(a * mult),
-      d: Math.round(d * mult), m: Math.round(m * mult),
-      hp: Math.round(hp * mult),
-      baseStats: char.baseStats, equipmentBonuses: sums, extraStats: extra,
-    };
+    st = { s: Math.round(st.s * (1 + collectionBonus / 100)), a: Math.round(st.a * (1 + collectionBonus / 100)), d: Math.round(st.d * (1 + collectionBonus / 100)), m: Math.round(st.m * (1 + collectionBonus / 100)) };
+  }
+  if (guildBonus && guildBonus > 0) {
+    st = { s: Math.round(st.s * (1 + guildBonus / 100)), a: Math.round(st.a * (1 + guildBonus / 100)), d: Math.round(st.d * (1 + guildBonus / 100)), m: Math.round(st.m * (1 + guildBonus / 100)) };
   }
 
-  return { s, a, d, m, hp, baseStats: char.baseStats, equipmentBonuses: sums, extraStats: extra };
+  return { ...st, hp: sumStats(st), baseStats: char.baseStats, equipmentBonuses: sums, extraStats: extra };
+}
+
+/** Удобная обёртка — вытаскивает все бонусы из Character */
+export function getCharStats(char: Character): StatBreakdown {
+  return calculateStats(
+    char,
+    char.drinkBonuses,
+    char.collectionCount || 0,
+    char.guildBonus
+  );
 }

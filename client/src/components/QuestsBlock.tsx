@@ -38,15 +38,28 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
             const data = (e as CustomEvent).detail;
             if (data?.quests) setDailyQuests(data.quests);
         };
-        window.addEventListener('dailyQuests', handler);
-        return () => window.removeEventListener('dailyQuests', handler);
+        window.addEventListener('questsUpdate', handler);
+        return () => window.removeEventListener('questsUpdate', handler);
     }, []);
 
     const active = dailyQuests.filter((q: any) => q.status === 'active');
     const hasGuild = !!guildQuest;
     const hasPersonal = active.length > 0;
 
-    if (!hasGuild && !hasPersonal) return null;
+    if (!hasGuild && !hasPersonal) {
+        return (
+            <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative">
+                <h3 className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-full text-[var(--color-text-accent)] text-base font-bold cursor-pointer hover:text-[var(--color-accent-info)] flex items-center gap-1 whitespace-nowrap"
+                    onClick={() => { onHighlight?.(null); navigate('/tavern?tab=quests'); }}>
+                    <Icon icon="game-icons:notebook" width="18" height="18" />Задания
+                </h3>
+                <p className="text-xs text-[var(--color-text-muted)] text-center py-2">
+                    Нет активных заданий.<br/>
+                    <span className="text-[var(--color-accent-info)] cursor-pointer hover:underline" onClick={() => navigate('/tavern?tab=quests')}>Зайти в Трактир</span>
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-default)] rounded-xl pt-5 pb-4 px-4 min-w-[210px] relative">

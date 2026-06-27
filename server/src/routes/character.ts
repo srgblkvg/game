@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { collectGuildTax } from '../db/helpers';
-import { currentStats } from '../game/stats';
+import { collectGuildTax, getUserById, enrichEquipment, applyExp, buildPlayerStats } from '../db/helpers';
+import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
-import { getUserById, getBaseStats, enrichEquipment, applyExp } from '../db/helpers';
 import { updateGuildQuestProgress } from './guild';
-import { markDirty } from '../websocket';
+import { getGuildBonus, getGuildBuildings } from '../game/guildBuildings';
+import { markDirty } from '../events';
 
 const router = Router();
 
@@ -75,21 +75,14 @@ router.get('/character/me', async (req, res) => {
         await db.run('UPDATE users SET equipment = ? WHERE id = ?', [JSON.stringify(enrichedEquipment), userId]);
     }
 
-    const base = getBaseStats(user);
     const drinkBonuses = getDrinkBonuses(user);
-    const stats = currentStats(base, enrichedEquipment, drinkBonuses);
-
-    // Бонус коллекции: +1% к основным статам за каждый предмет в коллекции
     const collectionCount = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt;
+    const collectedItems = await db.query('SELECT itemName, slot FROM collections WHERE userId = ?', [userId]) as any[];
+    const guildBonus = await getGuildBonus(userId, 'arena');
+    const buildings = await getGuildBuildings(userId);
+    const stats = await buildPlayerStats(user, 'arena');
+
     const totalCollectionItems = (await db.one('SELECT COUNT(*) as cnt FROM collection_set_items') as any).cnt;
-    if (collectionCount > 0) {
-        const bonus = 1 + collectionCount / 100;
-        stats.s = Math.round(stats.s * bonus);
-        stats.a = Math.round(stats.a * bonus);
-        stats.d = Math.round(stats.d * bonus);
-        stats.m = Math.round(stats.m * bonus);
-        stats.hp = Math.round((stats.hp || 50) * bonus);
-    }
 
     let jobData = null;
     if (user.activeJob) {
@@ -105,6 +98,9 @@ router.get('/character/me', async (req, res) => {
                 [newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId]);
             await db.run('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString(), jobData.premiumBonus || 0, expGain]);
+            if (levelsGained > 0 && user.oauthProvider === 'vk' && user.oauthId) {
+                sendLeaderboardLevel(userId, newLevel, String(user.oauthId)).catch(() => {});
+            }
             // Guild quest progress — track job seconds
             if (user.guildId) { updateGuildQuestProgress(user.guildId).catch(e => console.error('guildQuest jobs:', e.message)); }
             // Daily quests — track job seconds
@@ -126,6 +122,7 @@ router.get('/character/me', async (req, res) => {
         lastHpUpdate: user.lastHpUpdate || 0,
         roomType: user.roomType,
         roomUntil: user.roomUntil,
+        premiumUntil: user.premiumUntil,
     });
 
     // Если currentHp > maxHp (например после изменения бонусов) — ограничиваем
@@ -145,6 +142,7 @@ router.get('/character/me', async (req, res) => {
         baseStats: { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 },
         currentHp, stats, lastAttackTime: user.lastAttackTime || 0,
         protectionUntil: user.protectionUntil || 0,
+        lastHpUpdate: user.lastHpUpdate || 0,
         lastPveAttackTime: user.lastPveAttackTime || 0,
         attackCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 150 : 300) - (now - (user.lastAttackTime || 0))),
         pveCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 150 : 300) - (now - (user.lastPveAttackTime || 0))),
@@ -160,6 +158,9 @@ router.get('/character/me', async (req, res) => {
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,
         collectionCount: collectionCount || 0,
+        collectedItems: collectedItems || [],
+        guildBonus,
+        buildings,
         totalCollectionItems: totalCollectionItems || 189,
     });
 });

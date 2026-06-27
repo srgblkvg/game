@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { applyExp } from '../db/helpers';
-import { markDirty } from '../websocket';
+import { markDirty } from '../events';
 import { getToday, getSnapshot, getProgress, getMidnightTS, QUEST_INFO, DIFFICULTIES, BASE_REWARDS, QUEST_TYPES, type QuestType, type DiffKey } from '../game/questData';
 
 const router = Router();
@@ -19,22 +19,21 @@ router.get('/tavern/quests', async (req, res) => {
     if (quests.length === 0) {
         const now = await getSnapshot(userId);
 
-        // Переносим активные квесты со вчера на сегодня
-        const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-        const activeYesterday = await db.query(
-            "SELECT * FROM daily_quests WHERE userId = ? AND date = ? AND status = 'active'",
-            [userId, yesterday]
+        // Переносим ВСЕ активные квесты с прошлых дней на сегодня (не только вчера)
+        const activeOld = await db.query(
+            "SELECT * FROM daily_quests WHERE userId = ? AND date < ? AND status = 'active'",
+            [userId, today]
         ) as any[];
 
-        for (const aq of activeYesterday) {
+        for (const aq of activeOld) {
             await db.run(
-                'UPDATE daily_quests SET date = ?, snapshot = ? WHERE id = ?',
-                [today, JSON.stringify(now), aq.id]
+                'UPDATE daily_quests SET date = ? WHERE id = ?',
+                [today, aq.id]
             );
         }
 
         // Генерируем недостающие available квесты
-        const existingTypes = new Set(activeYesterday.map((q: any) => q.questType));
+        const existingTypes = new Set(activeOld.map((q: any) => q.questType));
         for (const qt of QUEST_TYPES) {
             if (existingTypes.has(qt)) continue;
             const diffs = Object.keys(DIFFICULTIES);

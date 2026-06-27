@@ -45,9 +45,16 @@ export default function CharacterCard({
 
   if (!char) return null;
 
-  const stats = char.stats || { s: 0, a: 0, d: 0, m: 0 };
-  const hp = char.maxHp ?? stats.hp ?? (stats.s + stats.a + stats.d + stats.m);
+  const stats: any = char.stats || { s: 0, a: 0, d: 0, m: 0 };
+  const hp = char.maxHp ?? stats.hp ?? 0;
   const expNeeded = 10 * Math.pow(2, char.level - 1);
+
+  // Бонусы из char (приходят с сервера или из calculateStats)
+  const eqBonuses = stats?.bonuses || (char as any).equipmentBonuses || { s: 0, a: 0, d: 0, m: 0 };
+  const exStats = stats?.extra || (char as any).extraStats || { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
+  const collBonus = (char as any).collectionCount || (char as any).collectionBonus || 0;
+  const gBonus = (char as any).guildBonus || 0;
+  const buildingsList = (char as any).buildings || [];
 
   const isMobile = compact === 'mobile' || compact === 'verySmall';
   const isVerySmall = compact === 'verySmall';
@@ -162,6 +169,11 @@ export default function CharacterCard({
               backgroundImage: bgImage,
               transform: side === 'right' ? 'scaleX(-1)' : 'none',
             }} />
+          {/* Overlay — радиальный градиент: светлый центр, затемнённые края */}
+          <div className="absolute inset-0 z-[1]"
+            style={{
+              background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.1) 100%)',
+            }} />
           {/* Hidden img to detect avatar load failure */}
           {customUrl && !avatarFailed && (
             <img src={customUrl} alt="" onError={() => setAvatarFailed(true)}
@@ -172,10 +184,12 @@ export default function CharacterCard({
         <StatsOverlay
           stats={stats}
           compact={compact}
-          baseStats={(char as any).baseStats}
-          equipmentBonuses={(char as any).equipmentBonuses}
-          extraStats={(char as any).extraStats}
-          collectionBonus={(char as any).collectionBonus}
+          baseStats={(char as any).baseStats || { s: 5, a: 5, d: 5, m: 5 }}
+          equipmentBonuses={eqBonuses}
+          extraStats={exStats}
+          collectionBonus={collBonus}
+          guildBonus={gBonus}
+          buildings={buildingsList}
         />
 
         {!isMob && (

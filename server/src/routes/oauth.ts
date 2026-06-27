@@ -30,7 +30,7 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 async function makeToken(userId: number, role: string): Promise<string> {
-    return jwt.sign({ userId, role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
+    return jwt.sign({ userId, role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
 }
 
 async function findOrCreateUser(provider: string, oauthId: string, username: string): Promise<{ id: number; username: string; level: number }> {
@@ -63,9 +63,10 @@ async function findOrCreateUser(provider: string, oauthId: string, username: str
 
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
     const randomHash = crypto.randomBytes(32).toString('hex');
-    const info = await db.run(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt)
-        VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male', ?)`,
-        [finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now]);
+    const premiumUntil = now + 86400; // 1 день премиума за привязку
+    const info = await db.run(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt, premiumUntil)
+        VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male', ?, ?)`,
+        [finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now, premiumUntil]);
     return { id: Number(info.lastInsertRowid), username: finalUsername, level: 1 };
 }
 

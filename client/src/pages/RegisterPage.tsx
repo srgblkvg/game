@@ -74,7 +74,7 @@ export default function RegisterPage() {
                     <p className="text-sm text-[var(--color-text-muted)] mb-2">
                         Код отправлен на <span className="text-[var(--color-text-primary)]">{email}</span>
                     </p>
-                    <p className="text-xs text-[var(--color-accent-warning)] bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mb-3">
+                    <p className="text-xs text-white bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mb-3">
                         ⚠ Письмо может попасть в спам. Если не пришло — проверьте папку «Спам».
                     </p>
                     <input

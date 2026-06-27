@@ -1,5 +1,7 @@
+import { StatRecord } from './stats';
+
 // Бонусы напитков (ключ → статы)
-export const DRINK_BONUSES: Record<string, { s: number; a: number; d: number; m: number }> = {
+export const DRINK_BONUSES: Record<string, StatRecord> = {
     rage_small: { s: 10, a: 0, d: 0, m: 0 },
     rage_med: { s: 25, a: 0, d: 0, m: 0 },
     rage_big: { s: 50, a: 0, d: 0, m: 0 },
@@ -17,9 +19,9 @@ export const DRINK_BONUSES: Record<string, { s: number; a: number; d: number; m:
     dragon_blood: { s: 30, a: 30, d: 30, m: 30 },
 };
 
-const empty = { s: 0, a: 0, d: 0, m: 0 };
+const empty: StatRecord = { s: 0, a: 0, d: 0, m: 0 };
 
-export function getDrinkBonuses(user: any): { s: number; a: number; d: number; m: number } {
+export function getDrinkBonuses(user: any): StatRecord {
     const now = Math.floor(Date.now() / 1000);
     if (!user.activeDrink || !user.drinkUntil || user.drinkUntil <= now) return empty;
     return DRINK_BONUSES[user.activeDrink] || empty;

@@ -12,16 +12,9 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { renderBattleLog } from '../utils/battleLog';
 import { formatMoney } from '../utils/money';
-import { calculateStats } from '../utils/stats';
 import CharacterCard from '../components/CharacterCard';
 import ItemTooltip from '../components/ItemTooltip';
 
-const rarityColors: Record<number, string> = {
-  0: '#6b6b6b', 1: '#a0a0a0', 2: '#4a9b4a', 3: '#4a7ac0', 4: '#a040c0', 5: '#d4a020', 6: '#e03030',
-};
-const rarityNames: Record<number, string> = {
-  0: 'Хлам', 1: 'Обычный', 2: 'Необычный', 3: 'Редкий', 4: 'Эпический', 5: 'Легендарный', 6: 'Мифический',
-};
 const rarityTextColors: Record<number, string> = {
   0: 'text-[#6b6b6b]', 1: 'text-[#a0a0a0]', 2: 'text-[#4a9b4a]', 3: 'text-[#4a7ac0]', 4: 'text-[#a040c0]', 5: 'text-[#d4a020]', 6: 'text-[#e03030]',
 };
@@ -50,7 +43,7 @@ export default function BestiaryPage() {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
-  const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
+  const [tooltipData, _setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
 
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
@@ -98,12 +91,13 @@ export default function BestiaryPage() {
 
   // API returns mobs in level order — just deduplicate, no sort needed
   const [floorsData, setFloorsData] = useState<any[]>([]);
+  const [diffGroups, setDiffGroups] = useState<any[]>([]);
   useEffect(() => {
     fetch('/api/floors')
-      .then(r => r.json()).then(setFloorsData).catch(() => {});
+      .then(r => r.json()).then(data => { setFloorsData(data.floors); setDiffGroups(data.groups || []); }).catch(() => {});
   }, []);
 
-  const floorBgMap = new Map(floorsData.map((f: any) => [f.name, f.background]));
+  const floorBgMap = new Map((floorsData || []).map((f: any) => [f.name, f.background]));
   // Build floor list in mob order (by level), with backgrounds from floors table
   const mobFloorNames: string[] = [];
   const seen = new Set<string>();
@@ -290,7 +284,7 @@ export default function BestiaryPage() {
     if (!character || cooldownRemaining > 0) return;
     setPhase('battle');
     const startHp = character.currentHp;
-    const pStats = calculateStats(character, (character as any).drinkBonuses, (character as any).collectionCount || 0);
+    const pStats = character.stats || { hp: character.currentHp || 100 };
     initialHpRef.current = { player: startHp, mob: mob.hp };
     setPlayerMaxHp(pStats.hp);
     setPlayerHp(startHp);
@@ -393,88 +387,11 @@ export default function BestiaryPage() {
             </div>
           )}
           {error && <p className="text-[var(--color-accent-danger)] mb-4">{error}</p>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {floors.map((floor) => {
-              const info = getFloorInfo(floor);
-              const disabled = cooldownRemaining > 0;
-              const bg = floorBgMap.get(floor);
-              return (
-                <Card key={floor} className={`cursor-pointer hover:border-[var(--color-accent-info)] transition-colors relative overflow-hidden min-w-0 ${disabled ? 'opacity-50' : ''}`}
-                  onClick={() => !disabled && selectFloor(floor)}
-                  style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-                  <div className="relative z-10 bg-[var(--color-overlay-text)] rounded-lg p-2 -m-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icon icon="game-icons:castle-ruins" width="20" height="20" className="text-[var(--color-text-muted)]" />
-                    <h3 className="font-bold text-sm">{floor}</h3>
-                  </div>
-                  <div className="text-xs text-[var(--color-text-muted)] space-y-1">
-                    <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
-                    <p className="font-bold text-[var(--color-text-secondary)]">Награда:</p>
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                      <span className="text-[var(--color-text-accent)]">◆ {info.goldMin}–{info.goldMax} серебра</span>
-                      <span className="text-[var(--color-accent-success)]">◆ ~{info.avgXp} XP</span>
-                    </div>
-                    {info.lootImages.length > 0 && (
-                      <div>
-                        <span className="text-[var(--color-accent-purple)] text-[10px]">Лут:</span>
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {info.lootImages.map((l: any, idx: number) => {
-                            const item = {
-                              name: l.name,
-                              rarity_id: Math.max(0, l.rarity),
-                              image: l.image,
-                              type: 'craft_item',
-                              rarity_display: rarityNames[Math.max(0, l.rarity)] || l.name,
-                              rarity_color: rarityColors[Math.max(0, l.rarity)] || '#888888',
-                            };
-                            return (
-                              <div
-                                key={l.name || idx}
-                                className="relative w-7 h-7 flex items-center justify-center cursor-default"
-                                onMouseEnter={(e) => setTooltipData({ item, x: e.clientX, y: e.clientY })}
-                                onMouseMove={(e) => setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
-                                onMouseLeave={() => setTooltipData(null)}
-                              >
-                                <img src={l.image} alt={l.name} className="w-6 h-6 object-contain rounded" />
-                                <span
-                                  className="absolute bottom-0 right-0 text-[8px] text-white px-0.5 rounded-sm leading-none bg-black/65"
-                                >
-                                  {(l.chance * 100).toFixed(0)}%
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    {info.itemDropTable.length > 0 && (
-                      <div>
-                        <span className="text-[var(--color-accent-gold)] text-[10px]">🎲 Предметы:</span>
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {info.itemDropTable.map((it: any) => (
-                            <div key={it.rarity} className="relative w-7 h-7 flex items-center justify-center cursor-default"
-                              title={`${rarityNames[it.rarity]}: ${(it.chance * 100).toFixed(1)}%`}>
-                              <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold"
-                                style={{ backgroundColor: rarityColors[it.rarity] || '#888', color: '#fff' }}>?</div>
-                              <span className="absolute bottom-0 right-0 text-[7px] text-white px-0.5 rounded-sm leading-none bg-black/65">
-                                {(it.chance * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {disabled && (
-                    <div className="mt-2">
-                      <Button variant="secondary" size="xs" fullWidth disabled>
-                        <Icon icon="game-icons:hourglass" width="12" height="12" className="inline mr-1" />{formatCooldown(cooldownRemaining)}
-                      </Button>
-                    </div>
-                  )}
-                  </div>
-                </Card>
-              );
+          <div className="space-y-4">
+            {(diffGroups || []).map(diff => {
+              const groupFloors = floors.filter(f => floorsData.some(fd => fd.name === f && (fd.difficulty||0) === diff.difficulty));
+              if (groupFloors.length === 0) return null;
+              return <FloorGroup key={diff.label} diff={diff} floors={groupFloors} getFloorInfo={getFloorInfo} floorBgMap={floorBgMap} cooldownRemaining={cooldownRemaining} selectFloor={selectFloor} />;
             })}
           </div>
         </>
@@ -492,7 +409,7 @@ export default function BestiaryPage() {
                 username: character.username,
                 level: character.level,
                 equipment: character.equipment,
-                stats: calculateStats(character, (character as any).drinkBonuses, (character as any).collectionCount || 0),
+                stats: character.stats as any,
                 currentHp: playerHp,
                 maxHp: playerMaxHp,
                 gender: character.gender || 'male',
@@ -586,6 +503,52 @@ export default function BestiaryPage() {
         </>
       )}
       {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
+    </div>
+  );
+}
+
+function FloorGroup({ diff, floors, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor }: any) {
+  const key = `floor_${diff.label}`;
+  const [open, setOpen] = useState(() => {
+    const saved = localStorage.getItem(key);
+    return saved !== null ? saved === '1' : false;
+  });
+  const toggle = () => { const v = !open; setOpen(v); localStorage.setItem(key, v ? '1' : '0'); };
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2 cursor-pointer" onClick={toggle}>
+        <span className="text-xs mr-1">{open ? '▼' : '▶'}</span>
+        <h2 className="font-bold text-sm">{diff.icon} {diff.label}</h2>
+        <span className="text-xs text-[var(--color-text-muted)]">({floors.length})</span>
+      </div>
+      {open && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {(floors || []).map((floor: string) => {
+            const info = getFloorInfo(floor);
+            const disabled = cooldownRemaining > 0;
+            const bg = floorBgMap.get(floor);
+            return (
+              <Card key={floor} className={`cursor-pointer hover:border-[var(--color-accent-info)] transition-colors relative overflow-hidden min-w-0 ${disabled ? "opacity-50" : ""}`}
+                onClick={() => !disabled && selectFloor(floor)}
+                style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}>
+                <div className="relative z-10 bg-[var(--color-overlay-text)] rounded-lg p-2 -m-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon icon="game-icons:castle-ruins" width="20" height="20" className="text-[var(--color-text-muted)]" />
+                    <h3 className="font-bold text-sm">{floor}</h3>
+                  </div>
+                  <div className="text-xs text-[var(--color-text-muted)] space-y-1">
+                    <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                      <span className="text-[var(--color-text-accent)]">◆ {info.goldMin}–{info.goldMax} сер.</span>
+                      <span className="text-[var(--color-accent-success)]">◆ ~{info.avgXp} XP</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

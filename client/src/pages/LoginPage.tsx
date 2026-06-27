@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { login, verifyEmail, resendCode, guestLogin } from '../api';
+import { guestLogin } from '../api';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
@@ -10,192 +10,96 @@ const BASE_URL = '/api/oauth';
 export default function LoginPage() {
     const { loginUser } = useAuth();
     const navigate = useNavigate();
-
-    // Шаг 1: логин/пароль
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
+    const [nickname, setNickname] = useState('');
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Шаг 2: подтверждение почты (если не подтверждена)
-    const [verifyEmailAddr, setVerifyEmailAddr] = useState('');
-    const [code, setCode] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [resendMsg, setResendMsg] = useState('');
-
-    const handleLogin = async () => {
+    const handlePlay = async () => {
+        const name = nickname.trim();
+        if (!name || name.length < 2) { setError('Минимум 2 символа'); return; }
+        if (name.length > 16) { setError('Максимум 16 символов'); return; }
+        if (!/^[a-zA-Zа-яА-ЯёЁ0-9_\- ]+$/.test(name)) { setError('Только буквы, цифры, _ и -'); return; }
+        setLoading(true);
         try {
-            setError('');
-            setLoading(true);
-            const result = await login(username, password);
-            loginUser(result.user, result.token);
-            navigate(result.user.role === 'admin' ? '/adminpanel' : '/');
-        } catch (e: any) {
-            // Если почта не подтверждена — показываем поле кода
-            if (e.message?.includes('Почта не подтверждена')) {
-                // Извлекаем email из ответа (если сервер его вернул)
-                setVerifyEmailAddr(username.includes('@') ? username : '');
-                setError(e.message);
-            } else {
-                setError(e.message);
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleVerify = async () => {
-        try {
-            setError('');
-            setLoading(true);
-            const email = verifyEmailAddr || username;
-            const result = await verifyEmail(email, code);
+            const result = await guestLogin(name);
             loginUser(result.user, result.token);
             navigate('/');
-        } catch (e: any) {
-            setError(e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleResend = async () => {
-        try {
-            setResendMsg('');
-            setLoading(true);
-            const email = verifyEmailAddr || username;
-            await resendCode(email);
-            setResendMsg('Код отправлен повторно');
-        } catch (e: any) {
-            setResendMsg(e.message);
-        } finally {
-            setLoading(false);
-        }
+        } catch (e: any) { setError(e.message); }
+        setLoading(false);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && username && password) handleLogin();
+        if (e.key === 'Enter' && nickname.trim().length >= 2) handlePlay();
     };
-
-    const handleGuestLogin = async () => {
-        try {
-            setError('');
-            setLoading(true);
-            const result = await guestLogin();
-            loginUser(result.user, result.token);
-            navigate('/');
-        } catch (e: any) {
-            setError(e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Показываем поле кода если есть ошибка о неподтверждённой почте
-    const showVerification = error.includes('Почта не подтверждена');
 
     return (
-        <div className="max-w-md mx-auto mt-8 px-4">
-            <Card padding="lg">
-                <h1 className="text-xl font-bold mb-4">Вход в игру</h1>
+        <div className="min-h-[80vh] flex items-center justify-center px-4 pt-16 sm:pt-0">
+            <div className="max-w-md w-full text-center">
+                <Card padding="lg">
+                    <h1 className="text-2xl font-bold mb-2">⚔️ MMO Arena</h1>
+                    <p className="text-sm text-[var(--color-text-muted)] mb-6">
+                        Добро пожаловать в мир битв, гильдий и турниров!
+                    </p>
 
-                {showVerification ? (
-                    <>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-2">
-                            Введите код подтверждения, отправленный на почту
-                        </p>
-                        <p className="text-xs text-[var(--color-accent-warning)] bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-2 mb-3">
-                            ⚠ Письмо может попасть в спам. Если не пришло — проверьте папку «Спам».
-                        </p>
+                    <div className="text-left mb-4">
+                        <label className="text-xs text-[var(--color-text-muted)] mb-1 block">Представьтесь:</label>
                         <input
                             type="text"
-                            placeholder="123456"
-                            maxLength={6}
-                            value={code}
-                            onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                            className="w-full p-2 mb-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-center text-2xl tracking-[0.5em] outline-none focus:border-[var(--color-accent-info)]"
-                            autoFocus
-                        />
-                        <Button variant="danger" fullWidth onClick={handleVerify} disabled={code.length !== 6 || loading}>
-                            {loading ? '...' : 'Подтвердить'}
-                        </Button>
-                        {resendMsg && <p className={`text-sm mt-2 ${resendMsg.includes('отправлен') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{resendMsg}</p>}
-                        {error && <p className="text-[var(--color-accent-danger)] mt-2 text-sm">{error}</p>}
-                        <div className="flex gap-2 mt-3">
-                            <button onClick={handleResend} disabled={loading} className="flex-1 text-sm text-[var(--color-accent-info)] hover:underline">
-                                Отправить код повторно
-                            </button>
-                            <button onClick={() => { setError(''); setVerifyEmailAddr(''); setCode(''); }} className="flex-1 text-sm text-[var(--color-text-muted)] hover:underline">
-                                ← Назад
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <input
-                            type="text"
-                            placeholder="Email или логин"
-                            value={username}
-                            onChange={e => setUsername(e.target.value)}
+                            placeholder="Ваш никнейм"
+                            value={nickname}
+                            onChange={e => setNickname(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            className="w-full p-2 mb-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
+                            maxLength={16}
+                            autoFocus
+                            className="w-full p-3 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded-lg text-[var(--color-text-primary)] text-lg text-center outline-none focus:border-[var(--color-accent-info)] transition-colors"
                         />
-                        <div className="relative mb-3">
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="Пароль"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                className="w-full p-2 pr-10 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded text-[var(--color-text-primary)] text-sm outline-none focus:border-[var(--color-accent-info)]"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                            >
-                                {showPassword ? '🙈' : '👁'}
-                            </button>
-                        </div>
-                        <Button variant="danger" fullWidth onClick={handleLogin} disabled={loading}>
-                            {loading ? '...' : 'Войти'}
-                        </Button>
-                        {error && <p className="text-[var(--color-accent-danger)] mt-2 text-sm">{error}</p>}
+                        {error && <p className="text-[var(--color-accent-danger)] text-xs mt-1">{error}</p>}
+                    </div>
 
-                        <p className="text-center text-sm text-[var(--color-text-muted)] mt-4">
-                            Нет аккаунта?{' '}
-                            <Link to="/register" className="text-[var(--color-accent-info)] hover:underline">
-                                Зарегистрироваться
-                            </Link>
-                        </p>
+                    <Button variant="danger" fullWidth onClick={handlePlay} disabled={loading} className="text-base py-3">
+                        {loading ? '...' : '⚔️ В бой!'}
+                    </Button>
 
-                        <div className="flex items-center gap-2 my-4">
-                            <div className="flex-1 h-px bg-[var(--color-border-light)]" />
-                            <span className="text-xs text-[var(--color-text-muted)]">или</span>
-                            <div className="flex-1 h-px bg-[var(--color-border-light)]" />
-                        </div>
+                    <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-3">
+                        Без паролей и регистраций — просто назовите себя
+                    </p>
 
-                        <div className="flex flex-col gap-2">
-                            <a href={`${BASE_URL}/yandex`} className="flex items-center justify-center w-full p-2 rounded text-sm font-medium bg-[#FC3F1D] text-white hover:bg-[#E5391A] transition-colors">
-                                Яндекс ID
-                            </a>
-                            <a href={`${BASE_URL}/vk`} className="flex items-center justify-center w-full p-2 rounded text-sm font-medium bg-[#0077FF] text-white hover:bg-[#0066DD] transition-colors">
-                                VK ID
-                            </a>
-                        </div>
+                    <div className="flex items-center gap-2 my-4">
+                        <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                        <span className="text-xs text-[var(--color-text-muted)]">привязать аккаунт</span>
+                        <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                    </div>
 
-                        <div className="flex items-center gap-2 my-4">
-                            <div className="flex-1 h-px bg-[var(--color-border-light)]" />
-                            <span className="text-xs text-[var(--color-text-muted)]">или</span>
-                            <div className="flex-1 h-px bg-[var(--color-border-light)]" />
-                        </div>
+                    <div className="flex flex-col gap-2">
+                        <a href={`${BASE_URL}/yandex`} className="flex items-center justify-center w-full p-2.5 rounded-lg text-sm font-medium bg-[#FC3F1D] text-white hover:bg-[#E5391A] transition-colors">
+                            Яндекс ID
+                        </a>
+                        <a href={`${BASE_URL}/vk`} className="flex items-center justify-center w-full p-2.5 rounded-lg text-sm font-medium bg-[#0077FF] text-white hover:bg-[#0066DD] transition-colors">
+                            VK ID
+                        </a>
+                    </div>
+                    <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">
+                        За привязку аккаунта — <span className="text-[var(--color-accent-gold)]">3 дня премиума</span>
+                    </p>
 
-                        <Button variant="secondary" fullWidth onClick={handleGuestLogin} disabled={loading}>
-                            {loading ? '...' : 'Гостевой вход'}
-                        </Button>
-                    </>
-                )}
-            </Card>
+                    <div className="flex items-center gap-2 my-4">
+                        <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                        <span className="text-xs text-[var(--color-text-muted)]">уже есть аккаунт</span>
+                        <div className="flex-1 h-px bg-[var(--color-border-light)]" />
+                    </div>
+
+                    <Button variant="secondary" fullWidth onClick={() => navigate('/login-classic')} className="text-xs">
+                        Войти через email и пароль
+                    </Button>
+                </Card>
+
+                <p className="text-[0.7rem] text-[var(--color-text-muted)] mt-4 leading-relaxed">
+                    Нажимая «⚔️ В бой!», вы принимаете{' '}
+                    <Link to="/rules" className="text-[var(--color-accent-info)] hover:underline">правила игры</Link>
+                    {' '}и соглашаетесь на{' '}
+                    <Link to="/privacy" className="text-[var(--color-accent-info)] hover:underline">обработку данных</Link>
+                </p>
+            </div>
         </div>
     );
 }

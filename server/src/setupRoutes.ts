@@ -21,7 +21,6 @@ import accountRoutes from './routes/account';
 import chatRoutes from './routes/chat';
 import craftRoutes from './routes/craft';
 import oauthRoutes from './routes/oauth';
-import vkBridgeAuth from './routes/vkBridgeAuth';
 import mobsRoutes from './routes/mobs';
 import bankRoutes from './routes/bank';
 import tavernRoutes from './routes/tavern';
@@ -37,21 +36,37 @@ import adminGameRoutes from './routes/adminGame';
 import actionsRoutes from './routes/actions';
 import collectionsRoutes from './routes/collections';
 import adminCollectionsRoutes from './routes/adminCollections';
+import adminBotsRoutes from './routes/adminBots';
+import guildBuildingsRoutes from './routes/guildBuildings';
 import battleSimRoutes from './routes/battleSim';
+import overflowRoutes from './routes/overflow';
+import vkPaymentsRoutes from './routes/vkPayments';
+import vkBridgeAuthRoutes from './routes/vkBridgeAuth';
+import yukassaRoutes from './routes/yukassa';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
   app.use('/api', authRoutes);
   app.use('/api', adminAuthRoutes);
   app.use('/api/oauth', oauthRoutes);
-  app.use('/api/auth', vkBridgeAuth);
 
   // Действия (публичный)
   app.use('/api', actionsRoutes);
 
   // Этажи (публичный — нужен бестиарию)
   app.get('/api/floors', async (_req: any, res) => {
-    res.json(await db.query('SELECT * FROM floors ORDER BY sort_order, name'));
+    const rows = await db.query('SELECT * FROM floors ORDER BY sort_order, name') as any[];
+    const DIFF_MAP: Record<string,number> = {
+        'Склеп':0,'Подземелье':0,'Катакомбы':0,'Деревня Пепла':0,
+        'Лес Черепов':1,'Старый Тракт':1,'Ядовитые луга':1,'Первый ярус':1,
+        'Гнилая Топь':2,'Чёрный Монастырь':2,'Башня Плакальщиц':2,'Некрополь Королей':2,
+        'Бездонный Овраг':3,'Врата Бездны':3,
+    };
+    const DIFF_LABELS = ['Легко','Нормально','Сложно','Ад'];
+    const DIFF_ICONS = ['🟢','🟡','🟠','🔴'];
+    const floors = rows.map(r => ({...r, difficulty: DIFF_MAP[r.name] ?? 0}));
+    const groups = DIFF_LABELS.map((label,i) => ({label, icon: DIFF_ICONS[i], difficulty: i}));
+    res.json({ floors, groups });
   });
 
   // Серверное время (публичный)
@@ -62,8 +77,17 @@ export function setupRoutes(app: Express) {
   // Приём клиентских ошибок (можно без авторизации — логируем всё)
   app.use('/api/log', logRoutes);
 
+  // VK Payments — публичный колбэк (без middleware, подпись проверяется внутри)
+  app.use('/api/vk/payments', vkPaymentsRoutes);
+
+  // YooKassa webhook — публичный (без middleware)
+  app.use('/api/yukassa', yukassaRoutes);
+
   // Админские маршруты
   app.use('/api/admin', authMiddleware, requireAdmin, adminRoutes);
+
+  // VK Bridge Auth (публичный, проверка токена внутри)
+  app.use('/api/auth', vkBridgeAuthRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminCraftRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminJobsRoutes);
   app.use('/api/admin/chat', authMiddleware, requireAdmin, adminChatRoutes);
@@ -72,6 +96,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/admin', authMiddleware, requireAdmin, adminGameRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminFeedbackRouter);
   app.use('/api/admin', authMiddleware, requireAdmin, adminCollectionsRoutes);
+  app.use('/api/admin', authMiddleware, requireAdmin, adminBotsRoutes);
 
   // Тоггл гостевых ограничений
   app.post('/api/admin/toggle-guest', authMiddleware, requireAdmin, (req, res) => {
@@ -101,9 +126,11 @@ export function setupRoutes(app: Express) {
   app.use('/api', ordersRoutes);
   app.use('/api', questsRoutes);
   app.use('/api', guildRoutes);
+  app.use('/api', guildBuildingsRoutes);
   app.use('/api', feedbackRoutes);
   app.use('/api', tournamentRoutes);
   app.use('/api', collectionsRoutes);
+  app.use('/api/overflow', overflowRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);

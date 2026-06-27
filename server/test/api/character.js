@@ -1,8 +1,8 @@
 const jwt = require("jsonwebtoken");
 const http = require("http");
 
-const env = require("dotenv").config().parsed;
-const token = jwt.sign({ userId: 31, username: "Ждуля", role: "player" }, env.JWT_SECRET);
+require("dotenv").config();
+const token = jwt.sign({ userId: 31, username: "Ждуля", role: "player" }, process.env.JWT_SECRET);
 
 http.get({
   hostname: "localhost", port: 3001,

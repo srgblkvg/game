@@ -85,10 +85,9 @@ router.post('/account/delete', async (req, res) => {
     // Отзываем токен
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
-        const parts = authHeader.split(' ');
-        const token = parts[1];
+        const token = authHeader.split(' ')[1];
         try {
-            const decoded: any = jwt.decode(token || '');
+            const decoded: any = jwt.decode(token!);
             if (decoded?.jti && decoded?.exp) revokeToken(decoded.jti, decoded.exp);
         } catch {}
     }
@@ -99,10 +98,9 @@ router.post('/account/delete', async (req, res) => {
 router.post('/account/logout', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Не авторизован' });
-    const parts = authHeader.split(' ');
-    const token = parts[1];
+    const token = authHeader.split(' ')[1];
     try {
-      const decoded: any = jwt.decode(token || '');
+      const decoded: any = jwt.decode(token!);
       if (decoded?.jti && decoded?.exp) {
         revokeToken(decoded.jti, decoded.exp);
       }
@@ -118,17 +116,14 @@ router.post('/account/register-guest', async (req, res) => {
     const parsed = registerGuestSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные', details: parsed.error.flatten() });
 
-    const { username, password, email, code } = parsed.data;
-
-    const existing = await db.one('SELECT id FROM users WHERE username = ? AND id != ?', [username, userId]);
-    if (existing) return res.status(400).json({ error: 'Это имя уже занято' });
+    const { password, email, code } = parsed.data;
 
     const emailTaken = await db.one('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
     if (emailTaken) return res.status(400).json({ error: 'Этот email уже используется' });
 
     // Проверяем код подтверждения email
     const now = Math.floor(Date.now() / 1000);
-    const guestUser = await db.one('SELECT emailCode, emailCodeExpires FROM users WHERE id = ?', [userId]) as any;
+    const guestUser = await db.one('SELECT emailCode, emailCodeExpires, username FROM users WHERE id = ?', [userId]) as any;
     if (!guestUser?.emailCode || guestUser.emailCodeExpires < now) {
         return res.status(400).json({ error: 'Код подтверждения недействителен или истёк. Запросите новый.' });
     }
@@ -137,11 +132,12 @@ router.post('/account/register-guest', async (req, res) => {
     }
 
     const passwordHash = bcrypt.hashSync(password, 10);
-    await db.run('UPDATE users SET username = ?, passwordHash = ?, email = ?, emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, isGuest = 0 WHERE id = ?',
-        [username, passwordHash, email, userId]);
+    const premiumUntil = now + 86400; // 1 день премиума за регистрацию
+    await db.run('UPDATE users SET passwordHash = ?, email = ?, emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, isGuest = 0, premiumUntil = ? WHERE id = ?',
+        [passwordHash, email, premiumUntil, userId]);
 
-    const token = jwt.sign({ userId, role: 'player', isGuest: false, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ success: true, token, username });
+    const token = jwt.sign({ userId, role: 'player', isGuest: false, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ success: true, token, username: guestUser.username });
 });
 
 // Загрузка аватара (base64)
@@ -160,8 +156,8 @@ router.post('/account/avatar', async (req, res) => {
     if (!match) return res.status(400).json({ error: 'Формат не поддерживается. Допустимы: webp, png, jpeg' });
 
     const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
-    const data = match[2] || '';
-    const buffer = Buffer.from(data, 'base64');
+    const data = match[2];
+    const buffer = Buffer.from(data!, 'base64');
     if (buffer.length > 512 * 1024) return res.status(400).json({ error: 'Изображение слишком большое (макс. 512 КБ)' });
 
     const filename = `${userId}.${ext}`;

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { broadcast } from '../websocket';
+import { broadcast } from '../events';
 
 const router = Router();
 

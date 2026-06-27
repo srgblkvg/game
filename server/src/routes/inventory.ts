@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { currentStats, isSlotCompatible } from '../game/stats';
 import { getUserById, getBaseStats, recalcHpOnEquip } from '../db/helpers';
+import { getDrinkBonuses } from '../game/drinks';
+import { getGuildBonus } from '../game/guildBuildings';
 
 const router = Router();
 
@@ -18,24 +20,28 @@ router.post('/character/equip', async (req, res) => {
     const equipment: Record<string, any> = JSON.parse(user.equipment || '{}');
     const currentEquipped = equipment[slotId];
 
+    const drinkBonuses = getDrinkBonuses(user);
+    const collectionCount = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt;
+    const guildBonus = await getGuildBonus(userId, 'arena');
+
     if (itemId === undefined || itemId === null) {
         if (!currentEquipped) return res.status(400).json({ error: 'Слот пуст' });
 
         const base = getBaseStats(user);
-        const oldStats = currentStats(base, equipment);
+const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, guildBonus);
         const oldMaxHp = oldStats.hp;
 
         inventory.push(currentEquipped);
         delete equipment[slotId];
 
-        const newStats = currentStats(base, equipment);
+        const newStats = currentStats(base, equipment, drinkBonuses, collectionCount, guildBonus);
         const newMaxHp = newStats.hp;
         const newHp = recalcHpOnEquip(user.currentHp, oldMaxHp, newMaxHp);
 
         const now = Math.floor(Date.now() / 1000);
         await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
             [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
-        return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp });
+        return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
     }
 
     const itemIndex = inventory.findIndex((i: any) => i.id == itemId);
@@ -67,12 +73,12 @@ router.post('/character/equip', async (req, res) => {
     }
 
     const base = getBaseStats(user);
-    const oldStats = currentStats(base, equipment);
+    const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, guildBonus);
 
     inventory.splice(itemIndex, 1);
     equipment[slotId] = item;
 
-    const newStats = currentStats(base, equipment);
+    const newStats = currentStats(base, equipment, drinkBonuses, collectionCount, guildBonus);
     const newMaxHp = newStats.hp;
     const newHp = recalcHpOnEquip(user.currentHp, oldStats.hp, newMaxHp);
 
@@ -80,7 +86,7 @@ router.post('/character/equip', async (req, res) => {
     await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
         [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
 
-    res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp });
+    res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
 });
 
 // Разобрать предмет(ы)

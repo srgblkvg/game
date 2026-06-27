@@ -19,7 +19,7 @@ export default function GuildRatingPage() {
             .then(r => r.json()).then(setGuilds).catch(() => {});
     }, [user]);
 
-    const myGuildId = (character as any)?.guildId;
+    const myGuildId = character?.guildId;
 
     const toggle = (id: number) => {
         setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });

@@ -110,9 +110,13 @@ export default function Header() {
             fetchBattles(1)
                 .then((battles: any[]) => {
                     if (battles.length > 0) {
-                        const lastBattleTime = safeDate(battles[0].createdAt)?.getTime() ?? Date.now();
-                        if (lastBattleTime > lastSeen) {
-                            setHasNewBattles(true);
+                        // Показываем уведомление только если атаковали игрока (он defender)
+                        const newDefeats = battles.filter((b: any) => b.defenderId === user.id);
+                        if (newDefeats.length > 0) {
+                            const lastBattleTime = safeDate(newDefeats[0].createdAt)?.getTime() ?? Date.now();
+                            if (lastBattleTime > lastSeen) {
+                                setHasNewBattles(true);
+                            }
                         }
                     }
                 })
@@ -120,15 +124,15 @@ export default function Header() {
         };
 
         checkForNewBattles();
-        fetchCharacter().then(setCharacter).catch(console.error);
+        fetchCharacter().then(char => setCharacter({ ...char })).catch(console.error);
         const interval = setInterval(() => {
             checkForNewBattles();
-            fetchCharacter().then(setCharacter).catch(console.error);
-        }, 30000); // 30 сек вместо 10 — баланс идёт через WS
+            fetchCharacter().then(char => setCharacter(prev => ({ ...prev, ...char }))).catch(console.error);
+        }, 30000);
 
         // Баланс через WS — мгновенное обновление money (кроме времени боя)
         const onBalance = (e: Event) => {
-            if ((window as any).__battling) return; // не обновляем во время анимации боя
+            if ((window as any).__battling) return;
             const { money } = (e as CustomEvent).detail;
             if (money !== undefined) {
                 setCharacter((prev: any) => prev ? { ...prev, money } : prev);
@@ -190,7 +194,7 @@ export default function Header() {
     };
 
     return (
-        <div className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+        <div id="site-header" className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
             <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
                 {user.role === 'player' && character && (
                     <span className="text-[var(--color-text-primary)] text-sm font-bold">
@@ -236,6 +240,9 @@ export default function Header() {
                                 title="Настройки"
                             >
                                 <Icon icon="game-icons:cog" width="20" height="20" className="text-[var(--color-text-muted)]" />
+                                {(user.isGuest) && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[var(--color-accent-danger)] rounded-full animate-pulse" />
+                                )}
                             </button>
                             {menuOpen && createPortal(
                                 <div ref={popupRef} className="fixed right-3 top-11 mt-1 w-44 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl z-[70] py-1">
@@ -279,6 +286,29 @@ export default function Header() {
                                         <Icon icon="mdi:vk" width="16" height="16" className="text-[#0077FF]" />
                                         Сообщество VK
                                     </a>
+                                    <button
+                                        onClick={() => { navigate('/rules'); setMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
+                                    >
+                                        <Icon icon="game-icons:book-cover" width="16" height="16" className="text-[var(--color-text-muted)]" />
+                                        Правила
+                                    </button>
+                                    <button
+                                        onClick={() => { navigate('/privacy'); setMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
+                                    >
+                                        <Icon icon="game-icons:locked-door" width="16" height="16" className="text-[var(--color-text-muted)]" />
+                                        Конфиденциальность
+                                    </button>
+                                    {(user.isGuest) && (
+                                        <div className="border-t border-[var(--color-border-light)] mt-1 pt-1 px-3 py-1.5">
+                                            <p className="text-[0.6rem] text-[var(--color-accent-gold)] mb-1">Привяжите аккаунт — 1 день премиума!</p>
+                                            <div className="flex gap-1">
+                                                <a href="/api/oauth/yandex" className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#FC3F1D] text-white no-underline">Яндекс</a>
+                                                <a href="/api/oauth/vk" className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#0077FF] text-white no-underline">VK</a>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>,
                                 document.body
                             )}

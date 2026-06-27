@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface GameItem {
   id?: string | number;
@@ -36,12 +36,17 @@ export interface Character {
   equipment: Record<string, GameItem>;
   baseStats: { s: number; a: number; d: number; m: number };
   currentHp: number;
+  lastHpUpdate?: number;
   stats?: {
     s: number;
     a: number;
     d: number;
     m: number;
     hp: number;
+    bonuses?: { s: number; a: number; d: number; m: number };
+    extra?: { crit: number; dodge: number; counter: number; fullBlock: number };
+    drinks?: { s: number; a: number; d: number; m: number };
+    collection?: number;
   };
   lastAttackTime: number;
   protectionUntil: number;
@@ -57,6 +62,7 @@ export interface Character {
     rewardMin?: number;
     rewardMax?: number;
     background?: string | null;
+    premiumBonus?: number;
   } | null;
   openPrivateTabs?: number[];
   gender?: string;
@@ -66,6 +72,9 @@ export interface Character {
   premium?: { until: number } | null;
   drinkBonuses?: { s: number; a: number; d: number; m: number };
   collectionCount?: number;
+  guildBonus?: number;
+  buildings?: { type: string; icon: string; label: string; level: number; bonus: number }[];
+  collectedItems?: { itemName: string; slot: string }[];
   totalCollectionItems?: number;
   attackCooldownSec?: number;
   pveCooldownSec?: number;
@@ -110,15 +119,13 @@ export function getRegenHp(currentHp: number, maxHp: number, serverTime: number,
 export function GameProvider({ children }: { children: ReactNode }) {
   const [character, setCharacter] = useState<Character | null>(null);
   const [serverTime, setServerTime] = useState(Math.floor(Date.now() / 1000));
-  const charRef = useRef(character);
 
   // Обновляем снапшот HP при изменении character
   useEffect(() => {
-    if (character && character !== charRef.current) {
-      _hpSnapshot = { hp: character.currentHp, time: serverTime };
-      charRef.current = character;
+    if (character) {
+      _hpSnapshot = { hp: character.currentHp, time: character.lastHpUpdate || serverTime };
     }
-  }, [character, serverTime]);
+  }, [character]);
 
   useEffect(() => {
     const handler = (e: Event) => setServerTime((e as CustomEvent).detail);

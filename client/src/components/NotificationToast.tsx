@@ -53,25 +53,9 @@ export default function NotificationToast() {
                     shownRef.add(n.id);
                     next.push({ ...n, fading: false });
                 }
-                // Ограничиваем 10 тостами
                 if (next.length > 10) return next.slice(-10);
                 return next;
             });
-        };
-        window.addEventListener('notifications', handler);
-        return () => window.removeEventListener('notifications', handler);
-    }, []);
-
-    // Бейдж на карточке Аукциона — инкрементируем глобальный счётчик
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const notifications = (e as CustomEvent).detail as Notification[];
-            if (!notifications) return;
-            const newSold = notifications.filter(n => n.type === 'auction_sold').length;
-            if (newSold > 0) {
-                (window as any).__auctionBadge = ((window as any).__auctionBadge || 0) + newSold;
-                window.dispatchEvent(new CustomEvent('auctionBadge'));
-            }
         };
         window.addEventListener('notifications', handler);
         return () => window.removeEventListener('notifications', handler);

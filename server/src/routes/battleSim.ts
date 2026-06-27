@@ -3,6 +3,7 @@ import { db } from '../db/index';
 import { runBattle } from '../game/battle';
 import { currentStats } from '../game/stats';
 import { authMiddleware } from '../middleware/auth';
+import { buildPlayerStats } from '../db/helpers';
 
 const router = Router();
 
@@ -75,37 +76,20 @@ router.post('/battle-sim', authMiddleware, async (req, res) => {
 
     try {
         const u1 = await db.one(
-            `SELECT id, username, level, bases, basea, based, basem, equipment, activedrink
+            `SELECT id, username, level, bases, basea, based, basem, equipment, activedrink, drinkuntil, guildid
              FROM users WHERE id = ?`, [id1]
         ) as any;
         const u2 = await db.one(
-            `SELECT id, username, level, bases, basea, based, basem, equipment, activedrink
+            `SELECT id, username, level, bases, basea, based, basem, equipment, activedrink, drinkuntil, guildid
              FROM users WHERE id = ?`, [id2]
         ) as any;
         if (!u1 || !u2) return res.status(404).json({ error: 'Игрок не найден' });
 
-        const c1 = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userid = ?', [id1]) as any;
-        const c2 = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userid = ?', [id2]) as any;
+        const s1 = await buildPlayerStats(u1, 'arena');
+        const s2 = await buildPlayerStats(u2, 'arena');
 
-        const buildPlayer = (u: any, collCnt: number) => {
-            let drinks = null;
-            if (u.activedrink) {
-                try { const d = JSON.parse(u.activedrink); if (d.bonuses) drinks = d.bonuses; } catch {}
-            }
-            return {
-                id: u.id,
-                name: u.username,
-                base: { s: +u.bases, a: +u.basea, d: +u.based, m: +u.basem },
-                equipment: JSON.parse(u.equipment || '{}'),
-                level: +u.level,
-                money: 0,
-                drinkBonuses: drinks,
-                collectionBonus: parseInt(String(collCnt || '0')),
-            };
-        };
-
-        const p1 = buildPlayer(u1, c1?.cnt || 0);
-        const p2 = buildPlayer(u2, c2?.cnt || 0);
+        const p1 = { id: u1.id, name: u1.username, base: { s: +u1.bases, a: +u1.basea, d: +u1.based, m: +u1.basem }, equipment: JSON.parse(u1.equipment || '{}'), level: +u1.level, money: 0, stats: s1 };
+        const p2 = { id: u2.id, name: u2.username, base: { s: +u2.bases, a: +u2.basea, d: +u2.based, m: +u2.basem }, equipment: JSON.parse(u2.equipment || '{}'), level: +u2.level, money: 0, stats: s2 };
 
         const results = [];
         let wins1 = 0, wins2 = 0;
@@ -137,12 +121,12 @@ router.post('/battle-sim', authMiddleware, async (req, res) => {
             });
         }
 
-        const st1 = currentStats(p1.base, p1.equipment, p1.drinkBonuses, p1.collectionBonus);
-        const st2 = currentStats(p2.base, p2.equipment, p2.drinkBonuses, p2.collectionBonus);
+        const st1 = p1.stats;
+        const st2 = p2.stats;
 
         res.json({
-            p1: { id: p1.id, name: p1.name, level: p1.level, base: p1.base, stats: st1, collectionBonus: p1.collectionBonus, drinkBonuses: p1.drinkBonuses },
-            p2: { id: p2.id, name: p2.name, level: p2.level, base: p2.base, stats: st2, collectionBonus: p2.collectionBonus, drinkBonuses: p2.drinkBonuses },
+            p1: { id: p1.id, name: p1.name, level: p1.level, base: p1.base, stats: st1 },
+            p2: { id: p2.id, name: p2.name, level: p2.level, base: p2.base, stats: st2 },
             wins1, wins2, total: count,
             avgEffects: allEffects.reduce((a, b) => a + b, 0) / count,
             battles: results,

@@ -57,7 +57,7 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
 
     return (
         <div
-            className={`relative aspect-square rounded-lg border bg-[var(--color-bg-secondary)] flex flex-col items-center justify-center p-1 transition-colors select-none ${
+            className={`relative rounded-lg border bg-[var(--color-bg-secondary)] overflow-hidden transition-colors select-none ${
                 owned && !collected
                     ? 'border-2 border-[#2ecc71] opacity-100 shadow-[0_0_8px_rgba(46,204,113,0.5)]'
                     : collected
@@ -71,14 +71,17 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
             onClick={canAdd ? onAdd : undefined}
             onContextMenu={(e) => e.preventDefault()}
         >
-            {getItemImage(item) ? (
-                <img src={getItemImage(item)!} alt={item.name} className="w-full h-full object-contain"
-                    style={collected || owned ? {} : { filter: 'grayscale(100%) brightness(0.6)' }} />
-            ) : (
-                <span className="text-[0.5rem] text-[var(--color-text-muted)] text-center leading-tight">{item.name}</span>
-            )}
-            <span className="text-[0.5rem] text-[var(--color-text-muted)] mt-0.5 leading-none text-center truncate w-full px-0.5">{item.name}</span>
-            {collected && <span className="absolute top-0.5 left-0.5 text-[0.5rem]">✓</span>}
+            <div className="pb-[100%]" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-1">
+                {getItemImage(item) ? (
+                    <img src={getItemImage(item)!} alt={item.name} className="w-full h-full object-contain"
+                        style={collected || owned ? {} : { filter: 'grayscale(100%) brightness(0.6)' }} />
+                ) : (
+                    <span className="text-[0.5rem] text-[var(--color-text-muted)] text-center leading-tight">{item.name}</span>
+                )}
+                <span className="text-[0.5rem] text-[var(--color-text-muted)] mt-0.5 leading-none text-center truncate w-full px-0.5">{item.name}</span>
+                {collected && <span className="absolute top-0.5 left-0.5 text-[0.5rem]">✓</span>}
+            </div>
         </div>
     );
 }
@@ -245,10 +248,10 @@ export default function CollectionsPage() {
                         </p>
                         {message && <p className="text-xs text-[var(--color-accent-danger)] mb-2">{message}</p>}
                         <div className="flex gap-2">
-                            <button className="flex-1 text-xs py-1.5 rounded-lg bg-[var(--color-accent-danger)] text-white font-medium hover:opacity-90" onClick={handleConfirm}>
+                            <button className="flex-1 text-xs py-1.5 rounded-lg bg-[var(--color-accent-danger)] text-white font-medium hover:opacity-90 cursor-pointer" onClick={handleConfirm}>
                                 Поместить в коллекцию
                             </button>
-                            <button className="flex-1 text-xs py-1.5 rounded-lg border border-[var(--color-border-light)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]"
+                            <button className="flex-1 text-xs py-1.5 rounded-lg border border-[var(--color-border-light)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] cursor-pointer"
                                 onClick={() => { setShowConfirm(false); setSelectedInvItem(null); }}>Отмена</button>
                         </div>
                     </div>

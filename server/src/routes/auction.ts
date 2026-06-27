@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
-import { markDirty, pushNotification, broadcast, sendToUser } from '../websocket';
+import { markDirty, pushNotification, broadcast, sendToUser } from '../events';
 
 const router = Router();
 
@@ -31,16 +31,70 @@ router.get('/auction/price-floor', async (req, res) => {
 // Все лоты
 router.get('/auction', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
-    // Закрываем просроченные лоты
+    // Закрываем просроченные лоты со ставками
     const expired = await db.query('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NOT NULL', [now]) as any[];
     for (const lot of expired) {
         const commission = Math.floor(lot.currentBid * 0.1);
         const payout = lot.currentBid - commission;
-        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [payout, lot.sellerId]);
+        // Заплатить продавцу
+        await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+        // Отдать предмет покупателю
+        const buyer = await db.one('SELECT inventory FROM users WHERE id = ?', [lot.currentBidderId]) as any;
+        if (buyer) {
+            const buyItemData = JSON.parse(lot.itemData);
+            const inventory = JSON.parse(buyer.inventory || '[]');
+            const isCraft = buyItemData.type === 'craft_item' || buyItemData.type === 'material';
+            if (isCraft) {
+                const existingIdx = inventory.findIndex((i: any) =>
+                    (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(buyItemData.id)
+                );
+                if (existingIdx !== -1) {
+                    inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (buyItemData.count || 1);
+                } else {
+                    inventory.push(buyItemData);
+                }
+            } else {
+                inventory.push(buyItemData);
+            }
+            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), lot.currentBidderId]);
+        }
+        // Запись в историю
+        await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [lot.sellerId, lot.currentBidderId, JSON.parse(lot.itemData).name || 'Предмет', lot.itemData, lot.currentBid, commission, new Date().toISOString()]);
+        // Уведомления
+        const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [lot.currentBidderId]) as any)?.username || 'Кто-то';
+        pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} купил «${JSON.parse(lot.itemData).name || 'Предмет'}» за ${lot.currentBid}🥇` });
+        sendToUser(lot.sellerId, { type: 'auction_badge', count: 1 });
+        await db.run('UPDATE users SET auction_sales = COALESCE(auction_sales, 0) + 1 WHERE id = ?', [lot.sellerId]);
+        pushNotification(lot.currentBidderId, { type: 'system', message: `Вы выиграли «${JSON.parse(lot.itemData).name || 'Предмет'}» на аукционе!` });
         await db.run('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
     }
-    // Удаляем непроданные
-    await db.run('DELETE FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL', [now]);
+    // Возвращаем непроданные лоты продавцам
+    const unsold = await db.query('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL', [now]) as any[];
+    for (const lot of unsold) {
+        const seller = await db.one('SELECT inventory FROM users WHERE id = ?', [lot.sellerId]) as any;
+        if (seller) {
+            const itemData = JSON.parse(lot.itemData);
+            const inventory = JSON.parse(seller.inventory || '[]');
+            const isCraft = itemData.type === 'craft_item' || itemData.type === 'material';
+            if (isCraft) {
+                const existingIdx = inventory.findIndex((i: any) =>
+                    (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
+                );
+                if (existingIdx !== -1) {
+                    inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (itemData.count || 1);
+                } else {
+                    inventory.push(itemData);
+                }
+            } else {
+                inventory.push(itemData);
+            }
+            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), lot.sellerId]);
+        }
+        pushNotification(lot.sellerId, { type: 'system', message: `Лот «${JSON.parse(lot.itemData).name || 'Предмет'}» не был продан и возвращён` });
+        await db.run('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
+    }
 
     const lots = await db.query(`
         SELECT l.*, u.username as sellerName, g.name as sellerGuild, u.guildId as sellerGuildId,
@@ -52,7 +106,58 @@ router.get('/auction', async (req, res) => {
         WHERE l.endsAt > ? ORDER BY l.endsAt ASC
     `, [now]) as any[];
 
-    res.json(lots.map((l) => ({ ...l, itemData: JSON.parse(l.itemData) })));
+    const allLots = lots.map((l) => {
+      try {
+        return { ...l, itemData: JSON.parse(l.itemData) };
+      } catch {
+        return { ...l, itemData: l.itemData };
+      }
+    });
+
+    // Client-side filtering/search/pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const search = (req.query.search as string) || '';
+    const category = (req.query.category as string) || 'all';
+    const sort = (req.query.sort as string) || 'end';
+
+    let filtered = allLots;
+    if (search) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter((l: any) => (l.itemData?.name || '').toLowerCase().includes(q));
+    }
+    if (category && category !== 'all') {
+      filtered = filtered.filter((l: any) => {
+        const slot = l.itemData?.slot || '';
+        if (category === 'weapon') return slot === 'weapon1';
+        if (category === 'shield') return slot === 'shield';
+        if (category === 'armor') return ['helmet','chest','gloves','boots'].includes(slot);
+        if (category === 'accessory') return ['amulet','ring','belt'].includes(slot);
+        if (category === 'material') return l.itemData?.type === 'craft_item' || l.itemData?.type === 'material';
+        return slot === category;
+      });
+    }
+
+    // Stat filters (client sends minStr/minAgi/minDef/minMag)
+    const statMap: Record<string, string> = { minStr: 's', minAgi: 'a', minDef: 'd', minMag: 'm' };
+    for (const [clientKey, statKey] of Object.entries(statMap)) {
+      const minVal = parseInt(req.query[clientKey] as string) || 0;
+      if (minVal > 0) {
+        filtered = filtered.filter((l: any) => (l.itemData?.bonuses?.[statKey] || 0) >= minVal);
+      }
+    }
+
+    // Sort
+    if (sort === 'price_asc') filtered.sort((a: any, b: any) => (a.currentBid || a.startPrice) - (b.currentBid || b.startPrice));
+    else if (sort === 'price_desc') filtered.sort((a: any, b: any) => (b.currentBid || b.startPrice) - (a.currentBid || a.startPrice));
+    // default 'end' — already sorted by endsAt ASC from query
+
+    const limit = 6;
+    const totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+    const paged = filtered.slice((page - 1) * limit, page * limit);
+
+    const myLotCount = (await db.one('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ? AND endsat > ?', [req.userId, Math.floor(Date.now() / 1000)]) as any).cnt;
+    res.json({ lots: paged, totalCount, totalPages, page, myLotCount });
 });
 
 // Создать лот
@@ -74,7 +179,7 @@ router.post('/auction/sell', async (req, res) => {
     if (buyoutPrice && buyoutPrice <= startPrice) return res.status(400).json({ error: 'Цена выкупа должна быть выше стартовой' });
 
     // Проверка лимита (5 лотов)
-    const userLotCount = (await db.one('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ?', [userId]) as any).cnt;
+    const userLotCount = (await db.one('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ? AND endsat > ?', [userId, Math.floor(Date.now() / 1000)]) as any).cnt;
     if (userLotCount >= 5) return res.status(400).json({ error: 'Максимум 5 лотов' });
 
     // Комиссия за листинг 5% (от общей стартовой цены)

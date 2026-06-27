@@ -54,10 +54,11 @@ export async function login(username: string, password: string) {
     return res.json();
 }
 
-export async function guestLogin() {
+export async function guestLogin(nickname?: string) {
     const res = await fetch(`${BASE_URL}/guest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nickname ? { nickname } : {}),
     });
     if (!res.ok) {
         const err = await res.json();

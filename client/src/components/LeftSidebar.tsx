@@ -1,8 +1,8 @@
 import CharacterCard from './CharacterCard';
 import StatAllocation from './StatAllocation';
 import BuffsBlock from './BuffsBlock';
-import { calculateStats } from '../utils/stats';
 import { useGame, getRegenHp, type Character } from '../contexts/GameContext';
+import { toCharCardData } from '../utils/character';
 
 interface LeftSidebarProps {
   character: Character;
@@ -14,8 +14,7 @@ interface LeftSidebarProps {
 export default function LeftSidebar({ character, onEquip, selectedItemId, highlightedSlots }: LeftSidebarProps) {
   if (!character) return null;
   const { serverTime } = useGame();
-  const drinkBonuses = character.drinkBonuses;
-  const stats = calculateStats(character, drinkBonuses, character.collectionCount || 0);
+  const stats = character.stats || { s: 0, a: 0, d: 0, m: 0, hp: 100 };
   // Премиум активирует комнату «Чулан», если нет своей
   const effectiveRoom = character.room || ((character.premium?.until || 0) > serverTime ? { type: 'closet' as const, until: character.premium!.until } : null);
   const regenHp = getRegenHp(character.currentHp, stats.hp, serverTime, effectiveRoom?.type, effectiveRoom?.until);
@@ -23,22 +22,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
   return (
     <div className="w-full sm:w-auto flex flex-col items-center sm:items-start">
       <CharacterCard
-        char={{
-          username: character.username,
-          level: character.level,
-          exp: character.exp,
-          currentHp: regenHp,
-          maxHp: stats.hp,
-          equipment: character.equipment,
-          stats: stats,
-          gender: character.gender,
-          guildName: character.guildName ?? undefined,
-          guildId: character.guildId ?? undefined,
-          avatar: character.avatar || null,
-          baseStats: stats.baseStats,
-          equipmentBonuses: stats.equipmentBonuses,
-          extraStats: stats.extraStats,
-        }}
+        char={toCharCardData(character, { currentHp: regenHp, maxHp: stats.hp })}
         side="left"
         showHealth
         showExp

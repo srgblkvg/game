@@ -23,7 +23,7 @@ router.post('/upload-image', async (req, res) => {
     const subfolder = folder ? `${folder}/` : '';
     const dir = path.join(ADMIN_UPLOADS_DIR, subfolder);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, filename), Buffer.from(match[2] || '', 'base64'));
+    fs.writeFileSync(path.join(dir, filename), Buffer.from(match[2]!, 'base64'));
 
     const url = `/uploads/admin/${subfolder}${filename}`;
     res.json({ success: true, url });

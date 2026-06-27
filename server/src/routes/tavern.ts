@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { currentStats } from '../game/stats';
-import { getBaseStats, enrichEquipment } from '../db/helpers';
+import { buildPlayerStats } from '../db/helpers';
+import { getGuildBonus } from '../game/guildBuildings';
 
 const router = Router();
 
@@ -38,18 +38,8 @@ router.get('/tavern', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const base = getBaseStats(user);
-    const equipment = JSON.parse(user.equipment || '{}');
-    const { enriched } = await enrichEquipment(equipment);
-
-    // Бонусы от активного напитка
-    let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;
-    if (user.activeDrink && user.drinkUntil > now && drinks[user.activeDrink]) {
-        drinkBonuses = drinks[user.activeDrink]?.bonuses as any;
-    }
-
-    const collCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [req.userId]) as any).cnt || 0;
-    const stats = currentStats(base, enriched, drinkBonuses, collCnt);
+    const guildBonus = await getGuildBonus(req.userId, 'arena');
+    const stats = await buildPlayerStats(user, 'arena');
     const maxHp = stats.hp;
 
     res.json({
@@ -72,18 +62,8 @@ router.post('/tavern/heal', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const base = getBaseStats(user);
-    const equipment = JSON.parse(user.equipment || '{}');
-    const { enriched } = await enrichEquipment(equipment);
-
-    // Бонусы от активного напитка
-    let drinkBonuses: { s: number; a: number; d: number; m: number } | undefined;
-    if (user.activeDrink && user.drinkUntil > now && drinks[user.activeDrink]) {
-        drinkBonuses = drinks[user.activeDrink]?.bonuses as any;
-    }
-
-    const collCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [req.userId]) as any).cnt || 0;
-    const stats = currentStats(base, enriched, drinkBonuses, collCnt);
+    const guildBonus = await getGuildBonus(req.userId, 'arena');
+    const stats = await buildPlayerStats(user, 'arena');
     const maxHp = stats.hp;
     const missingHp = maxHp - user.currentHp;
     if (missingHp <= 0) return res.status(400).json({ error: 'HP уже полное' });
@@ -109,12 +89,18 @@ router.post('/tavern/room', async (req, res) => {
     const duration = hours === 8 ? 8 : 1;
     const cost = hours === 8 ? room.cost8h : room.cost1h;
 
-    const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT money, roomType, roomUntil FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.money < cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${cost})` });
 
     const now = Math.floor(Date.now() / 1000);
-    const until = now + duration * 3600;
+    // Стакаем время: если та же комната уже активна — добавляем к существующему until
+    let until: number;
+    if (user.roomType === roomType && (user.roomUntil || 0) > now) {
+        until = user.roomUntil + duration * 3600;
+    } else {
+        until = now + duration * 3600;
+    }
 
     await db.run('UPDATE users SET money = money - ?, roomType = ?, roomUntil = ? WHERE id = ?',
         [cost, roomType, until, userId]);
@@ -130,12 +116,18 @@ router.post('/tavern/drink', async (req, res) => {
     const drink = drinks[drinkType];
     if (!drink) return res.status(400).json({ error: 'Неизвестный напиток' });
 
-    const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT money, activeDrink, drinkUntil FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.money < drink.cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${drink.cost})` });
 
     const now = Math.floor(Date.now() / 1000);
-    const until = now + 3600; // 1 час
+    // Стакаем время: если тот же напиток уже активен — добавляем к существующему until
+    let until: number;
+    if (user.activeDrink === drinkType && (user.drinkUntil || 0) > now) {
+        until = user.drinkUntil + 3600;
+    } else {
+        until = now + 3600;
+    }
 
     await db.run('UPDATE users SET money = money - ?, activeDrink = ?, drinkUntil = ? WHERE id = ?',
         [drink.cost, drinkType, until, userId]);

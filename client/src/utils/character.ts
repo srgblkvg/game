@@ -17,11 +17,11 @@ export function toCharCardData(
     guildId: character.guildId ?? undefined,
     avatar: character.avatar || null,
     baseStats: character.baseStats,
-    equipmentBonuses: character.drinkBonuses,
-    extraStats: undefined,
-    collectionCount: character.collectionCount || 0,
-    guildBonus: undefined,
-    buildings: [],
+    equipmentBonuses: character.stats?.bonuses,
+    extraStats: character.stats?.extra,
+    collectionCount: character.collectionCount ?? undefined,
+    guildBonus: character.guildBonus,
+    buildings: character.buildings ?? [],
     ...overrides,
   };
 }

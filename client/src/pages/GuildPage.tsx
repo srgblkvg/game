@@ -6,10 +6,13 @@ import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
-import { fmtSafeDate } from '../utils/date';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
+
+const TABS = ['🏚️ Обзор', '🏘️ Постройки', '💰 Казна', '👥 Участники'];
+const PERIODS = ['today','week','month','all'] as const;
+const PLABELS: Record<string,string> = {today:'Сегодня',week:'Неделя',month:'Месяц',all:'Всё'};
 
 export default function GuildPage() {
     const { user } = useAuth();
@@ -22,61 +25,32 @@ export default function GuildPage() {
     const [requests, setRequests] = useState<any[]>([]);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [tab, setTab] = useState(0);
 
-    // Create form
     const [showCreate, setShowCreate] = useState(false);
     const [createName, setCreateName] = useState('');
     const [createDesc, setCreateDesc] = useState('');
-    const [createJoinType, setCreateJoinType] = useState<'open' | 'request' | 'invite'>('open');
-
-    // Invite
+    const [createJoinType, setCreateJoinType] = useState<'open'|'request'|'invite'>('open');
     const [inviteName, setInviteName] = useState('');
     const [inviteSuggestions, setInviteSuggestions] = useState<any[]>([]);
-    const [inviteTargetId, setInviteTargetId] = useState<number | null>(null);
-
-    // Казна
+    const [inviteTargetId, setInviteTargetId] = useState<number|null>(null);
     const [treasuryAmount, setTreasuryAmount] = useState('');
     const [treasuryHistory, setTreasuryHistory] = useState<any[]>([]);
-    const [treasuryBalance, setTreasuryBalance] = useState(guild?.treasury || 0);
-    const [showTreasury, setShowTreasury] = useState(false);
-    const [treasuryPage, setTreasuryPage] = useState(1);
-    const [treasuryTotalPages, setTreasuryTotalPages] = useState(1);
-    const [treasurySearch, setTreasurySearch] = useState('');
-    const [taxRate, setTaxRate] = useState(guild?.taxRate || 0);
+    const [treasuryBalance, setTreasuryBalance] = useState(0);
+    const [taxRate, setTaxRate] = useState(0);
     const [taxRateInput, setTaxRateInput] = useState('');
-    const [treasuryTab, setTreasuryTab] = useState<'deposit' | 'tax' | 'history'>('deposit');
-
-    // Гильд-войны
+    const [treasurySubtab, setTreasurySubtab] = useState<'deposit'|'tax'|'history'>('deposit');
+    const [treasuryPeriod, setTreasuryPeriod] = useState('week');
     const [war, setWar] = useState<any>(null);
-
-    // Попап подтверждения
-    const [confirmPopup, setConfirmPopup] = useState<{ message: string; onConfirm: () => void } | null>(null);
     const [showWarRules, setShowWarRules] = useState(false);
-
-    // Динамический поиск в истории казны
-    useEffect(() => {
-        if (treasuryTab !== 'history' || !showTreasury) return;
-        const timer = setTimeout(() => loadTreasury(1, treasurySearch), 300);
-        return () => clearTimeout(timer);
-    }, [treasurySearch]);
-
-    const searchUsers = async (q: string) => {
-        if (q.length < 2) { setInviteSuggestions([]); return; }
-        try {
-            const r = await fetch(`${BASE_URL}/users/search?q=${encodeURIComponent(q)}`, { headers: getHeaders() });
-            const data = await r.json();
-            setInviteSuggestions(data || []);
-        } catch { setInviteSuggestions([]); }
-    };
-
-    useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
+    const [confirmPopup, setConfirmPopup] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
 
     const api = async (url: string, body?: any) => {
-        const r = await fetch(`${BASE_URL}${url}`, { method: body ? 'POST' : 'GET', headers: getHeaders(), body: body ? JSON.stringify(body) : undefined });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error);
-        return d;
+        const r = await fetch(`${BASE_URL}${url}`, { method: body ? 'POST' : 'GET', headers: { ...getHeaders(), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+        const d = await r.json(); if (!r.ok) throw new Error(d.error); return d;
     };
+    const msg = (m: string) => { setMessage(m); setTimeout(() => setMessage(''), 3000); };
 
     const load = async () => {
         try {
@@ -84,786 +58,217 @@ export default function GuildPage() {
                 fetch(`${BASE_URL}/guild/my`, { headers: getHeaders() }).then(r => r.json()),
                 fetch(`${BASE_URL}/guild/list`, { headers: getHeaders() }).then(r => r.json()),
             ]);
-            if (data.guild) {
-                setGuild(data.guild); setMembers(data.members);
-                setTreasuryBalance(data.guild.treasury || 0);
-                setTaxRate(data.guild.taxRate || 0);
-                setWar(data.war || null);
-                if (data.guild.myRank === 'leader' || data.guild.myRank === 'officer') {
-                    fetch(`${BASE_URL}/guild/requests`, { headers: getHeaders() })
-                        .then(r => r.json()).then(setRequests).catch(() => {});
-                }
-            }
-            else { setGuild(null); setMembers([]); }
+            if (data.guild) { setGuild(data.guild); setMembers(data.members); setTreasuryBalance(data.guild.treasury||0); setTaxRate(data.guild.taxRate||0); setWar(data.war||null);
+                if (data.guild.myRank==='leader'||data.guild.myRank==='officer') fetch(`${BASE_URL}/guild/requests`,{headers:getHeaders()}).then(r=>r.json()).then(setRequests).catch(()=>{});
+            } else { setGuild(null); setMembers([]); }
             setGuildList(list);
         } catch (e: any) { setError(e.message); }
     };
+    useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
+
+    const loadTreasury = async (period: string) => {
+        setTreasuryPeriod(period);
+        const r = await fetch(`${BASE_URL}/guild/treasury/history?period=${period}`, { headers: getHeaders() });
+        const d = await r.json();
+        if (r.ok) { setTreasuryBalance(d.treasury); setTreasuryHistory(d.contributions||[]); }
+    };
+    useEffect(() => { if (tab === 2) loadTreasury(treasuryPeriod); }, [tab]);
+
+    const searchUsers = async (q: string) => {
+        if (q.length < 2) { setInviteSuggestions([]); return; }
+        fetch(`${BASE_URL}/users/search?q=${encodeURIComponent(q)}`,{headers:getHeaders()}).then(r=>r.json()).then(setInviteSuggestions).catch(()=>setInviteSuggestions([]));
+    };
 
     const handleCreate = async () => {
-        try {
-            const d = await api('/guild/create', { name: createName, description: createDesc, joinType: createJoinType });
-            setMessage(`Гильдия «${d.name}» создана!`);
-            setShowCreate(false);
-            const fresh = await fetchCharacter(); setCharacter(fresh);
-            load();
-        } catch (e: any) { setError(e.message); }
+        try { const d = await api('/guild/create',{name:createName,description:createDesc,joinType:createJoinType}); msg(`Гильдия «${d.name}» создана!`); setShowCreate(false); const f=await fetchCharacter(); setCharacter(f); load(); }
+        catch (e: any) { setError(e.message); }
     };
-
-    const handleJoin = async (guildId: number, joinType: string) => {
-        try {
-            if (joinType === 'open') {
-                await api(`/guild/join/${guildId}`, {});
-                setMessage('Вы вступили в гильдию!');
-            } else if (joinType === 'request') {
-                await api(`/guild/request/${guildId}`, {});
-                setMessage('Заявка отправлена!');
-            }
-            const fresh = await fetchCharacter(); setCharacter(fresh);
-            load();
-        } catch (e: any) { setError(e.message); }
+    const handleJoin = async (gid: number, jt: string) => {
+        try { await api(jt==='open'?`/guild/join/${gid}`:`/guild/request/${gid}`,{}); msg(jt==='open'?'Вступили!':'Заявка отправлена!'); const f=await fetchCharacter(); setCharacter(f); load(); }
+        catch (e: any) { setError(e.message); }
     };
-
     const handleInvite = async () => {
-        if (!inviteTargetId) { setError('Выберите игрока из списка'); return; }
-        try {
-            await api('/guild/invite', { targetId: inviteTargetId });
-            setMessage('Приглашение отправлено!');
-            setInviteName('');
-            setInviteTargetId(null);
-            setInviteSuggestions([]);
-        } catch (e: any) { setError(e.message); }
+        if (!inviteTargetId) { setError('Выберите игрока'); return; }
+        try { await api('/guild/invite',{targetId:inviteTargetId}); msg('Приглашение отправлено!'); setInviteName(''); setInviteTargetId(null); }
+        catch (e: any) { setError(e.message); }
     };
-
-    const handleLeave = async () => {
-        setConfirmPopup({
-            message: 'Покинуть гильдию?',
-            onConfirm: async () => {
-                setConfirmPopup(null);
-                try {
-                    await api('/guild/leave', {});
-                    setGuild(null); setMembers([]);
-                    const fresh = await fetchCharacter(); setCharacter(fresh);
-                    load();
-                } catch (e: any) { setError(e.message); }
-            }
-        });
+    const handleLeave = () => setConfirmPopup({ message:'Покинуть гильдию?', onConfirm: async () => { setConfirmPopup(null);
+        try { await api('/guild/leave',{}); setGuild(null); const f=await fetchCharacter(); setCharacter(f); load(); } catch (e: any) { setError(e.message); }
+    }});
+    const handleRequest = async (id: number, accept: boolean) => {
+        try { await api('/guild/handle-request',{requestId:id,accept}); msg(accept?'Принято':'Отклонено'); load(); } catch (e: any) { setError(e.message); }
     };
-
-    const handleRequest = async (requestId: number, accept: boolean) => {
-        try {
-            await api('/guild/handle-request', { requestId, accept });
-            setMessage(accept ? 'Заявка принята!' : 'Заявка отклонена');
-            load();
-        } catch (e: any) { setError(e.message); }
+    const handleKick = (id: number, name: string) => setConfirmPopup({ message:`Исключить ${name}?`, onConfirm: async () => { setConfirmPopup(null);
+        try { await api('/guild/kick',{targetId:id}); msg(`${name} исключён`); load(); } catch (e: any) { setError(e.message); }
+    }});
+    const handleRole = async (id: number, name: string, rank: string) => {
+        try { await api('/guild/role',{targetId:id,rank}); msg(`${name} → ${rank==='officer'?'офицер':'боец'}`); load(); } catch (e: any) { setError(e.message); }
     };
-
-    const handleKick = async (targetId: number, username: string) => {
-        setConfirmPopup({
-            message: `Исключить ${username} из гильдии?`,
-            onConfirm: async () => {
-                setConfirmPopup(null);
-                try {
-                    await api('/guild/kick', { targetId });
-                    setMessage(`${username} исключён`);
-                    load();
-                } catch (e: any) { setError(e.message); }
-            }
-        });
-    };
-
-    const handleRole = async (targetId: number, username: string, rank: string) => {
-        try {
-            await api('/guild/role', { targetId, rank });
-            setMessage(`${username} → ${rank === 'officer' ? 'офицер' : 'боец'}`);
-            load();
-        } catch (e: any) { setError(e.message); }
-    };
-
     const handleCancelInvites = async () => {
-        try {
-            const d = await api('/guild/cancel-invites', {});
-            setMessage(`Отменено приглашений: ${d.cancelled}`);
-            load();
-        } catch (e: any) { setError(e.message); }
+        try { const d = await api('/guild/cancel-invites',{}); msg(`Отменено: ${d.cancelled}`); load(); } catch (e: any) { setError(e.message); }
     };
-
-    const clearMessages = () => { setMessage(''); setError(''); };
-
-    // Гильд-войны: объявить войну
-    const handleDeclareWar = async (targetGuildId: number, targetGuildName: string) => {
-        if (!confirm(`Объявить войну гильдии «${targetGuildName}»?\nКазна обеих гильдий будет заморожена на 24 часа.`)) return;
-        try {
-            const d = await api('/guild/war/declare', { targetGuildId });
-            setMessage(d.message);
-            load();
-        } catch (e: any) { setError(e.message); }
-    };
-
-    // Гильд-войны: ответить на войну
-    const handleWarRespond = async (accept: boolean) => {
-        try {
-            const d = await api('/guild/war/respond', { accept });
-            setMessage(d.message);
-            load();
-        } catch (e: any) { setError(e.message); }
-    };
-
-    const loadTreasury = async (pageNum = 1, search = '') => {
-        try {
-            const params = new URLSearchParams({ page: String(pageNum), limit: '10' });
-            if (search) params.set('search', search);
-            const r = await fetch(`${BASE_URL}/guild/treasury/history?${params}`, { headers: getHeaders() });
-            const d = await r.json();
-            if (r.ok) {
-                setTreasuryBalance(d.treasury);
-                setTreasuryHistory(d.history || []);
-                setTreasuryPage(d.page);
-                setTreasuryTotalPages(d.totalPages);
-            }
-        } catch {}
-    };
-
     const handleDeposit = async () => {
-        const amount = parseInt(treasuryAmount);
-        if (!amount || amount < 1) { setError('Укажите сумму (минимум 1)'); return; }
-        try {
-            const r = await fetch(`${BASE_URL}/guild/treasury/deposit`, {
-                method: 'POST', headers: getHeaders(),
-                body: JSON.stringify({ amount }),
-            });
-            const d = await r.json();
-            if (!r.ok) throw new Error(d.error);
-            setTreasuryBalance(d.treasury);
-            setTreasuryAmount('');
-            setMessage(`Внесено ${amount.toLocaleString()} серебра в казну`);
-            loadTreasury(1, treasurySearch);
-            const fresh = await fetchCharacter(); setCharacter(fresh);
-        } catch (e: any) { setError(e.message); }
+        const a = parseInt(treasuryAmount); if (!a||a<1) { setError('Укажите сумму'); return; }
+        setLoading(true);
+        try { const d = await api('/guild/treasury/deposit',{amount:a}); setTreasuryBalance(d.treasury); setTreasuryAmount(''); msg(`Внесено ${a}`); loadTreasury(treasuryPeriod); }
+        catch (e: any) { setError(e.message); } finally { setLoading(false); }
+    };
+    const handleTaxRate = async () => {
+        const r = parseInt(taxRateInput); if (isNaN(r)||r<0||r>50) { setError('0-50%'); return; }
+        try { await api('/guild/tax-rate',{taxRate:r}); setTaxRate(r); setTaxRateInput(''); msg(`Налог: ${r}%`); } catch (e: any) { setError(e.message); }
     };
 
-    const handleSetTaxRate = async () => {
-        const rate = parseInt(taxRateInput);
-        if (isNaN(rate) || rate < 0 || rate > 50) { setError('Ставка от 0 до 50%'); return; }
-        try {
-            const r = await fetch(`${BASE_URL}/guild/tax-rate`, {
-                method: 'POST', headers: getHeaders(),
-                body: JSON.stringify({ taxRate: rate }),
-            });
-            const d = await r.json();
-            if (!r.ok) throw new Error(d.error);
-            setTaxRate(rate);
-            setTaxRateInput('');
-            setMessage(`Ставка налога установлена: ${rate}%`);
-        } catch (e: any) { setError(e.message); }
-    };
+    // ── No guild ──
+    if (!guild) {
+        return (<div className="max-w-3xl mx-auto px-4 py-4"><BackButton /><h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
+            {message && <p className="text-sm text-green-400 mb-3">{message}</p>}{error && <p className="text-sm text-red-400 mb-3">{error}</p>}
+            <Button onClick={()=>setShowCreate(!showCreate)} className="mb-4">Создать гильдию</Button>
+            {showCreate && (<Card className="mb-4"><input className={inputClass+' mb-2'} placeholder="Название" value={createName} onChange={e=>setCreateName(e.target.value)}/>
+                <textarea className={inputClass+' mb-2'} placeholder="Описание" rows={2} value={createDesc} onChange={e=>setCreateDesc(e.target.value)}/>
+                <select className={inputClass+' mb-2'} value={createJoinType} onChange={e=>setCreateJoinType(e.target.value as any)}>
+                    <option value="open">Открытая</option><option value="request">По заявке</option><option value="invite">Закрытая</option></select>
+                <Button onClick={handleCreate}>Создать (1000 серебра)</Button></Card>)}
+            <h3 className="font-bold text-sm mb-2">Гильдии</h3>
+            {guildList.map((g:any)=>(<Card key={g.id} className="mb-2"><div className="flex justify-between items-center">
+                <div><h4 className="font-bold text-sm">{g.name}</h4><p className="text-xs text-[var(--color-text-muted)]">Ур.{g.level} • {g.memberCount} уч.</p></div>
+                <Button size="xs" onClick={()=>handleJoin(g.id,g.joinType)}>{g.joinType==='open'?'Вступить':'Заявка'}</Button></div></Card>))}
+        </div>);
+    }
 
-    if (!user) return null;
+    const myRank = guild.myRank;
 
-    return (
-        <div className="max-w-3xl mx-auto px-4 py-4">
-            <BackButton />
-            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
+    return (<div className="max-w-3xl mx-auto px-4 py-4"><BackButton /><h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
+        {message && <p className="text-sm text-green-400 mb-3">{message}</p>}{error && <p className="text-sm text-red-400 mb-3">{error}</p>}
 
-            {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
-            {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
+        {/* Header */}
+        <Card className="mb-4"><div className="flex justify-between items-start"><div className="flex gap-3">
+            {guild.image ? <img src={guild.image} alt="Герб" className="w-14 h-14 object-cover rounded border-2 border-[var(--color-accent-gold)]"/> :
+                <div className="w-14 h-14 rounded border-2 border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[0.5rem] text-[var(--color-text-muted)]">герб</div>}
+            <div><h2 className="font-bold text-lg">🏚️ {guild.name}</h2><p className="text-xs text-[var(--color-text-muted)]">Ур.{guild.level} • {members.length} уч.</p>
+                <ExpBar exp={guild.exp||0} level={guild.level||1}/></div></div>
+            <div className="flex gap-1"><Button variant="secondary" size="xs" onClick={()=>navigate('/guild/rating')}>Рейтинг</Button>
+                <Button variant="secondary" size="xs" onClick={handleLeave}>Покинуть</Button></div></div>
+            {myRank==='leader' ? (<div className="mt-3 space-y-2"><div className="flex items-center gap-2">
+                <label className="text-xs cursor-pointer text-[var(--color-accent-info)] hover:underline">{guild.image?'Сменить герб':'Загрузить герб'}
+                    <input type="file" accept="image/*" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();
+                        r.onload=()=>{const url=r.result as string;setGuild((p:any)=>p?{...p,image:url}:p);fetch('/api/guild/settings',{method:'POST',headers:{...getHeaders(),'Content-Type':'application/json'},body:JSON.stringify({image:url})}).catch(()=>{});};r.readAsDataURL(f);}}/></label></div>
+                <textarea value={guild.description||''} onChange={e=>setGuild((p:any)=>p?{...p,description:e.target.value}:p)}
+                    onBlur={async()=>{try{await fetch('/api/guild/settings',{method:'POST',headers:{...getHeaders(),'Content-Type':'application/json'},body:JSON.stringify({description:guild.description||''})});}catch{}}}
+                    placeholder="Описание гильдии..." rows={2} className="w-full text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-2 py-1 text-[var(--color-text-primary)] resize-none"/>
+                <div className="flex items-center gap-2"><span className="text-xs text-[var(--color-text-muted)]">Тип:</span>
+                    <select value={guild.joinType||'open'} onChange={async e=>{const v=e.target.value;setGuild((p:any)=>p?{...p,joinType:v}:p);
+                        try{await fetch('/api/guild/settings',{method:'POST',headers:{...getHeaders(),'Content-Type':'application/json'},body:JSON.stringify({joinType:v})});}catch{}}}
+                        className="text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-1 py-0.5">
+                        <option value="open">Открытая</option><option value="request">По заявкам</option><option value="invite">По приглашениям</option></select></div></div>
+            ) : (guild.description && <p className="text-xs text-[var(--color-text-muted)] mt-2">{guild.description}</p>)}
+        </Card>
 
-            {guild ? (
-                // --- Состою в гильдии ---
-                <>
-                    <Card className="mb-4">
-                        <div className="flex justify-between items-start mb-2">
-                            <div>
-                                <h2 className="font-bold text-lg">🏚️ {guild.name}</h2>
-                                <p className="text-xs text-[var(--color-text-muted)]">Уровень {guild.level} • {guild.memberCount} участников</p>
-                                <div className="mt-1">
-                                    <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
-                                        <span>Опыт гильдии</span>
-                                        <span>{guild.exp || 0} / {100 * Math.pow(2, (guild.level || 1) - 1)}</span>
-                                    </div>
-                                    <div className="w-full h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
-                                        <div className="h-full bg-[var(--color-accent-gold)] rounded-full transition-all duration-500"
-                                            style={{ width: `${Math.min(100, ((guild.exp || 0) / (100 * Math.pow(2, (guild.level || 1) - 1))) * 100)}%` }} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex gap-1">
-                                <Button variant="secondary" size="xs" onClick={() => navigate('/guild/rating')}>Рейтинг гильдий</Button>
-                                <Button variant="secondary" size="xs" onClick={handleLeave}>Покинуть</Button>
-                            </div>
-                        </div>
-                        {guild.myRank === 'leader' ? (
-                            <div className="mb-2 space-y-2">
-                                <div className="flex items-center gap-2">
-                                    {guild.image ? (
-                                        <img src={guild.image} alt="Герб" className="w-12 h-12 object-cover rounded border-2 border-[var(--color-accent-gold)]" />
-                                    ) : (
-                                        <div className="w-12 h-12 rounded border-2 border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[var(--color-text-muted)] text-[0.5rem]">герб</div>
-                                    )}
-                                    <label className="text-xs cursor-pointer text-[var(--color-accent-info)] hover:underline">
-                                        Загрузить герб
-                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (!file) return;
-                                            const reader = new FileReader();
-                                            reader.onload = () => {
-                                                const dataUrl = reader.result as string;
-                                                setGuild((prev: any) => prev ? { ...prev, image: dataUrl } : prev);
-                                                fetch('/api/guild/settings', {
-                                                    method: 'POST',
-                                                    headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ image: dataUrl }),
-                                                }).catch(() => {});
-                                            };
-                                            reader.readAsDataURL(file);
-                                        }} />
-                                    </label>
-                                </div>
-                                <textarea
-                                    value={guild.description || ''}
-                                    onChange={(e) => setGuild((prev: any) => prev ? { ...prev, description: e.target.value } : prev)}
-                                    onBlur={async () => {
-                                        try {
-                                            await fetch('/api/guild/settings', {
-                                                method: 'POST',
-                                                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ description: guild.description || '' }),
-                                            });
-                                        } catch {}
-                                    }}
-                                    placeholder="Описание гильдии..."
-                                    rows={2}
-                                    className="w-full text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-2 py-1 text-[var(--color-text-primary)] resize-none"
-                                />
-                            </div>
-                        ) : (
-                            <div className="mb-2">
-                                {guild.image && <img src={guild.image} alt="Герб" className="w-12 h-12 object-cover rounded border-2 border-[var(--color-accent-gold)] mb-1" />}
-                                {guild.description && <p className="text-xs text-[var(--color-text-muted)]">{guild.description}</p>}
-                            </div>
-                        )}
-                        <p className="text-xs text-[var(--color-text-muted)]">
-                            Тип: {guild.joinType === 'open' ? 'Открытая' : guild.joinType === 'request' ? 'По заявке' : 'По приглашению'}
-                            {guild.myRank === 'leader' && ' • Вы лидер'}
-                            {guild.myRank === 'officer' && ' • Вы офицер'}
-                        </p>
-                        {guild.myRank === 'leader' && (
-                            <div className="mt-2 flex items-center gap-2">
-                                <span className="text-xs text-[var(--color-text-muted)]">Тип:</span>
-                                <select
-                                    value={guild.joinType}
-                                    onChange={async (e) => {
-                                        const newType = e.target.value;
-                                        try {
-                                            const res = await fetch('/api/guild/settings', {
-                                                method: 'POST',
-                                                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ joinType: newType }),
-                                            });
-                                            const d = await res.json();
-                                            if (res.ok) {
-                                                setGuild((prev: any) => prev ? { ...prev, joinType: newType } : prev);
-                                                setMessage(d.message);
-                                            } else {
-                                                setError(d.error);
-                                            }
-                                        } catch { setError('Ошибка сети'); }
-                                    }}
-                                    className="text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-2 py-1 text-[var(--color-text-primary)]"
-                                >
-                                    <option value="open">Открытая</option>
-                                    <option value="request">По заявке</option>
-                                    <option value="invite">По приглашению</option>
-                                </select>
-                            </div>
-                        )}
-                    </Card>
-
-                    {/* Задания гильдии */}
-                    <GuildQuestBlock guildId={guild.id} myRank={guild.myRank} />
-
-                    {/* Блок войны */}
-                    {war && (
-                        <Card className="mb-4 border-l-4 border-l-red-500">
-                            <h3 className="font-bold text-sm flex items-center gap-2 mb-2">
-                                <Icon icon="game-icons:crossed-swords" width="18" height="18" style={{color: 'var(--color-war-active-text)'}} />
-                                ⚔️ Поле битвы
-                                <span className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold"
-                                    style={{
-                                        color: war.status === 'pending' ? 'var(--color-war-pending-text)' : 'var(--color-war-active-text)',
-                                        backgroundColor: war.status === 'pending' ? 'var(--color-war-pending-bg)' : 'var(--color-war-active-bg)',
-                                    }}
-                                >
-                                    {war.status === 'pending' ? 'Ожидает ответа' : 'Активна'}
-                                </span>
-                            </h3>
-                            <div className="text-xs space-y-1">
-                                <p>
-                                    <span className="text-[var(--color-text-muted)]">Атакующая:</span>{' '}
-                                    <span className="text-[var(--color-text-primary)] font-bold">{war.attackerGuild?.name || '???'}</span>
-                                </p>
-                                <p>
-                                    <span className="text-[var(--color-text-muted)]">Защищается:</span>{' '}
-                                    <span className="text-[var(--color-text-primary)] font-bold">{war.defenderGuild?.name || '???'}</span>
-                                </p>
-                                <p className="text-[var(--color-text-muted)]">
-                                    Объявлена: {fmtSafeDate(war.declaredAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
-                                </p>
-                                {war.acceptedAt && (
-                                    <p className="text-[var(--color-text-muted)]">
-                                        Принята: {fmtSafeDate(war.acceptedAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
-                                    </p>
-                                )}
-                                <p className="text-[var(--color-text-muted)]">
-                                    Окончание: {fmtSafeDate(war.expiresAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
-                                </p>
-                                {war.status === 'active' && (
-                                    <p className="text-[0.65rem] mt-1" style={{color: 'var(--color-war-active-text)'}}>💰 Казна заморожена до конца войны</p>
-                                )}
-                            </div>
-                            {war.status === 'active' && (
-                                <Button variant="danger" size="xs" className="mt-3" onClick={() => navigate('/guild/war')}>
-                                    ⚔️ На поле боя
-                                </Button>
-                            )}
-                            {/* Кнопки для лидера защищающейся гильдии (только при pending) */}
-                            {war.status === 'pending' && !war.isAttacker && guild.myRank === 'leader' && (
-                                <div className="flex gap-2 mt-3">
-                                    <Button variant="danger" size="xs" onClick={() => handleWarRespond(true)}>⚔️ Принять войну</Button>
-                                    <Button variant="secondary" size="xs" onClick={() => handleWarRespond(false)}>Отклонить</Button>
-                                </div>
-                            )}
-                            {war.status === 'pending' && war.isAttacker && (
-                                <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-2">
-                                    Ожидание ответа от лидера «{war.defenderGuild?.name || '???'}»
-                                </p>
-                            )}
-                        </Card>
-                    )}
-
-                    {/* Описание войны */}
-                    <Card className="mb-4">
-                        <div
-                            className="flex items-center gap-2 cursor-pointer select-none"
-                            onClick={() => setShowWarRules(!showWarRules)}
-                        >
-                            <span className="text-sm">{showWarRules ? '▼' : '▶'}</span>
-                            <h3 className="font-bold text-sm">⚔️ Война гильдий — правила</h3>
-                        </div>
-                        {showWarRules && (
-                            <div className="text-xs text-[var(--color-text-muted)] space-y-1 mt-2">
-                                <p>• Лидер может объявить войну другой гильдии (кнопка ⚔️ в списке гильдий или на странице гильдии).</p>
-                                <p>• У защитника 24 часа на принятие. При отказе или бездействии война отменяется.</p>
-                                <p>• После принятия — 24 часа боевых действий. Казна обеих гильдий замораживается.</p>
-                                <p>• Каждый участник может атаковать врагов до 3 раз за войну, кулдаун между атаками — 5 минут.</p>
-                                <p>• После атаки на игрока накладывается защита на 1 час от повторных атак.</p>
-                                <p>• Победа в бою приносит +1 очко гильдии. Бой идёт на максимальном HP.</p>
-                                <p>• Победитель по окончании войны забирает всю казну проигравшей гильдии.</p>
-                            </div>
-                        )}
-                    </Card>
-
-                    {/* Казна */}
-                    <Card className="mb-4">
-                        <div
-                            className="flex items-center justify-between cursor-pointer select-none"
-                            onClick={() => { if (!showTreasury) loadTreasury(1, treasurySearch); setShowTreasury(!showTreasury); }}
-                        >
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm">{showTreasury ? '▼' : '▶'}</span>
-                                <h3 className="font-bold text-sm">💰 Казна</h3>
-                                {taxRate > 0 && <span className="text-[0.6rem] text-[var(--color-text-muted)]">(налог {taxRate}%)</span>}
-                            </div>
-                            <span className="text-xs text-[var(--color-text-accent)]">
-                                {treasuryBalance.toLocaleString()} серебра
-                            </span>
-                        </div>
-                        {showTreasury && (
-                            <div className="mt-3">
-                                {/* Вкладки */}
-                                <div className="flex border-b border-[var(--color-border-light)] mb-3">
-                                    {(['deposit', 'tax', 'history'] as const).map(tab => (
-                                        <button
-                                            key={tab}
-                                            onClick={() => { setTreasuryTab(tab); if (tab === 'history') loadTreasury(1, treasurySearch); }}
-                                            className={`px-3 py-1 text-xs cursor-pointer border-b-2 transition-colors ${
-                                                treasuryTab === tab
-                                                    ? 'border-[var(--color-accent-info)] text-[var(--color-accent-info)] font-bold'
-                                                    : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                            }`}
-                                        >
-                                            {tab === 'deposit' ? '💰 Вклад' : tab === 'tax' ? '📊 Налог' : '📋 История'}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Вклад: Внесение */}
-                                {treasuryTab === 'deposit' && (
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="number" min="1"
-                                            placeholder="Сумма"
-                                            value={treasuryAmount}
-                                            onChange={e => setTreasuryAmount(e.target.value)}
-                                            className={inputClass}
-                                        />
-                                        <Button variant="success" size="xs" onClick={handleDeposit}>Внести</Button>
-                                    </div>
-                                )}
-
-                                {/* Вклад: Налог */}
-                                {treasuryTab === 'tax' && (
-                                    <div>
-                                        {guild.myRank === 'leader' ? (
-                                            <div className="p-2 bg-[var(--color-bg-input)] rounded">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-[var(--color-text-muted)]">Ставка:</span>
-                                                    <span className="text-xs font-bold text-[var(--color-text-primary)]">{taxRate}%</span>
-                                                    <input
-                                                        type="number" min="0" max="50"
-                                                        placeholder="0-50"
-                                                        value={taxRateInput}
-                                                        onChange={e => setTaxRateInput(e.target.value)}
-                                                        className="w-16 text-xs px-1 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border-light)] text-[var(--color-text-primary)]"
-                                                    />
-                                                    <Button variant="primary" size="xs" onClick={handleSetTaxRate}>✓</Button>
-                                                </div>
-                                                <p className="text-[0.55rem] text-[var(--color-text-muted)] mt-1">% с дохода участников (PvE, PvP, работы, аукцион). Мин. 1 серебро.</p>
-                                            </div>
-                                        ) : (
-                                            <p className="text-xs text-[var(--color-text-muted)]">
-                                                Налог: <span className="font-bold text-[var(--color-text-primary)]">{taxRate}%</span> с дохода. Устанавливает лидер.
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Вклад: История */}
-                                {treasuryTab === 'history' && (
-                                    <div>
-                                        <div className="flex gap-2 mb-2">
-                                            <input
-                                                type="text"
-                                                placeholder="Поиск по нику..."
-                                                value={treasurySearch}
-                                                onChange={e => setTreasurySearch(e.target.value)}
-                                                className={inputClass}
-                                            />
-                                        </div>
-                                        {treasuryHistory.length > 0 ? (
-                                            <div className="text-xs">
-                                                <div className="space-y-1">
-                                                    {treasuryHistory.map((h: any) => (
-                                                        <div key={h.id} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                                            <span className="text-[var(--color-text-primary)]">{h.username}</span>
-                                                            <span className={h.type?.startsWith('tax') ? 'text-[var(--color-accent-warning)]' : 'text-[var(--color-text-accent)]'}>
-                                                                +{h.amount.toLocaleString()}
-                                                                {h.type?.startsWith('tax') && <span className="text-[0.55rem] ml-0.5">налог</span>}
-                                                            </span>
-                                                            <span className="text-[var(--color-text-muted)]">{fmtSafeDate(h.createdAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                {treasuryTotalPages > 1 && (
-                                                    <div className="flex justify-center gap-2 mt-2">
-                                                        <Button size="xs" disabled={treasuryPage <= 1} onClick={() => loadTreasury(treasuryPage - 1, treasurySearch)}>←</Button>
-                                                        <span className="text-[0.65rem] text-[var(--color-text-muted)]">{treasuryPage}/{treasuryTotalPages}</span>
-                                                        <Button size="xs" disabled={treasuryPage >= treasuryTotalPages} onClick={() => loadTreasury(treasuryPage + 1, treasurySearch)}>→</Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <p className="text-xs text-[var(--color-text-muted)]">Пока никто не вносил</p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </Card>
-
-                    {/* Пригласить (лидер/офицер) */}
-                    {(guild.myRank === 'leader' || guild.myRank === 'officer') && (
-                        <Card className="mb-4">
-                            <h3 className="font-bold text-sm mb-2">Пригласить игрока</h3>
-                            <div className="relative">
-                                <div className="flex gap-2">
-                                    <input type="text" placeholder="Имя игрока" value={inviteName}
-                                        onChange={e => { setInviteName(e.target.value); searchUsers(e.target.value); setInviteTargetId(null); }}
-                                        className={inputClass} />
-                                    <Button variant="primary" size="xs" onClick={handleInvite}>Пригласить</Button>
-                                </div>
-                                {inviteSuggestions.length > 0 && (
-                                    <div className="absolute z-10 w-full mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg shadow-xl max-h-40 overflow-y-auto">
-                                        {inviteSuggestions.map((u: any) => (
-                                            <div key={u.id}
-                                                onClick={() => { setInviteName(u.username); setInviteTargetId(u.id); setInviteSuggestions([]); }}
-                                                className="px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] cursor-pointer flex items-center gap-2">
-                                                <span className="text-[var(--color-text-primary)]">{u.username}</span>
-                                                <span className="text-[var(--color-text-muted)] ml-auto">ур.{u.level}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                            <Button variant="secondary" size="xs" onClick={handleCancelInvites} className="mt-2">Отменить все приглашения</Button>
-                        </Card>
-                    )}
-
-                    {/* Заявки (лидер/офицер) */}
-                    {(guild.myRank === 'leader' || guild.myRank === 'officer') && requests.length > 0 && (
-                        <Card className="mb-4">
-                            <h3 className="font-bold text-sm mb-2">Заявки на вступление ({requests.length})</h3>
-                            <div className="space-y-2">
-                                {requests.map((r: any) => (
-                                    <div key={r.id} className="flex items-center gap-2 text-xs">
-                                        <span className="text-[var(--color-accent-info)] cursor-pointer hover:underline"
-                                            onClick={() => navigate(`/profile/${r.userId}`)}>
-                                            {r.username}
-                                        </span>
-                                        <div className="flex gap-1 ml-auto">
-                                            <Button variant="success" size="xs" onClick={() => handleRequest(r.id, true)}>Принять</Button>
-                                            <Button variant="danger" size="xs" onClick={() => handleRequest(r.id, false)}>Отклонить</Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    )}
-
-                    {/* Участники */}
-                    <Card>
-                        <h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3>
-                        <div className="space-y-1">
-                            {members.map((m: any) => {
-                                const canKick = (guild.myRank === 'leader' || guild.myRank === 'officer')
-                                    && m.userId !== user.id
-                                    && m.rank !== 'leader'
-                                    && !(guild.myRank === 'officer' && m.rank === 'officer');
-                                const canManage = guild.myRank === 'leader' && m.userId !== user.id && m.rank !== 'leader';
-                                return (
-                                <div key={m.userId} className="py-1 border-b border-[var(--color-border-light)]">
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <span className="w-6 text-center">
-                                            {m.rank === 'leader' ? '👑' : m.rank === 'officer' ? '🛡️' : '⚔️'}
-                                        </span>
-                                        <span className="text-[var(--color-accent-info)] cursor-pointer hover:underline"
-                                            onClick={() => navigate(`/profile/${m.userId}`)}>
-                                            {m.username}
-                                        </span>
-                                        <span className="text-[var(--color-text-muted)] text-[0.6rem]">
-                                            {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
-                                        </span>
-                                        <span className="text-[var(--color-text-muted)]">ур.{m.level}</span>
-                                        {(canManage || canKick) && (
-                                            <div className="flex gap-1 ml-auto">
-                                                {canManage && (
-                                                    <Button variant="secondary" size="xs"
-                                                        onClick={() => handleRole(m.userId, m.username, m.rank === 'officer' ? 'member' : 'officer')}>
-                                                        {m.rank === 'officer' ? 'Разжаловать' : 'Офицер'}
-                                                    </Button>
-                                                )}
-                                                {canKick && (
-                                                    <Button variant="danger" size="xs" onClick={() => handleKick(m.userId, m.username)}>Исключить</Button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                );
-                            })}
-                        </div>
-                    </Card>
-                </>
-            ) : (
-                // --- Не в гильдии ---
-                <>
-                    <div className="flex gap-2 mb-4">
-                        <Button variant={showCreate ? 'secondary' : 'primary'} size="sm"
-                            onClick={() => { setShowCreate(!showCreate); clearMessages(); }}>
-                            {showCreate ? 'Отмена' : 'Создать гильдию'}
-                        </Button>
-                    </div>
-
-                    {showCreate && (
-                        <Card className="mb-4">
-                            <h3 className="font-bold mb-2">Создание гильдии</h3>
-                            <input placeholder="Название" value={createName}
-                                onChange={e => setCreateName(e.target.value)} className={inputClass + ' mb-2'} />
-                            <input placeholder="Описание (необязательно)" value={createDesc}
-                                onChange={e => setCreateDesc(e.target.value)} className={inputClass + ' mb-2'} />
-                            <select value={createJoinType}
-                                onChange={e => setCreateJoinType(e.target.value as any)} className={inputClass}>
-                                <option value="open">Открытая (любой может вступить)</option>
-                                <option value="request">По заявке (требуется одобрение)</option>
-                                <option value="invite">По приглашению (только приглашённые)</option>
-                            </select>
-                            <p className="text-xs text-[var(--color-text-muted)] mb-2">Создание: 0 серебра</p>
-                            <Button variant="danger" size="sm" onClick={handleCreate}
-                                disabled={!createName.trim()}>Создать</Button>
-                        </Card>
-                    )}
-
-                    {/* Список гильдий */}
-                    <h3 className="font-bold text-sm mb-2">Существующие гильдии</h3>
-                    {guildList.length === 0 && (
-                        <p className="text-xs text-[var(--color-text-muted)]">Нет гильдий</p>
-                    )}
-                    {guildList.map((g: any) => (
-                        <Card key={g.id} className="mb-2">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <h4 className="font-bold text-sm cursor-pointer hover:text-[var(--color-accent-info)] transition-colors"
-                                        onClick={() => navigate(`/guild/${g.id}`)}>🏚️ {g.name}</h4>
-                                    <p className="text-xs text-[var(--color-text-muted)]">
-                                        Ур.{g.level} • {g.memberCount} уч. • {g.leaderName}
-                                        {g.warStatus && <span className="ml-2" style={{color: 'var(--color-war-active-text)'}}>⚔️ В войне</span>}
-                                    </p>
-                                </div>
-                                <div className="flex gap-1 items-center">
-                                    {g.joinType !== 'invite' && (
-                                        <Button variant="primary" size="xs"
-                                            onClick={() => handleJoin(g.id, g.joinType)}>
-                                            {g.joinType === 'open' ? 'Вступить' : 'Заявка'}
-                                        </Button>
-                                    )}
-                                    {/* Кнопка объявления войны (только лидер, не себе, не в войне) */}
-                                    {guild && guild.myRank === 'leader' && !g.warStatus && !war && (
-                                        <Button variant="danger" size="xs" onClick={() => handleDeclareWar(g.id, g.name)}>
-                                            ⚔️
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
-                </>
-            )}
-            {/* Попап подтверждения */}
-            {confirmPopup && (
-                <div className="fixed inset-0 z-[1100] flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmPopup(null)} />
-                    <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border-default)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-                        <p className="text-sm mb-4">{confirmPopup.message}</p>
-                        <div className="flex gap-2 justify-end">
-                            <Button variant="secondary" size="xs" onClick={() => setConfirmPopup(null)}>Отмена</Button>
-                            <Button variant="danger" size="xs" onClick={confirmPopup.onConfirm}>Подтвердить</Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+        {/* Tabs */}
+        <div className="flex gap-1 mb-4 bg-[var(--color-bg-card)] rounded-lg p-1">{TABS.map((l,i)=>(
+            <button key={i} onClick={()=>setTab(i)} className={`flex-1 py-1.5 text-xs font-medium rounded-md cursor-pointer transition-colors ${tab===i?'bg-[var(--color-accent-info)] text-white':'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}>{l}</button>))}
         </div>
-    );
+
+        {/* Tab 0: Обзор */}
+        {tab===0 && <div className="space-y-4">
+            <GuildQuestCard guildId={guild.id} myRank={myRank} api={api}/>
+            {war ? (<Card className="border-l-4 border-l-red-500"><h3 className="font-bold text-sm flex items-center gap-2 mb-2"><Icon icon="game-icons:crossed-swords" width="18" height="18"/>⚔️ Война</h3>
+                <p className="text-xs">Противник: <b>{war.attackerGuild?.id===guild.id?war.defenderGuild?.name:war.attackerGuild?.name}</b></p>
+                <p className="text-xs text-[var(--color-text-muted)]">{war.status==='pending'?'Ожидание ответа':war.status==='active'?'Активна':war.status}</p>
+                {war.status==='active'&&<>
+                    <p className="text-[0.65rem] mt-1 text-red-400">💰 Казна заморожена</p>
+                    <Button size="xs" variant="danger" className="mt-2" onClick={()=>navigate('/guild/war')}>⚔️ На поле боя</Button>
+                </>}
+                {myRank==='leader'&&war.attackerGuild?.id!==guild.id&&war.status==='pending'&&(<div className="flex gap-2 mt-2">
+                    <Button size="xs" onClick={async()=>{await api('/guild/war/respond',{accept:true});load();}}>Принять</Button>
+                    <Button size="xs" variant="secondary" onClick={async()=>{await api('/guild/war/respond',{accept:false});load();}}>Отклонить</Button></div>)}</Card>
+            ) : (<Card><div className="flex items-center gap-2 cursor-pointer" onClick={()=>setShowWarRules(!showWarRules)}>
+                <Icon icon={showWarRules?'game-icons:expand':'game-icons:contract'} width="14" height="14"/><h3 className="font-bold text-sm">⚔️ Война гильдий — правила</h3>
+            </div>{showWarRules&&<div className="text-xs text-[var(--color-text-muted)] mt-2 space-y-1">
+                <p>• Лидер объявляет войну через список гильдий</p><p>• 24 часа на ответ, 24 часа боёв</p><p>• Казна замораживается</p></div>}</Card>)}
+        </div>}
+
+        {/* Tab 1: Постройки */}
+        {tab===1 && <Card><h3 className="font-bold text-sm mb-2">🏘️ Постройки гильдии</h3>
+            {guild.buildings && guild.buildings.length>0 ? (<div className="space-y-3">
+                {guild.buildings.map((b:any)=>(<div key={b.type} className="border border-[var(--color-border-light)] rounded-lg p-3">
+                    <div className="flex justify-between items-start mb-1">
+                        <span className="text-sm font-medium">{b.icon} {b.label}</span>
+                        <span className="text-xs text-[var(--color-text-muted)]">{b.level>0?`ур.${b.level} (+${b.bonus}%)`:'Не построено'}</span>
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">{b.desc}</p>
+                    <div className="flex justify-between items-center text-[0.6rem] text-[var(--color-text-muted)] mb-2">
+                        <span>След. уровень: +{b.nextBonus}%</span>
+                        <span>Цена: {b.cost.toLocaleString()} серебра | Требуется ур. гильдии {b.reqLevel}</span>
+                    </div>
+                    {myRank==='leader'&&(
+                        <Button size="xs" disabled={!b.canBuild}
+                            onClick={async()=>{try{await api('/guild/buildings/build',{buildingType:b.type});load();}catch(e:any){setError(e.message);}}}>
+                            {b.level>0?'Улучшить':'Построить'}
+                        </Button>
+                    )}
+                </div>))}
+            </div>) : <p className="text-xs text-[var(--color-text-muted)]">Нет построек</p>}
+        </Card>}
+
+        {/* Tab 2: Казна */}
+        {tab===2 && <Card><h3 className="font-bold text-sm">💰 Казна — {treasuryBalance.toLocaleString()} серебра{taxRate>0?` (налог ${taxRate}%)`:''}</h3>
+            <div className="flex gap-1 my-2">{(['deposit','tax','history'] as const).map(t=>(
+                <button key={t} onClick={()=>setTreasurySubtab(t)} className={`text-xs px-2 py-1 rounded cursor-pointer ${treasurySubtab===t?'bg-[var(--color-accent-info)] text-white':'bg-[var(--color-bg-input)]'}`}>
+                    {{deposit:'Внести',tax:'Налог',history:'История'}[t]}</button>))}</div>
+            {treasurySubtab==='deposit'&&<div className="flex gap-2"><input className={inputClass+' flex-1'} type="number" placeholder="Сумма" value={treasuryAmount} onChange={e=>setTreasuryAmount(e.target.value)}/>
+                <Button size="xs" onClick={handleDeposit} disabled={loading}>Внести</Button></div>}
+            {treasurySubtab==='tax'&&myRank==='leader'&&<div className="flex gap-2"><input className={inputClass+' flex-1'} type="number" placeholder="0-50%" value={taxRateInput} onChange={e=>setTaxRateInput(e.target.value)}/>
+                <Button size="xs" onClick={handleTaxRate}>Установить</Button></div>}
+            {treasurySubtab==='history'&&<div>
+                <div className="flex gap-1 mb-2">{PERIODS.map(p=>(<button key={p} onClick={()=>loadTreasury(p)} className={`text-xs px-2 py-0.5 rounded cursor-pointer ${treasuryPeriod===p?'bg-[var(--color-accent-info)] text-white':'bg-[var(--color-bg-input)]'}`}>{PLABELS[p]}</button>))}</div>
+                {treasuryHistory.length>0?<div className="text-xs space-y-1">{treasuryHistory.map((h:any,i:number)=>(<div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
+                    <span>{h.username} <span className="text-[var(--color-text-muted)]">({h.count} раз)</span></span><span className="text-green-400">+{h.total.toLocaleString()}</span></div>))}</div>
+                :<p className="text-xs text-[var(--color-text-muted)]">Нет взносов</p>}</div>}
+        </Card>}
+
+        {/* Tab 3: Участники */}
+        {tab===3 && <div className="space-y-4">
+            {(myRank==='leader'||myRank==='officer')&&(<Card><h3 className="font-bold text-sm mb-2">Пригласить игрока</h3>
+                <div className="flex gap-2 mb-2"><input className={inputClass+' flex-1'} placeholder="Имя игрока" value={inviteName} onChange={e=>{setInviteName(e.target.value);searchUsers(e.target.value);}}/>
+                    <Button size="xs" onClick={handleInvite} disabled={!inviteTargetId}>Пригласить</Button></div>
+                {inviteSuggestions.length>0&&<div className="text-xs space-y-1 max-h-24 overflow-y-auto">{inviteSuggestions.map((s:any)=>(<div key={s.id} className={`p-1 cursor-pointer rounded ${inviteTargetId===s.id?'bg-[var(--color-accent-info)]':''}`}
+                    onClick={()=>{setInviteTargetId(s.id);setInviteName(s.username);setInviteSuggestions([]);}}>{s.username} (ур.{s.level})</div>))}</div>}
+                {requests.length>0&&<div className="mt-3"><h4 className="text-xs font-bold mb-1">Заявки ({requests.length})</h4>{requests.map((r:any)=>(<div key={r.id} className="flex justify-between py-1 text-xs"><span>{r.username}</span>
+                    <div className="flex gap-1"><Button size="xs" onClick={()=>handleRequest(r.id,true)}>✓</Button><Button size="xs" variant="secondary" onClick={()=>handleRequest(r.id,false)}>✗</Button></div></div>))}</div>}
+                {myRank==='leader'&&<div className="mt-2"><Button size="xs" variant="secondary" onClick={handleCancelInvites}>Отменить приглашения</Button></div>}</Card>)}
+            <Card><h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3><div className="space-y-1">
+                {members.map((m:any)=>(<div key={m.userId} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] text-xs">
+                    <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
+                        {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span></span>
+                    {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1">
+                        <Button size="xs" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
+                        <Button size="xs" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button></div>}
+                </div>))}</div></Card>
+        </div>}
+
+        {/* Popup */}
+        {confirmPopup&&<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={()=>setConfirmPopup(null)}>
+            <Card className="max-w-xs w-full" onClick={e=>e.stopPropagation()}><p className="text-sm mb-3">{confirmPopup.message}</p>
+                <div className="flex gap-2 justify-end"><Button variant="secondary" size="xs" onClick={()=>setConfirmPopup(null)}>Отмена</Button><Button size="xs" onClick={confirmPopup.onConfirm}>OK</Button></div></Card></div>}
+    </div>);
 }
 
-// Компонент заданий гильдии
-function GuildQuestBlock({ guildId, myRank }: { guildId: number; myRank: string }) {
-    const [activeQuest, setActiveQuest] = useState<any>(null);
-    const [options, setOptions] = useState<any[] | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [msg, setMsg] = useState('');
+function ExpBar({exp,level}:{exp:number;level:number}){const n=100*Math.pow(2,level-1);return <div className="mt-1"><div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5"><span>Опыт</span><span>{exp}/{n}</span></div><div className="w-full h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden"><div className="h-full bg-[var(--color-accent-gold)] rounded-full transition-all" style={{width:`${Math.min(100,(exp/n)*100)}%`}}/></div></div>}
 
-    const load = () => {
-        fetch('/api/guild/quest', { headers: getHeaders() })
-            .then(r => r.json()).then(d => {
-                setActiveQuest(d.activeQuest);
-                setOptions(d.options);
-            }).catch(() => {});
-    };
-
-    useEffect(() => { load(); }, [guildId]);
-
-    // Live guild quest progress via WebSocket
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const detail = (e as CustomEvent).detail;
-            if (detail) setActiveQuest(detail);
-        };
-        window.addEventListener('guildQuestProgress', handler);
-        return () => window.removeEventListener('guildQuestProgress', handler);
-    }, []);
-
-    const handleTake = async (opt: any) => {
-        setLoading(true);
-        try {
-            const r = await fetch('/api/guild/quest/take', {
-                method: 'POST',
-                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify(opt),
-            });
-            const d = await r.json();
-            if (r.ok) { load(); setMsg(d.message); }
-            else setMsg(d.error);
-        } catch { setMsg('Ошибка'); }
-        setLoading(false);
-    };
-
-    const handleClaim = async () => {
-        setLoading(true);
-        try {
-            const r = await fetch('/api/guild/quest/claim', {
-                method: 'POST',
-                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-            });
-            const d = await r.json();
-            if (r.ok) { load(); setMsg(d.message); }
-            else setMsg(d.error);
-        } catch { setMsg('Ошибка'); }
-        setLoading(false);
-    };
-
-    if (!activeQuest && !options && myRank !== 'leader') return null;
-
-    return (
-        <Card className="mb-4">
-            <h3 className="font-bold text-sm mb-2 flex items-center gap-2">
-                <Icon icon="game-icons:scroll-unfurled" width="16" height="16" />
-                Задание гильдии
-            </h3>
-            {msg && <p className="text-xs text-[var(--color-accent-success)] mb-2">{msg}</p>}
-
-            {activeQuest ? (
-                <div>
-                    <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium">{activeQuest.typeName}</span>
-                        <span className="text-[0.6rem] text-[var(--color-text-muted)]">{activeQuest.difficultyLabel}</span>
-                    </div>
-                    <p className="text-xs text-[var(--color-text-muted)] mb-2">{activeQuest.description}</p>
-                    <div className="mb-1">
-                        <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
-                            <span>Прогресс: {activeQuest.progress}/{activeQuest.requirement}</span>
-                            <span>Награда: +{activeQuest.rewardXp} XP гильдии</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
-                            <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all"
-                                style={{ width: `${Math.min(100, (activeQuest.progress / activeQuest.requirement) * 100)}%` }} />
-                        </div>
-                    </div>
-                    {myRank === 'leader' && activeQuest.progress >= activeQuest.requirement && (
-                        <Button variant="primary" size="xs" onClick={handleClaim} disabled={loading} className="mt-2">Забрать награду</Button>
-                    )}
-                </div>
-            ) : options ? (
-                <div>
-                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Выберите задание:</p>
-                    <div className="space-y-2">
-                        {options.map((opt, i) => (
-                            <div key={i} className="border border-[var(--color-border-light)] rounded-lg p-2 hover:bg-[var(--color-bg-hover)] transition-colors">
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs font-medium">{opt.typeName}</span>
-                                    <span className="text-[0.6rem] text-[var(--color-text-muted)]">{opt.difficultyLabel}</span>
-                                </div>
-                                <p className="text-xs text-[var(--color-text-muted)] mb-1">{opt.description}</p>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[0.6rem] text-[var(--color-accent-gold)]">+{opt.rewardXp} XP гильдии</span>
-                                    {myRank === 'leader' && (
-                                        <Button variant="primary" size="xs" onClick={() => handleTake(opt)} disabled={loading}>Взять</Button>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    {myRank !== 'leader' && <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">Ожидайте выбора лидера</p>}
-                </div>
-            ) : null}
-        </Card>
-    );
+function GuildQuestCard({guildId:_guildId,myRank,api}:{guildId:number;myRank:string;api:any}){
+    const [aq,setAq]=useState<any>(null);const [opts,setOpts]=useState<any[]|null>(null);const [m,setM]=useState('');const [l,setL]=useState(false);
+    useEffect(()=>{load();const h=(e:any)=>{if(e.detail?.id)setAq(e.detail)};window.addEventListener('guildQuestProgress',h);return()=>window.removeEventListener('guildQuestProgress',h)},[]);
+    const load=async()=>{const r=await fetch('/api/guild/quest',{headers:getHeaders()});const d=await r.json();setAq(d.activeQuest||null);setOpts(d.options||null)};
+    const take=async(o:any)=>{setL(true);try{await api('/guild/quest/take',{questType:o.questType,difficulty:o.difficulty,requirement:o.requirement,rewardXp:o.rewardXp});load()}catch(e:any){setM(e.message)}setL(false)};
+    const claim=async()=>{setL(true);try{const d=await api('/guild/quest/claim',{});setM(d.message||`+${d.rewardXp} XP!`);load()}catch(e:any){setM(e.message)}setL(false)};
+    return <Card><h3 className="font-bold text-sm mb-2 flex items-center gap-2"><Icon icon="game-icons:scroll-unfurled" width="16" height="16"/>Задание гильдии</h3>{m&&<p className="text-xs text-green-400 mb-2">{m}</p>}
+        {aq?<><p className="text-xs font-medium">{aq.typeName} <span className="text-[0.6rem] text-[var(--color-text-muted)]">{aq.difficultyLabel}</span></p><p className="text-xs text-[var(--color-text-muted)] mb-2">{aq.description}</p>
+            <div className="mb-1"><div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5"><span>{aq.progress}/{aq.requirement}</span><span>+{aq.rewardXp} XP</span></div>
+            <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full"><div className="h-full bg-[var(--color-accent-info)] rounded-full" style={{width:`${Math.min(100,(aq.progress/aq.requirement)*100)}%`}}/></div></div>
+            {myRank==='leader'&&aq.progress>=aq.requirement&&<Button variant="primary" size="xs" onClick={claim} disabled={l} className="mt-2">Забрать</Button>}</>
+        :opts?<><p className="text-xs text-[var(--color-text-muted)] mb-2">Выберите задание:</p><div className="space-y-2">{opts.map((o:any,i:number)=>(<div key={i} className="border border-[var(--color-border-light)] rounded-lg p-2">
+            <div className="flex justify-between mb-1"><span className="text-xs font-medium">{o.typeName}</span><span className="text-[0.6rem] text-[var(--color-text-muted)]">{o.difficultyLabel}</span></div>
+            <p className="text-xs text-[var(--color-text-muted)] mb-1">{o.description}</p><div className="flex justify-between"><span className="text-[0.6rem] text-yellow-400">+{o.rewardXp} XP</span>
+            {myRank==='leader'&&<Button variant="primary" size="xs" onClick={()=>take(o)} disabled={l}>Взять</Button>}</div></div>))}</div>
+            {myRank!=='leader'&&<p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">Ожидайте выбора лидера</p>}</>:null}</Card>;
 }

@@ -1,4 +1,5 @@
 import { getRarityColor, getItemImage, isCraftItem, getItemTypeName } from '../utils/itemUtils';
+import { useGame } from '../contexts/GameContext';
 import type { ReactNode } from 'react';
 
 interface ItemStatsProps {
@@ -20,6 +21,17 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
   const img = getItemImage(item);
   const upgradeLevel = item.upgradeLevel ?? 0;
   const resource = isCraftItem(item);
+
+  // Проверка коллекции
+  let inCollection = false;
+  try {
+    const { character } = useGame();
+    if (character?.collectedItems && item.name && item.slot) {
+      inCollection = character.collectedItems.some(
+        (c: any) => c.itemName === item.name && c.slot === item.slot
+      );
+    }
+  } catch {}
 
   const getBonus = (base: number) => {
     if (!base || upgradeLevel === 0) return base;
@@ -105,6 +117,13 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       {!resource && upgradeLevel > 0 && (
         <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center text-[var(--color-text-accent)]">
           Улучшение +{upgradeLevel} (+{upgradeLevel * 10}% к характеристикам)
+        </div>
+      )}
+
+      {/* Коллекция */}
+      {!resource && item.name && item.slot && (
+        <div className={`text-xs mt-1 pt-1 border-t border-[var(--color-border-light)] text-center font-bold ${inCollection ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-warning)]'}`}>
+          {inCollection ? '✓ В коллекции' : '✗ Нет в коллекции'}
         </div>
       )}
 

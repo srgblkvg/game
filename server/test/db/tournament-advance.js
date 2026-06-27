@@ -1,5 +1,6 @@
 require('dotenv').config();
-const { db } = require('/opt/game/server/src/db/index');
+const path = require('path');
+const { db } = require(path.resolve(__dirname, '../../dist/db/index'));
 
 async function autoAdvance(tournamentId) {
     const t = await db.one('SELECT * FROM tournaments WHERE id = $1', [tournamentId]);
@@ -9,7 +10,7 @@ async function autoAdvance(tournamentId) {
 
     const now = Math.floor(Date.now() / 1000);
     console.log('now:', now, 'now >= regEnd:', now >= t.registrationEnd);
-    
+
     if (t.status === 'registration' && now >= t.registrationEnd) {
         console.log('WOULD ADVANCE');
     }

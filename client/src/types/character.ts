@@ -38,7 +38,7 @@ export interface CharacterCardData {
   extraStats?: { crit: number; dodge: number; counter: number; fullBlock: number };
   guildName?: string;
   guildId?: number;
-  collectionCount?: number;
   guildBonus?: number;
-  buildings?: any[];
+  buildings?: { type: string; icon: string; label: string; level: number; bonus: number }[];
+  collectionCount?: number;
 }

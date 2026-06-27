@@ -6,7 +6,9 @@ const pool = new Pool({
   database: process.env.PGDATABASE || 'game',
   user: process.env.PGUSER || 'game',
   password: process.env.PGPASSWORD || 'game123',
-  max: 20,
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 });
 
 // Transform camelCase SQL identifiers to lowercase for PostgreSQL
@@ -25,7 +27,7 @@ function pgLowerIdentifiers(sql: string): string {
   cleaned = cleaned.replace(/\b([a-z]+[A-Z][a-zA-Z0-9]*)\b/g, (m) => m.toLowerCase());
 
   // Restore string literals
-  return cleaned.replace(/__STR_(\d+)__/g, (_, i) => strings[parseInt(i)] || '');
+  return cleaned.replace(/__STR_(\d+)__/g, (_, i) => strings[parseInt(i)]!);
 }
 
 // Suffix-based camelCase converter - adds camelCase keys for common patterns
@@ -95,6 +97,7 @@ function camelRows(rows: any[]): any[] {
              .replace(/^accountnumber$/i, 'accountNumber')
              .replace(/^fromaccount$/i, 'fromAccount')
              .replace(/^toaccount$/i, 'toAccount')
+             .replace(/^currentbidderid$/i, 'currentBidderId')
              .replace(/^currentbiddername$/i, 'currentBidderName')
              .replace(/^attackerguildid$/i, 'attackerGuildId')
              .replace(/^defenderguildid$/i, 'defenderGuildId')

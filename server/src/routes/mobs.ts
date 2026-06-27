@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { getBaseStats, enrichEquipment, collectGuildTax, applyExp } from '../db/helpers';
+import { collectGuildTax, applyExp, buildPlayerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { addPveRating } from '../game/rating';
-import { getDrinkBonuses } from '../game/drinks';
 import { updateGuildQuestProgress } from './guild';
-import { markDirty } from '../websocket';
+import { markDirty } from '../events';
+import { sendLeaderboardLevel } from '../vkLeaderboard';
+import { getGuildBonus } from '../game/guildBuildings';
 
 const router = Router();
 
@@ -116,12 +117,8 @@ router.post('/mob/attack', async (req, res) => {
     if (!mob) return res.status(404).json({ error: 'Моб не найден' });
 
     // Статы игрока
-    const userBase = getBaseStats(user);
-    const userEquip = JSON.parse(user.equipment || '{}');
-    const { enriched: enrichedEquip } = await enrichEquipment(userEquip);
-    const userStats = currentStats(userBase, enrichedEquip, getDrinkBonuses(user),
-        (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt || 0
-    );
+    const guildBonus = await getGuildBonus(userId, 'pve');
+    const userStats = await buildPlayerStats(user, 'pve');
 
     // Статы моба (s=atk, a=agi, d=def, m=mst)
     const mobBase = { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst };
@@ -398,6 +395,11 @@ router.post('/mob/attack', async (req, res) => {
 
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`,
         [newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId]);
+
+    // VK Leaderboard
+    if (levelsGained > 0 && user.oauthProvider === 'vk' && user.oauthId) {
+        sendLeaderboardLevel(userId, newLevel, String(user.oauthId)).catch(() => {});
+    }
 
     // Обновление прогресса гильдейского квеста (PvE)
     if (playerWon) {

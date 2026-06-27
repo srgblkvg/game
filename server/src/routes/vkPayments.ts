@@ -27,18 +27,19 @@ const ITEMS: Record<string, { title: string; price: number; days: number }> = {
 };
 
 // Проверка подписи запроса от VK
+// Алгоритм: MD5(concatenated sorted key=value pairs + secret_key)
+// https://dev.vk.com/ru/api/payments/getting-started#Подпись
+// https://pkg.go.dev/github.com/SevereCloud/vksdk/payments#Callback.Sign
 function verifySignature(params: Record<string, string>): boolean {
-  // Алгоритм: HMAC-SHA256(app_secret, sorted key=value) → hex
-  // https://dev.vk.com/ru/api/payments/getting-started#Подпись
-  const sign = params.sign;
-  if (!sign || !APP_SECRET) return false;
+  const sig = params.sig;
+  if (!sig || !APP_SECRET) return false;
   const pairs = Object.entries(params)
-    .filter(([k]) => k !== 'sign')
+    .filter(([k]) => k !== 'sig')
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => `${k}=${v}`)
-    .join('&');
-  const computed = crypto.createHmac('sha256', APP_SECRET).update(pairs).digest('hex');
-  return computed === sign;
+    .join('');
+  const computed = crypto.createHash('md5').update(pairs + APP_SECRET).digest('hex');
+  return computed === sig;
 }
 
 // POST /api/vk/payments — колбэк от VK

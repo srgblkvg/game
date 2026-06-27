@@ -1,8 +1,7 @@
-
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const http = require("http");
-const token = jwt.sign({userId:31, username:"test", role:"player"}, process.env.JWT_SECRET);
+const token = jwt.sign({ userId: 31, username: "test", role: "player" }, process.env.JWT_SECRET);
 
 function test(path, label) {
   return new Promise((resolve) => {

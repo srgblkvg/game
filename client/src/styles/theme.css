@@ -2,12 +2,13 @@
 
 html {
   font-size: 24px;
+  background: linear-gradient(180deg, #0a0a1e 0%, #12122a 40%, #1a1a35 100%);
 }
 
 /* === Тёмная тема (по умолчанию) === */
 @theme {
   /* Основная палитра */
-  --color-bg-primary: #1a1a2e;
+  --color-bg-primary: #0d0d1a;
   --color-bg-secondary: #1e1e30;
   --color-bg-card: #2a2a3e;
   --color-bg-card-hover: #2a2a4e;
@@ -121,18 +122,132 @@ html {
 html,
 body,
 #root {
-  background: var(--color-bg-primary);
   min-height: 100vh;
+  min-height: 100dvh; /* динамическая высота: подстраивается под скрытие/показ адресной строки браузера */
   margin: 0;
   font-family: 'Kurale', 'Times New Roman', serif;
   font-size: 16px;
   font-weight: 500;
   color: var(--color-text-primary);
   box-sizing: border-box;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px); /* 40px = высота свёрнутого чат-бара */
 }
 
-body {
-  padding-bottom: max(env(safe-area-inset-bottom, 42px), 50px);
+/* VK iframe: фиксированная высота + скролл */
+html.vk-iframe,
+html.vk-iframe body {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* VK WebView fixes: no transparency, solid backgrounds, fixed header */
+html.vk-iframe body {
+  overflow-y: auto !important; /* allow scroll when panels closed */
+}
+/* No gradient — solid background for VK */
+html.vk-iframe {
+  background: var(--color-bg-primary) !important;
+}
+html.vk-iframe[data-theme="light"] {
+  background: var(--color-bg-primary) !important;
+}
+/* Fixed header in VK */
+html.vk-iframe #site-header {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 40 !important;
+}
+/* Content offset for fixed header */
+html.vk-iframe #root {
+  padding-top: 80px !important;
+}
+/* Remove transparency from right panel */
+html.vk-iframe .right-panel-transparent {
+  background-color: var(--color-bg-primary) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* Remove transparency from chat panel */
+html.vk-iframe .chat-panel {
+  background-color: var(--color-bg-secondary) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* Remove transparency from overlays/backdrops */
+html.vk-iframe .backdrop-blur-xl {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.vk-iframe [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* Make semi-transparent bg solid */
+html.vk-iframe [class*="bg-["][class*="/60"],
+html.vk-iframe [class*="bg-["][class*="/85"],
+html.vk-iframe [class*="bg-["][class*="/40"],
+html.vk-iframe [class*="bg-["][class*="/50"],
+html.vk-iframe [class*="bg-["][class*="/20"] {
+  /* Can't easily undo opacity with CSS alone, handled via JS replace */ 
+}
+/* Override: solid bg for panels that use bg-primary/60 or bg-secondary/85 */
+html.vk-iframe [class*="bg-[var(--color-bg-primary)]/60"] {
+  background-color: var(--color-bg-primary) !important;
+}
+html.vk-iframe [class*="bg-[var(--color-bg-secondary)]/85"] {
+  background-color: var(--color-bg-secondary) !important;
+}
+html.vk-iframe [class*="bg-black/40"] {
+  background-color: rgba(0,0,0,0.6) !important;
+}
+html.vk-iframe [class*="bg-black/20"] {
+  background-color: rgba(0,0,0,0.4) !important;
+}
+
+/* Светлая тема — свой фон */
+html[data-theme="light"] {
+  background: linear-gradient(180deg, #f5f0e8 0%, #ede4d4 40%, #e8dcc8 100%);
+}
+
+/* Мерцание звёзд */
+@keyframes starTwinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Мерцание звёзд */
+@keyframes starTwinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Свечение редкостей */
+@keyframes glowEpic {
+  0%, 100% { box-shadow: 0 0 8px rgba(155, 89, 182, 0.4), inset 0 0 8px rgba(155, 89, 182, 0.1); }
+  50% { box-shadow: 0 0 18px rgba(155, 89, 182, 0.7), inset 0 0 14px rgba(155, 89, 182, 0.2); }
+}
+@keyframes glowLegendary {
+  0%, 100% { box-shadow: 0 0 10px rgba(241, 196, 15, 0.4), inset 0 0 10px rgba(241, 196, 15, 0.1); }
+  50% { box-shadow: 0 0 22px rgba(241, 196, 15, 0.7), inset 0 0 16px rgba(241, 196, 15, 0.2); }
+}
+
+@keyframes glowMythic {
+  0%, 100% { box-shadow: 0 0 10px rgba(231, 76, 60, 0.5), inset 0 0 10px rgba(231, 76, 60, 0.15); }
+  50% { box-shadow: 0 0 24px rgba(231, 76, 60, 0.8), inset 0 0 18px rgba(231, 76, 60, 0.25); }
+}
+
+.rarity-epic {
+  animation: glowEpic 2.5s ease-in-out infinite;
+}
+.rarity-legendary {
+  animation: glowLegendary 2s ease-in-out infinite;
+}
+.rarity-mythic {
+  animation: glowMythic 1.8s ease-in-out infinite;
 }
 
 h1, h2, h3 {
@@ -158,7 +273,11 @@ h1, h2, h3 {
   100% { transform: rotate(0deg) translateX(0); }
 }
 
-/* Анимации боя */
+/* ============================================
+   АНИМАЦИИ БОЯ
+   ============================================ */
+
+/* --- Обычная атака --- */
 #fighter-left.attacking {
   animation: attack-anim 0.6s ease-in-out;
 }
@@ -172,31 +291,113 @@ h1, h2, h3 {
   100% { transform: rotate(0deg) translateX(0); }
 }
 
-.fighter-card.dodging {
-  animation: dodge-anim 0.5s ease-out;
+/* --- Крит: мощный замах + красная вспышка --- */
+#fighter-left.critting {
+  animation: crit-anim 0.8s ease-in-out !important;
+  filter: brightness(1.6) drop-shadow(0 0 20px #e74c3c) !important;
+  outline: 3px solid rgba(231, 76, 60, 0.7) !important;
+  outline-offset: 2px;
+}
+#fighter-right.critting {
+  animation: crit-anim-right 0.8s ease-in-out !important;
+  filter: brightness(1.6) drop-shadow(0 0 20px #e74c3c) !important;
+  outline: 3px solid rgba(231, 76, 60, 0.7) !important;
+  outline-offset: 2px;
 }
 
-@keyframes dodge-anim {
-  0%   { opacity: 1; transform: translateX(0); }
-  30%  { opacity: 0.7; transform: translateX(-20px); }
-  100% { opacity: 1; transform: translateX(0); }
+@keyframes crit-anim {
+  0%   { transform: rotate(0deg) translateX(0) scale(1); }
+  10%  { transform: rotate(-8deg) translateX(-10px) scale(1.08); }
+  35%  { transform: rotate(25deg) translateX(50px) scale(1.25); }
+  60%  { transform: rotate(-5deg) translateX(-8px) scale(1.08); }
+  100% { transform: rotate(0deg) translateX(0) scale(1); }
 }
 
-.fighter-card.blocking {
-  box-shadow: 0 0 15px 5px #3498db, 0 0 0 4px #2980b9;
-  transition: box-shadow 0.3s;
+@keyframes crit-anim-right {
+  0%   { transform: rotate(0deg) translateX(0) scale(1); }
+  10%  { transform: rotate(8deg) translateX(10px) scale(1.08); }
+  35%  { transform: rotate(-25deg) translateX(-50px) scale(1.25); }
+  60%  { transform: rotate(5deg) translateX(8px) scale(1.08); }
+  100% { transform: rotate(0deg) translateX(0) scale(1); }
 }
 
-.fighter-card.stunned {
-  animation: stun-pulse 0.5s infinite alternate;
+/* Screen shake при крите */
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-4px, 2px); }
+  20% { transform: translate(4px, -2px); }
+  30% { transform: translate(-3px, -1px); }
+  40% { transform: translate(3px, 1px); }
+  50% { transform: translate(-2px, 2px); }
+  60% { transform: translate(2px, -2px); }
+  70% { transform: translate(-1px, -1px); }
+  80% { transform: translate(1px, 1px); }
+  90% { transform: translate(0, 0); }
+}
+
+/* --- Уклон: резкий уход вбок с размытием --- */
+#fighter-left.dodging, #fighter-right.dodging {
+  animation: dodge-slide 0.55s ease-out;
+  filter: blur(2px);
+  transition: filter 0.1s;
+}
+
+@keyframes dodge-slide {
+  0%   { transform: translateX(0); opacity: 1; }
+  10%  { transform: translateX(10px); opacity: 0.85; }
+  40%  { transform: translateX(-45px); opacity: 0.35; }
+  50%  { transform: translateX(-45px); opacity: 0.35; }
+  65%  { transform: translateX(-5px); opacity: 0.8; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* --- Блок: синий щит --- */
+#fighter-left.blocking, #fighter-right.blocking {
+  box-shadow: 0 0 20px 8px #3498db, 0 0 0 4px #2980b9, inset 0 0 15px rgba(52,152,219,0.3);
+  transition: box-shadow 0.2s;
+}
+
+/* --- Оглушение: тряска + звёзды + жёлтая аура --- */
+#fighter-left.stunned, #fighter-right.stunned {
+  animation: stun-shake 0.8s ease-in-out;
   border-color: #f1c40f !important;
+  box-shadow: 0 0 25px 8px rgba(241, 196, 15, 0.6), 0 0 50px 15px rgba(241, 196, 15, 0.3);
 }
 
-@keyframes stun-pulse {
-  from { box-shadow: 0 0 10px #f1c40f; }
-  to   { box-shadow: 0 0 20px #f1c40f; }
+@keyframes stun-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  8%  { transform: translateX(-7px) rotate(-3deg); }
+  16% { transform: translateX(8px) rotate(3deg); }
+  24% { transform: translateX(-6px) rotate(-2deg); }
+  32% { transform: translateX(6px) rotate(2deg); }
+  40% { transform: translateX(-4px) rotate(-1deg); }
+  48% { transform: translateX(4px) rotate(1deg); }
+  56% { transform: translateX(-2px); }
+  64% { transform: translateX(2px); }
+  72%, 100% { transform: translateX(0); }
 }
 
+/* Звёзды над оглушённым (псевдоэлемент) */
+#fighter-left.stunned::after, #fighter-right.stunned::after {
+  content: '✨💫✨';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.5rem;
+  animation: stars-float 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 100;
+  text-shadow: 0 0 8px #f1c40f;
+}
+
+@keyframes stars-float {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.5); }
+  30%  { opacity: 1; transform: translateX(-50%) translateY(-10px) scale(1.2); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(1); }
+}
+
+/* --- Урон (обычный) --- */
 .damage-float {
   position: absolute;
   top: 30%;
@@ -211,11 +412,27 @@ h1, h2, h3 {
   z-index: 999;
 }
 
+/* --- Урон (крит) — крупнее --- */
+.damage-float.crit-damage {
+  font-size: 2rem;
+  color: #ff2d2d;
+  text-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
+  animation: float-up-crit 1.2s ease-out forwards;
+  z-index: 1000;
+}
+
 @keyframes float-up {
   0%   { opacity: 1; transform: translate(-50%, 0); }
   100% { opacity: 0; transform: translate(-50%, -40px); }
 }
 
+@keyframes float-up-crit {
+  0%   { opacity: 1; transform: translate(-50%, 0) scale(0.5); }
+  20%  { opacity: 1; transform: translate(-50%, -5px) scale(1.3); }
+  100% { opacity: 0; transform: translate(-50%, -55px) scale(1); }
+}
+
+/* --- Текстовый оверлей (уклонение/блок/крит и т.д.) --- */
 .effect-overlay {
   position: absolute;
   top: 0; left: 0;
@@ -279,7 +496,7 @@ h1, h2, h3 {
 }
 
 .chat-blink {
-  animation: blink 1s infinite;
+  animation: 1s infinite blink;
 }
 @keyframes blink {
   0%, 100% { opacity: 1; }

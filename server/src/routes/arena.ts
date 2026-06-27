@@ -1,10 +1,8 @@
 // server/src/routes/arena.ts
 import { Router } from 'express';
 import { db } from '../db/index';
-import { currentStats } from '../game/stats';
 import { arenaEnterSchema } from '../validation';
-import { getBaseStats, enrichEquipment, spendMoney } from '../db/helpers';
-import { getDrinkBonuses } from '../game/drinks';
+import { getBaseStats, enrichEquipment, spendMoney, USER_ARENA_FIELDS_GUILD, buildPlayerStats } from '../db/helpers';
 
 const router = Router();
 
@@ -15,14 +13,14 @@ router.get('/arena/opponent', async (req, res) => {
     const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
     const difficulty = (req.query.difficulty as string) || 'equal'; // easy | equal | hard
 
-    const user: any = await db.one('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.inventorySlots, u.lastAttackTime, u.money, u.arenaOpponentId, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?', [userId]);
+    const user: any = await db.one(`SELECT ${USER_ARENA_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?`, [userId]);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
 
     // Если не смена — проверяем закреплённого соперника
     if (!change && user.arenaOpponentId) {
-        const saved = await db.one('SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.gender, u.avatar, u.activeDrink, u.drinkUntil, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)', [user.arenaOpponentId, now, user.guildId || 0]) as any;
+        const saved = await db.one(`SELECT ${USER_ARENA_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)`, [user.arenaOpponentId, now, user.guildId || 0]) as any;
         if (saved) {
             // Проверяем, соответствует ли сохранённый соперник запрошенной сложности
             const matchesDifficulty =
@@ -35,8 +33,7 @@ router.get('/arena/opponent', async (req, res) => {
                 const savedBase = { s: saved.baseS ?? 5, a: saved.baseA ?? 5, d: saved.baseD ?? 5, m: saved.baseM ?? 5 };
                 const savedEquip = JSON.parse(saved.equipment || '{}');
                 const { enriched: savedEnriched } = await enrichEquipment(savedEquip);
-                const savedCollCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [saved.id]) as any).cnt || 0;
-                const savedStats = currentStats(savedBase, savedEnriched, getDrinkBonuses(saved), savedCollCnt);
+                const savedStats = await buildPlayerStats(saved, 'arena');
                 return res.json({
                     id: saved.id, name: saved.username, level: saved.level,
                     equipment: savedEnriched, stats: savedStats,
@@ -58,7 +55,7 @@ router.get('/arena/opponent', async (req, res) => {
 
     // Подбор соперников по сложности
     let opponents = await db.query(
-        'SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.avatar, u.activeDrink, u.drinkUntil, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)',
+        `SELECT ${USER_ARENA_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)`,
         [userId, now, user.guildId || 0]
     ) as any[];
 
@@ -99,11 +96,8 @@ router.get('/arena/opponent', async (req, res) => {
     // Запоминаем выбранного соперника
     await db.run('UPDATE users SET arenaOpponentId = ? WHERE id = ?', [opponent.id, userId]);
 
-    const base = { s: opponent.baseS ?? 5, a: opponent.baseA ?? 5, d: opponent.baseD ?? 5, m: opponent.baseM ?? 5 };
-    const equipment = JSON.parse(opponent.equipment || '{}');
-    const { enriched: enrichedEquipment } = await enrichEquipment(equipment);
-    const oppCollCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [opponent.id]) as any).cnt || 0;
-    const stats = currentStats(base, enrichedEquipment, getDrinkBonuses(opponent), oppCollCnt);
+    const { enriched: enrichedEquipment } = await enrichEquipment(JSON.parse(opponent.equipment || '{}'));
+    const stats = await buildPlayerStats(opponent, 'arena');
 
     res.json({
         id: opponent.id,

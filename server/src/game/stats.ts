@@ -1,106 +1,149 @@
+// ── Реестр статов (ЕДИНСТВЕННОЕ место перечисления) ──
+// Добавить новый стат: добавить в PRIMARY_STATS + поле в StatRecord ниже
+
+export const PRIMARY_STATS = ['s', 'a', 'd', 'm'] as const;
+export type PrimaryStat = typeof PRIMARY_STATS[number]; // 's' | 'a' | 'd' | 'm'
+
+export const EXTRA_STATS = ['crit', 'dodge', 'counter', 'fullBlock'] as const;
+export type ExtraStat = typeof EXTRA_STATS[number];
+
+// Обобщённый тип стата
+export type StatRecord = { s: number; a: number; d: number; m: number };
+export type ExtraRecord = { crit: number; dodge: number; counter: number; fullBlock: number };
+
+// ── Хелперы ──
+
+/** HP = S + A + M (защита даёт блок, не HP) */
+export function sumStats(s: StatRecord): number {
+  return (s.s || 0) + (s.a || 0) + (s.m || 0);
+}
+
+/** Масштабировать все статы на множитель */
+export function scaleStats(s: StatRecord, mult: number): StatRecord {
+  return {
+    s: Math.round((s.s || 0) * mult),
+    a: Math.round((s.a || 0) * mult),
+    d: Math.round((s.d || 0) * mult),
+    m: Math.round((s.m || 0) * mult),
+  };
+}
+
+/** Сложить два StatRecord */
+export function addStats(a: StatRecord, b: StatRecord): StatRecord {
+  return {
+    s: (a.s || 0) + (b.s || 0),
+    a: (a.a || 0) + (b.a || 0),
+    d: (a.d || 0) + (b.d || 0),
+    m: (a.m || 0) + (b.m || 0),
+  };
+}
+
+/** Сумма extra-статов */
+export function sumExtra(e: ExtraRecord): number {
+  return EXTRA_STATS.reduce((sum, k) => sum + (e[k] || 0), 0);
+}
+
+// ── Боевые механики: имена статов ──
+// ЕДИНСТВЕННОЕ место правки при добавлении нового стата
+
+type StatKey = string;
+
+const F = {
+  dodgeDef:   'a',
+  dodgePen:   'm',
+  crit:       'm',
+  block:      'd',
+  damage:     's',
+  counterDef: ['m', 'a'],
+  counterTgt: ['m', 'd'],
+  stunAtk:    ['s', 'm'],
+  stunDef:    ['s', 'd'],
+} as const;
+
+function sv(stats: CharStats, key: any): number {
+  if (Array.isArray(key)) {
+    let sum = 0;
+    for (const k of key) sum += (stats as any)[k] || 0;
+    return sum;
+  }
+  return (stats as any)[key] || 0;
+}
+
+export { F, sv };
+
+// ── Типы предметов и персонажа ──
+
 export interface GameItem {
     id?: string | number;
     name?: string;
     slot: string;
     rarity_id: number;
-    bonuses: { s: number; a: number; d: number; m: number };
-    extra: {
-        crit: number;
-        dodge: number;
-        counter: number;
-        fullBlock: number;
-    };
+    bonuses: StatRecord;
+    extra: ExtraRecord;
     upgradeLevel?: number;
 }
 
-export interface CharStats {
-    s: number;
-    a: number;
-    d: number;
-    m: number;
+export interface CharStats extends StatRecord {
     hp: number;
-    bonuses: { s: number; a: number; d: number; m: number };
-    extra: {
-        crit: number;
-        dodge: number;
-        counter: number;
-        fullBlock: number;
-    };
-    drinks: { s: number; a: number; d: number; m: number };
-    collection: number;
+    bonuses: StatRecord;
+    extra: ExtraRecord;
+    drinks?: StatRecord;
+    collection?: number;
 }
 
-export interface StatSums {
-    s: number;
-    a: number;
-    d: number;
-    m: number;
-}
+export interface StatSums extends StatRecord {}
+
+// ── Вычисление статов персонажа ──
 
 export function currentStats(
-    base: { s: number; a: number; d: number; m: number },
+    base: StatRecord,
     equipment: Record<string, GameItem>,
-    drinkBonuses?: { s: number; a: number; d: number; m: number },
-    collectionBonus?: number
+    drinkBonuses?: StatRecord,
+    collectionBonus?: number,
+    guildBonus?: number
 ): CharStats {
-    const sums: StatSums = { s: 0, a: 0, d: 0, m: 0 };
-    const extra: Record<string, number> = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
+    const sums: StatRecord = { s: 0, a: 0, d: 0, m: 0 };
+    const extra: ExtraRecord = { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
 
     for (const item of Object.values(equipment)) {
+        const level = item.upgradeLevel || 0;
+        const multiplier = 1 + level * 0.1;
         if (item.bonuses) {
-            const level = item.upgradeLevel || 0;
-            const multiplier = 1 + level * 0.1;
-            for (const k of Object.keys(item.bonuses)) {
-                const key = k as keyof StatSums;
-                sums[key] = (sums[key] || 0) + Math.round(item.bonuses[key as keyof typeof item.bonuses] * multiplier);
+            for (const k of PRIMARY_STATS) {
+                sums[k] = (sums[k] || 0) + Math.round((item.bonuses[k] || 0) * multiplier);
             }
         }
         if (item.extra) {
-            for (const k of Object.keys(item.extra)) {
-                const key = k as keyof typeof item.extra;
-                extra[key] = (extra[key] || 0) + (item.extra[key] || 0);
+            for (const k of EXTRA_STATS) {
+                extra[k] = (extra[k] || 0) + Math.round((item.extra[k] || 0) * multiplier);
             }
         }
     }
 
     // Применяем бонусы напитков
     if (drinkBonuses) {
-        sums.s += drinkBonuses.s || 0;
-        sums.a += drinkBonuses.a || 0;
-        sums.d += drinkBonuses.d || 0;
-        sums.m += drinkBonuses.m || 0;
+        for (const k of PRIMARY_STATS) {
+            sums[k] += drinkBonuses[k] || 0;
+        }
     }
 
-    let st = {
-        s: base.s + (sums.s || 0),
-        a: base.a + (sums.a || 0),
-        d: base.d + (sums.d || 0),
-        m: base.m + (sums.m || 0),
-    };
+    let st = addStats(base, sums);
 
     // Бонус коллекции
     if (collectionBonus && collectionBonus > 0) {
-        const mult = 1 + collectionBonus / 100;
-        st = {
-            s: Math.round(st.s * mult),
-            a: Math.round(st.a * mult),
-            d: Math.round(st.d * mult),
-            m: Math.round(st.m * mult),
-        };
+        st = scaleStats(st, 1 + collectionBonus / 100);
     }
 
-    const hp = st.s + st.a + st.d + st.m;
+    // Бонус гильдейских сооружений
+    if (guildBonus && guildBonus > 0) {
+        st = scaleStats(st, 1 + guildBonus / 100);
+    }
 
     return {
         ...st,
-        hp,
-        bonuses: { s: sums.s || 0, a: sums.a || 0, d: sums.d || 0, m: sums.m || 0 },
-        extra: {
-            crit: extra.crit || 0,
-            dodge: extra.dodge || 0,
-            counter: extra.counter || 0,
-            fullBlock: extra.fullBlock || 0,
-        },
+        hp: sumStats(st),
+        bonuses: sums,
+        extra,
         drinks: drinkBonuses || { s: 0, a: 0, d: 0, m: 0 },
         collection: collectionBonus || 0,
     };

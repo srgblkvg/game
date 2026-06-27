@@ -48,7 +48,7 @@ router.post('/jobs/start-random', async (req, res) => {
 async function startJobForUser(user: any, job: any, res: any) {
     const now = Math.floor(Date.now() / 1000);
     const endTime = now + job.duration;
-    let reward = Math.floor(Math.random() * (job.rewardMax - job.rewardMin + 1)) + job.rewardMin;
+    let reward = Math.floor(Math.random() * (job.rewardMax * (user.level || 1) - job.rewardMin + 1)) + job.rewardMin;
     const expReward = Math.max(1, Math.floor(job.duration / 3600));
 
     // Премиум: случайный бонус от 1 до 30% от базовой награды
@@ -58,10 +58,11 @@ async function startJobForUser(user: any, job: any, res: any) {
         reward = reward + premiumBonus;
     }
 
-    const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, premiumBonus, background: job.background || null });
+    const scaledMax = job.rewardMax * (user.level || 1);
+    const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: scaledMax, premiumBonus, background: job.background || null });
     await db.run('UPDATE users SET activeJob = ? WHERE id = ?', [activeJob, user.id]);
 
-    res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: job.rewardMax, background: job.background || null });
+    res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: scaledMax, premiumBonus, background: job.background || null });
 }
 
 router.get('/jobs/history', async (req, res) => {

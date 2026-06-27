@@ -111,7 +111,6 @@ export const wsItemLinkSchema = z.object({
 
 // Гостевая регистрация
 export const registerGuestSchema = z.object({
-  username: z.string().min(3).max(20).regex(/^[a-zA-Zа-яА-Я0-9_]+$/, 'Только буквы, цифры и _'),
   email: z.string().email('Некорректный email'),
   password: z.string().min(8, 'Минимум 8 символов').max(64)
     .regex(/[0-9]/, 'Пароль должен содержать хотя бы одну цифру')
