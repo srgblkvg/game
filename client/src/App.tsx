@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import VkLoginPage from './pages/VkLoginPage';
 import HomePage from './pages/HomePage';
 import AdminRegisterPage from './pages/AdminRegisterPage';
 import ChatPanel from './components/chat/ChatPanel';
@@ -48,6 +49,9 @@ function Loading() {
 function App() {
   const { user } = useAuth();
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const isVkLaunch = searchParams.has('vk_user_id');
+
   return (
     <BrowserRouter>
       <ScrollToTop />
@@ -64,9 +68,9 @@ function App() {
       }}>
         <Suspense fallback={<Loading />}>
           <Routes>
-            <Route path="/login" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <Navigate to="/" />) : <LoginPage />} />
+            <Route path="/login" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <Navigate to="/" />) : (isVkLaunch ? <VkLoginPage /> : <LoginPage />)} />
             <Route path="/register" element={user ? <Navigate to="/" /> : <RegisterPage />} />
-            <Route path="/" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <HomePage />) : <Navigate to="/login" />} />
+            <Route path="/" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <HomePage />) : (isVkLaunch ? <VkLoginPage /> : <Navigate to="/login" />)} />
             <Route path="/profile/:userId" element={user?.role === 'player' ? <ProfilePage /> : <Navigate to="/login" />} />
             <Route path="/arena" element={user?.role === 'player' ? <ArenaPage /> : <Navigate to="/login" />} />
             <Route path="/shop" element={user?.role === 'player' ? <ShopPage /> : <Navigate to="/login" />} />

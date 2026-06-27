@@ -21,6 +21,7 @@ import accountRoutes from './routes/account';
 import chatRoutes from './routes/chat';
 import craftRoutes from './routes/craft';
 import oauthRoutes from './routes/oauth';
+import vkBridgeAuth from './routes/vkBridgeAuth';
 import mobsRoutes from './routes/mobs';
 import bankRoutes from './routes/bank';
 import tavernRoutes from './routes/tavern';
@@ -43,6 +44,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', authRoutes);
   app.use('/api', adminAuthRoutes);
   app.use('/api/oauth', oauthRoutes);
+  app.use('/api/auth', vkBridgeAuth);
 
   // Действия (публичный)
   app.use('/api', actionsRoutes);
