@@ -198,7 +198,7 @@ export default function RatingPage() {
                             {players.map((p, i) => {
                                 const isMe = user && p.id === user.id;
                                 return (
-                                <tr key={p.id} className={`border-b border-[var(--color-border-light)] ${isMe ? 'bg-[var(--color-accent-success)]/10' : ''}`}>
+                                <tr key={p.id} className={`border-b border-[var(--color-border-light)] ${isMe ? 'bg-[var(--color-bg-hover)] border-l-2 border-[var(--color-accent-success)]' : ''}`}>
                                     <td className="p-1.5">
                                         <span
                                             onClick={() => navigate(`/profile/${p.id}`)}
