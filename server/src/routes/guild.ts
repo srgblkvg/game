@@ -576,7 +576,7 @@ router.get('/guild/treasury/history', async (req, res) => {
 // --- Гильд-войны ---
 
 // Проверить, в войне ли гильдия (с авто-закрытием просроченных)
-async function isGuildAtWar(guildId: number): any | null {
+async function isGuildAtWar(guildId: number): Promise<any | null> {
     const now = new Date().toISOString();
     // Авто-отмена просроченных pending войн
     await db.run(
@@ -1080,15 +1080,15 @@ router.get('/guild/quest', async (req, res) => {
         const availableTypes = GUILD_QUEST_TYPES.filter(t => !usedTypes.has(t));
         if (availableTypes.length === 0) break;
         const questType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-        usedTypes.add(questType);
+        usedTypes.add(questType!);
 
         const diffs = Object.keys(GUILD_QUEST_DIFFICULTIES);
         const difficulty = diffs[Math.floor(Math.random() * diffs.length)] as keyof typeof GUILD_QUEST_DIFFICULTIES;
         const d = GUILD_QUEST_DIFFICULTIES[difficulty];
         const rewardXp = Math.floor(Math.random() * (d.xpMax - d.xpMin + 1)) + d.xpMin;
         const baseReqs: Record<string, number> = { pve: 50, pvp: 10, craft: 10, donate: 500, jobs: 1800 };
-        const requirement = (baseReqs[questType] || 50) * d.reqMult;
-        const info = GUILD_QUEST_INFO[questType];
+        const requirement = (baseReqs[questType!] || 50) * d.reqMult;
+        const info = GUILD_QUEST_INFO[questType!];
 
         options.push({
             questType, difficulty, requirement, rewardXp,

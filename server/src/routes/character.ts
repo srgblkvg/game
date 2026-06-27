@@ -31,7 +31,7 @@ router.get('/character/me', async (req, res) => {
     const equipment = JSON.parse(user.equipment || '{}');
     let changed = false;
 
-    inventory = await Promise.all(inventory.map(async (item) => {
+    inventory = await Promise.all(inventory.map(async (item: any) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
             if (item.rarity_id === undefined) {
                 const craftRow = await db.one(CRAFT_DATA_SQL, [Number(item.id)]) as any;

@@ -26,6 +26,8 @@ export interface CharStats {
         counter: number;
         fullBlock: number;
     };
+    drinks: { s: number; a: number; d: number; m: number };
+    collection: number;
 }
 
 export interface StatSums {

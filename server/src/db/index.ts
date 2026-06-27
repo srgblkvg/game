@@ -25,7 +25,7 @@ function pgLowerIdentifiers(sql: string): string {
   cleaned = cleaned.replace(/\b([a-z]+[A-Z][a-zA-Z0-9]*)\b/g, (m) => m.toLowerCase());
 
   // Restore string literals
-  return cleaned.replace(/__STR_(\d+)__/g, (_, i) => strings[parseInt(i)]);
+  return cleaned.replace(/__STR_(\d+)__/g, (_, i) => strings[parseInt(i)] || '');
 }
 
 // Suffix-based camelCase converter - adds camelCase keys for common patterns

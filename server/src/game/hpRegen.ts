@@ -14,7 +14,7 @@ export async function applyHpRegen(user: {
     lastHpUpdate: number;
     roomType?: string | null;
     roomUntil?: number;
-}): number {
+}): Promise<number> {
     const now = Math.floor(Date.now() / 1000);
     const HP_REGEN_SECONDS = 10;
     let hp = user.currentHp;

@@ -338,8 +338,13 @@ export async function runSeed() {
       6: [3000, 5000, 10000, 18000, 30000, 45000, 70000, 100000, 150000, 220000], // Мифический
     };
     for (let rarity = 0; rarity <= 6; rarity++) {
+      const costArr = costs[rarity as keyof typeof costs];
+      if (!costArr) continue;
       for (let lvl = 0; lvl < 10; lvl++) {
-        await db.run(INSERT_UPGRADE, [lvl + 1, rarity, chances[lvl], costs[rarity][lvl]]);
+        const chance = chances[lvl];
+        const cost = costArr[lvl];
+        if (chance === undefined || cost === undefined) continue;
+        await db.run(INSERT_UPGRADE, [lvl + 1, rarity, chance, cost]);
       }
     }
   }

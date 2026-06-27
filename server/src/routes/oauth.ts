@@ -29,11 +29,11 @@ setInterval(() => {
     }
 }, 5 * 60 * 1000);
 
-async function makeToken(userId: number, role: string): string {
+async function makeToken(userId: number, role: string): Promise<string> {
     return jwt.sign({ userId, role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '30d' });
 }
 
-async function findOrCreateUser(provider: string, oauthId: string, username: string): { id: number; username: string; level: number } {
+async function findOrCreateUser(provider: string, oauthId: string, username: string): Promise<{ id: number; username: string; level: number }> {
     const now = Math.floor(Date.now() / 1000);
     const existing: any = await db.one('SELECT id, username, level FROM users WHERE oauthProvider = ? AND oauthId = ?',
         [provider, oauthId]);

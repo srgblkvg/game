@@ -85,9 +85,10 @@ router.post('/account/delete', async (req, res) => {
     // Отзываем токен
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
+        const parts = authHeader.split(' ');
+        const token = parts[1];
         try {
-            const decoded: any = jwt.decode(token);
+            const decoded: any = jwt.decode(token || '');
             if (decoded?.jti && decoded?.exp) revokeToken(decoded.jti, decoded.exp);
         } catch {}
     }
@@ -98,9 +99,10 @@ router.post('/account/delete', async (req, res) => {
 router.post('/account/logout', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Не авторизован' });
-    const token = authHeader.split(' ')[1];
+    const parts = authHeader.split(' ');
+    const token = parts[1];
     try {
-      const decoded: any = jwt.decode(token);
+      const decoded: any = jwt.decode(token || '');
       if (decoded?.jti && decoded?.exp) {
         revokeToken(decoded.jti, decoded.exp);
       }
@@ -158,7 +160,7 @@ router.post('/account/avatar', async (req, res) => {
     if (!match) return res.status(400).json({ error: 'Формат не поддерживается. Допустимы: webp, png, jpeg' });
 
     const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
-    const data = match[2];
+    const data = match[2] || '';
     const buffer = Buffer.from(data, 'base64');
     if (buffer.length > 512 * 1024) return res.status(400).json({ error: 'Изображение слишком большое (макс. 512 КБ)' });
 

@@ -7,7 +7,7 @@ import { db } from '../db/index';
 let guestRestrictionsDisabled = false;
 export async function isGuestRestrictionsDisabled() { return guestRestrictionsDisabled; }
 export async function setGuestRestrictionsDisabled(v: boolean) { guestRestrictionsDisabled = v; }
-export async function toggleGuestRestrictions(): boolean { guestRestrictionsDisabled = !guestRestrictionsDisabled; return guestRestrictionsDisabled; }
+export async function toggleGuestRestrictions(): Promise<boolean> { guestRestrictionsDisabled = !guestRestrictionsDisabled; return guestRestrictionsDisabled; }
 
 // Кеш для троттлинга обновления lastLoginAt (раз в 5 мин)
 const lastLoginUpdates = new Map<string, number>();

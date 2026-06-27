@@ -100,7 +100,7 @@ router.post('/battle-sim', authMiddleware, async (req, res) => {
                 level: +u.level,
                 money: 0,
                 drinkBonuses: drinks,
-                collectionBonus: parseInt(collCnt?.cnt || '0'),
+                collectionBonus: parseInt(String(collCnt || '0')),
             };
         };
 

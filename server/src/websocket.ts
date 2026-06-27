@@ -385,7 +385,7 @@ export async function setupWebSocket(server: any) {
       if (data.type === 'public') {
         const parsed = wsPublicMessageSchema.safeParse(data);
         if (!parsed.success) {
-          const err = parsed.error.errors[0]?.message || 'Некорректное сообщение';
+          const err = parsed.error.issues[0]?.message || 'Некорректное сообщение';
           sendToUser(userId, { type: 'error', message: err });
           return;
         }
@@ -451,7 +451,7 @@ export async function setupWebSocket(server: any) {
       } else if (data.type === 'private') {
         const parsed = wsPrivateMessageSchema.safeParse(data);
         if (!parsed.success) {
-          const err = parsed.error.errors[0]?.message || 'Некорректное сообщение';
+          const err = parsed.error.issues[0]?.message || 'Некорректное сообщение';
           sendToUser(userId, { type: 'error', message: err });
           return;
         }

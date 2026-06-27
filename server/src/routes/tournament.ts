@@ -135,7 +135,7 @@ async function loadPlayerForBattle(userId: number) {
  * Разрешить все незавершённые матчи текущего раунда.
  * Возвращает номер разрешённого раунда (или 0 если ничего не сделано).
  */
-async function resolveCurrentRound(tournamentId: number): number {
+async function resolveCurrentRound(tournamentId: number): Promise<number> {
     // Находим минимальный раунд с незавершёнными матчами
     const pendingRound = await db.one(`
         SELECT round FROM tournament_matches
@@ -333,7 +333,7 @@ async function finishTournament(tournamentId: number) {
 // Автопродвижение (вызывается при каждом GET /tournament)
 // ---------------------------------------------------------------------------
 
-async function autoAdvance(tournamentId: number) {
+export async function autoAdvance(tournamentId: number) {
     const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [tournamentId]) as any;
     if (!t) return;
 
@@ -411,7 +411,7 @@ async function autoAdvance(tournamentId: number) {
 // Создание турнира (если нет активного)
 // ---------------------------------------------------------------------------
 
-async function getOrCreateTournament(type?: string) {
+export async function getOrCreateTournament(type?: string) {
     const now = Math.floor(Date.now() / 1000);
     const typeFilter = type ? "AND type = ?" : "";
     const params: any[] = type ? [type] : [];
