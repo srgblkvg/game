@@ -43,7 +43,12 @@ function verifySignature(params: Record<string, string>): boolean {
 
 // POST /api/vk/payments — колбэк от VK
 router.post('/', async (req: Request, res: Response) => {
-  const params = req.body as Record<string, string>;
+  const params = req.body as Record<string, string> | undefined;
+
+  if (!params) {
+    logger.warn('[VK Payments] Empty body');
+    return res.json({ error: { error_code: 1, error_msg: 'Empty body' } });
+  }
 
   // DEBUG: логируем сырой запрос для диагностики подписи
   logger.info(`[VK Payments RAW] body keys: ${Object.keys(params).sort().join(', ')}`);

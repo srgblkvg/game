@@ -9,7 +9,7 @@ const router = Router();
 db.run(`CREATE TABLE IF NOT EXISTS auction_history (
     id SERIAL PRIMARY KEY,
     sellerId INTEGER NOT NULL,
-    buyerId INTEGER NOT NULL,
+    buyerId INTEGER,
     itemName TEXT NOT NULL,
     itemData TEXT,
     price INTEGER NOT NULL,
@@ -346,7 +346,7 @@ router.get('/auction/history', async (req, res) => {
         SELECT h.*, s.username as sellerName, b.username as buyerName
         FROM auction_history h
         JOIN users s ON h.sellerId = s.id
-        JOIN users b ON h.buyerId = b.id
+        LEFT JOIN users b ON h.buyerId = b.id
         ORDER BY h.id DESC
         LIMIT ?
     `, [limit]);
