@@ -177,7 +177,9 @@ export default function BattleSimPage() {
                         <tr><td>База</td><td className="text-right">{p.base.s}</td><td className="text-right">{p.base.a}</td><td className="text-right">{p.base.d}</td><td className="text-right">{p.base.m}</td><td className="text-right">{p.base.s+p.base.a+p.base.d+p.base.m}</td></tr>
                         <tr className="text-[var(--color-accent-success)]"><td>+ Экип</td><td className="text-right">{st.bonuses?.s||0}</td><td className="text-right">{st.bonuses?.a||0}</td><td className="text-right">{st.bonuses?.d||0}</td><td className="text-right">{st.bonuses?.m||0}</td><td className="text-right">{(st.bonuses?.s||0)+(st.bonuses?.a||0)+(st.bonuses?.d||0)+(st.bonuses?.m||0)}</td></tr>
                         <tr className="text-[var(--color-accent-warning)]"><td>+ Напитки</td><td className="text-right">{st.drinks?.s||0}</td><td className="text-right">{st.drinks?.a||0}</td><td className="text-right">{st.drinks?.d||0}</td><td className="text-right">{st.drinks?.m||0}</td><td className="text-right">{(st.drinks?.s||0)+(st.drinks?.a||0)+(st.drinks?.d||0)+(st.drinks?.m||0)}</td></tr>
-                        <tr className="text-[var(--color-accent-purple)]"><td>× Колл ({st.collection||0})</td><td colSpan={4} className="text-right">{st.collection>0?`×${(1+st.collection/100).toFixed(2)}`:''}</td><td className="text-right">{st.collection>0?`+${st.collection}%`:''}</td></tr>
+                        {st.collection > 0 && (
+                            <tr className="text-[var(--color-accent-purple)]"><td>× Колл ({st.collection})</td><td colSpan={4} className="text-right">×{(1+st.collection/100).toFixed(2)}</td><td className="text-right">+{st.collection}%</td></tr>
+                        )}
                         {guildPct && (
                             <tr className="text-[var(--color-accent-warning)]"><td>× Гильдия ({guildPct})</td><td colSpan={4} className="text-right">×{(1+(p.guildBonus||0)/100).toFixed(2)}</td><td className="text-right">{guildPct}</td></tr>
                         )}

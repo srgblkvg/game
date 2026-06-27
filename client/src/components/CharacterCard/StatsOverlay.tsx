@@ -11,6 +11,7 @@ interface StatsOverlayProps {
   collectionBonus?: number;
   guildBonus?: number;
   buildings?: { type: string; icon: string; label: string; level: number; bonus: number }[];
+  noFlip?: boolean;
 }
 
 const STAT_ICONS: Record<string, string> = {
@@ -34,7 +35,7 @@ const BONUS_LABELS: Record<string, string> = {
   'fullBlock': 'Блок',
 };
 
-export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, guildBonus, buildings }: StatsOverlayProps) {
+export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, guildBonus, buildings, noFlip }: StatsOverlayProps) {
   const [flipped, setFlipped] = useState(false);
   const [animating, setAnimating] = useState(false);
   const isMobile = compact === 'mobile' || compact === 'verySmall';
@@ -47,7 +48,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
 
   const hasBonuses = baseStats && equipmentBonuses;
   const hasExtra = collectionBonus || guildBonus || (buildings && buildings.filter(b => b.bonus > 0).length > 0);
-  const showFlip = hasBonuses || hasExtra;
+  const showFlip = !noFlip && (hasBonuses || hasExtra);
   const bonusKeys = PRIMARY_STATS;
 
   const handleFlip = () => {

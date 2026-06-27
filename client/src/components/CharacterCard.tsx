@@ -52,8 +52,8 @@ export default function CharacterCard({
   // Бонусы из char (приходят с сервера или из calculateStats)
   const eqBonuses = stats?.bonuses || (char as any).equipmentBonuses || { s: 0, a: 0, d: 0, m: 0 };
   const exStats = stats?.extra || (char as any).extraStats || { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
-  const collBonus = (char as any).collectionCount || (char as any).collectionBonus || 0;
-  const gBonus = (char as any).guildBonus || 0;
+  const collBonus = Number((char as any).collectionCount ?? (char as any).collectionBonus ?? 0);
+  const gBonus = Number((char as any).guildBonus ?? 0);
   const buildingsList = (char as any).buildings || [];
 
   const isMobile = compact === 'mobile' || compact === 'verySmall';
@@ -190,6 +190,7 @@ export default function CharacterCard({
           collectionBonus={collBonus}
           guildBonus={gBonus}
           buildings={buildingsList}
+          noFlip={readOnly}
         />
 
         {!isMob && (
