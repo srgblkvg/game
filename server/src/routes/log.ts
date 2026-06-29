@@ -60,6 +60,25 @@ router.get('/quest-history', authMiddleware, async (req, res) => {
     ));
 });
 
+// История резни
+router.get('/massacre-battles', authMiddleware, async (req, res) => {
+    const userId = req.userId;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const battles = await db.query(
+        `SELECT e.id, e.status, e.created_at,
+                (SELECT COUNT(*) FROM massacre_participants WHERE event_id = e.id) as participant_count,
+                (SELECT COUNT(*) FROM massacre_turns WHERE event_id = e.id) as turn_count,
+                (SELECT user_id FROM massacre_participants WHERE event_id = e.id AND alive = TRUE LIMIT 1) as winner_id,
+                (SELECT u.username FROM massacre_participants mp JOIN users u ON mp.user_id = u.id WHERE mp.event_id = e.id AND mp.alive = TRUE LIMIT 1) as winner_name,
+                EXISTS(SELECT 1 FROM massacre_participants WHERE event_id = e.id AND user_id = ?) as participated
+         FROM massacre_events e
+         WHERE e.status = 'finished'
+         ORDER BY e.id DESC LIMIT ?`,
+        [userId, limit]
+    ) as any[];
+    res.json(battles);
+});
+
 // Приём клиентских ошибок
 router.post('/log/error', async (req, res) => {
     const { message, stack, url, line, col, userAgent } = req.body;

@@ -19,13 +19,14 @@ const LIMIT = 10;
 export default function HistoryPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages'>('all');
+    const [tab, setTab] = useState<'all' | 'battles' | 'pve' | 'jobs' | 'tournaments' | 'quests' | 'messages' | 'massacre'>('all');
     const [battles, setBattles] = useState<any[]>([]);
     const [pveBattles, setPveBattles] = useState<any[]>([]);
     const [jobHistory, setJobHistory] = useState<any[]>([]);
     const [privateMessages, setPrivateMessages] = useState<any[]>([]);
     const [tournamentHistory, setTournamentHistory] = useState<any[]>([]);
     const [questHistory, setQuestHistory] = useState<any[]>([]);
+    const [massacreBattles, setMassacreBattles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -34,16 +35,18 @@ export default function HistoryPage() {
     const loadData = useCallback(async () => {
         if (!user) return; setLoading(true);
         try {
-            const [b, jh, pm, pve, th, qh] = await Promise.all([
+            const [b, jh, pm, pve, th, qh, mb] = await Promise.all([
                 fetchBattles(30).catch(()=>[]), fetchJobHistory().catch(()=>[]),
                 fetch(`${BASE_URL}/chat/recent?limit=50`,{headers:getHeaders()}).then(r=>r.json()).then(msgs=>msgs.filter((m:any)=>m.targetId===user.id)).catch(()=>[]),
                 fetch(`${BASE_URL}/log/pve-battles?limit=30`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/tournament-history?limit=20`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
                 fetch(`${BASE_URL}/log/quest-history?limit=20`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
+                fetch(`${BASE_URL}/log/massacre-battles?limit=20`,{headers:getHeaders()}).then(r=>r.json()).catch(()=>[]),
             ]);
             setBattles(Array.isArray(b)?b:[]); setJobHistory(Array.isArray(jh)?jh:[]);
             setPrivateMessages(Array.isArray(pm)?pm:[]); setPveBattles(Array.isArray(pve)?pve:[]);
             setTournamentHistory(Array.isArray(th)?th:[]); setQuestHistory(Array.isArray(qh)?qh:[]);
+            setMassacreBattles(Array.isArray(mb)?mb:[]);
         } catch(e){console.error(e)} finally {setLoading(false)}
     }, [user]);
 
@@ -56,12 +59,13 @@ export default function HistoryPage() {
         ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:new Date(t.createdAt).getTime(),data:t})),
         ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt).getTime(),data:q})),
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
+        ...massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre',ts:new Date(m.created_at).getTime(),data:m})),
     ].sort((a,b)=>b.ts-a.ts);
 
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
         case 'jobs':return jobHistory;case 'tournaments':return tournamentHistory;case 'quests':return questHistory;
-        case 'messages':return privateMessages;default:return[];
+        case 'messages':return privateMessages;case 'massacre':return massacreBattles;default:return[];
     }})();
 
     const totalItems = currentData.length;
@@ -74,7 +78,7 @@ export default function HistoryPage() {
     const tabs = [
         {key:'all',label:'Все'},{key:'battles',label:'PvP'},{key:'pve',label:'Охота'},
         {key:'jobs',label:'Работы'},{key:'tournaments',label:'Турниры'},{key:'quests',label:'Квесты'},
-        {key:'messages',label:'Сообщения'},
+        {key:'messages',label:'Сообщения'},{key:'massacre',label:'Резня'},
     ] as const;
 
     if(!user) return null;
@@ -182,6 +186,15 @@ export default function HistoryPage() {
         if (type === 'message') {
             return <EntryRow time={fmt(data.createdAt)}>
                 <span className="text-[var(--color-accent-purple)]"><Icon icon="game-icons:chat-bubble" width="14" height="14" className="inline mr-1"/>{data.senderName}: {data.content}</span>
+            </EntryRow>;
+        }
+        if (type === 'massacre') {
+            return <EntryRow time={fmt(data.created_at)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
+                <span><Icon icon="game-icons:battered-axe" width="14" height="14" className="inline mr-1"/>Резня — {data.participant_count} участников</span>
+                <span className={`font-bold ml-2 ${data.winner_id === user.id ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
+                    {data.winner_id === user.id ? '🏆 Победитель' : data.participated ? 'Поражение' : ''}
+                </span>
+                <span className="text-[var(--color-text-muted)] ml-1">{data.turn_count} ходов</span>
             </EntryRow>;
         }
         return null;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import BackButton from '../components/BackButton';
 import Button from '../components/ui/Button';
@@ -46,6 +46,8 @@ export default function MassacrePage() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const eventIdParam = searchParams.get('eventId');
     const [state, setState] = useState<MassacreState | null>(null);
     const [turns, setTurns] = useState<TurnEntry[]>([]);
     const [participants, setParticipants] = useState<any[]>([]);
@@ -67,6 +69,10 @@ export default function MassacrePage() {
             // Загружаем лог последнего завершённого боя
             if (data.lastEvent?.id) {
                 fetchLog(data.lastEvent.id);
+            }
+            // Если передан конкретный eventId — грузим его лог
+            if (eventIdParam) {
+                fetchLog(parseInt(eventIdParam));
             }
             // Если текущий бой завершён или идёт — тоже грузим лог
             if (data.event && (data.event.status === 'finished' || data.event.status === 'in_progress')) {

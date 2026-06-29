@@ -93,7 +93,13 @@ export default function NotificationToast() {
                     className={`pointer-events-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-lg px-3 py-2.5 shadow-lg flex items-start gap-2 transition-all duration-300 ${
                         t.fading ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'
                     }`}
-                    onClick={() => dismiss(t.id)}
+                    onClick={() => {
+                        dismiss(t.id);
+                        if (t.data?.path) {
+                            // Навигация через window.location чтобы работало из любого места
+                            window.location.href = t.data.path;
+                        }
+                    }}
                 >
                     <Icon
                         icon={iconMap[t.type] || 'game-icons:ringing-bell'}
