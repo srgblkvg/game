@@ -95,6 +95,11 @@ export default function HistoryPage() {
 
     const fmt = (d: any) => formatGameDateTime(d);
 
+    const divisionLabels: Record<string, string> = {
+        copper: 'Медный', bronze: 'Бронзовый', iron: 'Железный', steel: 'Стальной', silver: 'Серебряный',
+        gold: 'Золотой', platinum: 'Платиновый', mithril: 'Мифриловый', adamant: 'Адамантиновый', orichalcum: 'Орихалковый',
+    };
+
     const renderBattleRow = (b: any) => {
         const win = b.winnerId === user.id;
         return <EntryRow time={fmt(b.createdAt)} onClick={()=>setSelectedBattle(b)}>
@@ -119,7 +124,7 @@ export default function HistoryPage() {
         const ss = t.snapshotStats?JSON.parse(t.snapshotStats):null;
         const canc = t.status==='cancelled';
         return <EntryRow time={fmt(t.createdAt)}>
-            <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{t.division==='custom'?t.name||'Турнир':t.division}»{canc?' отменён':' завершён'}</span>
+            <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{t.division==='custom'?t.name||'Турнир':(divisionLabels[t.division]||t.division)}»{canc?' отменён':' завершён'}</span>
             {canc?<span className="text-[var(--color-text-muted)] ml-1">Не набралось игроков</span>:
             ss?<span className="text-[var(--color-accent-success)] font-bold ml-1">{ss.place}-е место {ss.prize>0?formatMoney(ss.prize):'без приза'}</span>:
             <span className="text-[var(--color-text-muted)] ml-1">Участие</span>}

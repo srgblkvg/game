@@ -15,11 +15,13 @@ import BracketTree from "../components/BracketTree";
 import Card from '../components/ui/Card';
 
 const divisionIcons: Record<string, string> = {
-    copper: '🥉', steel: '🥈', mithril: '🥇', adamant: '👑',
+    copper: '🥉', bronze: '🥉', iron: '🥈', steel: '🥈', silver: '🥈',
+    gold: '🥇', platinum: '🥇', mithril: '🥇', adamant: '👑', orichalcum: '💎',
 };
 
 const divisionLabels: Record<string, string> = {
-    copper: 'Медный', steel: 'Стальной', mithril: 'Мифриловый', adamant: 'Адамантовый',
+    copper: 'Медный', bronze: 'Бронзовый', iron: 'Железный', steel: 'Стальной', silver: 'Серебряный',
+    gold: 'Золотой', platinum: 'Платиновый', mithril: 'Мифриловый', adamant: 'Адамантиновый', orichalcum: 'Орихалковый',
 };
 
 const statusLabels: Record<string, string> = {
@@ -27,11 +29,13 @@ const statusLabels: Record<string, string> = {
 };
 
 const divisionBorderClasses: Record<string, string> = {
-    copper: 'border-[#b8703a]', steel: 'border-[#909090]', mithril: 'border-[#40b0d0]', adamant: 'border-[#e03030]',
+    copper: 'border-[#b8703a]', bronze: 'border-[#cd7f32]', iron: 'border-[#607080]', steel: 'border-[#909090]', silver: 'border-[#a0a0c0]',
+    gold: 'border-[#d4a017]', platinum: 'border-[#40b0d0]', mithril: 'border-[#40b0d0]', adamant: 'border-[#e03030]', orichalcum: 'border-[#ff60ff]',
 };
 
 const divisionTextClasses: Record<string, string> = {
-    copper: 'text-[#b8703a]', steel: 'text-[#909090]', mithril: 'text-[#40b0d0]', adamant: 'text-[#e03030]',
+    copper: 'text-[#b8703a]', bronze: 'text-[#cd7f32]', iron: 'text-[#607080]', steel: 'text-[#909090]', silver: 'text-[#a0a0c0]',
+    gold: 'text-[#d4a017]', platinum: 'text-[#40b0d0]', mithril: 'text-[#40b0d0]', adamant: 'text-[#e03030]', orichalcum: 'text-[#ff60ff]',
 };
 
 const statusTextClasses: Record<string, string> = {
