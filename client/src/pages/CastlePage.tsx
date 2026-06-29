@@ -19,7 +19,7 @@ export default function CastlePage() {
 
     useEffect(() => {
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
-        fetch('/api/forum/latest').then(r => r.json()).then(d => setLatestThreads(d || [])).catch(() => {});
+        fetch('/api/forum/latest').then(r => r.json()).then(d => setLatestThreads(Array.isArray(d) ? d : [])).catch(() => {});
     }, []);
 
     return (

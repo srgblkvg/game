@@ -58,6 +58,20 @@ export function setupRoutes(app: Express) {
   // Казна замка (публичный)
   app.use('/api', treasuryRoutes);
 
+  // Форум — последние темы (публичный, для замка)
+  app.get('/api/forum/latest', async (_req: any, res) => {
+    const { db } = await import('./db/index');
+    const threads = await db.query(`
+      SELECT t.*, u.username as author_name,
+             lp.username as last_poster_name
+      FROM forum_threads t
+      JOIN users u ON t.author_id = u.id
+      LEFT JOIN users lp ON (SELECT author_id FROM forum_posts WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) = lp.id
+      ORDER BY t.updated_at DESC LIMIT 3
+    `, []) as any[];
+    res.json(threads);
+  });
+
   // Этажи (публичный — нужен бестиарию)
   app.get('/api/floors', async (_req: any, res) => {
     const rows = await db.query('SELECT * FROM floors ORDER BY sort_order, name') as any[];
