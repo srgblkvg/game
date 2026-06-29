@@ -66,15 +66,12 @@ export default function MassacrePage() {
             setState(data);
             setJoined(data.myParticipation);
 
-            // Загружаем лог последнего завершённого боя
             if (data.lastEvent?.id) {
                 fetchLog(data.lastEvent.id);
             }
-            // Если передан конкретный eventId — грузим его лог
             if (eventIdParam) {
                 fetchLog(parseInt(eventIdParam));
             }
-            // Если текущий бой завершён или идёт — тоже грузим лог
             if (data.event && (data.event.status === 'finished' || data.event.status === 'in_progress')) {
                 fetchLog(data.event.id);
             }
@@ -94,7 +91,6 @@ export default function MassacrePage() {
 
     useEffect(() => { fetchState(); }, []);
 
-    // Обновление через WS serverTick
     useEffect(() => {
         const handler = (e: Event) => {
             const d = (e as CustomEvent).detail;
@@ -103,7 +99,6 @@ export default function MassacrePage() {
                 timeLeft: d.timeLeft ?? prev.timeLeft,
                 event: prev.event ? { ...prev.event, participant_count: d.participant_count ?? prev.event.participant_count, status: d.status ?? prev.event.status } : prev.event,
             } : prev);
-            // Если статус изменился на finished/in_progress — грузим лог
             if (d.status === 'finished' || d.status === 'in_progress') {
                 fetchLog(d.id);
             }
@@ -112,7 +107,6 @@ export default function MassacrePage() {
         return () => window.removeEventListener('massacreTick', handler);
     }, []);
 
-    // Скролл лога вниз
     useEffect(() => {
         if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
     }, [turns]);
@@ -128,7 +122,6 @@ export default function MassacrePage() {
             const data = await res.json();
             if (!res.ok) { setError(data.error); setLoading(false); return; }
             setJoined(true);
-            // Обновить деньги
             if (character) {
                 setCharacter({ ...character, money: character.money - 100 });
             }
@@ -149,6 +142,88 @@ export default function MassacrePage() {
     const isStarting = state?.event?.status === 'starting' || (state?.event?.status === 'gathering' && state.timeLeft <= 0);
     const isInProgress = state?.event?.status === 'in_progress';
     const isFinished = state?.event?.status === 'finished';
+
+    // --- Визуализация ---
+    const [vizMode, setVizMode] = useState(false);
+    const [vizStep, setVizStep] = useState(-1);
+    const [vizPlaying, setVizPlaying] = useState(false);
+    const [vizSpeed, setVizSpeed] = useState(2);
+    const vizTimer = useRef<number | null>(null);
+
+    // Построить HP-трекер по ходам
+    const hpMap = useRef<Map<number, { name: string; max: number; history: number[] }>>(new Map());
+    useEffect(() => {
+        const map = new Map<number, { name: string; max: number; history: number[] }>();
+        for (const p of participants) {
+            // Стартовое HP берём из первого damage-хода или из участников
+            map.set(p.id, { name: p.name, max: p.hp_max || 100, history: [p.hp_max || 100] });
+        }
+        for (const t of turns) {
+            if (t.action_type === 'death' || t.action_type === 'victory' || t.action_type === 'stunned_skip') {
+                // Эти типы не меняют HP
+                const prev = map.get(t.actor_id);
+                if (prev) prev.history.push(prev.history[prev.history.length - 1]);
+                continue;
+            }
+            // damage step — применяем к цели
+            if (t.target_id && t.damage > 0) {
+                const targetHp = map.get(t.target_id);
+                if (targetHp) {
+                    targetHp.history.push(Math.max(0, targetHp.history[targetHp.history.length - 1] - t.damage));
+                }
+                // Атакующий HP не меняется
+                const actorHp = map.get(t.actor_id);
+                if (actorHp) actorHp.history.push(actorHp.history[actorHp.history.length - 1]);
+            }
+        }
+        hpMap.current = map;
+    }, [participants, turns]);
+
+    const totalVizSteps = turns.length;
+    const currentTurn = vizStep >= 0 && vizStep < turns.length ? turns[vizStep] : null;
+
+    const startViz = () => {
+        setVizStep(-1);
+        setVizPlaying(true);
+    };
+    const stopViz = () => {
+        setVizPlaying(false);
+        if (vizTimer.current) clearInterval(vizTimer.current);
+    };
+    useEffect(() => {
+        if (!vizPlaying) return;
+        vizTimer.current = window.setInterval(() => {
+            setVizStep(prev => {
+                if (prev >= totalVizSteps - 1) {
+                    stopViz();
+                    return prev;
+                }
+                return prev + 1;
+            });
+        }, 1000 / vizSpeed);
+        return () => { if (vizTimer.current) clearInterval(vizTimer.current); };
+    }, [vizPlaying, vizSpeed, totalVizSteps]);
+
+    const stepForward = () => {
+        if (vizStep < totalVizSteps - 1) setVizStep(vizStep + 1);
+    };
+    const stepBack = () => {
+        if (vizStep > 0) setVizStep(vizStep - 1);
+    };
+
+    // Карта HP на текущем шаге
+    const getHpAtStep = (pid: number) => {
+        const h = hpMap.current.get(pid);
+        if (!h) return 0;
+        const idx = Math.min(vizStep + 1, h.history.length - 1);
+        return h.history[idx] ?? 0;
+    };
+    const getMaxHp = (pid: number) => hpMap.current.get(pid)?.max || 100;
+    const getPct = (pid: number) => {
+        const max = getMaxHp(pid);
+        if (max <= 0) return 0;
+        return Math.max(0, Math.min(100, Math.round(getHpAtStep(pid) / max * 100)));
+    };
 
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
@@ -200,7 +275,6 @@ export default function MassacrePage() {
                 </Card>
             )}
 
-            {/* Бой начинается */}
             {isStarting && (
                 <Card className="text-center">
                     <p className="text-lg font-bold text-[var(--color-accent-warning)] mb-2">
@@ -212,7 +286,6 @@ export default function MassacrePage() {
                 </Card>
             )}
 
-            {/* Бой идёт */}
             {isInProgress && (
                 <Card className="text-center">
                     <p className="text-lg font-bold text-[var(--color-accent-danger)] mb-2">
@@ -224,14 +297,88 @@ export default function MassacrePage() {
                 </Card>
             )}
 
-            {/* Лог боя */}
-            {(turns.length > 0) && (
+            {/* Кнопка визуализации */}
+            {turns.length > 0 && (
+                <div className="flex justify-center gap-2 mt-3 mb-2">
+                    <Button variant="secondary" size="sm" onClick={() => setVizMode(!vizMode)}>
+                        <Icon icon={vizMode ? 'game-icons:notebook' : 'game-icons:play-button'} width="14" height="14" className="inline mr-1" />
+                        {vizMode ? 'Текстовый лог' : 'Визуализация боя'}
+                    </Button>
+                </div>
+            )}
+
+            {/* Визуализация */}
+            {vizMode && turns.length > 0 && (
+                <div className="mb-4">
+                    {/* Карточки участников */}
+                    <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))' }}>
+                        {participants.map(p => {
+                            const pct = getPct(p.id);
+                            const hpBarColor = pct > 50 ? '#4ade80' : pct > 25 ? '#facc15' : '#ef4444';
+                            const isDead = p.alive === false && vizStep >= totalVizSteps - 1;
+                            const isActor = currentTurn?.actor_id === p.id;
+                            const isTarget = currentTurn?.target_id === p.id;
+                            return (
+                                <div key={p.id} className={`relative rounded-lg p-2 text-center transition-all ${
+                                    isDead ? 'opacity-40 grayscale' : ''
+                                } ${
+                                    isActor ? 'ring-2 ring-red-500 bg-red-500/10' :
+                                    isTarget ? 'ring-2 ring-yellow-500 bg-yellow-500/10' :
+                                    'bg-[var(--color-bg-secondary)]'
+                                }`}>
+                                    <p className="text-[0.6rem] font-bold truncate mb-0.5">{p.name}</p>
+                                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-0.5">
+                                        <div className="h-full rounded-full transition-all duration-300" style={{
+                                            width: `${pct}%`,
+                                            backgroundColor: hpBarColor,
+                                        }} />
+                                    </div>
+                                    <p className="text-[0.5rem] text-[var(--color-text-muted)]">
+                                        {getHpAtStep(p.id)}/{getMaxHp(p.id)}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Текущий ход */}
+                    {currentTurn && (
+                        <div className="bg-[var(--color-bg-secondary)] rounded-lg p-2 text-center mb-2 text-xs">
+                            <span className="text-[var(--color-text-muted)]">Ход #{vizStep + 1}/{totalVizSteps}:</span>{' '}
+                            <span className="font-bold">{currentTurn.message}</span>
+                        </div>
+                    )}
+
+                    {/* Управление */}
+                    <div className="flex items-center justify-center gap-3">
+                        <Button variant="secondary" size="xs" onClick={stepBack} disabled={vizStep <= 0}>⏮</Button>
+                        {vizPlaying ? (
+                            <Button variant="danger" size="xs" onClick={stopViz}>⏸ Пауза</Button>
+                        ) : (
+                            <Button variant="danger" size="xs" onClick={startViz} disabled={vizStep >= totalVizSteps - 1}>▶ Играть</Button>
+                        )}
+                        <Button variant="secondary" size="xs" onClick={stepForward} disabled={vizStep >= totalVizSteps - 1}>⏭</Button>
+                        <select value={vizSpeed} onChange={e => setVizSpeed(Number(e.target.value))}
+                            className="bg-[var(--color-bg-input)] text-xs rounded px-1 py-0.5 border border-[var(--color-border-light)]">
+                            <option value={1}>1x</option>
+                            <option value={2}>2x</option>
+                            <option value={4}>4x</option>
+                        </select>
+                    </div>
+                    <div className="mt-1 text-center">
+                        <input type="range" min={0} max={totalVizSteps - 1} value={vizStep} className="w-full h-1"
+                            onChange={e => { setVizStep(Number(e.target.value)); stopViz(); }} />
+                    </div>
+                </div>
+            )}
+
+            {/* Текстовый лог */}
+            {!vizMode && turns.length > 0 && (
                 <div className="mt-4">
                     <h2 className="text-sm font-bold text-[var(--color-text-muted)] mb-2">
                         📜 Лог боя — {participants.length} участников
                     </h2>
 
-                    {/* Участники */}
                     <div className="flex flex-wrap gap-1 mb-3">
                         {participants.map((p: any) => (
                             <span key={p.id} className={`text-xs px-2 py-0.5 rounded ${
@@ -246,7 +393,6 @@ export default function MassacrePage() {
                         ))}
                     </div>
 
-                    {/* Ходы */}
                     <div
                         ref={logRef}
                         className="bg-[var(--color-bg-secondary)] rounded-lg p-3 max-h-[50vh] overflow-y-auto font-mono text-xs leading-relaxed space-y-1"
@@ -277,7 +423,6 @@ export default function MassacrePage() {
                 </div>
             )}
 
-            {/* Завершён но лога нет (ждём) */}
             {isFinished && turns.length === 0 && (
                 <Card className="text-center">
                     <p className="text-sm text-[var(--color-text-muted)]">Загрузка результатов...</p>
