@@ -53,7 +53,7 @@ export default function HomePage() {
 
   if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
   const isPremium = (character.premium?.until || 0) > serverTime;
-  const cd = isPremium ? 150 : 300;
+  const cd = isPremium ? 300 : 600;
   const attackCooldownSec = getRemaining((character.lastAttackTime || 0) + cd);
   const canAttack = attackCooldownSec <= 0;
   const pveCooldownSec = getRemaining((character.lastPveAttackTime || 0) + cd);
