@@ -9,7 +9,7 @@ import { getDrinkBonuses } from '../game/drinks';
 const router = Router();
 
 const MAX_PLAYERS = 8;
-const REGISTRATION_WINDOW = 30 * 60; // 30 минут
+const REGISTRATION_WINDOW = 60 * 60; // 1 час
 
 const divisions = [
     { name: 'copper', label: 'Медный', minLevel: 1, maxLevel: 15, basePool: 500, icon: '🥉' },
@@ -449,7 +449,7 @@ export async function getOrCreateTournament(type?: string) {
             if (lastCompleted?.completedAt) {
                 const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
                   : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
-                if (Date.now() < ts + 3600 * 1000) continue;
+                if (Date.now() < ts + 14400 * 1000) continue;
             }
             await db.run(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -629,7 +629,7 @@ router.get('/tournament', async (req, res) => {
         if (lastCompleted?.completedAt) {
             const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
               : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
-            const registrationOpensAt = ts + 3600 * 1000;
+            const registrationOpensAt = ts + 14400 * 1000;
             if (Date.now() < registrationOpensAt) {
                 upcomingOfficial.push({
                     division: div.name,
