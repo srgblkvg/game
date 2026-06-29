@@ -47,10 +47,13 @@ export default function HistoryPage() {
             setPrivateMessages(Array.isArray(pm)?pm:[]); setPveBattles(Array.isArray(pve)?pve:[]);
             setTournamentHistory(Array.isArray(th)?th:[]); setQuestHistory(Array.isArray(qh)?qh:[]);
             setMassacreBattles(Array.isArray(mb)?mb:[]);
+            console.log('massacre loaded:', Array.isArray(mb) ? mb.length : 'error', mb);
         } catch(e){console.error(e)} finally {setLoading(false)}
     }, [user]);
 
     useEffect(()=>{if(!user){navigate('/login');return}loadData()},[user,loadData,navigate]);
+
+    const massacreEntries = massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre' as const,ts:new Date(m.created_at).getTime(),data:m}));
 
     const allEntries = [
         ...battles.map(b=>({id:`b-${b.id}`,type:'battle',ts:new Date(b.createdAt).getTime(),data:b})),
@@ -59,13 +62,13 @@ export default function HistoryPage() {
         ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:new Date(t.createdAt).getTime(),data:t})),
         ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt).getTime(),data:q})),
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
-        ...massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre',ts:new Date(m.created_at).getTime(),data:m})),
+        ...massacreEntries,
     ].sort((a,b)=>b.ts-a.ts);
 
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
         case 'jobs':return jobHistory;case 'tournaments':return tournamentHistory;case 'quests':return questHistory;
-        case 'messages':return privateMessages;case 'massacre':return allEntries.filter(e=>e.type==='massacre');default:return[];
+        case 'messages':return privateMessages;case 'massacre':return [...massacreEntries].sort((a,b)=>b.ts-a.ts);default:return[];
     }})();
 
     const totalItems = currentData.length;
