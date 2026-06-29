@@ -99,33 +99,39 @@ export default function ThreadPage() {
 
     const load = async (pg = page) => {
         try {
-            const res = await fetch(`/api/forum/thread/${id}?page=${pg || 1}`, { headers: getHeaders() });
+            // If opening the thread fresh, find total pages first
+            if (pg === 0) {
+                const res = await fetch(`/api/forum/thread/${id}?page=1`, { headers: getHeaders() });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                setThread(data.thread);
+                setFirstPost(data.firstPost || null);
+                const lastPg = data.totalPages || 1;
+                setTotalPages(lastPg);
+                if (lastPg <= 1) {
+                    setPosts(data.posts || []);
+                    setPageState(1);
+                    setSearchParams({ page: '1' }, { replace: true });
+                } else {
+                    const res2 = await fetch(`/api/forum/thread/${id}?page=${lastPg}`, { headers: getHeaders() });
+                    const data2 = await res2.json();
+                    if (res2.ok) {
+                        setPosts(data2.posts || []);
+                        setPageState(data2.page || lastPg);
+                    }
+                    setSearchParams({ page: String(lastPg) }, { replace: true });
+                }
+                return;
+            }
+
+            const res = await fetch(`/api/forum/thread/${id}?page=${pg}`, { headers: getHeaders() });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setThread(data.thread);
             setFirstPost(data.firstPost || null);
             setPosts(data.posts || []);
             setTotalPages(data.totalPages || 1);
-            // If page was 0 (last), redirect to actual last page
-            const actualPage = data.page || 1;
-            const actualTotal = data.totalPages || 1;
-            if (pg === 0) {
-                const lastPg = actualTotal;
-                setPageState(lastPg);
-                setSearchParams({ page: String(lastPg) }, { replace: true });
-                // Reload with correct page
-                if (lastPg > 1) {
-                    const res2 = await fetch(`/api/forum/thread/${id}?page=${lastPg}`, { headers: getHeaders() });
-                    const data2 = await res2.json();
-                    if (res2.ok) {
-                        setPosts(data2.posts || []);
-                        setPageState(data2.page || lastPg);
-                        setTotalPages(data2.totalPages || 1);
-                    }
-                }
-            } else {
-                setPageState(actualPage);
-            }
+            setPageState(data.page || 1);
         } catch (e: any) { setError(e.message); }
     };
 
