@@ -165,47 +165,76 @@ export default function BestiaryPage() {
   };
 
   const executeStep = (step: any, side: 'left' | 'right') => {
-    const frame = document.getElementById(`fighter-${side}`);
-    const card = document.querySelector(`.fighter-card.${side}`) as HTMLElement;
+    const leftFrame = document.getElementById('fighter-left');
+    const rightFrame = document.getElementById('fighter-right');
+    const leftCard = document.querySelector('.fighter-card.left') as HTMLElement;
+    const rightCard = document.querySelector('.fighter-card.right') as HTMLElement;
+
     if (step.type === 'attack') {
+      if (step.actor === 'attacker') {
+        if (leftCard) leftCard.style.zIndex = '20';
+        leftFrame?.classList.add('attacking');
+        setTimeout(() => {
+          leftFrame?.classList.remove('attacking');
+          if (leftCard) leftCard.style.zIndex = '';
+        }, 600);
+      } else {
+        if (rightCard) rightCard.style.zIndex = '20';
+        rightFrame?.classList.add('attacking');
+        setTimeout(() => {
+          rightFrame?.classList.remove('attacking');
+          if (rightCard) rightCard.style.zIndex = '';
+        }, 600);
+      }
+    } else if (step.type === 'dodge') {
+      const dSide = step.actor === 'attacker' ? 'left' : 'right';
+      const frame = dSide === 'left' ? leftFrame : rightFrame;
+      const card = dSide === 'left' ? leftCard : rightCard;
+      if (card) card.style.zIndex = '20';
+      if (frame) frame.style.filter = '';
+      frame?.classList.add('dodging');
+      setTimeout(() => { frame?.classList.remove('dodging'); frame!.style.filter = ''; if (card) card.style.zIndex = ''; }, 550);
+      showEffectText(dSide, 'УКЛОНЕНИЕ!', '#f1c40f');
+    } else if (step.type === 'counter') {
+      const cSide = step.actor === 'attacker' ? 'left' : 'right';
+      const frame = cSide === 'left' ? leftFrame : rightFrame;
+      const card = cSide === 'left' ? leftCard : rightCard;
       if (card) card.style.zIndex = '20';
       frame?.classList.add('attacking');
-      if (atkTimeoutRef.current) clearTimeout(atkTimeoutRef.current);
-      atkTimeoutRef.current = window.setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
+      setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
+      showEffectText(cSide, 'КОНТРАТАКА!', '#f1c40f');
+    } else if (step.type === 'block') {
+      const bSide = step.actor === 'defender' ? 'right' : 'left';
+      const frame = bSide === 'left' ? leftFrame : rightFrame;
+      frame?.classList.add('blocking');
+      setTimeout(() => frame?.classList.remove('blocking'), 600);
+      showEffectText(bSide, 'БЛОК!', '#3498db');
+    } else if (step.type === 'fullBlock') {
+      const bSide = step.actor === 'defender' ? 'right' : 'left';
+      const frame = bSide === 'left' ? leftFrame : rightFrame;
+      frame?.classList.add('blocking');
+      setTimeout(() => frame?.classList.remove('blocking'), 600);
+      showEffectText(bSide, 'ПОЛНЫЙ БЛОК!', '#9b59b6');
     } else if (step.type === 'crit') {
-      if (atkTimeoutRef.current) { clearTimeout(atkTimeoutRef.current); atkTimeoutRef.current = null; }
+      const crSide = step.actor === 'attacker' ? 'left' : 'right';
+      const frame = crSide === 'left' ? leftFrame : rightFrame;
+      const card = crSide === 'left' ? leftCard : rightCard;
+      if (card) card.style.zIndex = '30';
       frame?.classList.remove('attacking');
       frame?.classList.add('critting');
-      if (card) card.style.zIndex = '30';
       setTimeout(() => {
         frame?.classList.remove('critting');
         frame!.style.filter = '';
         frame!.style.outline = '';
         if (card) card.style.zIndex = '';
       }, 800);
-      showEffectText(side, 'КРИТ!', '#e74c3c');
-    } else if (step.type === 'dodge') {
-      frame?.classList.add('dodging');
-      setTimeout(() => frame?.classList.remove('dodging'), 500);
-      showEffectText(side, 'УКЛОНЕНИЕ!', '#f1c40f');
-    } else if (step.type === 'counter') {
-      if (atkTimeoutRef.current) clearTimeout(atkTimeoutRef.current);
-      if (card) card.style.zIndex = '20';
-      frame?.classList.add('attacking');
-      atkTimeoutRef.current = window.setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
-      showEffectText(side, 'КОНТРАТАКА!', '#f1c40f');
-    } else if (step.type === 'block') {
-      frame?.classList.add('blocking');
-      setTimeout(() => frame?.classList.remove('blocking'), 600);
-      showEffectText(side, 'БЛОК!', '#3498db');
-    } else if (step.type === 'fullBlock') {
-      frame?.classList.add('blocking');
-      setTimeout(() => frame?.classList.remove('blocking'), 600);
-      showEffectText(side, 'ПОЛНЫЙ БЛОК!', '#9b59b6');
+      showEffectText(crSide, 'КРИТ!', '#e74c3c');
     } else if (step.type === 'stun') {
+      const sSide = step.actor === 'attacker' ? 'right' : 'left';
+      const frame = sSide === 'left' ? leftFrame : rightFrame;
       frame?.classList.add('stunned');
-      setTimeout(() => frame?.classList.remove('stunned'), 1000);
-      showEffectText(side, 'ОГЛУШЁН', '#f1c40f');
+      setTimeout(() => frame?.classList.remove('stunned'), 800);
+      showEffectText(sSide, 'ОГЛУШЁН', '#f1c40f');
     }
   };
 
