@@ -47,7 +47,6 @@ export default function HistoryPage() {
             setPrivateMessages(Array.isArray(pm)?pm:[]); setPveBattles(Array.isArray(pve)?pve:[]);
             setTournamentHistory(Array.isArray(th)?th:[]); setQuestHistory(Array.isArray(qh)?qh:[]);
             setMassacreBattles(Array.isArray(mb)?mb:[]);
-            console.log('massacre loaded:', Array.isArray(mb) ? mb.length : 'error', mb);
         } catch(e){console.error(e)} finally {setLoading(false)}
     }, [user]);
 
@@ -68,7 +67,7 @@ export default function HistoryPage() {
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
         case 'jobs':return jobHistory;case 'tournaments':return tournamentHistory;case 'quests':return questHistory;
-        case 'messages':return privateMessages;case 'massacre':return [...massacreEntries].sort((a,b)=>b.ts-a.ts);default:return[];
+        case 'messages':return privateMessages;case 'massacre':return allEntries.filter(e=>e.type==='massacre');default:return[];
     }})();
 
     const totalItems = currentData.length;
