@@ -68,17 +68,17 @@ export default function PremiumPage() {
             <button onClick={() => navigate(-1)} className="text-sm text-[var(--color-accent-info)] hover:underline mb-4 inline-block">← Назад</button>
 
             <h1 className="text-xl font-bold text-center mb-1">⭐ Премиум</h1>
-            <p className="text-center text-sm text-[var(--color-text-muted)] mb-5">
+            <p className="text-sm text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
                 {hasPremium
                     ? `Активен до ${new Date(premiumUntil * 1000).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`
-                    : 'Усильте своего персонажа'}
+                    : 'Премиум ускоряет кулдауны боёв, увеличивает доход и даёт пассивную регенерацию HP.'}
             </p>
 
             {/* Что даёт премиум */}
             <Card className="p-4 mb-4">
                 <h3 className="font-bold text-sm mb-3">Что даёт премиум:</h3>
                 <ul className="text-sm text-[var(--color-text-secondary)] space-y-2">
-                    <li>⚡ Ускоренный кулдаун боёв: <strong>150 сек</strong> вместо 300</li>
+                    <li>⚡ Кулдаун PvP: 5 мин вместо 10 • PvE: 2.5 мин вместо 5</li>
                     <li>💰 +30% серебра с PvE и работ</li>
                     <li>🏥 Автоматический реген HP (×3, как чулан в трактире)</li>
                 </ul>
@@ -92,7 +92,7 @@ export default function PremiumPage() {
                         <button
                             key={p.days}
                             onClick={() => setSelectedDays(p.days)}
-                            className={`p-2 rounded-lg border text-center text-sm transition-colors cursor-pointer ${selectedDays === p.days ? 'border-[var(--color-accent-gold)] bg-[var(--color-accent-gold)]/10' : 'border-[var(--color-border-light)] hover:border-[var(--color-text-muted)]'}`}
+                            className={`p-2 rounded-lg border text-center text-sm transition-colors cursor-pointer ${selectedDays === p.days ? 'border-[var(--color-accent-info)] bg-[var(--color-accent-info)]/15 text-[var(--color-text-primary)]' : 'border-[var(--color-border-light)] hover:border-[var(--color-text-muted)]'}`}
                         >
                             <div className="font-bold">{p.label}</div>
                             <div className="text-[var(--color-accent-gold)] text-xs">
