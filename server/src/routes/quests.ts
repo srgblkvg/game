@@ -43,7 +43,7 @@ router.get('/tavern/quests', async (req, res) => {
             const rw = BASE_REWARDS[qt];
             await db.run(
                 'INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [userId, qt, diff, req, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(now), today]
+                [userId, qt, diff, req, Math.round(rw.xp * d.rewardXpMult), Math.round(rw.money * d.rewardMoneyMult), 'available', JSON.stringify(now), today]
             );
         }
 
@@ -161,7 +161,7 @@ router.post('/tavern/quests/claim', async (req, res) => {
     const newReq = d.req[quest.questType as QuestType];
     const rw = BASE_REWARDS[quest.questType as QuestType];
     await db.run('INSERT INTO daily_quests (userId, questType, difficulty, requirement, rewardXp, rewardMoney, status, snapshot, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [userId, quest.questType, newDiff, newReq, Math.round(rw.xp * d.rewardMult), Math.round(rw.money * d.rewardMult), 'available', JSON.stringify(await getSnapshot(userId)), today]);
+        [userId, quest.questType, newDiff, newReq, Math.round(rw.xp * d.rewardXpMult), Math.round(rw.money * d.rewardMoneyMult), 'available', JSON.stringify(await getSnapshot(userId)), today]);
 
     const updated = await db.one('SELECT money, exp, level, statPoints FROM users WHERE id = ?', [userId]) as any;
     res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: quest.rewardMoney, money: updated.money, exp: updated.exp, level: updated.level, statPoints: updated.statPoints, levelsGained });
