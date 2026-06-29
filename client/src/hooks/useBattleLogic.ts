@@ -31,7 +31,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     const [hpRight, setHpRight] = useState(0);
     const [maxHpRight, setMaxHpRight] = useState(0);
     const [modalMessage, setModalMessage] = useState<string | null>(null);
-    const [speed, setSpeed] = useState(1);
+    const [speed, setSpeed] = useState(2);
     const [autoPlaying, setAutoPlaying] = useState(false);
 
     const logContainerRef = useRef<HTMLDivElement>(null);

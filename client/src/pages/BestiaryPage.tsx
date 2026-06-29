@@ -39,7 +39,7 @@ export default function BestiaryPage() {
   const [mobMaxHp, setMobMaxHp] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(2);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
@@ -51,7 +51,7 @@ export default function BestiaryPage() {
   const stepLock = useRef(false);
   const stepsRef = useRef<any[]>([]);
   const currentStepRef = useRef(-1);
-  const speedRef = useRef(1);
+  const speedRef = useRef(2);
   const initialHpRef = useRef({ player: 0, mob: 0 });
   const pendingCharRef = useRef<any>(null);
   const pendingDropsRef = useRef<any[]>([]);
@@ -458,8 +458,9 @@ export default function BestiaryPage() {
           {/* Speed controls */}
           {battleActive && !battleDone && (
             <div className="flex justify-center gap-4 mb-4">
-              <Button variant="primary" size="sm" onClick={toggleSpeed}>x{speed}</Button>
-              <Button variant="secondary" size="sm" onClick={handleSkip}>Пропустить</Button>
+              {(character as any)?.premium?.until > (serverTime || Math.floor(Date.now()/1000)) && (
+                <Button variant="secondary" size="sm" onClick={handleSkip}>Пропустить</Button>
+              )}
             </div>
           )}
 

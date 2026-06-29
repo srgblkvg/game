@@ -116,12 +116,11 @@ export default function ArenaPage() {
       {/* Управление скоростью */}
       {battleSteps.length > 0 && currentStep < battleSteps.length - 1 && (
         <div className="flex justify-center gap-4 mb-4">
-          <Button variant="primary" size="sm" onClick={toggleSpeed}>
-            {speed === 2 ? 'x1' : 'x2'}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={handleSkip}>
-            Пропустить
-          </Button>
+          {(character as any)?.premium?.until > Math.floor(Date.now()/1000) && (
+            <Button variant="secondary" size="sm" onClick={handleSkip}>
+              Пропустить
+            </Button>
+          )}
         </div>
       )}
 
