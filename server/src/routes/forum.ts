@@ -34,7 +34,7 @@ router.get('/forum/thread/:id', async (req, res) => {
     const threadId = parseInt(req.params.id);
     const limit = 9; // 9 + 1 первый = 10 на странице
     const page = parseInt(req.query.page as string) || 1;
-    const offset = page > 1 ? (page - 2) * limit + 1 : 0; // страница 1 = 0..8, стр 2 = 10..19 (пропускаем первый)
+    const offset = (page - 1) * limit;
 
     const thread = await db.one(`
         SELECT t.*, u.username as author_name
