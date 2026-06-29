@@ -2,6 +2,7 @@ import { fetchAdminJobs, createAdminJob, updateAdminJob, deleteAdminJob, adminFi
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import ImageUploader from '../../components/ImageUploader';
+import BulkImageUploader from '../../components/BulkImageUploader';
 import { inputClass } from '../../utils/formStyles';
 import { useCrud } from '../../hooks/useCrud';
 
@@ -94,6 +95,11 @@ export default function AdminJobs() {
           </table>
         </div>
       </Card>
+
+      <BulkImageUploader
+        items={crud.items.map((j: any) => ({ id: j.id, name: j.name, imagePath: j.background }))}
+        title="Массовая загрузка фонов работ"
+      />
 
       {crud.message && <div className="mt-4 p-3 bg-[var(--color-bg-card)] rounded text-sm">{crud.message}</div>}
     </div>

@@ -10,6 +10,7 @@ import {
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import ImageUploader from '../../components/ImageUploader';
+import BulkImageUploader from '../../components/BulkImageUploader';
 import { getHeaders } from '../../api/helpers';
 import RecipeForm from './AdminCraft/RecipeForm';
 import RecipeListItem from './AdminCraft/RecipeListItem';
@@ -168,6 +169,10 @@ export default function AdminCraft() {
                             </table>
                         </div>
                     </Card>
+                    <BulkImageUploader
+                        items={resources.map((r: any) => ({ id: r.id, name: r.name, imagePath: r.image }))}
+                        title="Массовая загрузка изображений ресурсов"
+                    />
                 </>
             )}
 

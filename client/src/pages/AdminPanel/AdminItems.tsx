@@ -5,6 +5,7 @@ import { getHeaders } from '../../api/helpers';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import ImageUploader from '../../components/ImageUploader';
+import BulkImageUploader from '../../components/BulkImageUploader';
 import { inputClass, selectClass, smallInputClass } from '../../utils/formStyles';
 import EditItemModal from './EditItemModal';
 
@@ -142,6 +143,11 @@ export default function AdminItems() {
                     </table>
                 </div>
             </Card>
+
+            <BulkImageUploader
+                items={items.map((i: any) => ({ id: i.id, name: i.name, imagePath: i.image }))}
+                title="Массовая загрузка изображений предметов"
+            />
 
             {/* Модалка редактирования */}
             {editingItem && (
