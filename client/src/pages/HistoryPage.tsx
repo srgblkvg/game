@@ -223,7 +223,9 @@ export default function HistoryPage() {
                 tab==='jobs'?paginatedData.map((j:any)=><div key={j.id}>{renderJobRow(j)}</div>):
                 tab==='tournaments'?paginatedData.map((t:any)=><div key={t.id}>{renderTournamentRow(t)}</div>):
                 tab==='quests'?paginatedData.map((q:any)=><div key={q.id}>{renderQuestRow(q)}</div>):
-                paginatedData.map((m:any)=><div key={m.id}>{renderMessageRow(m)}</div>)}
+                tab==='messages'?paginatedData.map((m:any)=><div key={m.id}>{renderMessageRow(m)}</div>):
+                tab==='massacre'?paginatedData.map((entry:any)=><div key={entry.id}>{renderEntry(entry)}</div>):
+                null}
                 {totalPages>1&&<div className="flex justify-center gap-4 mt-4 items-center">
                     <Button size="sm" disabled={page<=1} onClick={()=>setPage(page-1)}>← Назад</Button>
                     <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
