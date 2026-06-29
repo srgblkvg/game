@@ -87,7 +87,9 @@ export default function GuildViewPage() {
 
             {guild && (
                 <>
-                    <BackButton />
+                    <div className="mb-3">
+                        <BackButton />
+                    </div>
                     <Button variant="secondary" size="sm" onClick={() => navigate('/guild/rating')} className="mb-3">
                         ← Рейтинг гильдий
                     </Button>

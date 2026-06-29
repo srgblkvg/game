@@ -10,10 +10,38 @@ import { inputClass } from '../utils/formStyles';
 
 const MAX_QUOTE_LENGTH = 300;
 
+function stripQuotes(text: string): string {
+    return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
+}
+
+function renderContent(content: string): string {
+    // Split into quoted and non-quoted blocks
+    const lines = content.split('\n');
+    const parts: { type: 'quote' | 'text'; text: string }[] = [];
+    let current = { type: 'text' as const, text: '' };
+    for (const line of lines) {
+        const isQuote = line.startsWith('>');
+        if (isQuote !== (current.type === 'quote')) {
+            if (current.text) parts.push(current);
+            current = { type: isQuote ? 'quote' : 'text', text: '' };
+        }
+        current.text += (current.text ? '\n' : '') + (isQuote ? line.replace(/^>\s?/, '') : line);
+    }
+    if (current.text) parts.push(current);
+    return parts.map((p, i) =>
+        p.type === 'quote'
+            ? `<blockquote class="border-l-2 border-[var(--color-accent-info)] pl-3 my-2 text-sm text-[var(--color-text-muted)]">${p.text}</blockquote>`
+            : `<span>${p.text}</span>`
+    ).join('\n');
+}
+
 function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?: any[]; onReply: (text: string, parentId: number) => void; depth?: number }) {
     const [expanded, setExpanded] = useState(false);
     const isLong = post.content.length > 500;
     const displayContent = isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content;
+
+    // Format date with time
+    const dateStr = fmtSafeDate(post.createdAt, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     return (
         <div className={depth > 0 ? 'ml-4 sm:ml-6 border-l-2 border-[var(--color-border-light)] pl-3' : ''}>
@@ -33,12 +61,11 @@ function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?
                                 <a href={`/guild/${post.author_guild}`} className="text-[0.6rem] text-[var(--color-accent-info)] hover:underline no-underline"
                                     onClick={e => e.stopPropagation()}>[{post.author_guild_name}]</a>
                             )}
-                            <span className="text-[0.6rem] text-[var(--color-text-muted)]">{fmtSafeDate(post.createdAt)}</span>
+                            <span className="text-[0.6rem] text-[var(--color-text-muted)]">{dateStr}</span>
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">#{post.id}</span>
                         </div>
-                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words">
-                            {displayContent}
-                        </div>
+                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words"
+                            dangerouslySetInnerHTML={{ __html: renderContent(displayContent) }} />
                         {isLong && (
                             <button className="text-xs text-[var(--color-accent-info)] mt-1 cursor-pointer hover:underline"
                                 onClick={() => setExpanded(!expanded)}>
@@ -47,8 +74,8 @@ function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?
                         )}
                         <button className="text-xs text-[var(--color-text-muted)] mt-1.5 cursor-pointer hover:text-[var(--color-accent-info)]"
                             onClick={() => {
-                                const quote = post.content.slice(0, MAX_QUOTE_LENGTH);
-                                onReply(`> ${post.author_name}:\n> ${quote}\n\n`, post.id);
+                                const cleaned = stripQuotes(post.content.slice(0, MAX_QUOTE_LENGTH));
+                                onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
                                 document.getElementById('reply-input')?.focus();
                             }}>Ответить</button>
                     </div>
@@ -113,20 +140,13 @@ export default function ThreadPage() {
         setReplyParentId(parentId);
     };
 
-    // Build tree from flat posts
     const buildTree = (flatPosts: any[]) => {
         const map = new Map<number, any>();
         const roots: any[] = [];
+        for (const p of flatPosts) { p.children = []; map.set(p.id, p); }
         for (const p of flatPosts) {
-            p.children = [];
-            map.set(p.id, p);
-        }
-        for (const p of flatPosts) {
-            if (p.parent_id && map.has(p.parent_id)) {
-                map.get(p.parent_id).children.push(p);
-            } else {
-                roots.push(p);
-            }
+            if (p.parent_id && map.has(p.parent_id)) map.get(p.parent_id).children.push(p);
+            else roots.push(p);
         }
         return roots;
     };
@@ -140,13 +160,8 @@ export default function ThreadPage() {
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
             <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:discussion" width="22" height="22" className="inline mr-2" />{thread.title}</h1>
-
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
-
-            {tree.map(p => (
-                <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} />
-            ))}
-
+            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} />)}
             {totalPages > 1 && (
                 <div className="flex justify-center gap-2 mb-4">
                     <Button variant="secondary" size="xs" disabled={page <= 1} onClick={() => load(page - 1)}>←</Button>
@@ -154,24 +169,15 @@ export default function ThreadPage() {
                     <Button variant="secondary" size="xs" disabled={page >= totalPages} onClick={() => load(page + 1)}>→</Button>
                 </div>
             )}
-
             <Card className="mt-4">
                 {replyParentId && (
                     <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                        Ответ на сообщение #{replyParentId}
+                        Ответ на #{replyParentId}
                         <button className="ml-2 text-[var(--color-accent-danger)]" onClick={() => { setReplyParentId(null); setReplyText(''); }}>отмена</button>
                     </p>
                 )}
-                <textarea
-                    id="reply-input"
-                    className={inputClass + ' min-h-[100px] mb-2'}
-                    placeholder="Ваш ответ..."
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                />
-                <Button variant="primary" size="sm" onClick={handleReply} disabled={sending || !replyText.trim()}>
-                    {sending ? 'Отправка...' : 'Ответить'}
-                </Button>
+                <textarea id="reply-input" className={inputClass + ' min-h-[100px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
+                <Button variant="primary" size="sm" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
             </Card>
         </div>
     );
