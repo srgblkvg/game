@@ -5,7 +5,7 @@ import {
     dodgeChance, critChance, critMult, blockChance, blockReduction,
     counterChance, stunChance, rollDamage, BattleStep
 } from './battle';
-import { currentStats, CharStats } from './stats';
+import { CharStats } from './stats';
 
 // Импортируем типы/функции которых нет в экспорте battle.ts
 function runTurnLocal(
@@ -96,13 +96,14 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
     const turnOrder = participants.map(p => p.user_id);
     await db.run(`UPDATE massacre_events SET turn_order = ? WHERE id = ?`, [JSON.stringify(turnOrder), eventId]);
 
-    // Карта HP: userId -> { current, max, stunned }
-    const state = new Map<number, { hp: number; maxHp: number; stunned: boolean; alive: boolean; name: string; level: number; base_s: number; base_a: number; base_d: number; base_m: number }>();
+    // Карта участников: userId -> state
+    const state = new Map<number, { hp: number; maxHp: number; stunned: boolean; alive: boolean; name: string; level: number; stats: CharStats }>();
     for (const p of participants) {
+        const stats: CharStats = JSON.parse(p.stats_json || '{}');
         state.set(p.user_id, {
             hp: p.hp_current, maxHp: p.hp_max, stunned: p.stunned, alive: p.alive,
             name: p.username, level: p.level,
-            base_s: p.base_s, base_a: p.base_a, base_d: p.base_d, base_m: p.base_m,
+            stats,
         });
     }
 
@@ -138,15 +139,9 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
             const targetId = entry[0];
             const target = entry[1];
 
-            // Статы атакующего
-            const atkStats = currentStats(
-                { s: s.base_s, a: s.base_a, d: s.base_d, m: s.base_m },
-                {}, // без экипировки — в резне голые статы
-            );
-            const defStats = currentStats(
-                { s: target.base_s, a: target.base_a, d: target.base_d, m: target.base_m },
-                {},
-            );
+            // Статы атакующего и цели — из сохранённого снимка (с экипировкой, напитками, гильдией)
+            const atkStats = s.stats;
+            const defStats = target.stats;
 
             // Один ход
             const result = runTurnLocal(

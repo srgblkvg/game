@@ -101,9 +101,9 @@ router.post('/massacre/join', async (req, res) => {
 
     // Добавить участника
     await db.run(
-        `INSERT INTO massacre_participants (event_id, user_id, level, base_s, base_a, base_d, base_m, hp_current, hp_max)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [event.id, userId, user.level, user.bases, user.basea, user.based, user.basem, stats.hp, stats.hp]
+        `INSERT INTO massacre_participants (event_id, user_id, level, base_s, base_a, base_d, base_m, hp_current, hp_max, stats_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [event.id, userId, user.level, stats.s, stats.a, stats.d, stats.m, stats.hp, stats.hp, JSON.stringify(stats)]
     );
 
     res.json({ success: true, eventId: event.id });

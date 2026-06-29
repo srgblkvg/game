@@ -600,6 +600,7 @@ CREATE TABLE IF NOT EXISTS massacre_participants (
   hp_max INTEGER NOT NULL,
   stunned BOOLEAN NOT NULL DEFAULT FALSE,
   alive BOOLEAN NOT NULL DEFAULT TRUE,
+  stats_json TEXT DEFAULT '{}',
   joined_at TIMESTAMPTZ DEFAULT NOW()
 );
 
