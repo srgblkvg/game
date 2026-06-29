@@ -429,7 +429,7 @@ export async function setupWebSocket(server: any) {
         const itemDataJson = JSON.stringify(item);
         const itemName = sanitize(item.name);
         const info = await db.run(
-          'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderGuild, senderGuildId) VALUES (?, NULL, ?, ?, ?, ?)',
+          'INSERT INTO chat_messages (senderId, targetId, content, item_data, "senderGuild", "senderGuildId") VALUES (?, NULL, ?, ?, ?, ?)',
           [userId, `[${itemName}]`, itemDataJson, user.guildName || null, user.guildId || null]
         );
         const msg = {
@@ -478,7 +478,7 @@ export async function setupWebSocket(server: any) {
 
           const sanitizedPrivate = sanitize(privateContent);
           const info = await db.run(
-            'INSERT INTO chat_messages (senderId, targetId, content, senderGuild, senderGuildId) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO chat_messages (senderId, targetId, content, "senderGuild", "senderGuildId") VALUES (?, ?, ?, ?, ?)',
             [userId, targetUser.id, sanitizedPrivate, user.guildName || null, user.guildId || null]
           );
           const msg = {
@@ -500,7 +500,7 @@ export async function setupWebSocket(server: any) {
         // Обычное сообщение в общий чат
         const sanitizedContent = sanitize(content);
         const info = await db.run(
-          'INSERT INTO chat_messages (senderId, targetId, content, senderGuild, senderGuildId) VALUES (?, NULL, ?, ?, ?)',
+          'INSERT INTO chat_messages (senderId, targetId, content, "senderGuild", "senderGuildId") VALUES (?, NULL, ?, ?, ?)',
           [userId, sanitizedContent, user.guildName || null, user.guildId || null]
         );
         const msg = {
@@ -525,7 +525,7 @@ export async function setupWebSocket(server: any) {
         if (!targetId) return;
         const sanitizedContent = sanitize(data.content);
         const info = await db.run(
-          'INSERT INTO chat_messages (senderId, targetId, content, senderGuild, senderGuildId) VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO chat_messages (senderId, targetId, content, "senderGuild", "senderGuildId") VALUES (?, ?, ?, ?, ?)',
           [userId, targetId, sanitizedContent, user.guildName || null, user.guildId || null]
         );
         const msg = {

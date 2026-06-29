@@ -114,7 +114,7 @@ router.post('/chat/send', async (req, res) => {
             const itemDataJson = JSON.stringify(item);
             const itemName = sanitize(item.name);
             const info = await db.run(
-                'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderGuild, senderGuildId) VALUES (?, NULL, ?, ?, ?, ?)',
+                'INSERT INTO chat_messages (senderId, targetId, content, item_data, "senderGuild", "senderGuildId") VALUES (?, NULL, ?, ?, ?, ?)',
                 [userId, `[${itemName}]`, itemDataJson, user.guildname || user.guildName || null, user.guildId || null]
             );
             return res.json({ id: info.lastInsertRowid, senderId: userId, senderName: user.username, senderGuild: user.guildname || null, targetId: null, content: `[${itemName}]`, createdAt: now, item, itemRarity: item.rarity_id ?? item.rarity });
@@ -123,7 +123,7 @@ router.post('/chat/send', async (req, res) => {
         if (type === 'private' && targetUserId) {
             const sanitizedContent = sanitize(content.trim());
             const info = await db.run(
-                'INSERT INTO chat_messages (senderId, targetId, content, senderGuild, senderGuildId) VALUES (?, ?, ?, ?, ?)',
+                'INSERT INTO chat_messages (senderId, targetId, content, "senderGuild", "senderGuildId") VALUES (?, ?, ?, ?, ?)',
                 [userId, targetUserId, sanitizedContent, user.guildname || user.guildName || null, user.guildId || null]
             );
             return res.json({ id: info.lastInsertRowid, senderId: userId, senderName: user.username, targetId: targetUserId, content: sanitizedContent, createdAt: now });
@@ -132,7 +132,7 @@ router.post('/chat/send', async (req, res) => {
         // public
         const sanitizedContent = sanitize(content.trim());
         const info = await db.run(
-            'INSERT INTO chat_messages (senderId, targetId, content, senderGuild, senderGuildId) VALUES (?, NULL, ?, ?, ?)',
+            'INSERT INTO chat_messages (senderId, targetId, content, "senderGuild", "senderGuildId") VALUES (?, NULL, ?, ?, ?)',
             [userId, sanitizedContent, user.guildname || user.guildName || null, user.guildId || null]
         );
         res.json({ id: info.lastInsertRowid, senderId: userId, senderName: user.username, senderGuild: user.guildname || null, senderGuildId: user.guildId || null, targetId: null, content: sanitizedContent, createdAt: now });
