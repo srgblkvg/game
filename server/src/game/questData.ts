@@ -24,8 +24,8 @@ export const DIFFICULTIES = {
 export type DiffKey = keyof typeof DIFFICULTIES;
 
 export const BASE_REWARDS: Record<QuestType, { xp: number; money: number }> = {
-    hunt: { xp: 3, money: 30 }, arena: { xp: 3, money: 40 },
-    job: { xp: 3, money: 20 }, craft: { xp: 3, money: 25 }, auction: { xp: 3, money: 50 },
+    hunt: { xp: 10, money: 30 }, arena: { xp: 15, money: 40 },
+    job: { xp: 8, money: 20 }, craft: { xp: 10, money: 25 }, auction: { xp: 12, money: 50 },
 };
 
 export async function getToday(): Promise<string> {
