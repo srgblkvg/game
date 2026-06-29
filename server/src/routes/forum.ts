@@ -147,6 +147,19 @@ router.put('/forum/thread/:id', async (req, res) => {
     res.json({ success: true });
 });
 
+// Редактировать сообщение (только автор)
+router.put('/forum/post/:id', async (req, res) => {
+    const userId = req.userId;
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'Текст обязателен' });
+    const post = await db.one('SELECT id, author_id FROM forum_posts WHERE id = ?', [parseInt(req.params.id)]);
+    if (!post) return res.status(404).json({ error: 'Сообщение не найдено' });
+    if (post.author_id !== userId) return res.status(403).json({ error: 'Только автор может редактировать' });
+    await db.run('UPDATE forum_posts SET content = ?, updated_at = ? WHERE id = ?',
+        [content, new Date().toISOString(), post.id]);
+    res.json({ success: true });
+});
+
 // Последние 3 темы (для замка)
 router.get('/forum/latest', async (_req, res) => {
     const threads = await db.query(`

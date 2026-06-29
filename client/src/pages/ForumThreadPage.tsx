@@ -35,11 +35,30 @@ function renderContent(content: string): string {
     ).join('\n');
 }
 
-function PostCard({ post, children, onReply, depth = 0, isFirst = false }: any) {
+function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId }: any) {
     const [expanded, setExpanded] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [editText, setEditText] = useState('');
     const isLong = post.content.length > 500;
-    const displayContent = isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content;
+    const displayContent = editing ? editText : (isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content);
     const dateStr = fmtSafeDate(post.created_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const canEdit = userId && post.author_id === userId;
+
+    const handleSaveEdit = async () => {
+        if (!editText.trim()) return;
+        try {
+            const res = await fetch(`/api/forum/post/${post.id}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify({ content: editText }),
+            });
+            if (res.ok) {
+                post.content = editText;
+                post.updated_at = new Date().toISOString();
+                setEditing(false);
+            }
+        } catch { }
+    };
 
     return (
         <div className={depth > 0 ? 'ml-4 sm:ml-6 border-l-2 border-[var(--color-border-light)] pl-3' : ''}>
@@ -56,8 +75,18 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false }: any) 
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">#{post.id}</span>
                             {isFirst && <span className="text-[0.55rem] text-[var(--color-accent-warning)] font-bold">Автор</span>}
                         </div>
-                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: renderContent(displayContent) }} />
-                        {isLong && (
+                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: editing ? '<span></span>' : renderContent(displayContent) }} />
+                        {editing && (
+                            <div className="mt-2">
+                                <textarea className={inputClass + ' min-h-[100px] mb-2'} value={editText}
+                                    onChange={e => setEditText(e.target.value)} />
+                                <div className="flex gap-2">
+                                    <Button variant="success" size="xs" onClick={handleSaveEdit}>Сохранить</Button>
+                                    <Button variant="secondary" size="xs" onClick={() => setEditing(false)}>Отмена</Button>
+                                </div>
+                            </div>
+                        )}
+                        {isLong && !editing && (
                             <button className="text-xs text-[var(--color-accent-info)] mt-1 cursor-pointer hover:underline" onClick={() => setExpanded(!expanded)}>{expanded ? 'Свернуть' : 'Читать дальше'}</button>
                         )}
                         <button className="text-xs text-[var(--color-text-muted)] mt-1.5 cursor-pointer hover:text-[var(--color-accent-info)]"
@@ -65,13 +94,17 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false }: any) 
                                 const cleaned = stripQuotes(post.content.slice(0, MAX_QUOTE_LENGTH));
                                 onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
                             }}>Ответить</button>
+                        {canEdit && !editing && (
+                            <button className="text-xs text-[var(--color-text-muted)] mt-1.5 ml-2 cursor-pointer hover:text-[var(--color-accent-info)]"
+                                onClick={() => { setEditText(post.content); setEditing(true); }}>✎</button>
+                        )}
                     </div>
                 </div>
             </Card>
             {children && children.length > 0 && (
                 <div>
                     {children.map((child: any) => (
-                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} />
+                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} userId={userId} />
                     ))}
                 </div>
             )}
@@ -100,7 +133,7 @@ export default function ThreadPage() {
     const [newTitle, setNewTitle] = useState('');
     const replyRef = useRef<HTMLTextAreaElement>(null);
 
-    const isAuthor = user && thread && user.userId === thread.author_id;
+    const isAuthor = user && thread && user.id === thread.author_id;
 
     const load = async (pg = page) => {
         try {
@@ -244,8 +277,8 @@ export default function ThreadPage() {
             )}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
-            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} />}
-            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} />)}
+            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} userId={user?.id} />}
+            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} userId={user?.id} />)}
 
             {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mb-4">
