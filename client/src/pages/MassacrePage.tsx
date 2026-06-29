@@ -302,13 +302,15 @@ export default function MassacrePage() {
 
             {/* Кнопка визуализации */}
             {turns.length > 0 && (
-                <div className="flex justify-center gap-2 mt-3 mb-2">
-                    <p className="text-xs text-[var(--color-text-muted)]">История с последней резни:</p>
+                <>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-3 mb-1">История с последней резни:</p>
+                    <div className="flex justify-center gap-2 mb-2">
                     <Button variant="secondary" size="sm" onClick={() => setVizMode(!vizMode)}>
                         <Icon icon={vizMode ? 'game-icons:notebook' : 'game-icons:play-button'} width="14" height="14" className="inline mr-1" />
                         {vizMode ? 'Текстовый лог' : 'Визуализация боя'}
                     </Button>
                 </div>
+                </>
             )}
 
             {/* Визуализация */}
