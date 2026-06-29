@@ -379,8 +379,11 @@ export default function BestiaryPage() {
         <>
           <BackButton />
           <h1 className="text-xl font-bold mb-4 text-[var(--color-accent-danger)]">
-            <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
+              <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
           </h1>
+          <p className="text-sm text-[var(--color-text-muted)] mb-4 text-center">
+              Сражайтесь с монстрами на разных этажах, получайте опыт, серебро и ценные трофеи. Чем выше этаж — тем сильнее враги и богаче награда.
+          </p>
           {cooldownRemaining > 0 && (
             <div className="mb-4 text-sm text-[var(--color-accent-warning)] bg-[var(--color-bg-card)] border border-[var(--color-border-light)] rounded p-2 text-center">
               До следующей атаки: {formatCooldown(cooldownRemaining)}

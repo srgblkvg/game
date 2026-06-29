@@ -44,6 +44,18 @@ export default function HomePage() {
   const handleEquip = async (slotId: string, itemId?: string) => {
     try {
       const effectiveItemId = itemId || (selectedInventoryItemId && highlightedSlots.includes(slotId) ? selectedInventoryItemId : undefined);
+
+      // Проверка на два одинаковых кольца
+      if (effectiveItemId && (slotId === 'ring1' || slotId === 'ring2')) {
+        const item = character!.inventory.find((i: any) => i.id === effectiveItemId);
+        const otherSlot = slotId === 'ring1' ? 'ring2' : 'ring1';
+        const otherItem = character!.equipment[otherSlot];
+        if (item && otherItem && otherItem.name === item.name) {
+          alert('Нельзя надеть два одинаковых кольца!');
+          return;
+        }
+      }
+
       const data = await equipItem(slotId, effectiveItemId);
       setCharacter({ ...character!, inventory: data.inventory, equipment: data.equipment, currentHp: data.currentHp ?? Math.max(1, character!.currentHp), stats: data.stats ?? character!.stats });
       setSelectedInventoryItemId(null);
