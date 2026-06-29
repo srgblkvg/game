@@ -7,6 +7,7 @@ import { fmtSafeDate } from '../utils/date';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
+import { useAuth } from '../contexts/AuthContext';
 
 const MAX_QUOTE_LENGTH = 300;
 
@@ -27,14 +28,14 @@ function renderContent(content: string): string {
         current.text += (current.text ? '\n' : '') + (isQuote ? line.replace(/^>\s?/, '') : line);
     }
     if (current.text) parts.push(current);
-    return parts.map((p, i) =>
+    return parts.map(p =>
         p.type === 'quote'
             ? `<blockquote class="border-l-2 border-[var(--color-accent-info)] pl-3 my-2 text-sm text-[var(--color-text-muted)]">${p.text}</blockquote>`
             : `<span>${p.text}</span>`
     ).join('\n');
 }
 
-function PostCard({ post, children, onReply, depth = 0, isFirst = false }: { post: any; children?: any[]; onReply: (text: string, parentId: number) => void; depth?: number; isFirst?: boolean }) {
+function PostCard({ post, children, onReply, depth = 0, isFirst = false }: any) {
     const [expanded, setExpanded] = useState(false);
     const isLong = post.content.length > 500;
     const displayContent = isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content;
@@ -63,7 +64,6 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false }: { pos
                             onClick={() => {
                                 const cleaned = stripQuotes(post.content.slice(0, MAX_QUOTE_LENGTH));
                                 onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
-                                document.getElementById('reply-input')?.focus();
                             }}>Ответить</button>
                     </div>
                 </div>
@@ -81,6 +81,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false }: { pos
 
 export default function ThreadPage() {
     const { id } = useParams<{ id: string }>();
+    const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [thread, setThread] = useState<any>(null);
     const [firstPost, setFirstPost] = useState<any>(null);
@@ -88,18 +89,21 @@ export default function ThreadPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [page, setPageState] = useState(() => {
         const p = searchParams.get('page');
-        if (!p || p === 'last') return 0; // 0 = last page
+        if (!p || p === 'last') return 0;
         return parseInt(p) || 1;
     });
     const [replyText, setReplyText] = useState('');
     const [replyParentId, setReplyParentId] = useState<number | null>(null);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
+    const [editingTitle, setEditingTitle] = useState(false);
+    const [newTitle, setNewTitle] = useState('');
     const replyRef = useRef<HTMLTextAreaElement>(null);
+
+    const isAuthor = user && thread && user.userId === thread.author_id;
 
     const load = async (pg = page) => {
         try {
-            // If opening the thread fresh, find total pages first
             if (pg === 0) {
                 const res = await fetch(`/api/forum/thread/${id}?page=1`, { headers: getHeaders() });
                 const data = await res.json();
@@ -135,7 +139,7 @@ export default function ThreadPage() {
         } catch (e: any) { setError(e.message); }
     };
 
-    useEffect(() => { if (id) load(page); }, [id]);
+    useEffect(() => { if (id) load(); }, [id]);
 
     const goToPage = (pg: number) => {
         setPageState(pg);
@@ -156,7 +160,6 @@ export default function ThreadPage() {
             if (!res.ok) throw new Error(data.error);
             setReplyText('');
             setReplyParentId(null);
-            // After reply, go to last page
             goToPage(0);
         } catch (e: any) { setError(e.message); }
         finally { setSending(false); }
@@ -167,6 +170,34 @@ export default function ThreadPage() {
         setReplyParentId(parentId);
         replyRef.current?.scrollIntoView({ behavior: 'smooth' });
         replyRef.current?.focus();
+    };
+
+    const handleToggleClose = async () => {
+        try {
+            const res = await fetch(`/api/forum/thread/${id}/close`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify({ closed: !thread.is_closed }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            setThread({ ...thread, is_closed: data.is_closed });
+        } catch (e: any) { setError(e.message); }
+    };
+
+    const handleEditTitle = async () => {
+        if (!newTitle.trim()) return;
+        try {
+            const res = await fetch(`/api/forum/thread/${id}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify({ title: newTitle }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            setThread({ ...thread, title: newTitle });
+            setEditingTitle(false);
+        } catch (e: any) { setError(e.message); }
     };
 
     const buildTree = (flatPosts: any[]) => {
@@ -188,13 +219,32 @@ export default function ThreadPage() {
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
-            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:discussion" width="22" height="22" className="inline mr-2" />{thread.title}</h1>
+            {editingTitle ? (
+                <div className="mb-4">
+                    <input className={inputClass + ' mb-2'} value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Новое название" />
+                    <div className="flex gap-2">
+                        <Button variant="success" size="xs" onClick={handleEditTitle}>Сохранить</Button>
+                        <Button variant="secondary" size="xs" onClick={() => setEditingTitle(false)}>Отмена</Button>
+                    </div>
+                </div>
+            ) : (
+                <h1 className="text-xl font-bold mb-4 flex items-center gap-2 flex-wrap">
+                    <Icon icon="game-icons:discussion" width="22" height="22" className="inline" />
+                    {thread.title}
+                    {thread.is_closed && <span className="text-xs text-[var(--color-accent-danger)] border border-[var(--color-accent-danger)] rounded px-1.5 py-0.5">Закрыто</span>}
+                    {isAuthor && (
+                        <div className="flex gap-1 ml-auto">
+                            <Button variant="secondary" size="xs" onClick={() => { setNewTitle(thread.title); setEditingTitle(true); }}>✎</Button>
+                            <Button variant="secondary" size="xs" onClick={handleToggleClose}>
+                                {thread.is_closed ? 'Открыть' : 'Закрыть'}
+                            </Button>
+                        </div>
+                    )}
+                </h1>
+            )}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
-            {/* First post pinned */}
             {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} />}
-
-            {/* Rest of posts */}
             {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} />)}
 
             {totalPages > 1 && (
@@ -205,16 +255,22 @@ export default function ThreadPage() {
                 </div>
             )}
 
-            <Card className="mt-4">
-                {replyParentId && (
-                    <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                        Ответ на #{replyParentId}
-                        <button className="ml-2 text-[var(--color-accent-danger)]" onClick={() => { setReplyParentId(null); setReplyText(''); }}>отмена</button>
-                    </p>
-                )}
-                <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[100px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
-                <Button variant="primary" size="sm" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
-            </Card>
+            {thread.is_closed ? (
+                <Card className="mt-4 p-3 text-center text-sm text-[var(--color-text-muted)]">
+                    🔒 Тема закрыта автором. Новые сообщения не принимаются.
+                </Card>
+            ) : (
+                <Card className="mt-4">
+                    {replyParentId && (
+                        <p className="text-xs text-[var(--color-text-muted)] mb-1">
+                            Ответ на #{replyParentId}
+                            <button className="ml-2 text-[var(--color-accent-danger)]" onClick={() => { setReplyParentId(null); setReplyText(''); }}>отмена</button>
+                        </p>
+                    )}
+                    <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[100px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
+                    <Button variant="primary" size="sm" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
+                </Card>
+            )}
         </div>
     );
 }

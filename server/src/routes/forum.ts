@@ -107,8 +107,9 @@ router.post('/forum/reply', async (req, res) => {
     const { threadId, content, parentId } = req.body;
     if (!threadId || !content) return res.status(400).json({ error: 'Текст обязателен' });
 
-    const thread = await db.one('SELECT id FROM forum_threads WHERE id = ?', [threadId]);
+    const thread = await db.one('SELECT id, is_closed FROM forum_threads WHERE id = ?', [threadId]);
     if (!thread) return res.status(404).json({ error: 'Тема не найдена' });
+    if (thread.is_closed) return res.status(403).json({ error: 'Тема закрыта' });
 
     const now = new Date().toISOString();
     await db.run(
@@ -120,6 +121,29 @@ router.post('/forum/reply', async (req, res) => {
         [now, threadId]
     );
 
+    res.json({ success: true });
+});
+
+// Закрыть/открыть тему (только автор темы)
+router.put('/forum/thread/:id/close', async (req, res) => {
+    const userId = req.userId;
+    const thread = await db.one('SELECT id, author_id FROM forum_threads WHERE id = ?', [parseInt(req.params.id)]);
+    if (!thread) return res.status(404).json({ error: 'Тема не найдена' });
+    if (thread.author_id !== userId) return res.status(403).json({ error: 'Только автор может закрыть тему' });
+    const { closed } = req.body;
+    await db.run('UPDATE forum_threads SET is_closed = ? WHERE id = ?', [closed ? 1 : 0, thread.id]);
+    res.json({ success: true, is_closed: !!closed });
+});
+
+// Редактировать тему (только автор темы)
+router.put('/forum/thread/:id', async (req, res) => {
+    const userId = req.userId;
+    const { title } = req.body;
+    if (!title) return res.status(400).json({ error: 'Название обязательно' });
+    const thread = await db.one('SELECT id, author_id FROM forum_threads WHERE id = ?', [parseInt(req.params.id)]);
+    if (!thread) return res.status(404).json({ error: 'Тема не найдена' });
+    if (thread.author_id !== userId) return res.status(403).json({ error: 'Только автор может редактировать тему' });
+    await db.run('UPDATE forum_threads SET title = ? WHERE id = ?', [title, thread.id]);
     res.json({ success: true });
 });
 
