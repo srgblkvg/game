@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { buildPlayerStats } from '../db/helpers';
-import { pushNotification } from '../events';
 import { addToTreasury } from '../game/treasury';
 
 const router = Router();
