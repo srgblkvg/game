@@ -24,8 +24,8 @@ router.get('/arena/opponent', async (req, res) => {
         if (saved) {
             // Проверяем, соответствует ли сохранённый соперник запрошенной сложности
             const matchesDifficulty =
-                (difficulty === 'easy' && saved.level < user.level) ||
-                (difficulty === 'hard' && saved.level > user.level) ||
+                (difficulty === 'easy' && saved.level >= user.level - 2 && saved.level < user.level) ||
+                (difficulty === 'hard' && saved.level > user.level && saved.level <= user.level + 2) ||
                 (difficulty === 'equal' && saved.level === user.level);
 
             if (matchesDifficulty) {
@@ -59,11 +59,11 @@ router.get('/arena/opponent', async (req, res) => {
         [userId, now, user.guildId || 0]
     ) as any[];
 
-    const diffLabel = difficulty === 'easy' ? 'ниже вашего' : difficulty === 'hard' ? 'выше вашего' : 'равным вашему';
+    const diffLabel = difficulty === 'easy' ? `на −2..−1 уровня` : difficulty === 'hard' ? `на +1..+2 уровня` : 'равным вашему';
     if (difficulty === 'easy') {
-        opponents = opponents.filter((o: any) => o.level < user.level);
+        opponents = opponents.filter((o: any) => o.level >= user.level - 2 && o.level < user.level);
     } else if (difficulty === 'hard') {
-        opponents = opponents.filter((o: any) => o.level > user.level);
+        opponents = opponents.filter((o: any) => o.level > user.level && o.level <= user.level + 2);
     } else {
         opponents = opponents.filter((o: any) => o.level === user.level);
     }

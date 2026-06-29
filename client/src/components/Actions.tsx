@@ -286,9 +286,9 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                     <p className="text-[0.65rem] text-[var(--color-text-muted)]">Сложность соперника:</p>
                     <select value={arenaDifficulty} onChange={e => setArenaDifficulty(e.target.value)}
                         className="bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-light)] rounded px-2 py-1 text-xs w-full">
-                        <option value="easy">Лёгкий (ниже ур.)</option>
+                        <option value="easy">Слабый (−2 ур.)</option>
                         <option value="equal">Равный</option>
-                        <option value="hard">Сложный (выше ур.)</option>
+                        <option value="hard">Сильный (+2 ур.)</option>
                     </select>
                     <div className="flex gap-1 w-full">
                         <Button variant="danger" size="xs" fullWidth onClick={handleSearch}>Поиск</Button>
