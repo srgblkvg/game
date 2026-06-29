@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders } from '../api/helpers';
@@ -15,7 +15,6 @@ function stripQuotes(text: string): string {
 }
 
 function renderContent(content: string): string {
-    // Split into quoted and non-quoted blocks
     const lines = content.split('\n');
     const parts: { type: 'quote' | 'text'; text: string }[] = [];
     let current = { type: 'text' as const, text: '' };
@@ -35,42 +34,30 @@ function renderContent(content: string): string {
     ).join('\n');
 }
 
-function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?: any[]; onReply: (text: string, parentId: number) => void; depth?: number }) {
+function PostCard({ post, children, onReply, depth = 0, isFirst = false }: { post: any; children?: any[]; onReply: (text: string, parentId: number) => void; depth?: number; isFirst?: boolean }) {
     const [expanded, setExpanded] = useState(false);
     const isLong = post.content.length > 500;
     const displayContent = isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content;
-
-    // Format date with time
     const dateStr = fmtSafeDate(post.created_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     return (
         <div className={depth > 0 ? 'ml-4 sm:ml-6 border-l-2 border-[var(--color-border-light)] pl-3' : ''}>
-            <Card className="mb-2">
+            <Card className={`mb-2 ${isFirst ? 'border-l-2 border-l-[var(--color-accent-warning)]' : ''}`}>
                 <div className="flex items-start gap-3">
-                    <img
-                        src={post.author_avatar || '/character_man.webp'}
-                        alt=""
-                        className="w-7 h-7 rounded-full object-cover shrink-0 bg-[var(--color-bg-input)]"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
+                    <img src={post.author_avatar || '/character_man.webp'} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 bg-[var(--color-bg-input)]" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <a href={`/profile/${post.author_id}`} className="text-xs font-bold text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] no-underline"
-                                onClick={e => e.stopPropagation()}>{post.author_name}</a>
+                            <a href={`/profile/${post.author_id}`} className="text-xs font-bold text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] no-underline" onClick={e => e.stopPropagation()}>{post.author_name}</a>
                             {post.author_guild && (
-                                <a href={`/guild/${post.author_guild}`} className="text-[0.6rem] text-[var(--color-accent-success)] hover:underline no-underline"
-                                    onClick={e => e.stopPropagation()}>[{post.author_guild_name}]</a>
+                                <a href={`/guild/${post.author_guild}`} className="text-[0.6rem] text-[var(--color-accent-success)] hover:underline no-underline" onClick={e => e.stopPropagation()}>[{post.author_guild_name}]</a>
                             )}
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">{dateStr}</span>
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">#{post.id}</span>
+                            {isFirst && <span className="text-[0.55rem] text-[var(--color-accent-warning)] font-bold">ТС</span>}
                         </div>
-                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words"
-                            dangerouslySetInnerHTML={{ __html: renderContent(displayContent) }} />
+                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: renderContent(displayContent) }} />
                         {isLong && (
-                            <button className="text-xs text-[var(--color-accent-info)] mt-1 cursor-pointer hover:underline"
-                                onClick={() => setExpanded(!expanded)}>
-                                {expanded ? 'Свернуть' : 'Читать дальше'}
-                            </button>
+                            <button className="text-xs text-[var(--color-accent-info)] mt-1 cursor-pointer hover:underline" onClick={() => setExpanded(!expanded)}>{expanded ? 'Свернуть' : 'Читать дальше'}</button>
                         )}
                         <button className="text-xs text-[var(--color-text-muted)] mt-1.5 cursor-pointer hover:text-[var(--color-accent-info)]"
                             onClick={() => {
@@ -94,28 +81,51 @@ function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?
 
 export default function ThreadPage() {
     const { id } = useParams<{ id: string }>();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [thread, setThread] = useState<any>(null);
+    const [firstPost, setFirstPost] = useState<any>(null);
     const [posts, setPosts] = useState<any[]>([]);
-    const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [page, setPageState] = useState(() => {
+        const p = searchParams.get('page');
+        if (!p || p === 'last') return 0; // 0 = last page
+        return parseInt(p) || 1;
+    });
     const [replyText, setReplyText] = useState('');
     const [replyParentId, setReplyParentId] = useState<number | null>(null);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
+    const replyRef = useRef<HTMLTextAreaElement>(null);
 
-    const load = async (pg = 1) => {
+    const load = async (pg = page) => {
         try {
-            const res = await fetch(`/api/forum/thread/${id}?page=${pg}&limit=10`, { headers: getHeaders() });
+            const res = await fetch(`/api/forum/thread/${id}?page=${pg || 1}`, { headers: getHeaders() });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setThread(data.thread);
+            setFirstPost(data.firstPost || null);
             setPosts(data.posts || []);
             setTotalPages(data.totalPages || 1);
-            setPage(data.page || 1);
+            // If page was 0 (last), redirect to actual last page
+            const actualPage = data.page || 1;
+            const actualTotal = data.totalPages || 1;
+            if (pg === 0) {
+                const lastPg = actualTotal;
+                setPageState(lastPg);
+                setSearchParams({ page: String(lastPg) }, { replace: true });
+            } else {
+                setPageState(actualPage);
+            }
         } catch (e: any) { setError(e.message); }
     };
 
-    useEffect(() => { if (id) load(); }, [id]);
+    useEffect(() => { if (id) load(page); }, [id]);
+
+    const goToPage = (pg: number) => {
+        setPageState(pg);
+        setSearchParams({ page: String(pg) }, { replace: true });
+        load(pg);
+    };
 
     const handleReply = async () => {
         if (!replyText.trim()) return;
@@ -130,7 +140,8 @@ export default function ThreadPage() {
             if (!res.ok) throw new Error(data.error);
             setReplyText('');
             setReplyParentId(null);
-            load(page);
+            // After reply, go to last page
+            goToPage(0);
         } catch (e: any) { setError(e.message); }
         finally { setSending(false); }
     };
@@ -138,6 +149,8 @@ export default function ThreadPage() {
     const handleReplyClick = (text: string, parentId: number) => {
         setReplyText(text);
         setReplyParentId(parentId);
+        replyRef.current?.scrollIntoView({ behavior: 'smooth' });
+        replyRef.current?.focus();
     };
 
     const buildTree = (flatPosts: any[]) => {
@@ -161,14 +174,21 @@ export default function ThreadPage() {
             <BackButton />
             <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:discussion" width="22" height="22" className="inline mr-2" />{thread.title}</h1>
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
+
+            {/* First post pinned */}
+            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} />}
+
+            {/* Rest of posts */}
             {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} />)}
+
             {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mb-4">
-                    <Button variant="secondary" size="xs" disabled={page <= 1} onClick={() => load(page - 1)}>←</Button>
-                    <span className="text-sm text-[var(--color-text-muted)] self-center">{page}/{totalPages}</span>
-                    <Button variant="secondary" size="xs" disabled={page >= totalPages} onClick={() => load(page + 1)}>→</Button>
+                <div className="flex justify-center items-center gap-2 mb-4">
+                    <Button variant="secondary" size="xs" disabled={page <= 1} onClick={() => goToPage(page - 1)}>←</Button>
+                    <span className="text-sm text-[var(--color-text-muted)]">{page}/{totalPages}</span>
+                    <Button variant="secondary" size="xs" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>→</Button>
                 </div>
             )}
+
             <Card className="mt-4">
                 {replyParentId && (
                     <p className="text-xs text-[var(--color-text-muted)] mb-1">
@@ -176,7 +196,7 @@ export default function ThreadPage() {
                         <button className="ml-2 text-[var(--color-accent-danger)]" onClick={() => { setReplyParentId(null); setReplyText(''); }}>отмена</button>
                     </p>
                 )}
-                <textarea id="reply-input" className={inputClass + ' min-h-[100px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
+                <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[100px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
                 <Button variant="primary" size="sm" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
             </Card>
         </div>

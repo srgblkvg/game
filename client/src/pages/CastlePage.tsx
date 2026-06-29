@@ -72,7 +72,7 @@ export default function CastlePage() {
                     <div className="space-y-2">
                         {latestThreads.map((t: any) => (
                             <Card key={t.id} className="p-3 cursor-pointer hover:border-[var(--color-accent-info)] transition-colors"
-                                onClick={() => navigate(`/forum/${t.id}`)}>
+                                onClick={() => navigate(`/forum/${t.id}?page=last`)}>
                                 <h3 className="text-sm font-bold truncate">{t.title}</h3>
                                 <div className="flex justify-between text-[0.65rem] text-[var(--color-text-muted)] mt-1">
                                     <span>{t.author_name} • {fmtSafeDate(t.created_at, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>

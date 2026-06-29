@@ -32,9 +32,9 @@ router.get('/forum/threads', async (req, res) => {
 // Одна тема с сообщениями
 router.get('/forum/thread/:id', async (req, res) => {
     const threadId = parseInt(req.params.id);
+    const limit = 9; // 9 + 1 первый = 10 на странице
     const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-    const offset = (page - 1) * limit;
+    const offset = page > 1 ? (page - 2) * limit + 1 : 0; // страница 1 = 0..8, стр 2 = 10..19 (пропускаем первый)
 
     const thread = await db.one(`
         SELECT t.*, u.username as author_name
@@ -45,7 +45,8 @@ router.get('/forum/thread/:id', async (req, res) => {
 
     if (!thread) return res.status(404).json({ error: 'Тема не найдена' });
 
-    const posts = await db.query(`
+    // Первый пост всегда отдельно
+    const firstPost = await db.one(`
         SELECT p.*,
                u.username as author_name, u.avatar as author_avatar,
                u.guildId as author_guild, g.name as author_guild_name
@@ -54,12 +55,28 @@ router.get('/forum/thread/:id', async (req, res) => {
         LEFT JOIN guilds g ON u.guildId = g.id
         WHERE p.thread_id = ?
         ORDER BY p.created_at ASC
+        LIMIT 1
+    `, [threadId]) as any;
+
+    // Остальные посты (без первого)
+    const posts = await db.query(`
+        SELECT p.*,
+               u.username as author_name, u.avatar as author_avatar,
+               u.guildId as author_guild, g.name as author_guild_name
+        FROM forum_posts p
+        JOIN users u ON p.author_id = u.id
+        LEFT JOIN guilds g ON u.guildId = g.id
+        WHERE p.thread_id = ? AND p.id != ?
+        ORDER BY p.created_at ASC
         LIMIT ? OFFSET ?
-    `, [threadId, limit, offset]) as any[];
+    `, [threadId, firstPost.id, limit, offset]) as any[];
 
     const total = (await db.one('SELECT COUNT(*) as cnt FROM forum_posts WHERE thread_id = ?', [threadId]) as any).cnt;
+    const totalPages = Math.ceil((total - 1) / limit) + 1; // -1 за первый пост + страница первого
+    // Если page = 1, показываем первый пост + 9 остальных
+    // Если page = 2, показываем первый пост + след. 9 (пропуская 9 из page 1)
 
-    res.json({ thread, posts, total, page, totalPages: Math.ceil(total / limit) });
+    res.json({ thread, firstPost, posts, total, page, totalPages: Math.max(1, totalPages) });
 });
 
 // Создать тему

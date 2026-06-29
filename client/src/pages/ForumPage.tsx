@@ -67,7 +67,7 @@ export default function ForumPage() {
                 <div className="space-y-2">
                     {threads.map(t => (
                         <Card key={t.id} className="cursor-pointer hover:border-[var(--color-accent-info)] transition-colors"
-                            onClick={() => navigate(`/forum/${t.id}`)}>
+                            onClick={() => navigate(`/forum/${t.id}?page=last`)}>
                             <h3 className="font-bold text-sm mb-1">{t.title}</h3>
                             <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
                                 <span>Автор: {t.author_name} • {fmtSafeDate(t.created_at)}</span>
