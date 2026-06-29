@@ -6,7 +6,7 @@ const router = Router();
 // Список тем (последние активные)
 router.get('/forum/threads', async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const offset = (page - 1) * limit;
 
     const threads = await db.query(`
@@ -33,7 +33,7 @@ router.get('/forum/threads', async (req, res) => {
 router.get('/forum/thread/:id', async (req, res) => {
     const threadId = parseInt(req.params.id);
     const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const offset = (page - 1) * limit;
 
     const thread = await db.one(`

@@ -22,7 +22,7 @@ export default function ForumPage() {
 
     const load = async (pg = 1) => {
         try {
-            const res = await fetch(`/api/forum/threads?page=${pg}&limit=20`, { headers: getHeaders() });
+            const res = await fetch(`/api/forum/threads?page=${pg}&limit=10`, { headers: getHeaders() });
             const data = await res.json();
             setThreads(data.threads || []);
             setTotalPages(data.totalPages || 1);

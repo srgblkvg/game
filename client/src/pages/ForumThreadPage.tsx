@@ -105,7 +105,7 @@ export default function ThreadPage() {
 
     const load = async (pg = 1) => {
         try {
-            const res = await fetch(`/api/forum/thread/${id}?page=${pg}`, { headers: getHeaders() });
+            const res = await fetch(`/api/forum/thread/${id}?page=${pg}&limit=10`, { headers: getHeaders() });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setThread(data.thread);
