@@ -76,6 +76,8 @@ router.post('/tavern/heal', async (req, res) => {
 
     await db.run('UPDATE users SET money = money - ?, currentHp = ? WHERE id = ?', [cost, user.currentHp + healAmount, userId]);
 
+    addToTreasury(cost, 'tavern_heal').catch(() => {});
+
     res.json({ success: true, hpAfter: user.currentHp + healAmount, cost });
 });
 
@@ -105,6 +107,8 @@ router.post('/tavern/room', async (req, res) => {
 
     await db.run('UPDATE users SET money = money - ?, roomType = ?, roomUntil = ? WHERE id = ?',
         [cost, roomType, until, userId]);
+
+    addToTreasury(cost, 'tavern_room').catch(() => {});
 
     res.json({ success: true, room: { type: roomType, name: room.name, until, rate: room.rate } });
 });
