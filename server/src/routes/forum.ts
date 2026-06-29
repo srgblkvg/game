@@ -72,7 +72,7 @@ router.get('/forum/thread/:id', async (req, res) => {
     `, [threadId, firstPost.id, limit, offset]) as any[];
 
     const total = (await db.one('SELECT COUNT(*) as cnt FROM forum_posts WHERE thread_id = ?', [threadId]) as any).cnt;
-    const totalPages = Math.ceil((total - 1) / limit) + 1; // -1 за первый пост + страница первого
+    const totalPages = Math.max(1, Math.ceil((total - 1) / limit));
     // Если page = 1, показываем первый пост + 9 остальных
     // Если page = 2, показываем первый пост + след. 9 (пропуская 9 из page 1)
 

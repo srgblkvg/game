@@ -53,7 +53,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false }: { pos
                             )}
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">{dateStr}</span>
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">#{post.id}</span>
-                            {isFirst && <span className="text-[0.55rem] text-[var(--color-accent-warning)] font-bold">ТС</span>}
+                            {isFirst && <span className="text-[0.55rem] text-[var(--color-accent-warning)] font-bold">Автор</span>}
                         </div>
                         <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: renderContent(displayContent) }} />
                         {isLong && (
