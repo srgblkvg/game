@@ -57,6 +57,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               if (data.rating) {
                 window.dispatchEvent(new CustomEvent('ratingUpdate', { detail: data.rating }));
               }
+              // Резня: таймер и счётчик
+              if (data.massacre) {
+                window.dispatchEvent(new CustomEvent('massacreTick', { detail: data.massacre }));
+              }
               // Аукцион: непрочитанные продажи
               if (data.auctionSales !== undefined) {
                 localStorage.setItem('auctionBadge', String(data.auctionSales));

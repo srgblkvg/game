@@ -242,6 +242,26 @@ export async function setupWebSocket(server: any) {
         }
       }
 
+      // Резня: состояние текущего сбора
+      let massacreState: any = null;
+      try {
+        const mev = await db.one(
+          `SELECT id, status, entry_fee, gathering_end,
+                  (SELECT COUNT(*) FROM massacre_participants WHERE event_id = massacre_events.id) as participant_count
+           FROM massacre_events WHERE status IN ('gathering','in_progress') ORDER BY id DESC LIMIT 1`,
+          []
+        ) as any;
+        if (mev) {
+          const now = Math.floor(Date.now() / 1000);
+          massacreState = {
+            id: mev.id,
+            status: mev.status,
+            timeLeft: mev.status === 'gathering' ? Math.max(0, mev.gathering_end - now) : 0,
+            participant_count: mev.participant_count,
+          };
+        }
+      } catch {}
+
       for (const userId of userIds) {
         const ws = clients.get(userId);
         if (!ws || ws.readyState !== WebSocket.OPEN) continue;
@@ -257,6 +277,7 @@ export async function setupWebSocket(server: any) {
             if (gb > 0) payload.guildBadge = gb;
           }
         }
+        if (massacreState) payload.massacre = massacreState;
         // Грязные данные (квесты/рейтинг/уведомления) — per-user
         const flags = userDirtyFlags.get(userId);
         if (flags && flags.size > 0) {

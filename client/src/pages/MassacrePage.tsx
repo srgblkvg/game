@@ -65,7 +65,7 @@ export default function MassacrePage() {
             setJoined(data.myParticipation);
 
             // Если бой завершён или идёт — загружаем лог
-            if (data.event && (data.event.status === 'finished' || data.event.status === 'in_progress' || data.event.status === 'starting')) {
+            if (data.event && (data.event.status === 'finished' || data.event.status === 'in_progress')) {
                 fetchLog(data.event.id);
             }
         } catch { setError('Ошибка сети'); }
@@ -84,12 +84,23 @@ export default function MassacrePage() {
 
     useEffect(() => { fetchState(); }, []);
 
-    // Автообновление
+    // Обновление через WS serverTick
     useEffect(() => {
-        if (!state) return;
-        const interval = setInterval(fetchState, 5000);
-        return () => clearInterval(interval);
-    }, [state?.event?.id]);
+        const handler = (e: Event) => {
+            const d = (e as CustomEvent).detail;
+            setState((prev: any) => prev ? {
+                ...prev,
+                timeLeft: d.timeLeft ?? prev.timeLeft,
+                event: prev.event ? { ...prev.event, participant_count: d.participant_count ?? prev.event.participant_count, status: d.status ?? prev.event.status } : prev.event,
+            } : prev);
+            // Если статус изменился на finished/in_progress — грузим лог
+            if (d.status === 'finished' || d.status === 'in_progress') {
+                fetchLog(d.id);
+            }
+        };
+        window.addEventListener('massacreTick', handler);
+        return () => window.removeEventListener('massacreTick', handler);
+    }, []);
 
     // Скролл лога вниз
     useEffect(() => {

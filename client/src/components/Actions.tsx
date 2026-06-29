@@ -35,22 +35,25 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
     }, []);
 
-    // Счётчик резни
+    // Счётчик и таймер резни — через WS
     useEffect(() => {
-        const fetchState = () => {
-            fetch('/api/massacre/state', { headers: getHeaders() })
-                .then(r => r.json())
-                .then(d => {
-                    if (d.event?.participant_count !== undefined) {
-                        setMassacreCount(d.event.participant_count);
-                    }
-                    setMassacreTimeLeft(d.timeLeft || 0);
-                })
-                .catch(() => {});
+        const handler = (e: Event) => {
+            const { participant_count, timeLeft } = (e as CustomEvent).detail;
+            setMassacreCount(participant_count || 0);
+            setMassacreTimeLeft(timeLeft || 0);
         };
-        fetchState();
-        const interval = setInterval(fetchState, 5000);
-        return () => clearInterval(interval);
+        window.addEventListener('massacreTick', handler);
+        // Первичная загрузка
+        fetch('/api/massacre/state', { headers: getHeaders() })
+            .then(r => r.json())
+            .then(d => {
+                if (d.event) {
+                    setMassacreCount(d.event.participant_count || 0);
+                    setMassacreTimeLeft(d.timeLeft || 0);
+                }
+            })
+            .catch(() => {});
+        return () => window.removeEventListener('massacreTick', handler);
     }, []);
 
     // Бейдж аукциона через localStorage + событие
@@ -223,7 +226,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                                     </h3>
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">
-                                        {card.subtitle}{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount}</span>}
+                                        Хаотичный PvP{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount}</span>}
                                     </p>
                                     <div className="mt-auto">
                                         <Button variant="danger" size="xs" fullWidth
