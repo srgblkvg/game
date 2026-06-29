@@ -23,15 +23,18 @@ interface TournamentInfo {
 }
 
 const DIVISION_LABELS: Record<string, string> = {
-    copper: 'Медный', steel: 'Стальной', mithril: 'Мифриловый', adamant: 'Адамантовый',
+    copper: 'Медный', bronze: 'Бронзовый', iron: 'Железный', steel: 'Стальной', silver: 'Серебряный',
+    gold: 'Золотой', platinum: 'Платиновый', mithril: 'Мифриловый', adamant: 'Адамантиновый', orichalcum: 'Орихалковый',
 };
 
 const DIVISION_ICONS: Record<string, string> = {
-    copper: '🥉', steel: '🥈', mithril: '🥇', adamant: '👑',
+    copper: '🥉', bronze: '🥉', iron: '🥈', steel: '🥈', silver: '🥈',
+    gold: '🥇', platinum: '🥇', mithril: '🥇', adamant: '👑', orichalcum: '💎',
 };
 
 const DIVISION_LEVELS: Record<string, [number, number]> = {
-    copper: [1, 15], steel: [16, 35], mithril: [36, 60], adamant: [61, 999],
+    copper: [1, 5], bronze: [3, 7], iron: [5, 9], steel: [7, 11], silver: [9, 13],
+    gold: [11, 15], platinum: [13, 17], mithril: [15, 19], adamant: [17, 21], orichalcum: [19, 999],
 };
 
 function formatTimer(seconds: number): string {
