@@ -53,6 +53,7 @@ export default function BestiaryPage() {
   const currentStepRef = useRef(-1);
   const speedRef = useRef(2);
   const initialHpRef = useRef({ player: 0, mob: 0 });
+  const atkTimeoutRef = useRef<number | null>(null);
   const pendingCharRef = useRef<any>(null);
   const pendingDropsRef = useRef<any[]>([]);
 
@@ -169,25 +170,10 @@ export default function BestiaryPage() {
     if (step.type === 'attack') {
       if (card) card.style.zIndex = '20';
       frame?.classList.add('attacking');
-      setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
-    } else if (step.type === 'dodge') {
-      frame?.classList.add('dodging');
-      setTimeout(() => frame?.classList.remove('dodging'), 500);
-      showEffectText(side, 'УКЛОНЕНИЕ!', '#f1c40f');
-    } else if (step.type === 'counter') {
-      if (card) card.style.zIndex = '20';
-      frame?.classList.add('attacking');
-      setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
-      showEffectText(side, 'КОНТРАТАКА!', '#f1c40f');
-    } else if (step.type === 'block') {
-      frame?.classList.add('blocking');
-      setTimeout(() => frame?.classList.remove('blocking'), 600);
-      showEffectText(side, 'БЛОК!', '#3498db');
-    } else if (step.type === 'fullBlock') {
-      frame?.classList.add('blocking');
-      setTimeout(() => frame?.classList.remove('blocking'), 600);
-      showEffectText(side, 'ПОЛНЫЙ БЛОК!', '#9b59b6');
+      if (atkTimeoutRef.current) clearTimeout(atkTimeoutRef.current);
+      atkTimeoutRef.current = window.setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
     } else if (step.type === 'crit') {
+      if (atkTimeoutRef.current) { clearTimeout(atkTimeoutRef.current); atkTimeoutRef.current = null; }
       frame?.classList.remove('attacking');
       frame?.classList.add('critting');
       if (card) card.style.zIndex = '30';
@@ -198,6 +184,24 @@ export default function BestiaryPage() {
         if (card) card.style.zIndex = '';
       }, 800);
       showEffectText(side, 'КРИТ!', '#e74c3c');
+    } else if (step.type === 'dodge') {
+      frame?.classList.add('dodging');
+      setTimeout(() => frame?.classList.remove('dodging'), 500);
+      showEffectText(side, 'УКЛОНЕНИЕ!', '#f1c40f');
+    } else if (step.type === 'counter') {
+      if (atkTimeoutRef.current) clearTimeout(atkTimeoutRef.current);
+      if (card) card.style.zIndex = '20';
+      frame?.classList.add('attacking');
+      atkTimeoutRef.current = window.setTimeout(() => { frame?.classList.remove('attacking'); if (card) card.style.zIndex = ''; }, 600);
+      showEffectText(side, 'КОНТРАТАКА!', '#f1c40f');
+    } else if (step.type === 'block') {
+      frame?.classList.add('blocking');
+      setTimeout(() => frame?.classList.remove('blocking'), 600);
+      showEffectText(side, 'БЛОК!', '#3498db');
+    } else if (step.type === 'fullBlock') {
+      frame?.classList.add('blocking');
+      setTimeout(() => frame?.classList.remove('blocking'), 600);
+      showEffectText(side, 'ПОЛНЫЙ БЛОК!', '#9b59b6');
     } else if (step.type === 'stun') {
       frame?.classList.add('stunned');
       setTimeout(() => frame?.classList.remove('stunned'), 1000);
