@@ -159,10 +159,10 @@ router.post('/mob/attack', async (req, res) => {
     while (hpUser > 0 && hpMob > 0 && turns < maxTurns) {
         turns++;
         if (turn === 'player') {
-            addStep({ type: 'attack', message: 'Вы атакуете!' });
+            addStep({ type: 'attack', actor: 'attacker', message: 'Вы атакуете!' });
 
             if (Math.random() < dodgeChance(mob.agi)) {
-                addStep({ type: 'dodge', message: `${mob.name} уклоняется!` });
+                addStep({ type: 'dodge', actor: 'defender', message: `${mob.name} уклоняется!` });
                 turn = 'mob';
                 continue;
             }
@@ -173,18 +173,18 @@ router.post('/mob/attack', async (req, res) => {
 
             if (Math.random() < critChance(userStats.m)) {
                 dmg = Math.round(dmg * critMult(userStats.m));
-                addStep({ type: 'crit', message: 'Крит!' });
+                addStep({ type: 'crit', actor: 'attacker', message: 'Крит!' });
             }
 
             dmg = Math.max(0, Math.round(dmg));
-            addStep({ type: 'damage', damage: dmg, target: 'mob', message: `Урон: ${dmg}` });
+            addStep({ type: 'damage', damage: dmg, target: 'mob', actor: 'attacker', message: `Урон: ${dmg}` });
             hpMob = Math.max(0, hpMob - dmg);
             turn = 'mob';
         } else {
-            addStep({ type: 'attack', message: `${mob.name} атакует!` });
+            addStep({ type: 'attack', actor: 'defender', message: `${mob.name} атакует!` });
 
             if (Math.random() < dodgeChance(userStats.a)) {
-                addStep({ type: 'dodge', message: 'Вы уклоняетесь!' });
+                addStep({ type: 'dodge', actor: 'attacker', message: 'Вы уклоняетесь!' });
                 turn = 'player';
                 continue;
             }
@@ -195,7 +195,7 @@ router.post('/mob/attack', async (req, res) => {
 
             if (Math.random() < critChance(mobStats.m)) {
                 dmg = Math.round(dmg * critMult(mobStats.m));
-                addStep({ type: 'crit', message: 'Крит!' });
+                addStep({ type: 'crit', actor: 'defender', message: 'Крит!' });
             }
 
             dmg = Math.max(0, Math.round(dmg));
