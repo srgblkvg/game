@@ -226,7 +226,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                                     </h3>
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">
-                                        Хаотичный PvP{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount}</span>}
+                                        Хаотичный PvP{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount} уч.</span>}
                                     </p>
                                     <div className="mt-auto">
                                         <Button variant="danger" size="xs" fullWidth
