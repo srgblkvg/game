@@ -155,7 +155,9 @@ export default function AuctionPage() {
 
     // Динамическая фильтрация при вводе (с debounce 300ms)
     const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const initialRender = useRef(true);
     useEffect(() => {
+        if (initialRender.current) { initialRender.current = false; return; }
         if (searchTimer.current) clearTimeout(searchTimer.current);
         searchTimer.current = setTimeout(() => load(1), 300);
         return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
