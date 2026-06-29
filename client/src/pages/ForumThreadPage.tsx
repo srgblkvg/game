@@ -58,7 +58,7 @@ function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?
                             <a href={`/profile/${post.author_id}`} className="text-xs font-bold text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] no-underline"
                                 onClick={e => e.stopPropagation()}>{post.author_name}</a>
                             {post.author_guild && (
-                                <a href={`/guild/${post.author_guild}`} className="text-[0.6rem] text-[var(--color-accent-info)] hover:underline no-underline"
+                                <a href={`/guild/${post.author_guild}`} className="text-[0.6rem] text-[var(--color-accent-success)] hover:underline no-underline"
                                     onClick={e => e.stopPropagation()}>[{post.author_guild_name}]</a>
                             )}
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">{dateStr}</span>
