@@ -29,6 +29,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
     const [treasury, setTreasury] = useState(0);
     const [massacreCount, setMassacreCount] = useState(0);
+    const [massacreTimeLeft, setMassacreTimeLeft] = useState(0);
 
     useEffect(() => {
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
@@ -43,6 +44,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     if (d.event?.participant_count !== undefined) {
                         setMassacreCount(d.event.participant_count);
                     }
+                    setMassacreTimeLeft(d.timeLeft || 0);
                 })
                 .catch(() => {});
         };
@@ -110,7 +112,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle-ruins" width="14" height="14" />🌍 МИР
                     </h2>
-                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={massacreCount} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} />
+                    <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={massacreCount} massacreTimeLeft={massacreTimeLeft} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} />
                 </div>
             )}
             {castleCards.length > 0 && (
@@ -118,16 +120,16 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Icon icon="game-icons:castle" width="14" height="14" />🏰 Площадь
                     </h2>
-                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} />
+                    <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} />
                 </div>
             )}
         </div>
     );
 }
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, onAuctionClick, onGuildClick, onBankClick }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, onAuctionClick, onGuildClick, onBankClick }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
-    navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; treasury: number; massacreCount: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
+    navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; treasury: number; massacreCount: number; massacreTimeLeft: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
     const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
@@ -207,25 +209,28 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
 
                 if (isMassacre) {
                     const bgStyle = card.bg_image ? { backgroundImage: `url(${card.bg_image})` } : {};
+                    const formatTime = (sec: number) => {
+                        const m = Math.floor(sec / 60);
+                        const s = sec % 60;
+                        return `${m}:${s.toString().padStart(2, '0')}`;
+                    };
                     return (
                         <div key={i} className="relative group" id={`action-card-${card.title}`}>
                             <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                                 <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
                                 <div className="relative w-full flex flex-col flex-1">
-                                    <div className="flex items-center justify-between mb-0.5">
-                                        <h3 className="text-[0.85rem] font-bold flex items-center gap-1">
-                                            <Icon icon={card.icon} width="14" height="14" />{card.title}
-                                        </h3>
-                                        <span className="text-[0.7rem] font-bold text-white bg-[var(--color-accent-danger)] px-2 py-0.5 rounded-full min-w-[24px] text-center">
+                                    <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
+                                        <Icon icon={card.icon} width="14" height="14" />{card.title}
+                                        <span className="text-[0.65rem] font-bold text-white bg-[var(--color-accent-danger)] px-1.5 py-0.5 rounded-full ml-1">
                                             {massacreCount}
                                         </span>
-                                    </div>
+                                    </h3>
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                                     <div className="mt-auto">
                                         {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
                                         <Button variant="danger" size="xs" fullWidth
                                             onClick={() => { if (card.path) navigate(card.path); }}>
-                                            Перейти
+                                            {massacreTimeLeft > 0 ? formatTime(massacreTimeLeft) : 'Перейти'}
                                         </Button>
                                     </div>
                                 </div>
