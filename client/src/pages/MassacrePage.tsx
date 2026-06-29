@@ -385,6 +385,7 @@ export default function MassacrePage() {
             {/* Текстовый лог */}
             {!vizMode && turns.length > 0 && (
                 <div className="mt-4">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">История с последней резни:</p>
                     <h2 className="text-sm font-bold text-[var(--color-text-muted)] mb-2">
                         📜 Лог боя — {participants.length} участников
                     </h2>
