@@ -95,10 +95,12 @@ export default function NotificationToast() {
                     }`}
                     onClick={() => {
                         dismiss(t.id);
-                        if (t.data?.path) {
-                            // Навигация через window.location чтобы работало из любого места
-                            window.location.href = t.data.path;
-                        }
+                        try {
+                            const d = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
+                            if (d?.path) {
+                                window.location.href = d.path;
+                            }
+                        } catch {}
                     }}
                 >
                     <Icon
