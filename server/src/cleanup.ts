@@ -42,5 +42,9 @@ export async function cleanupOldData() {
   const jh = await db.run(`DELETE FROM job_history WHERE endTime < ?`, [weekAgo]);
   results.push(`job_history: ${jh.changes}`);
   
+  // Старые приглашения в гильдию (pending старше 14 дней)
+  const gi = await db.run(`DELETE FROM guild_invites WHERE status = 'pending' AND createdat < ?`, [weekAgoISO]);
+  results.push(`guild_invites: ${gi.changes}`);
+
   console.log(`[cleanup] ${new Date().toISOString()}: ${results.join(', ')}`);
 }

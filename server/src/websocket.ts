@@ -229,12 +229,13 @@ export async function setupWebSocket(server: any) {
       let guildBadges = new Map<number, number>();
       if (guildIds.size > 0 && tickCount % 3 === 0) {
         const gPlaceholders = Array.from(guildIds).map(() => '?').join(',');
+        const cutoff = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
         const gRows = await db.query(
           `SELECT guildId,
                   SUM(CASE WHEN invitedBy = 0 AND status = 'pending' THEN 1 ELSE 0 END) as requests,
                   SUM(CASE WHEN invitedBy != 0 AND status = 'pending' THEN 1 ELSE 0 END) as invites
-           FROM guild_invites WHERE guildId IN (${gPlaceholders}) GROUP BY guildId`,
-          Array.from(guildIds)
+           FROM guild_invites WHERE guildId IN (${gPlaceholders}) AND createdat > ? GROUP BY guildId`,
+          [...Array.from(guildIds), cutoff]
         ) as any[];
         for (const g of gRows) {
           guildBadges.set(g.guildid, (g.requests || 0) + (g.invites || 0));
