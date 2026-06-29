@@ -55,6 +55,13 @@ router.post('/shop/buy', async (req, res) => {
     const user = await db.one('SELECT money, inventory, inventorySlots FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // Ограничение: 10 покупок в сутки
+    const todayCount = (await db.one(
+        "SELECT COUNT(*) as cnt FROM shop_purchase_log WHERE user_id = ? AND created_at >= CURRENT_DATE",
+        [userId]
+    ) as any).cnt;
+    if (todayCount >= 10) return res.status(400).json({ error: 'Лимит покупок в магазине (10 в сутки)' });
+
     const dbItem = await db.one(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
         FROM items i
@@ -91,6 +98,9 @@ router.post('/shop/buy', async (req, res) => {
 
     await db.run('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?',
         [price, JSON.stringify(inventory), userId]);
+
+    // Логируем покупку для дневного лимита
+    db.run('INSERT INTO shop_purchase_log (user_id, item_id) VALUES (?, ?)', [userId, itemId]).catch(() => {});
 
     addToTreasury(price, 'shop_sale').catch(() => {});
 
