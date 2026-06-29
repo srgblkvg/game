@@ -68,11 +68,12 @@ function runTurnLocal(
 }
 
 export async function runMassacreBattle(eventId: number): Promise<void> {
-    // Загрузить участников
-    const participants = await db.query(
-        `SELECT mp.*, u.username FROM massacre_participants mp JOIN users u ON mp.user_id = u.id WHERE mp.event_id = ? AND mp.alive = TRUE`,
+    // Загрузить участников — через raw чтобы обойти pgLowerIdentifiers
+    const rawResult = await db.raw(
+        `SELECT mp.*, u.username FROM massacre_participants mp JOIN users u ON mp.user_id = u.id WHERE mp.event_id = $1 AND mp.alive = TRUE`,
         [eventId]
-    ) as any[];
+    );
+    const participants = rawResult.rows as any[];
 
     if (participants.length < 2) {
         // Недостаточно участников — отменяем, возвращаем деньги
