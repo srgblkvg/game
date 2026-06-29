@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders } from '../api/helpers';
@@ -10,50 +10,58 @@ import { inputClass } from '../utils/formStyles';
 
 const MAX_QUOTE_LENGTH = 300;
 
-function PostCard({ post, onReply }: { post: any; onReply: (text: string) => void }) {
-    const textRef = useRef<HTMLDivElement>(null);
+function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?: any[]; onReply: (text: string, parentId: number) => void; depth?: number }) {
     const [expanded, setExpanded] = useState(false);
     const isLong = post.content.length > 500;
     const displayContent = isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content;
 
     return (
-        <Card className="mb-3">
-            <div className="flex items-start gap-3">
-                <img
-                    src={post.author_avatar || (post.author_name ? '/character_man.webp' : '')}
-                    alt=""
-                    className="w-8 h-8 rounded-full object-cover shrink-0 bg-[var(--color-bg-input)]"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <a href={`/profile/${post.author_id}`} className="text-sm font-bold text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] no-underline"
-                            onClick={e => e.stopPropagation()}>{post.author_name}</a>
-                        {post.author_guild && (
-                            <a href={`/guild/${post.author_guild}`} className="text-xs text-[var(--color-accent-info)] hover:underline no-underline"
-                                onClick={e => e.stopPropagation()}>[{post.author_guild_name}]</a>
+        <div className={depth > 0 ? 'ml-4 sm:ml-6 border-l-2 border-[var(--color-border-light)] pl-3' : ''}>
+            <Card className="mb-2">
+                <div className="flex items-start gap-3">
+                    <img
+                        src={post.author_avatar || '/character_man.webp'}
+                        alt=""
+                        className="w-7 h-7 rounded-full object-cover shrink-0 bg-[var(--color-bg-input)]"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <a href={`/profile/${post.author_id}`} className="text-xs font-bold text-[var(--color-text-primary)] hover:text-[var(--color-accent-info)] no-underline"
+                                onClick={e => e.stopPropagation()}>{post.author_name}</a>
+                            {post.author_guild && (
+                                <a href={`/guild/${post.author_guild}`} className="text-[0.6rem] text-[var(--color-accent-info)] hover:underline no-underline"
+                                    onClick={e => e.stopPropagation()}>[{post.author_guild_name}]</a>
+                            )}
+                            <span className="text-[0.6rem] text-[var(--color-text-muted)]">{fmtSafeDate(post.createdAt)}</span>
+                            <span className="text-[0.6rem] text-[var(--color-text-muted)]">#{post.id}</span>
+                        </div>
+                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words">
+                            {displayContent}
+                        </div>
+                        {isLong && (
+                            <button className="text-xs text-[var(--color-accent-info)] mt-1 cursor-pointer hover:underline"
+                                onClick={() => setExpanded(!expanded)}>
+                                {expanded ? 'Свернуть' : 'Читать дальше'}
+                            </button>
                         )}
-                        <span className="text-xs text-[var(--color-text-muted)]">{fmtSafeDate(post.createdAt)}</span>
+                        <button className="text-xs text-[var(--color-text-muted)] mt-1.5 cursor-pointer hover:text-[var(--color-accent-info)]"
+                            onClick={() => {
+                                const quote = post.content.slice(0, MAX_QUOTE_LENGTH);
+                                onReply(`> ${post.author_name}:\n> ${quote}\n\n`, post.id);
+                                document.getElementById('reply-input')?.focus();
+                            }}>Ответить</button>
                     </div>
-                    <div ref={textRef} className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words">
-                        {displayContent}
-                    </div>
-                    {isLong && (
-                        <button className="text-xs text-[var(--color-accent-info)] mt-1 cursor-pointer hover:underline"
-                            onClick={() => setExpanded(!expanded)}>
-                            {expanded ? 'Свернуть' : 'Читать дальше'}
-                        </button>
-                    )}
-                    <button className="text-xs text-[var(--color-text-muted)] mt-2 cursor-pointer hover:text-[var(--color-accent-info)]"
-                        onClick={() => {
-                            const quote = post.content.slice(0, MAX_QUOTE_LENGTH);
-                            const text = `> ${post.author_name}:\n> ${quote}\n\n`;
-                            onReply(text);
-                            document.getElementById('reply-input')?.focus();
-                        }}>Ответить</button>
                 </div>
-            </div>
-        </Card>
+            </Card>
+            {children && children.length > 0 && (
+                <div>
+                    {children.map((child: any) => (
+                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} />
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -65,12 +73,13 @@ export default function ThreadPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [replyText, setReplyText] = useState('');
+    const [replyParentId, setReplyParentId] = useState<number | null>(null);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
 
     const load = async (pg = 1) => {
         try {
-            const res = await fetch(`/api/forum/thread/${id}?page=${pg}&limit=20`, { headers: getHeaders() });
+            const res = await fetch(`/api/forum/thread/${id}?page=${pg}`, { headers: getHeaders() });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setThread(data.thread);
@@ -89,18 +98,44 @@ export default function ThreadPage() {
             const res = await fetch('/api/forum/reply', {
                 method: 'POST',
                 headers: getHeaders(),
-                body: JSON.stringify({ threadId: parseInt(id!), content: replyText }),
+                body: JSON.stringify({ threadId: parseInt(id!), content: replyText, parentId: replyParentId }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setReplyText('');
+            setReplyParentId(null);
             load(page);
         } catch (e: any) { setError(e.message); }
         finally { setSending(false); }
     };
 
+    const handleReplyClick = (text: string, parentId: number) => {
+        setReplyText(text);
+        setReplyParentId(parentId);
+    };
+
+    // Build tree from flat posts
+    const buildTree = (flatPosts: any[]) => {
+        const map = new Map<number, any>();
+        const roots: any[] = [];
+        for (const p of flatPosts) {
+            p.children = [];
+            map.set(p.id, p);
+        }
+        for (const p of flatPosts) {
+            if (p.parent_id && map.has(p.parent_id)) {
+                map.get(p.parent_id).children.push(p);
+            } else {
+                roots.push(p);
+            }
+        }
+        return roots;
+    };
+
     if (error && !thread) return <div className="p-4 text-[var(--color-accent-danger)]">{error}</div>;
     if (!thread) return <div className="p-4">Загрузка...</div>;
+
+    const tree = buildTree(posts);
 
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
@@ -109,7 +144,9 @@ export default function ThreadPage() {
 
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
-            {posts.map(p => <PostCard key={p.id} post={p} onReply={setReplyText} />)}
+            {tree.map(p => (
+                <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} />
+            ))}
 
             {totalPages > 1 && (
                 <div className="flex justify-center gap-2 mb-4">
@@ -120,6 +157,12 @@ export default function ThreadPage() {
             )}
 
             <Card className="mt-4">
+                {replyParentId && (
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">
+                        Ответ на сообщение #{replyParentId}
+                        <button className="ml-2 text-[var(--color-accent-danger)]" onClick={() => { setReplyParentId(null); setReplyText(''); }}>отмена</button>
+                    </p>
+                )}
                 <textarea
                     id="reply-input"
                     className={inputClass + ' min-h-[100px] mb-2'}

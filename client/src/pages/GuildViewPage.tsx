@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { fmtSafeDate } from '../utils/date';
 import { getHeaders, BASE_URL } from '../api/helpers';
@@ -86,6 +87,7 @@ export default function GuildViewPage() {
 
             {guild && (
                 <>
+                    <BackButton />
                     <Button variant="secondary" size="sm" onClick={() => navigate('/guild/rating')} className="mb-3">
                         ← Рейтинг гильдий
                     </Button>

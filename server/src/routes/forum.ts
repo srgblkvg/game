@@ -87,7 +87,7 @@ router.post('/forum/thread', async (req, res) => {
 // Ответить в тему
 router.post('/forum/reply', async (req, res) => {
     const userId = req.userId;
-    const { threadId, content } = req.body;
+    const { threadId, content, parentId } = req.body;
     if (!threadId || !content) return res.status(400).json({ error: 'Текст обязателен' });
 
     const thread = await db.one('SELECT id FROM forum_threads WHERE id = ?', [threadId]);
@@ -95,8 +95,8 @@ router.post('/forum/reply', async (req, res) => {
 
     const now = new Date().toISOString();
     await db.run(
-        'INSERT INTO forum_posts (thread_id, author_id, content, created_at) VALUES (?, ?, ?, ?)',
-        [threadId, userId, content, now]
+        'INSERT INTO forum_posts (thread_id, author_id, content, created_at, parent_id) VALUES (?, ?, ?, ?, ?)',
+        [threadId, userId, content, now, parentId || null]
     );
     await db.run(
         'UPDATE forum_threads SET updated_at = ?, posts_count = posts_count + 1 WHERE id = ?',
