@@ -205,6 +205,35 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
 
                 const isMassacre = card.path === '/massacre';
 
+                if (isMassacre) {
+                    const bgStyle = card.bg_image ? { backgroundImage: `url(${card.bg_image})` } : {};
+                    return (
+                        <div key={i} className="relative group" id={`action-card-${card.title}`}>
+                            <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
+                                <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
+                                <div className="relative w-full flex flex-col flex-1">
+                                    <div className="flex items-center justify-between mb-0.5">
+                                        <h3 className="text-[0.85rem] font-bold flex items-center gap-1">
+                                            <Icon icon={card.icon} width="14" height="14" />{card.title}
+                                        </h3>
+                                        <span className="text-[0.7rem] font-bold text-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10 px-2 py-0.5 rounded-full min-w-[24px] text-center">
+                                            {massacreCount}
+                                        </span>
+                                    </div>
+                                    <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                                    <div className="mt-auto">
+                                        {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
+                                        <Button variant="danger" size="xs" fullWidth
+                                            onClick={() => { if (card.path) navigate(card.path); }}>
+                                            Перейти
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
                 const bgStyle = card.bg_image
                     ? { backgroundImage: `url(${card.bg_image})` }
                     : {};
@@ -240,11 +269,6 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                     {card.title === 'Банк' && (bankBadge ?? 0) > 0 && (
                         <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 rounded-full text-white text-[0.55rem] font-bold flex items-center justify-center px-1 shadow">
                             {bankBadge ?? 0}
-                        </span>
-                    )}
-                    {isMassacre && massacreCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[var(--color-accent-danger)] rounded-full text-white text-[0.55rem] font-bold flex items-center justify-center px-1 shadow">
-                            {massacreCount}
                         </span>
                     )}
                     </div>
