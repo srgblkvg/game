@@ -113,6 +113,16 @@ export default function ThreadPage() {
                 const lastPg = actualTotal;
                 setPageState(lastPg);
                 setSearchParams({ page: String(lastPg) }, { replace: true });
+                // Reload with correct page
+                if (lastPg > 1) {
+                    const res2 = await fetch(`/api/forum/thread/${id}?page=${lastPg}`, { headers: getHeaders() });
+                    const data2 = await res2.json();
+                    if (res2.ok) {
+                        setPosts(data2.posts || []);
+                        setPageState(data2.page || lastPg);
+                        setTotalPages(data2.totalPages || 1);
+                    }
+                }
             } else {
                 setPageState(actualPage);
             }
