@@ -150,30 +150,33 @@ export default function MassacrePage() {
     const [vizSpeed, setVizSpeed] = useState(2);
     const vizTimer = useRef<number | null>(null);
 
-    // Построить HP-трекер по ходам
-    const hpMap = useRef<Map<number, { name: string; max: number; history: number[] }>>(new Map());
+    // Построить HP-трекер по ходам — каждый участник имеет историю HP на каждом шагу
+    const hpMap = useRef<Map<number, { name: string; max: number; history: number[]; dead: boolean }>>(new Map());
     useEffect(() => {
-        const map = new Map<number, { name: string; max: number; history: number[] }>();
+        const map = new Map<number, { name: string; max: number; history: number[]; dead: boolean }>();
+        // Инициализация: запоминаем имена и стартовое HP
+        const currentHp = new Map<number, number>();
         for (const p of participants) {
-            // Стартовое HP берём из первого damage-хода или из участников
-            map.set(p.id, { name: p.name, max: p.hp_max || 100, history: [p.hp_max || 100] });
+            const hp = p.hp_max || p.maxHp || 100;
+            map.set(p.id, { name: p.name, max: hp, history: [hp], dead: false });
+            currentHp.set(p.id, hp);
         }
+        // Проходим по всем строкам лога
         for (const t of turns) {
-            if (t.action_type === 'death' || t.action_type === 'victory' || t.action_type === 'stunned_skip') {
-                // Эти типы не меняют HP
-                const prev = map.get(t.actor_id);
-                if (prev) prev.history.push(prev.history[prev.history.length - 1]);
-                continue;
+            // Применяем урон к цели
+            if (t.damage > 0 && t.target_id && currentHp.has(t.target_id)) {
+                const prev = currentHp.get(t.target_id) || 0;
+                currentHp.set(t.target_id, Math.max(0, prev - t.damage));
             }
-            // damage step — применяем к цели
-            if (t.target_id && t.damage > 0) {
-                const targetHp = map.get(t.target_id);
-                if (targetHp) {
-                    targetHp.history.push(Math.max(0, targetHp.history[targetHp.history.length - 1] - t.damage));
-                }
-                // Атакующий HP не меняется
-                const actorHp = map.get(t.actor_id);
-                if (actorHp) actorHp.history.push(actorHp.history[actorHp.history.length - 1]);
+            // Отмечаем смерть
+            if (t.action_type === 'death' && t.target_id) {
+                const entry = map.get(t.target_id);
+                if (entry) entry.dead = true;
+            }
+            // Записываем текущее HP ВСЕХ участников в историю
+            for (const [pid, hp] of currentHp) {
+                const entry = map.get(pid);
+                if (entry) entry.history.push(hp);
             }
         }
         hpMap.current = map;
@@ -215,7 +218,7 @@ export default function MassacrePage() {
     const getHpAtStep = (pid: number) => {
         const h = hpMap.current.get(pid);
         if (!h) return 0;
-        const idx = Math.min(vizStep + 1, h.history.length - 1);
+        const idx = Math.min(Math.max(0, vizStep + 1), h.history.length - 1);
         return h.history[idx] ?? 0;
     };
     const getMaxHp = (pid: number) => hpMap.current.get(pid)?.max || 100;
@@ -368,6 +371,15 @@ export default function MassacrePage() {
                     <div className="mt-1 text-center">
                         <input type="range" min={0} max={totalVizSteps - 1} value={vizStep} className="w-full h-1"
                             onChange={e => { setVizStep(Number(e.target.value)); stopViz(); }} />
+                    </div>
+                    {/* Легенда */}
+                    <div className="flex flex-wrap justify-center gap-3 mt-2 text-[0.6rem] text-[var(--color-text-muted)]">
+                        <span>🟥 — атакующий</span>
+                        <span>🟨 — цель атаки</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-green-400 rounded-sm inline-block" /> HP &gt; 50%</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-yellow-400 rounded-sm inline-block" /> HP 25–50%</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-red-500 rounded-sm inline-block" /> HP &lt; 25%</span>
+                        <span>☠ — мёртв</span>
                     </div>
                 </div>
             )}
