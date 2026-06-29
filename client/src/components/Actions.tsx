@@ -221,16 +221,16 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                 <div className="relative w-full flex flex-col flex-1">
                                     <h3 className="text-[0.85rem] font-bold mb-0.5 flex items-center justify-center gap-1">
                                         <Icon icon={card.icon} width="14" height="14" />{card.title}
-                                        <span className="text-[0.65rem] font-bold text-white bg-[var(--color-accent-danger)] px-1.5 py-0.5 rounded-full ml-1">
-                                            {massacreCount}
-                                        </span>
                                     </h3>
-                                    <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                                    <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">
+                                        {card.subtitle}{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount}</span>}
+                                    </p>
                                     <div className="mt-auto">
-                                        {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
                                         <Button variant="danger" size="xs" fullWidth
                                             onClick={() => { if (card.path) navigate(card.path); }}>
-                                            {massacreTimeLeft > 0 ? formatTime(massacreTimeLeft) : 'Перейти'}
+                                            {massacreTimeLeft > 0
+                                                ? `${formatMoney(card.cost)} · ${formatTime(massacreTimeLeft)}`
+                                                : formatMoney(card.cost)}
                                         </Button>
                                     </div>
                                 </div>
