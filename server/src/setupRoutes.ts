@@ -43,6 +43,7 @@ import overflowRoutes from './routes/overflow';
 import vkPaymentsRoutes from './routes/vkPayments';
 import vkBridgeAuthRoutes from './routes/vkBridgeAuth';
 import yukassaRoutes from './routes/yukassa';
+import treasuryRoutes from './routes/treasury';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -52,6 +53,9 @@ export function setupRoutes(app: Express) {
 
   // Действия (публичный)
   app.use('/api', actionsRoutes);
+
+  // Казна замка (публичный)
+  app.use('/api', treasuryRoutes);
 
   // Этажи (публичный — нужен бестиарию)
   app.get('/api/floors', async (_req: any, res) => {

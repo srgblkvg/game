@@ -27,6 +27,11 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
     const [guildBadge, setGuildBadge] = useState(parseInt(localStorage.getItem('guildBadge') || '0'));
     const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
+    const [treasury, setTreasury] = useState(0);
+
+    useEffect(() => {
+        fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
+    }, []);
 
     // Бейдж аукциона через localStorage + событие
     useEffect(() => {
@@ -164,6 +169,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                                     </h3>
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)]">{card.subtitle}</p>
+                                    {treasury > 0 && <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-0.5">Казна: {formatMoney(treasury)}</p>}
                                 </div>
                                 <div className="relative shrink-0">
                                     <Button variant="danger" size="xs" onClick={() => { if (card.path) navigate(card.path); }}>Перейти</Button>

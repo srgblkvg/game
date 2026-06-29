@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { requireFullAccess } from '../middleware/auth';
 import { markDirty, pushNotification, broadcast, sendToUser } from '../events';
+import { addToTreasury } from '../game/treasury';
 
 const router = Router();
 
@@ -62,6 +62,7 @@ router.get('/auction', async (req, res) => {
         await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [lot.sellerId, lot.currentBidderId, JSON.parse(lot.itemData).name || 'Предмет', lot.itemData, lot.currentBid, commission, new Date().toISOString()]);
+        addToTreasury(commission, 'auction_expired').catch(() => {});
         // Уведомления
         const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [lot.currentBidderId]) as any)?.username || 'Кто-то';
         pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} купил «${JSON.parse(lot.itemData).name || 'Предмет'}» за ${lot.currentBid}🥇` });
@@ -220,6 +221,8 @@ router.post('/auction/sell', async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [userId, JSON.stringify(sellItemData), totalStartPrice, totalBuyoutPrice, null, dur, endsAt, now]);
 
+    addToTreasury(listingFee, 'auction_listing').catch(() => {});
+
     broadcast('auction_changed', {});
     res.json({ success: true, listingFee });
 });
@@ -313,6 +316,7 @@ router.post('/auction/buyout', async (req, res) => {
     await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [lot.sellerId, userId, buyItemData.name || 'Предмет', lot.itemData, lot.buyoutPrice, commission, new Date().toISOString()]);
+    addToTreasury(commission, 'auction_buyout').catch(() => {});
 
     // Уведомление продавцу — прямой WS + toast
     const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
@@ -393,6 +397,7 @@ router.post('/auction/buy-partial', async (req, res) => {
     await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [lot.sellerId, userId, itemData.name || 'Предмет', JSON.stringify(singleItem), cost, commission, new Date().toISOString()]);
+    addToTreasury(commission, 'auction_partial').catch(() => {});
 
     broadcast('auction_changed', {});
     res.json({ success: true, cost, remaining: remainingCount });

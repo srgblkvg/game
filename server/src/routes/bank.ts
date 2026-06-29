@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
+import { addToTreasury } from '../game/treasury';
 
 const router = Router();
 
@@ -41,6 +42,7 @@ router.post('/bank/deposit', async (req, res) => {
 
             await client.query('UPDATE users SET money = money - $1, bank = bank + $2 WHERE id = $3', [amount, depositAmount, userId]);
             await client.query('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES ($1, $2, $3, $4, $5)', [userId, 'deposit', amount, commission, depositAmount]);
+            addToTreasury(commission, 'bank_deposit').catch(() => {});
 
             return (await client.query('SELECT money, bank FROM users WHERE id = $1', [userId])).rows[0] as any;
         });
@@ -112,6 +114,7 @@ router.post('/bank/transfer', async (req, res) => {
 
             await client.query('INSERT INTO transfers (fromUserId, toUserId, fromAccount, toAccount, toUsername, amount, commission, received) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
                 [userId, target.id, sender.accountnumber, target.accountnumber, target.username, transferAmount, commission, receivedAmount]);
+            addToTreasury(commission, 'bank_transfer').catch(() => {});
 
             const updated = (await client.query('SELECT bank FROM users WHERE id = $1', [userId])).rows[0] as any;
             return { updated, target, commission, receivedAmount };

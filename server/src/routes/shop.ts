@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { buyItemSchema } from '../validation';
+import { addToTreasury } from '../game/treasury';
 
 const router = Router();
 
@@ -90,6 +91,8 @@ router.post('/shop/buy', async (req, res) => {
 
     await db.run('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?',
         [price, JSON.stringify(inventory), userId]);
+
+    addToTreasury(price, 'shop_sale').catch(() => {});
 
     res.json({ success: true, moneyAfter: user.money - price });
 });
