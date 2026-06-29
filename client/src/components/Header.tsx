@@ -31,6 +31,7 @@ const breadcrumbMap: Record<string, string> = {
     orders: 'Заказы',
     guild: 'Гильдия',
     war: 'Поле боя',
+    massacre: 'Резня',
     feedback: 'Обратная связь',
     collections: 'Коллекция',
     castle: 'Замок',
