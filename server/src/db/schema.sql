@@ -384,8 +384,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   targetId INTEGER,
   content TEXT NOT NULL,
   item_data TEXT,
-  "senderGuild" TEXT,
-  "senderGuildId" INTEGER,
+  senderguild TEXT,
+  senderguildid INTEGER,
   createdAt TIMESTAMPTZ DEFAULT NOW()
 );
 
