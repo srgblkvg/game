@@ -38,12 +38,21 @@ router.get('/massacre/state', async (req, res) => {
 
     const timeLeft = Math.max(0, event.gathering_end - now);
 
+    // Последний завершённый бой
+    const lastEvent = await db.one(
+        `SELECT e.id, e.status, e.turn_order,
+                (SELECT COUNT(*) FROM massacre_participants WHERE event_id = e.id) as participant_count
+         FROM massacre_events e WHERE e.status = 'finished' ORDER BY e.id DESC LIMIT 1`,
+        []
+    ) as any;
+
     // Если сбор закончился но статус ещё gathering — бой скоро начнётся (scheduler подхватит)
     if (timeLeft <= 0 && event.status === 'gathering') {
         return res.json({
             event: { id: event.id, status: 'starting', entry_fee: event.entry_fee, participant_count: participantCount },
             myParticipation: myPart.cnt > 0,
             timeLeft: 0,
+            lastEvent: lastEvent ? { id: lastEvent.id, participant_count: lastEvent.participant_count } : null,
         });
     }
 
@@ -51,6 +60,7 @@ router.get('/massacre/state', async (req, res) => {
         event: { id: event.id, status: event.status, entry_fee: event.entry_fee, participant_count: participantCount, gathering_end: event.gathering_end },
         myParticipation: myPart.cnt > 0,
         timeLeft,
+        lastEvent: lastEvent ? { id: lastEvent.id, participant_count: lastEvent.participant_count } : null,
     });
 });
 

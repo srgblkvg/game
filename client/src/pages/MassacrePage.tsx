@@ -64,7 +64,11 @@ export default function MassacrePage() {
             setState(data);
             setJoined(data.myParticipation);
 
-            // Если бой завершён или идёт — загружаем лог
+            // Загружаем лог последнего завершённого боя
+            if (data.lastEvent?.id) {
+                fetchLog(data.lastEvent.id);
+            }
+            // Если текущий бой завершён или идёт — тоже грузим лог
             if (data.event && (data.event.status === 'finished' || data.event.status === 'in_progress')) {
                 fetchLog(data.event.id);
             }
