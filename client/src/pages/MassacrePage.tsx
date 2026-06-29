@@ -236,9 +236,9 @@ export default function MassacrePage() {
                         {participants.map((p: any) => (
                             <span key={p.id} className={`text-xs px-2 py-0.5 rounded ${
                                 p.id === user.id
-                                    ? 'bg-[var(--color-accent-warning)]/20 text-[var(--color-accent-warning)] border border-[var(--color-accent-warning)]/30'
+                                    ? 'bg-[#3d2e00] text-[#f0c040] border border-[#5a4200]'
                                     : p.alive === false
-                                    ? 'bg-gray-700/30 text-gray-500 line-through'
+                                    ? 'bg-[#2a2a2a] text-[#777] line-through'
                                     : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]'
                             }`}>
                                 {p.name} (ур.{p.level})
@@ -249,7 +249,7 @@ export default function MassacrePage() {
                     {/* Ходы */}
                     <div
                         ref={logRef}
-                        className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 max-h-[50vh] overflow-y-auto font-mono text-xs leading-relaxed space-y-1"
+                        className="bg-[var(--color-bg-secondary)] rounded-lg p-3 max-h-[50vh] overflow-y-auto font-mono text-xs leading-relaxed space-y-1"
                     >
                         {turns.map((t, i) => {
                             const act = actionLabels[t.action_type] || { icon: '❓', color: '#aaa', label: t.action_type };
@@ -259,7 +259,7 @@ export default function MassacrePage() {
                                     key={i}
                                     className={`px-2 py-1 rounded border ${
                                         isMy
-                                            ? 'bg-[var(--color-accent-warning)]/10 border-[var(--color-accent-warning)]/30'
+                                            ? 'bg-[#3d2e00] border-[#5a4200]'
                                             : 'border-transparent'
                                     }`}
                                 >
@@ -267,7 +267,7 @@ export default function MassacrePage() {
                                         #{t.turn_number}
                                     </span>
                                     <span style={{ color: act.color }}>{act.icon}</span>{' '}
-                                    <span className={isMy ? 'font-bold text-[var(--color-accent-warning)]' : ''}>
+                                    <span className={isMy ? 'font-bold text-[#f0c040]' : ''}>
                                         {isMy && '👉 '}{t.message}
                                     </span>
                                 </div>
