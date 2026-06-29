@@ -5,6 +5,16 @@ import { addToTreasury } from '../game/treasury';
 
 const router = Router();
 
+// Статистика магазина для игрока
+router.get('/shop/stats', async (req, res) => {
+    const userId = req.userId;
+    const todayCount = (await db.one(
+        "SELECT COUNT(*) as cnt FROM shop_purchase_log WHERE user_id = ? AND created_at >= CURRENT_DATE",
+        [userId]
+    ) as any).cnt;
+    res.json({ todayCount, dailyLimit: 10 });
+});
+
 // Получить все предметы (для коллекций)
 router.get('/items', async (req, res) => {
     const items = await db.query(`

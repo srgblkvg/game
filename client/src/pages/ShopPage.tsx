@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useAcquire } from '../contexts/AcquireContext';
 import { fetchShopItems, buyItem } from '../api';
+import { getHeaders } from '../api/helpers';
 import { formatMoney } from '../utils/money';
 import { getRarityColor } from '../utils/itemUtils';
 import ItemStats from '../components/ItemStats';
@@ -31,14 +32,18 @@ export default function ShopPage() {
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [todayCount, setTodayCount] = useState(0);
+    const dailyLimit = 10;
     useEffect(() => {
         if (!user) { navigate('/login'); return; }
         fetchShopItems().then(setItems).catch(console.error).finally(() => setLoading(false));
+        fetch('/api/shop/stats', { headers: getHeaders() }).then(r => r.json()).then(d => setTodayCount(d.todayCount || 0)).catch(() => {});
     }, [user, navigate]);
 
     const handleBuy = async (itemId: number) => {
         try {
             const res = await buyItem(itemId);
+            setTodayCount(c => c + 1);
             const boughtItem = items.find(i => i.id === itemId);
             if (boughtItem) showAcquire(boughtItem, 1, 'Куплено');
             setCharacter(prev => prev ? { ...prev, money: res.moneyAfter } : prev);
@@ -88,6 +93,9 @@ export default function ShopPage() {
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Базовые предметы экипировки для первых шагов в игре. Нельзя надеть два одинаковых кольца.
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)] mb-3">
+                Куплено сегодня: {todayCount}/{dailyLimit}
             </p>
 
             {message && <p className="mb-3 text-[var(--color-accent-success)] text-sm">{message}</p>}
