@@ -59,7 +59,7 @@ export default function HistoryPage() {
         ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:new Date(t.createdAt).getTime(),data:t})),
         ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt).getTime(),data:q})),
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
-        ...massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre',ts:new Date(m.created_at).getTime(),data:m})),
+        ...massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre',ts:new Date(m.created_At || m.createdAt || m.created_at).getTime(),data:m})),
     ].sort((a,b)=>b.ts-a.ts);
 
     const currentData = (()=>{switch(tab){
@@ -189,13 +189,15 @@ export default function HistoryPage() {
             </EntryRow>;
         }
         if (type === 'massacre') {
-            const pc = data.participantCount ?? data.participant_count ?? 0;
-            const tc = data.turnCount ?? data.turn_count ?? 0;
-            const wid = data.winnerId ?? data.winner_id;
-            return <EntryRow time={fmt(data.created_at || data.createdAt)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
+            const pc = data.participant_Count ?? data.participantCount ?? data.participant_count ?? 0;
+            const tc = data.turn_Count ?? data.turnCount ?? data.turn_count ?? 0;
+            const wid = data.winner_Id ?? data.winnerId ?? data.winner_id;
+            const wname = data.winner_Name ?? data.winnerName ?? data.winner_name ?? '?';
+            const ts = data.created_At || data.createdAt || data.created_at;
+            return <EntryRow time={fmt(ts)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
                 <span><Icon icon="game-icons:battered-axe" width="14" height="14" className="inline mr-1"/>Резня — {pc} участников</span>
                 <span className={`font-bold ml-2 ${wid === user.id ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
-                    {wid === user.id ? '🏆 Победитель' : data.participated ? 'Поражение' : ''}
+                    {wid === user.id ? `🏆 ${wname}` : data.participated ? 'Поражение' : ''}
                 </span>
                 <span className="text-[var(--color-text-muted)] ml-1">{tc} ходов</span>
             </EntryRow>;
