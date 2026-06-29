@@ -169,7 +169,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                                     </h3>
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)]">{card.subtitle}</p>
-                                    {treasury > 0 && <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-0.5">Казна: {formatMoney(treasury)}</p>}
+                                    <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-0.5">Казна: {formatMoney(treasury)} 🥇</p>
                                 </div>
                                 <div className="relative shrink-0">
                                     <Button variant="danger" size="xs" onClick={() => { if (card.path) navigate(card.path); }}>Перейти</Button>
