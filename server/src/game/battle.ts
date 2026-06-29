@@ -29,7 +29,7 @@ interface BattleResult {
 
 // ── Формулы (используют конфиг F из stats.ts) ──
 
-function dodgeChance(defStats: CharStats, atkStats: CharStats): number {
+export function dodgeChance(defStats: CharStats, atkStats: CharStats): number {
   const defW = sv(defStats, F.dodgeDef);
   const atkW = sv(atkStats, F.dodgePen);
   const extraDodge = (defStats.extra.dodge || 0);
@@ -40,37 +40,37 @@ function dodgeChance(defStats: CharStats, atkStats: CharStats): number {
   );
 }
 
-function critChance(stats: CharStats): number {
+export function critChance(stats: CharStats): number {
   const extraCrit = (stats.extra.crit || 0);
   return Math.min(0.8, sv(stats, F.crit) / (sv(stats, F.crit) + 500) + extraCrit / (extraCrit + 300));
 }
 
-function critMult(stats: CharStats): number {
+export function critMult(stats: CharStats): number {
   return 1.5 + 0.5 * (sv(stats, F.crit) / (sv(stats, F.crit) + 50));
 }
 
-function blockChance(defStats: CharStats): number {
+export function blockChance(defStats: CharStats): number {
   const extraBlock = (defStats.extra.fullBlock || 0);
   return Math.min(0.75, sv(defStats, F.block) / (sv(defStats, F.block) + 500) + extraBlock / (extraBlock + 300));
 }
 
-function blockReduction(defStats: CharStats, atkStats: CharStats): number {
+export function blockReduction(defStats: CharStats, atkStats: CharStats): number {
   const ratio = sv(defStats, F.block) / Math.max(1, sv(atkStats, F.damage));
   return Math.min(0.75, 0.5 * ratio);
 }
 
-function counterChance(defStats: CharStats, atkStats: CharStats, extraBonus: number): number {
+export function counterChance(defStats: CharStats, atkStats: CharStats, extraBonus: number): number {
   const dSum = sv(defStats, F.counterDef) + sv(atkStats, F.counterTgt);
   return Math.min(0.5, (dSum > 0 ? sv(defStats, F.counterDef) / dSum * 0.5 : 0) + extraBonus / (extraBonus + 300));
 }
 
-function stunChance(atkStats: CharStats, defStats: CharStats): number {
+export function stunChance(atkStats: CharStats, defStats: CharStats): number {
   const sum = sv(atkStats, F.stunAtk) + sv(defStats, F.stunDef);
   return sum > 0 ? sv(atkStats, F.stunAtk) / sum * 0.3 : 0;
 }
 
 // Смешанное распределение урона: 1% мин(level), 98% ~центр(70%), 1% макс(S)
-function rollDamage(stats: CharStats, level: number): number {
+export function rollDamage(stats: CharStats, level: number): number {
   const S = sumStats(stats);
   const roll = Math.random();
   let factor: number;

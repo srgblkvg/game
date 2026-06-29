@@ -27,6 +27,7 @@ server.listen(PORT, () => logger.info(`Server started on port ${PORT}`));
 import { startSalaryScheduler } from './schedulers/salary';
 import { startTournamentScheduler } from './schedulers/tournaments';
 import { startCleanupScheduler } from './schedulers/cleanup';
+import { startMassacreScheduler } from './schedulers/massacre';
 import { initTreasury, initTreasuryLog } from './game/treasury';
 
 // Init tables
@@ -36,3 +37,4 @@ initTreasuryLog().catch(e => logger.error('Treasury log init failed:', e.message
 startSalaryScheduler();
 startTournamentScheduler();
 startCleanupScheduler();
+startMassacreScheduler();

@@ -576,3 +576,43 @@ CREATE TABLE IF NOT EXISTS collections (
   rarity_id INTEGER NOT NULL,
   addedAt INTEGER DEFAULT EXTRACT(EPOCH FROM NOW())::INTEGER
 );
+
+-- ====== massacre (Резня) ======
+CREATE TABLE IF NOT EXISTS massacre_events (
+  id SERIAL PRIMARY KEY,
+  status TEXT NOT NULL DEFAULT 'gathering',
+  entry_fee INTEGER NOT NULL DEFAULT 100,
+  gathering_end INTEGER NOT NULL,
+  turn_order TEXT DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS massacre_participants (
+  id SERIAL PRIMARY KEY,
+  event_id INTEGER NOT NULL REFERENCES massacre_events(id),
+  user_id INTEGER NOT NULL,
+  level INTEGER NOT NULL,
+  base_s INTEGER NOT NULL DEFAULT 5,
+  base_a INTEGER NOT NULL DEFAULT 5,
+  base_d INTEGER NOT NULL DEFAULT 5,
+  base_m INTEGER NOT NULL DEFAULT 5,
+  hp_current INTEGER NOT NULL,
+  hp_max INTEGER NOT NULL,
+  stunned BOOLEAN NOT NULL DEFAULT FALSE,
+  alive BOOLEAN NOT NULL DEFAULT TRUE,
+  joined_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS massacre_turns (
+  id SERIAL PRIMARY KEY,
+  event_id INTEGER NOT NULL REFERENCES massacre_events(id),
+  turn_number INTEGER NOT NULL,
+  actor_id INTEGER NOT NULL,
+  actor_name TEXT NOT NULL,
+  target_id INTEGER,
+  target_name TEXT,
+  action_type TEXT NOT NULL,
+  damage INTEGER DEFAULT 0,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
