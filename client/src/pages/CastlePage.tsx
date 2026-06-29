@@ -62,10 +62,11 @@ export default function CastlePage() {
 
             {/* Форум */}
             <div className="mb-4">
-                <h2 className="text-sm font-bold mb-2 flex items-center gap-1 cursor-pointer hover:text-[var(--color-accent-info)]"
+                <h2 className="text-sm font-bold mb-1 flex items-center gap-1 cursor-pointer hover:text-[var(--color-accent-info)]"
                     onClick={() => navigate('/forum')}>
                     <Icon icon="game-icons:discussion" width="16" height="16" />Форум
                 </h2>
+                <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">Обсуждаемое:</p>
                 {latestThreads.length === 0 ? (
                     <p className="text-xs text-[var(--color-text-muted)]">Тем пока нет</p>
                 ) : (
