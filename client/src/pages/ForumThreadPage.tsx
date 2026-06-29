@@ -41,7 +41,7 @@ function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?
     const displayContent = isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content;
 
     // Format date with time
-    const dateStr = fmtSafeDate(post.createdAt, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const dateStr = fmtSafeDate(post.created_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     return (
         <div className={depth > 0 ? 'ml-4 sm:ml-6 border-l-2 border-[var(--color-border-light)] pl-3' : ''}>

@@ -70,12 +70,12 @@ export default function ForumPage() {
                             onClick={() => navigate(`/forum/${t.id}`)}>
                             <h3 className="font-bold text-sm mb-1">{t.title}</h3>
                             <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
-                                <span>Автор: {t.author_name} • {fmtSafeDate(t.createdAt)}</span>
+                                <span>Автор: {t.author_name} • {fmtSafeDate(t.created_at)}</span>
                                 <span>{t.posts_count} сообщ.</span>
                             </div>
                             {t.last_poster_name && (
                                 <div className="text-xs text-[var(--color-text-muted)] mt-1">
-                                    Последнее: {t.last_poster_name} • {fmtSafeDate(t.updatedAt)}
+                                    Последнее: {t.last_poster_name} • {fmtSafeDate(t.updated_at)}
                                 </div>
                             )}
                         </Card>

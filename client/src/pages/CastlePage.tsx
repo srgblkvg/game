@@ -75,9 +75,9 @@ export default function CastlePage() {
                                 onClick={() => navigate(`/forum/${t.id}`)}>
                                 <h3 className="text-sm font-bold truncate">{t.title}</h3>
                                 <div className="flex justify-between text-[0.65rem] text-[var(--color-text-muted)] mt-1">
-                                    <span>{t.author_name} • {fmtSafeDate(t.createdAt)}</span>
+                                    <span>{t.author_name} • {fmtSafeDate(t.created_at, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
                                     {t.last_poster_name && (
-                                        <span>{t.last_poster_name} • {fmtSafeDate(t.updatedAt)}</span>
+                                        <span>{t.last_poster_name} • {fmtSafeDate(t.updated_at, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
                                     )}
                                 </div>
                             </Card>
