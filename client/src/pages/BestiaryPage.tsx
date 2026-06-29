@@ -304,7 +304,7 @@ export default function BestiaryPage() {
   }, [nextStep, stopAuto]);
 
   useEffect(() => { if (battleSteps.length > 0 && currentStepRef.current === -1) startAuto(); return () => stopAuto(); }, [battleSteps, startAuto, stopAuto]);
-  useEffect(() => { if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0) stopAuto(); }, [currentStep, battleSteps.length, stopAuto]);
+  useEffect(() => { if (currentStep >= battleSteps.length - 1 && battleSteps.length > 0) { stopAuto(); applyPending(); } }, [currentStep, battleSteps.length, stopAuto, applyPending]);
   useEffect(() => { return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
 
   const selectFloor = async (floor: string) => {
