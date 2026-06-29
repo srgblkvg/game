@@ -309,17 +309,17 @@ h1, h2, h3 {
 
 @keyframes crit-anim {
   0%   { transform: rotate(0deg) translateX(0) scale(1); }
-  10%  { transform: rotate(-8deg) translateX(-10px) scale(1.08); }
-  35%  { transform: rotate(25deg) translateX(50px) scale(1.25); }
-  60%  { transform: rotate(-5deg) translateX(-8px) scale(1.08); }
+  10%  { transform: rotate(-12deg) translateX(-15px) scale(1.1); }
+  30%  { transform: rotate(30deg) translateX(70px) scale(1.35); }
+  55%  { transform: rotate(-3deg) translateX(-5px) scale(1.05); }
   100% { transform: rotate(0deg) translateX(0) scale(1); }
 }
 
 @keyframes crit-anim-right {
   0%   { transform: rotate(0deg) translateX(0) scale(1); }
-  10%  { transform: rotate(8deg) translateX(10px) scale(1.08); }
-  35%  { transform: rotate(-25deg) translateX(-50px) scale(1.25); }
-  60%  { transform: rotate(5deg) translateX(8px) scale(1.08); }
+  10%  { transform: rotate(12deg) translateX(15px) scale(1.1); }
+  30%  { transform: rotate(-30deg) translateX(-70px) scale(1.35); }
+  55%  { transform: rotate(3deg) translateX(5px) scale(1.05); }
   100% { transform: rotate(0deg) translateX(0) scale(1); }
 }
 

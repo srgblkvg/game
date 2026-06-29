@@ -200,7 +200,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             const side = step.actor === 'attacker' ? 'left' : 'right';
             const frame = side === 'left' ? leftFrame : rightFrame;
             const card = side === 'left' ? leftCard : rightCard;
-            if (card) card.style.zIndex = '20';
+            if (card) card.style.zIndex = '30';
             // Снимаем attacking чтобы не конфликтовало с critting
             frame?.classList.remove('attacking');
             frame?.classList.add('critting');

@@ -188,11 +188,14 @@ export default function BestiaryPage() {
       setTimeout(() => frame?.classList.remove('blocking'), 600);
       showEffectText(side, 'ПОЛНЫЙ БЛОК!', '#9b59b6');
     } else if (step.type === 'crit') {
+      frame?.classList.remove('attacking');
       frame?.classList.add('critting');
+      if (card) card.style.zIndex = '30';
       setTimeout(() => {
         frame?.classList.remove('critting');
         frame!.style.filter = '';
         frame!.style.outline = '';
+        if (card) card.style.zIndex = '';
       }, 800);
       showEffectText(side, 'КРИТ!', '#e74c3c');
     } else if (step.type === 'stun') {
