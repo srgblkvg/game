@@ -65,7 +65,7 @@ export default function HistoryPage() {
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
         case 'jobs':return jobHistory;case 'tournaments':return tournamentHistory;case 'quests':return questHistory;
-        case 'messages':return privateMessages;case 'massacre':return massacreBattles;default:return[];
+        case 'messages':return privateMessages;case 'massacre':return [...massacreBattles].sort((a,b)=>b.id-a.id);default:return[];
     }})();
 
     const totalItems = currentData.length;
@@ -194,10 +194,6 @@ export default function HistoryPage() {
             const wid = data.winner_id;
             const wname = data.winner_name ?? '?';
             const ts = data.created_at;
-            // fallback: если данные не пришли, покажем сырые ключи
-            if (!pc && !tc && !wid) {
-                console.log('massacre entry raw:', JSON.stringify(data));
-            }
             return <EntryRow time={fmt(ts)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
                 <span><Icon icon="game-icons:battered-axe" width="14" height="14" className="inline mr-1"/>Резня — {pc} участников</span>
                 <span className={`font-bold ml-2 ${wid === user.id ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
