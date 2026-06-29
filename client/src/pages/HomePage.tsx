@@ -72,7 +72,7 @@ export default function HomePage() {
   const bankCooldownSec = getRemaining((character.lastBankVisit || 0) + 1800);
 
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 py-4 sm:pt-8">
       {character.totalBattles === 0 && character.level <= 1 && character.money <= 100 && (!character.inventory || character.inventory.length === 0) && (
         <div className="mb-4 p-3 bg-[rgba(52,152,219,0.1)] border border-[rgba(52,152,219,0.3)] rounded-lg text-sm text-[var(--color-text-secondary)] text-center">
           👋 Добро пожаловать в MMO Arena!<br />
