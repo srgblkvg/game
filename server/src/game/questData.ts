@@ -16,9 +16,9 @@ export const QUEST_INFO: Record<QuestType, { name: string; icon: string; desc: (
 };
 
 export const DIFFICULTIES = {
-    easy:   { label: '⭐ Простой',    rewardXpMult: 1, rewardMoneyMult: 1,  req: { hunt: 3,    arena: 1,  job: 600,  craft: 1, auction: 1 } } as const,
-    medium: { label: '⭐⭐ Средний',   rewardXpMult: 2, rewardMoneyMult: 5,  req: { hunt: 15,   arena: 5,  job: 3600, craft: 3, auction: 3 } } as const,
-    hard:   { label: '⭐⭐⭐ Сложный',  rewardXpMult: 3, rewardMoneyMult: 10, req: { hunt: 75,   arena: 25, job: 14400,craft: 6, auction: 6 } } as const,
+    easy:   { label: '⭐ Простой',    rewardXpMult: 1, rewardMoneyMult: 1,  req: { hunt: 5,    arena: 2,  job: 900,  craft: 2, auction: 2 } } as const,
+    medium: { label: '⭐⭐ Средний',   rewardXpMult: 2, rewardMoneyMult: 5,  req: { hunt: 25,   arena: 8,  job: 5400, craft: 5, auction: 5 } } as const,
+    hard:   { label: '⭐⭐⭐ Сложный',  rewardXpMult: 3, rewardMoneyMult: 10, req: { hunt: 100,  arena: 35, job: 18000,craft: 10,auction: 10 } } as const,
 } as const;
 
 export type DiffKey = keyof typeof DIFFICULTIES;
