@@ -216,7 +216,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <h3 className="text-[0.85rem] font-bold flex items-center gap-1">
                                             <Icon icon={card.icon} width="14" height="14" />{card.title}
                                         </h3>
-                                        <span className="text-[0.7rem] font-bold text-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10 px-2 py-0.5 rounded-full min-w-[24px] text-center">
+                                        <span className="text-[0.7rem] font-bold text-white bg-[var(--color-accent-danger)] px-2 py-0.5 rounded-full min-w-[24px] text-center">
                                             {massacreCount}
                                         </span>
                                     </div>
