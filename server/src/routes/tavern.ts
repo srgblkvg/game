@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { buildPlayerStats } from '../db/helpers';
 import { getGuildBonus } from '../game/guildBuildings';
+import { addToTreasury } from '../game/treasury';
 
 const router = Router();
 
@@ -131,6 +132,8 @@ router.post('/tavern/drink', async (req, res) => {
 
     await db.run('UPDATE users SET money = money - ?, activeDrink = ?, drinkUntil = ? WHERE id = ?',
         [drink.cost, drinkType, until, userId]);
+
+    addToTreasury(drink.cost, 'tavern').catch(() => {});
 
     res.json({ success: true, drink: { type: drinkType, name: drink.name, bonuses: drink.bonuses, until } });
 });
