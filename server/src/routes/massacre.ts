@@ -144,7 +144,7 @@ router.get('/massacre/log/:eventId', async (req, res) => {
 
     res.json({
         event: { id: event.id, status: event.status, participant_count: participants.length },
-        participants: participants.map(p => ({ id: p.user_id, name: p.username, level: p.level, alive: p.alive })),
+        participants: participants.map(p => ({ id: p.user_id, name: p.username, level: p.level, alive: p.alive, hp_max: p.hp_max, hp_current: p.hp_current })),
         turns: turnsWithFlag,
     });
 });

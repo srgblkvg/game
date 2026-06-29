@@ -321,6 +321,7 @@ export default function MassacrePage() {
                             const isDead = p.alive === false && vizStep >= totalVizSteps - 1;
                             const isActor = currentTurn?.actor_id === p.id;
                             const isTarget = currentTurn?.target_id === p.id;
+                            const isMe = p.id === user.id;
                             return (
                                 <div key={p.id} className={`relative rounded-lg p-2 text-center transition-all ${
                                     isDead ? 'opacity-40 grayscale' : ''
@@ -328,7 +329,7 @@ export default function MassacrePage() {
                                     isActor ? 'ring-2 ring-red-500 bg-red-500/10' :
                                     isTarget ? 'ring-2 ring-yellow-500 bg-yellow-500/10' :
                                     'bg-[var(--color-bg-secondary)]'
-                                }`}>
+                                } ${isMe && !isActor && !isTarget ? 'ring-2 ring-[var(--color-accent-info)]' : ''}`}>
                                     <p className="text-[0.6rem] font-bold truncate mb-0.5">{p.name}</p>
                                     <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-0.5">
                                         <div className="h-full rounded-full transition-all duration-300" style={{
@@ -376,10 +377,6 @@ export default function MassacrePage() {
                     <div className="flex flex-wrap justify-center gap-3 mt-2 text-[0.6rem] text-[var(--color-text-muted)]">
                         <span>🟥 — атакующий</span>
                         <span>🟨 — цель атаки</span>
-                        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-green-400 rounded-sm inline-block" /> HP &gt; 50%</span>
-                        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-yellow-400 rounded-sm inline-block" /> HP 25–50%</span>
-                        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-red-500 rounded-sm inline-block" /> HP &lt; 25%</span>
-                        <span>☠ — мёртв</span>
                     </div>
                 </div>
             )}
