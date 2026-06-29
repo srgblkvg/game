@@ -51,7 +51,8 @@ export default function AdminGame() {
         setActions(await ar.json());
         setMobs(await mr.json());
         setLocations(await lr.json());
-        setFloors(await fr.json());
+        const frData = await fr.json();
+        setFloors(Array.isArray(frData) ? frData : (frData.floors || []));
     };
 
     useEffect(() => { loadAll(); }, []);
