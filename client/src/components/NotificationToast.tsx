@@ -111,8 +111,8 @@ export default function NotificationToast() {
                     />
                     <div className="min-w-0 flex-1">
                         <p className="text-xs text-[var(--color-text-primary)] leading-snug">{t.message}</p>
-                        {t.data && (
-                            <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-0.5">{t.data}</p>
+                        {t.type === 'battle_result' && (
+                            <p className="text-[0.6rem] text-[var(--color-accent-info)] mt-0.5">Нажмите для подробностей</p>
                         )}
                     </div>
                     <button

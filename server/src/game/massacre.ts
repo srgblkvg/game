@@ -222,7 +222,7 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
         pushNotification(userId, {
             type: 'battle_result',
             message: `Резня завершена! Победитель: ${winnerState.name}. Участников: ${participants.length}. Приз: ${prizePool} сер. +10 XP.`,
-            data: JSON.stringify({ eventId, participantCount: participants.length, winnerName: winnerState.name, winnerId, prizePool, path: '/history?tab=massacre' }),
+            data: JSON.stringify({ eventId, participantCount: participants.length, winnerName: winnerState.name, winnerId, prizePool, path: `/massacre?eventId=${eventId}` }),
         });
     }
 }
