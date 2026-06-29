@@ -326,10 +326,10 @@ export default function MassacrePage() {
                                 <div key={p.id} className={`relative rounded-lg p-2 text-center transition-all ${
                                     isDead ? 'opacity-40 grayscale' : ''
                                 } ${
-                                    isActor ? 'ring-2 ring-red-500 bg-red-500/10' :
-                                    isTarget ? 'ring-2 ring-yellow-500 bg-yellow-500/10' :
+                                    isActor ? 'ring-2 ring-[var(--color-accent-info)] bg-blue-500/10' :
+                                    isTarget ? 'ring-2 ring-red-500 bg-red-500/10' :
                                     'bg-[var(--color-bg-secondary)]'
-                                } ${isMe && !isActor && !isTarget ? 'ring-2 ring-[var(--color-accent-info)]' : ''}`}>
+                                } ${isMe && !isActor && !isTarget ? 'ring-2 ring-[var(--color-accent-warning)]' : ''}`}>
                                     <p className="text-[0.6rem] font-bold truncate mb-0.5">{p.name}</p>
                                     <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-0.5">
                                         <div className="h-full rounded-full transition-all duration-300" style={{
@@ -375,8 +375,9 @@ export default function MassacrePage() {
                     </div>
                     {/* Легенда */}
                     <div className="flex flex-wrap justify-center gap-3 mt-2 text-[0.6rem] text-[var(--color-text-muted)]">
-                        <span>🟥 — атакующий</span>
-                        <span>🟨 — цель атаки</span>
+                        <span>🟦 — атакующий</span>
+                        <span>🟥 — цель атаки</span>
+                        <span>🟨 — ваш персонаж</span>
                     </div>
                 </div>
             )}
