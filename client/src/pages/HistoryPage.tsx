@@ -189,12 +189,15 @@ export default function HistoryPage() {
             </EntryRow>;
         }
         if (type === 'massacre') {
-            return <EntryRow time={fmt(data.created_at)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
-                <span><Icon icon="game-icons:battered-axe" width="14" height="14" className="inline mr-1"/>Резня — {data.participant_count} участников</span>
-                <span className={`font-bold ml-2 ${data.winner_id === user.id ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
-                    {data.winner_id === user.id ? '🏆 Победитель' : data.participated ? 'Поражение' : ''}
+            const pc = data.participantCount ?? data.participant_count ?? 0;
+            const tc = data.turnCount ?? data.turn_count ?? 0;
+            const wid = data.winnerId ?? data.winner_id;
+            return <EntryRow time={fmt(data.created_at || data.createdAt)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
+                <span><Icon icon="game-icons:battered-axe" width="14" height="14" className="inline mr-1"/>Резня — {pc} участников</span>
+                <span className={`font-bold ml-2 ${wid === user.id ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
+                    {wid === user.id ? '🏆 Победитель' : data.participated ? 'Поражение' : ''}
                 </span>
-                <span className="text-[var(--color-text-muted)] ml-1">{data.turn_count} ходов</span>
+                <span className="text-[var(--color-text-muted)] ml-1">{tc} ходов</span>
             </EntryRow>;
         }
         return null;
