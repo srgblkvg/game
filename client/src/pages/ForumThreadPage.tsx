@@ -67,7 +67,6 @@ function PostCard({ post, children, onReply, depth = 0 }: { post: any; children?
 
 export default function ThreadPage() {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
     const [thread, setThread] = useState<any>(null);
     const [posts, setPosts] = useState<any[]>([]);
     const [page, setPage] = useState(1);
