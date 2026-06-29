@@ -24,7 +24,7 @@ function formatTime(seconds: number) {
     return `${m} мин`;
 }
 
-const roomNames: Record<string, string> = { closet: 'Чулан', bed: 'Койка', chamber: 'Покой' };
+const roomNames: Record<string, string> = { closet: 'Чулан', bed: 'Койка', chamber: 'Аппартаменты' };
 const roomIcons: Record<string, string> = { closet: 'game-icons:wooden-crate', bed: 'game-icons:bed', chamber: 'game-icons:castle' };
 const roomRates: Record<string, number> = { closet: 3, bed: 10, chamber: 50 };
 
