@@ -137,6 +137,12 @@ export default function MassacrePage() {
                 Резня
             </h1>
 
+            <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
+                Хаотичный массовый PvP-бой без правил. Вход — {formatMoney(100)}. Сбор участников длится 30 минут,
+                затем все сражаются по очереди, атакуя случайного противника. Оглушённый пропускает ход.
+                Победитель получает +10 опыта и весь призовой фонд. Выживает сильнейший!
+            </p>
+
             {/* Сбор участников */}
             {isGathering && (
                 <Card className="text-center">
