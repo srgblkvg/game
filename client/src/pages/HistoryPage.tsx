@@ -65,7 +65,7 @@ export default function HistoryPage() {
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
         case 'jobs':return jobHistory;case 'tournaments':return tournamentHistory;case 'quests':return questHistory;
-        case 'messages':return privateMessages;case 'massacre':return massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre',ts:new Date(m.created_at).getTime(),data:m})).sort((a,b)=>b.ts-a.ts);default:return[];
+        case 'messages':return privateMessages;case 'massacre':return allEntries.filter(e=>e.type==='massacre');default:return[];
     }})();
 
     const totalItems = currentData.length;
