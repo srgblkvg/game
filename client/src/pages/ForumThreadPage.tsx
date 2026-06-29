@@ -41,7 +41,8 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
     const [editText, setEditText] = useState('');
     const isLong = post.content.length > 500;
     const displayContent = editing ? editText : (isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content);
-    const dateStr = fmtSafeDate(post.created_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const dateStr = fmtSafeDate(post.updated_at || post.created_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const isEdited = !!post.updated_at;
     const canEdit = userId && post.author_id === userId;
 
     const handleSaveEdit = async () => {
@@ -72,6 +73,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
                                 <a href={`/guild/${post.author_guild}`} className="text-[0.6rem] text-[var(--color-accent-success)] hover:underline no-underline" onClick={e => e.stopPropagation()}>[{post.author_guild_name}]</a>
                             )}
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">{dateStr}</span>
+                            {isEdited && <span className="text-[0.55rem] text-[var(--color-text-muted)]">(ред.)</span>}
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">#{post.id}</span>
                             {isFirst && <span className="text-[0.55rem] text-[var(--color-accent-warning)] font-bold">Автор</span>}
                         </div>
