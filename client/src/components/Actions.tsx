@@ -152,6 +152,27 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
 
                 const highlighted = highlightCard === card.title;
 
+                // Замок — full-width card with button on the side
+                if (card.title === 'Замок') {
+                    const bgStyle = card.bg_image ? { backgroundImage: `url(${card.bg_image})` } : {};
+                    return (
+                        <div key={i} className="col-span-full relative group" id={`action-card-${card.title}`}>
+                            <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-row items-center gap-3 overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
+                                <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
+                                <div className="relative flex-1 min-w-0">
+                                    <h3 className="text-[0.85rem] font-bold flex items-center gap-1">
+                                        <Icon icon={card.icon} width="14" height="14" />{card.title}
+                                    </h3>
+                                    <p className="text-[0.7rem] text-[var(--color-text-muted)]">{card.subtitle}</p>
+                                </div>
+                                <div className="relative shrink-0">
+                                    <Button variant="danger" size="xs" onClick={() => { if (card.path) navigate(card.path); }}>Перейти</Button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
                 if (isArena) {
                     return <ArenaFlipCard key={i} card={card} disabled={disabled} cdSec={cdSec} btnText={btnText}
                         arenaDifficulty={arenaDifficulty} setArenaDifficulty={setArenaDifficulty} navigate={navigate}
