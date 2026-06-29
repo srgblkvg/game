@@ -12,11 +12,28 @@ const MAX_PLAYERS = 8;
 const REGISTRATION_WINDOW = 60 * 60; // 1 час
 
 const divisions = [
-    { name: 'copper', label: 'Медный', minLevel: 1, maxLevel: 15, basePool: 500, icon: '🥉' },
-    { name: 'steel', label: 'Стальной', minLevel: 16, maxLevel: 35, basePool: 2000, icon: '🥈' },
-    { name: 'mithril', label: 'Мифриловый', minLevel: 36, maxLevel: 60, basePool: 8000, icon: '🥇' },
-    { name: 'adamant', label: 'Адамантовый', minLevel: 61, maxLevel: 999, basePool: 25000, icon: '👑' },
+    { name: 'copper',    label: 'Медный',      tier: 1,  minLevel: 1,  maxLevel: 5,  icon: '🥉' },
+    { name: 'bronze',    label: 'Бронзовый',    tier: 2,  minLevel: 3,  maxLevel: 7,  icon: '🥉' },
+    { name: 'iron',      label: 'Железный',     tier: 3,  minLevel: 5,  maxLevel: 9,  icon: '🥈' },
+    { name: 'steel',     label: 'Стальной',     tier: 4,  minLevel: 7,  maxLevel: 11, icon: '🥈' },
+    { name: 'silver',    label: 'Серебряный',   tier: 5,  minLevel: 9,  maxLevel: 13, icon: '🥈' },
+    { name: 'gold',      label: 'Золотой',      tier: 6,  minLevel: 11, maxLevel: 15, icon: '🥇' },
+    { name: 'platinum',  label: 'Платиновый',   tier: 7,  minLevel: 13, maxLevel: 17, icon: '🥇' },
+    { name: 'mithril',   label: 'Мифриловый',   tier: 8,  minLevel: 15, maxLevel: 19, icon: '🥇' },
+    { name: 'adamant',   label: 'Адамантиновый',tier: 9,  minLevel: 17, maxLevel: 21, icon: '👑' },
+    { name: 'orichalcum',label: 'Орихалковый',  tier: 10, minLevel: 19, maxLevel: 999,icon: '💎' },
 ];
+const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
+
+// Расчёт призового фонда дивизиона: 50% казны * tier / TIERS_TOTAL
+async function calcDivisionPool(tier: number): Promise<number> {
+    try {
+        const { getTreasury } = await import('../game/treasury');
+        const treasury = await getTreasury();
+        const half = Math.floor(treasury * 0.5);
+        return Math.floor(half * tier / TIERS_TOTAL);
+    } catch { return 0; }
+}
 
 // ---------------------------------------------------------------------------
 // Брекет
@@ -400,9 +417,10 @@ export async function autoAdvance(tournamentId: number) {
             }
             const divConfig = divisions.find(d => d.name === t.division)!;
             const now2 = Math.floor(Date.now() / 1000);
+            const pool = await calcDivisionPool(divConfig.tier);
             await db.run(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, divConfig.basePool, new Date().toISOString(), MAX_PLAYERS]
+                [t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, pool, new Date().toISOString(), MAX_PLAYERS]
             );
         }
     }
@@ -451,9 +469,10 @@ export async function getOrCreateTournament(type?: string) {
                   : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
                 if (Date.now() < ts + 14400 * 1000) continue;
             }
+            const pool = await calcDivisionPool(div.tier);
             await db.run(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                [div.name, 'registration', now, now + REGISTRATION_WINDOW, div.basePool, new Date().toISOString(), 'official', MAX_PLAYERS]
+                [div.name, 'registration', now, now + REGISTRATION_WINDOW, pool, new Date().toISOString(), 'official', MAX_PLAYERS]
             );
         }
     }
