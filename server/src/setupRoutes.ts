@@ -44,6 +44,7 @@ import vkPaymentsRoutes from './routes/vkPayments';
 import vkBridgeAuthRoutes from './routes/vkBridgeAuth';
 import yukassaRoutes from './routes/yukassa';
 import treasuryRoutes from './routes/treasury';
+import forumRoutes from './routes/forum';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -135,6 +136,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', tournamentRoutes);
   app.use('/api', collectionsRoutes);
   app.use('/api/overflow', overflowRoutes);
+  app.use('/api', forumRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);

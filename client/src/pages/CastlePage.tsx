@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
+import { fmtSafeDate } from '../utils/date';
 
 const links = [
     { path: '/tournament', icon: 'game-icons:trophy-cup', title: 'Турниры', desc: 'Участвуйте в турнирах и выигрывайте призы' },
@@ -14,9 +15,11 @@ const links = [
 export default function CastlePage() {
     const navigate = useNavigate();
     const [treasury, setTreasury] = useState<number | null>(null);
+    const [latestThreads, setLatestThreads] = useState<any[]>([]);
 
     useEffect(() => {
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
+        fetch('/api/forum/latest').then(r => r.json()).then(d => setLatestThreads(d || [])).catch(() => {});
     }, []);
 
     return (
@@ -40,7 +43,7 @@ export default function CastlePage() {
                 </div>
             )}
 
-            <div className="space-y-3">
+            <div className="space-y-3 mb-4">
                 {links.map(link => (
                     <Card
                         key={link.path}
@@ -55,6 +58,32 @@ export default function CastlePage() {
                         <Icon icon="game-icons:arrow-right" width="16" height="16" className="text-[var(--color-text-muted)] shrink-0" />
                     </Card>
                 ))}
+            </div>
+
+            {/* Форум */}
+            <div className="mb-4">
+                <h2 className="text-sm font-bold mb-2 flex items-center gap-1 cursor-pointer hover:text-[var(--color-accent-info)]"
+                    onClick={() => navigate('/forum')}>
+                    <Icon icon="game-icons:discussion" width="16" height="16" />Форум
+                </h2>
+                {latestThreads.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">Тем пока нет</p>
+                ) : (
+                    <div className="space-y-2">
+                        {latestThreads.map((t: any) => (
+                            <Card key={t.id} className="p-3 cursor-pointer hover:border-[var(--color-accent-info)] transition-colors"
+                                onClick={() => navigate(`/forum/${t.id}`)}>
+                                <h3 className="text-sm font-bold truncate">{t.title}</h3>
+                                <div className="flex justify-between text-[0.65rem] text-[var(--color-text-muted)] mt-1">
+                                    <span>{t.author_name} • {fmtSafeDate(t.createdAt)}</span>
+                                    {t.last_poster_name && (
+                                        <span>{t.last_poster_name} • {fmtSafeDate(t.updatedAt)}</span>
+                                    )}
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
