@@ -29,6 +29,30 @@ router.post('/upload-image', async (req, res) => {
     res.json({ success: true, url });
 });
 
+// Массовая загрузка по существующим путям (без переименования)
+router.post('/upload-bulk', async (req, res) => {
+    const { images } = req.body; // [{ targetPath: '/uploads/admin/floors/x.webp', dataUrl: 'data:...' }]
+    if (!Array.isArray(images)) return res.status(400).json({ error: 'images must be array' });
+    const results: { targetPath: string; success: boolean; error?: string }[] = [];
+    for (const img of images) {
+        try {
+            const { targetPath, dataUrl } = img;
+            if (!targetPath || !dataUrl) { results.push({ targetPath, success: false, error: 'missing fields' }); continue; }
+            const match = dataUrl.match(/^data:image\/(webp|png|jpeg|jpg);base64,(.+)$/);
+            if (!match) { results.push({ targetPath, success: false, error: 'bad format' }); continue; }
+            const relPath = targetPath.replace(/^\/uploads\/admin\//, '');
+            const fullPath = path.join(ADMIN_UPLOADS_DIR, relPath);
+            const dir = path.dirname(fullPath);
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(fullPath, Buffer.from(match[2]!, 'base64'));
+            results.push({ targetPath, success: true });
+        } catch (e: any) {
+            results.push({ targetPath: img.targetPath || '', success: false, error: e.message });
+        }
+    }
+    res.json({ results });
+});
+
 // Список загруженных изображений
 router.get('/images', async (req, res) => {
     const folder = (req.query.folder as string) || '';

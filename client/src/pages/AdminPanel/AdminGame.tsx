@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import ImageUploader from '../../components/ImageUploader';
@@ -34,6 +34,8 @@ export default function AdminGame() {
     const [floors, setFloors] = useState<any[]>([]);
     const [editingFloor, setEditingFloor] = useState<any>(null);
     const [newFloor, setNewFloor] = useState({ name: '', background: '', sort_order: 0 });
+    const [bulkUploading, setBulkUploading] = useState(false);
+    const floorFileRefs = useRef<Map<number, HTMLInputElement>>(new Map());
 
     const api = async (method: string, url: string, body?: any) => {
         const r = await fetch(url, { method, headers: { ...getHeaders(), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
@@ -150,6 +152,58 @@ export default function AdminGame() {
                         </div>
                     ))}
                 </div>
+            </Card>
+            <Card className="mt-4">
+                <h3 className="font-bold mb-2">Массовая загрузка фонов</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">Выберите файлы для этажей — они сохранятся под существующими именами из БД.</p>
+                <div className=\"space-y-2\">
+                    {floors.filter(f => f.background).map((f: any) => {
+                        const exists = f.background && f.background.startsWith('/uploads/');
+                        return (
+                            <div key={f.id} className="flex items-center gap-2 text-sm">
+                                <span className="w-32 truncate">{f.name}</span>
+                                <span className="text-xs text-[var(--color-text-muted)] truncate flex-1">{f.background}</span>
+                                <input type="file" accept="image/*" className="text-xs"
+                                    ref={el => { if (el) floorFileRefs.current.set(f.id, el); }}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+                {floors.some(f => f.background && f.background.startsWith('/uploads/')) && (
+                    <Button variant="primary" size="sm" className="mt-3" disabled={bulkUploading}
+                        onClick={async () => {
+                            setBulkUploading(true);
+                            const images: { targetPath: string; dataUrl: string }[] = [];
+                            for (const f of floors) {
+                                if (!f.background || !f.background.startsWith('/uploads/')) continue;
+                                const input = floorFileRefs.current.get(f.id);
+                                const file = input?.files?.[0];
+                                if (!file) continue;
+                                const dataUrl = await new Promise<string>((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => resolve(reader.result as string);
+                                    reader.readAsDataURL(file);
+                                });
+                                images.push({ targetPath: f.background, dataUrl });
+                            }
+                            if (images.length === 0) { setBulkUploading(false); return; }
+                            try {
+                                const res = await fetch('/api/admin/upload-bulk', {
+                                    method: 'POST',
+                                    headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ images }),
+                                });
+                                const data = await res.json();
+                                const ok = data.results?.filter((r: any) => r.success).length || 0;
+                                setMessage(`Загружено ${ok}/${images.length}. Обновите страницу.`);
+                                loadAll();
+                            } catch (e: any) { setMessage(e.message); }
+                            finally { setBulkUploading(false); }
+                        }}>
+                        {bulkUploading ? 'Загрузка...' : 'Загрузить всё'}
+                    </Button>
+                )}
             </Card>
         </>
     );
