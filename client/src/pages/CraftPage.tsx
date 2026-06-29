@@ -300,7 +300,7 @@ export default function CraftPage() {
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:anvil" width="22" height="22" className="inline mr-2"/>Ремесло</h2>
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
-                Создавайте материалы и улучшайте предметы. Добывайте ресурсы в PvE, крафтите материалы из трёх предыдущей редкости. Улучшайте снаряжение камнями — с шансом на успех.
+                Создавайте материалы и улучшайте предметы в верстаке. Добывайте ресурсы в PvE, крафтите материалы из трёх предыдущей редкости. Улучшайте снаряжение камнями — с шансом на успех.
             </p>
 
             {/* Инструкция */}
@@ -319,30 +319,29 @@ export default function CraftPage() {
                         <div>
                             <h4 className="font-bold text-[var(--color-text-primary)]">📦 Материалы</h4>
                             <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>Материалы добываются с мобов в PvE</li>
+                                <li>Материалы добываются с монстров в PvE</li>
                                 <li>Для создания материала нужно <b>3 материала предыдущей редкости</b></li>
-                                <li>Цены снижены в 4 раза: от 5 до 3000 монет</li>
+                                <li>Из одного материала и серебра в верстаке можно создать случайный предмет редкости материала</li>
                             </ul>
                         </div>
 
                         <div>
                             <h4 className="font-bold text-[var(--color-text-primary)]">💎 Камни улучшения</h4>
                             <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>Камни <b>не создаются</b> в ремесле — только добываются с мобов (5% шанс)</li>
+                                <li>Камни <b>не создаются</b> в верстаке — только добываются с монстров (5% шанс)</li>
                                 <li><span className="text-[var(--color-accent-success)]">Камень любой редкости</span> может улучшить предмет <span className="text-[var(--color-accent-success)]">любой редкости</span></li>
-                                <li>Стоимость и шанс зависят от <b>редкости предмета</b> и <b>уровня заточки</b></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">📋 Как улучшить:</h4>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">📋 Как улучшить в верстаке:</h4>
                             <ol className="list-decimal pl-4 mt-1 space-y-0.5">
-                                <li>Перетащите <b>предмет</b> и <b>камень улучшения</b> в слоты ремесла</li>
+                                <li>Поместите <b>предмет</b> и <b>камень улучшения</b> в верстак</li>
                                 <li>Нажмите <b>«Улучшить»</b></li>
-                                <li>При успехе — предмет получает +1 уровень, характеристики +10% за уровень</li>
-                                <li>При неудаче +1..+3 — теряется только камень</li>
-                                <li>При неудаче +4..+6 — теряется камень и предмет</li>
-                                <li>При неудаче +7..+10 — <span className="text-[var(--color-accent-danger)]">предмет разрушается</span></li>
+                                <li>+1 уровень предмета даёт <b>+10% к характеристикам</b> предмета</li>
+                                <li><b>+1:</b> 100% успех</li>
+                                <li><b>+2 до +6:</b> при неудаче разрушается <b>только камень</b></li>
+                                <li><b>+7 до +10:</b> <span className="text-[var(--color-accent-danger)]">при неудаче предмет разрушается!</span></li>
                             </ol>
                         </div>
 
@@ -351,25 +350,20 @@ export default function CraftPage() {
                             <ul className="list-disc pl-4 mt-1 space-y-0.5">
                                 <li>+1: 100%</li>
                                 <li>+2: 90%</li>
-                                <li>+3: 70%</li>
-                                <li>+4: 50%</li>
-                                <li>+5: 25%</li>
-                                <li>+6: 10%</li>
-                                <li>+7: 5%</li>
-                                <li>+8: 3%</li>
-                                <li>+9: 2%</li>
+                                <li>+3: 75%</li>
+                                <li>+4: 60%</li>
+                                <li>+5: 40%</li>
+                                <li>+6: 20%</li>
+                                <li>+7: 10%</li>
+                                <li>+8: 5%</li>
+                                <li>+9: 3%</li>
                                 <li>+10: 1%</li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">💡 Советы:</h4>
-                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>Уровни +1..+3 безопасны — теряется только камень</li>
-                                <li>С +4 рискуете предметом, с +7 — <span className="text-[var(--color-accent-danger)]">разрушение</span></li>
-                                <li>+7 даёт <span className="text-[var(--color-accent-success)]">+5 рейтинга</span>, +10 — <span className="text-[var(--color-accent-success)]">+50</span></li>
-                                <li>Характеристики: +10% за уровень (предмет +5 = +50% к статам)</li>
-                            </ul>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">💍 Бижутерия</h4>
+                            <p className="mt-1">В бижутерии (амулет, кольца, пояс) <b>1 ед. характеристики не даёт +1% к второстепенным характеристикам</b> (крит, уклонение, блок).</p>
                         </div>
                     </div>
                 )}
@@ -385,8 +379,9 @@ export default function CraftPage() {
             />
 
             <div className="flex gap-8 flex-wrap mt-4">
-                {/* Ремесло-блок */}
+                {/* Верстак */}
                 <div className="flex-shrink-0 w-full max-w-[256px] mx-auto bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-light)] rounded-xl p-4 flex flex-col gap-2">
+                    <h3 className="text-center text-sm font-bold text-[var(--color-text-primary)]">🔨 Верстак</h3>
                     {/* Сетка слотов */}
                     <div className="grid grid-cols-[repeat(3,44px)] grid-rows-[repeat(3,44px)] gap-1 justify-center">
                         {craftSlots.map((item, index) => (
@@ -435,7 +430,11 @@ export default function CraftPage() {
                             <div>Улучшение до уровня +{upgradeInfo.nextLevel}</div>
                             <div>Шанс: {upgradeInfo.chance}%</div>
                             <div>Стоимость: {formatMoney(upgradeInfo.cost)}</div>
-                            <div className="text-[var(--color-accent-danger)] font-bold mt-1">При неудаче предмет будет разрушен!!!</div>
+                            {upgradeInfo.nextLevel <= 6 ? (
+                                <div className="text-[var(--color-accent-warning)] mt-1">При неудаче разрушится только камень</div>
+                            ) : (
+                                <div className="text-[var(--color-accent-danger)] font-bold mt-1">ВНИМАНИЕ!!! При неудаче предмет будет разрушен!!!</div>
+                            )}
                         </div>
                     )}
 
