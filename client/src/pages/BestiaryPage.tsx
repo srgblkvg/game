@@ -381,7 +381,7 @@ export default function BestiaryPage() {
           <h1 className="text-xl font-bold mb-4 text-[var(--color-accent-danger)]">
               <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
           </h1>
-          <p className="text-sm text-[var(--color-text-muted)] mb-4 text-center">
+          <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
               Сражайтесь с монстрами на разных этажах, получайте опыт, серебро и ценные трофеи. Чем выше этаж — тем сильнее враги и богаче награда.
           </p>
           {cooldownRemaining > 0 && (

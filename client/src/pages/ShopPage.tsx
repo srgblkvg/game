@@ -86,8 +86,8 @@ export default function ShopPage() {
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:buy-card" width="22" height="22" className="inline mr-2"/>Магазин</h2>
 
-            <p className="text-sm text-[var(--color-text-muted)] mb-4 text-center">
-                Покупайте случайное снаряжение за серебро. Качество зависит от вашего уровня. Используйте поиск по названию, типу или характеристикам.
+            <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
+                Базовые предметы экипировки для первых шагов в игре. Нельзя надеть два одинаковых кольца.
             </p>
 
             {message && <p className="mb-3 text-[var(--color-accent-success)] text-sm">{message}</p>}

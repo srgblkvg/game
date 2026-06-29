@@ -121,8 +121,8 @@ export default function JobsPage() {
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:swap-bag" width="22" height="22" className="inline mr-2"/>Работы</h2>
 
-            <p className="text-sm text-[var(--color-text-muted)] mb-4 text-center">
-                Выберите, сколько времени готовы потратить — работа будет выбрана случайно.
+            <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
+                Отправляйте персонажа в AFK-экспедицию. Выберите длительность — работа будет выбрана случайно. Награда зависит от времени: чем дольше, тем больше серебра и опыта.
             </p>
 
             {error && <p className="text-[var(--color-accent-danger)] mb-4 text-center text-sm">{error}</p>}
