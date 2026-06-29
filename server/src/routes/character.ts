@@ -144,6 +144,7 @@ router.get('/character/me', async (req, res) => {
         protectionUntil: user.protectionUntil || 0,
         lastHpUpdate: user.lastHpUpdate || 0,
         lastPveAttackTime: user.lastPveAttackTime || 0,
+        pvpCdSec: (user.premiumUntil || 0) > now ? 300 : 600,
         attackCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 300 : 600) - (now - (user.lastAttackTime || 0))),
         pveCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 300 : 600) - (now - (user.lastPveAttackTime || 0))),
         inventorySlots: user.inventorySlots || 10,

@@ -78,6 +78,7 @@ export interface Character {
   totalCollectionItems?: number;
   attackCooldownSec?: number;
   pveCooldownSec?: number;
+  pvpCdSec?: number;
   lastPveAttackTime?: number;
   lastBankVisit?: number;
   bank?: number;

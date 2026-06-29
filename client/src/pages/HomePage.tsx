@@ -52,9 +52,10 @@ export default function HomePage() {
 
 
   if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
-  const attackCooldownSec = character.attackCooldownSec ?? 0;
+  const pvpCd = character.pvpCdSec ?? 600;
+  const attackCooldownSec = getRemaining((character.lastAttackTime || 0) + pvpCd);
   const canAttack = attackCooldownSec <= 0;
-  const pveCooldownSec = character.pveCooldownSec ?? 0;
+  const pveCooldownSec = getRemaining((character.lastPveAttackTime || 0) + pvpCd);
   const bankCooldownSec = getRemaining((character.lastBankVisit || 0) + 1800);
 
   return (
