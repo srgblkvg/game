@@ -48,6 +48,7 @@ function isTextInput(el: HTMLElement): boolean {
 }
 
 function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string) {
+  el.focus();
   const start = el.selectionStart ?? el.value.length;
   const end = el.selectionEnd ?? el.value.length;
   el.setRangeText(char, start, end, 'end');
@@ -55,6 +56,7 @@ function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string) {
 }
 
 function deleteChar(el: HTMLInputElement | HTMLTextAreaElement) {
+  el.focus();
   const start = el.selectionStart ?? el.value.length;
   const end = el.selectionEnd ?? el.value.length;
   if (start !== end) {
@@ -107,9 +109,6 @@ export default function VkKeyboard() {
           stopRepeat();
           return;
         }
-        // Check input still exists and has value
-        const s = input.selectionStart ?? input.value.length;
-        // Only repeat if cursor is after at least one char
         insertChar(input, char);
       }, 50);
     }, 600);
