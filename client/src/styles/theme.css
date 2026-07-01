@@ -135,18 +135,15 @@ body,
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px); /* 40px = высота свёрнутого чат-бара */
 }
 
-/* VK iframe: scroll fix (original approach) */
-html.vk-iframe,
+/* VK iframe: html never scrolls, body at natural height (no dvh — avoids keyboard resize) */
+html.vk-iframe {
+  overflow: hidden;
+}
 html.vk-iframe body {
-  height: 100vh;
-  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
-}
-
-/* VK WebView fixes: no transparency, solid backgrounds, fixed header */
-html.vk-iframe body {
-  overflow-y: auto !important;
 }
 /* No gradient — solid background for VK */
 html.vk-iframe {
