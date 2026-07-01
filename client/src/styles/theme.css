@@ -135,13 +135,20 @@ body,
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px); /* 40px = высота свёрнутого чат-бара */
 }
 
-/* VK iframe: фиксированная высота + скролл */
-html.vk-iframe,
+/* VK iframe: position fixed — не зависит от dvh, не прыгает при клавиатуре */
+html.vk-iframe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
 html.vk-iframe body {
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  margin: 0;
 }
 
 /* VK WebView fixes: no transparency, solid backgrounds, fixed header */
@@ -165,6 +172,7 @@ html.vk-iframe #site-header {
 }
 /* Content offset for fixed header */
 html.vk-iframe #root {
+  min-height: 100%;
   padding-top: 80px !important;
 }
 /* Remove transparency from right panel */
