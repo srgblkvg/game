@@ -35,6 +35,9 @@ const SHIFT_MAP: Record<string, string> = {
   'c': 'C', 'v': 'V', 'b': 'B', 'n': 'N', 'm': 'M',
 };
 
+// Keys that should NOT repeat on long-press
+const NO_REPEAT = new Set(['⇧', '⌫', '␣', '↩', 'ru', 'en', '123', 'abc']);
+
 function isTextInput(el: HTMLElement): boolean {
   if (el.tagName === 'TEXTAREA') return true;
   if (el.tagName === 'INPUT') {
@@ -44,12 +47,22 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function insertText(el: HTMLInputElement | HTMLTextAreaElement, text: string) {
+function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string) {
   const start = el.selectionStart ?? el.value.length;
   const end = el.selectionEnd ?? el.value.length;
-  el.setRangeText(text, start, end, 'end');
+  el.setRangeText(char, start, end, 'end');
   el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.focus();
+}
+
+function deleteChar(el: HTMLInputElement | HTMLTextAreaElement) {
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? el.value.length;
+  if (start !== end) {
+    el.setRangeText('', start, end, 'end');
+  } else if (start > 0) {
+    el.setRangeText('', start - 1, start, 'start');
+  }
+  el.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 export default function VkKeyboard() {
@@ -57,69 +70,84 @@ export default function VkKeyboard() {
   const [shift, setShift] = useState(false);
   const [active, setActive] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const kbRef = useRef<HTMLDivElement>(null);
-  const backspaceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const repeatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const repeatKey = useRef<string | null>(null);
 
-  // Only render in VK WebView (mobile iframe)
-  if (typeof document !== 'undefined' && !document.documentElement.classList.contains('vk-iframe')) {
-    return null;
-  }
+  // Only render in VK mobile app WebView (not m.vk.com, not desktop)
+  const isVKWebView = typeof document !== 'undefined'
+    && document.documentElement.classList.contains('vk-iframe')
+    && typeof window.vkBridge?.isWebView === 'function'
+    && window.vkBridge.isWebView();
 
-  // Long-press backspace: first delete immediately, wait 200ms, then repeat
-  const startBackspace = useCallback(() => {
-    if (!active) return;
-    const input = active; // capture
-    // First delete immediately
-    const start = input.selectionStart ?? input.value.length;
-    const end = input.selectionEnd ?? input.value.length;
-    if (start !== end) {
-      insertText(input, '');
-    } else if (start > 0) {
-      input.setSelectionRange(start - 1, start);
-      insertText(input, '');
+  // Stop repeat on cleanup
+  const stopRepeat = useCallback(() => {
+    if (repeatTimer.current) {
+      clearTimeout(repeatTimer.current);
+      repeatTimer.current = null;
     }
-    // Wait 200ms before starting repeat
-    backspaceTimer.current = setTimeout(() => {
-      // Check still active after delay
-      if (!active || active !== input) return;
-      backspaceTimer.current = setInterval(() => {
-        if (!active) { stopBackspace(); return; }
-        const s = active.selectionStart ?? active.value.length;
-        const e = active.selectionEnd ?? active.value.length;
-        if (s !== e) {
-          insertText(active, '');
-        } else if (s > 0) {
-          active.setSelectionRange(s - 1, s);
-          insertText(active, '');
-        } else {
-          stopBackspace();
-        }
-      }, 50);
-    }, 200);
-  }, [active]);
-
-  const stopBackspace = useCallback(() => {
-    if (backspaceTimer.current) {
-      clearInterval(backspaceTimer.current);
-      backspaceTimer.current = null;
-    }
+    repeatKey.current = null;
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => () => stopBackspace(), [stopBackspace]);
+  useEffect(() => () => stopRepeat(), [stopRepeat]);
+
+  // Start long-press repeat: immediately, then after delay, every 50ms
+  const startRepeat = useCallback((key: string, char: string) => {
+    if (!active) return;
+    const input = active;
+
+    // Insert first character immediately
+    insertChar(input, char);
+    if (shift) setShift(false);
+
+    // After delay, start repeating
+    repeatKey.current = key;
+    repeatTimer.current = setTimeout(() => {
+      repeatTimer.current = setInterval(() => {
+        if (!active || repeatKey.current !== key) {
+          stopRepeat();
+          return;
+        }
+        // Check input still exists and has value
+        const s = input.selectionStart ?? input.value.length;
+        // Only repeat if cursor is after at least one char
+        insertChar(input, char);
+      }, 50);
+    }, 600);
+  }, [active, shift, stopRepeat]);
+
+  // Backspace long-press: same timing, different action
+  const startBackspace = useCallback(() => {
+    if (!active) return;
+    const input = active;
+    deleteChar(input);
+
+    // Don't repeat if there's nothing to delete
+    const s = input.selectionStart ?? input.value.length;
+    const e = input.selectionEnd ?? input.value.length;
+    if (s === 0 && e === 0) return;
+
+    repeatTimer.current = setTimeout(() => {
+      repeatTimer.current = setInterval(() => {
+        if (!active) { stopRepeat(); return; }
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+        if (start === 0 && end === 0) { stopRepeat(); return; }
+        deleteChar(input);
+      }, 50);
+    }, 600);
+  }, [active, stopRepeat]);
+
   // Notify body about keyboard height → chat panel adjusts
   useLayoutEffect(() => {
     if (active && kbRef.current) {
-      const h = kbRef.current.offsetHeight;
-      document.body.style.setProperty('--vk-keyboard-height', h + 'px');
+      document.body.style.setProperty('--vk-keyboard-height', kbRef.current.offsetHeight + 'px');
     } else {
       document.body.style.removeProperty('--vk-keyboard-height');
     }
-    return () => {
-      document.body.style.removeProperty('--vk-keyboard-height');
-    };
+    return () => document.body.style.removeProperty('--vk-keyboard-height');
   }, [active]);
 
-  // Re-measure on layout state change (changes number of rows)
+  // Re-measure on layout change
   useEffect(() => {
     if (active && kbRef.current) {
       document.body.style.setProperty('--vk-keyboard-height', kbRef.current.offsetHeight + 'px');
@@ -130,19 +158,14 @@ export default function VkKeyboard() {
   useEffect(() => {
     const onFocus = (e: FocusEvent) => {
       const el = e.target as HTMLElement;
-      if (isTextInput(el)) {
-        setActive(el as HTMLInputElement | HTMLTextAreaElement);
-      }
+      if (isTextInput(el)) setActive(el as HTMLInputElement | HTMLTextAreaElement);
     };
     const onBlur = () => {
       requestAnimationFrame(() => {
         const ae = document.activeElement as HTMLElement | null;
-        if (!ae || !isTextInput(ae)) {
-          setActive(null);
-        }
+        if (!ae || !isTextInput(ae)) setActive(null);
       });
     };
-
     document.addEventListener('focusin', onFocus);
     document.addEventListener('focusout', onBlur);
     return () => {
@@ -155,40 +178,29 @@ export default function VkKeyboard() {
     if (!active) return;
 
     if (key === '⌫') {
-      const start = active.selectionStart ?? active.value.length;
-      const end = active.selectionEnd ?? active.value.length;
-      if (start !== end) {
-        insertText(active, '');
-      } else if (start > 0) {
-        active.setSelectionRange(start - 1, start);
-        insertText(active, '');
-      }
+      deleteChar(active);
     } else if (key === '␣') {
-      insertText(active, ' ');
+      insertChar(active, ' ');
     } else if (key === '↩') {
-      if (active.tagName === 'INPUT' && (active as HTMLInputElement).type !== 'textarea') {
+      if (active.tagName === 'INPUT') {
         active.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       } else {
-        insertText(active, '\n');
+        insertChar(active, '\n');
       }
     } else if (key === '⇧') {
       setShift(s => !s);
-    } else if (key === '123') {
-      setLayout('num'); setShift(false);
-    } else if (key === 'en') {
-      setLayout('en'); setShift(false);
-    } else if (key === 'ru') {
-      setLayout('ru'); setShift(false);
-    } else if (key === 'abc') {
-      setLayout('en'); setShift(false);
-    } else {
+    } else if (key === '123') { setLayout('num'); setShift(false); }
+    else if (key === 'en')  { setLayout('en');  setShift(false); }
+    else if (key === 'ru')  { setLayout('ru');  setShift(false); }
+    else if (key === 'abc') { setLayout('en');  setShift(false); }
+    else {
       const char = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
-      insertText(active, char);
+      insertChar(active, char);
       if (shift) setShift(false);
     }
   }, [active, shift]);
 
-  if (!active) return null;
+  if (!isVKWebView || !active) return null;
 
   const keys = LAYOUTS[layout];
 
@@ -207,7 +219,8 @@ export default function VkKeyboard() {
             const isEnter = key === '↩';
             const isShift = key === '⇧';
             const isBackspace = key === '⌫';
-            const isSpecial = ['⌫', '⇧', '123', 'en', 'ru', 'abc', '␣', '↩'].includes(key);
+            const isSpecial = NO_REPEAT.has(key);
+            const canRepeat = !isSpecial; // character keys can long-press repeat
 
             let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 transition-opacity select-none';
             if (isSpace) {
@@ -225,6 +238,7 @@ export default function VkKeyboard() {
             }
 
             const display = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
+            const char = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
 
             return (
               <button
@@ -232,25 +246,19 @@ export default function VkKeyboard() {
                 className={cls}
                 onMouseDown={e => e.preventDefault()}
                 onTouchStart={e => {
-                  e.preventDefault();
+                  e.preventDefault(); // block browser long-press menu
                   if (isBackspace) {
                     startBackspace();
+                  } else if (canRepeat) {
+                    startRepeat(key, char);
                   } else {
                     handleKey(key);
                   }
                 }}
-                onTouchEnd={() => {
-                  if (isBackspace) stopBackspace();
-                }}
-                onTouchCancel={() => {
-                  if (isBackspace) stopBackspace();
-                }}
-                onMouseUp={() => {
-                  if (isBackspace) stopBackspace();
-                }}
-                onMouseLeave={() => {
-                  if (isBackspace) stopBackspace();
-                }}
+                onTouchEnd={stopRepeat}
+                onTouchCancel={stopRepeat}
+                onMouseUp={stopRepeat}
+                onMouseLeave={stopRepeat}
               >
                 {display}
               </button>
