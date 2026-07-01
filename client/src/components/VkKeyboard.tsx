@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 
 type Layout = 'ru' | 'en' | 'num';
 
@@ -56,7 +56,26 @@ export default function VkKeyboard() {
   const [layout, setLayout] = useState<Layout>('ru');
   const [shift, setShift] = useState(false);
   const [active, setActive] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
-  const keysRef = useRef(LAYOUTS);
+  const kbRef = useRef<HTMLDivElement>(null);
+  // Notify body about keyboard height → chat panel adjusts
+  useLayoutEffect(() => {
+    if (active && kbRef.current) {
+      const h = kbRef.current.offsetHeight;
+      document.body.style.setProperty('--vk-keyboard-height', h + 'px');
+    } else {
+      document.body.style.removeProperty('--vk-keyboard-height');
+    }
+    return () => {
+      document.body.style.removeProperty('--vk-keyboard-height');
+    };
+  }, [active]);
+
+  // Re-measure on layout state change (changes number of rows)
+  useEffect(() => {
+    if (active && kbRef.current) {
+      document.body.style.setProperty('--vk-keyboard-height', kbRef.current.offsetHeight + 'px');
+    }
+  }, [layout, active]);
 
   // Track active input
   useEffect(() => {
@@ -66,17 +85,13 @@ export default function VkKeyboard() {
         setActive(el as HTMLInputElement | HTMLTextAreaElement);
       }
     };
-    const onBlur = (e: FocusEvent) => {
-      const el = e.target as HTMLElement;
-      if (isTextInput(el)) {
-        // Check if focus moved to another input
-        requestAnimationFrame(() => {
-          const ae = document.activeElement as HTMLElement | null;
-          if (!ae || !isTextInput(ae)) {
-            setActive(null);
-          }
-        });
-      }
+    const onBlur = () => {
+      requestAnimationFrame(() => {
+        const ae = document.activeElement as HTMLElement | null;
+        if (!ae || !isTextInput(ae)) {
+          setActive(null);
+        }
+      });
     };
 
     document.addEventListener('focusin', onFocus);
@@ -91,7 +106,6 @@ export default function VkKeyboard() {
     if (!active) return;
 
     if (key === '⌫') {
-      // Backspace
       const start = active.selectionStart ?? active.value.length;
       const end = active.selectionEnd ?? active.value.length;
       if (start !== end) {
@@ -103,86 +117,65 @@ export default function VkKeyboard() {
     } else if (key === '␣') {
       insertText(active, ' ');
     } else if (key === '↩') {
-      insertText(active, '\n');
-      // If it's a single-line input, trigger form submit or just move on
       if (active.tagName === 'INPUT' && (active as HTMLInputElement).type !== 'textarea') {
         active.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      } else {
+        insertText(active, '\n');
       }
     } else if (key === '⇧') {
       setShift(s => !s);
     } else if (key === '123') {
-      setLayout('num');
-      setShift(false);
+      setLayout('num'); setShift(false);
     } else if (key === 'en') {
-      setLayout('en');
-      setShift(false);
+      setLayout('en'); setShift(false);
     } else if (key === 'ru') {
-      setLayout('ru');
-      setShift(false);
+      setLayout('ru'); setShift(false);
     } else if (key === 'abc') {
-      setLayout('en');
-      setShift(false);
+      setLayout('en'); setShift(false);
     } else {
-      // Regular character
       const char = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
       insertText(active, char);
-      if (shift) setShift(false); // One-time shift like mobile
+      if (shift) setShift(false);
     }
-  }, [active, shift, layout]);
-
-  // Blur active input when tapping outside
-  useEffect(() => {
-    if (!active) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Don't blur if clicking keyboard or the active input
-      if (target.closest('.vk-keyboard')) return;
-      if (target === active) return;
-      // Only blur if clicking another non-input element
-      if (!isTextInput(target)) {
-        // Don't blur — keep keyboard open
-        e.preventDefault();
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('touchstart', handler);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('touchstart', handler);
-    };
-  }, [active]);
+  }, [active, shift]);
 
   if (!active) return null;
 
   const keys = LAYOUTS[layout];
-  const isSmall = layout === 'num';
 
   return (
-    <div className="vk-keyboard fixed bottom-0 left-0 right-0 z-[10000] bg-[#1a1a2e] border-t border-[#333] px-1 py-1.5 select-none"
-         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+    <div
+      ref={kbRef}
+      className="vk-keyboard fixed bottom-0 left-0 right-0 z-[10000] select-none
+                 bg-[var(--vk-kb-bg,#1a1a2e)] border-t border-[var(--vk-kb-border,#333)]
+                 px-1 py-1.5"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
+    >
       {keys.map((row, ri) => (
         <div key={ri} className="flex justify-center gap-1 mb-1">
           {row.map((key, ki) => {
-            const isSpecial = ['⌫', '⇧', '123', 'en', 'ru', 'abc', '␣', '↩'].includes(key);
             const isSpace = key === '␣';
             const isEnter = key === '↩';
             const isShift = key === '⇧';
             const isBackspace = key === '⌫';
+            const isSpecial = ['⌫', '⇧', '123', 'en', 'ru', 'abc', '␣', '↩'].includes(key);
 
-            let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-70 transition-opacity';
+            let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 transition-opacity select-none';
             if (isSpace) {
-              cls += ' flex-[3] bg-[#3a3a5e] text-[#ccc] h-10';
+              cls += ' flex-[3] bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)] h-10';
             } else if (isEnter) {
               cls += ' flex-[1.5] bg-[var(--color-accent-info)] text-white h-10';
             } else if (isShift) {
-              cls += ` flex-1 ${shift ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[#3a3a5e] text-[#ccc]'} h-10`;
+              cls += ` flex-1 ${shift ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)]'} h-10`;
             } else if (isBackspace) {
-              cls += ' flex-[1.2] bg-[#5a2a2a] text-[#f88] h-10';
+              cls += ' flex-[1.2] bg-[var(--vk-kb-backspace,#5a2a2a)] text-[var(--vk-kb-backspace-text,#f88)] h-10';
             } else if (isSpecial) {
-              cls += ' flex-1 bg-[#3a3a5e] text-[#aaa] h-10 text-xs';
+              cls += ' flex-1 bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text-muted,#aaa)] h-10 text-xs';
             } else {
-              cls += ' flex-1 bg-[#4a4a6e] text-[#eee] h-10';
+              cls += ' flex-1 bg-[var(--vk-kb-key,#4a4a6e)] text-[var(--vk-kb-text,#eee)] h-10';
             }
+
+            const display = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
 
             return (
               <button
@@ -191,7 +184,7 @@ export default function VkKeyboard() {
                 onMouseDown={e => e.preventDefault()}
                 onTouchStart={e => { e.preventDefault(); handleKey(key); }}
               >
-                {shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key}
+                {display}
               </button>
             );
           })}

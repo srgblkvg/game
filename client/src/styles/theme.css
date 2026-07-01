@@ -179,6 +179,22 @@ html.vk-iframe .chat-panel {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+/* Chat panel shifts up when VK custom keyboard is visible */
+body .chat-panel {
+  bottom: var(--vk-keyboard-height, 0);
+}
+
+/* VK custom keyboard — light theme overrides */
+[data-theme="light"] .vk-keyboard {
+  --vk-kb-bg: #e8e0d0;
+  --vk-kb-border: #c4b8a8;
+  --vk-kb-key: #d4c8b8;
+  --vk-kb-special: #c4b8a8;
+  --vk-kb-text: #2c1810;
+  --vk-kb-text-muted: #5c4a3a;
+  --vk-kb-backspace: #e8c8c8;
+  --vk-kb-backspace-text: #b71c1c;
+}
 /* Remove transparency from overlays/backdrops */
 html.vk-iframe .backdrop-blur-xl {
   backdrop-filter: none !important;
