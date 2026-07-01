@@ -13,16 +13,20 @@ export default function RightSidebar() {
     useEffect(() => { setOpen(false); }, [location.pathname]);
 
     useEffect(() => {
+        const isVK = document.documentElement.classList.contains('vk-iframe');
+        const scrollEl = isVK ? document.getElementById('root') : document.body;
+        const htmlEl = isVK ? null : document.documentElement;
+
         if (open) {
-            document.body.style.overflow = 'hidden';
-            document.documentElement.style.overflow = 'hidden';
+            if (scrollEl) scrollEl.style.overflow = 'hidden';
+            if (htmlEl) htmlEl.style.overflow = 'hidden';
         } else {
-            document.body.style.overflow = '';
-            document.documentElement.style.overflow = '';
+            if (scrollEl) scrollEl.style.overflow = '';
+            if (htmlEl) htmlEl.style.overflow = '';
         }
         return () => {
-            document.body.style.overflow = '';
-            document.documentElement.style.overflow = '';
+            if (scrollEl) scrollEl.style.overflow = '';
+            if (htmlEl) htmlEl.style.overflow = '';
         };
     }, [open]);
 

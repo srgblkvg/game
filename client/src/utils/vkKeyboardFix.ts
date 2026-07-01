@@ -1,19 +1,19 @@
 /**
  * VK WebView keyboard fix.
  *
- * Problem: VK iframe has scrolling="no". CSS sets height:100dvh + overflow-y:auto on body.
- * When mobile keyboard opens, 100dvh shrinks, but body.scrollTop stays the same →
- * content is pushed up, empty space appears between top of viewport and content.
+ * CSS: html+body are position:fixed/absolute (never scroll), #root is the scroll container.
+ * This isolates scrolling from the WebView — when keyboard pushes the viewport,
+ * the containers stay locked to viewport edges.
  *
- * Solution (combined):
- * 1. CSS: add position:relative + height:100% as base (less jumpy than pure dvh)
- * 2. JS: on visualViewport resize, compensate scrollTop by the same delta
- * 3. JS: on input focus, prevent browser auto-scroll, reposition manually
+ * JS: on input focus, lock scroll position and adjust if keyboard covers the input.
  */
 
-let prevHeight = 0;
-let focusedInput: HTMLElement | null = null;
-let lockScroll = false;
+let lockedScrollY = 0;
+let lockedInput: HTMLElement | null = null;
+
+function getScrollEl(): HTMLElement {
+  return document.getElementById('root') || document.body;
+}
 
 function isTextInput(el: HTMLElement): boolean {
   if (el.tagName === 'TEXTAREA') return true;
@@ -26,74 +26,74 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function repositionInput() {
-  if (!focusedInput) return;
-  // Use scrollIntoView with nearest — minimal scroll, no overshoot
-  focusedInput.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+function lock() {
+  const scrollEl = getScrollEl();
+  lockedScrollY = scrollEl.scrollTop;
+  // Prevent any OS-level scroll from affecting visual position
+  scrollEl.style.overflow = 'hidden';
 }
 
-function handleViewportResize() {
+function unlock() {
+  const scrollEl = getScrollEl();
+  scrollEl.style.overflow = '';
+}
+
+function adjustForKeyboard() {
+  if (!lockedInput || !window.visualViewport) return;
+
   const vv = window.visualViewport;
-  if (!vv) return;
+  const inputRect = lockedInput.getBoundingClientRect();
+  const inputBottom = inputRect.bottom;
+  const vvHeight = vv.height;
 
-  const current = vv.height;
-  if (prevHeight === 0) { prevHeight = current; return; }
-
-  const diff = prevHeight - current;
-
-  if (Math.abs(diff) > 10) {
-    // Viewport changed significantly (keyboard opened/closed)
-    // Compensate: add the height delta to scrollTop
-    // If viewport shrunk by 300px: scrollTop += 300 (scroll down to keep content in place)
-    // If viewport grew by 300px: scrollTop -= 300 (scroll up)
-    document.body.scrollTop += diff;
-
-    // Fine-tune input position
-    if (focusedInput && diff > 10) {
-      requestAnimationFrame(repositionInput);
-    }
+  // Input hidden behind keyboard — scroll root to reveal it
+  if (inputBottom > vvHeight - 10) {
+    const scrollEl = getScrollEl();
+    const offset = inputBottom - vvHeight + 30; // 30px margin
+    scrollEl.scrollTop = lockedScrollY + offset;
   }
-
-  prevHeight = current;
 }
 
 export function initVkKeyboardFix() {
   if (!window.visualViewport) return;
 
-  const vv = window.visualViewport;
-  prevHeight = vv.height;
-
-  // Monitor viewport changes (keyboard transitions)
-  vv.addEventListener('resize', handleViewportResize);
-  vv.addEventListener('scroll', handleViewportResize);
-
-  // Track input focus — save scroll position to counteract browser auto-scroll
+  // Lock on text input focus
   document.addEventListener('focusin', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
 
-    focusedInput = target;
-    const savedScroll = document.body.scrollTop;
-    lockScroll = true;
+    lockedInput = target;
+    lock();
 
-    // Browser will auto-scroll to the input on next frame.
-    // Restore the saved position, then manually position.
-    requestAnimationFrame(() => {
-      if (lockScroll) {
-        document.body.scrollTop = savedScroll;
-        requestAnimationFrame(() => {
-          target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        });
-      }
-    });
+    // Wait for keyboard to appear, then adjust
+    setTimeout(adjustForKeyboard, 350);
   });
 
+  // Viewport resize (keyboard appearing/disappearing) while locked
+  window.visualViewport.addEventListener('resize', () => {
+    if (lockedInput) {
+      adjustForKeyboard();
+    }
+  });
+
+  // Unlock on text input blur
   document.addEventListener('focusout', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
-    if (focusedInput === target) {
-      focusedInput = null;
-      lockScroll = false;
-    }
+
+    setTimeout(() => {
+      const active = document.activeElement as HTMLElement | null;
+      if (active && isTextInput(active)) {
+        // Focus moved to another input — re-lock for new target
+        lockedInput = active;
+        lock();
+        setTimeout(adjustForKeyboard, 100);
+        return;
+      }
+
+      // No text input focused — unlock
+      lockedInput = null;
+      unlock();
+    }, 150);
   });
 }

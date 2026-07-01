@@ -37,18 +37,23 @@ export default function ChatPanel() {
     useEffect(() => { chatHeightRef.current = chatHeight; }, [chatHeight]);
     const [dragging, setDragging] = useState(false);
 
-    // Блокировка скролла body при открытом чате
+    // Блокировка скролла при открытом чате
     useEffect(() => {
+        // In VK iframe, scroll container is #root; otherwise body
+        const isVK = document.documentElement.classList.contains('vk-iframe');
+        const scrollEl = isVK ? document.getElementById('root') : document.body;
+        const htmlEl = isVK ? null : document.documentElement;
+
         if (isPanelOpen) {
-            document.body.style.overflow = 'hidden';
-            document.documentElement.style.overflow = 'hidden';
+            if (scrollEl) scrollEl.style.overflow = 'hidden';
+            if (htmlEl) htmlEl.style.overflow = 'hidden';
         } else {
-            document.body.style.overflow = '';
-            document.documentElement.style.overflow = '';
+            if (scrollEl) scrollEl.style.overflow = '';
+            if (htmlEl) htmlEl.style.overflow = '';
         }
         return () => {
-            document.body.style.overflow = '';
-            document.documentElement.style.overflow = '';
+            if (scrollEl) scrollEl.style.overflow = '';
+            if (htmlEl) htmlEl.style.overflow = '';
         };
     }, [isPanelOpen]);
 
