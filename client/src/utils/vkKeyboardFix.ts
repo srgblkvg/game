@@ -1,17 +1,16 @@
 /**
  * VK WebView keyboard fix.
  *
- * Problem: VK WebView pushes the iframe up when mobile keyboard opens,
- * leaving empty space. CSS/JS inside the page can't prevent this.
+ * Root cause: VK WebView pushes the entire iframe UP when mobile keyboard opens.
+ * CSS/JS inside can't prevent this — the shift is at the OS level.
  *
- * Solution: use VKWebAppResizeWindow to shrink iframe to visualViewport.
- * CSS uses position:fixed (no vh dependency) → no infinite resize loop.
+ * Solution: detect how much the viewport shifted (visualViewport.offsetTop change),
+ * then apply a counter-transform (translateY) to push content back down,
+ * visually negating the OS-level shift.
  */
 
 let lockedInput: HTMLElement | null = null;
-let originalHeight = 0;
-let originalWidth = 0;
-let lastResizeTime = 0;
+let baseOffsetTop = 0;
 
 function getScrollEl(): HTMLElement {
   return document.getElementById('root') || document.body;
@@ -28,18 +27,29 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function resizeIframe(width: number, height: number) {
-  if (!window.vkBridge) return;
+function applyCompensation() {
+  if (!window.visualViewport) return;
 
-  // Debounce: max 1 resize per 500ms to prevent loops
-  const now = Date.now();
-  if (now - lastResizeTime < 500) return;
-  lastResizeTime = now;
+  const vv = window.visualViewport;
+  const offsetDelta = baseOffsetTop - vv.offsetTop;
 
-  window.vkBridge.send('VKWebAppResizeWindow', {
-    width: Math.round(width),
-    height: Math.round(height),
-  }).catch(() => {});
+  if (offsetDelta > 10) {
+    // OS pushed viewport up by offsetDelta pixels
+    // Push content back down with transform
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.transform = `translateY(${offsetDelta}px)`;
+      // Also reduce height to prevent bottom overflow
+      root.style.height = `${vv.height - offsetDelta}px`;
+    }
+  } else {
+    // No significant shift
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.transform = '';
+      root.style.height = '';
+    }
+  }
 }
 
 function scrollInputIntoView() {
@@ -51,40 +61,45 @@ function scrollInputIntoView() {
     ? window.visualViewport.height
     : window.innerHeight;
 
-  // If input is hidden behind keyboard, scroll it up
-  if (inputBottom > vvHeight - 20) {
-    const offset = inputBottom - vvHeight + 40;
+  if (inputBottom > vvHeight - 30) {
+    const offset = inputBottom - vvHeight + 50;
     scrollEl.scrollTop += offset;
   }
 }
 
 export function initVkKeyboardFix() {
-  if (!window.vkBridge || !window.visualViewport) return;
+  if (!window.visualViewport) return;
 
-  originalWidth = window.innerWidth;
-  originalHeight = window.innerHeight;
+  // Capture initial offsetTop (should be 0 on most devices)
+  baseOffsetTop = window.visualViewport.offsetTop || 0;
 
-  // Focus: shrink iframe to visual viewport (eliminates gap above keyboard)
+  // Focus: track input, wait for keyboard, compensate
   document.addEventListener('focusin', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
-
     lockedInput = target;
-    const vv = window.visualViewport!;
-    resizeIframe(vv.width, vv.height);
 
-    // Scroll after keyboard settles
-    setTimeout(scrollInputIntoView, 350);
+    // Wait for keyboard to appear and viewport to shift
+    setTimeout(() => {
+      applyCompensation();
+      scrollInputIntoView();
+    }, 400);
   });
 
-  // Viewport resize while input is focused → just scroll (don't resize again)
+  // Viewport resize/scroll = keyboard appearing/disappearing
   window.visualViewport.addEventListener('resize', () => {
     if (lockedInput) {
+      applyCompensation();
       scrollInputIntoView();
     }
   });
+  window.visualViewport.addEventListener('scroll', () => {
+    if (lockedInput) {
+      applyCompensation();
+    }
+  });
 
-  // Blur: restore original iframe size
+  // Blur: remove compensation
   document.addEventListener('focusout', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
@@ -92,16 +107,18 @@ export function initVkKeyboardFix() {
     setTimeout(() => {
       const active = document.activeElement as HTMLElement | null;
       if (active && isTextInput(active)) {
-        // Focus moved to another input
         lockedInput = active;
-        scrollInputIntoView();
+        applyCompensation();
+        setTimeout(scrollInputIntoView, 100);
         return;
       }
 
-      // No input focused — restore iframe size
       lockedInput = null;
-      lastResizeTime = 0; // allow immediate resize
-      resizeIframe(originalWidth, originalHeight);
+      const root = document.getElementById('root');
+      if (root) {
+        root.style.transform = '';
+        root.style.height = '';
+      }
     }, 200);
   });
 }
