@@ -10,7 +10,6 @@ import { ServerTimeProvider } from './contexts/ServerTimeContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { addCollection } from '@iconify/react';
 import gameIcons from './icons-filtered.json';
-import { initVkKeyboardFix } from './utils/vkKeyboardFix';
 import './styles/theme.css';
 
 // VK Bridge init (для игр ВКонтакте)
@@ -24,8 +23,6 @@ if (window.vkBridge) {
   window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
   // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
   document.documentElement.classList.add('vk-iframe');
-  // VK keyboard workaround: scroll input to top, sync body height
-  initVkKeyboardFix();
 }
 
 // Регистрируем иконки локально (без API-запросов)
