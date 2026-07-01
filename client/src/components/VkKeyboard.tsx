@@ -153,23 +153,28 @@ export default function VkKeyboard() {
     }
   }, [layout, active]);
 
-  // Track active input
+  // Track active input — show on focus, hide only when tapping outside
   useEffect(() => {
     const onFocus = (e: FocusEvent) => {
       const el = e.target as HTMLElement;
       if (isTextInput(el)) setActive(el as HTMLInputElement | HTMLTextAreaElement);
     };
-    const onBlur = () => {
-      requestAnimationFrame(() => {
-        const ae = document.activeElement as HTMLElement | null;
-        if (!ae || !isTextInput(ae)) setActive(null);
-      });
+
+    // Hide keyboard only when tapping outside any input AND outside keyboard
+    const onTap = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (isTextInput(target)) return;
+      if (target.closest('.vk-keyboard')) return;
+      setActive(null);
     };
+
     document.addEventListener('focusin', onFocus);
-    document.addEventListener('focusout', onBlur);
+    document.addEventListener('touchstart', onTap);
+    document.addEventListener('mousedown', onTap);
     return () => {
       document.removeEventListener('focusin', onFocus);
-      document.removeEventListener('focusout', onBlur);
+      document.removeEventListener('touchstart', onTap);
+      document.removeEventListener('mousedown', onTap);
     };
   }, []);
 
