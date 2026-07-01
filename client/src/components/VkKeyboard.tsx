@@ -221,7 +221,7 @@ export default function VkKeyboard() {
       ref={kbRef}
       className="vk-keyboard fixed bottom-0 left-0 right-0 z-[10000] select-none
                  bg-[var(--vk-kb-bg,#1a1a2e)] border-t border-[var(--vk-kb-border,#333)]
-                 px-1 py-1.5"
+                 px-1 py-1.5 touch-manipulation"
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
     >
       {keys.map((row, ri) => (
@@ -260,7 +260,6 @@ export default function VkKeyboard() {
                 tabIndex={-1}
                 onMouseDown={e => e.preventDefault()}
                 onTouchStart={e => {
-                  e.preventDefault();
                   if (isBackspace) {
                     startBackspace();
                   } else if (canRepeat) {
