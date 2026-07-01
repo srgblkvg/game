@@ -1,12 +1,10 @@
 /**
  * VK WebView keyboard fix.
  *
- * Diagnosis: vv.offsetTop stays 0 (WebView not pushed).
- * But vv.height shrinks from 846→224 (keyboard appears), and so does winH.
- * Body/root follow the resize, but scrollTop stays → content shifts up,
- * leaving empty space between content bottom and keyboard top.
+ * Primary fix: meta viewport interactive-widget=overlays-content.
+ * If supported, viewport does NOT resize on keyboard → no empty space.
  *
- * Fix: on viewport resize, clamp scrollTop + adjust for focused input.
+ * Fallback (JS): if viewport still resizes, clamp scrollTop + scroll input into view.
  */
 
 let lockedInput: HTMLElement | null = null;
@@ -27,67 +25,55 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function fixScroll() {
+function scrollToInput() {
+  if (!lockedInput) return;
   const scrollEl = getScrollEl();
   const vv = window.visualViewport;
-  if (!vv) return;
+  const vh = vv ? vv.height : window.innerHeight;
+  const rect = lockedInput.getBoundingClientRect();
 
-  const viewH = vv.height;
-  const contentH = scrollEl.scrollHeight;
-  const maxScroll = Math.max(0, contentH - viewH);
+  if (rect.bottom > vh - 20) {
+    scrollEl.scrollTop += (rect.bottom - vh) + 50;
+  }
 
-  // Clamp: prevent overscroll (which would show empty space)
+  // Clamp — no overscroll
+  const maxScroll = Math.max(0, scrollEl.scrollHeight - vh);
   if (scrollEl.scrollTop > maxScroll) {
     scrollEl.scrollTop = maxScroll;
   }
+}
 
-  // If input is focused, scroll it into view within clamped range
-  if (lockedInput) {
-    requestAnimationFrame(() => {
-      lockedInput!.scrollIntoView({ block: 'nearest', behavior: 'instant' });
-      // Clamp again after scrollIntoView (it might overshoot)
-      if (scrollEl.scrollTop > maxScroll) {
-        scrollEl.scrollTop = maxScroll;
-      }
-    });
+function handleResize() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const h = vv.height;
+
+  // Only react to significant resize (>50px)
+  if (prevHeight > 0 && Math.abs(h - prevHeight) > 50 && lockedInput) {
+    scrollToInput();
   }
+  prevHeight = h;
 }
 
 export function initVkKeyboardFix() {
-  if (!window.visualViewport) return;
+  if (window.visualViewport) {
+    prevHeight = window.visualViewport.height;
+    window.visualViewport.addEventListener('resize', handleResize);
+  }
 
-  const vv = window.visualViewport;
-  prevHeight = vv.height;
-
-  // Focus: track input
   document.addEventListener('focusin', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
     lockedInput = target;
-
-    // Let keyboard appear, then fix
-    setTimeout(fixScroll, 350);
+    setTimeout(scrollToInput, 350);
   });
 
-  // Viewport resize = keyboard appeared/disappeared
-  vv.addEventListener('resize', () => {
-    const newH = vv.height;
-    if (Math.abs(newH - prevHeight) > 30) {
-      fixScroll();
-    }
-    prevHeight = newH;
-  });
-
-  // Blur: clear tracking
   document.addEventListener('focusout', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
-
     setTimeout(() => {
-      const active = document.activeElement as HTMLElement | null;
-      if (active && isTextInput(active)) {
-        lockedInput = active;
-        fixScroll();
+      if (document.activeElement && isTextInput(document.activeElement as HTMLElement)) {
+        lockedInput = document.activeElement as HTMLElement;
         return;
       }
       lockedInput = null;
