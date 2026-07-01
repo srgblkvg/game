@@ -221,7 +221,7 @@ export default function VkKeyboard() {
             const isSpecial = NO_REPEAT.has(key);
             const canRepeat = !isSpecial; // character keys can long-press repeat
 
-            let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 transition-opacity select-none';
+            let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 transition-opacity select-none cursor-pointer';
             if (isSpace) {
               cls += ' flex-[3] bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)] h-10';
             } else if (isEnter) {
@@ -240,12 +240,14 @@ export default function VkKeyboard() {
             const char = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
 
             return (
-              <button
+              <div
                 key={ki}
                 className={cls}
+                role="button"
+                tabIndex={-1}
                 onMouseDown={e => e.preventDefault()}
                 onTouchStart={e => {
-                  e.preventDefault(); // block browser long-press menu
+                  e.preventDefault();
                   if (isBackspace) {
                     startBackspace();
                   } else if (canRepeat) {
@@ -260,7 +262,7 @@ export default function VkKeyboard() {
                 onMouseLeave={stopRepeat}
               >
                 {display}
-              </button>
+              </div>
             );
           })}
         </div>
