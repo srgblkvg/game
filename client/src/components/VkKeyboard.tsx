@@ -1,3 +1,8 @@
+/**
+ * TODO: Удалить весь файл после ответа поддержки VK (проблема с клавиатурой в WebView).
+ * Вместе с этим файлом удалить: vkInputMode.ts, импорты/вызовы в main.tsx и App.tsx,
+ * CSS-правила в theme.css (VK keyboard + chat panel bottom + light theme overrides).
+ */
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 
 type Layout = 'ru' | 'en' | 'num';
@@ -101,11 +106,14 @@ export default function VkKeyboard() {
     return () => document.body.style.removeProperty('--vk-keyboard-height');
   }, [active]);
 
+  // Force-keep input focus while keyboard is visible (Android WebView loses it)
   useEffect(() => {
-    if (active && kbRef.current) {
-      document.body.style.setProperty('--vk-keyboard-height', kbRef.current.offsetHeight + 'px');
-    }
-  }, [layout, active]);
+    if (!active) return;
+    const id = setInterval(() => {
+      if (activeRef.current) activeRef.current.focus();
+    }, 80);
+    return () => clearInterval(id);
+  }, [active]);
 
   // Track active input — show on focus, hide on tap outside
   useEffect(() => {
@@ -207,6 +215,7 @@ export default function VkKeyboard() {
       startBackspaceRepeat();
     } else if (canRepeat) {
       startCharRepeat(char);
+      if (shift && !capsLock) setShift(false); // reset one-time shift
     } else {
       handleKey(key);
     }
@@ -240,7 +249,7 @@ export default function VkKeyboard() {
 
             return (
               <div key={ki} className={cls} role="button" tabIndex={-1}
-                onTouchStart={e => { e.preventDefault(); handleTouchStart(key, char, isBackspace, canRepeat); }}
+                onTouchStart={e => { e.preventDefault(); e.stopPropagation(); handleTouchStart(key, char, isBackspace, canRepeat); }}
                 onTouchEnd={() => { stopRepeat(); }}
                 onTouchCancel={() => { stopRepeat(); }}
                 onMouseDown={e => e.preventDefault()}

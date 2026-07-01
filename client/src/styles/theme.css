@@ -179,6 +179,7 @@ html.vk-iframe .chat-panel {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+/* TODO: удалить после ответа поддержки VK ↓ */
 /* Chat panel shifts up when VK custom keyboard is visible */
 body .chat-panel {
   bottom: var(--vk-keyboard-height, 0);
@@ -195,6 +196,7 @@ body .chat-panel {
   --vk-kb-backspace: #e8c8c8;
   --vk-kb-backspace-text: #b71c1c;
 }
+/* TODO: удалить после ответа поддержки VK ↑ */
 /* Remove transparency from overlays/backdrops */
 html.vk-iframe .backdrop-blur-xl {
   backdrop-filter: none !important;

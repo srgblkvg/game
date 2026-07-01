@@ -1,4 +1,7 @@
 /**
+ * TODO: Удалить весь файл после ответа поддержки VK.
+ * Блокирует нативную клавиатуру — нужен только вместе с VkKeyboard.tsx.
+ *
  * Blocks native keyboard in VK WebView by setting inputmode="none" on all inputs.
  * Uses MutationObserver to catch dynamically added inputs (React).
  */

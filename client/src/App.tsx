@@ -17,7 +17,9 @@ import RightSidebar from './components/RightSidebar';
 import NotificationToast from './components/NotificationToast';
 import ScrollToTop from './components/ScrollToTop';
 import MetrikaTracker from './components/MetrikaTracker';
+// TODO: удалить после ответа поддержки VK ↓
 import VkKeyboard from './components/VkKeyboard';
+// TODO: удалить после ответа поддержки VK ↑
 
 // Ленивая загрузка тяжёлых страниц
 const ArenaPage = lazy(() => import('./pages/Arena/ArenaPage'));
@@ -120,7 +122,9 @@ function App() {
         </Suspense>
       </div>
       <ChatPanel key={user?.id} />
+      {/* TODO: удалить после ответа поддержки VK ↓ */}
       <VkKeyboard />
+      {/* TODO: удалить после ответа поддержки VK ↑ */}
     </BrowserRouter>
   );
 }
