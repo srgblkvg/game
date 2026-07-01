@@ -1,10 +1,11 @@
 /**
  * VK WebView keyboard fix.
  *
- * Diagnosis: body.offsetHeight stays at 1681px (content height) even when
- * viewport shrinks to 224px. CSS height:100dvh is NOT constraining body.
- * 
- * Fix: force body height via JS to match visualViewport.height.
+ * Diagnosis: CSS height/min-height is ignored or overridden in VK WebView.
+ * Base CSS has html,body,#root { min-height: 100vh } forcing content-size height.
+ *
+ * Fix: force height + minHeight on html, body, AND #root via JS inline styles
+ * (inline style > CSS). This ensures containers match visualViewport exactly.
  */
 
 function isTextInput(el: HTMLElement): boolean {
@@ -16,61 +17,49 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function syncHeight() {
-  if (!window.visualViewport) return;
-  const h = window.visualViewport.height;
-  document.body.style.height = h + 'px';
+function syncHeight(h?: number) {
+  const vh = h ?? (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  const px = Math.round(vh) + 'px';
+
+  document.documentElement.style.height = px;
+  document.documentElement.style.minHeight = px;
+  document.body.style.height = px;
+  document.body.style.minHeight = px;
+
+  const root = document.getElementById('root');
+  if (root) {
+    root.style.minHeight = px;
+    root.style.height = px;
+  }
 }
 
-let wasResized = false;
-
 export function initVkKeyboardFix() {
-  if (!window.visualViewport) return;
-
-  // Initial height sync
   syncHeight();
 
-  // Sync on viewport resize (keyboard open/close)
-  window.visualViewport.addEventListener('resize', () => {
-    wasResized = true;
-    syncHeight();
-  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => syncHeight());
+  }
+  window.addEventListener('resize', () => syncHeight());
 
-  // On input focus, ensure height is correct and input is visible
   document.addEventListener('focusin', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
 
     syncHeight();
 
-    // Scroll input into view after keyboard settles
     setTimeout(() => {
-      const vv = window.visualViewport!;
+      syncHeight();
+      const vv = window.visualViewport;
+      const vh = vv ? vv.height : window.innerHeight;
       const rect = target.getBoundingClientRect();
-      if (rect.bottom > vv.height - 20) {
-        document.body.scrollTop += (rect.bottom - vv.height) + 40;
+
+      if (rect.bottom > vh - 20) {
+        document.body.scrollTop += (rect.bottom - vh) + 40;
       }
-      // Clamp
-      const maxScroll = Math.max(0, document.body.scrollHeight - vv.height);
+      const maxScroll = Math.max(0, document.body.scrollHeight - vh);
       if (document.body.scrollTop > maxScroll) {
         document.body.scrollTop = maxScroll;
       }
-    }, 350);
-  });
-
-  // On blur, if viewport was resized, restore full height
-  document.addEventListener('focusout', (e: FocusEvent) => {
-    const target = e.target as HTMLElement;
-    if (!isTextInput(target)) return;
-
-    setTimeout(() => {
-      if (document.activeElement && isTextInput(document.activeElement as HTMLElement)) {
-        return;
-      }
-      if (wasResized) {
-        syncHeight(); // restore to full height
-        wasResized = false;
-      }
-    }, 300);
+    }, 400);
   });
 }
