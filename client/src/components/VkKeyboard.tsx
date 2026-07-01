@@ -35,7 +35,6 @@ const SHIFT_MAP: Record<string, string> = {
   'c': 'C', 'v': 'V', 'b': 'B', 'n': 'N', 'm': 'M',
 };
 
-// Keys that should NOT repeat on long-press
 const NO_REPEAT = new Set(['⇧', '⌫', '␣', '↩', 'ru', 'en', '123', 'abc']);
 
 function isTextInput(el: HTMLElement): boolean {
@@ -70,80 +69,29 @@ function deleteChar(el: HTMLInputElement | HTMLTextAreaElement) {
 export default function VkKeyboard() {
   const [layout, setLayout] = useState<Layout>('ru');
   const [shift, setShift] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [active, setActive] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const activeRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const kbRef = useRef<HTMLDivElement>(null);
-  const repeatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const repeatKey = useRef<string | null>(null);
+  const repeatInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastShiftTime = useRef(0);
 
-  // Keep ref in sync with state
   useEffect(() => { activeRef.current = active; }, [active]);
 
-  // Only render in VK mobile app WebView (not m.vk.com, not desktop)
   const isVKWebView = typeof document !== 'undefined'
     && document.documentElement.classList.contains('vk-iframe')
     && typeof window.vkBridge?.isWebView === 'function'
     && window.vkBridge.isWebView();
 
-  // Stop repeat on cleanup
   const stopRepeat = useCallback(() => {
-    if (repeatTimer.current) {
-      clearTimeout(repeatTimer.current);
-      repeatTimer.current = null;
-    }
-    repeatKey.current = null;
+    if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
+    if (repeatInterval.current) { clearInterval(repeatInterval.current); repeatInterval.current = null; }
   }, []);
 
   useEffect(() => () => stopRepeat(), [stopRepeat]);
 
-  // Start long-press repeat: immediately, then after delay, every 50ms
-  const startRepeat = useCallback((key: string, char: string) => {
-    const input = activeRef.current;
-    if (!input) return;
-
-    // Insert first character immediately
-    insertChar(input, char);
-    if (shift) setShift(false);
-
-    // After delay, start repeating
-    repeatKey.current = key;
-    repeatTimer.current = setTimeout(() => {
-      repeatTimer.current = setInterval(() => {
-        if (repeatKey.current !== key) {
-          stopRepeat();
-          return;
-        }
-        const el = activeRef.current;
-        if (!el) { stopRepeat(); return; }
-        insertChar(el, char);
-      }, 50);
-    }, 600);
-  }, [shift, stopRepeat]);
-
-  // Backspace long-press: same timing, different action
-  const startBackspace = useCallback(() => {
-    const input = activeRef.current;
-    if (!input) return;
-    deleteChar(input);
-
-    // Don't repeat if there's nothing to delete
-    const s = input.selectionStart ?? input.value.length;
-    const e = input.selectionEnd ?? input.value.length;
-    if (s === 0 && e === 0) return;
-
-    repeatTimer.current = setTimeout(() => {
-      repeatTimer.current = setInterval(() => {
-        const el = activeRef.current;
-        if (!el) { stopRepeat(); return; }
-        const start = el.selectionStart ?? el.value.length;
-        const end = el.selectionEnd ?? el.value.length;
-        if (start === 0 && end === 0) { stopRepeat(); return; }
-        deleteChar(el);
-      }, 50);
-    }, 600);
-  }, [stopRepeat]);
-
-  // Notify body about keyboard height → chat panel adjusts
+  // Notify body about keyboard height
   useLayoutEffect(() => {
     if (active && kbRef.current) {
       document.body.style.setProperty('--vk-keyboard-height', kbRef.current.offsetHeight + 'px');
@@ -153,28 +101,24 @@ export default function VkKeyboard() {
     return () => document.body.style.removeProperty('--vk-keyboard-height');
   }, [active]);
 
-  // Re-measure on layout change
   useEffect(() => {
     if (active && kbRef.current) {
       document.body.style.setProperty('--vk-keyboard-height', kbRef.current.offsetHeight + 'px');
     }
   }, [layout, active]);
 
-  // Track active input — show on focus, hide only when tapping outside
+  // Track active input — show on focus, hide on tap outside
   useEffect(() => {
     const onFocus = (e: FocusEvent) => {
       const el = e.target as HTMLElement;
       if (isTextInput(el)) setActive(el as HTMLInputElement | HTMLTextAreaElement);
     };
-
-    // Hide keyboard only when tapping outside any input AND outside keyboard
     const onTap = (e: Event) => {
       const target = e.target as HTMLElement;
       if (isTextInput(target)) return;
       if (target.closest('.vk-keyboard')) return;
-      setActive(null);
+      setActive(null); setShift(false); setCapsLock(false);
     };
-
     document.addEventListener('focusin', onFocus);
     document.addEventListener('touchstart', onTap);
     document.addEventListener('mousedown', onTap);
@@ -185,96 +129,124 @@ export default function VkKeyboard() {
     };
   }, []);
 
-  const handleKey = useCallback((key: string) => {
+  const doDelete = useCallback(() => {
     const el = activeRef.current;
     if (!el) return;
+    deleteChar(el);
+  }, []);
 
+  const doInsert = useCallback((char: string) => {
+    const el = activeRef.current;
+    if (!el) return;
+    insertChar(el, char);
+  }, []);
+
+  const startCharRepeat = useCallback((char: string) => {
+    doInsert(char);
+    longPressTimeout.current = setTimeout(() => {
+      repeatInterval.current = setInterval(() => doInsert(char), 50);
+    }, 600);
+  }, [doInsert]);
+
+  const startBackspaceRepeat = useCallback(() => {
+    doDelete();
+    longPressTimeout.current = setTimeout(() => {
+      repeatInterval.current = setInterval(() => {
+        const el = activeRef.current;
+        if (!el) { stopRepeat(); return; }
+        const s = el.selectionStart ?? 0;
+        const e = el.selectionEnd ?? 0;
+        if (s === 0 && e === 0) { stopRepeat(); return; }
+        deleteChar(el);
+      }, 50);
+    }, 600);
+  }, [doDelete, stopRepeat]);
+
+  const handleShift = useCallback(() => {
+    const now = Date.now();
+    if (now - lastShiftTime.current < 400) {
+      // Double-tap: toggle caps lock
+      setCapsLock(c => !c);
+      setShift(false);
+    } else {
+      setShift(s => !s);
+      setCapsLock(false);
+    }
+    lastShiftTime.current = now;
+  }, []);
+
+  const handleKey = useCallback((key: string) => {
     if (key === '⌫') {
-      deleteChar(el);
+      doDelete();
     } else if (key === '␣') {
-      insertChar(el, ' ');
+      doInsert(' ');
     } else if (key === '↩') {
+      const el = activeRef.current;
+      if (!el) return;
       if (el.tagName === 'INPUT') {
         el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       } else {
         insertChar(el, '\n');
       }
     } else if (key === '⇧') {
-      setShift(s => !s);
-    } else if (key === '123') { setLayout('num'); setShift(false); }
-    else if (key === 'en')  { setLayout('en');  setShift(false); }
-    else if (key === 'ru')  { setLayout('ru');  setShift(false); }
-    else if (key === 'abc') { setLayout('en');  setShift(false); }
+      handleShift();
+    } else if (key === '123') { setLayout('num'); setShift(false); setCapsLock(false); }
+    else if (key === 'en')  { setLayout('en');  setShift(false); setCapsLock(false); }
+    else if (key === 'ru')  { setLayout('ru');  setShift(false); setCapsLock(false); }
+    else if (key === 'abc') { setLayout('en');  setShift(false); setCapsLock(false); }
     else {
-      const char = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
-      insertChar(el, char);
-      if (shift) setShift(false);
+      const char = (shift || capsLock) && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
+      doInsert(char);
+      if (shift && !capsLock) setShift(false);
     }
-  }, [shift]);
+  }, [shift, capsLock, doInsert, handleShift]);
+
+  const handleTouchStart = useCallback((key: string, char: string, isBackspace: boolean, canRepeat: boolean) => {
+    stopRepeat(); // clear any pending
+    if (isBackspace) {
+      startBackspaceRepeat();
+    } else if (canRepeat) {
+      startCharRepeat(char);
+    } else {
+      handleKey(key);
+    }
+  }, [handleKey, startCharRepeat, startBackspaceRepeat, stopRepeat]);
 
   if (!isVKWebView || !active) return null;
 
   const keys = LAYOUTS[layout];
+  const effectiveShift = shift || capsLock;
 
   return (
-    <div
-      ref={kbRef}
-      className="vk-keyboard fixed bottom-0 left-0 right-0 z-[10000] select-none
-                 bg-[var(--vk-kb-bg,#1a1a2e)] border-t border-[var(--vk-kb-border,#333)]
-                 px-1 py-1.5 touch-manipulation"
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
-    >
+    <div ref={kbRef} className="vk-keyboard fixed bottom-0 left-0 right-0 z-[10000] select-none bg-[var(--vk-kb-bg,#1a1a2e)] border-t border-[var(--vk-kb-border,#333)] px-1 py-1.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
       {keys.map((row, ri) => (
         <div key={ri} className="flex justify-center gap-1 mb-1">
           {row.map((key, ki) => {
             const isSpace = key === '␣';
             const isEnter = key === '↩';
-            const isShift = key === '⇧';
+            const isShiftKey = key === '⇧';
             const isBackspace = key === '⌫';
             const isSpecial = NO_REPEAT.has(key);
-            const canRepeat = !isSpecial; // character keys can long-press repeat
+            const canRepeat = !isSpecial;
+            const char = effectiveShift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
 
-            let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 transition-opacity select-none cursor-pointer';
-            if (isSpace) {
-              cls += ' flex-[3] bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)] h-10';
-            } else if (isEnter) {
-              cls += ' flex-[1.5] bg-[var(--color-accent-info)] text-white h-10';
-            } else if (isShift) {
-              cls += ` flex-1 ${shift ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)]'} h-10`;
-            } else if (isBackspace) {
-              cls += ' flex-[1.2] bg-[var(--vk-kb-backspace,#5a2a2a)] text-[var(--vk-kb-backspace-text,#f88)] h-10';
-            } else if (isSpecial) {
-              cls += ' flex-1 bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text-muted,#aaa)] h-10 text-xs';
-            } else {
-              cls += ' flex-1 bg-[var(--vk-kb-key,#4a4a6e)] text-[var(--vk-kb-text,#eee)] h-10';
-            }
-
-            const display = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
-            const char = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
+            let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 select-none cursor-pointer h-10';
+            if (isSpace) cls += ' flex-[3] bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)]';
+            else if (isEnter) cls += ' flex-[1.5] bg-[var(--color-accent-info)] text-white';
+            else if (isShiftKey) cls += ` flex-1 ${capsLock ? 'bg-[var(--color-accent-success)] text-white' : effectiveShift ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)]'}`;
+            else if (isBackspace) cls += ' flex-[1.2] bg-[var(--vk-kb-backspace,#5a2a2a)] text-[var(--vk-kb-backspace-text,#f88)]';
+            else if (isSpecial) cls += ' flex-1 bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text-muted,#aaa)] text-xs';
+            else cls += ' flex-1 bg-[var(--vk-kb-key,#4a4a6e)] text-[var(--vk-kb-text,#eee)]';
 
             return (
-              <div
-                key={ki}
-                className={cls}
-                role="button"
-                tabIndex={-1}
+              <div key={ki} className={cls} role="button" tabIndex={-1}
+                onTouchStart={e => { e.preventDefault(); handleTouchStart(key, char, isBackspace, canRepeat); }}
+                onTouchEnd={() => { stopRepeat(); }}
+                onTouchCancel={() => { stopRepeat(); }}
                 onMouseDown={e => e.preventDefault()}
-                onTouchStart={e => {
-                  if (isBackspace) {
-                    startBackspace();
-                  } else if (canRepeat) {
-                    startRepeat(key, char);
-                  } else {
-                    handleKey(key);
-                  }
-                }}
-                onTouchEnd={stopRepeat}
-                onTouchCancel={stopRepeat}
                 onMouseUp={stopRepeat}
                 onMouseLeave={stopRepeat}
-              >
-                {display}
-              </div>
+              >{char}</div>
             );
           })}
         </div>
