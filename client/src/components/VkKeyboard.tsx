@@ -57,35 +57,44 @@ export default function VkKeyboard() {
   const [shift, setShift] = useState(false);
   const [active, setActive] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const kbRef = useRef<HTMLDivElement>(null);
-  const backspaceTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const backspaceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Long-press backspace: start deleting repeatedly
+  // Only render in VK WebView (mobile iframe)
+  if (typeof document !== 'undefined' && !document.documentElement.classList.contains('vk-iframe')) {
+    return null;
+  }
+
+  // Long-press backspace: first delete immediately, wait 200ms, then repeat
   const startBackspace = useCallback(() => {
     if (!active) return;
+    const input = active; // capture
     // First delete immediately
-    const a = active;
-    const start = a.selectionStart ?? a.value.length;
-    const end = a.selectionEnd ?? a.value.length;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
     if (start !== end) {
-      insertText(a, '');
+      insertText(input, '');
     } else if (start > 0) {
-      a.setSelectionRange(start - 1, start);
-      insertText(a, '');
+      input.setSelectionRange(start - 1, start);
+      insertText(input, '');
     }
-    // Then repeat
-    backspaceTimer.current = setInterval(() => {
-      if (!active) { stopBackspace(); return; }
-      const s = active.selectionStart ?? active.value.length;
-      const e = active.selectionEnd ?? active.value.length;
-      if (s !== e) {
-        insertText(active, '');
-      } else if (s > 0) {
-        active.setSelectionRange(s - 1, s);
-        insertText(active, '');
-      } else {
-        stopBackspace();
-      }
-    }, 60);
+    // Wait 200ms before starting repeat
+    backspaceTimer.current = setTimeout(() => {
+      // Check still active after delay
+      if (!active || active !== input) return;
+      backspaceTimer.current = setInterval(() => {
+        if (!active) { stopBackspace(); return; }
+        const s = active.selectionStart ?? active.value.length;
+        const e = active.selectionEnd ?? active.value.length;
+        if (s !== e) {
+          insertText(active, '');
+        } else if (s > 0) {
+          active.setSelectionRange(s - 1, s);
+          insertText(active, '');
+        } else {
+          stopBackspace();
+        }
+      }, 50);
+    }, 200);
   }, [active]);
 
   const stopBackspace = useCallback(() => {
