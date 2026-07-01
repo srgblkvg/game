@@ -1,14 +1,12 @@
 /**
  * VK WebView keyboard fix.
  *
- * Primary fix: meta viewport interactive-widget=overlays-content.
- * If supported, viewport does NOT resize on keyboard → no empty space.
+ * Diagnosis: viewport/iframe resize from 846→224 when keyboard opens.
+ * Browser auto-scrolls on focus, causing overscroll → empty space.
  *
- * Fallback (JS): if viewport still resizes, clamp scrollTop + scroll input into view.
+ * Fix: freeze scroll (overflow:hidden) on focus, preventing visual movement.
+ * After keyboard settles, restore scroll and position input manually.
  */
-
-let lockedInput: HTMLElement | null = null;
-let prevHeight = 0;
 
 function getScrollEl(): HTMLElement {
   return document.getElementById('root') || document.body;
@@ -25,58 +23,71 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function scrollToInput() {
-  if (!lockedInput) return;
-  const scrollEl = getScrollEl();
-  const vv = window.visualViewport;
-  const vh = vv ? vv.height : window.innerHeight;
-  const rect = lockedInput.getBoundingClientRect();
+let lockedInput: HTMLElement | null = null;
+let frozen = false;
 
-  if (rect.bottom > vh - 20) {
-    scrollEl.scrollTop += (rect.bottom - vh) + 50;
-  }
-
-  // Clamp — no overscroll
-  const maxScroll = Math.max(0, scrollEl.scrollHeight - vh);
-  if (scrollEl.scrollTop > maxScroll) {
-    scrollEl.scrollTop = maxScroll;
-  }
+function freeze() {
+  const el = getScrollEl();
+  el.style.overflow = 'hidden';
+  frozen = true;
 }
 
-function handleResize() {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  const h = vv.height;
+function unfreeze() {
+  const el = getScrollEl();
+  frozen = false;
 
-  // Only react to significant resize (>50px)
-  if (prevHeight > 0 && Math.abs(h - prevHeight) > 50 && lockedInput) {
-    scrollToInput();
+  if (lockedInput) {
+    // Scroll input into view BEFORE re-enabling overflow (no visual jump)
+    const vv = window.visualViewport;
+    const vh = vv ? vv.height : window.innerHeight;
+    const rect = lockedInput.getBoundingClientRect();
+    const maxScroll = Math.max(0, el.scrollHeight - vh);
+
+    if (rect.bottom > vh - 20) {
+      el.scrollTop += (rect.bottom - vh) + 40;
+    }
+    // Clamp
+    if (el.scrollTop > maxScroll) el.scrollTop = maxScroll;
   }
-  prevHeight = h;
+
+  el.style.overflow = '';
 }
 
 export function initVkKeyboardFix() {
-  if (window.visualViewport) {
-    prevHeight = window.visualViewport.height;
-    window.visualViewport.addEventListener('resize', handleResize);
-  }
-
+  // Focus: freeze scroll immediately
   document.addEventListener('focusin', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
     lockedInput = target;
-    setTimeout(scrollToInput, 350);
+    freeze();
+
+    // Unfreeze after keyboard settles
+    setTimeout(unfreeze, 400);
   });
 
+  // Viewport resize while frozen: keep frozen, just track
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      if (frozen && lockedInput) {
+        // Re-clamp + reposition while still frozen
+        setTimeout(unfreeze, 100);
+      }
+    });
+  }
+
+  // Blur: unfreeze if needed
   document.addEventListener('focusout', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
+
     setTimeout(() => {
-      if (document.activeElement && isTextInput(document.activeElement as HTMLElement)) {
-        lockedInput = document.activeElement as HTMLElement;
+      const active = document.activeElement as HTMLElement | null;
+      if (active && isTextInput(active)) {
+        lockedInput = active;
         return;
       }
       lockedInput = null;
+      if (frozen) unfreeze();
     }, 200);
   });
 }
