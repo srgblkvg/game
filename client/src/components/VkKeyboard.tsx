@@ -71,9 +71,13 @@ export default function VkKeyboard() {
   const [layout, setLayout] = useState<Layout>('ru');
   const [shift, setShift] = useState(false);
   const [active, setActive] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const activeRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const kbRef = useRef<HTMLDivElement>(null);
   const repeatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const repeatKey = useRef<string | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => { activeRef.current = active; }, [active]);
 
   // Only render in VK mobile app WebView (not m.vk.com, not desktop)
   const isVKWebView = typeof document !== 'undefined'
@@ -94,8 +98,8 @@ export default function VkKeyboard() {
 
   // Start long-press repeat: immediately, then after delay, every 50ms
   const startRepeat = useCallback((key: string, char: string) => {
-    if (!active) return;
-    const input = active;
+    const input = activeRef.current;
+    if (!input) return;
 
     // Insert first character immediately
     insertChar(input, char);
@@ -105,19 +109,21 @@ export default function VkKeyboard() {
     repeatKey.current = key;
     repeatTimer.current = setTimeout(() => {
       repeatTimer.current = setInterval(() => {
-        if (!active || repeatKey.current !== key) {
+        if (repeatKey.current !== key) {
           stopRepeat();
           return;
         }
-        insertChar(input, char);
+        const el = activeRef.current;
+        if (!el) { stopRepeat(); return; }
+        insertChar(el, char);
       }, 50);
     }, 600);
-  }, [active, shift, stopRepeat]);
+  }, [shift, stopRepeat]);
 
   // Backspace long-press: same timing, different action
   const startBackspace = useCallback(() => {
-    if (!active) return;
-    const input = active;
+    const input = activeRef.current;
+    if (!input) return;
     deleteChar(input);
 
     // Don't repeat if there's nothing to delete
@@ -127,14 +133,15 @@ export default function VkKeyboard() {
 
     repeatTimer.current = setTimeout(() => {
       repeatTimer.current = setInterval(() => {
-        if (!active) { stopRepeat(); return; }
-        const start = input.selectionStart ?? input.value.length;
-        const end = input.selectionEnd ?? input.value.length;
+        const el = activeRef.current;
+        if (!el) { stopRepeat(); return; }
+        const start = el.selectionStart ?? el.value.length;
+        const end = el.selectionEnd ?? el.value.length;
         if (start === 0 && end === 0) { stopRepeat(); return; }
-        deleteChar(input);
+        deleteChar(el);
       }, 50);
     }, 600);
-  }, [active, stopRepeat]);
+  }, [stopRepeat]);
 
   // Notify body about keyboard height → chat panel adjusts
   useLayoutEffect(() => {
@@ -179,17 +186,18 @@ export default function VkKeyboard() {
   }, []);
 
   const handleKey = useCallback((key: string) => {
-    if (!active) return;
+    const el = activeRef.current;
+    if (!el) return;
 
     if (key === '⌫') {
-      deleteChar(active);
+      deleteChar(el);
     } else if (key === '␣') {
-      insertChar(active, ' ');
+      insertChar(el, ' ');
     } else if (key === '↩') {
-      if (active.tagName === 'INPUT') {
-        active.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      if (el.tagName === 'INPUT') {
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       } else {
-        insertChar(active, '\n');
+        insertChar(el, '\n');
       }
     } else if (key === '⇧') {
       setShift(s => !s);
@@ -199,10 +207,10 @@ export default function VkKeyboard() {
     else if (key === 'abc') { setLayout('en');  setShift(false); }
     else {
       const char = shift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
-      insertChar(active, char);
+      insertChar(el, char);
       if (shift) setShift(false);
     }
-  }, [active, shift]);
+  }, [shift]);
 
   if (!isVKWebView || !active) return null;
 
