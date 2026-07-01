@@ -57,6 +57,46 @@ export default function VkKeyboard() {
   const [shift, setShift] = useState(false);
   const [active, setActive] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const kbRef = useRef<HTMLDivElement>(null);
+  const backspaceTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Long-press backspace: start deleting repeatedly
+  const startBackspace = useCallback(() => {
+    if (!active) return;
+    // First delete immediately
+    const a = active;
+    const start = a.selectionStart ?? a.value.length;
+    const end = a.selectionEnd ?? a.value.length;
+    if (start !== end) {
+      insertText(a, '');
+    } else if (start > 0) {
+      a.setSelectionRange(start - 1, start);
+      insertText(a, '');
+    }
+    // Then repeat
+    backspaceTimer.current = setInterval(() => {
+      if (!active) { stopBackspace(); return; }
+      const s = active.selectionStart ?? active.value.length;
+      const e = active.selectionEnd ?? active.value.length;
+      if (s !== e) {
+        insertText(active, '');
+      } else if (s > 0) {
+        active.setSelectionRange(s - 1, s);
+        insertText(active, '');
+      } else {
+        stopBackspace();
+      }
+    }, 60);
+  }, [active]);
+
+  const stopBackspace = useCallback(() => {
+    if (backspaceTimer.current) {
+      clearInterval(backspaceTimer.current);
+      backspaceTimer.current = null;
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => () => stopBackspace(), [stopBackspace]);
   // Notify body about keyboard height → chat panel adjusts
   useLayoutEffect(() => {
     if (active && kbRef.current) {
@@ -182,7 +222,26 @@ export default function VkKeyboard() {
                 key={ki}
                 className={cls}
                 onMouseDown={e => e.preventDefault()}
-                onTouchStart={e => { e.preventDefault(); handleKey(key); }}
+                onTouchStart={e => {
+                  e.preventDefault();
+                  if (isBackspace) {
+                    startBackspace();
+                  } else {
+                    handleKey(key);
+                  }
+                }}
+                onTouchEnd={() => {
+                  if (isBackspace) stopBackspace();
+                }}
+                onTouchCancel={() => {
+                  if (isBackspace) stopBackspace();
+                }}
+                onMouseUp={() => {
+                  if (isBackspace) stopBackspace();
+                }}
+                onMouseLeave={() => {
+                  if (isBackspace) stopBackspace();
+                }}
               >
                 {display}
               </button>
