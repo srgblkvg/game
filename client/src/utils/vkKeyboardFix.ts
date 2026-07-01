@@ -1,17 +1,11 @@
 /**
  * VK WebView keyboard fix.
  *
- * CSS: html/body overflow:hidden, #root overflow-y:auto.
- * JS: rAF loop sets html/body/#root heights to visualViewport.height.
- * When keyboard opens (viewport shrinks), heights update in sync → no empty space.
+ * Diagnosis: body.offsetHeight stays at 1681px (content height) even when
+ * viewport shrinks to 224px. CSS height:100dvh is NOT constraining body.
+ * 
+ * Fix: force body height via JS to match visualViewport.height.
  */
-
-let rafId = 0;
-let lockedInput: HTMLElement | null = null;
-
-function getScrollEl(): HTMLElement {
-  return document.getElementById('root') || document.body;
-}
 
 function isTextInput(el: HTMLElement): boolean {
   if (el.tagName === 'TEXTAREA') return true;
@@ -22,77 +16,61 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function syncHeights() {
-  const vv = window.visualViewport;
-  if (!vv) return;
-
-  const h = Math.round(vv.height);
-
-  // Set fixed heights — no CSS positioning, just pixel heights
-  document.documentElement.style.height = h + 'px';
+function syncHeight() {
+  if (!window.visualViewport) return;
+  const h = window.visualViewport.height;
   document.body.style.height = h + 'px';
-
-  const root = document.getElementById('root');
-  if (root) {
-    root.style.height = h + 'px';
-  }
-
-  // Ensure input is visible within the viewport
-  if (lockedInput) {
-    const scrollEl = getScrollEl();
-    const rect = lockedInput.getBoundingClientRect();
-    if (rect.bottom > h - 20) {
-      scrollEl.scrollTop += (rect.bottom - h) + 40;
-    }
-    // Clamp
-    const maxScroll = Math.max(0, scrollEl.scrollHeight - h);
-    if (scrollEl.scrollTop > maxScroll) scrollEl.scrollTop = maxScroll;
-  }
 }
 
-function startLoop() {
-  if (rafId) return;
-  syncHeights();
-  function loop() {
-    syncHeights();
-    rafId = requestAnimationFrame(loop);
-  }
-  rafId = requestAnimationFrame(loop);
-}
-
-function stopLoop() {
-  if (rafId) {
-    cancelAnimationFrame(rafId);
-    rafId = 0;
-  }
-  // Restore natural heights (100dvh from CSS)
-  document.documentElement.style.height = '';
-  document.body.style.height = '';
-  const root = document.getElementById('root');
-  if (root) root.style.height = '';
-}
+let wasResized = false;
 
 export function initVkKeyboardFix() {
   if (!window.visualViewport) return;
 
+  // Initial height sync
+  syncHeight();
+
+  // Sync on viewport resize (keyboard open/close)
+  window.visualViewport.addEventListener('resize', () => {
+    wasResized = true;
+    syncHeight();
+  });
+
+  // On input focus, ensure height is correct and input is visible
   document.addEventListener('focusin', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
-    lockedInput = target;
-    startLoop();
+
+    syncHeight();
+
+    // Scroll input into view after keyboard settles
+    setTimeout(() => {
+      const vv = window.visualViewport!;
+      const rect = target.getBoundingClientRect();
+      if (rect.bottom > vv.height - 20) {
+        document.body.scrollTop += (rect.bottom - vv.height) + 40;
+      }
+      // Clamp
+      const maxScroll = Math.max(0, document.body.scrollHeight - vv.height);
+      if (document.body.scrollTop > maxScroll) {
+        document.body.scrollTop = maxScroll;
+      }
+    }, 350);
   });
 
+  // On blur, if viewport was resized, restore full height
   document.addEventListener('focusout', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
+
     setTimeout(() => {
-      const active = document.activeElement as HTMLElement | null;
-      if (active && isTextInput(active)) {
-        lockedInput = active;
+      if (document.activeElement && isTextInput(document.activeElement as HTMLElement)) {
         return;
       }
-      lockedInput = null;
-      stopLoop();
+      if (wasResized) {
+        syncHeight(); // restore to full height
+        wasResized = false;
+      }
     }, 300);
   });
 }

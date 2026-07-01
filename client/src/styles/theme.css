@@ -135,21 +135,18 @@ body,
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px); /* 40px = высота свёрнутого чат-бара */
 }
 
-/* VK iframe: html/body never scroll, #root scrolls, JS controls html height */
-html.vk-iframe {
-  overflow: hidden;
-}
+/* VK iframe: scroll fix (original approach) */
+html.vk-iframe,
 html.vk-iframe body {
-  overflow: hidden;
-  margin: 0;
-}
-html.vk-iframe #root {
-  min-height: 0 !important;
+  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding-top: 80px !important;
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px);
+}
+
+/* VK WebView fixes: no transparency, solid backgrounds, fixed header */
+html.vk-iframe body {
+  overflow-y: auto !important;
 }
 /* No gradient — solid background for VK */
 html.vk-iframe {
@@ -165,6 +162,10 @@ html.vk-iframe #site-header {
   left: 0 !important;
   right: 0 !important;
   z-index: 40 !important;
+}
+/* Content offset for fixed header */
+html.vk-iframe #root {
+  padding-top: 80px !important;
 }
 /* Remove transparency from right panel */
 html.vk-iframe .right-panel-transparent {
