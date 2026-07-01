@@ -17,6 +17,7 @@ import RightSidebar from './components/RightSidebar';
 import NotificationToast from './components/NotificationToast';
 import ScrollToTop from './components/ScrollToTop';
 import MetrikaTracker from './components/MetrikaTracker';
+import VkKeyboard from './components/VkKeyboard';
 
 // Ленивая загрузка тяжёлых страниц
 const ArenaPage = lazy(() => import('./pages/Arena/ArenaPage'));
@@ -119,6 +120,7 @@ function App() {
         </Suspense>
       </div>
       <ChatPanel key={user?.id} />
+      <VkKeyboard />
     </BrowserRouter>
   );
 }

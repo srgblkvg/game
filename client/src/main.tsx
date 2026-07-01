@@ -10,6 +10,7 @@ import { ServerTimeProvider } from './contexts/ServerTimeContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { addCollection } from '@iconify/react';
 import gameIcons from './icons-filtered.json';
+import { initVkInputMode } from './utils/vkInputMode';
 import './styles/theme.css';
 
 // VK Bridge init (для игр ВКонтакте)
@@ -23,6 +24,8 @@ if (window.vkBridge) {
   window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
   // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
   document.documentElement.classList.add('vk-iframe');
+  // Блокируем нативную клавиатуру — используем кастомную
+  initVkInputMode();
 }
 
 // Регистрируем иконки локально (без API-запросов)
