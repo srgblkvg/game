@@ -135,38 +135,21 @@ body,
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px); /* 40px = высота свёрнутого чат-бара */
 }
 
-/* VK iframe: html/body fixed (never scroll), #root scrolls */
+/* VK iframe: html/body never scroll, #root scrolls, JS controls html height */
 html.vk-iframe {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   overflow: hidden;
 }
 html.vk-iframe body {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   overflow: hidden;
   margin: 0;
 }
-/* #root = единственный скролл-контейнер */
 html.vk-iframe #root {
   min-height: 0 !important;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  /* safe-area + collapsed chat bar */
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px);
   padding-top: 80px !important;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px);
 }
 /* No gradient — solid background for VK */
 html.vk-iframe {

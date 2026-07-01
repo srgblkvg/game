@@ -1,12 +1,13 @@
 /**
  * VK WebView keyboard fix.
  *
- * Diagnosis: viewport/iframe resize from 846→224 when keyboard opens.
- * Browser auto-scrolls on focus, causing overscroll → empty space.
- *
- * Fix: freeze scroll (overflow:hidden) on focus, preventing visual movement.
- * After keyboard settles, restore scroll and position input manually.
+ * CSS: html/body overflow:hidden, #root overflow-y:auto.
+ * JS: rAF loop sets html/body/#root heights to visualViewport.height.
+ * When keyboard opens (viewport shrinks), heights update in sync → no empty space.
  */
+
+let rafId = 0;
+let lockedInput: HTMLElement | null = null;
 
 function getScrollEl(): HTMLElement {
   return document.getElementById('root') || document.body;
@@ -16,70 +17,74 @@ function isTextInput(el: HTMLElement): boolean {
   if (el.tagName === 'TEXTAREA') return true;
   if (el.tagName === 'INPUT') {
     const type = (el as HTMLInputElement).type;
-    return type === 'text' || type === 'search' || type === 'number'
-      || type === 'email' || type === 'url' || type === 'tel'
-      || type === 'password' || type === '';
+    return !['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'image', 'hidden', 'range', 'color'].includes(type);
   }
   return el.isContentEditable;
 }
 
-let lockedInput: HTMLElement | null = null;
-let frozen = false;
+function syncHeights() {
+  const vv = window.visualViewport;
+  if (!vv) return;
 
-function freeze() {
-  const el = getScrollEl();
-  el.style.overflow = 'hidden';
-  frozen = true;
-}
+  const h = Math.round(vv.height);
 
-function unfreeze() {
-  const el = getScrollEl();
-  frozen = false;
+  // Set fixed heights — no CSS positioning, just pixel heights
+  document.documentElement.style.height = h + 'px';
+  document.body.style.height = h + 'px';
 
-  if (lockedInput) {
-    // Scroll input into view BEFORE re-enabling overflow (no visual jump)
-    const vv = window.visualViewport;
-    const vh = vv ? vv.height : window.innerHeight;
-    const rect = lockedInput.getBoundingClientRect();
-    const maxScroll = Math.max(0, el.scrollHeight - vh);
-
-    if (rect.bottom > vh - 20) {
-      el.scrollTop += (rect.bottom - vh) + 40;
-    }
-    // Clamp
-    if (el.scrollTop > maxScroll) el.scrollTop = maxScroll;
+  const root = document.getElementById('root');
+  if (root) {
+    root.style.height = h + 'px';
   }
 
-  el.style.overflow = '';
+  // Ensure input is visible within the viewport
+  if (lockedInput) {
+    const scrollEl = getScrollEl();
+    const rect = lockedInput.getBoundingClientRect();
+    if (rect.bottom > h - 20) {
+      scrollEl.scrollTop += (rect.bottom - h) + 40;
+    }
+    // Clamp
+    const maxScroll = Math.max(0, scrollEl.scrollHeight - h);
+    if (scrollEl.scrollTop > maxScroll) scrollEl.scrollTop = maxScroll;
+  }
+}
+
+function startLoop() {
+  if (rafId) return;
+  syncHeights();
+  function loop() {
+    syncHeights();
+    rafId = requestAnimationFrame(loop);
+  }
+  rafId = requestAnimationFrame(loop);
+}
+
+function stopLoop() {
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+  // Restore natural heights (100dvh from CSS)
+  document.documentElement.style.height = '';
+  document.body.style.height = '';
+  const root = document.getElementById('root');
+  if (root) root.style.height = '';
 }
 
 export function initVkKeyboardFix() {
-  // Focus: freeze scroll immediately
+  if (!window.visualViewport) return;
+
   document.addEventListener('focusin', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
     lockedInput = target;
-    freeze();
-
-    // Unfreeze after keyboard settles
-    setTimeout(unfreeze, 400);
+    startLoop();
   });
 
-  // Viewport resize while frozen: keep frozen, just track
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', () => {
-      if (frozen && lockedInput) {
-        // Re-clamp + reposition while still frozen
-        setTimeout(unfreeze, 100);
-      }
-    });
-  }
-
-  // Blur: unfreeze if needed
   document.addEventListener('focusout', (e: FocusEvent) => {
     const target = e.target as HTMLElement;
     if (!isTextInput(target)) return;
-
     setTimeout(() => {
       const active = document.activeElement as HTMLElement | null;
       if (active && isTextInput(active)) {
@@ -87,7 +92,7 @@ export function initVkKeyboardFix() {
         return;
       }
       lockedInput = null;
-      if (frozen) unfreeze();
-    }, 200);
+      stopLoop();
+    }, 300);
   });
 }
