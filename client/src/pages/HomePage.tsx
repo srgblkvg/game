@@ -30,10 +30,10 @@ export default function HomePage() {
     // Header already polls character — no need for duplicate interval here
   }, [user, setCharacter]);
 
-  // Показываем туториал новым игрокам (флаг в БД)
+  // Показываем туториал тем, кто ещё не прошёл (флаг в БД)
   useEffect(() => {
     if (!character) return;
-    if (!character.tutorialCompleted && character.totalBattles === 0) {
+    if (!character.tutorialCompleted) {
       const t = setTimeout(() => setShowTutorial(true), 500);
       return () => clearTimeout(t);
     }
