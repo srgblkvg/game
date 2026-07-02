@@ -18,7 +18,7 @@ function stripQuotes(text: string): string {
 function renderContent(content: string): string {
     const lines = content.split('\n');
     const parts: { type: 'quote' | 'text'; text: string }[] = [];
-    let current = { type: 'text' as const, text: '' };
+    let current: { type: 'quote' | 'text'; text: string } = { type: 'text', text: '' };
     for (const line of lines) {
         const isQuote = line.startsWith('>');
         if (isQuote !== (current.type === 'quote')) {

@@ -43,12 +43,10 @@ export default function ArenaPage() {
     hpLeft, maxHpLeft,
     hpRight, maxHpRight,
     modalMessage,
-    speed,
     logContainerRef,
     loadOpponent,
     handleStartBattle,
     handleSkip,
-    toggleSpeed,
     setModalMessage,
     finishBattle,
   } = useBattleLogic(user?.id!, character, setCharacter);

@@ -15,7 +15,15 @@ export function useGlobalChat() { const ctx = useContext(ChatContext); if (!ctx)
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>(() => { try { const c = localStorage.getItem('chat_messages'); return c ? JSON.parse(c) : []; } catch { return []; } });
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const c = localStorage.getItem('chat_messages');
+      if (!c) return [];
+      const parsed = JSON.parse(c);
+      // Удаляем старые аукционные сообщения при загрузке — сервер пришлёт актуальные через WS
+      return parsed.filter((m: any) => !m.item?.type?.startsWith('auction_'));
+    } catch { return []; }
+  });
   useEffect(() => { try { localStorage.setItem('chat_messages', JSON.stringify(messages.slice(-100))); } catch {} }, [messages]);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [bannedUntil, setBannedUntil] = useState<number | null>(null);

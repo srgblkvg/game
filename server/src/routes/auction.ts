@@ -65,7 +65,7 @@ router.get('/auction', async (req, res) => {
         addToTreasury(commission, 'auction_expired').catch(() => {});
         // Уведомления
         const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [lot.currentBidderId]) as any)?.username || 'Кто-то';
-        pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} купил «${JSON.parse(lot.itemData).name || 'Предмет'}» за ${lot.currentBid}🥇` });
+        pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} купил «${JSON.parse(lot.itemData).name || 'Предмет'}» за ${lot.currentBid} серебра` });
         sendToUser(lot.sellerId, { type: 'auction_badge', count: 1 });
         await db.run('UPDATE users SET auction_sales = COALESCE(auction_sales, 0) + 1 WHERE id = ?', [lot.sellerId]);
         pushNotification(lot.currentBidderId, { type: 'system', message: `Вы выиграли «${JSON.parse(lot.itemData).name || 'Предмет'}» на аукционе!` });
@@ -180,7 +180,7 @@ router.post('/auction/sell', async (req, res) => {
     // Цена указана за 1 шт — умножаем на количество
     const totalStartPrice = startPrice * itemCount;
     const totalBuyoutPrice = buyoutPrice ? buyoutPrice * itemCount : null;
-    if (startPrice < floor) return res.status(400).json({ error: `Мин. цена за 1 шт для этой редкости: ${floor} 🥇` });
+    if (startPrice < floor) return res.status(400).json({ error: `Мин. цена за 1 шт для этой редкости: ${floor} серебра` });
     if (buyoutPrice && buyoutPrice <= startPrice) return res.status(400).json({ error: 'Цена выкупа должна быть выше стартовой' });
 
     // Проверка лимита (5 лотов)
@@ -191,7 +191,7 @@ router.post('/auction/sell', async (req, res) => {
     const listingFee = Math.max(1, Math.floor(totalStartPrice * 0.05));
     const user = await db.one('SELECT money, inventory FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.money < listingFee) return res.status(400).json({ error: `Недостаточно монет для листинга (${listingFee} 🥇)` });
+    if (user.money < listingFee) return res.status(400).json({ error: `Недостаточно монет для листинга (${listingFee} серебра)` });
 
     // Убираем предмет из инвентаря
     const inventory = JSON.parse(user.inventory || '[]');
@@ -276,7 +276,7 @@ router.post('/auction/bid', async (req, res) => {
 
             const currentBid = lot.currentbid ? parseInt(lot.currentbid) : null;
             const minBid = currentBid ? currentBid + Math.max(1, Math.floor(currentBid * 0.05)) : parseInt(lot.startprice);
-            if (amount < minBid) throw new Error(`Мин. ставка: ${minBid} 🥇`);
+            if (amount < minBid) throw new Error(`Мин. ставка: ${minBid} серебра`);
 
             const user = (await client.query('SELECT money FROM users WHERE id = $1', [userId])).rows[0] as any;
             if (!user || user.money < amount) throw new Error('Недостаточно монет');
@@ -394,7 +394,7 @@ router.post('/auction/buyout', async (req, res) => {
 
     // Уведомление продавцу — прямой WS + toast
     const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
-    pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} выкупил «${buyItemData.name || 'Предмет'}» за ${lot.buyoutPrice}🥇` });
+    pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} выкупил «${buyItemData.name || 'Предмет'}» за ${lot.buyoutPrice} серебра` });
     sendToUser(lot.sellerId, { type: 'auction_badge', count: 1 });
     await db.run('UPDATE users SET auction_sales = COALESCE(auction_sales, 0) + 1 WHERE id = ?', [lot.sellerId]);
 
@@ -411,14 +411,14 @@ router.post('/auction/buyout', async (req, res) => {
     });
     const buyoutChatInfo = await db.run(
       'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderguild, senderguildid) VALUES (?, NULL, ?, ?, NULL, NULL)',
-      [0, `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice}🥇`, buyoutItemData]
+      [0, `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice} серебра`, buyoutItemData]
     );
     const buyoutChatMsg = {
       id: buyoutChatInfo.lastInsertRowid,
       senderId: 0,
       senderName: 'Аукцион',
       targetId: null,
-      content: `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice}🥇`,
+      content: `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice} серебра`,
       createdAt: new Date().toISOString(),
       item: { type: 'auction_buyout', lotId, itemData: buyItemData, price: lot.buyoutPrice, buyerName },
     };

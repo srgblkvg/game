@@ -162,8 +162,8 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                                 {a.type === 'auction_lot' && (
                                                     <>
                                                         <div className="text-[var(--color-text-primary)]">
-                                                            Старт: <span className="text-[var(--color-accent-warning)] font-bold">{a.startPrice}🥇</span>
-                                                            {a.buyoutPrice ? <span className="ml-2">Выкуп: <span className="text-[var(--color-accent-success)] font-bold">{a.buyoutPrice}🥇</span></span> : null}
+                                                            Старт: <span className="text-[var(--color-accent-warning)] font-bold">{a.startPrice} серебра</span>
+                                                            {a.buyoutPrice ? <span className="ml-2">Выкуп: <span className="text-[var(--color-accent-success)] font-bold">{a.buyoutPrice} серебра</span></span> : null}
                                                         </div>
                                                         <div className="text-[var(--color-text-muted)] text-[0.72rem]">
                                                             Продавец: {a.sellerName || '?'}
@@ -174,8 +174,8 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                                 {a.type === 'auction_bid' && (
                                                     <>
                                                         <div className="text-[var(--color-text-primary)]">
-                                                            Ставка: <span className="text-[var(--color-accent-warning)] font-bold">{a.currentBid}🥇</span>
-                                                            {a.buyoutPrice ? <span className="ml-2">Выкуп: <span className="text-[var(--color-accent-success)]">{a.buyoutPrice}🥇</span></span> : null}
+                                                            Ставка: <span className="text-[var(--color-accent-warning)] font-bold">{a.currentBid} серебра</span>
+                                                            {a.buyoutPrice ? <span className="ml-2">Выкуп: <span className="text-[var(--color-accent-success)]">{a.buyoutPrice} серебра</span></span> : null}
                                                         </div>
                                                         <div className="text-[var(--color-text-muted)] text-[0.72rem]">
                                                             Лидер: <span className="text-[var(--color-accent-warning)] font-bold">{a.currentBidderName || '?'}</span>
@@ -185,7 +185,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                                 )}
                                                 {a.type === 'auction_buyout' && (
                                                     <div className="text-[var(--color-text-muted)] text-[0.72rem]">
-                                                        {a.buyerName} выкупил за {a.price}🥇
+                                                        {a.buyerName} выкупил за {a.price} серебра
                                                     </div>
                                                 )}
                                                 <div className="flex justify-between items-center mt-1 text-[0.68rem] text-[var(--color-border-light)]">

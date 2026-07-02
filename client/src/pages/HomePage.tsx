@@ -15,7 +15,7 @@ import { getHeaders } from '../api/helpers';
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { character, setCharacter, serverTime } = useGame();
+  const { character, setCharacter } = useGame();
   const navigate = useNavigate();
   const [noOpponentModal, setNoOpponentModal] = useState<string | null>(null);
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string | null>(null);

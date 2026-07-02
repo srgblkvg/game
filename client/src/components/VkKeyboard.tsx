@@ -94,7 +94,7 @@ export default function VkKeyboard() {
     if (repeatInterval.current) { clearInterval(repeatInterval.current); repeatInterval.current = null; }
   }, []);
 
-  useEffect(() => () => stopRepeat(), [stopRepeat]);
+  useEffect(() => stopRepeat, [stopRepeat]);
 
   // Notify body about keyboard height
   useLayoutEffect(() => {
@@ -103,7 +103,7 @@ export default function VkKeyboard() {
     } else {
       document.body.style.removeProperty('--vk-keyboard-height');
     }
-    return () => document.body.style.removeProperty('--vk-keyboard-height');
+    return () => { document.body.style.removeProperty('--vk-keyboard-height'); };
   }, [active]);
 
   // Force-keep input focus while keyboard is visible (Android WebView loses it)

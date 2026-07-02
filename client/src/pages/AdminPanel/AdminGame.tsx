@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import ImageUploader from '../../components/ImageUploader';
@@ -33,8 +33,6 @@ export default function AdminGame() {
     const [floors, setFloors] = useState<any[]>([]);
     const [editingFloor, setEditingFloor] = useState<any>(null);
     const [newFloor, setNewFloor] = useState({ name: '', background: '', sort_order: 0 });
-    const [bulkUploading, setBulkUploading] = useState(false);
-    const floorFileRefs = useRef<Map<number, HTMLInputElement>>(new Map());
 
     const api = async (method: string, url: string, body?: any) => {
         const r = await fetch(url, { method, headers: { ...getHeaders(), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });

@@ -145,7 +145,7 @@ async function doManageEq(token: string, botId: number, state: BotState) {
           duration: 24,
           count: Math.max(1, count),
         });
-        actions.push(`Продал ${item.name}×${count} за ${price}🥇 (выкуп ${buyoutPrice}🥇)`);
+        actions.push(`Продал ${item.name}×${count} за ${price} серебра (выкуп ${buyoutPrice} серебра)`);
       } catch (e: any) { /* нет денег на комиссию */ }
     }
   }
@@ -182,7 +182,7 @@ async function doManageEq(token: string, botId: number, state: BotState) {
       if (q.status === 'active' && q.progress >= q.requirement) {
         try {
           const claim = await apiCall(token, 'POST', '/tavern/quests/claim', { questId: q.id });
-          actions.push(`Сдал квест «${q.typeName}» +${claim.rewardXp || 0}XP +${claim.rewardMoney || 0}🥇`);
+          actions.push(`Сдал квест «${q.typeName}» +${claim.rewardXp || 0}XP +${claim.rewardMoney || 0} серебра`);
         } catch (e: any) { /* не вышло */ }
       }
     }
@@ -291,7 +291,7 @@ async function doPve(token: string, botId: number, state: BotState) {
   const result = await apiCall(token, 'POST', '/mob/attack', { mobId: mob.id });
   const won = result.playerWon;
   state.stats.lastActionResult = `PvE: ${mob.name} (ур.${mob.level}) — ${won ? 'победа' : 'поражение'}` +
-    (won && result.goldGained ? ` +${result.goldGained}🥇` : '');
+    (won && result.goldGained ? ` +${result.goldGained} серебра` : '');
 }
 
 // ─── PvP: только равные или слабее, реролл за серебро ───
@@ -338,7 +338,7 @@ async function doPvp(token: string, botId: number, state: BotState) {
     const result = await apiCall(token, 'POST', '/battle', { opponentId: opp.id });
     const won = result.hpAfter > 0;
     state.stats.lastActionResult = `PvP: vs ${opp.name} (ур.${opp.level}) — ${won ? 'победа' : 'поражение'}` +
-      (result.moneyStolen ? ` ±${result.moneyStolen}🥇` : '');
+      (result.moneyStolen ? ` ±${result.moneyStolen} серебра` : '');
   } catch (e: any) {
     state.stats.lastActionResult = `PvP: ${e.message}`;
   }
@@ -387,7 +387,7 @@ async function doAuctionBuy(token: string, botId: number, state: BotState) {
           } else {
             await apiCall(token, 'POST', '/auction/bid', { lotId: lot.id, amount: price });
           }
-          state.stats.lastActionResult = `Аукцион: купил ${itemData.name} за ${price}🥇 (лучше экипировки)`;
+          state.stats.lastActionResult = `Аукцион: купил ${itemData.name} за ${price} серебра (лучше экипировки)`;
           return;
         } catch (e: any) { /* недостаточно денег — смотрим дальше */ }
       }
@@ -404,7 +404,7 @@ async function doAuctionBuy(token: string, botId: number, state: BotState) {
     const price = lot.currentBid ? lot.currentBid + Math.max(1, Math.floor(lot.currentBid * 0.05)) : lot.startPrice;
     try {
       await apiCall(token, 'POST', '/auction/bid', { lotId: lot.id, amount: price });
-      state.stats.lastActionResult = `Аукцион: ставка ${price}🥇`;
+      state.stats.lastActionResult = `Аукцион: ставка ${price} серебра`;
     } catch (e: any) { state.stats.lastActionResult = `Аукцион: ${e.message}`; }
   } else {
     state.stats.lastActionResult = 'Аукцион: ничего не подошло';
@@ -482,7 +482,7 @@ async function doTournament(token: string, botId: number, state: BotState) {
       const label = t.type === 'official'
         ? (t.division || 'официальный')
         : (t.name || 'кастомный');
-      joined.push(`${label}${entryFee > 0 ? ` (взнос ${entryFee}🥇)` : ''}`);
+      joined.push(`${label}${entryFee > 0 ? ` (взнос ${entryFee} серебра)` : ''}`);
     } catch (e: any) {
       // Уже зарегистрирован, нет денег, турнир заполнен — всё норм
       if (!e.message.includes('уже зарегистрированы') &&

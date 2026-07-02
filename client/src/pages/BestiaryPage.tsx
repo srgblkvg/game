@@ -39,7 +39,7 @@ export default function BestiaryPage() {
   const [mobMaxHp, setMobMaxHp] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [speed, setSpeed] = useState(2);
+  const [speed, _setSpeed] = useState(2);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
@@ -53,7 +53,6 @@ export default function BestiaryPage() {
   const currentStepRef = useRef(-1);
   const speedRef = useRef(2);
   const initialHpRef = useRef({ player: 0, mob: 0 });
-  const atkTimeoutRef = useRef<number | null>(null);
   const pendingCharRef = useRef<any>(null);
   const pendingDropsRef = useRef<any[]>([]);
 
@@ -164,7 +163,7 @@ export default function BestiaryPage() {
     float.addEventListener('animationend', () => float.remove());
   };
 
-  const executeStep = (step: any, side: 'left' | 'right') => {
+  const executeStep = (step: any, _side: 'left' | 'right') => {
     const leftFrame = document.getElementById('fighter-left');
     const rightFrame = document.getElementById('fighter-right');
     const leftCard = document.querySelector('.fighter-card.left') as HTMLElement;
@@ -376,16 +375,6 @@ export default function BestiaryPage() {
     }
     // Применяем отложенное обновление персонажа и дропы
     applyPending();
-  };
-
-  const toggleSpeed = () => {
-    const ns = speed === 1 ? 2 : 1;
-    setSpeed(ns);
-    speedRef.current = ns;
-    if (currentStepRef.current >= 0 && currentStepRef.current < stepsRef.current.length - 1) {
-      stopAuto();
-      timerRef.current = window.setInterval(() => nextStep(), 1000 / ns);
-    }
   };
 
   const backToFloors = () => {

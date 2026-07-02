@@ -42,7 +42,7 @@ router.post('/orders/create', async (req, res) => {
 
     const user = await db.one('SELECT level, money FROM users WHERE id = ?', [userId]) as any;
     if (user.level < 5) return res.status(400).json({ error: 'Нужен 5 уровень' });
-    if (user.money < 5000) return res.status(400).json({ error: 'Нужно 5000 🥇' });
+    if (user.money < 5000) return res.status(400).json({ error: 'Нужно 5000 серебра' });
 
     const existing = await db.one('SELECT id FROM orders WHERE name = ?', [name]);
     if (existing) return res.status(400).json({ error: 'Имя занято' });
