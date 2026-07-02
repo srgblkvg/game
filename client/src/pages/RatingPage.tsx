@@ -17,7 +17,7 @@ export default function RatingPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [showInfo, setShowInfo] = useState(false);
-    const [initialPageSet, setInitialPageSet] = useState(false);
+    const initialLoadDone = useRef(false);
     const [search, setSearch] = useState('');
     const [searchInput, setSearchInput] = useState('');
     const [minElo, setMinElo] = useState(0);
@@ -53,28 +53,38 @@ export default function RatingPage() {
         { label: '• Пепел (0+)', min: 0 },
     ];
 
-    // Найти страницу с текущим игроком
+    // Найти страницу с текущим игроком и сразу загрузить
     useEffect(() => {
-        if (!user || initialPageSet) return;
+        if (!user) return;
+        let cancelled = false;
         fetch(`${BASE_URL}/my-position`, { headers: getHeaders() })
             .then(r => r.json())
             .then(data => {
-                if (data.position) {
-                    const myPage = Math.ceil(data.position / LIMIT);
-                    setPage(myPage);
-                }
-                setInitialPageSet(true);
+                if (cancelled) return;
+                const myPage = data.position ? Math.ceil(data.position / LIMIT) : 1;
+                setPage(myPage);
+                initialLoadDone.current = true;
+                return fetchRating(myPage, LIMIT, search, minElo);
             })
-            .catch(() => setInitialPageSet(true));
+            .then(ratingData => {
+                if (cancelled || !ratingData) return;
+                setPlayers(ratingData.users);
+                setTotalPages(Math.ceil(ratingData.total / LIMIT));
+            })
+            .catch(() => {
+                if (cancelled) return;
+                initialLoadDone.current = true;
+            });
+        return () => { cancelled = true; };
     }, [user]);
 
     useEffect(() => {
-        if (!initialPageSet) return;
+        if (!initialLoadDone.current) return;
         fetchRating(page, LIMIT, search, minElo).then(data => {
             setPlayers(data.users);
             setTotalPages(Math.ceil(data.total / LIMIT));
         }).catch(console.error);
-    }, [page, initialPageSet, search, minElo]);
+    }, [page, search, minElo]);
 
     return (
         <div className="max-w-xl mx-auto px-4 py-4">
