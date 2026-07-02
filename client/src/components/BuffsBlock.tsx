@@ -128,6 +128,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
 
                         {/* Комната */}
                         <BuffRow
+                            dataTutorial="room"
                             icon={hasRoom && room ? roomIcons[room.type] || 'game-icons:wooden-crate' : 'game-icons:wooden-crate'}
                             label="Комната"
                             active={!!hasRoom}
@@ -138,6 +139,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
 
                         {/* Напиток */}
                         <BuffRow
+                            dataTutorial="drink"
                             icon="game-icons:beer-bottle"
                             label="Напиток"
                             active={!!hasDrink}
@@ -148,6 +150,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
 
                         {/* Премиум */}
                         <BuffRow
+                            dataTutorial="premium"
                             icon="game-icons:star-formation"
                             label="Премиум"
                             active={!!hasPremium}
@@ -164,7 +167,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
                         <div className="text-[0.65rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 flex items-center justify-center gap-1">
                             <Icon icon="game-icons:infinity" width="10" height="10" /> Постоянные
                         </div>
-                        <div className="cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1 py-0.5" onClick={() => navigate('/collections')}>
+                        <div data-tutorial-buff="collection" className="cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1 py-0.5" onClick={() => navigate('/collections')}>
                             <div className="flex justify-between items-center text-xs mb-0.5">
                                 <span className="flex items-center gap-1.5">
                                     <Icon icon="game-icons:book-cover" width="12" height="12" className="text-[var(--color-text-muted)]" />
@@ -185,11 +188,11 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     );
 }
 
-function BuffRow({ icon, label, active, detail, time, onClick }: {
-    icon: string; label: string; active: boolean; detail?: string; time: string; onClick: () => void;
+function BuffRow({ icon, label, active, detail, time, onClick, dataTutorial }: {
+    icon: string; label: string; active: boolean; detail?: string; time: string; onClick: () => void; dataTutorial?: string;
 }) {
     return (
-        <div className="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1" onClick={onClick}>
+        <div data-tutorial-buff={dataTutorial} className="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1" onClick={onClick}>
             <Icon icon={icon} width="12" height="12" className={active ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-muted)]'} />
             <span className={active ? 'text-[var(--color-text-primary)] font-medium' : 'text-[var(--color-text-muted)]'}>
                 {label}{detail ? `: ${detail}` : ''}

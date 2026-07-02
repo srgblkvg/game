@@ -38,9 +38,9 @@ function calcTooltipPosition(
 ): TooltipPosition {
   const tooltipMaxW = isMobile ? viewportW - TOOLTIP_MARGIN * 2 : 320;
   const tooltipW = Math.min(320, tooltipMaxW);
-  // Оценка высоты tooltip (заголовок + описание + кнопки ~ 200px на десктопе, ~250 на мобильном)
-  const tooltipH = isMobile ? 250 : 220;
-  const gap = 12; // отступ между target и tooltip
+  // Оценка высоты tooltip (заголовок + описание + кнопки)
+  const tooltipH = isMobile ? 280 : 280;
+  const gap = 24; // отступ между target и tooltip
 
   // Доступное пространство с каждой стороны
   const spaceTop = target.top - TOOLTIP_MARGIN;
