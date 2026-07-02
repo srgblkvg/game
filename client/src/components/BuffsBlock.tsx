@@ -43,6 +43,13 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     const collectionPercent = Math.round((collectionCount / totalCollectionItems) * 100);
     const navigate = useNavigate();
 
+    // Разворачиваем блок по событию туториала
+    useEffect(() => {
+        const handler = () => setCollapsed(false);
+        window.addEventListener('tutorial-expand-buffs', handler);
+        return () => window.removeEventListener('tutorial-expand-buffs', handler);
+    }, []);
+
     useEffect(() => {
         const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
         return () => clearInterval(t);
@@ -92,7 +99,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     ].filter(Boolean) as string[];
 
     return (
-        <Card className="mt-4 w-full">
+        <Card className="mt-4 w-full" data-tutorial="buffs-block">
             <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setCollapsed(!collapsed)}>
                 <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xs flex-shrink-0">{collapsed ? '▶' : '▼'}</span>

@@ -181,6 +181,7 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
     });
 
     // Скроллим элемент в центр экрана (если он не полностью видим)
+    // Учитываем sticky-шапку — вычитаем её высоту из целевой позиции
     const isFullyVisible =
       rect.top >= 0 &&
       rect.left >= 0 &&
@@ -188,7 +189,11 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       rect.right <= vw;
 
     if (!isFullyVisible) {
-      el.scrollIntoView({ block: 'center', behavior: 'instant' });
+      const headerH = document.getElementById('site-header')?.offsetHeight || 0;
+      const targetCenter = rect.top + rect.height / 2;
+      const viewportCenter = vh / 2;
+      const scrollDelta = targetCenter - viewportCenter - headerH;
+      window.scrollBy({ top: scrollDelta, behavior: 'instant' });
       // Пересчитываем позицию после скролла
       const newRect = el.getBoundingClientRect();
       setTargetRect({
