@@ -48,18 +48,11 @@ function calcTooltipPosition(
   const spaceLeft = target.left - TOOLTIP_MARGIN;
   const spaceRight = viewportW - target.right - TOOLTIP_MARGIN;
 
-  // На мобильном всегда показываем снизу (или сверху, если нет места снизу)
+  // На мобильном — туториал всегда сверху, элемент под ним
   if (isMobile) {
-    let top: number;
-    if (spaceBottom >= tooltipH + gap) {
-      top = target.bottom + gap;
-    } else if (spaceTop >= tooltipH + gap) {
-      top = target.top - tooltipH - gap;
-    } else {
-      top = Math.max(TOOLTIP_MARGIN, (viewportH - tooltipH) / 2);
-    }
-    // left не важен — центрируем через CSS (left:50% + translateX(-50%))
-    return { left: 0, top };
+    // Высота шапки (уже не перекрыта оверлеем, но sticky-шапка всё ещё сверху)
+    const headerH = document.getElementById('site-header')?.offsetHeight || 0;
+    return { left: 0, top: Math.max(TOOLTIP_MARGIN, headerH + 8) };
   }
 
   // Десктоп: пробуем предпочтительную позицию, затем фолбэк
@@ -180,20 +173,31 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       right: rect.right,
     });
 
-    // Скроллим элемент чтобы был видим (учитываем sticky-шапку)
+    // Скроллим элемент чтобы был видим (учитываем sticky-шапку и tooltip сверху)
     const headerH = document.getElementById('site-header')?.offsetHeight || 0;
+    // На мобильном tooltip сверху — элемент должен быть ниже него
+    const tooltipTopOnMobile = mobile ? headerH + 8 : 0;
+    const tooltipEstH = mobile ? 180 : 0; // оценка высоты tooltip на мобильном
+    const topClearance = mobile ? tooltipTopOnMobile + tooltipEstH + 16 : headerH;
+
     const isFullyVisible =
-      rect.top >= headerH &&
+      rect.top >= topClearance &&
       rect.left >= 0 &&
       rect.bottom <= vh &&
       rect.right <= vw;
 
     if (!isFullyVisible) {
-      // Временно включаем скролл для корректной работы scrollIntoView
+      // Временно включаем скролл для корректной работы scrollIntoView/scrollBy
       document.body.style.overflow = '';
-      el.scrollIntoView({ block: 'center', behavior: 'instant' });
-      // Сдвигаем выше на высоту шапки + отступ
-      window.scrollBy({ top: -(headerH + 16), behavior: 'instant' });
+      if (mobile) {
+        // Скроллим чтобы элемент оказался ниже tooltip
+        const scrollTarget = window.scrollY + rect.top - topClearance;
+        window.scrollTo({ top: scrollTarget, behavior: 'instant' });
+      } else {
+        el.scrollIntoView({ block: 'center', behavior: 'instant' });
+        // Сдвигаем выше на высоту шапки + отступ
+        window.scrollBy({ top: -(headerH + 16), behavior: 'instant' });
+      }
       // Возвращаем блокировку
       document.body.style.overflow = 'hidden';
       // Пересчитываем позицию после скролла
@@ -308,10 +312,10 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
     background: 'var(--color-bg-secondary, #1e1e30)',
     border: '1px solid var(--color-border-default, #444)',
     borderRadius: '12px',
-    padding: isMobile ? '16px' : '20px',
+    padding: isMobile ? '12px' : '20px',
     zIndex: 102,
     boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-    maxHeight: isMobile ? '40vh' : '80vh',
+    maxHeight: isMobile ? '35vh' : '80vh',
     overflowY: 'auto',
     ...(isMobile ? {
       left: '50%',
@@ -398,7 +402,7 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
         <div style={{
           display: 'flex',
           gap: '6px',
-          marginBottom: isMobile ? '12px' : '16px',
+          marginBottom: isMobile ? '8px' : '16px',
         }}>
           {steps.map((_, i) => (
             <div
@@ -420,28 +424,28 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
 
         {/* Счётчик */}
         <div style={{
-          fontSize: isMobile ? '0.7rem' : '0.75rem',
+          fontSize: isMobile ? '0.65rem' : '0.75rem',
           color: 'var(--color-text-muted, #888)',
-          marginBottom: '8px',
+          marginBottom: '4px',
         }}>
           Шаг {current + 1} из {steps.length}
         </div>
 
         {/* Заголовок */}
         <h3 style={{
-          fontSize: isMobile ? '1rem' : '1.1rem',
+          fontSize: isMobile ? '0.9rem' : '1.1rem',
           fontWeight: 700,
           color: 'var(--color-text-primary, #eee)',
-          margin: '0 0 8px 0',
+          margin: '0 0 4px 0',
         }}>
           {step.title}
         </h3>
 
         {/* Описание */}
         <p style={{
-          fontSize: isMobile ? '0.78rem' : '0.85rem',
+          fontSize: isMobile ? '0.72rem' : '0.85rem',
           color: 'var(--color-text-secondary, #ccc)',
-          margin: '0 0 16px 0',
+          margin: '0 0 12px 0',
           lineHeight: 1.5,
         }}>
           {step.description}
