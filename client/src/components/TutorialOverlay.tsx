@@ -17,12 +17,140 @@ interface TargetRect {
   right: number;
 }
 
-const PADDING = 12; // отступ вокруг подсвеченной области
+interface TooltipPosition {
+  left: number;
+  top: number;
+  /** Стрелка-указатель: куда направлена подсказка относительно цели */
+  arrow?: 'up' | 'down' | 'none';
+}
+
+const PADDING = 8; // отступ вокруг подсвеченной области
+const TOOLTIP_MARGIN = 12; // минимальный отступ tooltip от краёв экрана
+const MOBILE_BREAKPOINT = 480;
+
+/** Вычисляет лучшую позицию tooltip с учётом доступного пространства */
+function calcTooltipPosition(
+  target: TargetRect,
+  preferredPos: string,
+  viewportW: number,
+  viewportH: number,
+  isMobile: boolean,
+): TooltipPosition {
+  const tooltipMaxW = isMobile ? viewportW - TOOLTIP_MARGIN * 2 : 320;
+  const tooltipW = Math.min(320, tooltipMaxW);
+  // Оценка высоты tooltip (заголовок + описание + кнопки ~ 200px на десктопе, ~250 на мобильном)
+  const tooltipH = isMobile ? 250 : 220;
+  const gap = 12; // отступ между target и tooltip
+
+  // Доступное пространство с каждой стороны
+  const spaceTop = target.top - TOOLTIP_MARGIN;
+  const spaceBottom = viewportH - target.bottom - TOOLTIP_MARGIN;
+  const spaceLeft = target.left - TOOLTIP_MARGIN;
+  const spaceRight = viewportW - target.right - TOOLTIP_MARGIN;
+
+  // На мобильном всегда показываем снизу (или сверху, если нет места снизу)
+  if (isMobile) {
+    if (spaceBottom >= tooltipH + gap) {
+      // Снизу — по центру экрана
+      return {
+        left: Math.max(TOOLTIP_MARGIN, (viewportW - tooltipW) / 2),
+        top: target.bottom + gap,
+        arrow: 'up',
+      };
+    }
+    if (spaceTop >= tooltipH + gap) {
+      return {
+        left: Math.max(TOOLTIP_MARGIN, (viewportW - tooltipW) / 2),
+        top: target.top - tooltipH - gap,
+        arrow: 'down',
+      };
+    }
+    // Ни сверху ни снизу — центрируем на экране
+    return {
+      left: Math.max(TOOLTIP_MARGIN, (viewportW - tooltipW) / 2),
+      top: Math.max(TOOLTIP_MARGIN, (viewportH - tooltipH) / 2),
+      arrow: 'none',
+    };
+  }
+
+  // Десктоп: пробуем предпочтительную позицию, затем фолбэк
+  let tLeft: number;
+  let tTop: number;
+  let arrow: 'up' | 'down' | 'none' = 'none';
+
+  const tryBottom = (): boolean => {
+    if (spaceBottom < tooltipH + gap) return false;
+    tLeft = clamp(target.left + target.width / 2 - tooltipW / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
+    tTop = target.bottom + gap;
+    arrow = 'up';
+    return true;
+  };
+
+  const tryTop = (): boolean => {
+    if (spaceTop < tooltipH + gap) return false;
+    tLeft = clamp(target.left + target.width / 2 - tooltipW / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
+    tTop = target.top - tooltipH - gap;
+    arrow = 'down';
+    return true;
+  };
+
+  const tryRight = (): boolean => {
+    if (spaceRight < tooltipW + gap) return false;
+    tLeft = target.right + gap;
+    tTop = clamp(target.top + target.height / 2 - tooltipH / 2, TOOLTIP_MARGIN, viewportH - tooltipH - TOOLTIP_MARGIN);
+    arrow = 'none';
+    return true;
+  };
+
+  const tryLeft = (): boolean => {
+    if (spaceLeft < tooltipW + gap) return false;
+    tLeft = target.left - tooltipW - gap;
+    tTop = clamp(target.top + target.height / 2 - tooltipH / 2, TOOLTIP_MARGIN, viewportH - tooltipH - TOOLTIP_MARGIN);
+    arrow = 'none';
+    return true;
+  };
+
+  // Пробуем в порядке: предпочтительная → самая вместительная сторона
+  const ordered: (() => boolean)[] = [];
+
+  if (preferredPos === 'top') ordered.push(tryTop, tryBottom, tryRight, tryLeft);
+  else if (preferredPos === 'bottom') ordered.push(tryBottom, tryTop, tryRight, tryLeft);
+  else if (preferredPos === 'left') ordered.push(tryLeft, tryRight, tryBottom, tryTop);
+  else if (preferredPos === 'right') ordered.push(tryRight, tryLeft, tryBottom, tryTop);
+  else if (preferredPos === 'center') {
+    // Центр экрана
+    tLeft = clamp((viewportW - tooltipW) / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
+    tTop = clamp((viewportH - tooltipH) / 2, TOOLTIP_MARGIN, viewportH - tooltipH - TOOLTIP_MARGIN);
+    arrow = 'none';
+    ordered.push(() => true);
+  } else {
+    ordered.push(tryBottom, tryTop, tryRight, tryLeft);
+  }
+
+  for (const fn of ordered) {
+    if (fn()) break;
+  }
+
+  // Фолбэк: центрируем на экране
+  if (tLeft === undefined!) {
+    tLeft = clamp((viewportW - tooltipW) / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
+    tTop = clamp((viewportH - tooltipH) / 2, TOOLTIP_MARGIN, viewportH - tooltipH - TOOLTIP_MARGIN);
+    arrow = 'none';
+  }
+
+  return { left: tLeft!, top: tTop!, arrow };
+}
+
+function clamp(val: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, val));
+}
 
 export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayProps) {
   const [current, setCurrent] = useState(0);
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const [arrowDir, setArrowDir] = useState<'up' | 'down' | 'none'>('none');
+  const [isMobile, setIsMobile] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const step = steps[current];
@@ -33,7 +161,6 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
 
     const el = document.querySelector(step.targetSelector);
     if (!el) {
-      // Элемент не найден — пропускаем шаг
       if (current < steps.length - 1) {
         setCurrent(prev => prev + 1);
       } else {
@@ -43,6 +170,11 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
     }
 
     const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const mobile = vw < MOBILE_BREAKPOINT;
+    setIsMobile(mobile);
+
     setTargetRect({
       top: rect.top,
       left: rect.left,
@@ -52,45 +184,71 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       right: rect.right,
     });
 
-    // Позиция подсказки
-    const pos = step.tooltipPosition || 'bottom';
-    const tooltipW = 320;
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
+    // Скроллим элемент в центр экрана (если он не полностью видим)
+    const isFullyVisible =
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= vh &&
+      rect.right <= vw;
 
-    let tLeft: number;
-    let tTop: number;
+    if (!isFullyVisible) {
+      el.scrollIntoView({ block: 'center', behavior: 'instant' });
+      // Пересчитываем позицию после скролла
+      const newRect = el.getBoundingClientRect();
+      setTargetRect({
+        top: newRect.top,
+        left: newRect.left,
+        width: newRect.width,
+        height: newRect.height,
+        bottom: newRect.bottom,
+        right: newRect.right,
+      });
 
-    switch (pos) {
-      case 'top':
-        tLeft = Math.max(16, Math.min(viewportW - tooltipW - 16, rect.left + rect.width / 2 - tooltipW / 2));
-        tTop = Math.max(16, rect.top - 16);
-        break;
-      case 'bottom':
-        tLeft = Math.max(16, Math.min(viewportW - tooltipW - 16, rect.left + rect.width / 2 - tooltipW / 2));
-        tTop = Math.min(viewportH - 16, rect.bottom + 16);
-        break;
-      case 'left':
-        tLeft = Math.max(16, rect.left - tooltipW - 16);
-        tTop = Math.max(16, Math.min(viewportH - 16, rect.top + rect.height / 2));
-        break;
-      case 'right':
-        tLeft = Math.min(viewportW - tooltipW - 16, rect.right + 16);
-        tTop = Math.max(16, Math.min(viewportH - 16, rect.top + rect.height / 2));
-        break;
-      case 'center':
-        tLeft = Math.max(16, (viewportW - tooltipW) / 2);
-        tTop = Math.max(16, (viewportH - 200) / 2);
-        break;
-      default:
-        tLeft = Math.max(16, Math.min(viewportW - tooltipW - 16, rect.left + rect.width / 2 - tooltipW / 2));
-        tTop = Math.min(viewportH - 16, rect.bottom + 16);
+      const pos = calcTooltipPosition(
+        {
+          top: newRect.top,
+          left: newRect.left,
+          width: newRect.width,
+          height: newRect.height,
+          bottom: newRect.bottom,
+          right: newRect.right,
+        },
+        step.tooltipPosition || 'bottom',
+        vw,
+        vh,
+        mobile,
+      );
+
+      setTooltipStyle({
+        left: `${pos.left}px`,
+        top: `${pos.top}px`,
+        maxWidth: mobile ? `calc(100vw - ${TOOLTIP_MARGIN * 2}px)` : '320px',
+      });
+      setArrowDir(pos.arrow || 'none');
+      return;
     }
 
+    const pos = calcTooltipPosition(
+      {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        bottom: rect.bottom,
+        right: rect.right,
+      },
+      step.tooltipPosition || 'bottom',
+      vw,
+      vh,
+      mobile,
+    );
+
     setTooltipStyle({
-      left: `${tLeft}px`,
-      top: `${tTop}px`,
+      left: `${pos.left}px`,
+      top: `${pos.top}px`,
+      maxWidth: mobile ? `calc(100vw - ${TOOLTIP_MARGIN * 2}px)` : '320px',
     });
+    setArrowDir(pos.arrow || 'none');
   }, [step, current, steps.length, onComplete]);
 
   useEffect(() => {
@@ -138,6 +296,21 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
 
   const r = targetRect;
   const pr = PADDING;
+
+  // Стили tooltip с учётом мобильного режима
+  const tooltipCombined: React.CSSProperties = {
+    position: 'fixed',
+    ...tooltipStyle,
+    width: isMobile ? `calc(100vw - ${TOOLTIP_MARGIN * 2}px)` : '320px',
+    background: 'var(--color-bg-secondary, #1e1e30)',
+    border: '1px solid var(--color-border-default, #444)',
+    borderRadius: '12px',
+    padding: isMobile ? '16px' : '20px',
+    zIndex: 102,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+    maxHeight: isMobile ? '40vh' : '80vh',
+    overflowY: 'auto',
+  };
 
   return createPortal(
     <div ref={overlayRef} className="tutorial-overlay">
@@ -198,29 +371,33 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       }} />
 
       {/* Подсказка */}
-      <div style={{
-        position: 'fixed',
-        ...tooltipStyle,
-        width: '320px',
-        maxWidth: 'calc(100vw - 32px)',
-        background: 'var(--color-bg-secondary, #1e1e30)',
-        border: '1px solid var(--color-border-default, #444)',
-        borderRadius: '12px',
-        padding: '20px',
-        zIndex: 102,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-      }}>
+      <div style={tooltipCombined}>
+        {/* Стрелка-указатель (только на десктопе) */}
+        {!isMobile && arrowDir !== 'none' && (
+          <div style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            ...(arrowDir === 'up'
+              ? { top: '-8px', borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: '8px solid var(--color-bg-secondary, #1e1e30)' }
+              : { bottom: '-8px', borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '8px solid var(--color-bg-secondary, #1e1e30)' }),
+            width: 0,
+            height: 0,
+            zIndex: 103,
+          }} />
+        )}
+
         {/* Индикатор шагов */}
         <div style={{
           display: 'flex',
           gap: '6px',
-          marginBottom: '16px',
+          marginBottom: isMobile ? '12px' : '16px',
         }}>
           {steps.map((_, i) => (
             <div
               key={i}
               style={{
-                width: '24px',
+                flex: 1,
                 height: '4px',
                 borderRadius: '2px',
                 background: i === current
@@ -236,7 +413,7 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
 
         {/* Счётчик */}
         <div style={{
-          fontSize: '0.75rem',
+          fontSize: isMobile ? '0.7rem' : '0.75rem',
           color: 'var(--color-text-muted, #888)',
           marginBottom: '8px',
         }}>
@@ -245,7 +422,7 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
 
         {/* Заголовок */}
         <h3 style={{
-          fontSize: '1.1rem',
+          fontSize: isMobile ? '1rem' : '1.1rem',
           fontWeight: 700,
           color: 'var(--color-text-primary, #eee)',
           margin: '0 0 8px 0',
@@ -255,9 +432,9 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
 
         {/* Описание */}
         <p style={{
-          fontSize: '0.85rem',
+          fontSize: isMobile ? '0.78rem' : '0.85rem',
           color: 'var(--color-text-secondary, #ccc)',
-          margin: '0 0 20px 0',
+          margin: '0 0 16px 0',
           lineHeight: 1.5,
         }}>
           {step.description}
@@ -276,7 +453,7 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
               background: 'none',
               border: 'none',
               color: 'var(--color-text-muted, #888)',
-              fontSize: '0.8rem',
+              fontSize: isMobile ? '0.75rem' : '0.8rem',
               cursor: 'pointer',
               padding: '8px 12px',
               borderRadius: '6px',
@@ -299,10 +476,10 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
               background: 'var(--color-accent-warning, #f1c40f)',
               color: 'var(--color-warning-text, #0d0d1a)',
               border: 'none',
-              fontSize: '0.85rem',
+              fontSize: isMobile ? '0.8rem' : '0.85rem',
               fontWeight: 600,
               cursor: 'pointer',
-              padding: '10px 24px',
+              padding: isMobile ? '8px 20px' : '10px 24px',
               borderRadius: '8px',
               transition: 'opacity 0.2s',
             }}
@@ -313,15 +490,17 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
           </button>
         </div>
 
-        {/* Подсказка по клавишам */}
-        <div style={{
-          marginTop: '12px',
-          fontSize: '0.65rem',
-          color: 'var(--color-text-muted, #888)',
-          textAlign: 'center',
-        }}>
-          Enter — далее · Esc — пропустить
-        </div>
+        {/* Подсказка по клавишам — только десктоп */}
+        {!isMobile && (
+          <div style={{
+            marginTop: '12px',
+            fontSize: '0.65rem',
+            color: 'var(--color-text-muted, #888)',
+            textAlign: 'center',
+          }}>
+            Enter — далее · Esc — пропустить
+          </div>
+        )}
       </div>
     </div>,
     document.body,
