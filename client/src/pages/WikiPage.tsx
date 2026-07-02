@@ -6,7 +6,7 @@ export default function WikiPage() {
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-6">
-            <button onClick={() => navigate('/')} className="text-sm text-[var(--color-accent-info)] hover:underline mb-4 inline-block">← Вернуться в игру</button>
+            <button onClick={() => navigate('/')} className="text-sm text-[var(--color-accent-info)] hover:underline mb-4 inline-block cursor-pointer">← Вернуться в игру</button>
 
             <h1 className="text-2xl font-bold text-center text-[var(--color-accent-danger)] mb-1">⚔️ MMO Arena</h1>
             <p className="text-center text-[var(--color-text-muted)] text-sm mb-6">Гайд для нового игрока</p>
@@ -15,15 +15,13 @@ export default function WikiPage() {
                 <p className="text-sm"><span className="text-[var(--color-accent-success)] font-bold">💡 Совет:</span> Начните с Охоты — безопасный способ получить первый опыт и серебро. Затем купите снаряжение в Магазине и выполняйте квесты.</p>
             </Card>
 
-            {/* ─── НАЧАЛО ИГРЫ ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🚀 Начало игры</h2>
             <p className="text-sm text-[var(--color-text-secondary)] mb-2">Вы попадаете на главную страницу с <strong>карточкой персонажа</strong>. У вас есть ник, уровень, опыт и четыре базовые характеристики:</p>
             <p className="text-sm text-[var(--color-text-muted)] mb-2"><strong>Сила</strong> — урон, <strong>Ловкость</strong> — уклонение, <strong>Защита</strong> — блок (кап 75%), <strong>Мастерство</strong> — крит. HP = Сила + Ловкость + Мастерство.</p>
-            <p className="text-sm text-[var(--color-text-secondary)] mb-2">Введите никнейм на странице входа — и вы в игре. Чтобы сохранить прогресс, <strong>привяжите почту или OAuth</strong> через меню настроек (шестерёнка → Аккаунт). За привязку — <strong>3 дня премиума</strong>!</p>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-2">Введите никнейм на странице входа — и вы в игре. Чтобы сохранить прогресс, <strong>привяжите почту или OAuth</strong> через меню настроек (Настройки → Аккаунт). За привязку — <strong>1 день премиума</strong>!</p>
 
-            {/* ─── PvE ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🌍 МИР — PvE</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 my-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 my-2">
                 <Card className="p-2">
                     <span className="text-lg">💀</span>
                     <h4 className="text-sm text-[var(--color-accent-success)]">Охота (Бестиарий)</h4>
@@ -34,14 +32,8 @@ export default function WikiPage() {
                     <h4 className="text-sm text-[var(--color-accent-success)]">Работы</h4>
                     <p className="text-[0.6rem] text-[var(--color-text-muted)]">Экспедиции за серебром. 5 типов с разным доходом и длительностью. Можно отправиться и заниматься другими делами.</p>
                 </Card>
-                <Card className="p-2">
-                    <span className="text-lg">🗡️</span>
-                    <h4 className="text-sm text-[var(--color-accent-success)]">Резня</h4>
-                    <p className="text-[0.6rem] text-[var(--color-text-muted)]">PvP-ивент: платный вход, все против всех. Игроки ходят по очереди, последний выживший забирает банк.</p>
-                </Card>
             </div>
 
-            {/* ─── PvP ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">⚔️ PvP</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 my-2">
                 <Card className="p-2">
@@ -55,13 +47,12 @@ export default function WikiPage() {
                     <p className="text-[0.6rem] text-[var(--color-text-muted)]">Регулярные турниры с призовым фондом. Расписание и регистрация на странице турниров.</p>
                 </Card>
                 <Card className="p-2">
-                    <span className="text-lg">🏴</span>
-                    <h4 className="text-sm text-[var(--color-accent-success)]">Война гильдий</h4>
-                    <p className="text-[0.6rem] text-[var(--color-text-muted)]">Сражения между гильдиями. Бонусы от построек: Осадный лагерь (атака) и Стены (защита).</p>
+                    <span className="text-lg">🗡️</span>
+                    <h4 className="text-sm text-[var(--color-accent-success)]">Резня</h4>
+                    <p className="text-[0.6rem] text-[var(--color-text-muted)]">PvP-ивент: платный вход, все против всех. Игроки ходят по очереди, последний выживший забирает банк.</p>
                 </Card>
             </div>
 
-            {/* ─── ГОРОД ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🏰 Площадь — город</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 my-2">
                 {[
@@ -76,7 +67,6 @@ export default function WikiPage() {
                 ))}
             </div>
 
-            {/* ─── ТРАКТИР ПОДРОБНО ─── */}
             <h3 className="text-sm font-bold text-[var(--color-accent-success)] mt-3 mb-1">🍺 Трактир подробнее</h3>
             <Card className="p-3 mb-3">
                 <p className="text-xs text-[var(--color-text-muted)]"><strong>Лечение:</strong> мгновенное восстановление HP за серебро (2💰 за 1 HP).</p>
@@ -87,7 +77,6 @@ export default function WikiPage() {
                 <p className="text-xs text-[var(--color-text-muted)]"><strong>Напитки</strong> (1 час) — баффы к статам. 3 уровня: +10/+25/+50. Универсальные: +5/+12/+30 ко всем статам.</p>
             </Card>
 
-            {/* ─── ИНФО-ПАНЕЛИ ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">📋 Информация</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 my-2">
                 {[
@@ -101,25 +90,24 @@ export default function WikiPage() {
                 ))}
             </div>
 
-            {/* ─── ГИЛЬДИИ ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🏰 Гильдии</h2>
             <p className="text-sm text-[var(--color-text-secondary)] mb-2">Вступите через список гильдий или примите приглашение (приходит в ЛС). У гильдии 4 вкладки: Обзор, Постройки, Казна, Участники.</p>
             <p className="text-sm text-[var(--color-text-muted)] mb-2"><strong>Гильд-квесты:</strong> общие задания для всех участников (PvE, PvP, крафт, пожертвования, работы).</p>
+            <p className="text-sm text-[var(--color-text-muted)] mb-2"><strong>Война гильдий:</strong> сражения между гильдиями. Бонусы от построек: Осадный лагерь (атака) и Стены (защита).</p>
             <Card className="p-3 mb-3">
-                <p className="text-xs text-[var(--color-text-muted)]"><strong>Постройки</strong> — каждое улучшение +5 к статам в своём контексте:</p>
+                <p className="text-xs text-[var(--color-text-muted)]"><strong>Постройки</strong> — каждое улучшение +5% к статам в своём контексте:</p>
                 <p className="text-xs text-[var(--color-text-muted)] ml-2">🏟️ Тренировочная площадка — Арена и Турниры</p>
                 <p className="text-xs text-[var(--color-text-muted)] ml-2">🔭 Штаб разведки — против монстров (PvE)</p>
                 <p className="text-xs text-[var(--color-text-muted)] ml-2">⚔️ Осадный лагерь — атака в войне гильдий</p>
                 <p className="text-xs text-[var(--color-text-muted)] ml-2">🏰 Стены — защита в войне гильдий</p>
             </Card>
 
-            {/* ─── ОБЩЕНИЕ ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">💬 Общение</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 my-2">
                 <Card className="p-2">
                     <span className="text-lg">💬</span>
                     <h4 className="text-sm text-[var(--color-accent-success)]">Чат</h4>
-                    <p className="text-[0.6rem] text-[var(--color-text-muted)]">Общий / Гильдия / ЛС. Команды: @ник, /w ник, /g. Панель внизу экрана.</p>
+                    <p className="text-[0.6rem] text-[var(--color-text-muted)]">Общий / Гильдия / ЛС. Команды: /w ник, /g. Панель внизу экрана.</p>
                 </Card>
                 <Card className="p-2">
                     <span className="text-lg">📝</span>
@@ -128,7 +116,6 @@ export default function WikiPage() {
                 </Card>
             </div>
 
-            {/* ─── СНАРЯЖЕНИЕ ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🎒 Снаряжение</h2>
             <Card className="p-3 mb-3">
                 <p className="text-xs text-[var(--color-text-muted)]"><strong>10 слотов:</strong> Оружие, Щит, Шлем, Нагрудник, Перчатки, Ботинки, Амулет, Пояс, Кольцо 1, Кольцо 2.</p>
@@ -138,21 +125,14 @@ export default function WikiPage() {
                 <p className="text-xs text-[var(--color-text-muted)]"><strong>Инвентарь:</strong> 10 слотов по умолчанию. Нельзя надеть два одинаковых кольца.</p>
             </Card>
 
-            {/* ─── ПРЕМИУМ ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">⭐ Премиум</h2>
             <Card className="p-3 mb-3">
                 <p className="text-xs text-[var(--color-text-muted)]"><strong>Бонусы:</strong> кулдаун Охоты 150с (вместо 300с), регенерация HP ×3 (как Чулан) если нет активной комнаты.</p>
-                <p className="text-xs text-[var(--color-text-muted)]"><strong>Получение:</strong> 3 дня за привязку аккаунта, покупка через магазин (VK Pay / ЮKassa).</p>
+                <p className="text-xs text-[var(--color-text-muted)]"><strong>Получение:</strong> 1 день за привязку аккаунта, покупка через магазин (VK Pay / ЮKassa).</p>
             </Card>
 
-            {/* ─── ПРОЧЕЕ ─── */}
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🛠️ Прочее</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 my-2">
-                <Card className="p-2">
-                    <span className="text-lg">🧪</span>
-                    <h4 className="text-sm text-[var(--color-accent-success)]">Симулятор боя</h4>
-                    <p className="text-[0.6rem] text-[var(--color-text-muted)]">Тестовые бои между двумя игроками. 100 симуляций — увидите кто побеждает чаще.</p>
-                </Card>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 my-2">
                 <Card className="p-2">
                     <span className="text-lg">📨</span>
                     <h4 className="text-sm text-[var(--color-accent-success)]">Обратная связь</h4>
@@ -166,7 +146,7 @@ export default function WikiPage() {
             </div>
 
             <div className="mt-6 text-center">
-                <button onClick={() => navigate('/')} className="text-sm text-[var(--color-accent-info)] hover:underline">← Вернуться в игру</button>
+                <button onClick={() => navigate('/')} className="text-sm text-[var(--color-accent-info)] hover:underline cursor-pointer">← Вернуться в игру</button>
             </div>
         </div>
     );

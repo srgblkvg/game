@@ -36,6 +36,7 @@ const breadcrumbMap: Record<string, string> = {
     collections: 'Коллекция',
     castle: 'Замок',
     forum: 'Форум',
+    wiki: 'Руководство',
 };
 
 function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: string) => void }) {
@@ -226,32 +227,25 @@ export default function Header() {
                     {user.role === 'player' && (
                         <button
                             onClick={handleHistoryClick}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors relative cursor-pointer"
+                            className="inline-flex flex-col items-center justify-center rounded hover:bg-[var(--color-bg-hover)] transition-colors relative cursor-pointer px-1 py-0.5"
                             title="Сводка"
                         >
                             <Icon icon="game-icons:notebook" width="20" height="20" className="text-[var(--color-text-muted)]" />
+                            <span className="text-[0.55rem] text-[var(--color-text-muted)] leading-none mt-0.5">Сводка</span>
                             {(hasNewBattles || hasUnreadPM) && (
-                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
+                                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
                             )}
-                        </button>
-                    )}
-                    {user.role === 'player' && (
-                        <button
-                            onClick={() => navigate('/wiki')}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
-                            title="Гайд"
-                        >
-                            <Icon icon="game-icons:open-book" width="20" height="20" className="text-[var(--color-accent-success)]" />
                         </button>
                     )}
                     {user.role === 'player' && (
                         <div ref={menuRef} className="relative">
                             <button
                                 onClick={() => setMenuOpen(!menuOpen)}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors relative cursor-pointer"
+                                className="inline-flex flex-col items-center justify-center rounded hover:bg-[var(--color-bg-hover)] transition-colors relative cursor-pointer px-1 py-0.5"
                                 title="Настройки"
                             >
                                 <Icon icon="game-icons:cog" width="20" height="20" className="text-[var(--color-text-muted)]" />
+                                <span className="text-[0.55rem] text-[var(--color-text-muted)] leading-none mt-0.5">Настройки</span>
                                 {(user.isGuest) && (
                                     <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[var(--color-accent-danger)] rounded-full animate-pulse" />
                                 )}
@@ -271,6 +265,13 @@ export default function Header() {
                                     >
                                         <Icon icon={theme === 'dark' ? 'game-icons:sun' : 'game-icons:moon'} width="16" height="16" />
                                         {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+                                    </button>
+                                    <button
+                                        onClick={() => { navigate('/wiki'); setMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
+                                    >
+                                        <Icon icon="game-icons:open-book" width="16" height="16" className="text-[var(--color-accent-success)]" />
+                                        Руководство
                                     </button>
                                     <button
                                         onClick={() => { navigate('/feedback'); setMenuOpen(false); }}
