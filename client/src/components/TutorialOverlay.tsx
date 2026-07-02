@@ -180,21 +180,22 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       right: rect.right,
     });
 
-    // Скроллим элемент в центр экрана (если он не полностью видим)
-    // Учитываем sticky-шапку — корректируем позицию после scrollIntoView
+    // Скроллим элемент чтобы был видим (учитываем sticky-шапку)
+    const headerH = document.getElementById('site-header')?.offsetHeight || 0;
     const isFullyVisible =
-      rect.top >= 0 &&
+      rect.top >= headerH &&
       rect.left >= 0 &&
       rect.bottom <= vh &&
       rect.right <= vw;
 
     if (!isFullyVisible) {
+      // Временно включаем скролл для корректной работы scrollIntoView
+      document.body.style.overflow = '';
       el.scrollIntoView({ block: 'center', behavior: 'instant' });
-      // Сдвигаем выше на высоту sticky-шапки
-      const headerH = document.getElementById('site-header')?.offsetHeight || 0;
-      if (headerH > 0) {
-        document.documentElement.scrollTop = Math.max(0, document.documentElement.scrollTop - headerH);
-      }
+      // Сдвигаем выше на высоту шапки + отступ
+      window.scrollBy({ top: -(headerH + 16), behavior: 'instant' });
+      // Возвращаем блокировку
+      document.body.style.overflow = 'hidden';
       // Пересчитываем позицию после скролла
       const newRect = el.getBoundingClientRect();
       setTargetRect({
