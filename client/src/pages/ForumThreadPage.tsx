@@ -66,10 +66,10 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
             <Card className={`mb-2 ${isFirst ? 'border border-[#f59e0b]/30 relative mt-3' : ''}`}>
                 {isFirst && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--color-bg-secondary)] border border-[#f59e0b]/30 rounded-full w-7 h-7 flex items-center justify-center text-sm shadow-[0_0_6px_rgba(245,158,11,0.3)]">
-                        👑
+                        📢
                     </div>
                 )}
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 mt-1">
                     <img src={post.author_avatar || '/character_man.webp'} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 bg-[var(--color-bg-input)]" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
