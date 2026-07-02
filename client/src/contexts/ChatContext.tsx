@@ -117,6 +117,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               window.dispatchEvent(new CustomEvent('auctionChanged'));
               break;
             }
+            case 'auction_message_removed': {
+              const lotId = data.lotId;
+              if (lotId) {
+                setMessages(p => p.filter(m => {
+                  if (!m.item?.lotId) return true;
+                  return m.item.lotId !== lotId;
+                }));
+              }
+              break;
+            }
             case 'guildQuestProgress': {
               if (data.activeQuest) {
                 window.dispatchEvent(new CustomEvent('guildQuestProgress', { detail: data.activeQuest }));
