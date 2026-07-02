@@ -495,18 +495,6 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
             {isLast ? 'Понятно!' : 'Далее'}
           </button>
         </div>
-
-        {/* Подсказка по клавишам — только десктоп */}
-        {!isMobile && (
-          <div style={{
-            marginTop: '12px',
-            fontSize: '0.65rem',
-            color: 'var(--color-text-muted, #888)',
-            textAlign: 'center',
-          }}>
-            Enter — далее · Esc — пропустить
-          </div>
-        )}
       </div>
     </div>,
     document.body,
