@@ -25,11 +25,15 @@ export default function RatingPage() {
     const navigate = useNavigate();
 
     // Живой поиск с задержкой 300мс
+    const prevSearchRef = useRef(searchInput);
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             setSearch(searchInput);
-            setPage(1);
+            if (searchInput !== prevSearchRef.current) {
+                setPage(1);
+                prevSearchRef.current = searchInput;
+            }
         }, 300);
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     }, [searchInput]);
