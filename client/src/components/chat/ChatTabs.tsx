@@ -30,14 +30,14 @@ export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatAc
         )}
       </div>
       <div onClick={onSelectAuction} className={`px-[0.6rem] py-[0.3rem] cursor-pointer border-r border-[var(--color-border-default)] whitespace-nowrap text-[var(--color-accent-warning)] flex items-center gap-1 ${auctionChatActive ? 'bg-[#3a2a0a] font-bold' : 'bg-transparent font-normal'}`}>
-        🔨 Аукцион
+        Аукцион
         {unreadAuction > 0 && !auctionChatActive && (
           <span className="w-2 h-2 rounded-full bg-[var(--color-accent-warning)] inline-block" />
         )}
       </div>
       {guildName && (
         <div onClick={onSelectGuild} className={`px-[0.6rem] py-[0.3rem] cursor-pointer border-r border-[var(--color-border-default)] whitespace-nowrap text-[var(--color-accent-success)] flex items-center gap-1 ${guildChatActive ? 'bg-[#1a3a1a] font-bold' : 'bg-transparent font-normal'}`}>
-          🏚️ {truncate(guildName)}
+          {truncate(guildName)}
           {unreadGuild > 0 && !guildChatActive && (
             <span className="w-2 h-2 rounded-full bg-[var(--color-accent-success)] inline-block" />
           )}
