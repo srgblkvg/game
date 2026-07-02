@@ -127,7 +127,7 @@ export default function GuildPage() {
                 <textarea className={inputClass+' mb-2'} placeholder="Описание" rows={2} value={createDesc} onChange={e=>setCreateDesc(e.target.value)}/>
                 <select className={inputClass+' mb-2'} value={createJoinType} onChange={e=>setCreateJoinType(e.target.value as any)}>
                     <option value="open">Открытая</option><option value="request">По заявке</option><option value="invite">Закрытая</option></select>
-                <Button onClick={handleCreate}>Создать (1000 серебра)</Button></Card>)}
+                <Button onClick={handleCreate}>Создать (10000 серебра)</Button></Card>)}
             <h3 className="font-bold text-sm mb-2">Гильдии</h3>
             {guildList.map((g:any)=>(<Card key={g.id} className="mb-2"><div className="flex justify-between items-center">
                 <div><h4 className="font-bold text-sm">{g.name}</h4><p className="text-xs text-[var(--color-text-muted)]">Ур.{g.level} • {g.memberCount} уч.</p></div>

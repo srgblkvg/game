@@ -27,7 +27,6 @@ import tavernRoutes from './routes/tavern';
 import auctionRoutes from './routes/auction';
 import tournamentRoutes from './routes/tournament';
 import adminTournamentRoutes from './routes/adminTournament';
-import ordersRoutes from './routes/orders';
 import logRoutes from './routes/log';
 import questsRoutes from './routes/quests';
 import guildRoutes from './routes/guild';
@@ -143,7 +142,6 @@ export function setupRoutes(app: Express) {
   app.use('/api', bankRoutes);
   app.use('/api', tavernRoutes);
   app.use('/api', auctionRoutes);
-  app.use('/api', ordersRoutes);
   app.use('/api', questsRoutes);
   app.use('/api', guildRoutes);
   app.use('/api', guildBuildingsRoutes);

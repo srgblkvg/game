@@ -36,7 +36,6 @@ const BankPage = lazy(() => import('./pages/BankPage'));
 const TavernPage = lazy(() => import('./pages/TavernPage'));
 const AuctionPage = lazy(() => import('./pages/AuctionPage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
-const OrdersPage = lazy(() => import('./pages/OrdersPage'));
 const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 const GuildPage = lazy(() => import('./pages/GuildPage'));
 const GuildViewPage = lazy(() => import('./pages/GuildViewPage'));
@@ -102,7 +101,6 @@ function App() {
             <Route path="/tavern" element={user?.role === 'player' ? <TavernPage /> : <Navigate to="/login" />} />
             <Route path="/auction" element={user?.role === 'player' ? <AuctionPage /> : <Navigate to="/login" />} />
             <Route path="/tournament" element={user?.role === 'player' ? <TournamentPage /> : <Navigate to="/login" />} />
-            <Route path="/orders" element={user?.role === 'player' ? <OrdersPage /> : <Navigate to="/login" />} />
             <Route path="/premium" element={<PremiumPage />} />
             <Route path="/guild" element={user?.role === 'player' ? <GuildPage /> : <Navigate to="/login" />} />
             <Route path="/guild/rating" element={user?.role === 'player' ? <GuildRatingPage /> : <Navigate to="/login" />} />

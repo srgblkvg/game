@@ -12,11 +12,14 @@ router.post('/guild/create', async (req, res) => {
     if (!name || !name.trim()) return res.status(400).json({ error: 'Укажите название гильдии' });
     if (!['open', 'request', 'invite'].includes(joinType || 'open')) return res.status(400).json({ error: 'Неверный тип вступления' });
 
+    const user = await db.one('SELECT money, guildId FROM users WHERE id = ?', [userId]) as any;
+    if (user.money < 10000) return res.status(400).json({ error: 'Нужно 10000 серебра' });
+    if (user.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии. Покиньте текущую чтобы создать новую.' });
+
     const existing = await db.one('SELECT id FROM guilds WHERE name = ?', [name.trim()]);
     if (existing) return res.status(400).json({ error: 'Гильдия с таким названием уже существует' });
 
-    const alreadyInGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]) as any;
-    if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии. Покиньте текущую чтобы создать новую.' });
+    await db.run('UPDATE users SET money = money - 10000 WHERE id = ?', [userId]);
 
     const info = await db.run(
         'INSERT INTO guilds (name, description, leaderId, joinType) VALUES (?, ?, ?, ?)',
