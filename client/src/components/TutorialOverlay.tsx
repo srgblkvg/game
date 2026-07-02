@@ -48,11 +48,9 @@ function calcTooltipPosition(
   const spaceLeft = target.left - TOOLTIP_MARGIN;
   const spaceRight = viewportW - target.right - TOOLTIP_MARGIN;
 
-  // На мобильном — туториал всегда сверху, элемент под ним
+  // На мобильном — туториал всегда сверху, прямо над шапкой (она затемнена)
   if (isMobile) {
-    // Высота шапки (уже не перекрыта оверлеем, но sticky-шапка всё ещё сверху)
-    const headerH = document.getElementById('site-header')?.offsetHeight || 0;
-    return { left: 0, top: Math.max(TOOLTIP_MARGIN, headerH + 8) };
+    return { left: 0, top: 8 };
   }
 
   // Десктоп: пробуем предпочтительную позицию, затем фолбэк
@@ -175,10 +173,8 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
 
     // Скроллим элемент чтобы был видим (учитываем sticky-шапку и tooltip сверху)
     const headerH = document.getElementById('site-header')?.offsetHeight || 0;
-    // На мобильном tooltip сверху — элемент должен быть ниже него
-    const tooltipTopOnMobile = mobile ? headerH + 8 : 0;
-    const tooltipEstH = mobile ? 180 : 0; // оценка высоты tooltip на мобильном
-    const topClearance = mobile ? tooltipTopOnMobile + tooltipEstH + 16 : headerH;
+    // На мобильном tooltip сверху на top:8 — элемент должен быть ниже
+    const topClearance = mobile ? (8 + 180 + 24) : headerH;
 
     const isFullyVisible =
       rect.top >= topClearance &&
@@ -190,9 +186,11 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       // Временно включаем скролл для корректной работы scrollIntoView/scrollBy
       document.body.style.overflow = '';
       if (mobile) {
-        // Скроллим чтобы элемент оказался ниже tooltip
-        const scrollTarget = window.scrollY + rect.top - topClearance;
-        window.scrollTo({ top: scrollTarget, behavior: 'instant' });
+        // Скроллим чтобы элемент оказался ниже tooltip (tooltip сверху на top:8)
+        const tooltipBottom = 8 + tooltipEstH;
+        const targetY = tooltipBottom + 24;
+        const scrollDelta = rect.top - targetY;
+        window.scrollBy({ top: scrollDelta, behavior: 'instant' });
       } else {
         el.scrollIntoView({ block: 'center', behavior: 'instant' });
         // Сдвигаем выше на высоту шапки + отступ
