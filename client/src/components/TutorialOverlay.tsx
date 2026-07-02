@@ -50,32 +50,21 @@ function calcTooltipPosition(
 
   // На мобильном всегда показываем снизу (или сверху, если нет места снизу)
   if (isMobile) {
+    let top: number;
     if (spaceBottom >= tooltipH + gap) {
-      // Снизу — по центру экрана
-      return {
-        left: Math.max(TOOLTIP_MARGIN, (viewportW - tooltipW) / 2),
-        top: target.bottom + gap,
-        arrow: 'up',
-      };
+      top = target.bottom + gap;
+    } else if (spaceTop >= tooltipH + gap) {
+      top = target.top - tooltipH - gap;
+    } else {
+      top = Math.max(TOOLTIP_MARGIN, (viewportH - tooltipH) / 2);
     }
-    if (spaceTop >= tooltipH + gap) {
-      return {
-        left: Math.max(TOOLTIP_MARGIN, (viewportW - tooltipW) / 2),
-        top: target.top - tooltipH - gap,
-        arrow: 'down',
-      };
-    }
-    // Ни сверху ни снизу — центрируем на экране
-    return {
-      left: Math.max(TOOLTIP_MARGIN, (viewportW - tooltipW) / 2),
-      top: Math.max(TOOLTIP_MARGIN, (viewportH - tooltipH) / 2),
-      arrow: 'none',
-    };
+    // left не важен — центрируем через CSS (left:50% + translateX(-50%))
+    return { left: 0, top };
   }
 
   // Десктоп: пробуем предпочтительную позицию, затем фолбэк
-  let tLeft: number;
-  let tTop: number;
+  let tLeft = clamp((viewportW - tooltipW) / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
+  let tTop = clamp((viewportH - tooltipH) / 2, TOOLTIP_MARGIN, viewportH - tooltipH - TOOLTIP_MARGIN);
   let arrow: 'up' | 'down' | 'none' = 'none';
 
   const tryBottom = (): boolean => {
@@ -138,7 +127,7 @@ function calcTooltipPosition(
     arrow = 'none';
   }
 
-  return { left: tLeft!, top: tTop!, arrow };
+  return { left: tLeft, top: tTop, arrow };
 }
 
 function clamp(val: number, min: number, max: number): number {
@@ -310,6 +299,10 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
     boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
     maxHeight: isMobile ? '40vh' : '80vh',
     overflowY: 'auto',
+    ...(isMobile ? {
+      left: '50%',
+      transform: 'translateX(-50%)',
+    } : {}),
   };
 
   return createPortal(
