@@ -236,6 +236,15 @@ export default function Header() {
                         </button>
                     )}
                     {user.role === 'player' && (
+                        <button
+                            onClick={() => navigate('/wiki')}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
+                            title="Гайд"
+                        >
+                            <Icon icon="game-icons:open-book" width="20" height="20" className="text-[var(--color-accent-success)]" />
+                        </button>
+                    )}
+                    {user.role === 'player' && (
                         <div ref={menuRef} className="relative">
                             <button
                                 onClick={() => setMenuOpen(!menuOpen)}
@@ -263,15 +272,6 @@ export default function Header() {
                                         <Icon icon={theme === 'dark' ? 'game-icons:sun' : 'game-icons:moon'} width="16" height="16" />
                                         {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
                                     </button>
-                                    <a
-                                        href="/wiki/"
-                                        target="_blank"
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] no-underline cursor-pointer"
-                                        onClick={() => setMenuOpen(false)}
-                                    >
-                                        <Icon icon="game-icons:open-book" width="16" height="16" className="text-[var(--color-accent-success)]" />
-                                        Вики
-                                    </a>
                                     <button
                                         onClick={() => { navigate('/feedback'); setMenuOpen(false); }}
                                         className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] cursor-pointer"
