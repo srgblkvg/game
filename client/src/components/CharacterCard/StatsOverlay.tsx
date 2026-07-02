@@ -46,10 +46,9 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
 
   const tdStyle = 'text-left overflow-hidden text-ellipsis whitespace-nowrap pr-[2px]';
 
-  const hasEquipmentBonus = equipmentBonuses && Object.values(equipmentBonuses).some(v => v > 0);
-  const hasExtraStats = extraStats && Object.values(extraStats).some(v => v > 0);
-  const hasAnyBonus = hasEquipmentBonus || hasExtraStats || (collectionBonus ?? 0) > 0 || (guildBonus ?? 0) > 0 || (buildings && buildings.some(b => b.bonus > 0));
-  const showFlip = !noFlip && hasAnyBonus;
+  const hasBonuses = baseStats && equipmentBonuses;
+  const hasExtra = (collectionBonus ?? 0) > 0 || (guildBonus ?? 0) > 0 || (buildings && buildings.some(b => b.bonus > 0));
+  const showFlip = !noFlip && (hasBonuses || hasExtra);
   const bonusKeys = PRIMARY_STATS;
 
   const handleFlip = () => {
@@ -111,7 +110,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                 })}
               </>
             )}
-            {collectionBonus && collectionBonus > 0 && (
+            {(collectionBonus ?? 0) > 0 && (
               <>
                 <tr><td colSpan={2}><div className="border-t border-[var(--color-border-light)] my-0.5" /></td></tr>
                 <tr>
@@ -123,7 +122,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                 </tr>
               </>
             )}
-            {guildBonus && guildBonus > 0 && (
+            {(guildBonus ?? 0) > 0 && (
               <>
                 <tr><td colSpan={2}><div className="border-t border-[var(--color-border-light)] my-0.5" /></td></tr>
                 <tr>
