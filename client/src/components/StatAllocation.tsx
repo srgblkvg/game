@@ -46,7 +46,7 @@ export default function StatAllocation() {
   };
 
   return (
-    <Card className="mt-4 w-full">
+    <Card className="mt-4 w-full" data-tutorial="stat-allocation">
       <div
         className="flex items-center justify-between cursor-pointer select-none"
         onClick={() => setCollapsed(!collapsed)}

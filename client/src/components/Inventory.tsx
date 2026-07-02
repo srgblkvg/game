@@ -132,7 +132,7 @@ export default function Inventory({
     };
 
     return (
-        <div className="w-full bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]">
+        <div className="w-full bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
             <div className="flex items-center justify-between mb-2">
                 <h3 className="m-0 flex items-center gap-1">
                     <Icon icon="game-icons:backpack" width="18" height="18" />

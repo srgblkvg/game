@@ -34,6 +34,7 @@ export default function RightSidebar() {
     return (
         <>
             <button
+                data-tutorial="right-sidebar"
                 onClick={() => { setOpen(!open); if (!open) window.dispatchEvent(new CustomEvent('closeChatPanel')); }}
                 className={`fixed right-3 top-16 z-[45] flex items-center gap-1.5 rounded-full border shadow-lg cursor-pointer transition-all duration-300 ${
                     open

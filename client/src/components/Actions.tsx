@@ -109,7 +109,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const castleCards = cards.filter(c => c.section === 'castle');
 
     return (
-        <div className="mt-6 w-full max-w-2xl mx-auto space-y-4">
+        <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
             {worldCards.length > 0 && (
                 <div>
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">

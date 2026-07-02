@@ -204,7 +204,7 @@ export default function ChatPanel() {
         fetchRecentMessages(10)
             .then((msgs: ChatMessage[]) => addMessages(msgs))
             .catch(console.error);
-    }, [visible, privateChatWith, guildChatActive, addMessages]);
+    }, [visible, privateChatWith, guildChatActive, auctionChatActive, addMessages]);
 
     useEffect(() => {
         if (!visible || privateChatWith === null) return;
@@ -465,6 +465,7 @@ export default function ChatPanel() {
             )}
             <div
                 ref={panelRef}
+                data-tutorial="chat-panel"
                 className={`chat-panel fixed bottom-0 left-0 w-full flex-col z-[1000] bg-[var(--color-bg-secondary)]/85 backdrop-blur-[12px] border-t-2 border-[var(--color-border-light)] ${visible ? 'flex' : 'hidden'} ${dragging ? '' : 'transition-[height] duration-150'}`}
                 style={{ height: isPanelOpen ? chatHeight : 40 }}
             >

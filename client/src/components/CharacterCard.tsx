@@ -140,6 +140,7 @@ export default function CharacterCard({
   // --- Render ---
   return (
     <div className={`fighter-card ${side} flex-shrink-0 flex flex-col items-center text-[var(--color-text-primary)]`}
+      data-tutorial="character-card"
       style={{ width: cardWidth, minWidth: cardWidth, margin: cardMargin }}>
       {/* Имя и уровень */}
       <div className="w-full text-center mb-2">
