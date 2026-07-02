@@ -35,6 +35,7 @@ function calcTooltipPosition(
   viewportW: number,
   viewportH: number,
   isMobile: boolean,
+  stepAction?: string,
 ): TooltipPosition {
   const tooltipMaxW = isMobile ? viewportW - TOOLTIP_MARGIN * 2 : 320;
   const tooltipW = Math.min(320, tooltipMaxW);
@@ -48,8 +49,13 @@ function calcTooltipPosition(
   const spaceLeft = target.left - TOOLTIP_MARGIN;
   const spaceRight = viewportW - target.right - TOOLTIP_MARGIN;
 
-  // На мобильном — туториал всегда сверху, прямо над шапкой (она затемнена)
+  // На мобильном — туториал сверху. Для шапки — под шапкой, для остального — поверх
   if (isMobile) {
+    const isHeaderStep = stepAction === '__header__';
+    if (isHeaderStep) {
+      const headerH = document.getElementById('site-header')?.offsetHeight || 60;
+      return { left: 0, top: headerH + 8 };
+    }
     return { left: 0, top: 8 };
   }
 
@@ -186,11 +192,9 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       // Временно включаем скролл для корректной работы scrollIntoView/scrollBy
       document.body.style.overflow = '';
       if (mobile) {
-        // Скроллим чтобы элемент оказался ниже tooltip (tooltip сверху на top:8, h≈180)
-        const tooltipBottom = 8 + 180;
-        const targetY = tooltipBottom + 24;
-        const scrollDelta = rect.top - targetY;
-        window.scrollBy({ top: scrollDelta, behavior: 'instant' });
+        // Скроллим к началу элемента, затем сдвигаем вниз на высоту tooltip
+        el.scrollIntoView({ block: 'start', behavior: 'instant' });
+        window.scrollBy({ top: -(8 + 180 + 24), behavior: 'instant' });
       } else {
         el.scrollIntoView({ block: 'center', behavior: 'instant' });
         // Сдвигаем выше на высоту шапки + отступ
@@ -222,6 +226,7 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
         vw,
         vh,
         mobile,
+        step.action,
       );
 
       setTooltipStyle({
@@ -246,6 +251,7 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       vw,
       vh,
       mobile,
+      step.action,
     );
 
     setTooltipStyle({

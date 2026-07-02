@@ -18,6 +18,7 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Шапка',
     description: 'Здесь отображается ваше серебро, статус защиты, игровое время и настройки. Кнопка «Сводка» покажет историю боёв и личные сообщения.',
     tooltipPosition: 'bottom',
+    action: '__header__',
   },
   // --- 2. Персонаж ---
   {
