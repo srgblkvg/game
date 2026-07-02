@@ -13,7 +13,7 @@ router.get('/chat/recent', async (req, res) => {
            CASE WHEN al.id IS NOT NULL THEN 1 ELSE 0 END as is_active_auction
     FROM chat_messages m
     LEFT JOIN users u ON m.senderId = u.id
-    LEFT JOIN auction_lots al ON al.id = (m.item_data::jsonb->>'lotId')::int
+    LEFT JOIN auction_lots al ON m.item_data IS NOT NULL AND al.id = (m.item_data::jsonb->>'lotId')::int
     WHERE (al.id IS NOT NULL)
        OR ((m.targetId IS NULL OR m.senderId = ? OR m.targetId = ?) AND m.id IN (
          SELECT id FROM chat_messages
