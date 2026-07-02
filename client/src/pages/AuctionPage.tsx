@@ -114,13 +114,28 @@ export default function AuctionPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { showAcquire } = useAcquire();
 
+    const [lots, setLots] = useState<any[]>([]);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+    const [tab, setTab] = useState<'buy' | 'sell' | 'history'>('buy');
+    const [history, setHistory] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
     // Highlight specific lot from chat link
     const highlightLotId = searchParams.get('lot');
 
     useEffect(() => {
         if (highlightLotId) {
             setTab('buy');
-            // Clear the param after navigation so it doesn't stick
+        }
+    }, [highlightLotId]);
+
+    // Scroll to highlighted lot after lots are loaded
+    useEffect(() => {
+        if (!highlightLotId || lots.length === 0) return;
+        const el = document.getElementById(`auction-lot-${highlightLotId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const t = setTimeout(() => {
                 const p = new URLSearchParams(searchParams);
                 p.delete('lot');
@@ -128,14 +143,7 @@ export default function AuctionPage() {
             }, 2000);
             return () => clearTimeout(t);
         }
-    }, []); // eslint-disable-line
-
-    const [lots, setLots] = useState<any[]>([]);
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
-    const [tab, setTab] = useState<'buy' | 'sell' | 'history'>('buy');
-    const [history, setHistory] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
+    }, [lots, highlightLotId]);
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -482,7 +490,7 @@ export default function AuctionPage() {
                             const hoursLeft = Math.max(0, Math.ceil((lot.endsAt - Date.now() / 1000) / 3600));
 
                             return (
-                                <div key={lot.id} ref={String(lot.id) === highlightLotId ? (el) => { if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } : undefined}>
+                                <div key={lot.id} id={`auction-lot-${lot.id}`}>
                                 <Card className={`mb-3 ${String(lot.id) === highlightLotId ? 'ring-2 ring-[var(--color-accent-warning)]' : ''}`}>
                                     <div className="flex justify-between items-start gap-3">
                                         <div onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
