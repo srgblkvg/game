@@ -24,7 +24,7 @@ router.get('/chat/recent', async (req, res) => {
   `, [userId, userId, userId, userId, limit]);
 
   const result = messages.map((m) => {
-    const msg = { ...m, content: m.content || '' };
+    const msg = { ...m, content: m.content || '', senderName: m.senderName || 'Глашатай' };
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);
@@ -64,7 +64,7 @@ router.get('/chat/private/:userId', async (req, res) => {
   `, [currentUserId, otherUserId, otherUserId, currentUserId, limit]);
 
   const result = messages.map((m) => {
-    const msg = { ...m, content: m.content || '' };
+    const msg = { ...m, content: m.content || '', senderName: m.senderName || 'Глашатай' };
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);
