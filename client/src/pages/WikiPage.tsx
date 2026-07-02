@@ -11,8 +11,9 @@ export default function WikiPage() {
             <h1 className="text-2xl font-bold text-center text-[var(--color-accent-danger)] mb-1">⚔️ MMO Arena</h1>
             <p className="text-center text-[var(--color-text-muted)] text-sm mb-6">Гайд для нового игрока</p>
 
-            <Card className="mb-4 border-l-4 border-l-[var(--color-accent-success)] bg-[var(--color-accent-success)]/5 p-3">
-                <p className="text-sm"><span className="text-[var(--color-accent-success)] font-bold">💡 Совет:</span> Начните с Охоты — безопасный способ получить первый опыт и серебро. Затем купите снаряжение в Магазине и выполняйте квесты.</p>
+            <Card className="mb-4 p-4 bg-[rgba(245,158,11,0.06)] border-0 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#f59e0b] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_12px_rgba(245,158,11,0.4)]"></div>
+                <p className="text-sm"><span className="text-[#fbbf24] font-bold">💡 Совет:</span> Начните с Охоты — безопасный способ получить первый опыт и серебро. Затем купите снаряжение в Магазине и выполняйте квесты.</p>
             </Card>
 
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🚀 Начало игры</h2>
