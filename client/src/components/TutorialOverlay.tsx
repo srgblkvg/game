@@ -49,14 +49,19 @@ function calcTooltipPosition(
   const spaceLeft = target.left - TOOLTIP_MARGIN;
   const spaceRight = viewportW - target.right - TOOLTIP_MARGIN;
 
-  // На мобильном — туториал сверху. Для шапки — под шапкой, для остального — поверх
+  // На мобильном — туториал под или над элементом, как на десктопе
+  // Но всегда центрирован горизонтально
   if (isMobile) {
-    const isHeaderStep = stepAction === '__header__';
-    if (isHeaderStep) {
-      const headerH = document.getElementById('site-header')?.offsetHeight || 60;
-      return { left: 0, top: headerH + 8 };
+    // Пробуем снизу, затем сверху, затем центр
+    if (spaceBottom >= tooltipH + gap) {
+      const tLeft = clamp(target.left + target.width / 2 - tooltipW / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
+      return { left: tLeft, top: target.bottom + gap, arrow: 'up' };
     }
-    return { left: 0, top: 8 };
+    if (spaceTop >= tooltipH + gap) {
+      const tLeft = clamp(target.left + target.width / 2 - tooltipW / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
+      return { left: tLeft, top: target.top - tooltipH - gap, arrow: 'down' };
+    }
+    return { left: 0, top: Math.max(TOOLTIP_MARGIN, (viewportH - tooltipH) / 2) };
   }
 
   // Десктоп: пробуем предпочтительную позицию, затем фолбэк
@@ -177,10 +182,9 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       right: rect.right,
     });
 
-    // Скроллим элемент чтобы был видим (учитываем sticky-шапку и tooltip сверху)
+    // Скроллим элемент чтобы был видим
     const headerH = document.getElementById('site-header')?.offsetHeight || 0;
-    // На мобильном tooltip сверху на top:8, h≈150 — элемент ниже с отступом 12
-    const topClearance = mobile ? (8 + 150 + 12) : headerH;
+    const topClearance = headerH;
 
     const isFullyVisible =
       rect.top >= topClearance &&
@@ -189,20 +193,10 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       rect.right <= vw;
 
     if (!isFullyVisible) {
-      // Временно включаем скролл для корректной работы scrollIntoView/scrollBy
       document.body.style.overflow = '';
-      if (mobile) {
-        // scrollIntoView + scrollTo: гарантированно работает
-        el.scrollIntoView({ block: 'start', behavior: 'instant' });
-        // Форсим reflow, затем сдвигаем вниз на 170px (высота tooltip + отступ)
-        void document.body.offsetHeight;
-        window.scrollTo({ top: Math.max(0, window.scrollY - 170), behavior: 'instant' });
-      } else {
-        el.scrollIntoView({ block: 'center', behavior: 'instant' });
-        // Сдвигаем выше на высоту шапки + отступ
-        window.scrollBy({ top: -(headerH + 16), behavior: 'instant' });
-      }
-      // Возвращаем блокировку
+      el.scrollIntoView({ block: 'center', behavior: 'instant' });
+      // Сдвигаем выше на высоту шапки
+      window.scrollBy({ top: -(headerH + 8), behavior: 'instant' });
       document.body.style.overflow = 'hidden';
       // Пересчитываем позицию после скролла
       const newRect = el.getBoundingClientRect();
@@ -323,10 +317,6 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
     boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
     maxHeight: isMobile ? '35vh' : '80vh',
     overflowY: 'auto',
-    ...(isMobile ? {
-      left: '50%',
-      transform: 'translateX(-50%)',
-    } : {}),
   };
 
   return createPortal(
