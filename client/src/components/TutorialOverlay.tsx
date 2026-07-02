@@ -186,8 +186,8 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       // Временно включаем скролл для корректной работы scrollIntoView/scrollBy
       document.body.style.overflow = '';
       if (mobile) {
-        // Скроллим чтобы элемент оказался ниже tooltip (tooltip сверху на top:8)
-        const tooltipBottom = 8 + tooltipEstH;
+        // Скроллим чтобы элемент оказался ниже tooltip (tooltip сверху на top:8, h≈180)
+        const tooltipBottom = 8 + 180;
         const targetY = tooltipBottom + 24;
         const scrollDelta = rect.top - targetY;
         window.scrollBy({ top: scrollDelta, behavior: 'instant' });
