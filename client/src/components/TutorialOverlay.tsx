@@ -49,19 +49,14 @@ function calcTooltipPosition(
   const spaceLeft = target.left - TOOLTIP_MARGIN;
   const spaceRight = viewportW - target.right - TOOLTIP_MARGIN;
 
-  // На мобильном — туториал под или над элементом, как на десктопе
-  // Но всегда центрирован горизонтально
+  // Мобилка: шаг шапки — tooltip под шапкой, остальные — tooltip прибит к верху
   if (isMobile) {
-    // Пробуем снизу, затем сверху, затем центр
-    if (spaceBottom >= tooltipH + gap) {
-      const tLeft = clamp(target.left + target.width / 2 - tooltipW / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
-      return { left: tLeft, top: target.bottom + gap, arrow: 'up' };
+    if (stepAction === '__header__') {
+      const headerH = document.getElementById('site-header')?.offsetHeight || 60;
+      return { left: 0, top: headerH + 8 };
     }
-    if (spaceTop >= tooltipH + gap) {
-      const tLeft = clamp(target.left + target.width / 2 - tooltipW / 2, TOOLTIP_MARGIN, viewportW - tooltipW - TOOLTIP_MARGIN);
-      return { left: tLeft, top: target.top - tooltipH - gap, arrow: 'down' };
-    }
-    return { left: 0, top: Math.max(TOOLTIP_MARGIN, (viewportH - tooltipH) / 2) };
+    // Остальные шаги: tooltip сверху, центрирован через CSS
+    return { left: 0, top: 8 };
   }
 
   // Десктоп: пробуем предпочтительную позицию, затем фолбэк
@@ -317,6 +312,10 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
     boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
     maxHeight: isMobile ? '35vh' : '80vh',
     overflowY: 'auto',
+    ...(isMobile ? {
+      left: '50%',
+      transform: 'translateX(-50%)',
+    } : {}),
   };
 
   return createPortal(
