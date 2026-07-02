@@ -57,7 +57,21 @@ router.get('/rating', async (req, res) => {
         rank: getRank(u.elo || 1000),
     }));
 
-    res.json({ users: result, total });
+    // Include user's own page for auto-navigation
+    let myPage = 1;
+    if (req.userId) {
+        const userRow = await db.one('SELECT elo FROM users WHERE id = ?', [req.userId]) as any;
+        if (userRow) {
+            const elo = userRow.elo || 1000;
+            const pos = (await db.one(
+                `SELECT COUNT(*) as cnt FROM users u ${whereClause} AND (u.elo > ? OR (u.elo = ? AND u.id < ?))`,
+                [...params, elo, elo, req.userId]
+            ) as any).cnt + 1;
+            myPage = Math.ceil(pos / limit);
+        }
+    }
+
+    res.json({ users: result, total, myPage });
 });
 
 // Позиция текущего игрока в рейтинге

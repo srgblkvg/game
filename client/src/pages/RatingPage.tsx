@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { fetchRating } from '../api/character';
 import { useAuth } from '../contexts/AuthContext';
-import { getHeaders, BASE_URL } from '../api/helpers';
 import Card from '../components/ui/Card';
 import GuildTag from '../components/GuildTag';
 import Button from '../components/ui/Button';
@@ -54,28 +53,20 @@ export default function RatingPage() {
 
     const initialLoadDone = useRef(false);
 
-    // Initial load: find player's position, then load that page
+    // Initial load: jump to user's page
     useEffect(() => {
         if (!user) return;
         let cancelled = false;
         (async () => {
             try {
-                let startPage = 1;
-                try {
-                    const r = await fetch(`${BASE_URL}/my-position`, { headers: getHeaders() });
-                    const data = await r.json();
-                    if (!cancelled && data.position) {
-                        startPage = Math.ceil(data.position / LIMIT);
-                    }
-                } catch {}
+                const data = await fetchRating(1, LIMIT, search, minElo);
                 if (cancelled) return;
-                setPage(startPage);
-                initialLoadDone.current = true;
-                const data = await fetchRating(startPage, LIMIT, search, minElo);
-                if (!cancelled) {
-                    setPlayers(data.users);
-                    setTotalPages(Math.ceil(data.total / LIMIT));
+                setPlayers(data.users);
+                setTotalPages(Math.ceil(data.total / LIMIT));
+                if (data.myPage && data.myPage !== 1) {
+                    setPage(data.myPage);
                 }
+                initialLoadDone.current = true;
             } catch {
                 if (!cancelled) initialLoadDone.current = true;
             }

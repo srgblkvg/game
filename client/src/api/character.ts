@@ -66,10 +66,11 @@ export async function fetchRating(page = 1, limit = 20, search = '', minElo = 0,
     if (minElo) params.set('minElo', String(minElo));
     if (maxElo) params.set('maxElo', String(maxElo));
     const res = await fetch(`${BASE_URL}/rating?${params}`, {
-        headers: getHeaders(),
+        headers: getHeaders()
     });
     if (!res.ok) throw new Error('Ошибка загрузки рейтинга');
-    return res.json(); // { users, total }
+    const data = await res.json();
+    return { users: data.users, total: data.total, myPage: data.myPage || 1 };
 }
 
 export async function fetchUsersByIds(ids: number[]) {
