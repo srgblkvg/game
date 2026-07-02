@@ -65,7 +65,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
         <div className={depth > 0 ? 'ml-4 sm:ml-6 border-l-2 border-[var(--color-border-light)] pl-3' : ''}>
             <Card className={`mb-2 ${isFirst ? 'border border-[#f59e0b]/30 relative mt-3' : ''}`}>
                 {isFirst && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--color-bg-secondary)] border border-[#f59e0b]/30 rounded-full w-7 h-7 flex items-center justify-center text-sm shadow-[0_0_6px_rgba(245,158,11,0.3)]">
+                    <div className="absolute -top-2.5 -right-2.5 bg-[var(--color-bg-secondary)] border border-[#f59e0b]/30 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-[0_0_6px_rgba(245,158,11,0.3)]">
                         📢
                     </div>
                 )}
