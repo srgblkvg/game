@@ -17,7 +17,6 @@ export default function RatingPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [showInfo, setShowInfo] = useState(false);
-    const initialLoadDone = useRef(false);
     const [search, setSearch] = useState('');
     const [searchInput, setSearchInput] = useState('');
     const [minElo, setMinElo] = useState(0);
@@ -53,31 +52,38 @@ export default function RatingPage() {
         { label: '• Пепел (0+)', min: 0 },
     ];
 
-    // Найти страницу с текущим игроком и сразу загрузить
+    const initialLoadDone = useRef(false);
+
+    // Initial load: find player's position, then load that page
     useEffect(() => {
         if (!user) return;
         let cancelled = false;
-        fetch(`${BASE_URL}/my-position`, { headers: getHeaders() })
-            .then(r => r.json())
-            .then(data => {
+        (async () => {
+            try {
+                let startPage = 1;
+                try {
+                    const r = await fetch(`${BASE_URL}/my-position`, { headers: getHeaders() });
+                    const data = await r.json();
+                    if (!cancelled && data.position) {
+                        startPage = Math.ceil(data.position / LIMIT);
+                    }
+                } catch {}
                 if (cancelled) return;
-                const myPage = data.position ? Math.ceil(data.position / LIMIT) : 1;
-                setPage(myPage);
+                setPage(startPage);
                 initialLoadDone.current = true;
-                return fetchRating(myPage, LIMIT, search, minElo);
-            })
-            .then(ratingData => {
-                if (cancelled || !ratingData) return;
-                setPlayers(ratingData.users);
-                setTotalPages(Math.ceil(ratingData.total / LIMIT));
-            })
-            .catch(() => {
-                if (cancelled) return;
-                initialLoadDone.current = true;
-            });
+                const data = await fetchRating(startPage, LIMIT, search, minElo);
+                if (!cancelled) {
+                    setPlayers(data.users);
+                    setTotalPages(Math.ceil(data.total / LIMIT));
+                }
+            } catch {
+                if (!cancelled) initialLoadDone.current = true;
+            }
+        })();
         return () => { cancelled = true; };
     }, [user]);
 
+    // Subsequent loads: pagination, search, filter
     useEffect(() => {
         if (!initialLoadDone.current) return;
         fetchRating(page, LIMIT, search, minElo).then(data => {
