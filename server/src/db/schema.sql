@@ -225,7 +225,8 @@ CREATE TABLE IF NOT EXISTS users (
   craftBroken INTEGER DEFAULT 0,
   guildId INTEGER DEFAULT NULL,
   avatar TEXT,
-  arenaOpponentId INTEGER DEFAULT NULL
+  arenaOpponentId INTEGER DEFAULT NULL,
+  tutorial_completed INTEGER DEFAULT 0
 );
 
 -- ====== admins ======

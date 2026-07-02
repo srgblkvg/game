@@ -88,6 +88,7 @@ export interface Character {
   avatar?: string | null;
   elo?: number;
   pveRating?: number;
+  tutorialCompleted?: number;
 }
 
 interface GameContextType {

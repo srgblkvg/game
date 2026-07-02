@@ -164,6 +164,7 @@ router.get('/character/me', async (req, res) => {
         guildBonus,
         buildings,
         totalCollectionItems: totalCollectionItems || 189,
+        tutorialCompleted: user.tutorialCompleted || 0,
     });
 });
 
@@ -182,6 +183,13 @@ router.post('/character/save-tabs', async (req, res) => {
     const { tabs } = req.body;
     if (!Array.isArray(tabs)) return res.status(400).json({ error: 'tabs должен быть массивом' });
     await db.run('UPDATE users SET openPrivateTabs = ? WHERE id = ?', [JSON.stringify(tabs), userId]);
+    res.json({ success: true });
+});
+
+// Отметить туториал как пройденный
+router.post('/character/tutorial-done', async (req, res) => {
+    const userId = req.userId;
+    await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
     res.json({ success: true });
 });
 

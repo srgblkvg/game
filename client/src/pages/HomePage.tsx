@@ -11,8 +11,7 @@ import { getCompatibleSlots } from '../utils/itemUtils';
 import { getRemaining } from '../hooks/useServerTime';
 import TutorialOverlay from '../components/TutorialOverlay';
 import tutorialSteps from '../data/tutorialSteps';
-
-const TUTORIAL_KEY = 'mmo_tutorial_seen';
+import { getHeaders } from '../api/helpers';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -31,12 +30,10 @@ export default function HomePage() {
     // Header already polls character — no need for duplicate interval here
   }, [user, setCharacter]);
 
-  // Показываем туториал новым игрокам
+  // Показываем туториал новым игрокам (флаг в БД)
   useEffect(() => {
     if (!character) return;
-    const seen = localStorage.getItem(TUTORIAL_KEY);
-    if (!seen && character.totalBattles === 0) {
-      // Небольшая задержка чтобы DOM отрисовался
+    if (!character.tutorialCompleted && character.totalBattles === 0) {
       const t = setTimeout(() => setShowTutorial(true), 500);
       return () => clearTimeout(t);
     }
@@ -122,9 +119,11 @@ export default function HomePage() {
       {showTutorial && (
         <TutorialOverlay
           steps={tutorialSteps}
-          onComplete={() => {
-            localStorage.setItem(TUTORIAL_KEY, '1');
+          onComplete={async () => {
             setShowTutorial(false);
+            try {
+              await fetch('/api/character/tutorial-done', { method: 'POST', headers: getHeaders() });
+            } catch {}
           }}
         />
       )}
