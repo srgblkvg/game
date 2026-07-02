@@ -42,7 +42,7 @@ router.post('/orders/create', async (req, res) => {
 
     const user = await db.one('SELECT level, money FROM users WHERE id = ?', [userId]) as any;
     if (user.level < 5) return res.status(400).json({ error: 'Нужен 5 уровень' });
-    if (user.money < 5000) return res.status(400).json({ error: 'Нужно 5000 серебра' });
+    if (user.money < 10000) return res.status(400).json({ error: 'Нужно 10000 серебра' });
 
     const existing = await db.one('SELECT id FROM orders WHERE name = ?', [name]);
     if (existing) return res.status(400).json({ error: 'Имя занято' });
@@ -51,7 +51,7 @@ router.post('/orders/create', async (req, res) => {
     if (memberCheck) return res.status(400).json({ error: 'Вы уже в ордене' });
 
     const now = Math.floor(Date.now() / 1000);
-    await db.run('UPDATE users SET money = money - 5000 WHERE id = ?', [userId]);
+    await db.run('UPDATE users SET money = money - 10000 WHERE id = ?', [userId]);
     const result = await db.run('INSERT INTO orders (name, masterId, createdAt) VALUES (?, ?, ?)', [name, userId, now]);
     await db.run('INSERT INTO order_members (orderId, userId, rank, joinedAt) VALUES (?, ?, ?, ?)', [result.lastInsertRowid, userId, 'master', now]);
 
