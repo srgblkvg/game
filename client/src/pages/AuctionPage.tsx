@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
@@ -111,7 +111,24 @@ export default function AuctionPage() {
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { showAcquire } = useAcquire();
+
+    // Highlight specific lot from chat link
+    const highlightLotId = searchParams.get('lot');
+
+    useEffect(() => {
+        if (highlightLotId) {
+            setTab('buy');
+            // Clear the param after navigation so it doesn't stick
+            const t = setTimeout(() => {
+                const p = new URLSearchParams(searchParams);
+                p.delete('lot');
+                setSearchParams(p, { replace: true });
+            }, 2000);
+            return () => clearTimeout(t);
+        }
+    }, []); // eslint-disable-line
 
     const [lots, setLots] = useState<any[]>([]);
     const [message, setMessage] = useState('');
@@ -465,7 +482,8 @@ export default function AuctionPage() {
                             const hoursLeft = Math.max(0, Math.ceil((lot.endsAt - Date.now() / 1000) / 3600));
 
                             return (
-                                <Card key={lot.id} className="mb-3">
+                                <div key={lot.id} ref={String(lot.id) === highlightLotId ? (el) => { if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } : undefined}>
+                                <Card className={`mb-3 ${String(lot.id) === highlightLotId ? 'ring-2 ring-[var(--color-accent-warning)]' : ''}`}>
                                     <div className="flex justify-between items-start gap-3">
                                         <div onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                                             onTouchStart={e => handleTouchStart(e, item)} onTouchEnd={handleTouchEnd} onContextMenu={e => e.preventDefault()}
@@ -513,6 +531,7 @@ export default function AuctionPage() {
                                         </div>
                                     </div>
                                 </Card>
+                                </div>
                             );
                         })
                     )}
