@@ -130,8 +130,76 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                             <div
                                 className={`flex flex-col gap-[2px] max-w-[85%] ${isOwn ? 'items-end' : 'items-start'}`}
                             >
-                                {group.map((msg) =>
-                                    msg.item && msg.item.type !== 'guild_invite' && msg.item.type !== 'war_declared' ? (
+                                {group.map((msg) => {
+                                    const isAuction = msg.item?.type?.startsWith('auction_');
+                                    if (isAuction) {
+                                        const a = msg.item;
+                                        const itemName = a.itemData?.name || 'Предмет';
+                                        const rarity = a.itemData?.rarity_id ?? 0;
+                                        const now = Math.floor(Date.now() / 1000);
+                                        const timeLeft = Math.max(0, (a.endsAt || 0) - now);
+                                        const hours = Math.floor(timeLeft / 3600);
+                                        const mins = Math.floor((timeLeft % 3600) / 60);
+                                        return (
+                                            <div
+                                                key={msg.id}
+                                                className={`px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.35)] text-[0.82rem] leading-[1.4] rounded-[8px] bg-[#2a2010] border border-[#4a3820] max-w-[90%]`}
+                                            >
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <span
+                                                        style={{ color: getRarityColor(rarity) }}
+                                                        className="font-bold cursor-pointer hover:underline"
+                                                        onMouseEnter={(e) => setTooltipData({ item: a.itemData, x: e.clientX, y: e.clientY })}
+                                                        onMouseMove={(e) => { if (tooltipData) setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null); }}
+                                                        onMouseLeave={() => setTooltipData(null)}
+                                                    >
+                                                        [{itemName}{a.itemData?.upgradeLevel > 0 ? ` +${a.itemData.upgradeLevel}` : ''}]
+                                                    </span>
+                                                    <span className="text-[var(--color-text-muted)] text-[0.7rem]">
+                                                        {a.type === 'auction_lot' ? '📦 Новый лот' : a.type === 'auction_bid' ? '💰 Ставка' : '✅ Выкуп'}
+                                                    </span>
+                                                </div>
+                                                {a.type === 'auction_lot' && (
+                                                    <>
+                                                        <div className="text-[var(--color-text-primary)]">
+                                                            Старт: <span className="text-[var(--color-accent-warning)] font-bold">{a.startPrice}🥇</span>
+                                                            {a.buyoutPrice ? <span className="ml-2">Выкуп: <span className="text-[var(--color-accent-success)] font-bold">{a.buyoutPrice}🥇</span></span> : null}
+                                                        </div>
+                                                        <div className="text-[var(--color-text-muted)] text-[0.72rem]">
+                                                            Продавец: {a.sellerName || '?'}
+                                                            {a.currentBidderName ? null : ' • Нет покупателя'}
+                                                        </div>
+                                                    </>
+                                                )}
+                                                {a.type === 'auction_bid' && (
+                                                    <>
+                                                        <div className="text-[var(--color-text-primary)]">
+                                                            Ставка: <span className="text-[var(--color-accent-warning)] font-bold">{a.currentBid}🥇</span>
+                                                            {a.buyoutPrice ? <span className="ml-2">Выкуп: <span className="text-[var(--color-accent-success)]">{a.buyoutPrice}🥇</span></span> : null}
+                                                        </div>
+                                                        <div className="text-[var(--color-text-muted)] text-[0.72rem]">
+                                                            Лидер: <span className="text-[var(--color-accent-warning)] font-bold">{a.currentBidderName || '?'}</span>
+                                                            {a.previousBidderName ? <span> (перебил {a.previousBidderName})</span> : null}
+                                                        </div>
+                                                    </>
+                                                )}
+                                                {a.type === 'auction_buyout' && (
+                                                    <div className="text-[var(--color-text-muted)] text-[0.72rem]">
+                                                        {a.buyerName} выкупил за {a.price}🥇
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between items-center mt-1 text-[0.68rem] text-[var(--color-border-light)]">
+                                                    <span>{formatTime(msg.createdAt)}</span>
+                                                    {a.type !== 'auction_buyout' && (
+                                                        <span className={timeLeft < 3600 ? 'text-[var(--color-accent-danger)]' : 'text-[var(--color-accent-success)]'}>
+                                                            {timeLeft > 0 ? `⏳ ${hours}ч ${mins}м` : '⏳ Истёк'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    if (msg.item && msg.item.type !== 'guild_invite' && msg.item.type !== 'war_declared') return (
                                         /* Item link bubble */
                                         <div
                                             key={msg.id}
@@ -155,8 +223,9 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                             [{msg.item.name}
                                             {msg.item.upgradeLevel > 0 ? ` +${msg.item.upgradeLevel}` : ''}]
                                         </div>
-                                    ) : (
-                                        /* Text bubble */
+                                    );
+                                    /* Text bubble */
+                                    return (
                                         <div
                                             key={msg.id}
                                             className={`px-3 py-[7px] break-words shadow-[0_1px_3px_rgba(0,0,0,0.35)] text-[0.85rem] leading-[1.4] ${
@@ -173,8 +242,8 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                         >
                                             {renderContent ? renderContent(msg) : msg.content}
                                         </div>
-                                    )
-                                )}
+                                    );
+                                })}
                             </div>
                         </div>
                     );

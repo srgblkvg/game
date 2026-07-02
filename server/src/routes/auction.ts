@@ -217,11 +217,41 @@ router.post('/auction/sell', async (req, res) => {
     const endsAt = now + dur * 3600;
 
     await db.run('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?', [listingFee, JSON.stringify(inventory), userId]);
-    await db.run(`INSERT INTO auction_lots (sellerId, itemData, startPrice, buyoutPrice, currentBid, duration, endsAt, createdAt)
+    const lotResult = await db.run(`INSERT INTO auction_lots (sellerId, itemData, startPrice, buyoutPrice, currentBid, duration, endsAt, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [userId, JSON.stringify(sellItemData), totalStartPrice, totalBuyoutPrice, null, dur, endsAt, now]);
+    const lotId = lotResult.lastInsertRowid;
 
     addToTreasury(listingFee, 'auction_listing').catch(() => {});
+
+    // Системное сообщение в чат (вкладка Аукцион)
+    const sellerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
+    const auctionItemData = JSON.stringify({
+      type: 'auction_lot',
+      lotId,
+      itemData: sellItemData,
+      startPrice: totalStartPrice,
+      currentBid: null,
+      buyoutPrice: totalBuyoutPrice,
+      currentBidderName: null,
+      sellerName,
+      endsAt,
+      createdAt: now,
+    });
+    const chatInfo = await db.run(
+      'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderguild, senderguildid) VALUES (?, NULL, ?, ?, NULL, NULL)',
+      [0, `📦 ${sellerName} выставил лот`, auctionItemData]
+    );
+    const chatMsg = {
+      id: chatInfo.lastInsertRowid,
+      senderId: 0,
+      senderName: 'Аукцион',
+      targetId: null,
+      content: `📦 ${sellerName} выставил лот`,
+      createdAt: new Date().toISOString(),
+      item: { type: 'auction_lot', lotId, itemData: sellItemData, startPrice: totalStartPrice, currentBid: null, buyoutPrice: totalBuyoutPrice, currentBidderName: null, sellerName, endsAt },
+    };
+    broadcast('message', { message: chatMsg });
 
     broadcast('auction_changed', {});
     res.json({ success: true, listingFee });
@@ -257,6 +287,44 @@ router.post('/auction/bid', async (req, res) => {
         });
 
         broadcast('auction_changed', { lotId });
+
+        // Системное сообщение о перебивке ставки
+        const lot = await db.one('SELECT * FROM auction_lots WHERE id = ?', [lotId]) as any;
+        if (lot) {
+          const itemData = JSON.parse(lot.itemdata || lot.itemData || '{}');
+          const bidderName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
+          const prevBidderId = lot.currentbidderid;
+          const previousBidderName = (prevBidderId && prevBidderId !== userId)
+            ? ((await db.one('SELECT username FROM users WHERE id = ?', [prevBidderId]) as any)?.username || 'Кто-то')
+            : null;
+          const auctionItemData = JSON.stringify({
+            type: 'auction_bid',
+            lotId,
+            itemData,
+            startPrice: parseInt(lot.startprice) || 0,
+            currentBid: amount,
+            buyoutPrice: lot.buyoutprice || null,
+            currentBidderName: bidderName,
+            previousBidderName,
+            sellerName: (await db.one('SELECT username FROM users WHERE id = ?', [lot.sellerid || lot.sellerId]) as any)?.username || 'Кто-то',
+            endsAt: lot.endsat || lot.endsAt,
+            createdAt: Math.floor(Date.now() / 1000),
+          });
+          const chatInfo = await db.run(
+            'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderguild, senderguildid) VALUES (?, NULL, ?, ?, NULL, NULL)',
+            [0, `💰 ${bidderName} перебил ставку`, auctionItemData]
+          );
+          const chatMsg = {
+            id: chatInfo.lastInsertRowid,
+            senderId: 0,
+            senderName: 'Аукцион',
+            targetId: null,
+            content: `💰 ${bidderName} перебил ставку`,
+            createdAt: new Date().toISOString(),
+            item: { type: 'auction_bid', lotId, itemData, startPrice: parseInt(lot.startprice) || 0, currentBid: amount, buyoutPrice: lot.buyoutprice || null, currentBidderName: bidderName, previousBidderName, sellerName: (await db.one('SELECT username FROM users WHERE id = ?', [lot.sellerid || lot.sellerId]) as any)?.username || 'Кто-то', endsAt: lot.endsat || lot.endsAt },
+          };
+          broadcast('message', { message: chatMsg });
+        }
         res.json({ success: true });
     } catch (e: any) {
         res.status(400).json({ error: e.message });
@@ -325,6 +393,31 @@ router.post('/auction/buyout', async (req, res) => {
     await db.run('UPDATE users SET auction_sales = COALESCE(auction_sales, 0) + 1 WHERE id = ?', [lot.sellerId]);
 
     broadcast('auction_changed', {});
+
+    // Системное сообщение о выкупе лота
+    const buyoutItemData = JSON.stringify({
+      type: 'auction_buyout',
+      lotId,
+      itemData: buyItemData,
+      price: lot.buyoutPrice,
+      buyerName,
+      sellerName: (await db.one('SELECT username FROM users WHERE id = ?', [lot.sellerId]) as any)?.username || 'Кто-то',
+    });
+    const buyoutChatInfo = await db.run(
+      'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderguild, senderguildid) VALUES (?, NULL, ?, ?, NULL, NULL)',
+      [0, `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice}🥇`, buyoutItemData]
+    );
+    const buyoutChatMsg = {
+      id: buyoutChatInfo.lastInsertRowid,
+      senderId: 0,
+      senderName: 'Аукцион',
+      targetId: null,
+      content: `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice}🥇`,
+      createdAt: new Date().toISOString(),
+      item: { type: 'auction_buyout', lotId, itemData: buyItemData, price: lot.buyoutPrice, buyerName },
+    };
+    broadcast('message', { message: buyoutChatMsg });
+
     res.json({ success: true });
 });
 

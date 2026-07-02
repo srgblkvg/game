@@ -59,6 +59,7 @@ export default function ChatPanel() {
 
     const [openPrivateTabs, setOpenPrivateTabs] = useState<Map<number, string>>(new Map());
     const [guildChatActive, setGuildChatActive] = useState(false);
+    const [auctionChatActive, setAuctionChatActive] = useState(false);
     const [guildId, setGuildId] = useState<number | null>(null);
     const [guildName, setGuildName] = useState<string | null>(null);
     const [guildMemberIds, setGuildMemberIds] = useState<Set<number>>(new Set());
@@ -67,23 +68,28 @@ export default function ChatPanel() {
     const [unreadGeneral, setUnreadGeneral] = useState(0);
     const [unreadPrivate, setUnreadPrivate] = useState<Map<number, number>>(new Map());
     const [unreadGuild, setUnreadGuild] = useState(0);
+    const [unreadAuction, setUnreadAuction] = useState(0);
 
     // --- Last-read tracking (persisted in localStorage) ---
     const LS_GENERAL = 'chatLastReadGeneral';
     const LS_GUILD = 'chatLastReadGuild';
+    const LS_AUCTION = 'chatLastReadAuction';
     const lsPrivate = (uid: number) => `chatLastReadPrivate_${uid}`;
     const getLastRead = (key: string): number => parseInt(localStorage.getItem(key) || '0') || 0;
     const saveLastRead = (key: string, id: number) => { if (id > getLastRead(key)) localStorage.setItem(key, String(id)); };
 
-    const markRead = useCallback((type: 'general' | 'guild' | number) => {
+    const markRead = useCallback((type: 'general' | 'guild' | 'auction' | number) => {
         const filtered = type === 'general'
-            ? messages.filter(m => m.targetId === null)
+            ? messages.filter(m => m.targetId === null && !m.item?.type?.startsWith('auction_'))
             : type === 'guild'
                 ? messages.filter(m => m.targetId !== null && m.targetId < 0)
-                : messages.filter(m => (m.senderId === userId && m.targetId === type) || (m.senderId === type && m.targetId === userId));
+                : type === 'auction'
+                    ? messages.filter(m => m.item?.type?.startsWith('auction_'))
+                    : messages.filter(m => (m.senderId === userId && m.targetId === type) || (m.senderId === type && m.targetId === userId));
         const maxId = filtered.length > 0 ? Math.max(...filtered.map(m => m.id)) : 0;
         if (type === 'general') { saveLastRead(LS_GENERAL, maxId); setUnreadGeneral(0); }
         else if (type === 'guild') { saveLastRead(LS_GUILD, maxId); setUnreadGuild(0); }
+        else if (type === 'auction') { saveLastRead(LS_AUCTION, maxId); setUnreadAuction(0); }
         else { saveLastRead(lsPrivate(type), maxId); setUnreadPrivate(p => { const n = new Map(p); n.delete(type); return n; }); }
     }, [messages, userId]);
 
@@ -91,6 +97,7 @@ export default function ChatPanel() {
     useEffect(() => {
         if (!isPanelOpen && messages.length > 0) {
             if (guildChatActive) markRead('guild');
+            else if (auctionChatActive) markRead('auction');
             else if (privateChatWith !== null) markRead(privateChatWith);
             else markRead('general');
         }
@@ -102,8 +109,10 @@ export default function ChatPanel() {
         if (messages.length === 0) return;
         const lastReadGeneral = getLastRead(LS_GENERAL);
         const lastReadGuild = getLastRead(LS_GUILD);
-        setUnreadGeneral(messages.filter(m => m.senderId !== userId && m.targetId === null && m.id > lastReadGeneral).length);
+        const lastReadAuction = getLastRead(LS_AUCTION);
+        setUnreadGeneral(messages.filter(m => m.senderId !== userId && m.targetId === null && !m.item?.type?.startsWith('auction_') && m.id > lastReadGeneral).length);
         setUnreadGuild(guildId !== null ? messages.filter(m => m.senderId !== userId && m.targetId !== null && m.targetId < 0 && m.id > lastReadGuild).length : 0);
+        setUnreadAuction(messages.filter(m => m.senderId !== userId && m.item?.type?.startsWith('auction_') && m.id > lastReadAuction).length);
         const priv = new Map<number, number>();
         // Only auto-open tabs for messages that just arrived (not historical)
         const newMsgs = messages.slice(prevMsgCount.current);
@@ -213,6 +222,8 @@ export default function ChatPanel() {
     }, [visible, guildChatActive, guildId, addMessages]);
 
     const handleSend = useCallback((text: string) => {
+        // На вкладке аукциона не отправляем сообщения
+        if (auctionChatActive) return;
         // Удаляем @ перед именами, которых нет в онлайне
         const cleanedText = text.replace(/@(\S+)/g, (match, name) => {
             if (onlineUsers.some(u => u.username.toLowerCase() === name.toLowerCase())) {
@@ -402,17 +413,20 @@ export default function ChatPanel() {
     }, [currentUsername, handleNickClick, setCharacter]);
 
     const displayedMessages = useMemo(() => messages.filter(msg => {
+        if (auctionChatActive) {
+            return msg.item?.type?.startsWith('auction_');
+        }
         if (guildChatActive && guildId) {
             return msg.targetId === -guildId;
         }
         if (privateChatWith === null) {
-            return msg.targetId === null;
+            return msg.targetId === null && !msg.item?.type?.startsWith('auction_');
         }
         return (msg.senderId === userId && msg.targetId === privateChatWith) ||
             (msg.senderId === privateChatWith && msg.targetId === userId);
     }).sort((a: ChatMessage, b: ChatMessage) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    ), [messages, privateChatWith, userId, guildChatActive, guildId]);
+    ), [messages, privateChatWith, userId, guildChatActive, guildId, auctionChatActive]);
 
     const openPrivateTabsArray = useMemo(() =>
         Array.from(openPrivateTabs.entries()).map(([id, name]) => ({ id, name })),
@@ -497,12 +511,15 @@ export default function ChatPanel() {
                                 openPrivateTabs={openPrivateTabsArray}
                                 guildChatActive={guildChatActive}
                                 guildName={guildName || undefined}
+                                auctionChatActive={auctionChatActive}
                                 unreadGeneral={unreadGeneral}
                                 unreadPrivate={unreadPrivate}
                                 unreadGuild={unreadGuild}
-                                onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); markRead('general'); }}
-                                onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); markRead(id); }}
-                                onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); markRead('guild'); }}
+                                unreadAuction={unreadAuction}
+                                onSelectPublic={() => { setPrivateChatWith(null); setGuildChatActive(false); setAuctionChatActive(false); markRead('general'); }}
+                                onSelectPrivate={(id) => { setPrivateChatWith(id); setGuildChatActive(false); setAuctionChatActive(false); markRead(id); }}
+                                onSelectGuild={() => { setPrivateChatWith(null); setGuildChatActive(true); setAuctionChatActive(false); markRead('guild'); }}
+                                onSelectAuction={() => { setPrivateChatWith(null); setGuildChatActive(false); setAuctionChatActive(true); markRead('auction'); }}
                                 onCloseTab={(e, id) => {
                                     e.stopPropagation();
                                     removeTab(id);
@@ -541,6 +558,7 @@ export default function ChatPanel() {
                         )}
                     </div>
 
+                    {!auctionChatActive && (
                     <ChatInput
                         isPrivate={privateChatWith !== null}
                         isGuild={guildChatActive}
@@ -553,6 +571,12 @@ export default function ChatPanel() {
                         isGuest={user?.isGuest}
                         onClearPending={handleClearPending}
                     />
+                    )}
+                    {auctionChatActive && (
+                        <div className="px-3 py-2 text-[0.78rem] text-[var(--color-text-muted)] bg-[var(--color-bg-input)] border-t border-[var(--color-border-default)] text-center">
+                            🔨 Аукцион — только чтение. Ставки делаются на <a href="/auction" className="text-[var(--color-accent-warning)] underline" onClick={(e) => { e.preventDefault(); navigate('/auction'); }}>странице аукциона</a>
+                        </div>
+                    )}
                 </div>
             )}
 

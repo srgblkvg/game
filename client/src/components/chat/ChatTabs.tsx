@@ -3,20 +3,23 @@ interface ChatTabsProps {
   openPrivateTabs: { id: number; name: string }[];
   guildChatActive: boolean;
   guildName?: string;
+  auctionChatActive: boolean;
   unreadGeneral: number;
   unreadPrivate: Map<number, number>;
   unreadGuild: number;
+  unreadAuction: number;
   onSelectPublic: () => void;
   onSelectPrivate: (id: number) => void;
   onSelectGuild: () => void;
+  onSelectAuction: () => void;
   onCloseTab: (e: React.MouseEvent, id: number) => void;
 }
 
-export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatActive, guildName, unreadGeneral, unreadPrivate, unreadGuild, onSelectPublic, onSelectPrivate, onSelectGuild, onCloseTab }: ChatTabsProps) {
+export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatActive, guildName, auctionChatActive, unreadGeneral, unreadPrivate, unreadGuild, unreadAuction, onSelectPublic, onSelectPrivate, onSelectGuild, onSelectAuction, onCloseTab }: ChatTabsProps) {
   const maxNickLength = 12;
   const truncate = (nick: string) => nick.length > maxNickLength ? nick.slice(0, maxNickLength) + '...' : nick;
 
-  const isPublic = privateChatWith === null && !guildChatActive;
+  const isPublic = privateChatWith === null && !guildChatActive && !auctionChatActive;
 
   return (
     <div className="flex bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)] overflow-x-auto [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-[var(--color-border-light)] [&::-webkit-scrollbar-thumb]:rounded">
@@ -34,6 +37,12 @@ export default function ChatTabs({ privateChatWith, openPrivateTabs, guildChatAc
           )}
         </div>
       )}
+      <div onClick={onSelectAuction} className={`px-[0.6rem] py-[0.3rem] cursor-pointer border-r border-[var(--color-border-default)] whitespace-nowrap text-[var(--color-accent-warning)] flex items-center gap-1 ${auctionChatActive ? 'bg-[#3a2a0a] font-bold' : 'bg-transparent font-normal'}`}>
+        🔨 Аукцион
+        {unreadAuction > 0 && !auctionChatActive && (
+          <span className="w-2 h-2 rounded-full bg-[var(--color-accent-warning)] inline-block" />
+        )}
+      </div>
       {openPrivateTabs.map(({ id, name }) => {
         const isActive = privateChatWith === id;
         const pmUnread = unreadPrivate.get(id) || 0;
