@@ -10,9 +10,9 @@ import { ServerTimeProvider } from './contexts/ServerTimeContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { addCollection } from '@iconify/react';
 import gameIcons from './icons-filtered.json';
-// TODO: удалить после ответа поддержки VK ↓
+/* TODO: удалить после ответа поддержки VK ↓
 import { initVkInputMode } from './utils/vkInputMode';
-// TODO: удалить после ответа поддержки VK ↑
+TODO: удалить после ответа поддержки VK ↑ */
 import './styles/theme.css';
 
 // VK Bridge init (для игр ВКонтакте)
@@ -26,9 +26,9 @@ if (window.vkBridge) {
   window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
   // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
   document.documentElement.classList.add('vk-iframe');
-  // TODO: удалить после ответа поддержки VK ↓
+  /* TODO: удалить после ответа поддержки VK ↓
   initVkInputMode();
-  // TODO: удалить после ответа поддержки VK ↑
+  TODO: удалить после ответа поддержки VK ↑ */
 }
 
 // Регистрируем иконки локально (без API-запросов)
