@@ -78,7 +78,7 @@ router.post('/system-message', async (req, res) => {
     const msg = {
         id: info.lastInsertRowid,
         senderId: 0,
-        senderName: 'system',
+        senderName: 'Глашатай',
         targetId: null,
         content,
         createdAt: new Date().toISOString(),

@@ -20,7 +20,7 @@ function formatTime(dateStr: string): string {
 const MAX_NICK_LENGTH = 14;
 
 function truncate(nick: string | null): string {
-    if (!nick) return 'Система';
+    if (!nick) return 'Глашатай';
     return nick.length > MAX_NICK_LENGTH ? nick.slice(0, MAX_NICK_LENGTH) + '\u2026' : nick;
 }
 

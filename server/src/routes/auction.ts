@@ -249,7 +249,7 @@ router.post('/auction/sell', async (req, res) => {
     const chatMsg = {
       id: chatInfo.lastInsertRowid,
       senderId: 0,
-      senderName: 'Аукцион',
+      senderName: 'Глашатай',
       targetId: null,
       content: `📦 ${sellerName} выставил лот`,
       createdAt: new Date().toISOString(),
@@ -321,7 +321,7 @@ router.post('/auction/bid', async (req, res) => {
           const chatMsg = {
             id: chatInfo.lastInsertRowid,
             senderId: 0,
-            senderName: 'Аукцион',
+            senderName: 'Глашатай',
             targetId: null,
             content: `💰 ${bidderName} перебил ставку`,
             createdAt: new Date().toISOString(),
@@ -416,7 +416,7 @@ router.post('/auction/buyout', async (req, res) => {
     const buyoutChatMsg = {
       id: buyoutChatInfo.lastInsertRowid,
       senderId: 0,
-      senderName: 'Аукцион',
+      senderName: 'Глашатай',
       targetId: null,
       content: `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice} серебра`,
       createdAt: new Date().toISOString(),
