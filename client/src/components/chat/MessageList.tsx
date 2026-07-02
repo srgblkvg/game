@@ -19,7 +19,8 @@ function formatTime(dateStr: string): string {
 
 const MAX_NICK_LENGTH = 14;
 
-function truncate(nick: string): string {
+function truncate(nick: string | null): string {
+    if (!nick) return 'Система';
     return nick.length > MAX_NICK_LENGTH ? nick.slice(0, MAX_NICK_LENGTH) + '\u2026' : nick;
 }
 
@@ -105,7 +106,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                     className={`text-[0.72rem] font-semibold select-none ${
                                         isGuild ? 'text-[var(--color-accent-success)]' : isPrivate ? 'text-[var(--color-accent-purple)]' : 'text-[var(--color-text-muted)]'
                                     } ${isOwn ? 'cursor-default' : 'cursor-pointer'}`}
-                                    onClick={isOwn ? undefined : (e) => onNickClick(e, firstMsg.senderName, false)}
+                                    onClick={isOwn || !firstMsg.senderName ? undefined : (e) => onNickClick(e, firstMsg.senderName!, false)}
                                 >
                                     {truncate(firstMsg.senderName)}
                                 </span>
