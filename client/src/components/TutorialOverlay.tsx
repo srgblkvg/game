@@ -179,8 +179,8 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
 
     // Скроллим элемент чтобы был видим (учитываем sticky-шапку и tooltip сверху)
     const headerH = document.getElementById('site-header')?.offsetHeight || 0;
-    // На мобильном tooltip сверху на top:8 — элемент должен быть ниже
-    const topClearance = mobile ? (8 + 180 + 24) : headerH;
+    // На мобильном tooltip сверху на top:8, h≈150 — элемент ниже с отступом 12
+    const topClearance = mobile ? (8 + 150 + 12) : headerH;
 
     const isFullyVisible =
       rect.top >= topClearance &&
@@ -192,9 +192,9 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       // Временно включаем скролл для корректной работы scrollIntoView/scrollBy
       document.body.style.overflow = '';
       if (mobile) {
-        // Скроллим к началу элемента, затем сдвигаем вниз на высоту tooltip
+        // Скроллим к началу элемента, затем сдвигаем вниз на высоту tooltip + отступ
         el.scrollIntoView({ block: 'start', behavior: 'instant' });
-        window.scrollBy({ top: -(8 + 180 + 24), behavior: 'instant' });
+        window.scrollBy({ top: -(8 + 150 + 12), behavior: 'instant' });
       } else {
         el.scrollIntoView({ block: 'center', behavior: 'instant' });
         // Сдвигаем выше на высоту шапки + отступ
