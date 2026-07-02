@@ -121,6 +121,8 @@ export default function HomePage() {
           steps={tutorialSteps}
           onComplete={async () => {
             setShowTutorial(false);
+            // Обновляем персонажа локально, чтобы не переоткрылся при следующем poll
+            setCharacter(prev => prev ? { ...prev, tutorialCompleted: 1 } : prev);
             try {
               await fetch('/api/character/tutorial-done', { method: 'POST', headers: getHeaders() });
             } catch {}
