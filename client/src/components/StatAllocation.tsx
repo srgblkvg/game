@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { useGame } from '../contexts/GameContext';
 import { allocateStats, fetchCharacter } from '../api/character';
@@ -17,6 +17,13 @@ export default function StatAllocation() {
   const [alloc, setAlloc] = useState({ s: 0, a: 0, d: 0, m: 0 });
   const [msg, setMsg] = useState('');
   const [collapsed, setCollapsed] = useState(true);
+
+  // Разворачиваем блок по событию туториала
+  useEffect(() => {
+    const handler = () => setCollapsed(false);
+    window.addEventListener('tutorial-expand-stats', handler);
+    return () => window.removeEventListener('tutorial-expand-stats', handler);
+  }, []);
 
   if (!character) return null;
 
@@ -63,7 +70,7 @@ export default function StatAllocation() {
       {!collapsed && (
         <div className="mt-2">
           {STATS.map(({ key, label, icon, color, desc }) => (
-            <div key={key} className="flex items-center gap-2 py-1 border-b border-[var(--color-border-light)] last:border-b-0">
+            <div key={key} data-tutorial-stat={key} className="flex items-center gap-2 py-1 border-b border-[var(--color-border-light)] last:border-b-0">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-sm font-bold flex items-center gap-1" style={{ color }}>

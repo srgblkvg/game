@@ -145,6 +145,13 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
   const step = steps[current];
   const isLast = current === steps.length - 1;
 
+  // Диспатчим кастомное событие при смене шага
+  useEffect(() => {
+    if (step?.action) {
+      window.dispatchEvent(new CustomEvent(step.action));
+    }
+  }, [current, step]);
+
   const calcPosition = useCallback(() => {
     if (!step) return;
 

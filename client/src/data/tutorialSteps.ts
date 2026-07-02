@@ -7,49 +7,136 @@ export interface TutorialStep {
   description: string;
   /** Где показывать подсказку относительно элемента: top, bottom, left, right, center */
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right' | 'center';
+  /** Кастомное событие перед показом шага (dispatchEvent) */
+  action?: string;
 }
 
 const tutorialSteps: TutorialStep[] = [
+  // --- 1. Шапка ---
   {
     targetSelector: '#site-header',
     title: 'Шапка',
     description: 'Здесь отображается ваше серебро, статус защиты, игровое время и настройки. Кнопка «Сводка» покажет историю боёв и личные сообщения.',
     tooltipPosition: 'bottom',
   },
+  // --- 2. Персонаж ---
   {
     targetSelector: '[data-tutorial="character-card"]',
     title: 'Ваш персонаж',
     description: 'Карточка персонажа: имя, уровень, здоровье, опыт и экипировка. Нажмите на слот, чтобы надеть предмет из инвентаря.',
     tooltipPosition: 'right',
   },
+  // --- 3. Характеристики (разворачиваем блок) ---
   {
     targetSelector: '[data-tutorial="stat-allocation"]',
     title: 'Характеристики',
-    description: 'Распределяйте очки по 4 характеристикам: Сила, Ловкость, Защита и Мастерство. Каждая влияет на урон, здоровье и шанс блока.',
+    description: 'При достижении нового уровня вы получаете очки характеристик. Распределяйте их между Силой, Ловкостью, Защитой и Мастерством.',
+    tooltipPosition: 'right',
+    action: 'tutorial-expand-stats',
+  },
+  // --- 4. Сила ---
+  {
+    targetSelector: '[data-tutorial-stat="s"]',
+    title: 'Сила',
+    description: 'Увеличивает урон в атаке. Каждое очко делает ваши удары сильнее.',
     tooltipPosition: 'right',
   },
+  // --- 5. Ловкость ---
+  {
+    targetSelector: '[data-tutorial-stat="a"]',
+    title: 'Ловкость',
+    description: 'Повышает уклонение и определяет очерёдность хода в бою. Быстрые персонажи атакуют первыми.',
+    tooltipPosition: 'right',
+  },
+  // --- 6. Защита ---
+  {
+    targetSelector: '[data-tutorial-stat="d"]',
+    title: 'Защита',
+    description: 'Увеличивает шанс и силу блока. Заблокированный удар наносит меньше урона.',
+    tooltipPosition: 'right',
+  },
+  // --- 7. Мастерство ---
+  {
+    targetSelector: '[data-tutorial-stat="m"]',
+    title: 'Мастерство',
+    description: 'Влияет на шанс критического удара, контратаки и оглушения противника.',
+    tooltipPosition: 'right',
+  },
+  // --- 8. Инвентарь ---
   {
     targetSelector: '[data-tutorial="inventory"]',
     title: 'Инвентарь',
-    description: 'Все ваши предметы. Нажмите на предмет, затем на слот персонажа, чтобы экипировать. Предметы можно продать или использовать.',
+    description: 'Все ваши предметы и ресурсы. Нажмите на предмет, затем на слот персонажа, чтобы экипировать. Предметы можно продать, использовать или скрафтить.',
     tooltipPosition: 'right',
   },
+  // --- 9. Действия — обзор ---
   {
     targetSelector: '[data-tutorial="actions"]',
     title: 'Действия',
-    description: 'Основные активности: Арена (PvP-бои), Охота (PvE), Банк, Магазин, Ремесло, Работы, Гильдия и многое другое.',
+    description: 'Здесь собраны все основные активности. Пройдёмся по каждой.',
     tooltipPosition: 'left',
   },
+  // --- 10. Арена (PvP) ---
+  {
+    targetSelector: '#action-card-Арена',
+    title: 'Арена (PvP)',
+    description: 'Бой с другим игроком. Победитель забирает процент серебра, которое противник носит с собой. Храните сбережения в Банке!',
+    tooltipPosition: 'bottom',
+  },
+  // --- 11. Охота (PvE) ---
+  {
+    targetSelector: '#action-card-Охота',
+    title: 'Охота (PvE)',
+    description: 'Сражение с монстрами. С них выпадают ресурсы (камень, кожа, ткань) и предметы экипировки. Основной источник добычи.',
+    tooltipPosition: 'bottom',
+  },
+  // --- 12. Банк ---
+  {
+    targetSelector: '#action-card-Банк',
+    title: 'Банк',
+    description: 'Храните серебро в безопасности. Деньги в банке нельзя потерять при поражении на Арене. Можно класть и снимать в любое время.',
+    tooltipPosition: 'top',
+  },
+  // --- 13. Магазин ---
+  {
+    targetSelector: '#action-card-Магазин',
+    title: 'Магазин',
+    description: 'Покупайте предметы, расходники и améliorations за серебро. Ассортимент обновляется.',
+    tooltipPosition: 'top',
+  },
+  // --- 14. Ремесло ---
+  {
+    targetSelector: '#action-card-Ремесло',
+    title: 'Ремесло',
+    description: 'Создавайте и улучшайте предметы из добытых ресурсов. Собранные коллекции дают постоянные бонусы.',
+    tooltipPosition: 'top',
+  },
+  // --- 15. Работы ---
+  {
+    targetSelector: '#action-card-Работы',
+    title: 'Работы',
+    description: 'Отправьте персонажа на работу — через время он вернётся с серебром и опытом. Работает даже когда вы не в игре.',
+    tooltipPosition: 'top',
+  },
+  // --- 16. Гильдия ---
+  {
+    targetSelector: '#action-card-Гильдия',
+    title: 'Гильдия',
+    description: 'Вступайте в гильдии, участвуйте в войнах гильдий, выполняйте квесты и получайте бонусы от зданий.',
+    tooltipPosition: 'top',
+  },
+  // --- 17. Боевой журнал ---
   {
     targetSelector: '[data-tutorial="right-sidebar"]',
     title: 'Боевой журнал',
     description: 'Турниры, рейтинг игроков и ежедневные задания. Нажмите на свёрток, чтобы открыть панель.',
     tooltipPosition: 'left',
   },
+  // --- 18. Чат ---
   {
     targetSelector: '[data-tutorial="chat-panel"]',
     title: 'Чат',
-    description: 'Общайтесь с другими игроками! Вкладки: Общий чат, Гильдия, Аукцион и личные сообщения. Чат можно свернуть кнопкой в углу.',
+    description: 'Общайтесь с другими игроками! Вкладки: Общий чат, Гильдия, Аукцион и личные сообщения.',
     tooltipPosition: 'top',
   },
 ];
