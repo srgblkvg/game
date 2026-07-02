@@ -124,7 +124,15 @@ function calcTooltipPosition(
     arrow = 'none';
   }
 
-  return { left: tLeft, top: tTop, arrow };
+  // Десктоп: не перекрываем панель чата снизу
+  if (!isMobile) {
+    const chatEl = document.querySelector('.chat-panel');
+    const chatH = chatEl ? chatEl.getBoundingClientRect().height : 0;
+    const maxTop = viewportH - chatH - tooltipH - TOOLTIP_MARGIN;
+    tTop = Math.min(tTop!, maxTop);
+  }
+
+  return { left: tLeft!, top: tTop!, arrow };
 }
 
 function clamp(val: number, min: number, max: number): number {
