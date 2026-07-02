@@ -107,7 +107,7 @@ router.post('/guild/war/declare', async (req, res) => {
             [0, defenderLeader.id, msg, JSON.stringify({ type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name })]
         );
         broadcast('message', { message: {
-            id: info.lastInsertRowid, senderId: 0, senderName: 'system', targetId: defenderLeader.id,
+            id: info.lastInsertRowid, senderId: 0, senderName: 'Глашатай', targetId: defenderLeader.id,
             content: msg, createdAt: new Date().toISOString(),
             item: { type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name },
         }});

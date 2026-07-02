@@ -113,7 +113,7 @@ router.post('/guild/invite', async (req, res) => {
     const info = await db.run('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)', [0, targetId, msg, JSON.stringify({ type: 'guild_invite', guildId: member.guildId, guildName: guild.name })]);
 
     broadcast('message', { message: {
-        id: info.lastInsertRowid, senderId: 0, senderName: 'system', targetId,
+        id: info.lastInsertRowid, senderId: 0, senderName: 'Глашатай', targetId,
         content: msg, createdAt: new Date().toISOString(),
         item: { type: 'guild_invite', guildId: member.guildId, guildName: guild.name },
     }});
