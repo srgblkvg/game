@@ -40,8 +40,7 @@ router.post('/orders/create', async (req, res) => {
     const { name } = req.body;
     if (!name || name.length < 2) return res.status(400).json({ error: 'Имя ордена от 2 символов' });
 
-    const user = await db.one('SELECT level, money FROM users WHERE id = ?', [userId]) as any;
-    if (user.level < 5) return res.status(400).json({ error: 'Нужен 5 уровень' });
+    const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
     if (user.money < 10000) return res.status(400).json({ error: 'Нужно 10000 серебра' });
 
     const existing = await db.one('SELECT id FROM orders WHERE name = ?', [name]);

@@ -91,7 +91,7 @@ export default function OrdersPage() {
 
             {tab === 'all' && (
                 <div>
-                    {!myOrder && character && character.level >= 5 && character.money >= 10000 && (
+                    {!myOrder && character && character.money >= 10000 && (
                         <Card className="mb-4">
                             <h3 className="font-bold mb-2">Создать гильдию (10000 серебра)</h3>
                             <div className="flex gap-2">
