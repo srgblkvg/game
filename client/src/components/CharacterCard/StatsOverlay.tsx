@@ -77,21 +77,17 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
         </div>
         <table className="w-full border-collapse">
           <tbody>
-            {bonusKeys.map(key => {
-              const val = equipmentBonuses![key];
-              if (!val) return null;
-              return (
+            {bonusKeys.map(key => (
               <tr key={key}>
                 <td className={tdStyle}>
                   <Icon icon={STAT_ICONS[STAT_LABELS[key]]} width={iconSize} height={iconSize} className="inline mr-0.5" />
                   {STAT_LABELS[key]}
                 </td>
                 <td className="text-right pl-[2px] text-[var(--color-accent-success)]">
-                  +{val}
+                  +{equipmentBonuses![key]}
                 </td>
               </tr>
-              );
-            })}
+            ))}
             {extraStats && (extraStats.crit > 0 || extraStats.dodge > 0 || extraStats.counter > 0 || extraStats.fullBlock > 0) && (
               <>
                 <tr><td colSpan={2}><div className="border-t border-[var(--color-border-light)] my-0.5" /></td></tr>
