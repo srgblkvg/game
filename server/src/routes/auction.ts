@@ -70,6 +70,7 @@ router.get('/auction', async (req, res) => {
         await db.run('UPDATE users SET auction_sales = COALESCE(auction_sales, 0) + 1 WHERE id = ?', [lot.sellerId]);
         pushNotification(lot.currentBidderId, { type: 'system', message: `Вы выиграли «${JSON.parse(lot.itemData).name || 'Предмет'}» на аукционе!` });
         await db.run('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
+        await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lot.id}%`]);
     }
     // Возвращаем непроданные лоты продавцам
     const unsold = await db.query('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL', [now]) as any[];
@@ -95,6 +96,7 @@ router.get('/auction', async (req, res) => {
         }
         pushNotification(lot.sellerId, { type: 'system', message: `Лот «${JSON.parse(lot.itemData).name || 'Предмет'}» не был продан и возвращён` });
         await db.run('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
+        await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lot.id}%`]);
     }
 
     const lots = await db.query(`
@@ -374,6 +376,7 @@ router.post('/auction/buyout', async (req, res) => {
     await db.run('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [lot.buyoutPrice, JSON.stringify(inventory), userId]);
     await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
+    await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
 
     // Daily quests — track auction trades
     markDirty(userId, 'quests');
@@ -468,6 +471,7 @@ router.post('/auction/buy-partial', async (req, res) => {
     if (remainingCount <= 0) {
         // Полностью распродано
         await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
+    await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
     } else {
         const newItemData = { ...itemData, count: remainingCount };
         const newStartPrice = Math.max(1, Math.floor(lot.startPrice * remainingCount / stackCount));
@@ -529,6 +533,7 @@ router.post('/auction/cancel', async (req, res) => {
 
     // Удаляем лот
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
+    await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
 
     res.json({ success: true, message: 'Лот снят с аукциона' });
 });

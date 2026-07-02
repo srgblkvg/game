@@ -480,6 +480,9 @@ export default function ChatPanel() {
                             {unreadGeneral > 0 && (
                                 <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[var(--color-text-primary)] inline-block" />
                             )}
+                            {unreadAuction > 0 && (
+                                <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[var(--color-accent-warning)] inline-block" />
+                            )}
                             {unreadGuild > 0 && (
                                 <span className="chat-blink w-2.5 h-2.5 rounded-full bg-[var(--color-accent-success)] inline-block" />
                             )}
