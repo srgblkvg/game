@@ -264,7 +264,8 @@ export default function Header() {
                                         {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
                                     </button>
                                     <a
-                                        href="/wiki"
+                                        href="/wiki/"
+                                        target="_blank"
                                         className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-bg-hover)] flex items-center gap-2 text-[var(--color-text-primary)] no-underline cursor-pointer"
                                         onClick={() => setMenuOpen(false)}
                                     >
