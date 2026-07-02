@@ -7,14 +7,21 @@ const router = Router();
 router.get('/chat/recent', async (req, res) => {
   const userId = req.userId;
   const limit = parseInt(req.query.limit as string) || 20;
+  // Fetch regular chat (last N) + ALL active auction messages
   const messages = await db.query(`
-    SELECT m.*, u.username as senderName
+    SELECT m.*, u.username as senderName,
+           CASE WHEN al.id IS NOT NULL THEN 1 ELSE 0 END as is_active_auction
     FROM chat_messages m
     LEFT JOIN users u ON m.senderId = u.id
-    WHERE m.targetId IS NULL OR m.senderId = ? OR m.targetId = ?
-    ORDER BY m.createdAt DESC
-    LIMIT ?
-  `, [userId, userId, limit]);
+    LEFT JOIN auction_lots al ON al.id = (m.item_data::jsonb->>'lotId')::int
+    WHERE (al.id IS NOT NULL)
+       OR ((m.targetId IS NULL OR m.senderId = ? OR m.targetId = ?) AND m.id IN (
+         SELECT id FROM chat_messages
+         WHERE item_data IS NULL AND (targetId IS NULL OR senderId = ? OR targetId = ?)
+         ORDER BY createdAt DESC LIMIT ?
+       ))
+    ORDER BY m.createdAt ASC
+  `, [userId, userId, userId, userId, limit]);
 
   const result = messages.map((m) => {
     const msg = { ...m, content: m.content || '' };
