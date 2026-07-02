@@ -14,6 +14,7 @@ import gameIcons from './icons-filtered.json';
 import { initVkInputMode } from './utils/vkInputMode';
 TODO: удалить после ответа поддержки VK ↑ */
 import './styles/theme.css';
+import { initVkKeyboardFix } from './utils/vkKeyboardFix';
 
 // VK Bridge init (для игр ВКонтакте)
 declare global {
@@ -26,9 +27,8 @@ if (window.vkBridge) {
   window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
   // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
   document.documentElement.classList.add('vk-iframe');
-  /* TODO: удалить после ответа поддержки VK ↓
-  initVkInputMode();
-  TODO: удалить после ответа поддержки VK ↑ */
+  initVkKeyboardFix();
+  // initVkInputMode(); // TODO: удалить после ответа поддержки VK
 }
 
 // Регистрируем иконки локально (без API-запросов)
