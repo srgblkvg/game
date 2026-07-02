@@ -10,7 +10,7 @@ router.get('/chat/recent', async (req, res) => {
   const messages = await db.query(`
     SELECT m.*, u.username as senderName
     FROM chat_messages m
-    JOIN users u ON m.senderId = u.id
+    LEFT JOIN users u ON m.senderId = u.id
     WHERE m.targetId IS NULL OR m.senderId = ? OR m.targetId = ?
     ORDER BY m.createdAt DESC
     LIMIT ?
@@ -50,7 +50,7 @@ router.get('/chat/private/:userId', async (req, res) => {
   const messages = await db.query(`
     SELECT m.*, u.username as senderName
     FROM chat_messages m
-    JOIN users u ON m.senderId = u.id
+    LEFT JOIN users u ON m.senderId = u.id
     WHERE (m.senderId = ? AND m.targetId = ?) OR (m.senderId = ? AND m.targetId = ?)
     ORDER BY m.createdAt DESC
     LIMIT ?
