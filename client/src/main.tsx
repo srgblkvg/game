@@ -24,14 +24,19 @@ declare global {
 
 if (window.vkBridge) {
   window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
-  // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
-  document.documentElement.classList.add('vk-iframe');
-  // Фикс авто-зума на iOS при фокусе на текстовые поля
-  const vp = document.querySelector('meta[name=\"viewport\"]');
-  if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-  // TODO: удалить после ответа поддержки VK ↓
-  initVkInputMode();
-  // TODO: удалить после ответа поддержки VK ↑
+
+  // VK iframe-специфичные настройки (только когда игра внутри VK)
+  const isVkIframe = new URLSearchParams(window.location.search).has('vk_user_id');
+  if (isVkIframe) {
+    // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
+    document.documentElement.classList.add('vk-iframe');
+    // Фикс авто-зума на iOS при фокусе на текстовые поля
+    const vp = document.querySelector('meta[name=\"viewport\"]');
+    if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+    // TODO: удалить после ответа поддержки VK ↓
+    initVkInputMode();
+    // TODO: удалить после ответа поддержки VK ↑
+  }
 }
 
 // Регистрируем иконки локально (без API-запросов)

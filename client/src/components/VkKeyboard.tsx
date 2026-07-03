@@ -84,9 +84,9 @@ export default function VkKeyboard() {
 
   useEffect(() => { activeRef.current = active; }, [active]);
 
-  // Показываем только для пользователей зашедших через VK (флаг ставится при VK-логине)
-  const isVKWebView = typeof window !== 'undefined'
-    && localStorage.getItem('isVK') === '1';
+  // Показываем только в VK iframe (класс vk-iframe только при vk_user_id в URL)
+  const isVKWebView = typeof document !== 'undefined'
+    && document.documentElement.classList.contains('vk-iframe');
 
   const stopRepeat = useCallback(() => {
     if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
