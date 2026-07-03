@@ -134,6 +134,11 @@ export default function AuctionPage() {
     // Scroll to highlighted lot after lots are loaded
     useEffect(() => {
         if (!highlightLotId || lots.length === 0) return;
+        // Снимаем возможный scroll-lock от чата/панелей
+        document.body.style.position = '';
+        document.body.style.overflow = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
         const el = document.getElementById(`auction-lot-${highlightLotId}`);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
