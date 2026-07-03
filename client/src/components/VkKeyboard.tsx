@@ -57,6 +57,11 @@ function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string) {
   const end = el.selectionEnd ?? el.value.length;
   el.setRangeText(char, start, end, 'end');
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  // После React-рендера курсор сбрасывается — возвращаем
+  const newPos = start + 1;
+  requestAnimationFrame(() => {
+    el.setSelectionRange(newPos, newPos);
+  });
 }
 
 function deleteChar(el: HTMLInputElement | HTMLTextAreaElement) {
@@ -69,6 +74,10 @@ function deleteChar(el: HTMLInputElement | HTMLTextAreaElement) {
     el.setRangeText('', start - 1, start, 'start');
   }
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  const newPos = start !== end ? start : Math.max(0, start - 1);
+  requestAnimationFrame(() => {
+    el.setSelectionRange(newPos, newPos);
+  });
 }
 
 export default function VkKeyboard() {
