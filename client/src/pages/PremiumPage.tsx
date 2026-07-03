@@ -37,9 +37,11 @@ export default function PremiumPage() {
     };
 
     const [loading, setLoading] = useState(false);
+    const [paymentMsg, setPaymentMsg] = useState('');
 
     const buyWithYooKassa = async (plan: typeof plans[number]) => {
         setLoading(true);
+        setPaymentMsg('');
         try {
             const token = localStorage.getItem('token');
             const res = await fetch('/api/yukassa/create-payment', {
@@ -53,11 +55,25 @@ export default function PremiumPage() {
             const data = await res.json();
             if (data.confirmation_url) {
                 window.open(data.confirmation_url, '_blank');
+                setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
+                // Ждём подтверждения (polling статуса)
+                const check = setInterval(async () => {
+                    try {
+                        const r = await fetch('/api/character', { headers: { 'Authorization': `Bearer ${token}` } });
+                        const ch = await r.json();
+                        if (ch.premium && ch.premium > Math.floor(Date.now() / 1000)) {
+                            clearInterval(check);
+                            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
+                            setTimeout(() => setPaymentMsg(''), 5000);
+                        }
+                    } catch {}
+                }, 3000);
+                setTimeout(() => clearInterval(check), 120000); // 2 мин таймаут
             } else {
-                alert('Ошибка: ' + (data.error || 'Не удалось создать платёж'));
+                setPaymentMsg('❌ Ошибка: ' + (data.error || 'Не удалось создать платёж'));
             }
         } catch (err: unknown) {
-            alert('Ошибка: ' + JSON.stringify(err));
+            setPaymentMsg('❌ Ошибка: ' + (err instanceof Error ? err.message : 'Сетевая ошибка'));
         } finally {
             setLoading(false);
         }
@@ -111,6 +127,12 @@ export default function PremiumPage() {
                         : 'Оплата через ЮKassa. После оплаты премиум активируется автоматически.'}
                 </p>
             </Card>
+
+            {paymentMsg && (
+                <div className={`rounded-xl p-3 mb-3 text-center text-sm font-bold ${paymentMsg.startsWith('✅') ? 'bg-[var(--color-accent-success)]/15 text-[var(--color-accent-success)]' : paymentMsg.startsWith('❌') ? 'bg-[var(--color-accent-danger)]/15 text-[var(--color-accent-danger)]' : 'bg-[var(--color-bg-secondary)] text-[var(--color-accent-info)] border border-[var(--color-border-light)]'}`}>
+                    {paymentMsg}
+                </div>
+            )}
 
             {/* Публичная оферта */}
             <Card className="p-4 mb-4">
