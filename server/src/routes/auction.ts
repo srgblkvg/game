@@ -1,9 +1,38 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { markDirty, pushNotification, broadcast, sendToUser } from '../events';
+import { addToOverflow, isInventoryFull } from './overflow';
 import { addToTreasury } from '../game/treasury';
 
 const router = Router();
+
+// Хелпер: добавить предмет в инвентарь или overflow при переполнении
+async function returnItemToInventory(userId: number, itemData: any) {
+    const user = await db.one('SELECT inventory, inventorySlots FROM users WHERE id = ?', [userId]) as any;
+    const inventory = JSON.parse(user.inventory || '[]');
+    const maxSlots = user.inventoryslots || user.inventorySlots || 10;
+    const isCraft = itemData.type === 'craft_item' || itemData.type === 'material';
+    const count = itemData.count || 1;
+
+    if (isCraft) {
+        const existingIdx = inventory.findIndex((i: any) =>
+            (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
+        );
+        if (existingIdx !== -1) {
+            inventory[existingIdx].count = (inventory[existingIdx].count || 0) + count;
+            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+            return;
+        }
+    }
+
+    const equipCount = inventory.filter((i: any) => !!(i.slot)).length;
+    if (!isCraft && equipCount >= maxSlots) {
+        await addToOverflow(userId, { ...itemData, count });
+    } else {
+        inventory.push({ ...itemData, count });
+        await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+    }
+}
 
 // Таблица истории сделок
 db.run(`CREATE TABLE IF NOT EXISTS auction_history (
@@ -38,26 +67,9 @@ router.get('/auction', async (req, res) => {
         const payout = lot.currentBid - commission;
         // Заплатить продавцу
         await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
-        // Отдать предмет покупателю
-        const buyer = await db.one('SELECT inventory FROM users WHERE id = ?', [lot.currentBidderId]) as any;
-        if (buyer) {
-            const buyItemData = JSON.parse(lot.itemData);
-            const inventory = JSON.parse(buyer.inventory || '[]');
-            const isCraft = buyItemData.type === 'craft_item' || buyItemData.type === 'material';
-            if (isCraft) {
-                const existingIdx = inventory.findIndex((i: any) =>
-                    (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(buyItemData.id)
-                );
-                if (existingIdx !== -1) {
-                    inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (buyItemData.count || 1);
-                } else {
-                    inventory.push(buyItemData);
-                }
-            } else {
-                inventory.push(buyItemData);
-            }
-            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), lot.currentBidderId]);
-        }
+        // Отдать предмет покупателю (или overflow)
+        const buyItemData = JSON.parse(lot.itemData);
+        await returnItemToInventory(lot.currentBidderId, buyItemData);
         // Запись в историю
         await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -76,25 +88,8 @@ router.get('/auction', async (req, res) => {
     // Возвращаем непроданные лоты продавцам
     const unsold = await db.query('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL', [now]) as any[];
     for (const lot of unsold) {
-        const seller = await db.one('SELECT inventory FROM users WHERE id = ?', [lot.sellerId]) as any;
-        if (seller) {
-            const itemData = JSON.parse(lot.itemData);
-            const inventory = JSON.parse(seller.inventory || '[]');
-            const isCraft = itemData.type === 'craft_item' || itemData.type === 'material';
-            if (isCraft) {
-                const existingIdx = inventory.findIndex((i: any) =>
-                    (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
-                );
-                if (existingIdx !== -1) {
-                    inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (itemData.count || 1);
-                } else {
-                    inventory.push(itemData);
-                }
-            } else {
-                inventory.push(itemData);
-            }
-            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), lot.sellerId]);
-        }
+        const itemData = JSON.parse(lot.itemData);
+        await returnItemToInventory(lot.sellerId, itemData);
         pushNotification(lot.sellerId, { type: 'system', message: `Лот «${JSON.parse(lot.itemData).name || 'Предмет'}» не был продан и возвращён` });
         await db.run('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
         await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lot.id}%`]);
@@ -358,24 +353,11 @@ router.post('/auction/buyout', async (req, res) => {
     }
 
     const itemData = JSON.parse(lot.itemData);
-    const inventory = JSON.parse(user.inventory || '[]');
 
-    // Стакаем с существующими материалами
-    const isCraft = itemData.type === 'craft_item' || itemData.type === 'material';
-    if (isCraft) {
-        const existingIdx = inventory.findIndex((i: any) =>
-            (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
-        );
-        if (existingIdx !== -1) {
-            inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (itemData.count || 1);
-        } else {
-            inventory.push(itemData);
-        }
-    } else {
-        inventory.push(itemData);
-    }
+    // Добавляем предмет покупателю (или overflow)
+    await returnItemToInventory(userId, itemData);
 
-    await db.run('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [lot.buyoutPrice, JSON.stringify(inventory), userId]);
+    await db.run('UPDATE users SET money = money - ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [lot.buyoutPrice, userId]);
     await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
     await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
@@ -458,16 +440,8 @@ router.post('/auction/buy-partial', async (req, res) => {
 
     const inventory = JSON.parse(user.inventory || '[]');
 
-    // Добавляем покупателю: если у него уже есть такой же craft_item, увеличиваем count
-    const singleItem = { ...itemData, count: quantity };
-    const existingIdx = inventory.findIndex((i: any) =>
-        (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
-    );
-    if (existingIdx !== -1) {
-        inventory[existingIdx].count = (inventory[existingIdx].count || 0) + quantity;
-    } else {
-        inventory.push(singleItem);
-    }
+    // Добавляем покупателю
+    await returnItemToInventory(userId, { ...itemData, count: quantity });
 
     // Обновляем лот: уменьшаем count
     const remainingCount = stackCount - quantity;
@@ -487,7 +461,7 @@ router.post('/auction/buy-partial', async (req, res) => {
     }
 
     // Списываем деньги покупателю и начисляем продавцу
-    await db.run('UPDATE users SET money = money - ?, inventory = ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [cost, JSON.stringify(inventory), userId]);
+    await db.run('UPDATE users SET money = money - ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [cost, userId]);
     await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
 
     // Daily quests — track auction trades
@@ -497,7 +471,7 @@ router.post('/auction/buy-partial', async (req, res) => {
     // Запись в историю
     await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [lot.sellerId, userId, itemData.name || 'Предмет', JSON.stringify(singleItem), cost, commission, new Date().toISOString()]);
+        [lot.sellerId, userId, itemData.name || 'Предмет', JSON.stringify({ ...itemData, count: quantity }), cost, commission, new Date().toISOString()]);
     addToTreasury(commission, 'auction_partial').catch(() => {});
 
     broadcast('auction_changed', {});
@@ -517,18 +491,8 @@ router.post('/auction/cancel', async (req, res) => {
 
     const itemData = JSON.parse(lot.itemData);
 
-    // Возвращаем предмет в инвентарь
-    const user = await db.one('SELECT inventory FROM users WHERE id = ?', [userId]) as any;
-    const inventory = JSON.parse(user.inventory || '[]');
-    const existingIdx = inventory.findIndex((i: any) =>
-        (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
-    );
-    if (existingIdx !== -1) {
-        inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (itemData.count || 1);
-    } else {
-        inventory.push({ ...itemData, count: itemData.count || 1 });
-    }
-    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+    // Возвращаем предмет в инвентарь (или overflow если заполнен)
+    await returnItemToInventory(userId, itemData);
 
     // Возвращаем деньги текущему лидеру ставок
     if (lot.currentBidderId && lot.currentBid) {
