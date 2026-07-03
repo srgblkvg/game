@@ -1,3 +1,4 @@
+import PageHeader from '../components/ui/PageHeader';
 import { Icon } from "@iconify/react";
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +21,8 @@ const durations = [
 ];
 
 export default function JobsPage() {
+  const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/jobs'); if (c) setActionCard(c); }).catch(() => {}); }, []);
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
@@ -119,6 +122,7 @@ export default function JobsPage() {
     return (
         <div className="px-4 py-4 max-w-md mx-auto">
             <BackButton />
+          {actionCard && <PageHeader title="Работы" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:swap-bag" width="22" height="22" className="inline mr-2"/>Работы</h2>
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">

@@ -1,3 +1,4 @@
+import PageHeader from '../components/ui/PageHeader';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
@@ -108,6 +109,8 @@ function parseSearch(query: string): { text: string; stats: Record<string, numbe
 
 
 export default function AuctionPage() {
+  const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/auction'); if (c) setActionCard(c); }).catch(() => {}); }, []);
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const isVk = document.documentElement.classList.contains('vk-iframe');
@@ -381,6 +384,7 @@ export default function AuctionPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
+          {actionCard && <PageHeader title="Аукцион" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
             <h1 className="text-xl font-bold mb-1"><Icon icon="game-icons:pay-money" width="22" height="22" className="inline mr-2" />Аукцион</h1>
             <p className="text-xs text-[var(--color-text-muted)] mb-4">Торговая площадка Мёртвых земель — покупайте и продавайте предметы между игроками</p>
 

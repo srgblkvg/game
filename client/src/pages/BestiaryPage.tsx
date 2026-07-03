@@ -1,3 +1,5 @@
+import PageHeader from '../components/ui/PageHeader';
+import { getHeaders } from '../api/helpers';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
@@ -20,6 +22,8 @@ const rarityTextColors: Record<number, string> = {
 };
 
 export default function BestiaryPage() {
+  const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/bestiary'); if (c) setActionCard(c); }).catch(() => {}); }, []);
   const { user } = useAuth();
   const { character, setCharacter } = useGame();
   const serverTime = useServerTime();
@@ -407,6 +411,7 @@ export default function BestiaryPage() {
       {phase === 'floors' ? (
         <>
           <BackButton />
+          {actionCard && <PageHeader title="Охота" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
           <h1 className="text-xl font-bold mb-4 text-[var(--color-accent-danger)]">
               <Icon icon="game-icons:death-skull" width="22" height="22" className="inline mr-2" />ОХОТА
           </h1>

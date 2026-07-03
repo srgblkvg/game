@@ -1,3 +1,4 @@
+import PageHeader from '../components/ui/PageHeader';
 import { useState, useEffect } from 'react';
 import BackButton from '../components/BackButton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -21,6 +22,8 @@ function formatTime(seconds: number) {
 }
 
 export default function TavernPage() {
+  const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/tavern'); if (c) setActionCard(c); }).catch(() => {}); }, []);
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
@@ -72,6 +75,7 @@ export default function TavernPage() {
     return (
         <div className="max-w-2xl mx-auto px-4 py-4">
             <BackButton />
+          {actionCard && <PageHeader title="Трактир" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
             <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:drink-me" width="22" height="22" className="inline mr-2" />Трактир «Гнилая Кровь»</h1>
             <Card className="mb-4"><div className="flex justify-between items-center"><div><p className="text-xs text-[var(--color-text-muted)]">HP: {tavern.currentHp}/{character?.stats?.hp || tavern.maxHp}</p><p className="text-xs text-[var(--color-text-muted)]">{tavern.money != null ? formatMoney(tavern.money) : '...'}</p></div><div className="text-xs text-right">{tavern.room && tavern.room.until > now && <p className="text-[var(--color-accent-success)]">Комната: {tavern.room.type==='chamber'?'Аппартаменты':tavern.room.type==='bed'?'Койка':'Чулан'} ({formatTime(tavern.room.until-now)})</p>}{tavern.drink && tavern.drink.until > now && <p className="text-[var(--color-accent-purple)]">Напиток: {tavern.drinks.find((d:any)=>d.key===tavern.drink.type)?.name} ({formatTime(tavern.drink.until-now)})</p>}</div></div></Card>
 

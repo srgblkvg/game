@@ -1,3 +1,4 @@
+import PageHeader from '../components/ui/PageHeader';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
@@ -43,6 +44,8 @@ const actionLabels: Record<string, { icon: string; color: string; label: string 
 };
 
 export default function MassacrePage() {
+  const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/massacre'); if (c) setActionCard(c); }).catch(() => {}); }, []);
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
@@ -231,6 +234,7 @@ export default function MassacrePage() {
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
+          {actionCard && <PageHeader title="Резня" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
             <h1 className="text-center text-xl font-bold mb-4">
                 <Icon icon="game-icons:battered-axe" width="22" height="22" className="inline mr-2" />
                 Резня

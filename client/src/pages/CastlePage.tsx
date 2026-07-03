@@ -1,3 +1,5 @@
+import PageHeader from '../components/ui/PageHeader';
+import { getHeaders } from '../api/helpers';
 import { useState, useEffect } from 'react';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
@@ -13,6 +15,8 @@ const links = [
 ];
 
 export default function CastlePage() {
+  const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/castle'); if (c) setActionCard(c); }).catch(() => {}); }, []);
     const navigate = useNavigate();
     const [treasury, setTreasury] = useState<number | null>(null);
     const [latestThreads, setLatestThreads] = useState<any[]>([]);
@@ -25,6 +29,7 @@ export default function CastlePage() {
     return (
         <div className="px-4 py-4 max-w-md mx-auto">
             <BackButton />
+          {actionCard && <PageHeader title="Замок" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
             <h1 className="text-xl font-bold mb-4">
                 <Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Замок
             </h1>

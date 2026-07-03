@@ -1,3 +1,4 @@
+import PageHeader from '../components/ui/PageHeader';
 import { Icon } from "@iconify/react";
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +25,8 @@ const statNames: Record<string, string> = {
 };
 
 export default function ShopPage() {
+  const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/shop'); if (c) setActionCard(c); }).catch(() => {}); }, []);
     const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
@@ -89,6 +92,7 @@ export default function ShopPage() {
     return (
         <div className="px-4 py-4">
             <BackButton />
+          {actionCard && <PageHeader title="Магазин" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:buy-card" width="22" height="22" className="inline mr-2"/>Магазин</h2>
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">

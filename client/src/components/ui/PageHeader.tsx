@@ -1,15 +1,29 @@
-import type { ReactNode } from 'react';
+import { Icon } from '@iconify/react';
 
 interface PageHeaderProps {
-  title: string;
-  children?: ReactNode;
+    title: string;
+    icon?: string;
+    bgImage?: string | null;
+    subtitle?: string;
 }
 
-export default function PageHeader({ title, children }: PageHeaderProps) {
-  return (
-    <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-      <h2 className="text-xl font-bold text-[var(--color-text-primary)]">{title}</h2>
-      {children}
-    </div>
-  );
+export default function PageHeader({ title, icon, bgImage, subtitle }: PageHeaderProps) {
+    return (
+        <div className="relative w-full h-32 sm:h-40 mb-4 rounded-xl overflow-hidden">
+            {bgImage && (
+                <div
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${bgImage})` }}
+                />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg-primary)] via-[var(--color-bg-primary)]/60 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center gap-2">
+                {icon && <Icon icon={icon} width="24" height="24" className="text-[var(--color-accent-warning)]" />}
+                <div>
+                    <h1 className="text-xl font-bold text-[var(--color-text-primary)]">{title}</h1>
+                    {subtitle && <p className="text-xs text-[var(--color-text-muted)]">{subtitle}</p>}
+                </div>
+            </div>
+        </div>
+    );
 }
