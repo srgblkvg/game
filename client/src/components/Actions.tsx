@@ -24,6 +24,9 @@ interface ActionCard {
 export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob }: ActionsProps) {
     const navigate = useNavigate();
     const [cards, setCards] = useState<ActionCard[]>([]);
+    const [tournamentInfo, setTournamentInfo] = useState<any>(null);
+    const [myRegistration, setMyRegistration] = useState<any>(null);
+    const [registerMsg, setRegisterMsg] = useState('');
     const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
     const [guildBadge, setGuildBadge] = useState(parseInt(localStorage.getItem('guildBadge') || '0'));
     const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
@@ -101,6 +104,17 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     buttonText: a.cost > 0 ? `В бой` : 'Перейти',
                 }));
                 setCards(mapped);
+            })
+            .catch(() => {});
+        // Турниры для Замка
+        fetch('/api/tournament?tab=active&type=official', { headers: getHeaders() })
+            .then(r => r.json())
+            .then((data: any) => {
+                if (data.tournaments?.length > 0) {
+                    const t = data.tournaments[0]; // ближайший подходящий
+                    setTournamentInfo(t);
+                    setMyRegistration(t.myRegistration || null);
+                }
             })
             .catch(() => {});
     }, []);
@@ -198,6 +212,36 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                     </h3>
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)]">{card.subtitle}</p>
                                     <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-0.5">Казна: {formatMoney(treasury)}</p>
+                                    {tournamentInfo && (
+                                        <div className="mt-1 text-[0.65rem]">
+                                            {tournamentInfo.status === 'registration' ? (
+                                                myRegistration ? (
+                                                    <span className="text-[var(--color-accent-success)]">✓ Вы записаны</span>
+                                                ) : (
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            try {
+                                                                const res = await fetch('/api/tournament/register', {
+                                                                    method: 'POST',
+                                                                    headers: getHeaders(),
+                                                                    body: JSON.stringify({ tournamentId: tournamentInfo.id }),
+                                                                });
+                                                                const d = await res.json();
+                                                                if (d.success) setRegisterMsg('Записаны!');
+                                                                else setRegisterMsg(d.error || 'Ошибка');
+                                                            } catch { setRegisterMsg('Ошибка'); }
+                                                        }}
+                                                        className="text-[var(--color-accent-info)] underline cursor-pointer hover:text-[var(--color-accent-warning)]"
+                                                    >Записаться</button>
+                                                )
+                                            ) : null}
+                                            <span className="text-[var(--color-text-muted)] ml-1">
+                                                {tournamentInfo.division && `🏆 ${tournamentInfo.division}`}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {registerMsg && <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">{registerMsg}</p>}
                                 </div>
                                 <div className="relative shrink-0">
                                     <Button variant="danger" size="md" onClick={() => { if (card.path) navigate(card.path); }}>Перейти</Button>
