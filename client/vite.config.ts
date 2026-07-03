@@ -32,13 +32,6 @@ function unwrapBlock(css: string, atRule: string): string {
   return result;
 }
 
-function fixColorMix(css: string): string {
-  return css.replace(
-    /color-mix\(in\s+\w+,\s*var\((--[\w-]+)\)\s+(\d+)%,\s*transparent\)/g,
-    (_, variable) => `var(${variable})`
-  );
-}
-
 function addTransformFallback(css: string): string {
   return css.replace(
     /translate:var\(--tw-translate-x\)\s+var\(--tw-translate-y\)/g,
@@ -59,7 +52,6 @@ function inlineCssPlugin(): Plugin {
           let css = chunk.source as string;
           css = stripUnsupportedAtRules(css);
           css = addTransformFallback(css);
-          css = fixColorMix(css);
           cssMap.set(name, css);
           delete bundle[name];
         }
