@@ -11,7 +11,13 @@ export default function PageHeader({ title, icon, bgImage }: PageHeaderProps) {
     const bgStyle = bgImage ? { backgroundImage: `url(${bgImage})` } : {};
 
     // Сброс скролла при переходе на страницу
-    useEffect(() => { window.scrollTo(0, 0); }, []);
+    useEffect(() => {
+        document.body.style.position = '';
+        document.body.style.overflow = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, 0);
+    }, []);
 
     return (
         <div className="relative bg-[var(--color-bg-secondary)] rounded-xl mb-4 p-4 h-28 overflow-hidden border border-[var(--color-border-default)]">
