@@ -187,21 +187,29 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
       right: rect.right,
     });
 
-    // Скроллим элемент чтобы был видим
+    // Скроллим элемент чтобы был видим (учитываем шапку и панель чата)
     const headerH = document.getElementById('site-header')?.offsetHeight || 0;
+    const chatEl = document.querySelector('.chat-panel');
+    const chatH = chatEl ? chatEl.getBoundingClientRect().height : 0;
     const topClearance = headerH;
+    const bottomClearance = chatH;
 
     const isFullyVisible =
       rect.top >= topClearance &&
       rect.left >= 0 &&
-      rect.bottom <= vh &&
+      rect.bottom <= vh - bottomClearance &&
       rect.right <= vw;
 
     if (!isFullyVisible) {
       document.body.style.overflow = '';
       el.scrollIntoView({ block: 'center', behavior: 'instant' });
-      // Сдвигаем выше на высоту шапки
+      // Сдвигаем выше на высоту шапки и ниже на высоту чата
       window.scrollBy({ top: -(headerH + 8), behavior: 'instant' });
+      // Проверяем что не упёрлись в чат — если да, ещё чуть выше
+      const afterRect = el.getBoundingClientRect();
+      if (afterRect.bottom > vh - bottomClearance - 16) {
+        window.scrollBy({ top: -(afterRect.bottom - (vh - bottomClearance) + 16), behavior: 'instant' });
+      }
       document.body.style.overflow = 'hidden';
       // Пересчитываем позицию после скролла
       const newRect = el.getBoundingClientRect();
