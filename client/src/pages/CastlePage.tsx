@@ -30,9 +30,6 @@ export default function CastlePage() {
         <div className="px-4 py-4 max-w-md mx-auto">
             <BackButton />
           {actionCard && <PageHeader title="Замок" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
-            <h1 className="text-xl font-bold mb-4">
-                <Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Замок
-            </h1>
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
                 Турниры, рейтинги и состязания королевства.

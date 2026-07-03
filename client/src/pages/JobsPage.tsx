@@ -123,6 +123,7 @@ export default function JobsPage() {
         <div className="px-4 py-4 max-w-md mx-auto">
             <BackButton />
           {actionCard && <PageHeader title="Работы" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
+            <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Отправляйте персонажа в AFK-экспедицию. Выберите длительность — работа будет выбрана случайно. Награда зависит от времени: чем дольше, тем больше серебра и опыта.
             </p>
 
