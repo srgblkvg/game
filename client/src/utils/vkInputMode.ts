@@ -1,48 +1,58 @@
 /**
  * TODO: Удалить весь файл после ответа поддержки VK.
- * Блокирует нативную клавиатуру в VK iframe.
+ * Полностью блокирует системную клавиатуру в VK iframe.
  *
- * Стратегия:
- * 1. touchstart (срабатывает ДО focus) — меняем type="number"→"text"
- * 2. inputmode="none" через MutationObserver
- * 3. Браузер видит type="text" + inputmode="none" → не показывает клавиатуру
+ * Двойная защита:
+ * 1. readOnly — гарантированно блокирует клавиатуру на Android/iOS
+ * 2. type="number" → type="text" — Android игнорирует inputmode="none" на number
+ * 3. attributeFilter на type — ловит когда React меняет тип обратно
+ *
+ * Кастомная клавиатура работает через setRangeText (работает на readonly).
  */
 
 export function initVkInputMode() {
   function fixInput(el: HTMLElement) {
+    // readOnly гарантированно блокирует системную клавиатуру
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      (el as HTMLInputElement).readOnly = true;
+    }
     el.setAttribute('inputmode', 'none');
-  }
-
-  // Перехватываем касание ДО фокуса — меняем number на text
-  document.addEventListener('touchstart', (e) => {
-    const el = e.target as HTMLElement;
+    // Android показывает цифровую клавиатуру на number даже с inputmode="none"
     if (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'number') {
       (el as HTMLInputElement).type = 'text';
-      el.setAttribute('inputmode', 'none');
     }
-  }, { passive: true });
+  }
 
   // Существующие инпуты
-  document.querySelectorAll('input, textarea, [contenteditable]').forEach(el => {
-    fixInput(el as HTMLElement);
-  });
+  document.querySelectorAll('input, textarea').forEach(el => fixInput(el as HTMLElement));
 
-  // Новые инпуты (React)
+  // Новые инпуты + отслеживаем смену type (React перерендер)
   const observer = new MutationObserver(mutations => {
     for (const m of mutations) {
+      // Атрибут type изменился (React перерендерил number обратно)
+      if (m.type === 'attributes' && m.attributeName === 'type') {
+        const el = m.target as HTMLInputElement;
+        if (el.type === 'number') {
+          el.type = 'text';
+        }
+      }
+      // Новые элементы
       for (const node of m.addedNodes) {
         if (!(node instanceof HTMLElement)) continue;
         if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') {
           fixInput(node);
         }
         if (node.querySelectorAll) {
-          node.querySelectorAll('input, textarea, [contenteditable]').forEach(el => {
-            fixInput(el as HTMLElement);
-          });
+          node.querySelectorAll('input, textarea').forEach(el => fixInput(el as HTMLElement));
         }
       }
     }
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['type'],
+  });
 }
