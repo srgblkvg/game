@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
+import { sendToUser } from '../events';
 import crypto from 'crypto';
 import logger from '../logger';
 
@@ -120,6 +121,9 @@ router.post('/', async (req: Request, res: Response) => {
           'UPDATE users SET premiumUntil = ? WHERE id = ?',
           [newUntil, character.id],
         );
+
+        // Уведомляем через WS
+        sendToUser(character.id, { type: 'premiumActivated', until: newUntil });
 
         // Логируем
         await db.run(

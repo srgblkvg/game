@@ -18,6 +18,12 @@ export default function PremiumPage() {
     const premiumUntil = character?.premium?.until || 0;
     const hasPremium = premiumUntil > Math.floor(Date.now() / 1000);
 
+    // Если сообщение об оплате и премиум уже активен — показываем успех
+    if (paymentMsg === 'Оплата открыта. Ожидайте подтверждения...' && hasPremium) {
+        setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
+        setTimeout(() => setPaymentMsg(''), 5000);
+    }
+
     const handleBuy = () => {
         const plan = plans.find(p => p.days === selectedDays);
         if (!plan) return;
@@ -34,20 +40,8 @@ export default function PremiumPage() {
                     setPaymentMsg('❌ Оплата отменена');
                     return;
                 }
+                // Платёж открыт — ожидаем обновления персонажа (GameContext сам обновляет)
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
-                const token = localStorage.getItem('token');
-                const check = setInterval(async () => {
-                    try {
-                        const r = await fetch('/api/character', { headers: { 'Authorization': `Bearer ${token}` } });
-                        const ch = await r.json();
-                        if (ch.premium?.until && ch.premium.until > Math.floor(Date.now() / 1000)) {
-                            clearInterval(check);
-                            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-                            setTimeout(() => setPaymentMsg(''), 5000);
-                        }
-                    } catch {}
-                }, 3000);
-                setTimeout(() => clearInterval(check), 120000);
             })
             .catch((err: unknown) => {
                 setPaymentMsg('❌ Ошибка: ' + (err instanceof Error ? err.message : JSON.stringify(err)));

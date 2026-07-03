@@ -22,14 +22,18 @@ export class VkAdapter implements PlatformAdapter {
     get vkUserId(): string | null { return this._vkUser; }
 
     async init() {
-        // Детектим vk_user_id из URL
+        // Детектим vk_user_id из URL или sessionStorage
         const params = new URLSearchParams(window.location.search);
         const vid = params.get('vk_user_id');
+        const wasVk = sessionStorage.getItem('isVkIframe') === '1';
+        
         if (vid) {
             this._vkUser = vid;
             sessionStorage.setItem('isVkIframe', '1');
         }
-        // Флаг для авторизации
-        localStorage.setItem('isVK', vid ? '1' : '0');
+        
+        // isVK = есть vk_user_id сейчас ИЛИ был в этой сессии
+        const isVk = !!(vid || wasVk);
+        localStorage.setItem('isVK', isVk ? '1' : '0');
     }
 }

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { YooKassa, CurrencyEnum } from 'yookassa-sdk';
 import { db } from '../db/index';
+import { sendToUser } from '../events';
 import logger from '../logger';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
 import { authMiddleware } from '../middleware/auth';
@@ -150,6 +151,9 @@ router.post('/webhook', async (req: Request, res: Response) => {
       const newUntil = currentUntil + days * 86400;
 
       await db.run('UPDATE users SET premiumUntil = ? WHERE id = ?', [newUntil, userId]);
+
+      // Уведомляем через WS
+      sendToUser(userId, { type: 'premiumActivated', until: newUntil });
 
       await db.run(
         'UPDATE yukassa_payments SET status = ?, processed_at = ? WHERE payment_id = ?',
