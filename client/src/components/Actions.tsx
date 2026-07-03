@@ -229,9 +229,9 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                                     body: JSON.stringify({ tournamentId: tournamentInfo.id }),
                                                                 });
                                                                 const d = await res.json();
-                                                                if (d.success) setRegisterMsg('Записаны!');
-                                                                else setRegisterMsg(d.error || 'Ошибка');
-                                                            } catch { setRegisterMsg('Ошибка'); }
+                                                                if (d.success) setRegisterMsg?.('Записаны!');
+                                                                else setRegisterMsg?.(d.error || 'Ошибка');
+                                                            } catch { setRegisterMsg?.('Ошибка'); }
                                                         }}
                                                         className="text-[var(--color-accent-info)] underline cursor-pointer hover:text-[var(--color-accent-warning)]"
                                                     >Записаться</button>
