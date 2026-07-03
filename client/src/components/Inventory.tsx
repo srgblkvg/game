@@ -154,7 +154,7 @@ export default function Inventory({
 
             {!collapsed && (<>
 
-            <div className="grid grid-cols-[repeat(auto-fill,48px)] gap-2.5 mb-2">
+            <div className="grid grid-cols-[repeat(auto-fill,48px)] gap-2.5 mb-2 overflow-hidden">
                 {Array.from({ length: maxSlots }).map((_, idx) => {
                     const item = inventory[idx] || null;
                     const isSelected = selectedItemId && item && item.id === selectedItemId;

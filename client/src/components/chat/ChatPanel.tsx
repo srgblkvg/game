@@ -34,6 +34,7 @@ export default function ChatPanel() {
         return saved ? parseInt(saved) : 300;
     });
     const chatHeightRef = useRef(chatHeight);
+    const dragMovedRef = useRef(false);
     useEffect(() => { chatHeightRef.current = chatHeight; }, [chatHeight]);
     const [dragging, setDragging] = useState(false);
 
@@ -446,9 +447,11 @@ export default function ChatPanel() {
     const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
         const startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
         const startH = chatHeight;
+        dragMovedRef.current = false;
         setDragging(true);
 
         const onMove = (ev: MouseEvent | TouchEvent) => {
+            dragMovedRef.current = true;
             const y = 'touches' in ev ? (ev as TouchEvent).touches[0].clientY : (ev as MouseEvent).clientY;
             const delta = startY - y;
             const h = Math.max(120, Math.min(window.innerHeight * 0.85, startH + delta));
@@ -481,7 +484,7 @@ export default function ChatPanel() {
                 style={{ height: isPanelOpen ? chatHeight : 40 }}
             >
             <div
-                onClick={() => setIsPanelOpen(!isPanelOpen)}
+                onClick={() => { if (!dragMovedRef.current) setIsPanelOpen(!isPanelOpen); }}
                 className="cursor-pointer p-2 bg-[var(--color-bg-card)]/90 border-b border-[var(--color-border-default)] flex justify-between items-center"
             >
                 <div className="flex items-center gap-1.5">
