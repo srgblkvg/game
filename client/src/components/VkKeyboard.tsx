@@ -161,6 +161,8 @@ export default function VkKeyboard() {
   const doInsert = useCallback((char: string) => {
     const el = activeRef.current;
     if (!el) return;
+    // Для числовых полей — только цифры
+    if (el.hasAttribute('data-vk-num') && !/^\d$/.test(char)) return;
     insertChar(el, char, cursorRef);
   }, []);
 
