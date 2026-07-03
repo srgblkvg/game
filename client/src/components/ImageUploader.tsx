@@ -74,14 +74,14 @@ export default function ImageUploader({ currentUrl, folder, onUploaded, label, c
                     <img src={preview} alt="" className="w-12 h-12 object-cover rounded border border-[var(--color-border-default)]" />
                 )}
                 <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
-                <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                <Button variant="secondary" size="md" onClick={() => fileRef.current?.click()} disabled={uploading}>
                     {uploading ? 'Загрузка...' : preview ? 'Заменить' : 'Загрузить'}
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => { loadGallery(); setShowGallery(true); }} title="Выбрать из галереи">
+                <Button variant="secondary" size="md" onClick={() => { loadGallery(); setShowGallery(true); }} title="Выбрать из галереи">
                     📁
                 </Button>
                 {preview && (
-                    <Button variant="secondary" size="sm" onClick={() => { setPreview(null); onUploaded(''); }}>
+                    <Button variant="secondary" size="md" onClick={() => { setPreview(null); onUploaded(''); }}>
                         ✕
                     </Button>
                 )}

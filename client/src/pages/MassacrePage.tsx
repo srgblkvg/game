@@ -305,7 +305,7 @@ export default function MassacrePage() {
                 <>
                     <p className="text-xs text-[var(--color-text-muted)] mt-3 mb-1">История с последней резни:</p>
                     <div className="flex justify-center gap-2 mb-2">
-                    <Button variant="secondary" size="sm" onClick={() => setVizMode(!vizMode)}>
+                    <Button variant="secondary" size="md" onClick={() => setVizMode(!vizMode)}>
                         <Icon icon={vizMode ? 'game-icons:notebook' : 'game-icons:play-button'} width="14" height="14" className="inline mr-1" />
                         {vizMode ? 'Текстовый лог' : 'Визуализация боя'}
                     </Button>
@@ -358,13 +358,13 @@ export default function MassacrePage() {
 
                     {/* Управление */}
                     <div className="flex items-center justify-center gap-3">
-                        <Button variant="secondary" size="sm" onClick={stepBack} disabled={vizStep <= 0}>⏮</Button>
+                        <Button variant="secondary" size="md" onClick={stepBack} disabled={vizStep <= 0}>⏮</Button>
                         {vizPlaying ? (
-                            <Button variant="danger" size="sm" onClick={stopViz}>⏸ Пауза</Button>
+                            <Button variant="danger" size="md" onClick={stopViz}>⏸ Пауза</Button>
                         ) : (
-                            <Button variant="danger" size="sm" onClick={startViz} disabled={vizStep >= totalVizSteps - 1}>▶ Играть</Button>
+                            <Button variant="danger" size="md" onClick={startViz} disabled={vizStep >= totalVizSteps - 1}>▶ Играть</Button>
                         )}
-                        <Button variant="secondary" size="sm" onClick={stepForward} disabled={vizStep >= totalVizSteps - 1}>⏭</Button>
+                        <Button variant="secondary" size="md" onClick={stepForward} disabled={vizStep >= totalVizSteps - 1}>⏭</Button>
                         <select value={vizSpeed} onChange={e => setVizSpeed(Number(e.target.value))}
                             className="bg-[var(--color-bg-input)] text-xs rounded px-1 py-0.5 border border-[var(--color-border-light)]">
                             <option value={1}>1x</option>

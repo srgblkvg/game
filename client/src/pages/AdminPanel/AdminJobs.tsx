@@ -62,11 +62,11 @@ export default function AdminJobs() {
         <div className="mt-3 flex gap-2">
           {crud.editing ? (
             <>
-              <Button variant="success" size="sm" onClick={crud.update}>Сохранить</Button>
-              <Button variant="danger" size="sm" onClick={crud.cancelEdit}>Отмена</Button>
+              <Button variant="success" size="md" onClick={crud.update}>Сохранить</Button>
+              <Button variant="danger" size="md" onClick={crud.cancelEdit}>Отмена</Button>
             </>
           ) : (
-            <Button variant="success" size="sm" onClick={crud.create}>Создать</Button>
+            <Button variant="success" size="md" onClick={crud.create}>Создать</Button>
           )}
         </div>
       </Card>
@@ -85,9 +85,9 @@ export default function AdminJobs() {
                 <tr key={job.id} className="border-b border-[var(--color-border-light)]">
                   <td className="p-1">{job.id}</td><td className="p-1">{job.name}</td><td className="p-1">{job.duration}</td><td className="p-1">{job.rewardMin}</td><td className="p-1">{job.rewardMax}</td>
                   <td className="p-1">
-                    <Button variant="primary" size="sm" className="mr-1" onClick={() => crud.startEdit(job)}>Ред.</Button>
-                    <Button variant="danger" size="sm" className="mr-1" onClick={() => crud.remove(job.id)}>Удалить</Button>
-                    <Button size="sm" style={{ background: '#8e44ad' }} onClick={() => handleFinishAll(job.id)}>Завершить все</Button>
+                    <Button variant="primary" size="md" className="mr-1" onClick={() => crud.startEdit(job)}>Ред.</Button>
+                    <Button variant="danger" size="md" className="mr-1" onClick={() => crud.remove(job.id)}>Удалить</Button>
+                    <Button size="md" style={{ background: '#8e44ad' }} onClick={() => handleFinishAll(job.id)}>Завершить все</Button>
                   </td>
                 </tr>
               ))}

@@ -11,7 +11,7 @@ export default function BackButton({ to }: BackButtonProps) {
     <div className="mb-4">
       <Button
         variant="secondary"
-        size="sm"
+        size="md"
         onClick={() => (to ? navigate(to) : navigate(-1))}
       >
         ← Назад

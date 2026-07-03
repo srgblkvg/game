@@ -59,7 +59,7 @@ export default function AdminChat() {
                 <h4 className="font-bold mb-2">Блокировка игрока</h4>
                 <input type="number" placeholder="ID игрока" value={banUserId} onChange={e => setBanUserId(e.target.value)} className={inputClass} />
                 <input type="number" placeholder="Минут" value={banMinutes} onChange={e => setBanMinutes(e.target.value)} className={`${inputClass} w-20`} />
-                <Button size="sm" className="bg-[#e67e22]" onClick={handleBan}>Заблокировать</Button>
+                <Button size="md" className="bg-[#e67e22]" onClick={handleBan}>Заблокировать</Button>
             </Card>
 
             <Card className="mb-4">
@@ -80,7 +80,7 @@ export default function AdminChat() {
                                     <td className="p-1">{u.username}</td>
                                     <td className="p-1">{fmtSafeDate(u.chatBannedUntil)}</td>
                                     <td className="p-1">
-                                        <Button variant="success" size="sm" onClick={() => handleUnban(u.id)}>Разбанить</Button>
+                                        <Button variant="success" size="md" onClick={() => handleUnban(u.id)}>Разбанить</Button>
                                     </td>
                                 </tr>
                             ))}
@@ -95,15 +95,15 @@ export default function AdminChat() {
                     <input type="text" placeholder="Текст сообщения в чат" value={systemText}
                         onChange={e => setSystemText(e.target.value)} className={inputClass}
                         onKeyDown={e => e.key === 'Enter' && handleSystemMessage()} />
-                    <Button size="sm" className="bg-[#8e44ad]" onClick={handleSystemMessage}>Отправить</Button>
+                    <Button size="md" className="bg-[#8e44ad]" onClick={handleSystemMessage}>Отправить</Button>
                 </div>
             </Card>
 
             <Card className="mb-4">
                 <h4 className="font-bold mb-2">Удаление</h4>
                 <input type="number" placeholder="ID сообщения" value={deleteId} onChange={e => setDeleteId(e.target.value)} className={inputClass} />
-                <Button variant="danger" size="sm" className="mr-2" onClick={handleDelete}>Удалить одно</Button>
-                <Button variant="danger" size="sm" onClick={handleDeleteAll}>Удалить все</Button>
+                <Button variant="danger" size="md" className="mr-2" onClick={handleDelete}>Удалить одно</Button>
+                <Button variant="danger" size="md" onClick={handleDeleteAll}>Удалить все</Button>
             </Card>
 
             {message && <p className="mb-4 text-[var(--color-accent-success)]">{message}</p>}

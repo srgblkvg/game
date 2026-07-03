@@ -39,7 +39,7 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
                         color={recipe.result.rarity_color || '#555'}
                         image={recipe.result.image}
                         name={recipe.result_type === 'random_item' ? '?' : (recipe.result.name || '?')}
-                        size="sm"
+                        size="md"
                       />
                     ) : (
                       <div className="w-6 h-6 rounded border border-[var(--color-border-light)] bg-[var(--color-bg-input)] flex-shrink-0" />

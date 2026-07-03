@@ -66,10 +66,10 @@ export default function AdminPanel() {
             <div className="flex justify-between items-center mb-4">
                 <h1 className="text-xl font-bold">Панель администратора</h1>
                 <div className="flex gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => setShowPasswordForm(!showPasswordForm)}>
+                    <Button variant="secondary" size="md" onClick={() => setShowPasswordForm(!showPasswordForm)}>
                         {showPasswordForm ? 'Отмена' : '🔑 Сменить пароль'}
                     </Button>
-                    <Button variant="danger" size="sm" onClick={handleLogout}>Выйти</Button>
+                    <Button variant="danger" size="md" onClick={handleLogout}>Выйти</Button>
                 </div>
             </div>
 
@@ -94,7 +94,7 @@ export default function AdminPanel() {
                             required
                             minLength={8}
                         />
-                        <Button variant="primary" size="sm" type="submit" disabled={passwordLoading}>
+                        <Button variant="primary" size="md" type="submit" disabled={passwordLoading}>
                             {passwordLoading ? '...' : 'Сохранить'}
                         </Button>
                         {passwordMsg && (
@@ -111,7 +111,7 @@ export default function AdminPanel() {
                     <Button
                         key={t.key}
                         variant={tab === t.key ? 'danger' : 'secondary'}
-                        size="sm"
+                        size="md"
                         onClick={() => setTab(t.key)}
                         className="whitespace-nowrap"
                     >

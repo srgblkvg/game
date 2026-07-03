@@ -67,7 +67,7 @@ export default function AdminBattles() {
                     {selected.moneyStolen > 0 && <span className="text-[var(--color-text-accent)]">Серебро: {formatMoney(selected.moneyStolen)}</span>}
                 </div>
                 <div className="flex justify-center mt-4">
-                    <Button variant="secondary" size="sm" onClick={() => setSelected(null)}>Закрыть</Button>
+                    <Button variant="secondary" size="md" onClick={() => setSelected(null)}>Закрыть</Button>
                 </div>
             </Modal>
         );
@@ -104,7 +104,7 @@ export default function AdminBattles() {
                                     <td className="p-1.5 text-[var(--color-text-accent)]">{b.moneyStolen || 0}</td>
                                     <td className="p-1.5 text-xs">{new Date(b.createdAt).toLocaleString()}</td>
                                     <td className="p-1.5">
-                                        <Button variant="primary" size="sm" onClick={() => setSelected(b)}>Лог</Button>
+                                        <Button variant="primary" size="md" onClick={() => setSelected(b)}>Лог</Button>
                                     </td>
                                 </tr>
                             ))}
@@ -114,9 +114,9 @@ export default function AdminBattles() {
 
                 {totalPages > 1 && (
                     <div className="flex justify-center gap-4 mt-4 items-center">
-                        <Button size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Назад</Button>
+                        <Button size="md" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Назад</Button>
                         <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
-                        <Button size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Вперёд →</Button>
+                        <Button size="md" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Вперёд →</Button>
                     </div>
                 )}
             </Card>

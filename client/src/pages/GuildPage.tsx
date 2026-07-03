@@ -131,7 +131,7 @@ export default function GuildPage() {
             <h3 className="font-bold text-sm mb-2">Гильдии</h3>
             {guildList.map((g:any)=>(<Card key={g.id} className="mb-2"><div className="flex justify-between items-center">
                 <div><h4 className="font-bold text-sm">{g.name}</h4><p className="text-xs text-[var(--color-text-muted)]">Ур.{g.level} • {g.memberCount} уч.</p></div>
-                <Button size="sm" onClick={()=>handleJoin(g.id,g.joinType)}>{g.joinType==='open'?'Вступить':'Заявка'}</Button></div></Card>))}
+                <Button size="md" onClick={()=>handleJoin(g.id,g.joinType)}>{g.joinType==='open'?'Вступить':'Заявка'}</Button></div></Card>))}
         </div>);
     }
 
@@ -146,8 +146,8 @@ export default function GuildPage() {
                 <div className="w-14 h-14 rounded border-2 border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[0.5rem] text-[var(--color-text-muted)]">герб</div>}
             <div><h2 className="font-bold text-lg">🏚️ {guild.name}</h2><p className="text-xs text-[var(--color-text-muted)]">Ур.{guild.level} • {members.length} уч.</p>
                 <ExpBar exp={guild.exp||0} level={guild.level||1}/></div></div>
-            <div className="flex gap-1"><Button variant="secondary" size="sm" onClick={()=>navigate('/guild/rating')}>Рейтинг</Button>
-                <Button variant="secondary" size="sm" onClick={handleLeave}>Покинуть</Button></div></div>
+            <div className="flex gap-1"><Button variant="secondary" size="md" onClick={()=>navigate('/guild/rating')}>Рейтинг</Button>
+                <Button variant="secondary" size="md" onClick={handleLeave}>Покинуть</Button></div></div>
             {myRank==='leader' ? (<div className="mt-3 space-y-2"><div className="flex items-center gap-2">
                 <label className="text-xs cursor-pointer text-[var(--color-accent-info)] hover:underline">{guild.image?'Сменить герб':'Загрузить герб'}
                     <input type="file" accept="image/*" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();
@@ -176,11 +176,11 @@ export default function GuildPage() {
                 <p className="text-xs text-[var(--color-text-muted)]">{war.status==='pending'?'Ожидание ответа':war.status==='active'?'Активна':war.status}</p>
                 {war.status==='active'&&<>
                     <p className="text-[0.65rem] mt-1 text-red-400">💰 Казна заморожена</p>
-                    <Button size="sm" variant="danger" className="mt-2" onClick={()=>navigate('/guild/war')}>⚔️ На поле боя</Button>
+                    <Button size="md" variant="danger" className="mt-2" onClick={()=>navigate('/guild/war')}>⚔️ На поле боя</Button>
                 </>}
                 {myRank==='leader'&&war.attackerGuild?.id!==guild.id&&war.status==='pending'&&(<div className="flex gap-2 mt-2">
-                    <Button size="sm" onClick={async()=>{await api('/guild/war/respond',{accept:true});load();}}>Принять</Button>
-                    <Button size="sm" variant="secondary" onClick={async()=>{await api('/guild/war/respond',{accept:false});load();}}>Отклонить</Button></div>)}</Card>
+                    <Button size="md" onClick={async()=>{await api('/guild/war/respond',{accept:true});load();}}>Принять</Button>
+                    <Button size="md" variant="secondary" onClick={async()=>{await api('/guild/war/respond',{accept:false});load();}}>Отклонить</Button></div>)}</Card>
             ) : (<Card><div className="flex items-center gap-2 cursor-pointer" onClick={()=>setShowWarRules(!showWarRules)}>
                 <Icon icon={showWarRules?'game-icons:expand':'game-icons:contract'} width="14" height="14"/><h3 className="font-bold text-sm">⚔️ Война гильдий — правила</h3>
             </div>{showWarRules&&<div className="text-xs text-[var(--color-text-muted)] mt-2 space-y-1">
@@ -201,7 +201,7 @@ export default function GuildPage() {
                         <span>Цена: {b.cost.toLocaleString()} серебра | Требуется ур. гильдии {b.reqLevel}</span>
                     </div>
                     {myRank==='leader'&&(
-                        <Button size="sm" disabled={!b.canBuild}
+                        <Button size="md" disabled={!b.canBuild}
                             onClick={async()=>{try{await api('/guild/buildings/build',{buildingType:b.type});load();}catch(e:any){setError(e.message);}}}>
                             {b.level>0?'Улучшить':'Построить'}
                         </Button>
@@ -216,9 +216,9 @@ export default function GuildPage() {
                 <button key={t} onClick={()=>setTreasurySubtab(t)} className={`text-xs px-2 py-1 rounded cursor-pointer ${treasurySubtab===t?'bg-[var(--color-accent-info)] text-white':'bg-[var(--color-bg-input)]'}`}>
                     {{deposit:'Внести',tax:'Налог',history:'История'}[t]}</button>))}</div>
             {treasurySubtab==='deposit'&&<div className="flex gap-2"><input className={inputClass+' flex-1'} type="number" placeholder="Сумма" value={treasuryAmount} onChange={e=>setTreasuryAmount(e.target.value)}/>
-                <Button size="sm" onClick={handleDeposit} disabled={loading}>Внести</Button></div>}
+                <Button size="md" onClick={handleDeposit} disabled={loading}>Внести</Button></div>}
             {treasurySubtab==='tax'&&myRank==='leader'&&<div className="flex gap-2"><input className={inputClass+' flex-1'} type="number" placeholder="0-50%" value={taxRateInput} onChange={e=>setTaxRateInput(e.target.value)}/>
-                <Button size="sm" onClick={handleTaxRate}>Установить</Button></div>}
+                <Button size="md" onClick={handleTaxRate}>Установить</Button></div>}
             {treasurySubtab==='history'&&<div>
                 <div className="flex gap-1 mb-2">{PERIODS.map(p=>(<button key={p} onClick={()=>loadTreasury(p)} className={`text-xs px-2 py-0.5 rounded cursor-pointer ${treasuryPeriod===p?'bg-[var(--color-accent-info)] text-white':'bg-[var(--color-bg-input)]'}`}>{PLABELS[p]}</button>))}</div>
                 {treasuryHistory.length>0?<div className="text-xs space-y-1">{treasuryHistory.map((h:any,i:number)=>(<div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
@@ -230,26 +230,26 @@ export default function GuildPage() {
         {tab===3 && <div className="space-y-4">
             {(myRank==='leader'||myRank==='officer')&&(<Card><h3 className="font-bold text-sm mb-2">Пригласить игрока</h3>
                 <div className="flex gap-2 mb-2"><input className={inputClass+' flex-1'} placeholder="Имя игрока" value={inviteName} onChange={e=>{setInviteName(e.target.value);searchUsers(e.target.value);}}/>
-                    <Button size="sm" onClick={handleInvite} disabled={!inviteTargetId}>Пригласить</Button></div>
+                    <Button size="md" onClick={handleInvite} disabled={!inviteTargetId}>Пригласить</Button></div>
                 {inviteSuggestions.length>0&&<div className="text-xs space-y-1 max-h-24 overflow-y-auto">{inviteSuggestions.map((s:any)=>(<div key={s.id} className={`p-1 cursor-pointer rounded ${inviteTargetId===s.id?'bg-[var(--color-accent-info)]':''}`}
                     onClick={()=>{setInviteTargetId(s.id);setInviteName(s.username);setInviteSuggestions([]);}}>{s.username} (ур.{s.level})</div>))}</div>}
                 {requests.length>0&&<div className="mt-3"><h4 className="text-xs font-bold mb-1">Заявки ({requests.length})</h4>{requests.map((r:any)=>(<div key={r.id} className="flex justify-between py-1 text-xs"><span>{r.username}</span>
-                    <div className="flex gap-1"><Button size="sm" onClick={()=>handleRequest(r.id,true)}>✓</Button><Button size="sm" variant="secondary" onClick={()=>handleRequest(r.id,false)}>✗</Button></div></div>))}</div>}
-                {myRank==='leader'&&<div className="mt-2"><Button size="sm" variant="secondary" onClick={handleCancelInvites}>Отменить приглашения</Button></div>}</Card>)}
+                    <div className="flex gap-1"><Button size="md" onClick={()=>handleRequest(r.id,true)}>✓</Button><Button size="md" variant="secondary" onClick={()=>handleRequest(r.id,false)}>✗</Button></div></div>))}</div>}
+                {myRank==='leader'&&<div className="mt-2"><Button size="md" variant="secondary" onClick={handleCancelInvites}>Отменить приглашения</Button></div>}</Card>)}
             <Card><h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3><div className="space-y-1">
                 {members.map((m:any)=>(<div key={m.userId} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] text-xs">
                     <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
                         {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span></span>
                     {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1">
-                        <Button size="sm" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
-                        <Button size="sm" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button></div>}
+                        <Button size="md" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
+                        <Button size="md" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button></div>}
                 </div>))}</div></Card>
         </div>}
 
         {/* Popup */}
         {confirmPopup&&<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={()=>setConfirmPopup(null)}>
             <Card className="max-w-xs w-full" onClick={e=>e.stopPropagation()}><p className="text-sm mb-3">{confirmPopup.message}</p>
-                <div className="flex gap-2 justify-end"><Button variant="secondary" size="sm" onClick={()=>setConfirmPopup(null)}>Отмена</Button><Button size="sm" onClick={confirmPopup.onConfirm}>OK</Button></div></Card></div>}
+                <div className="flex gap-2 justify-end"><Button variant="secondary" size="md" onClick={()=>setConfirmPopup(null)}>Отмена</Button><Button size="md" onClick={confirmPopup.onConfirm}>OK</Button></div></Card></div>}
     </div>);
 }
 
@@ -265,10 +265,10 @@ function GuildQuestCard({guildId:_guildId,myRank,api}:{guildId:number;myRank:str
         {aq?<><p className="text-xs font-medium">{aq.typeName} <span className="text-[0.6rem] text-[var(--color-text-muted)]">{aq.difficultyLabel}</span></p><p className="text-xs text-[var(--color-text-muted)] mb-2">{aq.description}</p>
             <div className="mb-1"><div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5"><span>{aq.progress}/{aq.requirement}</span><span>+{aq.rewardXp} XP</span></div>
             <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full"><div className="h-full bg-[var(--color-accent-info)] rounded-full" style={{width:`${Math.min(100,(aq.progress/aq.requirement)*100)}%`}}/></div></div>
-            {myRank==='leader'&&aq.progress>=aq.requirement&&<Button variant="primary" size="sm" onClick={claim} disabled={l} className="mt-2">Забрать</Button>}</>
+            {myRank==='leader'&&aq.progress>=aq.requirement&&<Button variant="primary" size="md" onClick={claim} disabled={l} className="mt-2">Забрать</Button>}</>
         :opts?<><p className="text-xs text-[var(--color-text-muted)] mb-2">Выберите задание:</p><div className="space-y-2">{opts.map((o:any,i:number)=>(<div key={i} className="border border-[var(--color-border-light)] rounded-lg p-2">
             <div className="flex justify-between mb-1"><span className="text-xs font-medium">{o.typeName}</span><span className="text-[0.6rem] text-[var(--color-text-muted)]">{o.difficultyLabel}</span></div>
             <p className="text-xs text-[var(--color-text-muted)] mb-1">{o.description}</p><div className="flex justify-between"><span className="text-[0.6rem] text-yellow-400">+{o.rewardXp} XP</span>
-            {myRank==='leader'&&<Button variant="primary" size="sm" onClick={()=>take(o)} disabled={l}>Взять</Button>}</div></div>))}</div>
+            {myRank==='leader'&&<Button variant="primary" size="md" onClick={()=>take(o)} disabled={l}>Взять</Button>}</div></div>))}</div>
             {myRank!=='leader'&&<p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">Ожидайте выбора лидера</p>}</>:null}</Card>;
 }

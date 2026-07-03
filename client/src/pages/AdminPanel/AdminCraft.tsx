@@ -129,7 +129,7 @@ export default function AdminCraft() {
             <label className="text-sm">Изображение:
                 <ImageUploader currentUrl={res.image || null} folder="craft" onUploaded={(url) => setter({ ...res, image: url })} />
             </label>
-            <Button variant="success" size="sm" onClick={onSubmit}>{submitText}</Button>
+            <Button variant="success" size="md" onClick={onSubmit}>{submitText}</Button>
         </div>
     );
 
@@ -137,7 +137,7 @@ export default function AdminCraft() {
         <div>
             <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
                 {tabs.map(t => (
-                    <Button key={t.key} variant={tab === t.key ? 'danger' : 'secondary'} size="sm" onClick={() => setTab(t.key)} className="whitespace-nowrap">{t.label}</Button>
+                    <Button key={t.key} variant={tab === t.key ? 'danger' : 'secondary'} size="md" onClick={() => setTab(t.key)} className="whitespace-nowrap">{t.label}</Button>
                 ))}
             </div>
 
@@ -148,7 +148,7 @@ export default function AdminCraft() {
                         {editingResource
                             ? renderResourceForm(editingResource, setEditingResource, 'Сохранить', handleUpdateResource)
                             : renderResourceForm(newResource, setNewResource, 'Создать', handleCreateResource)}
-                        {editingResource && <Button variant="danger" size="sm" className="ml-2 mt-2" onClick={() => setEditingResource(null)}>Отмена</Button>}
+                        {editingResource && <Button variant="danger" size="md" className="ml-2 mt-2" onClick={() => setEditingResource(null)}>Отмена</Button>}
                     </Card>
                     <Card>
                         <h3 className="font-bold mb-2">Все ресурсы</h3>
@@ -160,8 +160,8 @@ export default function AdminCraft() {
                                         <tr key={r.id} className="border-b border-[var(--color-border-light)]">
                                             <td className="p-1">{r.id}</td><td className="p-1">{r.name}</td><td className="p-1" style={{ color: r.rarity_color }}>{r.rarity_display}</td><td className="p-1">{r.type || 'craft'}</td><td className="p-1">{r.description}</td>
                                             <td className="p-1">
-                                                <Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingResource(r)}>Ред.</Button>
-                                                <Button variant="danger" size="sm" onClick={() => handleDeleteResource(r.id)}>Удалить</Button>
+                                                <Button variant="primary" size="md" className="mr-1" onClick={() => setEditingResource(r)}>Ред.</Button>
+                                                <Button variant="danger" size="md" onClick={() => handleDeleteResource(r.id)}>Удалить</Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -183,7 +183,7 @@ export default function AdminCraft() {
                         {editingRecipe
                             ? <RecipeForm recipe={editingRecipe} onChange={setEditingRecipe} onSubmit={handleUpdateRecipe} submitText="Сохранить" onCancel={() => setEditingRecipe(null)} categories={categories} items={items} resources={resources} />
                             : <RecipeForm recipe={newRecipe} onChange={setNewRecipe} onSubmit={handleCreateRecipe} submitText="Создать" categories={categories} items={items} resources={resources} />}
-                        {editingRecipe && <Button variant="danger" size="sm" className="ml-2 mt-2" onClick={() => setEditingRecipe(null)}>Отмена</Button>}
+                        {editingRecipe && <Button variant="danger" size="md" className="ml-2 mt-2" onClick={() => setEditingRecipe(null)}>Отмена</Button>}
                     </Card>
                     <Card>
                         <h3 className="font-bold mb-2">Все рецепты</h3>
@@ -205,10 +205,10 @@ export default function AdminCraft() {
                                 <input type="number" value={editingCategory ? editingCategory.sort_order : newCategory.sort_order}
                                     onChange={e => editingCategory ? setEditingCategory({ ...editingCategory, sort_order: +e.target.value }) : setNewCategory({ ...newCategory, sort_order: +e.target.value })} className={inputClass} />
                             </label>
-                            <Button variant="success" size="sm" onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}>
+                            <Button variant="success" size="md" onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}>
                                 {editingCategory ? 'Сохранить' : 'Создать'}
                             </Button>
-                            {editingCategory && <Button variant="danger" size="sm" className="ml-2" onClick={() => setEditingCategory(null)}>Отмена</Button>}
+                            {editingCategory && <Button variant="danger" size="md" className="ml-2" onClick={() => setEditingCategory(null)}>Отмена</Button>}
                         </div>
                     </Card>
                     <Card>
@@ -220,8 +220,8 @@ export default function AdminCraft() {
                                     <tr key={c.id} className="border-b border-[var(--color-border-light)]">
                                         <td className="p-1">{c.id}</td><td className="p-1">{c.name}</td><td className="p-1">{c.sort_order}</td>
                                         <td className="p-1">
-                                            <Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingCategory(c)}>Ред.</Button>
-                                            <Button variant="danger" size="sm" onClick={() => handleDeleteCategory(c.id)}>Удалить</Button>
+                                            <Button variant="primary" size="md" className="mr-1" onClick={() => setEditingCategory(c)}>Ред.</Button>
+                                            <Button variant="danger" size="md" onClick={() => handleDeleteCategory(c.id)}>Удалить</Button>
                                         </td>
                                     </tr>
                                 ))}
@@ -254,10 +254,10 @@ export default function AdminCraft() {
                                 <input type="number" value={editingChance ? editingChance.money_cost : newChance.money_cost}
                                     onChange={e => editingChance ? setEditingChance({ ...editingChance, money_cost: +e.target.value }) : setNewChance({ ...newChance, money_cost: +e.target.value })} className={inputClass} />
                             </label>
-                            <Button variant="success" size="sm" onClick={editingChance ? handleUpdateChance : handleCreateChance}>
+                            <Button variant="success" size="md" onClick={editingChance ? handleUpdateChance : handleCreateChance}>
                                 {editingChance ? 'Сохранить' : 'Создать'}
                             </Button>
-                            {editingChance && <Button variant="danger" size="sm" className="ml-2" onClick={() => setEditingChance(null)}>Отмена</Button>}
+                            {editingChance && <Button variant="danger" size="md" className="ml-2" onClick={() => setEditingChance(null)}>Отмена</Button>}
                         </div>
                     </Card>
                     <Card>
@@ -270,8 +270,8 @@ export default function AdminCraft() {
                                         <td className="p-1" style={{ color: rarities.find(r => r.id === uc.rarity_id)?.color }}>{rarities.find(r => r.id === uc.rarity_id)?.display_name || `#${uc.rarity_id}`}</td>
                                         <td className="p-1">{uc.level}</td><td className="p-1">{uc.chance}</td><td className="p-1">{uc.money_cost}</td>
                                         <td className="p-1">
-                                            <Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingChance(uc)}>Ред.</Button>
-                                            <Button variant="danger" size="sm" onClick={() => handleDeleteChance(uc.level, uc.rarity_id)}>Удалить</Button>
+                                            <Button variant="primary" size="md" className="mr-1" onClick={() => setEditingChance(uc)}>Ред.</Button>
+                                            <Button variant="danger" size="md" onClick={() => handleDeleteChance(uc.level, uc.rarity_id)}>Удалить</Button>
                                         </td>
                                     </tr>
                                 ))}

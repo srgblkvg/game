@@ -115,7 +115,7 @@ export default function ArenaPage() {
       {battleSteps.length > 0 && currentStep < battleSteps.length - 1 && (
         <div className="flex justify-center gap-4 mb-4">
           {(character as any)?.premium?.until > Math.floor(Date.now()/1000) && (
-            <Button variant="secondary" size="sm" onClick={handleSkip}>
+            <Button variant="secondary" size="md" onClick={handleSkip}>
               Пропустить
             </Button>
           )}
@@ -183,7 +183,7 @@ export default function ArenaPage() {
       {modalMessage && (
         <Modal open={!!modalMessage} onClose={() => setModalMessage(null)}>
           <p className="whitespace-pre-wrap mb-4">{modalMessage}</p>
-          <Button variant="danger" size="sm" fullWidth onClick={() => setModalMessage(null)}>OK</Button>
+          <Button variant="danger" size="md" fullWidth onClick={() => setModalMessage(null)}>OK</Button>
         </Modal>
       )}
     </div>

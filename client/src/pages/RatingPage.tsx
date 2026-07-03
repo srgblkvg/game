@@ -98,7 +98,7 @@ export default function RatingPage() {
                     className="flex-1 px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm"
                 />
                 {searchInput && (
-                    <Button size="sm" variant="danger" onClick={() => { setSearchInput(''); setSearch(''); }}>
+                    <Button size="md" variant="danger" onClick={() => { setSearchInput(''); setSearch(''); }}>
                         ✕
                     </Button>
                 )}
@@ -238,9 +238,9 @@ export default function RatingPage() {
 
                 {totalPages > 1 && (
                     <div className="flex justify-center gap-4 mt-4 items-center">
-                        <Button size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Назад</Button>
+                        <Button size="md" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Назад</Button>
                         <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
-                        <Button size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Вперёд →</Button>
+                        <Button size="md" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Вперёд →</Button>
                     </div>
                 )}
             </Card>

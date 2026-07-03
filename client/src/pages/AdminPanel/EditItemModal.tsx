@@ -85,8 +85,8 @@ export default function EditItemModal({ item, rarities, onSave, onClose }: EditI
       <label className="text-xs mt-2 block">Стоимость (серебро, пусто = авто) <input type="number" value={form.cost} onChange={e => set('cost', e.target.value ? +e.target.value : '')} className={smallInputClass} style={{width:'100%'}} /></label>
 
       <div className="flex gap-4 justify-center mt-4">
-        <Button variant="success" size="sm" onClick={() => onSave(form)}>Сохранить</Button>
-        <Button variant="danger" size="sm" onClick={onClose}>Отмена</Button>
+        <Button variant="success" size="md" onClick={() => onSave(form)}>Сохранить</Button>
+        <Button variant="danger" size="md" onClick={onClose}>Отмена</Button>
       </div>
     </Modal>
   );

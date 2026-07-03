@@ -88,8 +88,8 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
                                 <textarea className={inputClass + ' min-h-[100px] mb-2'} value={editText}
                                     onChange={e => setEditText(e.target.value)} />
                                 <div className="flex gap-2">
-                                    <Button variant="success" size="sm" onClick={handleSaveEdit}>Сохранить</Button>
-                                    <Button variant="secondary" size="sm" onClick={() => setEditing(false)}>Отмена</Button>
+                                    <Button variant="success" size="md" onClick={handleSaveEdit}>Сохранить</Button>
+                                    <Button variant="secondary" size="md" onClick={() => setEditing(false)}>Отмена</Button>
                                 </div>
                             </div>
                         )}
@@ -263,8 +263,8 @@ export default function ThreadPage() {
                 <div className="mb-4">
                     <input className={inputClass + ' mb-2'} value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Новое название" />
                     <div className="flex gap-2">
-                        <Button variant="success" size="sm" onClick={handleEditTitle}>Сохранить</Button>
-                        <Button variant="secondary" size="sm" onClick={() => setEditingTitle(false)}>Отмена</Button>
+                        <Button variant="success" size="md" onClick={handleEditTitle}>Сохранить</Button>
+                        <Button variant="secondary" size="md" onClick={() => setEditingTitle(false)}>Отмена</Button>
                     </div>
                 </div>
             ) : (
@@ -274,8 +274,8 @@ export default function ThreadPage() {
                     {thread.is_closed && <span className="text-xs text-[var(--color-accent-danger)] border border-[var(--color-accent-danger)] rounded px-1.5 py-0.5">Закрыто</span>}
                     {isAuthor && (
                         <div className="flex gap-1 ml-auto">
-                            <Button variant="secondary" size="sm" onClick={() => { setNewTitle(thread.title); setEditingTitle(true); }}>✎</Button>
-                            <Button variant="secondary" size="sm" onClick={handleToggleClose}>
+                            <Button variant="secondary" size="md" onClick={() => { setNewTitle(thread.title); setEditingTitle(true); }}>✎</Button>
+                            <Button variant="secondary" size="md" onClick={handleToggleClose}>
                                 {thread.is_closed ? 'Открыть' : 'Закрыть'}
                             </Button>
                         </div>
@@ -289,9 +289,9 @@ export default function ThreadPage() {
 
             {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mb-4">
-                    <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>←</Button>
+                    <Button variant="secondary" size="md" disabled={page <= 1} onClick={() => goToPage(page - 1)}>←</Button>
                     <span className="text-sm text-[var(--color-text-muted)]">{page}/{totalPages}</span>
-                    <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>→</Button>
+                    <Button variant="secondary" size="md" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>→</Button>
                 </div>
             )}
 
@@ -308,7 +308,7 @@ export default function ThreadPage() {
                         </p>
                     )}
                     <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[100px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
-                    <Button variant="primary" size="sm" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
+                    <Button variant="primary" size="md" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
                 </Card>
             )}
         </div>

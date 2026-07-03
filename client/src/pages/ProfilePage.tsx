@@ -46,7 +46,7 @@ export default function ProfilePage() {
             <BackButton />
             <h2 className="text-xl font-bold mb-4">Профиль игрока</h2>
 
-            <Button variant="secondary" size="sm" onClick={() => navigate('/rating')} className="mb-4">
+            <Button variant="secondary" size="md" onClick={() => navigate('/rating')} className="mb-4">
                 ← Рейтинг игроков
             </Button>
 

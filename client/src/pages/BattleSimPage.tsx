@@ -263,7 +263,7 @@ export default function BattleSimPage() {
                 <span className="text-sm">Боёв:</span>
                 <input type="number" value={battleCount} onChange={e => setBattleCount(parseInt(e.target.value) || 100)}
                     min={1} max={500} className="w-20 p-1.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] text-sm text-center" />
-                <Button variant="primary" size="sm" onClick={runSim} disabled={!p1 || !p2 || loading}>
+                <Button variant="primary" size="md" onClick={runSim} disabled={!p1 || !p2 || loading}>
                     {loading ? 'Симуляция...' : 'Запустить'}
                 </Button>
             </div>

@@ -156,7 +156,7 @@ export default function ShopPage() {
                                         </div>
                                         <Button
                                             variant={canAfford ? 'success' : 'secondary'}
-                                            size="sm"
+                                            size="md"
                                             fullWidth
                                             onClick={() => handleBuy(item.id)}
                                             disabled={!canAfford}

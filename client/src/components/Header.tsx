@@ -318,7 +318,7 @@ export default function Header() {
                         </div>
                     )}
                     {user.role === 'admin' && (
-                        <Button variant="danger" size="sm" onClick={() => navigate('/adminpanel')}>
+                        <Button variant="danger" size="md" onClick={() => navigate('/adminpanel')}>
                             <span className="flex items-center gap-1">
                                 <Icon icon="game-icons:shield" width="18" height="18" />
                                 Панель администратора

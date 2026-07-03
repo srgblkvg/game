@@ -90,7 +90,7 @@ export default function GuildViewPage() {
                     <div className="mb-3">
                         <BackButton />
                     </div>
-                    <Button variant="secondary" size="sm" onClick={() => navigate('/guild/rating')} className="mb-3">
+                    <Button variant="secondary" size="md" onClick={() => navigate('/guild/rating')} className="mb-3">
                         ← Рейтинг гильдий
                     </Button>
                     <Card className="mb-4">
@@ -117,11 +117,11 @@ export default function GuildViewPage() {
                         </div>
                         {!isMember && (
                             <div className="mt-3 flex gap-2">
-                                <Button variant="primary" size="sm" onClick={handleJoin}>
+                                <Button variant="primary" size="md" onClick={handleJoin}>
                                     {guild.joinType === 'open' ? 'Вступить' : guild.joinType === 'request' ? 'Подать заявку' : 'Закрыто'}
                                 </Button>
                                 {canDeclareWar && (
-                                    <Button variant="danger" size="sm" onClick={handleDeclareWar}>
+                                    <Button variant="danger" size="md" onClick={handleDeclareWar}>
                                         ⚔️ Объявить войну
                                     </Button>
                                 )}
@@ -129,7 +129,7 @@ export default function GuildViewPage() {
                         )}
                         {isMember && (
                             <div className="mt-3">
-                                <Button variant="secondary" size="sm" onClick={() => navigate('/guild')}>Управление гильдией</Button>
+                                <Button variant="secondary" size="md" onClick={() => navigate('/guild')}>Управление гильдией</Button>
                             </div>
                         )}
                     </Card>

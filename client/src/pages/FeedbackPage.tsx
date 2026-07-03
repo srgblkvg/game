@@ -58,7 +58,7 @@ export default function FeedbackPage() {
                         rows={5}
                         style={{ resize: 'vertical' }}
                     />
-                    <Button variant="primary" size="sm" type="submit" disabled={loading}>
+                    <Button variant="primary" size="md" type="submit" disabled={loading}>
                         {loading ? 'Отправка...' : 'Отправить'}
                     </Button>
                     {msg && <p className={`mt-2 text-sm ${msg.startsWith('✅') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{msg}</p>}

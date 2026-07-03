@@ -220,28 +220,28 @@ export default function AdminUsers() {
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Сброс таймеров</h3>
                 <input type="number" placeholder="ID игрока" value={timerUserId} onChange={e => setTimerUserId(e.target.value)} className={inputClass} />
-                <Button size="sm" onClick={() => resetTimers(false)} className="mr-2">Сбросить</Button>
-                <Button variant="danger" size="sm" onClick={() => resetTimers(true)}>Сбросить всем</Button>
+                <Button size="md" onClick={() => resetTimers(false)} className="mr-2">Сбросить</Button>
+                <Button variant="danger" size="md" onClick={() => resetTimers(true)}>Сбросить всем</Button>
             </Card>
 
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Пополнить баланс</h3>
                 <input type="number" placeholder="ID игрока" value={moneyUserId} onChange={e => setMoneyUserId(e.target.value)} className={inputClass} />
                 <input type="number" placeholder="Сумма" value={moneyAmount} onChange={e => setMoneyAmount(e.target.value)} className={`${inputClass} w-20`} />
-                <Button variant="success" size="sm" onClick={handleAddMoney}>Пополнить</Button>
+                <Button variant="success" size="md" onClick={handleAddMoney}>Пополнить</Button>
             </Card>
 
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Выдать премиум</h3>
                 <input type="number" placeholder="ID игрока" value={premiumUserId} onChange={e => setPremiumUserId(e.target.value)} className={inputClass} />
                 <input type="number" placeholder="Дней" value={premiumDays} onChange={e => setPremiumDays(e.target.value)} className={`${inputClass} w-20`} min="1" />
-                <Button variant="success" size="sm" onClick={handleGrantPremium}>Выдать</Button>
+                <Button variant="success" size="md" onClick={handleGrantPremium}>Выдать</Button>
             </Card>
 
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Завершить работу по ID</h3>
                 <input type="number" placeholder="ID игрока" value={finishJobUserId} onChange={e => setFinishJobUserId(e.target.value)} className={inputClass} />
-                <Button size="sm" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(parseInt(finishJobUserId))}>Завершить работу</Button>
+                <Button size="md" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(parseInt(finishJobUserId))}>Завершить работу</Button>
             </Card>
 
             {message && <div className="mb-4 p-3 bg-[var(--color-bg-card)] rounded text-sm">{message}</div>}
@@ -250,9 +250,9 @@ export default function AdminUsers() {
                 <div className="flex justify-between items-center mb-2">
                     <h3 className="font-bold">Список игроков ({filteredUsers.length}{searchQuery ? ` / ${users.length}` : ''})</h3>
                     <div className="flex gap-1">
-                        <Button size="sm" variant={userFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setUserFilter('all')}>Все</Button>
-                        <Button size="sm" variant={userFilter === 'players' ? 'primary' : 'secondary'} onClick={() => setUserFilter('players')}>Игроки</Button>
-                        <Button size="sm" variant={userFilter === 'guests' ? 'primary' : 'secondary'} onClick={() => setUserFilter('guests')}>🎭 Гости</Button>
+                        <Button size="md" variant={userFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setUserFilter('all')}>Все</Button>
+                        <Button size="md" variant={userFilter === 'players' ? 'primary' : 'secondary'} onClick={() => setUserFilter('players')}>Игроки</Button>
+                        <Button size="md" variant={userFilter === 'guests' ? 'primary' : 'secondary'} onClick={() => setUserFilter('guests')}>🎭 Гости</Button>
                     </div>
                     <input
                         type="text"
@@ -319,27 +319,27 @@ export default function AdminUsers() {
                                         <td className="p-1" style={{ color: jobName !== 'Нет' ? '#e67e22' : '#aaa' }}>{jobName}</td>
                                         <td className="p-1">
                                             <div className="flex gap-1 flex-wrap">
-                                                <Button size="sm" variant="secondary" onClick={() => toggleInfo(u.id)}>
+                                                <Button size="md" variant="secondary" onClick={() => toggleInfo(u.id)}>
                                                     {isExpanded && expandedView === 'info' ? '▲' : '▼'}
                                                 </Button>
-                                                <Button size="sm" variant="secondary" onClick={() => handleShowIps(u.id)}>
+                                                <Button size="md" variant="secondary" onClick={() => handleShowIps(u.id)}>
                                                     IP
                                                 </Button>
                                                 {jobName !== 'Нет' && (
-                                                    <Button size="sm" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(u.id)}>🏁</Button>
+                                                    <Button size="md" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(u.id)}>🏁</Button>
                                                 )}
                                                 {u.bannedUntil > now ? (
-                                                    <Button size="sm" variant="success" onClick={() => handleUnban(u.id)}>Разбан</Button>
+                                                    <Button size="md" variant="success" onClick={() => handleUnban(u.id)}>Разбан</Button>
                                                 ) : (
-                                                    <Button size="sm" variant="danger" onClick={() => setBanUserId(u.id)}>Бан</Button>
+                                                    <Button size="md" variant="danger" onClick={() => setBanUserId(u.id)}>Бан</Button>
                                                 )}
                                                 {deleteConfirmId === u.id ? (
                                                     <span className="flex gap-1">
-                                                        <Button size="sm" variant="danger" onClick={() => handleDelete(u.id)}>Точно?</Button>
-                                                        <Button size="sm" variant="secondary" onClick={() => setDeleteConfirmId(null)}>✕</Button>
+                                                        <Button size="md" variant="danger" onClick={() => handleDelete(u.id)}>Точно?</Button>
+                                                        <Button size="md" variant="secondary" onClick={() => setDeleteConfirmId(null)}>✕</Button>
                                                     </span>
                                                 ) : (
-                                                    <Button size="sm" variant="secondary" style={{ color: '#e03030', borderColor: '#e03030' }}
+                                                    <Button size="md" variant="secondary" style={{ color: '#e03030', borderColor: '#e03030' }}
                                                         onClick={() => setDeleteConfirmId(u.id)}>✕</Button>
                                                 )}
                                             </div>
@@ -413,8 +413,8 @@ export default function AdminUsers() {
                                 <option value="hours">Часы</option>
                                 <option value="days">Дни</option>
                             </select>
-                            <Button variant="danger" size="sm" onClick={() => handleBan(banUserId)}>Забанить</Button>
-                            <Button variant="secondary" size="sm" onClick={() => setBanUserId(null)}>Отмена</Button>
+                            <Button variant="danger" size="md" onClick={() => handleBan(banUserId)}>Забанить</Button>
+                            <Button variant="secondary" size="md" onClick={() => setBanUserId(null)}>Отмена</Button>
                         </div>
                     </div>
                 )}

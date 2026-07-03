@@ -59,7 +59,7 @@ export default function BulkImageUploader({ items, title }: BulkImageUploaderPro
                     </div>
                 ))}
             </div>
-            <Button variant="primary" size="sm" onClick={handleUpload} disabled={uploading}>
+            <Button variant="primary" size="md" onClick={handleUpload} disabled={uploading}>
                 {uploading ? 'Загрузка...' : `Загрузить всё (${items.filter(i => i.imagePath?.startsWith('/uploads/')).length})`}
             </Button>
             {message && <p className="text-xs mt-2 text-[var(--color-accent-success)]">{message}</p>}

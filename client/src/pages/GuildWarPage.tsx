@@ -71,7 +71,7 @@ export default function GuildWarPage() {
             <div className="px-4 py-4 max-w-3xl mx-auto">
                 <BackButton />
                 {error ? <p className="text-[var(--color-accent-danger)]">{error}</p> : <p className="text-[var(--color-text-muted)]">Нет активной войны</p>}
-                <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate('/guild')}>← К гильдии</Button>
+                <Button variant="secondary" size="md" className="mt-3" onClick={() => navigate('/guild')}>← К гильдии</Button>
             </div>
         );
     }
@@ -117,7 +117,7 @@ export default function GuildWarPage() {
                         <h3 className="font-bold text-sm">
                             {battleResult?.won ? '🏆 Победа!' : battleResult?.won === false ? '💀 Поражение' : '📋 Лог боя'}
                         </h3>
-                        <Button variant="secondary" size="sm" onClick={() => { setBattleLog([]); setBattleResult(null); }}>✕</Button>
+                        <Button variant="secondary" size="md" onClick={() => { setBattleLog([]); setBattleResult(null); }}>✕</Button>
                     </div>
                     <div className="max-h-60 overflow-y-auto">
                         {renderBattleLog(battleLog)}
@@ -188,7 +188,7 @@ export default function GuildWarPage() {
                                     )}
                                     <Button
                                         variant="danger"
-                                        size="sm"
+                                        size="md"
                                         disabled={cantAttack}
                                         onClick={() => handleAttack(m.id, m.username)}
                                     >

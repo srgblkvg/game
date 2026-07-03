@@ -15,8 +15,8 @@ export default function RecipeListItem({ recipe, onEdit, onDelete }: Props) {
       {recipe.result && <div>Результат: {recipe.result.name} ({recipe.result.rarity_display})</div>}
       <div>Категория: {recipe.category?.name || '—'}</div>
       <div>Шанс: {recipe.success_chance ?? 100}%</div>
-      <Button variant="primary" size="sm" className="mr-1 mt-1" onClick={onEdit}>Ред.</Button>
-      <Button variant="danger" size="sm" className="mt-1" onClick={onDelete}>Удалить</Button>
+      <Button variant="primary" size="md" className="mr-1 mt-1" onClick={onEdit}>Ред.</Button>
+      <Button variant="danger" size="md" className="mt-1" onClick={onDelete}>Удалить</Button>
     </div>
   );
 }

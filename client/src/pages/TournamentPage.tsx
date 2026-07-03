@@ -173,11 +173,11 @@ export default function TournamentPage() {
 
                 {t.status === 'registration' && joinable && !myReg && (
                     <div className="flex gap-2">
-                        <Button variant="danger" size="sm" onClick={() => handleRegister(t.id, t.type === 'official' ? t.division : undefined)}>
+                        <Button variant="danger" size="md" onClick={() => handleRegister(t.id, t.type === 'official' ? t.division : undefined)}>
                             {t.type === 'custom' && t.entryFee > 0 ? `Вступить (${formatMoney(t.entryFee)})` : 'Записаться'}
                         </Button>
                         {t.type === 'official' && (
-                            <Button variant="secondary" size="sm" onClick={() => handleRegister(t.id, t.division + '🎫')}>🎫 Золотой билет (1000)</Button>
+                            <Button variant="secondary" size="md" onClick={() => handleRegister(t.id, t.division + '🎫')}>🎫 Золотой билет (1000)</Button>
                         )}
                     </div>
                 )}
@@ -283,10 +283,10 @@ export default function TournamentPage() {
             </Card>
 
             <div className="flex gap-2 mb-4 flex-wrap">
-                <Button variant={tab === 'all' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('all'); setCompletedPage(1); }}>Все</Button>
-                <Button variant={tab === 'official' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('official'); setCompletedPage(1); }}>Официальные</Button>
-                <Button variant={tab === 'custom' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('custom'); setCompletedPage(1); }}>Самоорганизованные</Button>
-                <Button variant={tab === 'completed' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('completed'); setCompletedPage(1); }}>Завершённые</Button>
+                <Button variant={tab === 'all' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('all'); setCompletedPage(1); }}>Все</Button>
+                <Button variant={tab === 'official' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('official'); setCompletedPage(1); }}>Официальные</Button>
+                <Button variant={tab === 'custom' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('custom'); setCompletedPage(1); }}>Самоорганизованные</Button>
+                <Button variant={tab === 'completed' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('completed'); setCompletedPage(1); }}>Завершённые</Button>
             </div>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
@@ -316,7 +316,7 @@ export default function TournamentPage() {
 
             {/* Кнопка создания custom турнира */}
             {tab === 'custom' && !showCreate && (
-                <Button variant="danger" size="sm" className="mb-3" onClick={() => setShowCreate(true)}>
+                <Button variant="danger" size="md" className="mb-3" onClick={() => setShowCreate(true)}>
                     + Создать турнир
                 </Button>
             )}
@@ -358,8 +358,8 @@ export default function TournamentPage() {
                         </div>
                     </div>
                     <div className="flex gap-2 mt-3">
-                        <Button variant="danger" size="sm" onClick={handleCreateCustom}>Создать</Button>
-                        <Button variant="secondary" size="sm" onClick={() => setShowCreate(false)}>Отмена</Button>
+                        <Button variant="danger" size="md" onClick={handleCreateCustom}>Создать</Button>
+                        <Button variant="secondary" size="md" onClick={() => setShowCreate(false)}>Отмена</Button>
                     </div>
                 </Card>
             )}
@@ -410,9 +410,9 @@ export default function TournamentPage() {
                     ))}
                     {data.totalPages > 1 && (
                         <div className="flex justify-center gap-4 mt-4 items-center">
-                            <Button size="sm" disabled={data.page <= 1} onClick={() => setCompletedPage(data.page - 1)}>← Назад</Button>
+                            <Button size="md" disabled={data.page <= 1} onClick={() => setCompletedPage(data.page - 1)}>← Назад</Button>
                             <span className="text-sm text-[var(--color-text-secondary)]">стр. {data.page} из {data.totalPages}</span>
-                            <Button size="sm" disabled={data.page >= data.totalPages} onClick={() => setCompletedPage(data.page + 1)}>Вперёд →</Button>
+                            <Button size="md" disabled={data.page >= data.totalPages} onClick={() => setCompletedPage(data.page + 1)}>Вперёд →</Button>
                         </div>
                     )}
                     {data.tournaments.length === 0 && <Card className="text-center py-6"><p className="text-sm text-[var(--color-text-muted)]">Нет завершённых турниров</p></Card>}

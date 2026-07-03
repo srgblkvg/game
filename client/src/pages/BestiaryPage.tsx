@@ -484,7 +484,7 @@ export default function BestiaryPage() {
           {battleActive && !battleDone && (
             <div className="flex justify-center gap-4 mb-4">
               {(character as any)?.premium?.until > (serverTime || Math.floor(Date.now()/1000)) && (
-                <Button variant="secondary" size="sm" onClick={handleSkip}>Пропустить</Button>
+                <Button variant="secondary" size="md" onClick={handleSkip}>Пропустить</Button>
               )}
             </div>
           )}
@@ -530,7 +530,7 @@ export default function BestiaryPage() {
           {error && !battleDone && (
             <Card className="text-center">
               <p className="text-[var(--color-accent-danger)] mb-3">{error}</p>
-              <Button variant="secondary" size="sm" onClick={backToFloors}>Вернуться</Button>
+              <Button variant="secondary" size="md" onClick={backToFloors}>Вернуться</Button>
             </Card>
           )}
         </>

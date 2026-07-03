@@ -440,14 +440,14 @@ export default function CraftPage() {
 
                     {/* Кнопки */}
                     <div className="flex flex-col gap-2 items-center mt-2">
-                        <Button variant={activeRecipe ? 'success' : 'secondary'} size="sm" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate}>
+                        <Button variant={activeRecipe ? 'success' : 'secondary'} size="md" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate}>
                             {crafting ? 'Создание...' : 'Создать'}
                         </Button>
-                        <Button variant={upgradeInfo ? 'primary' : 'secondary'} size="sm" fullWidth disabled={!upgradeInfo || crafting} onClick={handleUpgrade}
+                        <Button variant={upgradeInfo ? 'primary' : 'secondary'} size="md" fullWidth disabled={!upgradeInfo || crafting} onClick={handleUpgrade}
                             className={upgradeInfo ? 'bg-[#f39c12]' : ''}>
                             {crafting ? 'Улучшение...' : 'Улучшить'}
                         </Button>
-                        <Button variant="danger" size="sm" fullWidth disabled={!hasItemsInSlots} onClick={async () => {
+                        <Button variant="danger" size="md" fullWidth disabled={!hasItemsInSlots} onClick={async () => {
                             const itemsToSalvage = craftSlots.filter(s => s && !isCraftItem(s));
                             const stonesToDisassemble = craftSlots.filter(s => s && isCraftItem(s) && s.itemType === 'upgrade');
                             if (itemsToSalvage.length === 0 && stonesToDisassemble.length === 0) return;
@@ -518,7 +518,7 @@ export default function CraftPage() {
                     <div className="absolute inset-0 bg-black/50" onClick={() => setErrorPopup(null)} />
                     <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-accent-danger)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center">
                         <p className="text-sm text-[var(--color-accent-danger)] mb-4">{errorPopup}</p>
-                        <Button variant="secondary" size="sm" onClick={() => setErrorPopup(null)}>OK</Button>
+                        <Button variant="secondary" size="md" onClick={() => setErrorPopup(null)}>OK</Button>
                     </div>
                 </div>
             )}

@@ -170,7 +170,7 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                             reader.readAsDataURL(file);
                         }}
                     />
-                    <Button variant="secondary" size="sm" onClick={() => (document.getElementById('avatar-upload') as HTMLInputElement)?.click()}>
+                    <Button variant="secondary" size="md" onClick={() => (document.getElementById('avatar-upload') as HTMLInputElement)?.click()}>
                         Выбрать файл
                     </Button>
                 </Card>
@@ -256,7 +256,7 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                 <h3 className="font-bold mb-2">Сменить имя</h3>
                 <form onSubmit={handleChangeUsername}>
                     <input type="text" placeholder="Новое имя" value={newUsername} onChange={e => setNewUsername(e.target.value)} className={inputClass} required />
-                    <Button variant="primary" size="sm" type="submit">Сохранить</Button>
+                    <Button variant="primary" size="md" type="submit">Сохранить</Button>
                 </form>
                 {usernameMsg && <p className={`mt-2 text-sm ${usernameMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{usernameMsg}</p>}
             </Card>
@@ -270,7 +270,7 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                     <input type="password" placeholder="Старый пароль" value={oldPassword} onChange={e => setOldPassword(e.target.value)} className={inputClass} required />
                     <input type="password" placeholder="Новый пароль" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputClass} required />
                     <p className="text-xs text-[var(--color-text-muted)] mb-2">Минимум 8 символов, цифра и спецсимвол</p>
-                    <Button variant="primary" size="sm" type="submit">Сохранить</Button>
+                    <Button variant="primary" size="md" type="submit">Сохранить</Button>
                 </form>
                 {passwordMsg && <p className={`mt-2 text-sm ${passwordMsg.includes('успешно') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{passwordMsg}</p>}
             </Card>
@@ -283,14 +283,14 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                 <div className="flex gap-4">
                     <Button
                         variant={currentGender === 'male' ? 'primary' : 'secondary'}
-                        size="sm"
+                        size="md"
                         onClick={() => handleGenderChange('male')}
                     >
                         Мужской
                     </Button>
                     <Button
                         variant={currentGender === 'female' ? 'primary' : 'secondary'}
-                        size="sm"
+                        size="md"
                         style={{ background: currentGender === 'female' ? '#e91e63' : undefined }}
                         onClick={() => handleGenderChange('female')}
                     >
@@ -327,8 +327,8 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                                 Это действие необратимо. Все данные будут удалены: персонаж, история боёв, инвентарь.
                             </p>
                             <div className="flex gap-2">
-                                <Button variant="danger" size="sm" onClick={handleDeleteAccount}>Удалить навсегда</Button>
-                                <Button variant="secondary" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+                                <Button variant="danger" size="md" onClick={handleDeleteAccount}>Удалить навсегда</Button>
+                                <Button variant="secondary" size="md" onClick={() => setShowDeleteConfirm(false)}>
                                     Отмена
                                 </Button>
                             </div>
@@ -361,8 +361,8 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                                 required
                             />
                             <div className="flex gap-2 mt-2">
-                                <Button variant="danger" size="sm" type="submit">Удалить навсегда</Button>
-                                <Button variant="secondary" size="sm" onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); }}>
+                                <Button variant="danger" size="md" type="submit">Удалить навсегда</Button>
+                                <Button variant="secondary" size="md" onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); }}>
                                     Отмена
                                 </Button>
                             </div>

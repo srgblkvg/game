@@ -79,15 +79,15 @@ export default function AdminGame() {
                     </div>
                     <ImageUploader currentUrl={editingAction.bg_image || null} folder="actions" onUploaded={(url) => setEditingAction({ ...editingAction, bg_image: url })} label="Фон карточки" className="mt-2" />
                     <div className="mt-3 flex gap-2">
-                        <Button variant="success" size="sm" onClick={async () => { try { await api('PUT', `/api/admin/actions/${editingAction.id}`, editingAction); setMessage('Сохранено'); setEditingAction(null); loadAll(); } catch (e: any) { setMessage(e.message); } }}>Сохранить</Button>
-                        <Button variant="danger" size="sm" onClick={() => setEditingAction(null)}>Отмена</Button>
+                        <Button variant="success" size="md" onClick={async () => { try { await api('PUT', `/api/admin/actions/${editingAction.id}`, editingAction); setMessage('Сохранено'); setEditingAction(null); loadAll(); } catch (e: any) { setMessage(e.message); } }}>Сохранить</Button>
+                        <Button variant="danger" size="md" onClick={() => setEditingAction(null)}>Отмена</Button>
                     </div>
                 </Card>
             )}
             <BulkImageUploader items={actions.map(a => ({ id: a.id, name: a.title, imagePath: a.bg_image }))} title="Массовая загрузка фонов действий" />
             <Card><h3 className="font-bold mb-2">Все действия</h3>
                 <table className="w-full text-sm"><thead><tr className="border-b border-[var(--color-border-default)]"><th className="text-left p-1">Раздел</th><th className="text-left p-1">Название</th><th className="text-left p-1">Путь</th><th className="p-1">Действия</th></tr></thead>
-                    <tbody>{actions.map((a: any) => (<tr key={a.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{a.section}</td><td className="p-1">{a.title}</td><td className="p-1 text-xs">{a.path || '—'}</td><td className="p-1"><Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingAction(a)}>Ред.</Button><Button variant="danger" size="sm" onClick={async () => { if (confirm('Удалить?')) { await api('DELETE', `/api/admin/actions/${a.id}`); loadAll(); } }}>Удалить</Button></td></tr>))}</tbody></table>
+                    <tbody>{actions.map((a: any) => (<tr key={a.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{a.section}</td><td className="p-1">{a.title}</td><td className="p-1 text-xs">{a.path || '—'}</td><td className="p-1"><Button variant="primary" size="md" className="mr-1" onClick={() => setEditingAction(a)}>Ред.</Button><Button variant="danger" size="md" onClick={async () => { if (confirm('Удалить?')) { await api('DELETE', `/api/admin/actions/${a.id}`); loadAll(); } }}>Удалить</Button></td></tr>))}</tbody></table>
             </Card>
         </>
     );
@@ -112,13 +112,13 @@ export default function AdminGame() {
                     <input placeholder="Локация" value={editingMob.location || ''} onChange={e => setEditingMob({ ...editingMob, location: e.target.value })} list="loc-list" className={inputClass + ' mt-2'} />
                     <datalist id="loc-list">{locations.map(l => <option key={l} value={l} />)}</datalist>
                     <ImageUploader currentUrl={editingMob.background || null} folder="mobs" onUploaded={(url) => setEditingMob({ ...editingMob, background: url })} label="Фон карточки моба" className="mt-2" />
-                    <div className="mt-3 flex gap-2"><Button variant="success" size="sm" onClick={async () => { try { await api('PUT', `/api/admin/mobs/${editingMob.id}`, editingMob); setMessage('Сохранено'); setEditingMob(null); loadAll(); } catch (e: any) { setMessage(e.message); } }}>Сохранить</Button><Button variant="danger" size="sm" onClick={() => setEditingMob(null)}>Отмена</Button></div>
+                    <div className="mt-3 flex gap-2"><Button variant="success" size="md" onClick={async () => { try { await api('PUT', `/api/admin/mobs/${editingMob.id}`, editingMob); setMessage('Сохранено'); setEditingMob(null); loadAll(); } catch (e: any) { setMessage(e.message); } }}>Сохранить</Button><Button variant="danger" size="md" onClick={() => setEditingMob(null)}>Отмена</Button></div>
                 </Card>
             )}
             <BulkImageUploader items={mobs.map(m => ({ id: m.id, name: m.name, imagePath: m.background }))} title="Массовая загрузка фонов мобов" />
             <Card><h3 className="font-bold mb-2">Мобы ({mobs.length})</h3>
                 <table className="w-full text-sm"><thead><tr className="border-b border-[var(--color-border-default)]"><th className="text-left p-1">Название</th><th className="p-1">Ур.</th><th className="p-1">HP</th><th className="text-left p-1">Локация</th><th className="p-1"></th></tr></thead>
-                    <tbody>{mobs.map((m: any) => (<tr key={m.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{m.name}</td><td className="p-1 text-center">{m.level}</td><td className="p-1 text-center">{m.hp}</td><td className="p-1 text-xs">{m.location}</td><td className="p-1"><Button variant="primary" size="sm" onClick={() => setEditingMob(m)}>Ред.</Button></td></tr>))}</tbody></table>
+                    <tbody>{mobs.map((m: any) => (<tr key={m.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{m.name}</td><td className="p-1 text-center">{m.level}</td><td className="p-1 text-center">{m.hp}</td><td className="p-1 text-xs">{m.location}</td><td className="p-1"><Button variant="primary" size="md" onClick={() => setEditingMob(m)}>Ред.</Button></td></tr>))}</tbody></table>
             </Card>
         </>
     );
@@ -134,10 +134,10 @@ export default function AdminGame() {
                 <ImageUploader currentUrl={(editingFloor || newFloor).background || null} folder="floors" onUploaded={(url) => editingFloor ? setEditingFloor({ ...editingFloor, background: url }) : setNewFloor({ ...newFloor, background: url })} label="Фоновое изображение этажа" className="mt-2" />
                 <div className="mt-3 flex gap-2">
                     {editingFloor ? (
-                        <><Button variant="success" size="sm" onClick={async () => { try { await api('PUT', `/api/admin/floors/${editingFloor.id}`, editingFloor); setMessage('Сохранено'); setEditingFloor(null); loadAll(); } catch (e: any) { setMessage(e.message); } }}>Сохранить</Button>
-                            <Button variant="danger" size="sm" onClick={() => setEditingFloor(null)}>Отмена</Button></>
+                        <><Button variant="success" size="md" onClick={async () => { try { await api('PUT', `/api/admin/floors/${editingFloor.id}`, editingFloor); setMessage('Сохранено'); setEditingFloor(null); loadAll(); } catch (e: any) { setMessage(e.message); } }}>Сохранить</Button>
+                            <Button variant="danger" size="md" onClick={() => setEditingFloor(null)}>Отмена</Button></>
                     ) : (
-                        <Button variant="success" size="sm" onClick={async () => { try { await api('POST', '/api/admin/floors', newFloor); setMessage('Создано'); loadAll(); setNewFloor({ name: '', background: '', sort_order: 0 }); } catch (e: any) { setMessage(e.message); } }}>Создать</Button>
+                        <Button variant="success" size="md" onClick={async () => { try { await api('POST', '/api/admin/floors', newFloor); setMessage('Создано'); loadAll(); setNewFloor({ name: '', background: '', sort_order: 0 }); } catch (e: any) { setMessage(e.message); } }}>Создать</Button>
                     )}
                 </div>
             </Card>
@@ -160,9 +160,9 @@ export default function AdminGame() {
     return (
         <div>
             <div className="flex gap-2 mb-4">
-                <Button variant={tab === 'actions' ? 'danger' : 'secondary'} size="sm" onClick={() => setTab('actions')}>Действия</Button>
-                <Button variant={tab === 'mobs' ? 'danger' : 'secondary'} size="sm" onClick={() => setTab('mobs')}>Мобы</Button>
-                <Button variant={tab === 'floors' ? 'danger' : 'secondary'} size="sm" onClick={() => setTab('floors')}>Этажи</Button>
+                <Button variant={tab === 'actions' ? 'danger' : 'secondary'} size="md" onClick={() => setTab('actions')}>Действия</Button>
+                <Button variant={tab === 'mobs' ? 'danger' : 'secondary'} size="md" onClick={() => setTab('mobs')}>Мобы</Button>
+                <Button variant={tab === 'floors' ? 'danger' : 'secondary'} size="md" onClick={() => setTab('floors')}>Этажи</Button>
             </div>
             {tab === 'actions' ? renderActionsTab() : tab === 'mobs' ? renderMobsTab() : renderFloorsTab()}
             {message && <div className="mt-4 p-3 bg-[var(--color-bg-card)] rounded text-sm">{message}</div>}

@@ -139,7 +139,7 @@ export default function AdminTournaments() {
     return (
         <div>
             <div className="flex items-center gap-2 mb-4">
-                <Button variant="success" size="sm" onClick={() => { resetForm(); setShowForm(!showForm); }}>
+                <Button variant="success" size="md" onClick={() => { resetForm(); setShowForm(!showForm); }}>
                     {showForm ? 'Скрыть форму' : 'Создать турнир'}
                 </Button>
             </div>
@@ -174,8 +174,8 @@ export default function AdminTournaments() {
                             </label>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="success" size="sm" type="submit">{editingId ? 'Сохранить' : 'Создать'}</Button>
-                            {editingId && <Button variant="danger" size="sm" onClick={resetForm}>Отмена</Button>}
+                            <Button variant="success" size="md" type="submit">{editingId ? 'Сохранить' : 'Создать'}</Button>
+                            {editingId && <Button variant="danger" size="md" onClick={resetForm}>Отмена</Button>}
                         </div>
                     </form>
                 </Card>
@@ -210,14 +210,14 @@ export default function AdminTournaments() {
                                     <td className="p-1">{t.prizePool}</td>
                                     <td className="p-1">{t.participantCount}</td>
                                     <td className="p-1">
-                                        <Button variant="primary" size="sm" className="mr-1" onClick={() => startEdit(t)}>Ред.</Button>
+                                        <Button variant="primary" size="md" className="mr-1" onClick={() => startEdit(t)}>Ред.</Button>
                                         {t.status === 'registration' && (
-                                            <Button variant="success" size="sm" className="mr-1" onClick={() => handleStart(t.id)}>Старт</Button>
+                                            <Button variant="success" size="md" className="mr-1" onClick={() => handleStart(t.id)}>Старт</Button>
                                         )}
                                         {t.status === 'in_progress' && (
-                                            <Button variant="danger" size="sm" className="mr-1" onClick={() => handleFinish(t.id)}>Финиш</Button>
+                                            <Button variant="danger" size="md" className="mr-1" onClick={() => handleFinish(t.id)}>Финиш</Button>
                                         )}
-                                        <Button variant="danger" size="sm" onClick={() => handleDelete(t.id)}>Удалить</Button>
+                                        <Button variant="danger" size="md" onClick={() => handleDelete(t.id)}>Удалить</Button>
                                     </td>
                                 </tr>
                             ))}

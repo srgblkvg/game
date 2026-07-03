@@ -96,8 +96,8 @@ export default function AdminCollections() {
                     </label>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="danger" size="sm" onClick={handleSave}>Сохранить</Button>
-                    {editing && <Button variant="secondary" size="sm" onClick={resetForm}>Отмена</Button>}
+                    <Button variant="danger" size="md" onClick={handleSave}>Сохранить</Button>
+                    {editing && <Button variant="secondary" size="md" onClick={resetForm}>Отмена</Button>}
                 </div>
             </div>
 
@@ -112,8 +112,8 @@ export default function AdminCollections() {
                                 <p className="text-xs">Бонус: +{set.bonus_percent}% | Порядок: {set.sort_order} | Предметов: {set.items?.length || 0}</p>
                             </div>
                             <div className="flex gap-1">
-                                <Button variant="secondary" size="sm" onClick={() => handleEdit(set)}>Ред.</Button>
-                                <Button variant="danger" size="sm" onClick={() => handleDelete(set.id)}>Уд.</Button>
+                                <Button variant="secondary" size="md" onClick={() => handleEdit(set)}>Ред.</Button>
+                                <Button variant="danger" size="md" onClick={() => handleDelete(set.id)}>Уд.</Button>
                             </div>
                         </div>
                     </div>

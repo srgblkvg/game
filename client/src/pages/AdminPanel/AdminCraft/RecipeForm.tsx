@@ -66,13 +66,13 @@ export default function RecipeForm({ recipe, onChange, onSubmit, submitText, onC
               const n = [...recipe.ingredients]; n[idx].quantity = +e.target.value;
               onChange({ ...recipe, ingredients: n });
             }} className={`${inputClass} w-20`} />
-            <Button variant="danger" size="sm" onClick={() => removeIngredient(idx)}>×</Button>
+            <Button variant="danger" size="md" onClick={() => removeIngredient(idx)}>×</Button>
           </div>
         ))}
-        <Button size="sm" className="mt-1" onClick={addIngredient}>+ Добавить ингредиент</Button>
+        <Button size="md" className="mt-1" onClick={addIngredient}>+ Добавить ингредиент</Button>
       </div>
-      <Button variant="success" size="sm" className="mt-3" onClick={onSubmit}>{submitText}</Button>
-      {onCancel && <Button variant="danger" size="sm" className="ml-2 mt-3" onClick={onCancel}>Отмена</Button>}
+      <Button variant="success" size="md" className="mt-3" onClick={onSubmit}>{submitText}</Button>
+      {onCancel && <Button variant="danger" size="md" className="ml-2 mt-3" onClick={onCancel}>Отмена</Button>}
     </div>
   );
 }

@@ -76,7 +76,7 @@ export default function BankPage() {
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Храните серебро в банке — оно защищено от потерь при PvP. Пополнение с комиссией 2%, снятие и переводы между счетами — мгновенные.</p>
             <Card className="mb-3"><div className="grid grid-cols-2 gap-4 text-center"><div><p className="text-xs text-[var(--color-text-muted)]">При себе</p><p className="text-lg font-bold">{formatMoney(pocket)}</p></div><div><p className="text-xs text-[var(--color-text-muted)]">В банке</p><p className="text-lg font-bold">{formatMoney(bank)}</p></div></div></Card>
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}
-            <div className="flex gap-2 mb-3">{(['info','deposit','transfer'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="sm" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'История операций':t==='deposit'?'Пополнить/Снять':'Переводы'}</Button>)}</div>
+            <div className="flex gap-2 mb-3">{(['info','deposit','transfer'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'История операций':t==='deposit'?'Пополнить/Снять':'Переводы'}</Button>)}</div>
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
@@ -98,7 +98,7 @@ export default function BankPage() {
                 </Card>
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">История вкладов</h3>
-                    <div className="flex gap-2 mb-3">{(['all','deposit','withdraw'] as const).map(f => <Button key={f} variant={opsTab===f?'primary':'secondary'} size="sm" onClick={()=>{setOpsTab(f);loadOperations(f);}}>{f==='all'?'Все':f==='deposit'?'Пополнение':'Снятие'}</Button>)}</div>
+                    <div className="flex gap-2 mb-3">{(['all','deposit','withdraw'] as const).map(f => <Button key={f} variant={opsTab===f?'primary':'secondary'} size="md" onClick={()=>{setOpsTab(f);loadOperations(f);}}>{f==='all'?'Все':f==='deposit'?'Пополнение':'Снятие'}</Button>)}</div>
                     {operations.length===0 ? <p className="text-xs text-[var(--color-text-muted)]">Нет операций</p> :
                     <div className="space-y-2">{operations.map((o:any)=><div key={o.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={o.type==='deposit'?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}>{o.type==='deposit'?'📥':'📤'} {formatMoney(o.amount)}</span>{o.commission>0&&<span className="text-[var(--color-text-muted)]">ком. {formatMoney(o.commission)}</span>}<span className="ml-auto text-[var(--color-text-muted)]">{fmtSafeDate(o.createdAt)}</span></div><div className="text-[var(--color-text-muted)]">{o.type==='deposit'?`Зачислено: ${formatMoney(o.result)}`:`Получено: ${formatMoney(o.result)}`}</div></div>)}</div>}
                 </Card>
@@ -114,7 +114,7 @@ export default function BankPage() {
                 </Card>
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">История переводов</h3>
-                    <div className="flex gap-2 mb-3">{(['all','in','out'] as const).map(f => <Button key={f} variant={historyTab===f?'primary':'secondary'} size="sm" onClick={()=>{setHistoryTab(f);loadTransfers(f);}}>{f==='all'?'Все':f==='in'?'Входящие':'Исходящие'}</Button>)}</div>
+                    <div className="flex gap-2 mb-3">{(['all','in','out'] as const).map(f => <Button key={f} variant={historyTab===f?'primary':'secondary'} size="md" onClick={()=>{setHistoryTab(f);loadTransfers(f);}}>{f==='all'?'Все':f==='in'?'Входящие':'Исходящие'}</Button>)}</div>
                     {transfers.length===0 ? <p className="text-xs text-[var(--color-text-muted)]">Нет переводов</p> :
                     <div className="space-y-2">{transfers.map((t:any)=>{const out=t.fromUserId===user?.id;return<div key={t.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?t.amount:t.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${t.toAccount}`:`от ${t.fromAccount}`}</span><span className="ml-auto text-[var(--color-text-muted)]">{fmtSafeDate(t.createdAt)}</span></div><div className="text-[var(--color-text-muted)]">{out?`Кому: ${t.toUsername}`:`От: счёт ${t.fromAccount}`}{t.commission>0&&out?`, ком. ${t.commission}`:''}</div></div>})}</div>}
                 </Card>

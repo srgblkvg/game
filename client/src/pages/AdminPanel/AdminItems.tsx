@@ -111,7 +111,7 @@ export default function AdminItems() {
                     </div>
                 </details>
                 <label className="text-xs mt-2 block">Стоимость (серебро) <input type="number" value={newItem.cost} onChange={e => setNewItem({ ...newItem, cost: e.target.value })} className={smallInputClass} style={{width:'100%'}} /></label>
-                <Button variant="success" size="sm" className="mt-3" onClick={handleCreateItem}>Создать</Button>
+                <Button variant="success" size="md" className="mt-3" onClick={handleCreateItem}>Создать</Button>
             </Card>
 
             {/* Таблица предметов */}
@@ -134,8 +134,8 @@ export default function AdminItems() {
                                     <td className="p-1.5">{item.slot}</td>
                                     <td className="p-1.5" style={{ color: item.rarity_color }}>{item.rarity_display}</td>
                                     <td className="p-1.5">
-                                        <Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingItem({ ...item, bonuses: JSON.parse(item.bonuses || '{}'), extra: JSON.parse(item.extra || '{}') })}>Ред.</Button>
-                                        <Button variant="danger" size="sm" onClick={() => handleDeleteItem(item.id)}>Удалить</Button>
+                                        <Button variant="primary" size="md" className="mr-1" onClick={() => setEditingItem({ ...item, bonuses: JSON.parse(item.bonuses || '{}'), extra: JSON.parse(item.extra || '{}') })}>Ред.</Button>
+                                        <Button variant="danger" size="md" onClick={() => handleDeleteItem(item.id)}>Удалить</Button>
                                     </td>
                                 </tr>
                             ))}

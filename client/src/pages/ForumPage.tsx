@@ -56,7 +56,7 @@ export default function ForumPage() {
             <BackButton />
             <div className="flex items-center justify-between mb-4">
                 <h1 className="text-xl font-bold"><Icon icon="game-icons:discussion" width="22" height="22" className="inline mr-2" />Форум</h1>
-                <Button variant="primary" size="sm" onClick={() => setShowNew(true)}>Новая тема</Button>
+                <Button variant="primary" size="md" onClick={() => setShowNew(true)}>Новая тема</Button>
             </div>
 
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
@@ -85,16 +85,16 @@ export default function ForumPage() {
 
             {totalPages > 1 && (
                 <div className="flex justify-center gap-2 mt-4">
-                    <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => load(page - 1)}>←</Button>
+                    <Button variant="secondary" size="md" disabled={page <= 1} onClick={() => load(page - 1)}>←</Button>
                     <span className="text-sm text-[var(--color-text-muted)] self-center">{page}/{totalPages}</span>
-                    <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => load(page + 1)}>→</Button>
+                    <Button variant="secondary" size="md" disabled={page >= totalPages} onClick={() => load(page + 1)}>→</Button>
                 </div>
             )}
 
             <Modal open={showNew} onClose={() => setShowNew(false)} title="Новая тема">
                 <input className={inputClass + ' mb-2'} placeholder="Название темы" value={newTitle} onChange={e => setNewTitle(e.target.value)} maxLength={200} />
                 <textarea className={inputClass + ' mb-3 min-h-[120px]'} placeholder="Текст сообщения" value={newContent} onChange={e => setNewContent(e.target.value)} />
-                <Button variant="primary" size="sm" fullWidth disabled={creating} onClick={handleCreate}>
+                <Button variant="primary" size="md" fullWidth disabled={creating} onClick={handleCreate}>
                     {creating ? 'Создание...' : 'Создать тему'}
                 </Button>
             </Modal>

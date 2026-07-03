@@ -85,10 +85,10 @@ export default function AdminBots() {
           />
           Использовать существующих
         </label>
-        <Button variant="primary" size="sm" onClick={handleStart} disabled={loading || running}>
+        <Button variant="primary" size="md" onClick={handleStart} disabled={loading || running}>
           {loading ? '...' : '▶ Запустить'}
         </Button>
-        <Button variant="danger" size="sm" onClick={handleStop} disabled={loading || !running}>
+        <Button variant="danger" size="md" onClick={handleStop} disabled={loading || !running}>
           ⏹ Остановить
         </Button>
       </div>

@@ -217,7 +217,7 @@ export default function HistoryPage() {
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:notebook" width="22" height="22" className="inline mr-2"/>Сводка</h2>
             <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
-                {tabs.map(t=><Button key={t.key} variant={tab===t.key?'danger':'secondary'} size="sm" onClick={()=>setTab(t.key)} className="whitespace-nowrap">{t.label}</Button>)}
+                {tabs.map(t=><Button key={t.key} variant={tab===t.key?'danger':'secondary'} size="md" onClick={()=>setTab(t.key)} className="whitespace-nowrap">{t.label}</Button>)}
             </div>
             {loading?<p className="text-[var(--color-text-muted)]">Загрузка...</p>:
             <Card>
@@ -232,9 +232,9 @@ export default function HistoryPage() {
                 tab==='massacre'?paginatedData.map((entry:any)=><div key={entry.id}>{renderEntry(entry)}</div>):
                 null}
                 {totalPages>1&&<div className="flex justify-center gap-4 mt-4 items-center">
-                    <Button size="sm" disabled={page<=1} onClick={()=>setPage(page-1)}>← Назад</Button>
+                    <Button size="md" disabled={page<=1} onClick={()=>setPage(page-1)}>← Назад</Button>
                     <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
-                    <Button size="sm" disabled={page>=totalPages} onClick={()=>setPage(page+1)}>Вперёд →</Button>
+                    <Button size="md" disabled={page>=totalPages} onClick={()=>setPage(page+1)}>Вперёд →</Button>
                 </div>}
             </Card>}
             {selectedBattle&&<Modal open={!!selectedBattle} onClose={()=>setSelectedBattle(null)}
@@ -243,7 +243,7 @@ export default function HistoryPage() {
                 <div className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 max-h-[60vh] overflow-y-auto font-mono text-xs leading-relaxed">
                     {renderBattleLog(typeof selectedBattle.steps==='string'?JSON.parse(selectedBattle.steps):(selectedBattle.steps||[]))}
                 </div>
-                <div className="flex justify-center mt-4"><Button variant="secondary" size="sm" onClick={()=>setSelectedBattle(null)}>Закрыть</Button></div>
+                <div className="flex justify-center mt-4"><Button variant="secondary" size="md" onClick={()=>setSelectedBattle(null)}>Закрыть</Button></div>
             </Modal>}
         </div>
     );
