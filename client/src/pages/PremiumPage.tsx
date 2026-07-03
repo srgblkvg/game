@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
 import Card from '../components/ui/Card';
@@ -20,11 +20,14 @@ export default function PremiumPage() {
     const premiumUntil = character?.premium?.until || 0;
     const hasPremium = premiumUntil > Math.floor(Date.now() / 1000);
 
-    // Если сообщение об оплате и премиум уже активен — показываем успех
-    if (paymentMsg === 'Оплата открыта. Ожидайте подтверждения...' && hasPremium) {
-        setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-        setTimeout(() => setPaymentMsg(''), 5000);
-    }
+    // Авто-обнаружение активации премиума
+    useEffect(() => {
+        if (paymentMsg === 'Оплата открыта. Ожидайте подтверждения...' && hasPremium) {
+            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
+            const t = setTimeout(() => setPaymentMsg(''), 5000);
+            return () => clearTimeout(t);
+        }
+    }, [hasPremium, paymentMsg]);
 
     const handleBuy = () => {
         const plan = plans.find(p => p.days === selectedDays);
