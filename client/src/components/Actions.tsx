@@ -328,7 +328,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             </h3>
                             <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                             <div className="mt-auto">
-                                <p className="text-[0.6rem] text-[var(--color-text-muted)] h-[1em]">{card.cost > 0 ? `Цена: ${formatMoney(card.cost)}` : '\u00A0'}</p>
+                                <p className="text-[0.6rem] text-[var(--color-text-muted)] h-4 leading-4">{card.cost > 0 ? `Цена: ${formatMoney(card.cost)}` : ''}</p>
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="md" fullWidth disabled={disabled}
                                     onClick={() => { if (card.path) { if (card.title === 'Аукцион' && onAuctionClick) onAuctionClick(); if (card.title === 'Гильдия' && onGuildClick) onGuildClick(); if (card.title === 'Банк' && onBankClick) onBankClick(); navigate(card.path); } }}>
                                     {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
@@ -403,6 +403,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                     </h3>
                     <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                    <p className="text-[0.6rem] text-[var(--color-text-muted)] h-4 leading-4">{card.cost > 0 ? `Цена: ${formatMoney(card.cost)}` : ''}</p>
                         <div className="mt-auto">
                             <Button variant={disabled ? 'secondary' : 'danger'} size="md" fullWidth disabled={disabled}
                                 onClick={() => { if (!disabled) setFlipped(true); }}>
