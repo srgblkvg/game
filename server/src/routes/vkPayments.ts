@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
+import { authMiddleware } from '../middleware/auth';
 import crypto from 'crypto';
 import logger from '../logger';
 
@@ -154,6 +155,23 @@ router.post('/', async (req: Request, res: Response) => {
   }
 
   return res.json({ error: { error_code: 1, error_msg: 'Unknown notification type' } });
+});
+
+// GET /api/vk/payments/latest — последний статус платежа текущего юзера
+router.get('/latest', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    // Ищем character по userId
+    const user = await db.one('SELECT id FROM users WHERE id = ?', [(req as any).userId]);
+    if (!user) return res.json({ status: 'not_found' });
+    
+    const payment = await db.one(
+      'SELECT status FROM vk_payments WHERE character_id = ? ORDER BY id DESC LIMIT 1',
+      [user.id]
+    );
+    res.json({ status: payment?.status || 'not_found' });
+  } catch {
+    res.json({ status: 'not_found' });
+  }
 });
 
 export default router;
