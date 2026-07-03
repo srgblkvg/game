@@ -44,7 +44,7 @@ export default function AdminFeedback() {
                                     </span>
                                 </div>
                                 {!m.read && (
-                                    <Button variant="secondary" size="xs" onClick={() => markRead(m.id)}>
+                                    <Button variant="secondary" size="sm" onClick={() => markRead(m.id)}>
                                         Прочитано
                                     </Button>
                                 )}
@@ -54,9 +54,9 @@ export default function AdminFeedback() {
                     ))}
                     {totalPages > 1 && (
                         <div className="flex justify-center gap-2 mt-3">
-                            <Button size="xs" disabled={page <= 1} onClick={() => setPage(page - 1)}>←</Button>
+                            <Button size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>←</Button>
                             <span className="text-xs text-[var(--color-text-muted)]">{page}/{totalPages}</span>
-                            <Button size="xs" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>→</Button>
+                            <Button size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>→</Button>
                         </div>
                     )}
                 </div>

@@ -179,7 +179,7 @@ export default function Inventory({
             </div>
 
             <div className="flex justify-between items-center">
-                <button onClick={handleExpand} className="bg-[var(--color-accent-info)] border-none text-white px-2.5 py-0.5 rounded cursor-pointer text-xs">
+                <button onClick={handleExpand} className="bg-[var(--color-accent-info)] border-none text-white px-3 py-1.5 rounded cursor-pointer text-sm font-medium">
                     + Слот ({formatMoney(priceForNextSlot)})
                 </button>
             </div>

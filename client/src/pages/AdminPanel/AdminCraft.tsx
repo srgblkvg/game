@@ -160,8 +160,8 @@ export default function AdminCraft() {
                                         <tr key={r.id} className="border-b border-[var(--color-border-light)]">
                                             <td className="p-1">{r.id}</td><td className="p-1">{r.name}</td><td className="p-1" style={{ color: r.rarity_color }}>{r.rarity_display}</td><td className="p-1">{r.type || 'craft'}</td><td className="p-1">{r.description}</td>
                                             <td className="p-1">
-                                                <Button variant="primary" size="xs" className="mr-1" onClick={() => setEditingResource(r)}>Ред.</Button>
-                                                <Button variant="danger" size="xs" onClick={() => handleDeleteResource(r.id)}>Удалить</Button>
+                                                <Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingResource(r)}>Ред.</Button>
+                                                <Button variant="danger" size="sm" onClick={() => handleDeleteResource(r.id)}>Удалить</Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -220,8 +220,8 @@ export default function AdminCraft() {
                                     <tr key={c.id} className="border-b border-[var(--color-border-light)]">
                                         <td className="p-1">{c.id}</td><td className="p-1">{c.name}</td><td className="p-1">{c.sort_order}</td>
                                         <td className="p-1">
-                                            <Button variant="primary" size="xs" className="mr-1" onClick={() => setEditingCategory(c)}>Ред.</Button>
-                                            <Button variant="danger" size="xs" onClick={() => handleDeleteCategory(c.id)}>Удалить</Button>
+                                            <Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingCategory(c)}>Ред.</Button>
+                                            <Button variant="danger" size="sm" onClick={() => handleDeleteCategory(c.id)}>Удалить</Button>
                                         </td>
                                     </tr>
                                 ))}
@@ -270,8 +270,8 @@ export default function AdminCraft() {
                                         <td className="p-1" style={{ color: rarities.find(r => r.id === uc.rarity_id)?.color }}>{rarities.find(r => r.id === uc.rarity_id)?.display_name || `#${uc.rarity_id}`}</td>
                                         <td className="p-1">{uc.level}</td><td className="p-1">{uc.chance}</td><td className="p-1">{uc.money_cost}</td>
                                         <td className="p-1">
-                                            <Button variant="primary" size="xs" className="mr-1" onClick={() => setEditingChance(uc)}>Ред.</Button>
-                                            <Button variant="danger" size="xs" onClick={() => handleDeleteChance(uc.level, uc.rarity_id)}>Удалить</Button>
+                                            <Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingChance(uc)}>Ред.</Button>
+                                            <Button variant="danger" size="sm" onClick={() => handleDeleteChance(uc.level, uc.rarity_id)}>Удалить</Button>
                                         </td>
                                     </tr>
                                 ))}

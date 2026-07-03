@@ -117,7 +117,7 @@ export default function GuildWarPage() {
                         <h3 className="font-bold text-sm">
                             {battleResult?.won ? '🏆 Победа!' : battleResult?.won === false ? '💀 Поражение' : '📋 Лог боя'}
                         </h3>
-                        <Button variant="secondary" size="xs" onClick={() => { setBattleLog([]); setBattleResult(null); }}>✕</Button>
+                        <Button variant="secondary" size="sm" onClick={() => { setBattleLog([]); setBattleResult(null); }}>✕</Button>
                     </div>
                     <div className="max-h-60 overflow-y-auto">
                         {renderBattleLog(battleLog)}
@@ -188,7 +188,7 @@ export default function GuildWarPage() {
                                     )}
                                     <Button
                                         variant="danger"
-                                        size="xs"
+                                        size="sm"
                                         disabled={cantAttack}
                                         onClick={() => handleAttack(m.id, m.username)}
                                     >

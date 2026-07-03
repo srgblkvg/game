@@ -85,9 +85,9 @@ export default function ForumPage() {
 
             {totalPages > 1 && (
                 <div className="flex justify-center gap-2 mt-4">
-                    <Button variant="secondary" size="xs" disabled={page <= 1} onClick={() => load(page - 1)}>←</Button>
+                    <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => load(page - 1)}>←</Button>
                     <span className="text-sm text-[var(--color-text-muted)] self-center">{page}/{totalPages}</span>
-                    <Button variant="secondary" size="xs" disabled={page >= totalPages} onClick={() => load(page + 1)}>→</Button>
+                    <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => load(page + 1)}>→</Button>
                 </div>
             )}
 

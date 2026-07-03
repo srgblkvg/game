@@ -87,7 +87,7 @@ export default function AdminGame() {
             <BulkImageUploader items={actions.map(a => ({ id: a.id, name: a.title, imagePath: a.bg_image }))} title="Массовая загрузка фонов действий" />
             <Card><h3 className="font-bold mb-2">Все действия</h3>
                 <table className="w-full text-sm"><thead><tr className="border-b border-[var(--color-border-default)]"><th className="text-left p-1">Раздел</th><th className="text-left p-1">Название</th><th className="text-left p-1">Путь</th><th className="p-1">Действия</th></tr></thead>
-                    <tbody>{actions.map((a: any) => (<tr key={a.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{a.section}</td><td className="p-1">{a.title}</td><td className="p-1 text-xs">{a.path || '—'}</td><td className="p-1"><Button variant="primary" size="xs" className="mr-1" onClick={() => setEditingAction(a)}>Ред.</Button><Button variant="danger" size="xs" onClick={async () => { if (confirm('Удалить?')) { await api('DELETE', `/api/admin/actions/${a.id}`); loadAll(); } }}>Удалить</Button></td></tr>))}</tbody></table>
+                    <tbody>{actions.map((a: any) => (<tr key={a.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{a.section}</td><td className="p-1">{a.title}</td><td className="p-1 text-xs">{a.path || '—'}</td><td className="p-1"><Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingAction(a)}>Ред.</Button><Button variant="danger" size="sm" onClick={async () => { if (confirm('Удалить?')) { await api('DELETE', `/api/admin/actions/${a.id}`); loadAll(); } }}>Удалить</Button></td></tr>))}</tbody></table>
             </Card>
         </>
     );
@@ -118,7 +118,7 @@ export default function AdminGame() {
             <BulkImageUploader items={mobs.map(m => ({ id: m.id, name: m.name, imagePath: m.background }))} title="Массовая загрузка фонов мобов" />
             <Card><h3 className="font-bold mb-2">Мобы ({mobs.length})</h3>
                 <table className="w-full text-sm"><thead><tr className="border-b border-[var(--color-border-default)]"><th className="text-left p-1">Название</th><th className="p-1">Ур.</th><th className="p-1">HP</th><th className="text-left p-1">Локация</th><th className="p-1"></th></tr></thead>
-                    <tbody>{mobs.map((m: any) => (<tr key={m.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{m.name}</td><td className="p-1 text-center">{m.level}</td><td className="p-1 text-center">{m.hp}</td><td className="p-1 text-xs">{m.location}</td><td className="p-1"><Button variant="primary" size="xs" onClick={() => setEditingMob(m)}>Ред.</Button></td></tr>))}</tbody></table>
+                    <tbody>{mobs.map((m: any) => (<tr key={m.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{m.name}</td><td className="p-1 text-center">{m.level}</td><td className="p-1 text-center">{m.hp}</td><td className="p-1 text-xs">{m.location}</td><td className="p-1"><Button variant="primary" size="sm" onClick={() => setEditingMob(m)}>Ред.</Button></td></tr>))}</tbody></table>
             </Card>
         </>
     );

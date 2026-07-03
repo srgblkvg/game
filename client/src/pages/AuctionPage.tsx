@@ -376,9 +376,9 @@ export default function AuctionPage() {
             <p className="text-xs text-[var(--color-text-muted)] mb-4">Торговая площадка Мёртвых земель — покупайте и продавайте предметы между игроками</p>
 
             <div className="flex gap-2 mb-4">
-                <Button variant={tab === 'buy' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('buy'); clearMessages(); }}>Покупка</Button>
-                <Button variant={tab === 'sell' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('sell'); clearMessages(); }}>Продажа</Button>
-                <Button variant={tab === 'history' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('history'); loadHistory(); clearMessages(); }}>История</Button>
+                <Button variant={tab === 'buy' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('buy'); clearMessages(); }}>Покупка</Button>
+                <Button variant={tab === 'sell' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('sell'); clearMessages(); }}>Продажа</Button>
+                <Button variant={tab === 'history' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('history'); loadHistory(); clearMessages(); }}>История</Button>
             </div>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
@@ -509,7 +509,7 @@ export default function AuctionPage() {
                                             {lot.sellerId !== character?.id && (
                                                 <div className="flex flex-col gap-1.5 items-end">
                                                     {lot.buyoutPrice && (
-                                                        <Button size="xs" variant="primary" onClick={() => handleBuyout(lot.id)} disabled={(character?.money || 0) < lot.buyoutPrice}>
+                                                        <Button size="sm" variant="primary" onClick={() => handleBuyout(lot.id)} disabled={(character?.money || 0) < lot.buyoutPrice}>
                                                             Выкупить {formatMoney(lot.buyoutPrice)}
                                                         </Button>
                                                     )}
@@ -517,7 +517,7 @@ export default function AuctionPage() {
                                                         <input type="number" placeholder={String(minBid)} value={bidAmount[lot.id] || ''}
                                                             onChange={e => setBidAmount(prev => ({ ...prev, [lot.id]: e.target.value }))}
                                                             className="w-20 px-2 py-0.5 text-xs rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)]" />
-                                                        <Button size="xs" variant="secondary" onClick={() => handleBid(lot.id, bidAmount[lot.id] || String(minBid), minBid)}>Ставка</Button>
+                                                        <Button size="sm" variant="secondary" onClick={() => handleBid(lot.id, bidAmount[lot.id] || String(minBid), minBid)}>Ставка</Button>
                                                     </div>
                                                     {isStack && lot.buyoutPrice && (
                                                         <div className="flex items-end gap-1">
@@ -525,7 +525,7 @@ export default function AuctionPage() {
                                                                 value={partialQty[lot.id] || ''}
                                                                 onChange={e => setPartialQty(prev => ({ ...prev, [lot.id]: parseInt(e.target.value) || 0 }))}
                                                                 className="w-14 px-2 py-0.5 text-xs rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)]" />
-                                                            <Button size="xs" variant="secondary" onClick={() => { const q = partialQty[lot.id] || 1; handleBuyPartial(lot.id, q); }}
+                                                            <Button size="sm" variant="secondary" onClick={() => { const q = partialQty[lot.id] || 1; handleBuyPartial(lot.id, q); }}
                                                                 disabled={(character?.money || 0) < buyoutPerItem * (partialQty[lot.id] || 1)}>
                                                                 Купить
                                                             </Button>
@@ -534,7 +534,7 @@ export default function AuctionPage() {
                                                 </div>
                                             )}
                                             {lot.sellerId === character?.id && (
-                                                <Button size="xs" variant="danger" onClick={() => handleCancel(lot.id)} disabled={!!lot.currentBidderId}>Снять лот</Button>
+                                                <Button size="sm" variant="danger" onClick={() => handleCancel(lot.id)} disabled={!!lot.currentBidderId}>Снять лот</Button>
                                             )}
                                         </div>
                                     </div>

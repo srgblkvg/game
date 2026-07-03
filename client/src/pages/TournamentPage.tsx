@@ -173,11 +173,11 @@ export default function TournamentPage() {
 
                 {t.status === 'registration' && joinable && !myReg && (
                     <div className="flex gap-2">
-                        <Button variant="danger" size="xs" onClick={() => handleRegister(t.id, t.type === 'official' ? t.division : undefined)}>
+                        <Button variant="danger" size="sm" onClick={() => handleRegister(t.id, t.type === 'official' ? t.division : undefined)}>
                             {t.type === 'custom' && t.entryFee > 0 ? `Вступить (${formatMoney(t.entryFee)})` : 'Записаться'}
                         </Button>
                         {t.type === 'official' && (
-                            <Button variant="secondary" size="xs" onClick={() => handleRegister(t.id, t.division + '🎫')}>🎫 Золотой билет (1000)</Button>
+                            <Button variant="secondary" size="sm" onClick={() => handleRegister(t.id, t.division + '🎫')}>🎫 Золотой билет (1000)</Button>
                         )}
                     </div>
                 )}
@@ -283,10 +283,10 @@ export default function TournamentPage() {
             </Card>
 
             <div className="flex gap-2 mb-4 flex-wrap">
-                <Button variant={tab === 'all' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('all'); setCompletedPage(1); }}>Все</Button>
-                <Button variant={tab === 'official' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('official'); setCompletedPage(1); }}>Официальные</Button>
-                <Button variant={tab === 'custom' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('custom'); setCompletedPage(1); }}>Самоорганизованные</Button>
-                <Button variant={tab === 'completed' ? 'primary' : 'secondary'} size="xs" onClick={() => { setTab('completed'); setCompletedPage(1); }}>Завершённые</Button>
+                <Button variant={tab === 'all' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('all'); setCompletedPage(1); }}>Все</Button>
+                <Button variant={tab === 'official' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('official'); setCompletedPage(1); }}>Официальные</Button>
+                <Button variant={tab === 'custom' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('custom'); setCompletedPage(1); }}>Самоорганизованные</Button>
+                <Button variant={tab === 'completed' ? 'primary' : 'secondary'} size="sm" onClick={() => { setTab('completed'); setCompletedPage(1); }}>Завершённые</Button>
             </div>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}

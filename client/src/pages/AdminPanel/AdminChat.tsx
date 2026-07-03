@@ -80,7 +80,7 @@ export default function AdminChat() {
                                     <td className="p-1">{u.username}</td>
                                     <td className="p-1">{fmtSafeDate(u.chatBannedUntil)}</td>
                                     <td className="p-1">
-                                        <Button variant="success" size="xs" onClick={() => handleUnban(u.id)}>Разбанить</Button>
+                                        <Button variant="success" size="sm" onClick={() => handleUnban(u.id)}>Разбанить</Button>
                                     </td>
                                 </tr>
                             ))}

@@ -85,9 +85,9 @@ export default function AdminJobs() {
                 <tr key={job.id} className="border-b border-[var(--color-border-light)]">
                   <td className="p-1">{job.id}</td><td className="p-1">{job.name}</td><td className="p-1">{job.duration}</td><td className="p-1">{job.rewardMin}</td><td className="p-1">{job.rewardMax}</td>
                   <td className="p-1">
-                    <Button variant="primary" size="xs" className="mr-1" onClick={() => crud.startEdit(job)}>Ред.</Button>
-                    <Button variant="danger" size="xs" className="mr-1" onClick={() => crud.remove(job.id)}>Удалить</Button>
-                    <Button size="xs" style={{ background: '#8e44ad' }} onClick={() => handleFinishAll(job.id)}>Завершить все</Button>
+                    <Button variant="primary" size="sm" className="mr-1" onClick={() => crud.startEdit(job)}>Ред.</Button>
+                    <Button variant="danger" size="sm" className="mr-1" onClick={() => crud.remove(job.id)}>Удалить</Button>
+                    <Button size="sm" style={{ background: '#8e44ad' }} onClick={() => handleFinishAll(job.id)}>Завершить все</Button>
                   </td>
                 </tr>
               ))}

@@ -112,7 +112,7 @@ export default function StatAllocation() {
               </span>
               <Button
                 variant="success"
-                size="xs"
+                size="sm"
                 onClick={(e) => { e.stopPropagation(); handleApply(); }}
                 disabled={alloc.s + alloc.a + alloc.d + alloc.m === 0 || remaining > 0}
               >

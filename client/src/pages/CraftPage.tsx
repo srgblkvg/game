@@ -518,7 +518,7 @@ export default function CraftPage() {
                     <div className="absolute inset-0 bg-black/50" onClick={() => setErrorPopup(null)} />
                     <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-accent-danger)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center">
                         <p className="text-sm text-[var(--color-accent-danger)] mb-4">{errorPopup}</p>
-                        <Button variant="secondary" size="xs" onClick={() => setErrorPopup(null)}>OK</Button>
+                        <Button variant="secondary" size="sm" onClick={() => setErrorPopup(null)}>OK</Button>
                     </div>
                 </div>
             )}

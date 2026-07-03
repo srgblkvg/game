@@ -250,9 +250,9 @@ export default function AdminUsers() {
                 <div className="flex justify-between items-center mb-2">
                     <h3 className="font-bold">Список игроков ({filteredUsers.length}{searchQuery ? ` / ${users.length}` : ''})</h3>
                     <div className="flex gap-1">
-                        <Button size="xs" variant={userFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setUserFilter('all')}>Все</Button>
-                        <Button size="xs" variant={userFilter === 'players' ? 'primary' : 'secondary'} onClick={() => setUserFilter('players')}>Игроки</Button>
-                        <Button size="xs" variant={userFilter === 'guests' ? 'primary' : 'secondary'} onClick={() => setUserFilter('guests')}>🎭 Гости</Button>
+                        <Button size="sm" variant={userFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setUserFilter('all')}>Все</Button>
+                        <Button size="sm" variant={userFilter === 'players' ? 'primary' : 'secondary'} onClick={() => setUserFilter('players')}>Игроки</Button>
+                        <Button size="sm" variant={userFilter === 'guests' ? 'primary' : 'secondary'} onClick={() => setUserFilter('guests')}>🎭 Гости</Button>
                     </div>
                     <input
                         type="text"
@@ -319,27 +319,27 @@ export default function AdminUsers() {
                                         <td className="p-1" style={{ color: jobName !== 'Нет' ? '#e67e22' : '#aaa' }}>{jobName}</td>
                                         <td className="p-1">
                                             <div className="flex gap-1 flex-wrap">
-                                                <Button size="xs" variant="secondary" onClick={() => toggleInfo(u.id)}>
+                                                <Button size="sm" variant="secondary" onClick={() => toggleInfo(u.id)}>
                                                     {isExpanded && expandedView === 'info' ? '▲' : '▼'}
                                                 </Button>
-                                                <Button size="xs" variant="secondary" onClick={() => handleShowIps(u.id)}>
+                                                <Button size="sm" variant="secondary" onClick={() => handleShowIps(u.id)}>
                                                     IP
                                                 </Button>
                                                 {jobName !== 'Нет' && (
-                                                    <Button size="xs" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(u.id)}>🏁</Button>
+                                                    <Button size="sm" style={{ background: '#f39c12' }} onClick={() => handleFinishJob(u.id)}>🏁</Button>
                                                 )}
                                                 {u.bannedUntil > now ? (
-                                                    <Button size="xs" variant="success" onClick={() => handleUnban(u.id)}>Разбан</Button>
+                                                    <Button size="sm" variant="success" onClick={() => handleUnban(u.id)}>Разбан</Button>
                                                 ) : (
-                                                    <Button size="xs" variant="danger" onClick={() => setBanUserId(u.id)}>Бан</Button>
+                                                    <Button size="sm" variant="danger" onClick={() => setBanUserId(u.id)}>Бан</Button>
                                                 )}
                                                 {deleteConfirmId === u.id ? (
                                                     <span className="flex gap-1">
-                                                        <Button size="xs" variant="danger" onClick={() => handleDelete(u.id)}>Точно?</Button>
-                                                        <Button size="xs" variant="secondary" onClick={() => setDeleteConfirmId(null)}>✕</Button>
+                                                        <Button size="sm" variant="danger" onClick={() => handleDelete(u.id)}>Точно?</Button>
+                                                        <Button size="sm" variant="secondary" onClick={() => setDeleteConfirmId(null)}>✕</Button>
                                                     </span>
                                                 ) : (
-                                                    <Button size="xs" variant="secondary" style={{ color: '#e03030', borderColor: '#e03030' }}
+                                                    <Button size="sm" variant="secondary" style={{ color: '#e03030', borderColor: '#e03030' }}
                                                         onClick={() => setDeleteConfirmId(u.id)}>✕</Button>
                                                 )}
                                             </div>

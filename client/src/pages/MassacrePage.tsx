@@ -358,13 +358,13 @@ export default function MassacrePage() {
 
                     {/* Управление */}
                     <div className="flex items-center justify-center gap-3">
-                        <Button variant="secondary" size="xs" onClick={stepBack} disabled={vizStep <= 0}>⏮</Button>
+                        <Button variant="secondary" size="sm" onClick={stepBack} disabled={vizStep <= 0}>⏮</Button>
                         {vizPlaying ? (
-                            <Button variant="danger" size="xs" onClick={stopViz}>⏸ Пауза</Button>
+                            <Button variant="danger" size="sm" onClick={stopViz}>⏸ Пауза</Button>
                         ) : (
-                            <Button variant="danger" size="xs" onClick={startViz} disabled={vizStep >= totalVizSteps - 1}>▶ Играть</Button>
+                            <Button variant="danger" size="sm" onClick={startViz} disabled={vizStep >= totalVizSteps - 1}>▶ Играть</Button>
                         )}
-                        <Button variant="secondary" size="xs" onClick={stepForward} disabled={vizStep >= totalVizSteps - 1}>⏭</Button>
+                        <Button variant="secondary" size="sm" onClick={stepForward} disabled={vizStep >= totalVizSteps - 1}>⏭</Button>
                         <select value={vizSpeed} onChange={e => setVizSpeed(Number(e.target.value))}
                             className="bg-[var(--color-bg-input)] text-xs rounded px-1 py-0.5 border border-[var(--color-border-light)]">
                             <option value={1}>1x</option>

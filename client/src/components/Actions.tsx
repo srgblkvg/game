@@ -195,7 +195,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                     <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-0.5">Казна: {formatMoney(treasury)}</p>
                                 </div>
                                 <div className="relative shrink-0">
-                                    <Button variant="danger" size="sm" onClick={() => { if (card.path) navigate(card.path); }}>Перейти</Button>
+                                    <Button variant="danger" size="md" onClick={() => { if (card.path) navigate(card.path); }}>Перейти</Button>
                                 </div>
                             </div>
                         </div>
@@ -229,7 +229,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         Хаотичный PvP{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount} уч.</span>}
                                     </p>
                                     <div className="mt-auto">
-                                        <Button variant="danger" size="sm" fullWidth
+                                        <Button variant="danger" size="md" fullWidth
                                             onClick={() => { if (card.path) navigate(card.path); }}>
                                             {massacreTimeLeft > 0
                                                 ? `${formatMoney(card.cost)} · ${formatTime(massacreTimeLeft)}`
@@ -257,7 +257,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                             <div className="mt-auto">
                                 {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
-                                <Button variant={disabled ? 'secondary' : 'danger'} size="sm" fullWidth disabled={disabled}
+                                <Button variant={disabled ? 'secondary' : 'danger'} size="md" fullWidth disabled={disabled}
                                     onClick={() => { if (card.path) { if (card.title === 'Аукцион' && onAuctionClick) onAuctionClick(); if (card.title === 'Гильдия' && onGuildClick) onGuildClick(); if (card.title === 'Банк' && onBankClick) onBankClick(); navigate(card.path); } }}>
                                     {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
                                 </Button>
@@ -332,7 +332,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                     </h3>
                     <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                         <div className="mt-auto">
-                            <Button variant={disabled ? 'secondary' : 'danger'} size="sm" fullWidth disabled={disabled}
+                            <Button variant={disabled ? 'secondary' : 'danger'} size="md" fullWidth disabled={disabled}
                                 onClick={() => { if (!disabled) setFlipped(true); }}>
                                 {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
                             </Button>
@@ -348,8 +348,8 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                         <option value="hard">Сильный</option>
                     </select>
                     <div className="flex gap-1 w-full">
-                        <Button variant="danger" size="sm" fullWidth onClick={handleSearch}>Поиск</Button>
-                        <Button variant="secondary" size="sm" onClick={() => { setFlipped(false); }} className="min-w-[24px]">←</Button>
+                        <Button variant="danger" size="md" fullWidth onClick={handleSearch}>Поиск</Button>
+                        <Button variant="secondary" size="md" onClick={() => { setFlipped(false); }} className="min-w-[24px]">←</Button>
                     </div>
                 </div>
             </div>

@@ -134,8 +134,8 @@ export default function AdminItems() {
                                     <td className="p-1.5">{item.slot}</td>
                                     <td className="p-1.5" style={{ color: item.rarity_color }}>{item.rarity_display}</td>
                                     <td className="p-1.5">
-                                        <Button variant="primary" size="xs" className="mr-1" onClick={() => setEditingItem({ ...item, bonuses: JSON.parse(item.bonuses || '{}'), extra: JSON.parse(item.extra || '{}') })}>Ред.</Button>
-                                        <Button variant="danger" size="xs" onClick={() => handleDeleteItem(item.id)}>Удалить</Button>
+                                        <Button variant="primary" size="sm" className="mr-1" onClick={() => setEditingItem({ ...item, bonuses: JSON.parse(item.bonuses || '{}'), extra: JSON.parse(item.extra || '{}') })}>Ред.</Button>
+                                        <Button variant="danger" size="sm" onClick={() => handleDeleteItem(item.id)}>Удалить</Button>
                                     </td>
                                 </tr>
                             ))}

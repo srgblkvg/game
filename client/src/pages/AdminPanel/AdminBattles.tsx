@@ -104,7 +104,7 @@ export default function AdminBattles() {
                                     <td className="p-1.5 text-[var(--color-text-accent)]">{b.moneyStolen || 0}</td>
                                     <td className="p-1.5 text-xs">{new Date(b.createdAt).toLocaleString()}</td>
                                     <td className="p-1.5">
-                                        <Button variant="primary" size="xs" onClick={() => setSelected(b)}>Лог</Button>
+                                        <Button variant="primary" size="sm" onClick={() => setSelected(b)}>Лог</Button>
                                     </td>
                                 </tr>
                             ))}
