@@ -109,6 +109,8 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 setCards(mapped);
             })
             .catch(() => {});
+    }, []);
+
     // Турниры для Замка
     const loadTournaments = useCallback((data: any) => {
         setUserLevel(data.userLevel || 1);
@@ -141,11 +143,12 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         setNextTournamentSec(0);
     }, []);
 
+    useEffect(() => {
         fetch('/api/tournament?tab=active&type=official', { headers: getHeaders() })
             .then(r => r.json())
             .then(loadTournaments)
             .catch(() => {});
-    }, []);
+    }, [loadTournaments]);
 
     // Периодически обновляем данные турнира
     useEffect(() => {
