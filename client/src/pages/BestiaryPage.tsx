@@ -406,6 +406,8 @@ export default function BestiaryPage() {
   const visibleSteps = battleSteps.slice(Math.max(0, currentStep - 4), currentStep + 1);
 
   return (
+    <>
+    {actionCard && <PageHeader title="Охота" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
     <div className="px-4 py-4 max-w-4xl mx-auto">
 
       {phase === 'floors' ? (
@@ -588,5 +590,6 @@ function FloorGroup({ diff, floors, getFloorInfo, floorBgMap, cooldownRemaining,
         </div>
       )}
     </div>
+    </>
   );
 }
