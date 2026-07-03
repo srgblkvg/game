@@ -18,6 +18,8 @@ export default function BankPage() {
     const navigate = useNavigate();
 
     const [tab, setTab] = useState<'info' | 'deposit' | 'transfer'>('info');
+    const [pocket, setPocket] = useState(0);
+    const [bank, setBank] = useState(0);
     const [accountNumber, setAccountNumber] = useState('');
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
