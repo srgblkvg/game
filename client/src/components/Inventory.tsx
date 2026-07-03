@@ -137,7 +137,7 @@ export default function Inventory({
         <div className="w-full bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
             <div className="flex items-center justify-between mb-2">
                 <h3 className="m-0 flex items-center gap-1 cursor-pointer" onClick={() => setCollapsed(!collapsed)}>
-                    <Icon icon={collapsed ? 'game-icons:arrow-right' : 'game-icons:arrow-down'} width="14" height="14" className="text-[var(--color-text-muted)]" />
+                    <span className="text-[var(--color-text-muted)] text-xs">{collapsed ? '▶' : '▼'}</span>
                     <Icon icon="game-icons:backpack" width="18" height="18" />
                     Инвентарь ({inventory.length}/{maxSlots})
                 </h3>
