@@ -101,7 +101,6 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Инвентарь',
     description: 'Все ваши предметы и ресурсы. Нажмите на предмет, затем на слот персонажа, чтобы экипировать. Предметы можно продать или использовать.',
     tooltipPosition: 'right',
-    action: 'tutorial-collapse-inventory',
   },
   // --- 14. Действия — Замок первый (сворачиваем инвентарь) ---
   {
