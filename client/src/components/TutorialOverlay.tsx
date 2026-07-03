@@ -150,10 +150,12 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
   const step = steps[current];
   const isLast = current === steps.length - 1;
 
-  // Диспатчим кастомное событие при смене шага
+  // Диспатчим кастомные события при смене шага (поддерживает несколько через запятую)
   useEffect(() => {
     if (step?.action) {
-      window.dispatchEvent(new CustomEvent(step.action));
+      step.action.split(',').forEach(a => {
+        window.dispatchEvent(new CustomEvent(a.trim()));
+      });
     }
   }, [current, step]);
 

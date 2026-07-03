@@ -51,21 +51,20 @@ const tutorialSteps: TutorialStep[] = [
     description: 'Увеличивает шанс и силу блока. Заблокированный удар наносит меньше урона.',
     tooltipPosition: 'right',
   },
-  // --- 7. Мастерство (при переходе дальше — сворачиваем) ---
+  // --- 7. Мастерство ---
   {
     targetSelector: '[data-tutorial-stat="m"]',
     title: 'Мастерство',
     description: 'Влияет на шанс крита, контратаки и оглушения противника.',
     tooltipPosition: 'right',
-    action: 'tutorial-collapse-stats',
   },
-  // --- 8. Усиления (разворачиваем) ---
+  // --- 8. Усиления (при показе — сворачиваем статы) ---
   {
     targetSelector: '[data-tutorial="buffs-block"]',
     title: 'Усиления',
     description: 'Временные и постоянные баффы. Комнаты ускоряют регенерацию здоровья, напитки дают боевые бонусы, премиум сокращает кулдауны. Коллекции — постоянный бонус к статам.',
     tooltipPosition: 'right',
-    action: 'tutorial-expand-buffs',
+    action: 'tutorial-collapse-stats, tutorial-expand-buffs',
   },
   // --- 9. Комната ---
   {
@@ -94,7 +93,7 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Коллекция',
     description: 'Собирайте предметы экипировки — каждый сет даёт постоянный бонус к статам.',
     tooltipPosition: 'right',
-    action: 'tutorial-collapse-buffs',
+    action: 'tutorial-collapse-buffs, tutorial-expand-inventory',
   },
   // --- 13. Инвентарь ---
   {
