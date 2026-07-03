@@ -10,6 +10,7 @@ export default function PremiumPage() {
     const [selectedDays, setSelectedDays] = useState(7);
     const [loading, setLoading] = useState(false);
     const [paymentMsg, setPaymentMsg] = useState('');
+    const [paymentStarted, setPaymentStarted] = useState(0); // timestamp когда начали платёж
     const isVK = localStorage.getItem('isVK') === '1';
 
     const plans = [
@@ -20,14 +21,15 @@ export default function PremiumPage() {
     const premiumUntil = character?.premium?.until || 0;
     const hasPremium = premiumUntil > Math.floor(Date.now() / 1000);
 
-    // Авто-обнаружение активации премиума
+    // Авто-обнаружение активации премиума (только если платёж был начат в последние 5 минут)
     useEffect(() => {
-        if (paymentMsg === 'Оплата открыта. Ожидайте подтверждения...' && hasPremium) {
+        const recent = paymentStarted > 0 && (Date.now() - paymentStarted) < 300000;
+        if (paymentMsg === 'Оплата открыта. Ожидайте подтверждения...' && hasPremium && recent) {
             setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-            const t = setTimeout(() => setPaymentMsg(''), 5000);
+            const t = setTimeout(() => { setPaymentMsg(''); setPaymentStarted(0); }, 5000);
             return () => clearTimeout(t);
         }
-    }, [hasPremium, paymentMsg]);
+    }, [hasPremium, paymentMsg, paymentStarted]);
 
     const handleBuy = () => {
         const plan = plans.find(p => p.days === selectedDays);
@@ -46,6 +48,7 @@ export default function PremiumPage() {
                     return;
                 }
                 // Платёж открыт — ожидаем обновления персонажа (GameContext сам обновляет)
+                setPaymentStarted(Date.now());
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
             })
             .catch((err: unknown) => {
@@ -73,6 +76,7 @@ export default function PremiumPage() {
             const data = await res.json();
             if (data.confirmation_url) {
                 window.open(data.confirmation_url, '_blank');
+                setPaymentStarted(Date.now());
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
                 // Ждём подтверждения (polling статуса)
                 const check = setInterval(async () => {
