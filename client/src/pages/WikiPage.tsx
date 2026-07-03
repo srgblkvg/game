@@ -3,6 +3,7 @@ import Card from '../components/ui/Card';
 
 export default function WikiPage() {
     const navigate = useNavigate();
+    const isVK = localStorage.getItem('isVK') === '1';
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-6">
@@ -21,7 +22,7 @@ export default function WikiPage() {
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🚀 Начало игры</h2>
             <p className="text-sm text-[var(--color-text-secondary)] mb-2">Вы попадаете на главную страницу с <strong>карточкой персонажа</strong>. У вас есть ник, уровень, опыт и четыре базовые характеристики:</p>
             <p className="text-sm text-[var(--color-text-muted)] mb-2"><strong>Сила</strong> — урон, <strong>Ловкость</strong> — уклонение, <strong>Защита</strong> — блок (кап 75%), <strong>Мастерство</strong> — крит. HP = Сила + Ловкость + Мастерство.</p>
-            <p className="text-sm text-[var(--color-text-secondary)] mb-2">Введите никнейм на странице входа — и вы в игре. Чтобы сохранить прогресс, <strong>привяжите почту или OAuth</strong> через меню настроек (Настройки → Аккаунт). За привязку — <strong>1 день премиума</strong>!</p>
+            {!isVK && <p className="text-sm text-[var(--color-text-secondary)] mb-2">Введите никнейм на странице входа — и вы в игре. Чтобы сохранить прогресс, <strong>привяжите почту или OAuth</strong> через меню настроек (Настройки → Аккаунт). За привязку — <strong>1 день премиума</strong>!</p>}
 
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🌍 МИР — PvE</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 my-2">
@@ -131,7 +132,8 @@ export default function WikiPage() {
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">⭐ Премиум</h2>
             <Card className="p-3 mb-3">
                 <p className="text-xs text-[var(--color-text-muted)]"><strong>Бонусы:</strong> кулдаун Охоты 150с (вместо 300с), регенерация HP ×3 (как Чулан) если нет активной комнаты.</p>
-                <p className="text-xs text-[var(--color-text-muted)]"><strong>Получение:</strong> 1 день за привязку аккаунта, покупка через магазин (VK Pay / ЮKassa).</p>
+                {!isVK && <p className="text-xs text-[var(--color-text-muted)]"><strong>Получение:</strong> 1 день за привязку аккаунта, покупка через магазин (VK Pay / ЮKassa).</p>}
+                {isVK && <p className="text-xs text-[var(--color-text-muted)]"><strong>Получение:</strong> покупка через магазин (голоса VK).</p>}
             </Card>
 
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">🛠️ Прочее</h2>

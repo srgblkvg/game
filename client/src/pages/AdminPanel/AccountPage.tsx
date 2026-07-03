@@ -12,6 +12,7 @@ export default function AccountPage() {
     const { user, loginUser, logout } = useAuth();
     const { character, setCharacter } = useGame();
     const navigate = useNavigate();
+    const isVK = localStorage.getItem('isVK') === '1';
 
     const [newUsername, setNewUsername] = useState('');
     const [usernameMsg, setUsernameMsg] = useState('');
@@ -123,7 +124,7 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
             <h2 className="text-xl font-bold mb-4">Аккаунт</h2>
             <p className="mb-4">Текущее имя: <strong>{character?.username || user.username}</strong></p>
 
-            {user.isGuest && (
+            {!isVK && user.isGuest && (
                 <Card className="mb-4 border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-gold)]/5">
                     <p className="text-sm text-[var(--color-accent-gold)] mb-2">🎁 Привяжите почту или OAuth — получите <b>3 дня премиума</b>!</p>
                     <div className="flex gap-2">
@@ -175,7 +176,7 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
             )}
 
             {/* Гостевая регистрация */}
-            {user.isGuest && (
+            {!isVK && user.isGuest && (
                 <Card className="mb-4">
                     {guestStep === 'code' ? (
                         <>
@@ -260,8 +261,8 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
             </Card>
             )}
 
-            {/* Смена пароля */}
-            {!user.isGuest && (
+            {/* Смена пароля — скрыто в VK */}
+            {!isVK && !user.isGuest && (
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Сменить пароль</h3>
                 <form onSubmit={handleChangePassword}>
@@ -274,8 +275,8 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
             </Card>
             )}
 
-            {/* Выбор пола */}
-            {!user.isGuest && (
+            {/* Выбор пола — скрыто в VK */}
+            {!isVK && !user.isGuest && (
             <Card className="mb-4">
                 <h3 className="font-bold mb-2">Пол</h3>
                 <div className="flex gap-4">
@@ -299,10 +300,13 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
             </Card>
             )}
 
-            <Button variant="danger" size="md" fullWidth onClick={handleLogout}>Выйти</Button>
+            {/* Выход — скрыто в VK (бесшовная авторизация) */}
+            {!isVK && (
+                <Button variant="danger" size="md" fullWidth onClick={handleLogout}>Выйти</Button>
+            )}
 
-            {/* Удаление аккаунта */}
-            {!user.isGuest && (
+            {/* Удаление аккаунта — скрыто в VK */}
+            {!isVK && !user.isGuest && (
             <div className="mt-6 pt-4 border-t border-[var(--color-border-light)]">
                 {!showDeleteConfirm ? (
                     <Button
