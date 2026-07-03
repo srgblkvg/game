@@ -254,7 +254,7 @@ export default function Inventory({
             </div>
 
             {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
-            )}</>
+            </>)}
         </div>
     );
 }
