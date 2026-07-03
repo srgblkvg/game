@@ -304,7 +304,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                                     setRegisterMsg?.(d.error || 'Ошибка');
                                                                     // Если турнир уже закрыт — обновляем данные
                                                                     if (d.error?.includes('закрыта') || d.error?.includes('не найден')) {
-                                                                        setTournamentInfo(null);
+                                                                        setTournamentInfo?.(null);
                                                                         setRegisterMsg?.('');
                                                                     }
                                                                 }
