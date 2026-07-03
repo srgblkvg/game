@@ -93,6 +93,7 @@ export default function ShopPage() {
         <div className="px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Магазин" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
+            <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Базовые предметы экипировки для первых шагов в игре. Нельзя надеть два одинаковых кольца.
             </p>
             <p className="text-xs text-[var(--color-text-muted)] mb-3">
