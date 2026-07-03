@@ -52,7 +52,13 @@ function nextPowerOfTwo(n: number): number {
  * Пары: 1-й с последним, 2-й с предпоследним и т.д.
  */
 async function generateBracket(tournamentId: number) {
-    // Используем прямой SQL через pool для надёжности
+    // Проверяем, что сетка ещё не создана
+    const existing = await db.one('SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = ?', [tournamentId]) as any;
+    if (existing?.cnt > 0) {
+        console.log(`[bracket] tid=${tournamentId} already has matches, skip`);
+        return;
+    }
+
     const partRows = await pool.query(
         `SELECT tp.userid, u.tournamentelo FROM tournament_participants tp JOIN users u ON tp.userid = u.id WHERE tp.tournamentid = $1 ORDER BY u.tournamentelo ASC`,
         [tournamentId]
