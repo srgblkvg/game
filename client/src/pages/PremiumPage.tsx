@@ -75,6 +75,13 @@ export default function PremiumPage() {
             if (data.confirmation_url) {
                 window.open(data.confirmation_url, '_blank');
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
+                // Таймаут: если за 2 мин не пришёл success — показываем что не оплачено
+                const t = setTimeout(() => {
+                    setPaymentMsg(prev => prev === 'Оплата открыта. Ожидайте подтверждения...' ? '❌ Оплата не завершена' : prev);
+                }, 120000);
+                // Снимаем таймер если пришёл success через WS
+                const cleanup = () => clearTimeout(t);
+                window.addEventListener('paymentStatus', cleanup, { once: true });
             } else {
                 setPaymentMsg('❌ Ошибка: ' + (data.error || 'Не удалось создать платёж'));
             }
