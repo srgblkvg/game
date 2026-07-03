@@ -1,5 +1,7 @@
 /**
  * Безопасное форматирование даты из разных форматов (epoch string/number, ISO string).
+ * Отображает в ЛОКАЛЬНОМ часовом поясе пользователя (браузера).
+ * Сервер всегда хранит/передаёт время в UTC — конвертация только на клиенте.
  */
 export function safeDate(value: any): Date | null {
     if (value == null) return null;
@@ -19,8 +21,8 @@ export function fmtSafeDate(value: any, options?: Intl.DateTimeFormatOptions): s
     const d = safeDate(value);
     if (!d) return '—';
     try {
-        return d.toLocaleString('ru-RU', { timeZone: 'UTC', ...options });
-    } catch {
         return d.toLocaleString('ru-RU', options);
+    } catch {
+        return '—';
     }
 }
