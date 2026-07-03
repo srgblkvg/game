@@ -124,7 +124,7 @@ router.post('/', async (req: Request, res: Response) => {
         );
 
         // Уведомляем через WS
-        sendToUser(character.id, { type: 'premiumActivated', until: newUntil });
+        sendToUser(character.id, { type: 'paymentStatus', status: 'success', platform: 'vk', until: newUntil });
 
         // Логируем
         await db.run(

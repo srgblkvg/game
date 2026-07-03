@@ -125,6 +125,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               window.dispatchEvent(new CustomEvent('auctionChanged'));
               break;
             }
+            case 'paymentStatus': {
+              window.dispatchEvent(new CustomEvent('paymentStatus', { detail: data }));
+              break;
+            }
             case 'auction_message_removed': {
               const lotId = data.lotId;
               if (lotId) {

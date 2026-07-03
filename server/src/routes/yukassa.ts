@@ -153,7 +153,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
       await db.run('UPDATE users SET premiumUntil = ? WHERE id = ?', [newUntil, userId]);
 
       // Уведомляем через WS
-      sendToUser(userId, { type: 'premiumActivated', until: newUntil });
+      sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa', until: newUntil });
 
       await db.run(
         'UPDATE yukassa_payments SET status = ?, processed_at = ? WHERE payment_id = ?',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
 import Card from '../components/ui/Card';
@@ -20,12 +20,24 @@ export default function PremiumPage() {
     const premiumUntil = character?.premium?.until || 0;
     const hasPremium = premiumUntil > Math.floor(Date.now() / 1000);
 
+    // Слушаем WS-бродкаст о статусе платежа
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const data = (e as CustomEvent).detail;
+            if (data?.status === 'success') {
+                setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
+                setTimeout(() => setPaymentMsg(''), 5000);
+            }
+        };
+        window.addEventListener('paymentStatus', handler);
+        return () => window.removeEventListener('paymentStatus', handler);
+    }, []);
+
     const handleBuy = () => {
         const plan = plans.find(p => p.days === selectedDays);
         if (!plan) return;
 
         if (isVK) {
-            // VK: вызываем платёжный диалог
             setPaymentMsg('');
             window.vkBridge!.send('VKWebAppShowOrderBox', {
                 type: 'item',
@@ -36,30 +48,12 @@ export default function PremiumPage() {
                     setPaymentMsg('❌ Оплата отменена');
                     return;
                 }
-                // Платёж открыт — поллим статус через API
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
-                const token = localStorage.getItem('token');
-                const check = setInterval(async () => {
-                    try {
-                        const r = await fetch('/api/vk/payments/latest', { headers: { 'Authorization': `Bearer ${token}` } });
-                        const s = await r.json();
-                        if (s.status === 'chargeable') {
-                            clearInterval(check);
-                            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-                            setTimeout(() => setPaymentMsg(''), 5000);
-                        } else if (s.status === 'refunded') {
-                            clearInterval(check);
-                            setPaymentMsg('❌ Платёж отменён');
-                        }
-                    } catch {}
-                }, 3000);
-                setTimeout(() => clearInterval(check), 120000);
             })
             .catch((err: unknown) => {
                 setPaymentMsg('❌ Ошибка: ' + (err instanceof Error ? err.message : JSON.stringify(err)));
             });
         } else {
-            // YooKassa (обычный сайт)
             buyWithYooKassa(plan);
         }
     };
@@ -81,23 +75,6 @@ export default function PremiumPage() {
             if (data.confirmation_url) {
                 window.open(data.confirmation_url, '_blank');
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
-                // Polling статуса платежа через API
-                const pid = data.payment_id;
-                const check = setInterval(async () => {
-                    try {
-                        const r = await fetch(`/api/yukassa/status/${pid}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                        const s = await r.json();
-                        if (s.status === 'succeeded') {
-                            clearInterval(check);
-                            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-                            setTimeout(() => setPaymentMsg(''), 5000);
-                        } else if (s.status === 'canceled') {
-                            clearInterval(check);
-                            setPaymentMsg('❌ Платёж отменён');
-                        }
-                    } catch {}
-                }, 3000);
-                setTimeout(() => clearInterval(check), 120000);
             } else {
                 setPaymentMsg('❌ Ошибка: ' + (data.error || 'Не удалось создать платёж'));
             }
@@ -119,7 +96,6 @@ export default function PremiumPage() {
                     : 'Премиум ускоряет кулдауны боёв, увеличивает доход и даёт пассивную регенерацию HP.'}
             </p>
 
-            {/* Что даёт премиум */}
             <Card className="p-4 mb-4">
                 <h3 className="font-bold text-sm mb-3">Что даёт премиум:</h3>
                 <ul className="text-sm text-[var(--color-text-secondary)] space-y-2">
@@ -130,7 +106,6 @@ export default function PremiumPage() {
                 </ul>
             </Card>
 
-            {/* Выбор плана */}
             <Card className="p-4 mb-4">
                 <h3 className="font-bold text-sm mb-3">Выберите срок:</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
@@ -163,7 +138,6 @@ export default function PremiumPage() {
                 </div>
             )}
 
-            {/* Публичная оферта */}
             <Card className="p-4 mb-4">
                 <h3 className="font-bold text-sm mb-2">📜 Публичная оферта</h3>
                 <div className="text-xs text-[var(--color-text-muted)] space-y-2">
