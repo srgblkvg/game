@@ -103,12 +103,13 @@ const tutorialSteps: TutorialStep[] = [
     tooltipPosition: 'right',
     action: 'tutorial-collapse-inventory',
   },
-  // --- 14. Действия — Замок первый ---
+  // --- 14. Действия — Замок первый (сворачиваем инвентарь) ---
   {
     targetSelector: '#action-card-Замок',
     title: 'Замок',
     description: 'Казна королевства, турниры, форум и другие общественные активности.',
     tooltipPosition: 'top',
+    action: 'tutorial-collapse-inventory',
   },
   // --- 15. Переключатели Мир / Площадь ---
   {
