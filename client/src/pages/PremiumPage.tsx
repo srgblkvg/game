@@ -77,22 +77,24 @@ export default function PremiumPage() {
             const data = await res.json();
             if (data.confirmation_url) {
                 window.open(data.confirmation_url, '_blank');
-                setPaymentStarted(Date.now());
-                setPremiumBeforePayment(premiumUntil);
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
-                // Ждём подтверждения (polling статуса)
+                // Polling статуса платежа через API
+                const pid = data.payment_id;
                 const check = setInterval(async () => {
                     try {
-                        const r = await fetch('/api/character', { headers: { 'Authorization': `Bearer ${token}` } });
-                        const ch = await r.json();
-                        if (ch.premium && ch.premium > Math.floor(Date.now() / 1000)) {
+                        const r = await fetch(`/api/yukassa/status/${pid}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                        const s = await r.json();
+                        if (s.status === 'succeeded') {
                             clearInterval(check);
                             setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
                             setTimeout(() => setPaymentMsg(''), 5000);
+                        } else if (s.status === 'canceled') {
+                            clearInterval(check);
+                            setPaymentMsg('❌ Платёж отменён');
                         }
                     } catch {}
                 }, 3000);
-                setTimeout(() => clearInterval(check), 120000); // 2 мин таймаут
+                setTimeout(() => clearInterval(check), 120000);
             } else {
                 setPaymentMsg('❌ Ошибка: ' + (data.error || 'Не удалось создать платёж'));
             }

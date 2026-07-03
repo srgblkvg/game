@@ -176,4 +176,18 @@ router.post('/webhook', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/yukassa/status/:paymentId — проверка статуса платежа
+router.get('/status/:paymentId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const payment = await db.one(
+      'SELECT status FROM yukassa_payments WHERE payment_id = ? AND user_id = ?',
+      [req.params.paymentId, (req as any).userId]
+    );
+    if (!payment) return res.status(404).json({ error: 'Платёж не найден' });
+    res.json({ status: payment.status });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Ошибка' });
+  }
+});
+
 export default router;
