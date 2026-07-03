@@ -20,14 +20,11 @@ export default function PremiumPage() {
     const premiumUntil = character?.premium?.until || 0;
     const hasPremium = premiumUntil > Math.floor(Date.now() / 1000);
 
-    // Слушаем WS-бродкаст о статусе платежа
+    // WS-бродкаст: оплата прошла (единственный статус который приходит)
     useEffect(() => {
-        const handler = (e: Event) => {
-            const data = (e as CustomEvent).detail;
-            if (data?.status === 'success') {
-                setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-                setTimeout(() => setPaymentMsg(''), 5000);
-            }
+        const handler = () => {
+            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
+            setTimeout(() => setPaymentMsg(''), 5000);
         };
         window.addEventListener('paymentStatus', handler);
         return () => window.removeEventListener('paymentStatus', handler);
@@ -45,14 +42,12 @@ export default function PremiumPage() {
             })
             .then((data: any) => {
                 if (data?.status === 'cancelled') {
-                    setPaymentMsg('❌ Оплата отменена');
+                    setPaymentMsg(''); // отмена — молча
                     return;
                 }
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
             })
-            .catch((err: unknown) => {
-                setPaymentMsg('❌ Ошибка: ' + (err instanceof Error ? err.message : JSON.stringify(err)));
-            });
+            .catch(() => { setPaymentMsg(''); });
         } else {
             buyWithYooKassa(plan);
         }
@@ -75,18 +70,11 @@ export default function PremiumPage() {
             if (data.confirmation_url) {
                 window.open(data.confirmation_url, '_blank');
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
-                // Таймаут: если за 2 мин не пришёл success — показываем что не оплачено
-                const t = setTimeout(() => {
-                    setPaymentMsg(prev => prev === 'Оплата открыта. Ожидайте подтверждения...' ? '❌ Оплата не завершена' : prev);
-                }, 120000);
-                // Снимаем таймер если пришёл success через WS
-                const cleanup = () => clearTimeout(t);
-                window.addEventListener('paymentStatus', cleanup, { once: true });
             } else {
-                setPaymentMsg('❌ Ошибка: ' + (data.error || 'Не удалось создать платёж'));
+                setPaymentMsg('❌ ' + (data.error || 'Не удалось создать платёж'));
             }
-        } catch (err: unknown) {
-            setPaymentMsg('❌ Ошибка: ' + (err instanceof Error ? err.message : 'Сетевая ошибка'));
+        } catch {
+            setPaymentMsg('❌ Ошибка сети');
         } finally {
             setLoading(false);
         }
