@@ -173,7 +173,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 </div>
             )}
             {/* Категории */}
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center gap-2" data-tutorial="actions-tabs">
                 <button
                     onClick={() => setActiveTab('world')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'world' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
