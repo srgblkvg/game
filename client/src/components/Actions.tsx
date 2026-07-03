@@ -105,11 +105,17 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             .catch(() => {});
     }, []);
 
+    const heroCards = cards.filter(c => c.section === 'hero');
     const worldCards = cards.filter(c => c.section === 'world');
     const castleCards = cards.filter(c => c.section === 'castle');
 
     return (
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
+            {heroCards.length > 0 && (
+                <div>
+                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} />
+                </div>
+            )}
             {worldCards.length > 0 && (
                 <div>
                     <h2 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
