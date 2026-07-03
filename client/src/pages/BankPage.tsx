@@ -75,10 +75,7 @@ export default function BankPage() {
     return (
         <div className="max-w-md mx-auto px-4 py-4">
             <BackButton />
-          {actionCard && <PageHeader title="Банк" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
-            <h1 className="text-xl font-bold mb-2"><Icon icon="game-icons:bank" width="22" height="22" className="inline mr-2" />Банк</h1>
-            <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Храните серебро в банке — оно защищено от потерь при PvP. Пополнение с комиссией 2%, снятие и переводы между счетами — мгновенные.</p>
-            <Card className="mb-3"><div className="grid grid-cols-2 gap-4 text-center"><div><p className="text-xs text-[var(--color-text-muted)]">При себе</p><p className="text-lg font-bold">{formatMoney(pocket)}</p></div><div><p className="text-xs text-[var(--color-text-muted)]">В банке</p><p className="text-lg font-bold">{formatMoney(bank)}</p></div></div></Card>
+          {actionCard && <PageHeader title="Банк" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}
             <div className="flex gap-2 mb-3">{(['info','deposit','transfer'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'История операций':t==='deposit'?'Пополнить/Снять':'Переводы'}</Button>)}</div>
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}

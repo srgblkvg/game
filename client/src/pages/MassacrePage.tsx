@@ -234,7 +234,7 @@ export default function MassacrePage() {
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
-          {actionCard && <PageHeader title="Резня" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
+          {actionCard && <PageHeader title="Резня" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <h1 className="text-center text-xl font-bold mb-4">
                 <Icon icon="game-icons:battered-axe" width="22" height="22" className="inline mr-2" />
                 Резня

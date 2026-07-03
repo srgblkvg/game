@@ -29,7 +29,7 @@ export default function CastlePage() {
     return (
         <div className="px-4 py-4 max-w-md mx-auto">
             <BackButton />
-          {actionCard && <PageHeader title="Замок" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
+          {actionCard && <PageHeader title="Замок" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <h1 className="text-xl font-bold mb-4">
                 <Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Замок
             </h1>
