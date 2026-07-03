@@ -14,34 +14,36 @@ import gameIcons from './icons-filtered.json';
 import { initVkInputMode } from './utils/vkInputMode';
 // TODO: удалить после ответа поддержки VK ↑
 import './styles/theme.css';
+import { getPlatformAdapter } from './platforms/adapter';
 
-// VK Bridge init (для игр ВКонтакте)
+// VK Bridge (для игр ВКонтакте)
 declare global {
   interface Window {
     vkBridge?: any;
   }
 }
 
-// VK iframe-специфичные настройки (только когда игра внутри VK)
-// vk_user_id есть только при первом запуске — сохраняем в sessionStorage
-// чтобы перезагрузка фрейма (reload frame) не теряла настройки
-const hasVkParam = new URLSearchParams(window.location.search).has('vk_user_id');
-if (hasVkParam) sessionStorage.setItem('isVkIframe', '1');
-const isVkIframe = hasVkParam || sessionStorage.getItem('isVkIframe') === '1';
+// Определяем платформу
+const platform = getPlatformAdapter();
+platform.init();
 
+// VK Bridge init
 if (window.vkBridge) {
   window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
 }
 
-if (isVkIframe) {
-  // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
-  document.documentElement.classList.add('vk-iframe');
-  // Фикс авто-зума на iOS при фокусе на текстовые поля
-  const vp = document.querySelector('meta[name="viewport"]');
-  if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-  // TODO: удалить после ответа поддержки VK ↓
+// Применяем платформо-специфичные настройки
+if (platform.bodyClass) {
+  document.documentElement.classList.add(platform.bodyClass);
+}
+
+// Viewport meta
+const vp = document.querySelector('meta[name="viewport"]');
+if (vp) vp.setAttribute('content', platform.viewportMeta);
+
+// Кастомная клавиатура VK
+if (!platform.allowSystemKeyboard) {
   initVkInputMode();
-  // TODO: удалить после ответа поддержки VK ↑
 }
 
 // Регистрируем иконки локально (без API-запросов)
