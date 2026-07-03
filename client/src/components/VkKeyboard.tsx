@@ -84,10 +84,9 @@ export default function VkKeyboard() {
 
   useEffect(() => { activeRef.current = active; }, [active]);
 
+  // Показываем клавиатуру в любом VK WebView (класс vk-iframe добавляется при детекте VK Bridge)
   const isVKWebView = typeof document !== 'undefined'
-    && document.documentElement.classList.contains('vk-iframe')
-    && typeof window.vkBridge?.isWebView === 'function'
-    && window.vkBridge.isWebView();
+    && document.documentElement.classList.contains('vk-iframe');
 
   const stopRepeat = useCallback(() => {
     if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }

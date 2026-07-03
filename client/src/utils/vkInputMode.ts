@@ -2,17 +2,17 @@
  * TODO: Удалить весь файл после ответа поддержки VK.
  * Блокирует нативную клавиатуру — нужен только вместе с VkKeyboard.tsx.
  *
- * Blocks native keyboard in VK WebView by setting inputmode="none" on all inputs.
- * Also converts type="number" to type="text" — iOS ignores inputmode="none" on numeric inputs.
- * Uses MutationObserver to catch dynamically added inputs (React).
+ * Sets readOnly + inputmode="none" on all inputs — this GUARANTEES
+ * the native keyboard never appears (Android + iOS). The custom keyboard
+ * inserts text via setRangeText + input event, which works on readOnly inputs.
  */
 
 export function initVkInputMode() {
   function fixInput(el: HTMLElement) {
     el.setAttribute('inputmode', 'none');
-    // iOS игнорирует inputmode="none" на type="number" — принудительно меняем на text
-    if (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'number') {
-      (el as HTMLInputElement).type = 'text';
+    // readOnly гарантированно блокирует системную клавиатуру на Android и iOS
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      (el as HTMLInputElement).readOnly = true;
     }
   }
 
