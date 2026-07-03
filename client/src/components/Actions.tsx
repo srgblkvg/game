@@ -123,11 +123,11 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             <div className="flex justify-center gap-2">
                 <button
                     onClick={() => setActiveTab('world')}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'world' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                    className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'world' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🌍 Мир</button>
                 <button
                     onClick={() => setActiveTab('castle')}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                    className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🏰 Площадь</button>
             </div>
             <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} />
