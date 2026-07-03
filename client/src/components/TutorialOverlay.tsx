@@ -41,7 +41,7 @@ function calcTooltipPosition(
   const tooltipW = Math.min(320, tooltipMaxW);
   // Оценка высоты tooltip (заголовок + описание + кнопки)
   const tooltipH = isMobile ? 280 : 280;
-  const gap = 24; // отступ между target и tooltip
+  const gap = 48; // отступ между target и tooltip (увеличен чтобы не перекрывать подсветку)
 
   // Доступное пространство с каждой стороны
   const spaceTop = target.top - TOOLTIP_MARGIN;

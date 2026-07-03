@@ -99,7 +99,7 @@ const tutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tutorial="actions"]',
     title: 'Мир и Площадь',
     description: 'Занятия разделены на две вкладки. Мир — PvE и PvP с таймерами. Площадь — торговля, гильдии, общение.',
-    tooltipPosition: 'center',
+    tooltipPosition: 'left',
   },
   {
     targetSelector: '#action-card-Охота',
@@ -130,7 +130,7 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Переключаемся',
     description: 'Теперь посмотрим карточки на вкладке Площадь.',
     action: 'tutorial-tab-castle',
-    tooltipPosition: 'center',
+    tooltipPosition: 'left',
   },
   {
     targetSelector: '#action-card-Аукцион',
