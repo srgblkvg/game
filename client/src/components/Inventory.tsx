@@ -67,6 +67,8 @@ export default function Inventory({
         return () => document.removeEventListener('click', handleGlobalClick);
     }, []);
 
+    const [collapsed, setCollapsed] = useState(false);
+
     if (!character || !user) return null;
 
     const maxSlots = character.inventorySlots || 10;
@@ -134,9 +136,12 @@ export default function Inventory({
     return (
         <div className="w-full bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
             <div className="flex items-center justify-between mb-2">
-                <h3 className="m-0 flex items-center gap-1">
+                <h3 className="m-0 flex items-center gap-1 cursor-pointer" onClick={() => setCollapsed(!collapsed)}>
+                    <Icon icon={collapsed ? 'game-icons:arrow-right' : 'game-icons:arrow-down'} width="14" height="14" className="text-[var(--color-text-muted)]" />
                     <Icon icon="game-icons:backpack" width="18" height="18" />
-                    Инвентарь ({inventory.length}/{maxSlots})</h3>
+                    Инвентарь ({inventory.length}/{maxSlots})
+                </h3>
+                {!collapsed && (
                 <button
                     onClick={() => setSortEquipment(nextSortOrder(sortEquipment))}
                     className="bg-transparent border border-[var(--color-border-light)] text-[var(--color-text-secondary)] rounded px-1.5 py-px cursor-pointer text-xs leading-none"
@@ -144,7 +149,10 @@ export default function Inventory({
                 >
                     {sortSymbol(sortEquipment)}
                 </button>
+                )}
             </div>
+
+            {!collapsed && (<>
 
             <div className="grid grid-cols-[repeat(auto-fill,48px)] gap-2.5 mb-2">
                 {Array.from({ length: maxSlots }).map((_, idx) => {
@@ -246,6 +254,7 @@ export default function Inventory({
             </div>
 
             {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
+            )}</>
         </div>
     );
 }
