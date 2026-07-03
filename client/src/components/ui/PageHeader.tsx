@@ -11,9 +11,10 @@ export default function PageHeader({ title, icon, bgImage, subtitle }: PageHeade
     return (
         <div className="relative w-full h-32 sm:h-40 mb-4 rounded-xl overflow-hidden">
             {bgImage && (
-                <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${bgImage})` }}
+                <img
+                    src={bgImage}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
                 />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg-primary)] via-[var(--color-bg-primary)]/60 to-transparent" />

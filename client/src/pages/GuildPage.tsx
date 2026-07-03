@@ -123,9 +123,6 @@ export default function GuildPage() {
 
     // ── No guild ──
     if (!guild) {
-        return (<div className="max-w-3xl mx-auto px-4 py-4"><BackButton /><h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
-          {actionCard && <PageHeader title="Гильдия" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
-            {message && <p className="text-sm text-green-400 mb-3">{message}</p>}{error && <p className="text-sm text-red-400 mb-3">{error}</p>}
             <Button onClick={()=>setShowCreate(!showCreate)} className="mb-4">Создать гильдию</Button>
             {showCreate && (<Card className="mb-4"><input className={inputClass+' mb-2'} placeholder="Название" value={createName} onChange={e=>setCreateName(e.target.value)}/>
                 <textarea className={inputClass+' mb-2'} placeholder="Описание" rows={2} value={createDesc} onChange={e=>setCreateDesc(e.target.value)}/>
@@ -141,9 +138,6 @@ export default function GuildPage() {
 
     const myRank = guild.myRank;
 
-    return (<div className="max-w-3xl mx-auto px-4 py-4"><BackButton /><h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Гильдии</h1>
-          {actionCard && <PageHeader title="Гильдия" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
-        {message && <p className="text-sm text-green-400 mb-3">{message}</p>}{error && <p className="text-sm text-red-400 mb-3">{error}</p>}
 
         {/* Header */}
         <Card className="mb-4"><div className="flex justify-between items-start"><div className="flex gap-3">

@@ -385,9 +385,6 @@ export default function AuctionPage() {
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Аукцион" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
-            <h1 className="text-xl font-bold mb-1"><Icon icon="game-icons:pay-money" width="22" height="22" className="inline mr-2" />Аукцион</h1>
-            <p className="text-xs text-[var(--color-text-muted)] mb-4">Торговая площадка Мёртвых земель — покупайте и продавайте предметы между игроками</p>
-
             <div className="flex gap-2 mb-4">
                 <Button variant={tab === 'buy' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('buy'); clearMessages(); }}>Покупка</Button>
                 <Button variant={tab === 'sell' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('sell'); clearMessages(); }}>Продажа</Button>

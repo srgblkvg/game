@@ -76,9 +76,6 @@ export default function TavernPage() {
         <div className="max-w-2xl mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Трактир" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
-            <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:drink-me" width="22" height="22" className="inline mr-2" />Трактир «Гнилая Кровь»</h1>
-            <Card className="mb-4"><div className="flex justify-between items-center"><div><p className="text-xs text-[var(--color-text-muted)]">HP: {tavern.currentHp}/{character?.stats?.hp || tavern.maxHp}</p><p className="text-xs text-[var(--color-text-muted)]">{tavern.money != null ? formatMoney(tavern.money) : '...'}</p></div><div className="text-xs text-right">{tavern.room && tavern.room.until > now && <p className="text-[var(--color-accent-success)]">Комната: {tavern.room.type==='chamber'?'Аппартаменты':tavern.room.type==='bed'?'Койка':'Чулан'} ({formatTime(tavern.room.until-now)})</p>}{tavern.drink && tavern.drink.until > now && <p className="text-[var(--color-accent-purple)]">Напиток: {tavern.drinks.find((d:any)=>d.key===tavern.drink.type)?.name} ({formatTime(tavern.drink.until-now)})</p>}</div></div></Card>
-
             <div className="flex gap-2 mb-4">{(['heal','room','drink','quests'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>setTab(t)}>{t==='heal'?'Лечение':t==='room'?'Комнаты':t==='drink'?'Напитки':'Задания'}</Button>)}</div>
             {message && <p className="mb-4 text-sm text-[var(--color-accent-success)]">{message}</p>}
             {error && <p className="mb-4 text-sm text-[var(--color-accent-danger)]">{error}</p>}

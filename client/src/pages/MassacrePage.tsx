@@ -235,10 +235,7 @@ export default function MassacrePage() {
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
           {actionCard && <PageHeader title="Резня" icon={actionCard.icon} bgImage={actionCard.bg_image} subtitle={actionCard.subtitle} />}
-            <h1 className="text-center text-xl font-bold mb-4">
                 <Icon icon="game-icons:battered-axe" width="22" height="22" className="inline mr-2" />
-                Резня
-            </h1>
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
                 Хаотичный массовый PvP-бой без правил. Вход — {formatMoney(100)}. Сбор участников длится 30 минут,
