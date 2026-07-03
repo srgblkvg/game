@@ -10,8 +10,6 @@ export default function PremiumPage() {
     const [selectedDays, setSelectedDays] = useState(7);
     const [loading, setLoading] = useState(false);
     const [paymentMsg, setPaymentMsg] = useState('');
-    const [paymentStarted, setPaymentStarted] = useState(0);
-    const [premiumBeforePayment, setPremiumBeforePayment] = useState(0);
     const isVK = localStorage.getItem('isVK') === '1';
 
     const plans = [
@@ -21,15 +19,6 @@ export default function PremiumPage() {
 
     const premiumUntil = character?.premium?.until || 0;
     const hasPremium = premiumUntil > Math.floor(Date.now() / 1000);
-
-    // Авто-обнаружение: премиум увеличился после начала платежа
-    useEffect(() => {
-        if (paymentStarted > 0 && premiumBeforePayment > 0 && premiumUntil > premiumBeforePayment) {
-            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-            const t = setTimeout(() => { setPaymentMsg(''); setPaymentStarted(0); setPremiumBeforePayment(0); }, 5000);
-            return () => clearTimeout(t);
-        }
-    }, [premiumUntil, paymentStarted, premiumBeforePayment]);
 
     const handleBuy = () => {
         const plan = plans.find(p => p.days === selectedDays);
@@ -47,10 +36,24 @@ export default function PremiumPage() {
                     setPaymentMsg('❌ Оплата отменена');
                     return;
                 }
-                // Платёж открыт — ожидаем обновления персонажа
-                setPaymentStarted(Date.now());
-                setPremiumBeforePayment(premiumUntil);
+                // Платёж открыт — поллим статус через API
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
+                const token = localStorage.getItem('token');
+                const check = setInterval(async () => {
+                    try {
+                        const r = await fetch('/api/vk/payments/latest', { headers: { 'Authorization': `Bearer ${token}` } });
+                        const s = await r.json();
+                        if (s.status === 'chargeable') {
+                            clearInterval(check);
+                            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
+                            setTimeout(() => setPaymentMsg(''), 5000);
+                        } else if (s.status === 'refunded') {
+                            clearInterval(check);
+                            setPaymentMsg('❌ Платёж отменён');
+                        }
+                    } catch {}
+                }, 3000);
+                setTimeout(() => clearInterval(check), 120000);
             })
             .catch((err: unknown) => {
                 setPaymentMsg('❌ Ошибка: ' + (err instanceof Error ? err.message : JSON.stringify(err)));
