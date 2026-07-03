@@ -544,6 +544,7 @@ export default function BestiaryPage() {
       )}
       {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
     </div>
+    </>
   );
 }
 
@@ -590,6 +591,5 @@ function FloorGroup({ diff, floors, getFloorInfo, floorBgMap, cooldownRemaining,
         </div>
       )}
     </div>
-    </>
   );
 }
