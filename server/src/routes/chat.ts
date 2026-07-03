@@ -11,7 +11,7 @@ router.get('/chat/recent', async (req, res) => {
   const messages = await db.query(`
     SELECT m.id, m.senderId, m.targetId, m.content, m.createdAt, m.item_data,
            m.senderguild, m.senderguildid,
-           COALESCE(u.username, 'Глашатай') as senderName,
+           CASE WHEN m.senderId = 0 THEN 'Глашатай' ELSE u.username END as senderName,
            CASE WHEN al.id IS NOT NULL THEN 1 ELSE 0 END as is_active_auction
     FROM chat_messages m
     LEFT JOIN users u ON m.senderId = u.id
@@ -59,7 +59,7 @@ router.get('/chat/private/:userId', async (req, res) => {
   const messages = await db.query(`
     SELECT m.id, m.senderId, m.targetId, m.content, m.createdAt, m.item_data,
            m.senderguild, m.senderguildid,
-           COALESCE(u.username, 'Глашатай') as senderName
+           CASE WHEN m.senderId = 0 THEN 'Глашатай' ELSE u.username END as senderName
     FROM chat_messages m
     LEFT JOIN users u ON m.senderId = u.id
     WHERE (m.senderId = ? AND m.targetId = ?) OR (m.senderId = ? AND m.targetId = ?)
