@@ -408,8 +408,8 @@ export default function BestiaryPage() {
   return (
     <>
     <BackButton />
-    {actionCard && <PageHeader title="Охота" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
     <div className="px-4 py-4 max-w-4xl mx-auto">
+    {actionCard && <PageHeader title="Охота" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
       {phase === 'floors' ? (
         <>
