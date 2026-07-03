@@ -10,7 +10,8 @@ export default function PremiumPage() {
     const [selectedDays, setSelectedDays] = useState(7);
     const [loading, setLoading] = useState(false);
     const [paymentMsg, setPaymentMsg] = useState('');
-    const [paymentStarted, setPaymentStarted] = useState(0); // timestamp когда начали платёж
+    const [paymentStarted, setPaymentStarted] = useState(0);
+    const [premiumBeforePayment, setPremiumBeforePayment] = useState(0);
     const isVK = localStorage.getItem('isVK') === '1';
 
     const plans = [
@@ -21,15 +22,14 @@ export default function PremiumPage() {
     const premiumUntil = character?.premium?.until || 0;
     const hasPremium = premiumUntil > Math.floor(Date.now() / 1000);
 
-    // Авто-обнаружение активации премиума (только если платёж был начат в последние 5 минут)
+    // Авто-обнаружение: премиум увеличился после начала платежа
     useEffect(() => {
-        const recent = paymentStarted > 0 && (Date.now() - paymentStarted) < 300000;
-        if (paymentMsg === 'Оплата открыта. Ожидайте подтверждения...' && hasPremium && recent) {
+        if (paymentStarted > 0 && premiumBeforePayment > 0 && premiumUntil > premiumBeforePayment) {
             setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-            const t = setTimeout(() => { setPaymentMsg(''); setPaymentStarted(0); }, 5000);
+            const t = setTimeout(() => { setPaymentMsg(''); setPaymentStarted(0); setPremiumBeforePayment(0); }, 5000);
             return () => clearTimeout(t);
         }
-    }, [hasPremium, paymentMsg, paymentStarted]);
+    }, [premiumUntil, paymentStarted, premiumBeforePayment]);
 
     const handleBuy = () => {
         const plan = plans.find(p => p.days === selectedDays);
@@ -47,8 +47,9 @@ export default function PremiumPage() {
                     setPaymentMsg('❌ Оплата отменена');
                     return;
                 }
-                // Платёж открыт — ожидаем обновления персонажа (GameContext сам обновляет)
+                // Платёж открыт — ожидаем обновления персонажа
                 setPaymentStarted(Date.now());
+                setPremiumBeforePayment(premiumUntil);
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
             })
             .catch((err: unknown) => {
@@ -77,6 +78,7 @@ export default function PremiumPage() {
             if (data.confirmation_url) {
                 window.open(data.confirmation_url, '_blank');
                 setPaymentStarted(Date.now());
+                setPremiumBeforePayment(premiumUntil);
                 setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
                 // Ждём подтверждения (polling статуса)
                 const check = setInterval(async () => {
