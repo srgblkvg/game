@@ -596,6 +596,7 @@ router.get('/tournament', async (req, res) => {
 
         return {
             ...t,
+            divisionLabel: t.type === 'official' ? (divisions.find(x => x.name === t.division)?.label || t.division) : t.division,
             minLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.minLevel; })() : t.minLevel,
             maxLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.maxLevel; })() : t.maxLevel,
             participantCount: participants.length,

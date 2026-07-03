@@ -309,7 +309,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                 )
                                             ) : null}
                                             <span className="text-[var(--color-text-muted)] ml-1">
-                                                {tournamentInfo.division && `🏆 ${tournamentInfo.division}`}
+                                                {tournamentInfo.divisionLabel && `🏆 ${tournamentInfo.divisionLabel}`}
                                             </span>
                                         </div>
                                     ) : nextTournamentSec && nextTournamentSec > 0 ? (
