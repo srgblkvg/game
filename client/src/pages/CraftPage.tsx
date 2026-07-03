@@ -1,5 +1,4 @@
 import PageHeader from '../components/ui/PageHeader';
-import { Icon } from "@iconify/react";
 // client/src/pages/CraftPage.tsx
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
