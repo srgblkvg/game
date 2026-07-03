@@ -1,17 +1,18 @@
 /**
  * TODO: Удалить весь файл после ответа поддержки VK.
  * Блокирует нативную клавиатуру в VK iframe через inputmode="none".
- * Активируется только при наличии vk_user_id в URL (VK iframe).
+ * Также меняет type="number" на type="text" — Android игнорирует
+ * inputmode="none" на числовых инпутах и показывает цифровую клавиатуру.
  */
 
 export function initVkInputMode() {
-  const isVkIframe = typeof window !== 'undefined'
-    && new URLSearchParams(window.location.search).has('vk_user_id');
-
-  if (!isVkIframe) return;
-
   function fixInput(el: HTMLElement) {
+    // inputmode="none" блокирует системную клавиатуру
     el.setAttribute('inputmode', 'none');
+    // Android показывает цифровую клавиатуру на type="number" даже с inputmode="none"
+    if (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'number') {
+      (el as HTMLInputElement).type = 'text';
+    }
   }
 
   document.querySelectorAll('input, textarea, [contenteditable]').forEach(el => {

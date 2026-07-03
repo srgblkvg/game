@@ -84,9 +84,10 @@ export default function VkKeyboard() {
 
   useEffect(() => { activeRef.current = active; }, [active]);
 
-  // Показываем только в VK iframe (класс vk-iframe только при vk_user_id в URL)
+  // Показываем только в VK iframe И на тач-устройствах (на десктопе не нужна)
   const isVKWebView = typeof document !== 'undefined'
-    && document.documentElement.classList.contains('vk-iframe');
+    && document.documentElement.classList.contains('vk-iframe')
+    && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
   const stopRepeat = useCallback(() => {
     if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
