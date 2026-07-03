@@ -1,24 +1,33 @@
 /**
  * TODO: Удалить весь файл после ответа поддержки VK.
- * Блокирует нативную клавиатуру в VK iframe через inputmode="none".
- * Также меняет type="number" на type="text" — Android игнорирует
- * inputmode="none" на числовых инпутах и показывает цифровую клавиатуру.
+ * Блокирует нативную клавиатуру в VK iframe.
+ *
+ * Стратегия:
+ * 1. touchstart (срабатывает ДО focus) — меняем type="number"→"text"
+ * 2. inputmode="none" через MutationObserver
+ * 3. Браузер видит type="text" + inputmode="none" → не показывает клавиатуру
  */
 
 export function initVkInputMode() {
   function fixInput(el: HTMLElement) {
-    // inputmode="none" блокирует системную клавиатуру
     el.setAttribute('inputmode', 'none');
-    // Android показывает цифровую клавиатуру на type="number" даже с inputmode="none"
-    if (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'number') {
-      (el as HTMLInputElement).type = 'text';
-    }
   }
 
+  // Перехватываем касание ДО фокуса — меняем number на text
+  document.addEventListener('touchstart', (e) => {
+    const el = e.target as HTMLElement;
+    if (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'number') {
+      (el as HTMLInputElement).type = 'text';
+      el.setAttribute('inputmode', 'none');
+    }
+  }, { passive: true });
+
+  // Существующие инпуты
   document.querySelectorAll('input, textarea, [contenteditable]').forEach(el => {
     fixInput(el as HTMLElement);
   });
 
+  // Новые инпуты (React)
   const observer = new MutationObserver(mutations => {
     for (const m of mutations) {
       for (const node of m.addedNodes) {
