@@ -29,7 +29,6 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [registerMsg, setRegisterMsg] = useState('');
     const [nextTournamentSec, setNextTournamentSec] = useState(0);
     const [nextTournamentLabel, setNextTournamentLabel] = useState('');
-    const [userLevel, setUserLevel] = useState(1);
     const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
     const [guildBadge, setGuildBadge] = useState(parseInt(localStorage.getItem('guildBadge') || '0'));
     const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
@@ -113,7 +112,6 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
 
     // Турниры для Замка
     const loadTournaments = useCallback((data: any) => {
-        setUserLevel(data.userLevel || 1);
         const myLevel = data.userLevel || 1;
         const filterLevel = (t: any) => myLevel >= (t.minLevel || 0) && myLevel <= (t.maxLevel || 999);
 
