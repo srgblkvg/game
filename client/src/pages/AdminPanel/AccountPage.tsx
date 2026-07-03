@@ -305,10 +305,20 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                 <Button variant="danger" size="md" fullWidth onClick={handleLogout}>Выйти</Button>
             )}
 
-            {/* Удаление аккаунта — скрыто в VK */}
-            {!isVK && !user.isGuest && (
+            {/* Удаление аккаунта */}
+            {!user.isGuest && (
             <div className="mt-6 pt-4 border-t border-[var(--color-border-light)]">
-                {!showDeleteConfirm ? (
+                {isVK ? (
+                    <Card>
+                        <h3 className="font-bold mb-2 text-[var(--color-accent-danger)]">Удаление аккаунта</h3>
+                        <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                            Это действие необратимо. Все данные будут удалены: персонаж, история боёв, инвентарь.
+                        </p>
+                        <p className="text-sm text-[var(--color-text-muted)]">
+                            Для удаления аккаунта перейдите в настройки ВКонтакте: <strong>Мои приложения → MMO Arena → Удалить</strong>.
+                        </p>
+                    </Card>
+                ) : !showDeleteConfirm ? (
                     <Button
                         variant="secondary"
                         size="md"

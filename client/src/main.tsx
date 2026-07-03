@@ -26,6 +26,9 @@ if (window.vkBridge) {
   window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
   // Включаем скролл внутри iframe: фиксируем высоту body, контент скроллится
   document.documentElement.classList.add('vk-iframe');
+  // Фикс авто-зума на iOS при фокусе на текстовые поля
+  const vp = document.querySelector('meta[name=\"viewport\"]');
+  if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
   // TODO: удалить после ответа поддержки VK ↓
   initVkInputMode();
   // TODO: удалить после ответа поддержки VK ↑
