@@ -2,7 +2,6 @@ import PageHeader from '../components/ui/PageHeader';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
-import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { fmtSafeDate, safeDate } from '../utils/date';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,8 +17,8 @@ export default function BankPage() {
     const navigate = useNavigate();
 
     const [tab, setTab] = useState<'info' | 'deposit' | 'transfer'>('info');
-    const [pocket, setPocket] = useState(0);
-    const [bank, setBank] = useState(0);
+    const [_pocket, setPocket] = useState(0);
+    const [_bank, setBank] = useState(0);
     const [accountNumber, setAccountNumber] = useState('');
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
