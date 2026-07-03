@@ -27,6 +27,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [tournamentInfo, setTournamentInfo] = useState<any>(null);
     const [myRegistration, setMyRegistration] = useState<any>(null);
     const [registerMsg, setRegisterMsg] = useState('');
+    const [nextTournamentSec, setNextTournamentSec] = useState(0);
     const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
     const [guildBadge, setGuildBadge] = useState(parseInt(localStorage.getItem('guildBadge') || '0'));
     const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
@@ -111,13 +112,31 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             .then(r => r.json())
             .then((data: any) => {
                 if (data.tournaments?.length > 0) {
-                    const t = data.tournaments[0]; // ближайший подходящий
+                    const t = data.tournaments[0];
                     setTournamentInfo(t);
                     setMyRegistration(t.myRegistration || null);
+                    setNextTournamentSec(0);
+                } else {
+                    // Нет активных — считаем до следующего (каждые 5 мин)
+                    const now = Math.floor(Date.now() / 1000);
+                    const next = Math.ceil(now / 300) * 300;
+                    setNextTournamentSec(next - now);
                 }
             })
             .catch(() => {});
     }, []);
+
+    // Таймер до следующего турнира
+    useEffect(() => {
+        if (nextTournamentSec <= 0) return;
+        const id = setInterval(() => {
+            setNextTournamentSec(prev => {
+                if (prev <= 1) { setTournamentInfo(null); return 0; }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(id);
+    }, [nextTournamentSec > 0 ? 1 : 0]);
 
     const heroCards = cards.filter(c => c.section === 'hero');
     const worldCards = cards.filter(c => c.section === 'world');
@@ -130,7 +149,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
             {heroCards.length > 0 && (
                 <div>
-                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={tournamentInfo} myRegistration={myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} />
+                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={tournamentInfo} myRegistration={myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} />
                 </div>
             )}
             {/* Категории */}
@@ -144,15 +163,15 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🏰 Площадь</button>
             </div>
-            <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} />
+            <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} />
         </div>
     );
 }
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, myRegistration, registerMsg, setRegisterMsg }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, myRegistration, registerMsg, setRegisterMsg, nextTournamentSec }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
     navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; treasury: number; massacreCount: number; massacreTimeLeft: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
-    tournamentInfo?: any; myRegistration?: any; registerMsg?: string; setRegisterMsg?: (msg: string) => void;
+    tournamentInfo?: any; myRegistration?: any; registerMsg?: string; setRegisterMsg?: (msg: string) => void; nextTournamentSec?: number;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
     const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
@@ -213,7 +232,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                     </h3>
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)]">{card.subtitle}</p>
                                     <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-0.5">Казна: {formatMoney(treasury)}</p>
-                                    {tournamentInfo && (
+                                    {tournamentInfo ? (
                                         <div className="mt-1 text-[0.65rem]">
                                             {tournamentInfo.status === 'registration' ? (
                                                 myRegistration ? (
@@ -241,7 +260,11 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                 {tournamentInfo.division && `🏆 ${tournamentInfo.division}`}
                                             </span>
                                         </div>
-                                    )}
+                                    ) : nextTournamentSec && nextTournamentSec > 0 ? (
+                                        <div className="mt-1 text-[0.65rem] text-[var(--color-text-muted)]">
+                                            ⏳ Следующий турнир через {Math.floor(nextTournamentSec / 60)}:{String(nextTournamentSec % 60).padStart(2, '0')}
+                                        </div>
+                                    ) : null}
                                     {registerMsg && <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">{registerMsg}</p>}
                                 </div>
                                 <div className="relative shrink-0">
