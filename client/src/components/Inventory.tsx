@@ -16,6 +16,7 @@ interface InventoryProps {
     inventoryOverride?: any[];
     selectedItemId?: string | null;
     onDragStartItem?: () => void;
+    collapsible?: boolean;
 }
 
 type SortOrder = 'none' | 'asc' | 'desc';
@@ -50,13 +51,19 @@ export default function Inventory({
     inventoryOverride,
     selectedItemId,
     onDragStartItem,
+    collapsible = true,
 }: InventoryProps) {
     const { character, setCharacter } = useGame();
     const { user } = useAuth();
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const { sendItemLink } = useGlobalChat();
 
-    const [sortEquipment, setSortEquipment] = useState<SortOrder>('none');
+    const [sortEquipment, setSortEquipment] = useState<SortOrder>(
+        () => (localStorage.getItem('invSort') as SortOrder) || 'none'
+    );
+    const [collapsed, setCollapsed] = useState(
+        () => localStorage.getItem('invCollapsed') === '1'
+    );
     const [sortCraft, setSortCraft] = useState<SortOrder>('none');
     const [activeType, setActiveType] = useState<string>('all');
 
@@ -67,7 +74,9 @@ export default function Inventory({
         return () => document.removeEventListener('click', handleGlobalClick);
     }, []);
 
-    const [collapsed, setCollapsed] = useState(false);
+    // Сохраняем состояние в localStorage
+    useEffect(() => { localStorage.setItem('invCollapsed', collapsed ? '1' : '0'); }, [collapsed]);
+    useEffect(() => { localStorage.setItem('invSort', sortEquipment); }, [sortEquipment]);
 
     if (!character || !user) return null;
 
@@ -136,8 +145,8 @@ export default function Inventory({
     return (
         <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
             <div className="flex items-center justify-between mb-2">
-                <h3 className="m-0 flex items-center gap-1 cursor-pointer" onClick={() => setCollapsed(!collapsed)}>
-                    <span className="text-[var(--color-text-muted)] text-xs">{collapsed ? '▶' : '▼'}</span>
+                <h3 className="m-0 flex items-center gap-1 cursor-pointer" onClick={() => collapsible && setCollapsed(!collapsed)}>
+                    {collapsible && <span className="text-[var(--color-text-muted)] text-xs">{collapsed ? '▶' : '▼'}</span>}
                     <Icon icon="game-icons:backpack" width="18" height="18" />
                     Инвентарь ({inventory.length}/{maxSlots})
                 </h3>
@@ -152,7 +161,7 @@ export default function Inventory({
                 )}
             </div>
 
-            {!collapsed && (<>
+            {(!collapsible || !collapsed) && (<>
 
             <div className="grid grid-cols-[repeat(auto-fill,48px)] gap-2.5 mb-2 overflow-hidden">
                 {Array.from({ length: maxSlots }).map((_, idx) => {
