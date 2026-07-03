@@ -301,13 +301,12 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">
                                         Хаотичный PvP{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount} уч.</span>}
                                     </p>
-                                    <div className="mt-auto w-full">
+                                    <div className="mt-auto">
                                         <Button variant="danger" size="md" fullWidth
                                             onClick={() => { if (card.path) navigate(card.path); }}>
-                                            <span className="whitespace-nowrap text-[0.75rem]">
-                                                {formatMoney(card.cost)}
-                                                {massacreTimeLeft > 0 && <span className="text-[0.6rem] opacity-70"> · {formatTime(massacreTimeLeft)}</span>}
-                                            </span>
+                                            {massacreTimeLeft > 0
+                                                ? `${formatMoney(card.cost)} · ${formatTime(massacreTimeLeft)}`
+                                                : formatMoney(card.cost)}
                                         </Button>
                                     </div>
                                 </div>
