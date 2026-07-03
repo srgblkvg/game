@@ -235,7 +235,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-row items-center gap-3 overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                                 <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
                                 <div className="relative flex-1 min-w-0">
-                                    <h3 className="text-sm font-bold flex items-center gap-1">
+                                    <h3 className="text-base font-bold flex items-center gap-1">
                                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                                     </h3>
                                     <p className="text-xs text-[var(--color-text-muted)]">{card.subtitle}</p>
@@ -303,10 +303,10 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                                 <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
                                 <div className="relative w-full flex flex-col flex-1">
-                                    <h3 className="text-sm font-bold mb-0.5 flex items-center justify-center gap-1">
+                                    <h3 className="text-base font-bold mb-0.5 flex items-center justify-center gap-1">
                                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                                     </h3>
-                                    <p className="text-xs text-[var(--color-text-muted)] mb-1">
+                                    <p className="text-sm text-[var(--color-text-muted)] mb-1">
                                         Хаотичный PvP{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount} уч.</span>}
                                     </p>
                                     <p className="text-xs text-[var(--color-text-muted)] h-4 leading-4">Вход: {formatMoney(card.cost)}</p>
@@ -331,10 +331,10 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                         <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                         <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
                         <div className="relative w-full flex flex-col flex-1">
-                            <h3 className="text-sm font-bold mb-0.5 flex items-center justify-center gap-1">
+                            <h3 className="text-base font-bold mb-0.5 flex items-center justify-center gap-1">
                                 <Icon icon={card.icon} width="14" height="14" />{card.title}
                             </h3>
-                            <p className="text-xs text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                            <p className="text-sm text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                             <div className="mt-auto">
                                 <p className="text-xs text-[var(--color-text-muted)] h-4 leading-4">{card.cost > 0 ? `${card.path === '/massacre' ? 'Вход' : 'Цена'}: ${formatMoney(card.cost)}` : ''}</p>
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="md" fullWidth disabled={disabled}
@@ -407,10 +407,10 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
                 <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all backface-hidden ${flipped ? 'pointer-events-none' : ''} ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
                 <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
                 <div className="relative w-full flex flex-col flex-1">
-                    <h3 className="text-sm font-bold mb-0.5 flex items-center justify-center gap-1">
+                    <h3 className="text-base font-bold mb-0.5 flex items-center justify-center gap-1">
                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                     </h3>
-                    <p className="text-xs text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                    <p className="text-sm text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                     <p className="text-xs text-[var(--color-text-muted)] h-4 leading-4">{card.cost > 0 ? `Цена: ${formatMoney(card.cost)}` : ''}</p>
                         <div className="mt-auto">
                             <Button variant={disabled ? 'secondary' : 'danger'} size="md" fullWidth disabled={disabled}
