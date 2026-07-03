@@ -262,7 +262,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         </div>
                                     ) : nextTournamentSec && nextTournamentSec > 0 ? (
                                         <div className="mt-1 text-[0.65rem] text-[var(--color-text-muted)]">
-                                            ⏳ Следующий турнир через {Math.floor(nextTournamentSec / 60)}:{String(nextTournamentSec % 60).padStart(2, '0')}
+                                            ⏳ Следующий турнир через {String(Math.floor(nextTournamentSec / 3600)).padStart(2, '0')}:{String(Math.floor((nextTournamentSec % 3600) / 60)).padStart(2, '0')}:{String(nextTournamentSec % 60).padStart(2, '0')}
                                         </div>
                                     ) : null}
                                     {registerMsg && <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">{registerMsg}</p>}
