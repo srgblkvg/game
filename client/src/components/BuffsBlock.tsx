@@ -43,11 +43,16 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     const collectionPercent = Math.round((collectionCount / totalCollectionItems) * 100);
     const navigate = useNavigate();
 
-    // Разворачиваем блок по событию туториала
+    // Разворачиваем/сворачиваем блок по событиям туториала
     useEffect(() => {
-        const handler = () => setCollapsed(false);
-        window.addEventListener('tutorial-expand-buffs', handler);
-        return () => window.removeEventListener('tutorial-expand-buffs', handler);
+        const expand = () => setCollapsed(false);
+        const collapse = () => setCollapsed(true);
+        window.addEventListener('tutorial-expand-buffs', expand);
+        window.addEventListener('tutorial-collapse-buffs', collapse);
+        return () => {
+            window.removeEventListener('tutorial-expand-buffs', expand);
+            window.removeEventListener('tutorial-collapse-buffs', collapse);
+        };
     }, []);
 
     useEffect(() => {

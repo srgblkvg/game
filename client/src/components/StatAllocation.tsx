@@ -18,11 +18,16 @@ export default function StatAllocation() {
   const [msg, setMsg] = useState('');
   const [collapsed, setCollapsed] = useState(true);
 
-  // Разворачиваем блок по событию туториала
+  // Разворачиваем/сворачиваем блок по событиям туториала
   useEffect(() => {
-    const handler = () => setCollapsed(false);
-    window.addEventListener('tutorial-expand-stats', handler);
-    return () => window.removeEventListener('tutorial-expand-stats', handler);
+    const expand = () => setCollapsed(false);
+    const collapse = () => setCollapsed(true);
+    window.addEventListener('tutorial-expand-stats', expand);
+    window.addEventListener('tutorial-collapse-stats', collapse);
+    return () => {
+      window.removeEventListener('tutorial-expand-stats', expand);
+      window.removeEventListener('tutorial-collapse-stats', collapse);
+    };
   }, []);
 
   if (!character) return null;

@@ -78,6 +78,18 @@ export default function Inventory({
     useEffect(() => { localStorage.setItem('invCollapsed', collapsed ? '1' : '0'); }, [collapsed]);
     useEffect(() => { localStorage.setItem('invSort', sortEquipment); }, [sortEquipment]);
 
+    // Туториал: развернуть/свернуть
+    useEffect(() => {
+        const expand = () => { if (collapsible) setCollapsed(false); };
+        const collapse = () => setCollapsed(true);
+        window.addEventListener('tutorial-expand-inventory', expand);
+        window.addEventListener('tutorial-collapse-inventory', collapse);
+        return () => {
+            window.removeEventListener('tutorial-expand-inventory', expand);
+            window.removeEventListener('tutorial-collapse-inventory', collapse);
+        };
+    }, [collapsible]);
+
     if (!character || !user) return null;
 
     const maxSlots = character.inventorySlots || 10;

@@ -146,6 +146,18 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         return () => clearInterval(id);
     }, [nextTournamentSec > 0 ? 1 : 0]);
 
+    // Туториал: переключение табов
+    useEffect(() => {
+        const toWorld = () => setActiveTab('world');
+        const toCastle = () => setActiveTab('castle');
+        window.addEventListener('tutorial-tab-world', toWorld);
+        window.addEventListener('tutorial-tab-castle', toCastle);
+        return () => {
+            window.removeEventListener('tutorial-tab-world', toWorld);
+            window.removeEventListener('tutorial-tab-castle', toCastle);
+        };
+    }, []);
+
     const heroCards = cards.filter(c => c.section === 'hero');
     const worldCards = cards.filter(c => c.section === 'world');
     const castleCards = cards.filter(c => c.section === 'castle');
