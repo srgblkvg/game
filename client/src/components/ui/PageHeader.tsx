@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
 
 interface PageHeaderProps {
@@ -9,6 +10,9 @@ interface PageHeaderProps {
 export default function PageHeader({ title, icon, bgImage }: PageHeaderProps) {
     const bgStyle = bgImage ? { backgroundImage: `url(${bgImage})` } : {};
 
+    // Сброс скролла при переходе на страницу
+    useEffect(() => { window.scrollTo(0, 0); }, []);
+
     return (
         <div className="relative bg-[var(--color-bg-secondary)] rounded-xl mb-4 p-4 h-28 overflow-hidden border border-[var(--color-border-default)]">
             {bgImage && (
@@ -16,8 +20,8 @@ export default function PageHeader({ title, icon, bgImage }: PageHeaderProps) {
             )}
             <div className="relative z-10 flex items-end h-full">
                 <div className="flex items-center gap-2">
-                    {icon && <Icon icon={icon} width="24" height="24" className="text-white" />}
-                    <h1 className="text-lg font-bold text-white">{title}</h1>
+                    {icon && <Icon icon={icon} width="24" height="24" className="text-[var(--color-text-primary)]" />}
+                    <h1 className="text-lg font-bold text-[var(--color-text-primary)]">{title}</h1>
                 </div>
             </div>
         </div>

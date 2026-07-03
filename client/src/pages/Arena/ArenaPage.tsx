@@ -1,3 +1,5 @@
+import PageHeader from '../../components/ui/PageHeader';
+import { getHeaders } from '../../api/helpers';
 import { Icon } from "@iconify/react";
 import BackButton from '../../components/BackButton';
 import { useEffect, useState } from 'react';
@@ -13,6 +15,8 @@ import { formatMoney } from '../../utils/money';
 import { renderBattleLog } from '../../utils/battleLog';
 
 export default function ArenaPage() {
+  const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.title === 'Арена'); if (c) setActionCard(c); }).catch(() => {}); }, []);
   const { user } = useAuth();
   const { character, setCharacter } = useGame();
   const navigate = useNavigate();
@@ -75,7 +79,7 @@ export default function ArenaPage() {
     ) : (
     <div className="px-4 py-4 min-h-screen">
       <BackButton />
-            <h1 className="text-center text-xl font-bold mb-4"><Icon icon='game-icons:crossed-swords' width="22" height="22" className="inline mr-2"/>Арена</h1>
+            {actionCard && <PageHeader title="Арена" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
       {/* Карточки бойцов */}
       <div data-battle-arena className="flex justify-between sm:justify-center gap-2 sm:gap-8 my-4 px-1 sm:px-0">

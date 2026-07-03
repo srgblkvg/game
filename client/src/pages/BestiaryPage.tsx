@@ -409,10 +409,10 @@ export default function BestiaryPage() {
     <>
     {actionCard && <PageHeader title="Охота" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
     <div className="px-4 py-4 max-w-4xl mx-auto">
+      <BackButton />
 
       {phase === 'floors' ? (
         <>
-          <BackButton />
           <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
               Сражайтесь с монстрами на разных этажах, получайте опыт, серебро и ценные трофеи. Чем выше этаж — тем сильнее враги и богаче награда.
           </p>
