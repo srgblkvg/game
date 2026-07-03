@@ -109,10 +109,11 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
 
     const handleLogout = () => { logout(); navigate('/login'); };
 
-    const handleDeleteAccount = async (e: React.FormEvent) => {
-        e.preventDefault(); setDeleteMsg('');
+    const handleDeleteAccount = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        setDeleteMsg('');
         try {
-            await deleteAccount(deletePassword);
+            await deleteAccount(isVK ? undefined : deletePassword);
             logout(); navigate('/login');
         } catch (err: any) { setDeleteMsg(err.message); }
     };
@@ -309,15 +310,31 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
             {!user.isGuest && (
             <div className="mt-6 pt-4 border-t border-[var(--color-border-light)]">
                 {isVK ? (
-                    <Card>
-                        <h3 className="font-bold mb-2 text-[var(--color-accent-danger)]">Удаление аккаунта</h3>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-3">
-                            Это действие необратимо. Все данные будут удалены: персонаж, история боёв, инвентарь.
-                        </p>
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            Для удаления аккаунта перейдите в настройки ВКонтакте: <strong>Мои приложения → MMO Arena → Удалить</strong>.
-                        </p>
-                    </Card>
+                    !showDeleteConfirm ? (
+                        <Button
+                            variant="secondary"
+                            size="md"
+                            fullWidth
+                            onClick={() => setShowDeleteConfirm(true)}
+                            style={{ color: '#e03030', borderColor: '#e03030' }}
+                        >
+                            ⚠️ Удалить аккаунт
+                        </Button>
+                    ) : (
+                        <Card>
+                            <h3 className="font-bold mb-2 text-[var(--color-accent-danger)]">Удаление аккаунта</h3>
+                            <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                                Это действие необратимо. Все данные будут удалены: персонаж, история боёв, инвентарь.
+                            </p>
+                            <div className="flex gap-2">
+                                <Button variant="danger" size="sm" onClick={handleDeleteAccount}>Удалить навсегда</Button>
+                                <Button variant="secondary" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+                                    Отмена
+                                </Button>
+                            </div>
+                            {deleteMsg && <p className="mt-2 text-sm text-[var(--color-accent-danger)]">{deleteMsg}</p>}
+                        </Card>
+                    )
                 ) : !showDeleteConfirm ? (
                     <Button
                         variant="secondary"

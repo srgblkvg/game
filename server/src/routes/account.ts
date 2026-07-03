@@ -70,11 +70,14 @@ router.post('/account/delete', async (req, res) => {
     const userId = req.userId;
     const { currentPassword } = req.body;
 
-    const user = await db.one('SELECT passwordHash, username FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT passwordHash, username, oauthProvider FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    if (!bcrypt.compareSync(currentPassword, user.passwordHash)) {
-        return res.status(400).json({ error: 'Неверный пароль' });
+    // VK пользователи не имеют пароля — удаляем без проверки
+    if (user.oauthProvider !== 'vk') {
+        if (!currentPassword || !bcrypt.compareSync(currentPassword, user.passwordHash)) {
+            return res.status(400).json({ error: 'Неверный пароль' });
+        }
     }
 
     // Удаляем связанные данные
