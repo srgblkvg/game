@@ -51,24 +51,15 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string, cursorRef: { current: number }, activeRef: { current: HTMLInputElement | HTMLTextAreaElement | null }) {
+function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string, cursorRef: { current: number }) {
   el.focus();
   const start = cursorRef.current;
   el.setRangeText(char, start, start, 'end');
   el.dispatchEvent(new Event('input', { bubbles: true }));
   cursorRef.current = start + 1;
-  // Тройной rAF + свежая ссылка из activeRef (React мог пересоздать элемент)
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const fresh = activeRef.current;
-        if (fresh) fresh.setSelectionRange(cursorRef.current, cursorRef.current);
-      });
-    });
-  });
 }
 
-function deleteChar(el: HTMLInputElement | HTMLTextAreaElement, cursorRef: { current: number }, activeRef: { current: HTMLInputElement | HTMLTextAreaElement | null }) {
+function deleteChar(el: HTMLInputElement | HTMLTextAreaElement, cursorRef: { current: number }) {
   el.focus();
   const start = cursorRef.current;
   if (start > 0) {
@@ -76,14 +67,6 @@ function deleteChar(el: HTMLInputElement | HTMLTextAreaElement, cursorRef: { cur
     cursorRef.current = start - 1;
   }
   el.dispatchEvent(new Event('input', { bubbles: true }));
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const fresh = activeRef.current;
-        if (fresh) fresh.setSelectionRange(cursorRef.current, cursorRef.current);
-      });
-    });
-  });
 }
 
 export default function VkKeyboard() {
@@ -169,13 +152,13 @@ export default function VkKeyboard() {
   const doDelete = useCallback(() => {
     const el = activeRef.current;
     if (!el) return;
-    deleteChar(el, cursorRef, activeRef);
+    deleteChar(el, cursorRef);
   }, []);
 
   const doInsert = useCallback((char: string) => {
     const el = activeRef.current;
     if (!el) return;
-    insertChar(el, char, cursorRef, activeRef);
+    insertChar(el, char, cursorRef);
   }, []);
 
   const startCharRepeat = useCallback((char: string) => {
@@ -194,7 +177,7 @@ export default function VkKeyboard() {
         const s = el.selectionStart ?? 0;
         const e = el.selectionEnd ?? 0;
         if (s === 0 && e === 0) { stopRepeat(); return; }
-        deleteChar(el, cursorRef, activeRef);
+        deleteChar(el, cursorRef);
       }, 50);
     }, 600);
   }, [doDelete, stopRepeat]);
@@ -223,7 +206,7 @@ export default function VkKeyboard() {
       if (el.tagName === 'INPUT') {
         el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       } else {
-        insertChar(el, '\n', cursorRef, activeRef);
+        insertChar(el, '\n', cursorRef);
       }
     } else if (key === '⇧') {
       handleShift();

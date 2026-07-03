@@ -2,82 +2,58 @@
  * TODO: Удалить весь файл после ответа поддержки VK.
  * Блокирует системную клавиатуру в VK iframe.
  *
- * Стратегия:
- * 1. touchstart — временный readOnly (блокирует клавиатуру на время касания)
- * 2. touchend — убираем readOnly, меняем type="number"→"text" + inputmode="none"
- * 3. focusin — финальная проверка
- * 4. MutationObserver + attributeFilter — ловим React перерендер
+ * Подход: временный readOnly во время touchstart→touchend.
+ * Это единственный надёжный способ блокировать системную клавиатуру
+ * без побочных эффектов (смена типа ломает setSelectionRange/курсор).
+ *
+ * После touchend: readOnly=false, inputmode="none".
+ * Курсор работает нормально, кастомная клавиатура вставляет символы.
  */
 
 export function initVkInputMode() {
   let pendingFix: HTMLInputElement | null = null;
 
-  function fixInput(el: HTMLElement) {
-    el.setAttribute('inputmode', 'none');
-    if (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'number') {
-      (el as HTMLInputElement).type = 'text';
-    }
-  }
-
-  // touchstart: временный readOnly чтобы клавиатура не появилась
+  // touchstart: временный readOnly — системная клавиатура не появится
   document.addEventListener('touchstart', (e) => {
     const el = e.target as HTMLElement;
-    if (el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'number') {
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
       (el as HTMLInputElement).readOnly = true;
       pendingFix = el as HTMLInputElement;
     }
   }, { passive: true });
 
-  // touchend: убираем readOnly, меняем тип
+  // touchend: убираем readOnly, клавиатура уже не появится
   document.addEventListener('touchend', () => {
     if (pendingFix) {
       const el = pendingFix;
       pendingFix = null;
-      el.type = 'text';
-      el.setAttribute('inputmode', 'none');
       el.readOnly = false;
-      // Возвращаем фокус
+      el.setAttribute('inputmode', 'none');
       setTimeout(() => el.focus(), 0);
     }
   }, { passive: true });
 
-  // Финальная проверка при фокусе
-  document.addEventListener('focusin', (e) => {
-    const el = e.target as HTMLElement;
-    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-      fixInput(el);
-    }
+  // Существующие инпуты: только inputmode
+  document.querySelectorAll('input, textarea').forEach(el => {
+    el.setAttribute('inputmode', 'none');
   });
 
-  // Существующие инпуты
-  document.querySelectorAll('input, textarea').forEach(el => fixInput(el as HTMLElement));
-
-  // Новые инпуты + отслеживаем смену type (React перерендер)
+  // Новые инпуты (React): только inputmode
   const observer = new MutationObserver(mutations => {
     for (const m of mutations) {
-      if (m.type === 'attributes' && m.attributeName === 'type') {
-        const el = m.target as HTMLInputElement;
-        if (el.type === 'number') {
-          el.type = 'text';
-          el.setAttribute('inputmode', 'none');
-        }
-      }
       for (const node of m.addedNodes) {
         if (!(node instanceof HTMLElement)) continue;
         if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') {
-          fixInput(node);
+          node.setAttribute('inputmode', 'none');
         }
         if (node.querySelectorAll) {
-          node.querySelectorAll('input, textarea').forEach(el => fixInput(el as HTMLElement));
+          node.querySelectorAll('input, textarea').forEach(el => {
+            (el as HTMLElement).setAttribute('inputmode', 'none');
+          });
         }
       }
     }
   });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['type'],
-  });
+  observer.observe(document.body, { childList: true, subtree: true });
 }
