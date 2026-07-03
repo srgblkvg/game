@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
@@ -29,6 +29,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [registerMsg, setRegisterMsg] = useState('');
     const [nextTournamentSec, setNextTournamentSec] = useState(0);
     const [nextTournamentLabel, setNextTournamentLabel] = useState('');
+    const [userLevel, setUserLevel] = useState(1);
     const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
     const [guildBadge, setGuildBadge] = useState(parseInt(localStorage.getItem('guildBadge') || '0'));
     const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
@@ -108,40 +109,37 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 setCards(mapped);
             })
             .catch(() => {});
-        // Турниры для Замка
-        const loadTournaments = (data: any) => {
-            setUserLevel(data.userLevel || 1);
-            const myLevel = data.userLevel || 1;
-            const filterLevel = (t: any) => myLevel >= (t.minLevel || 0) && myLevel <= (t.maxLevel || 999);
+    // Турниры для Замка
+    const loadTournaments = useCallback((data: any) => {
+        setUserLevel(data.userLevel || 1);
+        const myLevel = data.userLevel || 1;
+        const filterLevel = (t: any) => myLevel >= (t.minLevel || 0) && myLevel <= (t.maxLevel || 999);
 
-            if (data.tournaments?.length > 0) {
-                // Ищем первый подходящий по уровню среди активных
-                const suitable = data.tournaments.filter(filterLevel);
-                if (suitable.length > 0) {
-                    const t = suitable[0];
-                    setTournamentInfo(t);
-                    setMyRegistration(t.myRegistration || null);
-                    setNextTournamentSec(0);
-                    return;
-                }
-                // Не подходит — покажем таймер до следующего
+        if (data.tournaments?.length > 0) {
+            const suitable = data.tournaments.filter(filterLevel);
+            if (suitable.length > 0) {
+                const t = suitable[0];
+                setTournamentInfo(t);
+                setMyRegistration(t.myRegistration || null);
+                setNextTournamentSec(0);
+                return;
             }
-            // Нет активных или не подходят — ищем в upcoming
-            if (data.upcomingOfficial?.length > 0) {
-                const suitable = data.upcomingOfficial
-                    .filter((u: any) => myLevel >= u.minLevel && myLevel <= u.maxLevel)
-                    .sort((a: any, b: any) => a.registrationOpensAt - b.registrationOpensAt);
-                if (suitable.length > 0) {
-                    const next = suitable[0];
-                    const now = Math.floor(Date.now() / 1000);
-                    setNextTournamentSec(Math.max(0, next.registrationOpensAt - now));
-                    setNextTournamentLabel(`${next.icon || '🏆'} ${next.label || next.division}`);
-                    return;
-                }
+        }
+        if (data.upcomingOfficial?.length > 0) {
+            const suitable = data.upcomingOfficial
+                .filter((u: any) => myLevel >= u.minLevel && myLevel <= u.maxLevel)
+                .sort((a: any, b: any) => a.registrationOpensAt - b.registrationOpensAt);
+            if (suitable.length > 0) {
+                const next = suitable[0];
+                const now = Math.floor(Date.now() / 1000);
+                setNextTournamentSec(Math.max(0, next.registrationOpensAt - now));
+                setNextTournamentLabel(`${next.icon || '🏆'} ${next.label || next.division}`);
+                return;
             }
-            setTournamentInfo(null);
-            setNextTournamentSec(0);
-        };
+        }
+        setTournamentInfo(null);
+        setNextTournamentSec(0);
+    }, []);
 
         fetch('/api/tournament?tab=active&type=official', { headers: getHeaders() })
             .then(r => r.json())
