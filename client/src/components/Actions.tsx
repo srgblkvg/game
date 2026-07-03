@@ -301,12 +301,11 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                     <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">
                                         Хаотичный PvP{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount} уч.</span>}
                                     </p>
+                                    <p className="text-[0.65rem] text-[var(--color-text-muted)]">{formatMoney(card.cost)}</p>
                                     <div className="mt-auto">
                                         <Button variant="danger" size="md" fullWidth
                                             onClick={() => { if (card.path) navigate(card.path); }}>
-                                            {massacreTimeLeft > 0
-                                                ? `${formatMoney(card.cost)} · ${formatTime(massacreTimeLeft)}`
-                                                : formatMoney(card.cost)}
+                                            {massacreTimeLeft > 0 ? formatTime(massacreTimeLeft) : 'В бой'}
                                         </Button>
                                     </div>
                                 </div>
@@ -329,7 +328,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             </h3>
                             <p className="text-[0.7rem] text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
                             <div className="mt-auto">
-                                {card.cost > 0 && <p className="text-[0.6rem] text-[var(--color-text-muted)]">Цена: {formatMoney(card.cost)}</p>}
+                                <p className="text-[0.6rem] text-[var(--color-text-muted)] h-[1em]">{card.cost > 0 ? `Цена: ${formatMoney(card.cost)}` : '\u00A0'}</p>
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="md" fullWidth disabled={disabled}
                                     onClick={() => { if (card.path) { if (card.title === 'Аукцион' && onAuctionClick) onAuctionClick(); if (card.title === 'Гильдия' && onGuildClick) onGuildClick(); if (card.title === 'Банк' && onBankClick) onBankClick(); navigate(card.path); } }}>
                                     {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
