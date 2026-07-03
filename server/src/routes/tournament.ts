@@ -555,10 +555,7 @@ router.get('/tournament', async (req, res) => {
         return res.json({ tournaments: result, total, page, totalPages: Math.ceil(total / limit), userLevel: user.level, tab: 'completed' });
     }
 
-    // Активные турниры
-    const tournaments = await getOrCreateTournament();
-
-    // Автопродвижение
+    // Активные турниры — сначала автопродвижение, потом создание новых
     const allForAdvance = await db.query(
         "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC",
         []
@@ -566,6 +563,7 @@ router.get('/tournament', async (req, res) => {
     for (const t of allForAdvance) {
         await autoAdvance(t.id);
     }
+    const tournaments = await getOrCreateTournament();
     const typeFilter = (req.query.type as string) || 'all';
     let typeCondition = '';
     const typeParams: any[] = [];
