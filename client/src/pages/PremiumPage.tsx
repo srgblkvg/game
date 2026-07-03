@@ -30,12 +30,24 @@ export default function PremiumPage() {
                 item: plan.vkItem,
             })
             .then((data: any) => {
-                if (data.status === 'chargeable' || data.status === 'success') {
-                    setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
-                    setTimeout(() => setPaymentMsg(''), 5000);
-                } else {
-                    setPaymentMsg('❌ Оплата отменена или не удалась');
+                if (data?.status === 'cancelled') {
+                    setPaymentMsg('❌ Оплата отменена');
+                    return;
                 }
+                setPaymentMsg('Оплата открыта. Ожидайте подтверждения...');
+                const token = localStorage.getItem('token');
+                const check = setInterval(async () => {
+                    try {
+                        const r = await fetch('/api/character', { headers: { 'Authorization': `Bearer ${token}` } });
+                        const ch = await r.json();
+                        if (ch.premium?.until && ch.premium.until > Math.floor(Date.now() / 1000)) {
+                            clearInterval(check);
+                            setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
+                            setTimeout(() => setPaymentMsg(''), 5000);
+                        }
+                    } catch {}
+                }, 3000);
+                setTimeout(() => clearInterval(check), 120000);
             })
             .catch((err: unknown) => {
                 setPaymentMsg('❌ Ошибка: ' + (err instanceof Error ? err.message : JSON.stringify(err)));
