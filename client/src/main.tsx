@@ -23,7 +23,11 @@ declare global {
 }
 
 // VK iframe-специфичные настройки (только когда игра внутри VK)
-const isVkIframe = new URLSearchParams(window.location.search).has('vk_user_id');
+// vk_user_id есть только при первом запуске — сохраняем в sessionStorage
+// чтобы перезагрузка фрейма (reload frame) не теряла настройки
+const hasVkParam = new URLSearchParams(window.location.search).has('vk_user_id');
+if (hasVkParam) sessionStorage.setItem('isVkIframe', '1');
+const isVkIframe = hasVkParam || sessionStorage.getItem('isVkIframe') === '1';
 
 if (window.vkBridge) {
   window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
