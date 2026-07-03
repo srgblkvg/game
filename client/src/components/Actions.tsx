@@ -295,8 +295,6 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                                 const d = await res.json();
                                                                 if (d.success) {
                                                                     setMyRegistration?.({ tournamentId: tournamentInfo.id });
-                                                                    setRegisterMsg?.('Записаны!');
-                                                                    setTimeout(() => setRegisterMsg?.(''), 2000);
                                                                 } else {
                                                                     setRegisterMsg?.(d.error || 'Ошибка');
                                                                     // Если турнир уже закрыт — обновляем данные
