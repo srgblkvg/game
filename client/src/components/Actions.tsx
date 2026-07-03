@@ -304,10 +304,10 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                     <div className="mt-auto w-full">
                                         <Button variant="danger" size="md" fullWidth
                                             onClick={() => { if (card.path) navigate(card.path); }}>
-                                            <div className="flex flex-col items-center leading-tight">
-                                                <span>{formatMoney(card.cost)}</span>
-                                                <span className="text-[0.6rem] opacity-80">{massacreTimeLeft > 0 ? formatTime(massacreTimeLeft) : '\u00A0'}</span>
-                                            </div>
+                                            <span className="whitespace-nowrap text-[0.75rem]">
+                                                {formatMoney(card.cost)}
+                                                {massacreTimeLeft > 0 && <span className="text-[0.6rem] opacity-70"> · {formatTime(massacreTimeLeft)}</span>}
+                                            </span>
                                         </Button>
                                     </div>
                                 </div>
