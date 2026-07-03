@@ -134,6 +134,37 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             .catch(() => {});
     }, []);
 
+    // Периодически обновляем данные турнира
+    useEffect(() => {
+        const id = setInterval(() => {
+            fetch('/api/tournament?tab=active&type=official', { headers: getHeaders() })
+                .then(r => r.json())
+                .then((data: any) => {
+                    if (data.tournaments?.length > 0) {
+                        const t = data.tournaments[0];
+                        setTournamentInfo(t);
+                        setMyRegistration(t.myRegistration || null);
+                        setNextTournamentSec(0);
+                    } else if (data.upcomingOfficial?.length > 0) {
+                        const myLevel = data.userLevel || 1;
+                        const suitable = data.upcomingOfficial
+                            .filter((u: any) => myLevel >= u.minLevel && myLevel <= u.maxLevel)
+                            .sort((a: any, b: any) => a.registrationOpensAt - b.registrationOpensAt);
+                        if (suitable.length > 0) {
+                            const next = suitable[0];
+                            const now = Math.floor(Date.now() / 1000);
+                            setNextTournamentSec(Math.max(0, next.registrationOpensAt - now));
+                            setNextTournamentLabel(`${next.icon || '🏆'} ${next.label || next.division}`);
+                        }
+                    } else {
+                        setTournamentInfo(null);
+                    }
+                })
+                .catch(() => {});
+        }, 30000); // каждые 30 секунд
+        return () => clearInterval(id);
+    }, []);
+
     // Таймер до следующего турнира
     useEffect(() => {
         if (nextTournamentSec <= 0) return;
@@ -269,7 +300,14 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                                 });
                                                                 const d = await res.json();
                                                                 if (d.success) setRegisterMsg?.('Записаны!');
-                                                                else setRegisterMsg?.(d.error || 'Ошибка');
+                                                                else {
+                                                                    setRegisterMsg?.(d.error || 'Ошибка');
+                                                                    // Если турнир уже закрыт — обновляем данные
+                                                                    if (d.error?.includes('закрыта') || d.error?.includes('не найден')) {
+                                                                        setTournamentInfo(null);
+                                                                        setRegisterMsg?.('');
+                                                                    }
+                                                                }
                                                             } catch { setRegisterMsg?.('Ошибка'); }
                                                         }}
                                                         className="text-[var(--color-accent-info)] underline cursor-pointer hover:text-[var(--color-accent-warning)]"
