@@ -5,9 +5,17 @@
  * Sets readOnly + inputmode="none" on all inputs — this GUARANTEES
  * the native keyboard never appears (Android + iOS). The custom keyboard
  * inserts text via setRangeText + input event, which works on readOnly inputs.
+ *
+ * Only activates in VK iframe (detected via vk_user_id in URL).
  */
 
 export function initVkInputMode() {
+  // Активируем только в VK iframe (параметры запуска)
+  const isVkIframe = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).has('vk_user_id');
+
+  if (!isVkIframe) return;
+
   function fixInput(el: HTMLElement) {
     el.setAttribute('inputmode', 'none');
     // readOnly гарантированно блокирует системную клавиатуру на Android и iOS
