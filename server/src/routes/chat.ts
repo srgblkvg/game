@@ -9,7 +9,9 @@ router.get('/chat/recent', async (req, res) => {
   const limit = parseInt(req.query.limit as string) || 20;
   // Fetch regular chat (last N) + ALL active auction messages
   const messages = await db.query(`
-    SELECT m.*, u.username as senderName,
+    SELECT m.id, m.senderId, m.targetId, m.content, m.createdAt, m.item_data,
+           m.senderguild, m.senderguildid,
+           COALESCE(u.username, 'Глашатай') as senderName,
            CASE WHEN al.id IS NOT NULL THEN 1 ELSE 0 END as is_active_auction
     FROM chat_messages m
     LEFT JOIN users u ON m.senderId = u.id
@@ -24,7 +26,7 @@ router.get('/chat/recent', async (req, res) => {
   `, [userId, userId, userId, userId, limit]);
 
   const result = messages.map((m) => {
-    const msg = { ...m, content: m.content || '', senderName: m.senderName || 'Глашатай' };
+    const msg = { ...m, content: m.content || '' };
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);
@@ -55,7 +57,9 @@ router.get('/chat/private/:userId', async (req, res) => {
   const otherUserId = parseInt(req.params.userId);
   const limit = parseInt(req.query.limit as string) || 100;
   const messages = await db.query(`
-    SELECT m.*, u.username as senderName
+    SELECT m.id, m.senderId, m.targetId, m.content, m.createdAt, m.item_data,
+           m.senderguild, m.senderguildid,
+           COALESCE(u.username, 'Глашатай') as senderName
     FROM chat_messages m
     LEFT JOIN users u ON m.senderId = u.id
     WHERE (m.senderId = ? AND m.targetId = ?) OR (m.senderId = ? AND m.targetId = ?)
@@ -64,7 +68,7 @@ router.get('/chat/private/:userId', async (req, res) => {
   `, [currentUserId, otherUserId, otherUserId, currentUserId, limit]);
 
   const result = messages.map((m) => {
-    const msg = { ...m, content: m.content || '', senderName: m.senderName || 'Глашатай' };
+    const msg = { ...m, content: m.content || '' };
     if (m.item_data) {
       try {
         const item = JSON.parse(m.item_data);
