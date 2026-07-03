@@ -28,6 +28,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [myRegistration, setMyRegistration] = useState<any>(null);
     const [registerMsg, setRegisterMsg] = useState('');
     const [nextTournamentSec, setNextTournamentSec] = useState(0);
+    const [nextTournamentLabel, setNextTournamentLabel] = useState('');
     const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
     const [guildBadge, setGuildBadge] = useState(parseInt(localStorage.getItem('guildBadge') || '0'));
     const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
@@ -116,11 +117,18 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     setTournamentInfo(t);
                     setMyRegistration(t.myRegistration || null);
                     setNextTournamentSec(0);
-                } else {
-                    // Нет активных — считаем до следующего (каждые 5 мин)
-                    const now = Math.floor(Date.now() / 1000);
-                    const next = Math.ceil(now / 300) * 300;
-                    setNextTournamentSec(next - now);
+                } else if (data.upcomingOfficial?.length > 0) {
+                    // Находим ближайший подходящий по уровню
+                    const myLevel = data.userLevel || 1;
+                    const suitable = data.upcomingOfficial
+                        .filter((u: any) => myLevel >= u.minLevel && myLevel <= u.maxLevel)
+                        .sort((a: any, b: any) => a.registrationOpensAt - b.registrationOpensAt);
+                    if (suitable.length > 0) {
+                        const next = suitable[0];
+                        const now = Math.floor(Date.now() / 1000);
+                        setNextTournamentSec(Math.max(0, next.registrationOpensAt - now));
+                        setNextTournamentLabel(`${next.icon || '🏆'} ${next.label || next.division}`);
+                    }
                 }
             })
             .catch(() => {});
@@ -149,7 +157,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
             {heroCards.length > 0 && (
                 <div>
-                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={tournamentInfo} myRegistration={myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} />
+                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={tournamentInfo} myRegistration={myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} nextTournamentLabel={nextTournamentLabel} />
                 </div>
             )}
             {/* Категории */}
@@ -168,10 +176,10 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     );
 }
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, myRegistration, registerMsg, setRegisterMsg, nextTournamentSec }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, myRegistration, registerMsg, setRegisterMsg, nextTournamentSec, nextTournamentLabel }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
     navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; treasury: number; massacreCount: number; massacreTimeLeft: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
-    tournamentInfo?: any; myRegistration?: any; registerMsg?: string; setRegisterMsg?: (msg: string) => void; nextTournamentSec?: number;
+    tournamentInfo?: any; myRegistration?: any; registerMsg?: string; setRegisterMsg?: (msg: string) => void; nextTournamentSec?: number; nextTournamentLabel?: string;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
     const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
@@ -262,7 +270,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         </div>
                                     ) : nextTournamentSec && nextTournamentSec > 0 ? (
                                         <div className="mt-1 text-[0.65rem] text-[var(--color-text-muted)]">
-                                            ⏳ Следующий турнир через {String(Math.floor(nextTournamentSec / 3600)).padStart(2, '0')}:{String(Math.floor((nextTournamentSec % 3600) / 60)).padStart(2, '0')}:{String(nextTournamentSec % 60).padStart(2, '0')}
+                                            ⏳ {nextTournamentLabel} через {String(Math.floor(nextTournamentSec / 3600)).padStart(2, '0')}:{String(Math.floor((nextTournamentSec % 3600) / 60)).padStart(2, '0')}:{String(nextTournamentSec % 60).padStart(2, '0')}
                                         </div>
                                     ) : null}
                                     {registerMsg && <p className="text-[0.6rem] text-[var(--color-accent-success)] mt-0.5">{registerMsg}</p>}
