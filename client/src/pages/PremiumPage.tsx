@@ -24,11 +24,21 @@ export default function PremiumPage() {
 
         if (isVK) {
             // VK: вызываем платёжный диалог
+            setPaymentMsg('');
             window.vkBridge!.send('VKWebAppShowOrderBox', {
                 type: 'item',
                 item: plan.vkItem,
-            }).catch((err: unknown) => {
-                alert('Ошибка: ' + JSON.stringify(err));
+            })
+            .then((data: any) => {
+                if (data.status === 'chargeable' || data.status === 'success') {
+                    setPaymentMsg('✅ Оплата прошла! Премиум активирован.');
+                    setTimeout(() => setPaymentMsg(''), 5000);
+                } else {
+                    setPaymentMsg('❌ Оплата отменена или не удалась');
+                }
+            })
+            .catch((err: unknown) => {
+                setPaymentMsg('❌ Ошибка: ' + (err instanceof Error ? err.message : JSON.stringify(err)));
             });
         } else {
             // YooKassa (обычный сайт)
