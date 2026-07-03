@@ -21,10 +21,11 @@ const LAYOUTS: Record<Layout, string[][]> = {
     ['123', 'ru', '␣', '↩'],
   ],
   num: [
-    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-    ['@', '#', '$', '%', '&', '*', '-', '+', '(', ')'],
-    ['!', '"', "'", ':', ';', '/', '?', ',', '.', '⌫'],
-    ['abc', 'ru', '␣', '↩'],
+    ['1', '2', '3'],
+    ['4', '5', '6'],
+    ['7', '8', '9'],
+    ['C', '0', '⌫'],
+    ['abc', '␣', '↩'],
   ],
 };
 
@@ -40,7 +41,7 @@ const SHIFT_MAP: Record<string, string> = {
   'c': 'C', 'v': 'V', 'b': 'B', 'n': 'N', 'm': 'M',
 };
 
-const NO_REPEAT = new Set(['⇧', '⌫', '␣', '↩', 'ru', 'en', '123', 'abc']);
+const NO_REPEAT = new Set(['⇧', '⌫', '␣', '↩', 'ru', 'en', '123', 'abc', 'C']);
 
 function isTextInput(el: HTMLElement): boolean {
   if (el.tagName === 'TEXTAREA') return true;
@@ -129,8 +130,11 @@ export default function VkKeyboard() {
       const el = e.target as HTMLElement;
       if (isTextInput(el)) {
         setActive(el as HTMLInputElement | HTMLTextAreaElement);
-        // Инициализируем позицию курсора в конец строки
         cursorRef.current = (el as HTMLInputElement).value.length;
+        // Авто-переключение на цифровую клавиатуру для числовых полей
+        if (el.hasAttribute('data-vk-num')) {
+          setLayout('num');
+        }
       }
     };
     const onTap = (e: Event) => {
@@ -198,6 +202,13 @@ export default function VkKeyboard() {
   const handleKey = useCallback((key: string) => {
     if (key === '⌫') {
       doDelete();
+    } else if (key === 'C') {
+      const el = activeRef.current;
+      if (el) {
+        el.value = '';
+        cursorRef.current = 0;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     } else if (key === '␣') {
       doInsert(' ');
     } else if (key === '↩') {

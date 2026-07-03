@@ -430,13 +430,13 @@ export default function AuctionPage() {
                             <label className="text-xs text-[var(--color-text-muted)] block mb-1">Количество для продажи (макс: {maxItemCount})</label>
                             <div className="flex gap-2 items-center">
                                 <input type="range" min={1} max={maxItemCount} value={sellCount} onChange={e => handleCountChange(parseInt(e.target.value))} className="flex-1" />
-                                <input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} min={1} max={maxItemCount} value={sellCount} onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) handleCountChange(Math.max(1, Math.min(maxItemCount, v))); }} className={inputClass + ' w-16 text-center'} />
+                                <input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} data-vk-num={isVk ? "true" : undefined} min={1} max={maxItemCount} value={sellCount} onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) handleCountChange(Math.max(1, Math.min(maxItemCount, v))); }} className={inputClass + ' w-16 text-center'} />
                                 <button type="button" className="text-xs px-2 py-1 rounded bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)]" onClick={() => handleCountChange(maxItemCount)}>Все</button>
                             </div>
                         </div>
                     )}
-                    <div className="mb-2"><label className="text-xs text-[var(--color-text-muted)] block mb-1">Стартовая цена за 1 шт (мин: {formatMoney(autoMin)})</label><input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} placeholder="Цена за 1 шт" value={startPrice} onChange={e => setStartPrice(e.target.value)} className={inputClass} min={autoMin} />{isMaterial && sellCount > 1 && <p className="text-xs text-[var(--color-accent-info)] mt-1">Итого за {sellCount} шт: {formatMoney(parseInt(startPrice || '0') * sellCount)}</p>}</div>
-                    <div className="mb-2"><label className="text-xs text-[var(--color-text-muted)] block mb-1">Цена выкупа за 1 шт (необязательно)</label><input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} placeholder="Выкуп за 1 шт" value={buyoutPrice} onChange={e => setBuyoutPrice(e.target.value)} className={inputClass} />{isMaterial && sellCount > 1 && buyoutPrice && <p className="text-xs text-[var(--color-accent-info)] mt-1">Итого выкуп за {sellCount} шт: {formatMoney(parseInt(buyoutPrice) * sellCount)}</p>}</div>
+                    <div className="mb-2"><label className="text-xs text-[var(--color-text-muted)] block mb-1">Стартовая цена за 1 шт (мин: {formatMoney(autoMin)})</label><input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} data-vk-num={isVk ? "true" : undefined} placeholder="Цена за 1 шт" value={startPrice} onChange={e => setStartPrice(e.target.value)} className={inputClass} min={autoMin} />{isMaterial && sellCount > 1 && <p className="text-xs text-[var(--color-accent-info)] mt-1">Итого за {sellCount} шт: {formatMoney(parseInt(startPrice || '0') * sellCount)}</p>}</div>
+                    <div className="mb-2"><label className="text-xs text-[var(--color-text-muted)] block mb-1">Цена выкупа за 1 шт (необязательно)</label><input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} data-vk-num={isVk ? "true" : undefined} placeholder="Выкуп за 1 шт" value={buyoutPrice} onChange={e => setBuyoutPrice(e.target.value)} className={inputClass} />{isMaterial && sellCount > 1 && buyoutPrice && <p className="text-xs text-[var(--color-accent-info)] mt-1">Итого выкуп за {sellCount} шт: {formatMoney(parseInt(buyoutPrice) * sellCount)}</p>}</div>
                     <select value={duration} onChange={e => setDuration(+e.target.value)} className={inputClass}><option value={6}>6 часов</option><option value={12}>12 часов</option><option value={24}>24 часа</option><option value={48}>48 часов</option></select>
                     <p className="text-xs text-[var(--color-text-muted)] mb-2">Комиссия 5% от стартовой цены</p>
                     <Button variant="danger" size="sm" onClick={handleSell}>Выставить (5% комиссия)</Button>
@@ -515,14 +515,14 @@ export default function AuctionPage() {
                                                         </Button>
                                                     )}
                                                     <div className="flex items-end gap-1">
-                                                        <input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} placeholder={String(minBid)} value={bidAmount[lot.id] || ''}
+                                                        <input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} data-vk-num={isVk ? "true" : undefined} placeholder={String(minBid)} value={bidAmount[lot.id] || ''}
                                                             onChange={e => setBidAmount(prev => ({ ...prev, [lot.id]: e.target.value }))}
                                                             className="w-20 px-2 py-0.5 text-xs rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)]" />
                                                         <Button size="sm" variant="secondary" onClick={() => handleBid(lot.id, bidAmount[lot.id] || String(minBid), minBid)}>Ставка</Button>
                                                     </div>
                                                     {isStack && lot.buyoutPrice && (
                                                         <div className="flex items-end gap-1">
-                                                            <input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} min={1} max={stackCount} placeholder="Кол-во"
+                                                            <input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} data-vk-num={isVk ? "true" : undefined} min={1} max={stackCount} placeholder="Кол-во"
                                                                 value={partialQty[lot.id] || ''}
                                                                 onChange={e => setPartialQty(prev => ({ ...prev, [lot.id]: parseInt(e.target.value) || 0 }))}
                                                                 className="w-14 px-2 py-0.5 text-xs rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)]" />
