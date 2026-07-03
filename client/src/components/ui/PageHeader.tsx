@@ -12,11 +12,17 @@ export default function PageHeader({ title, icon, bgImage }: PageHeaderProps) {
 
     // Сброс скролла при переходе на страницу
     useEffect(() => {
+        // Снимаем возможный scroll-lock
         document.body.style.position = '';
         document.body.style.overflow = '';
         document.body.style.top = '';
         document.body.style.width = '';
-        window.scrollTo(0, 0);
+        // Сбрасываем скролл — с задержкой чтобы DOM перестроился
+        requestAnimationFrame(() => {
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            window.scrollTo(0, 0);
+        });
     }, []);
 
     return (
