@@ -707,7 +707,7 @@ router.post('/tournament/register', async (req, res) => {
         const tournamentId = req.body.tournamentId;
         if (!tournamentId) return res.status(400).json({ error: 'Укажите tournamentId или division' });
         tournament = await db.one(
-            "SELECT * FROM tournaments WHERE id = ? AND status = 'registration' AND type = 'custom'",
+            "SELECT * FROM tournaments WHERE id = ? AND status = 'registration'",
             [tournamentId]
         ) as any;
         if (!tournament) return res.status(400).json({ error: 'Турнир не найден или регистрация закрыта' });
