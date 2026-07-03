@@ -134,7 +134,7 @@ export default function Inventory({
     };
 
     return (
-        <div className="w-full bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
+        <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
             <div className="flex items-center justify-between mb-2">
                 <h3 className="m-0 flex items-center gap-1 cursor-pointer" onClick={() => setCollapsed(!collapsed)}>
                     <span className="text-[var(--color-text-muted)] text-xs">{collapsed ? '▶' : '▼'}</span>

@@ -459,6 +459,8 @@ export default function ChatPanel() {
         };
         const onEnd = () => {
             setDragging(false);
+            // Сброс через таймаут — чтобы onClick не увидел dragMovedRef=true
+            setTimeout(() => { dragMovedRef.current = false; }, 0);
             localStorage.setItem('chatHeight', String(chatHeightRef.current));
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onEnd);

@@ -86,7 +86,7 @@ export default function OverflowStorage({ onTake }: { onTake?: () => void }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="mt-4 w-full bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]">
+    <div className="mt-4 w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]">
       <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center gap-2">
           <span className="text-sm">{expanded ? '▼' : '▶'}</span>
