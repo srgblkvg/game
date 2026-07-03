@@ -141,6 +141,7 @@ html.vk-iframe body {
   height: 100vh !important;
   height: 100dvh !important;
   overflow: auto !important;
+  padding-bottom: max(env(safe-area-inset-bottom, 50px), 50px) !important;
 }
 
 /* No gradient — solid background for VK */
