@@ -139,6 +139,8 @@ export default function AuctionPage() {
         document.body.style.overflow = '';
         document.body.style.top = '';
         document.body.style.width = '';
+        // Небольшая задержка чтобы DOM обновился
+        setTimeout(() => {
         const el = document.getElementById(`auction-lot-${highlightLotId}`);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -146,9 +148,10 @@ export default function AuctionPage() {
                 const p = new URLSearchParams(searchParams);
                 p.delete('lot');
                 setSearchParams(p, { replace: true });
-            }, 2000);
+            }, 3000);
             return () => clearTimeout(t);
         }
+        }, 100);
     }, [lots, highlightLotId]);
 
     // Pagination
@@ -497,7 +500,7 @@ export default function AuctionPage() {
 
                             return (
                                 <div key={lot.id} id={`auction-lot-${lot.id}`}>
-                                <Card className={`mb-3 ${String(lot.id) === highlightLotId ? 'ring-2 ring-[var(--color-accent-warning)]' : ''}`}>
+                                <Card className={`mb-3 ${String(lot.id) === highlightLotId ? 'ring-2 ring-[var(--color-accent-warning)] ring-offset-2 ring-offset-[var(--color-bg-primary)]' : ''}`}>
                                     <div className="flex justify-between items-start gap-3">
                                         <div onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                                             onTouchStart={e => handleTouchStart(e, item)} onTouchEnd={handleTouchEnd} onContextMenu={e => e.preventDefault()}
