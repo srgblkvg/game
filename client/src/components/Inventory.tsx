@@ -142,13 +142,26 @@ export default function Inventory({
         setTooltipData({ item, x: touch.clientX, y: touch.clientY });
     };
 
+    const fillRatio = inventory.length / Math.max(1, maxSlots);
+    const fillPct = Math.round(fillRatio * 100);
+    const fillColor = fillRatio >= 1 ? 'bg-[var(--color-accent-danger)]'
+        : fillRatio >= 0.8 ? 'bg-[var(--color-accent-warning)]'
+        : 'bg-[var(--color-accent-success)]';
+    const counterColor = fillRatio >= 1 ? 'text-[var(--color-accent-danger)]'
+        : fillRatio >= 0.8 ? 'text-[var(--color-accent-warning)]'
+        : '';
+
     return (
-        <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl p-4 border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
+        <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)] overflow-hidden" data-tutorial="inventory">
+            {/* Индикатор заполнения */}
+            <div className={`h-1 ${fillColor} transition-all duration-300`} style={{ width: `${fillPct}%` }} />
+
+            <div className="p-4">
             <div className="flex items-center justify-between mb-2">
                 <h3 className="m-0 flex items-center gap-1 cursor-pointer" onClick={() => collapsible && setCollapsed(!collapsed)}>
                     {collapsible && <span className="text-[var(--color-text-muted)] text-xs">{collapsed ? '▶' : '▼'}</span>}
                     <Icon icon="game-icons:backpack" width="18" height="18" />
-                    Инвентарь ({inventory.length}/{maxSlots})
+                    Инвентарь <span className={counterColor}>({inventory.length}/{maxSlots})</span>
                 </h3>
                 {!collapsed && (
                 <button
@@ -264,6 +277,7 @@ export default function Inventory({
 
             {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
             </>)}
+            </div>
         </div>
     );
 }
