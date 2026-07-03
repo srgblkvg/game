@@ -476,6 +476,12 @@ export async function getOrCreateTournament(type?: string) {
                 if (Date.now() < ts + 14400 * 1000) continue;
             }
             const pool = await calcDivisionPool(div.tier);
+            // Перепроверяем (гонка между параллельными запросами)
+            const recheck = await db.one(
+                `SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress') AND type = 'official'`,
+                [div.name]
+            ) as any;
+            if (recheck) continue;
             await db.run(
                 'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [div.name, 'registration', now, now + REGISTRATION_WINDOW, pool, new Date().toISOString(), 'official', MAX_PLAYERS]

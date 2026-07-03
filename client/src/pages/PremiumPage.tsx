@@ -8,6 +8,7 @@ export default function PremiumPage() {
     const { character } = useGame();
     const navigate = useNavigate();
     const [selectedDays, setSelectedDays] = useState(7);
+    const [loading, setLoading] = useState(false);
     const [paymentMsg, setPaymentMsg] = useState('');
     const isVK = localStorage.getItem('isVK') === '1';
 
@@ -52,8 +53,6 @@ export default function PremiumPage() {
             buyWithYooKassa(plan);
         }
     };
-
-    const [paymentMsg, setPaymentMsg] = useState('');
 
     const buyWithYooKassa = async (plan: typeof plans[number]) => {
         setLoading(true);
