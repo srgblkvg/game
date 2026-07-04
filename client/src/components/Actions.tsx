@@ -191,37 +191,21 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
 
     const switchTab = (tab: 'world' | 'castle') => {
         if (tab === activeTab) return;
-        // Новые карточки заезжают с той стороны, куда двигаемся:
-        // castle (свайп влево) → заезжают справа; world (свайп вправо) → заезжают слева
         setSlideDir(tab === 'castle' ? 'right' : 'left');
         setActiveTab(tab);
     };
 
     // Свайп для переключения табов на мобильных
     const touchStartX = useRef(0);
-    const touchMoveX = useRef(0);
-    const [swipeOffset, setSwipeOffset] = useState(0);
-    const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; touchMoveX.current = e.touches[0].clientX; };
-    const handleTouchMove = (e: React.TouchEvent) => {
-        touchMoveX.current = e.touches[0].clientX;
-        const delta = touchMoveX.current - touchStartX.current;
-        // Ограничиваем свайп: мир не свайпаем вправо, площадь не влево
-        if ((activeTab === 'world' && delta > 0) || (activeTab === 'castle' && delta < 0)) {
-            setSwipeOffset(0);
-        } else {
-            setSwipeOffset(delta);
-        }
-    };
+    const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
     const handleTouchEnd = (e: React.TouchEvent) => {
         const delta = e.changedTouches[0].clientX - touchStartX.current;
-        setSwipeOffset(0);
         if (Math.abs(delta) < 40) return;
         if (delta < 0 && activeTab === 'world') switchTab('castle');
         else if (delta > 0 && activeTab === 'castle') switchTab('world');
     };
 
     const activeCards = activeTab === 'world' ? worldCards : castleCards;
-    const slideX = slideDir === 'left' ? '-100%' : slideDir === 'right' ? '100%' : '0';
 
     // После окончания анимации сбрасываем направление
     useEffect(() => {
@@ -251,10 +235,15 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             {/* Анимированный контейнер карточек */}
             <div className="overflow-hidden">
                 <div
-                    className="transition-transform duration-200 ease-out"
-                    style={{ transform: `translateX(${swipeOffset !== 0 ? `${swipeOffset}px` : slideX})` }}
+                    className="transition-all duration-250 ease-out"
+                    style={slideDir ? {
+                        transform: `translateX(${slideDir === 'right' ? '60px' : '-60px'})`,
+                        opacity: 0.4,
+                    } : {
+                        transform: 'translateX(0)',
+                        opacity: 1,
+                    }}
                     onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
                     <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} />
