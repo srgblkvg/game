@@ -76,6 +76,7 @@ export default function BankPage() {
             <BackButton />
           {actionCard && <PageHeader title="Банк" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}
+            <Card className="mb-3"><div className="flex justify-between items-center"><div><p className="text-xs text-[var(--color-text-muted)]">В кошельке</p><p className="text-sm font-bold">{formatMoney(_pocket)}</p></div><div className="text-right"><p className="text-xs text-[var(--color-text-muted)]">В банке</p><p className="text-sm font-bold text-[var(--color-accent-success)]">{formatMoney(_bank)}</p></div></div></Card>
             <div className="flex gap-2 mb-3">{(['info','deposit','transfer'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'История операций':t==='deposit'?'Пополнить/Снять':'Переводы'}</Button>)}</div>
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}

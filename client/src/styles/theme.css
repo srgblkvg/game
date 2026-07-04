@@ -236,6 +236,14 @@ html.vk-iframe [class*="bg-black/40"] {
 html.vk-iframe [class*="bg-black/20"] {
   background-color: rgba(0,0,0,0.4) !important;
 }
+/* VK WebView: модальные окна — бэкдроп */
+html.vk-iframe [class*="bg-black/70"] {
+  background-color: rgba(0,0,0,0.7) !important;
+}
+/* VK WebView: фон контента модалки */
+html.vk-iframe [class*="bg-[var(--color-bg-modal)]"] {
+  background-color: var(--color-bg-primary) !important;
+}
 /* Stats overlay + любые card-фоны с opacity */
 html.vk-iframe [class*="bg-[var(--color-bg-card)]/70"],
 html.vk-iframe [class*="bg-[var(--color-bg-card)]/95"] {

@@ -149,7 +149,7 @@ export default function GuildPage() {
         <Card className="mb-4"><div className="flex justify-between items-start"><div className="flex gap-3">
             {guild.image ? <img src={guild.image} alt="Герб" className="w-14 h-14 object-cover rounded border-2 border-[var(--color-accent-gold)]"/> :
                 <div className="w-14 h-14 rounded border-2 border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[0.5rem] text-[var(--color-text-muted)]">герб</div>}
-            <div><h2 className="font-bold text-lg">🏚️ {guild.name}</h2><p className="text-xs text-[var(--color-text-muted)]">Ур.{guild.level} • {members.length} уч.</p>
+            <div><h2 className="font-bold text-lg">🏚️ {guild.name}</h2><p className="text-xs text-[var(--color-text-muted)]">Ур.{guild.level} • {members.length} уч.{taxRate > 0 ? ` • Налог ${taxRate}%` : ''}</p>
                 <ExpBar exp={guild.exp||0} level={guild.level||1}/></div></div>
             <div className="flex gap-1"><Button variant="secondary" size="md" onClick={()=>navigate('/guild/rating')}>Рейтинг</Button>
                 <Button variant="secondary" size="md" onClick={handleLeave}>Покинуть</Button></div></div>
