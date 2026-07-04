@@ -135,13 +135,26 @@ body,
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px); /* 40px = высота свёрнутого чат-бара */
 }
 
-/* VK iframe: scroll fix */
+/* VK iframe: scroll fix + bottom nav offset (VK tab bar ~56px + safe area) */
 html.vk-iframe,
 html.vk-iframe body {
   height: 100vh !important;
   height: 100dvh !important;
   overflow: auto !important;
-  padding-bottom: max(env(safe-area-inset-bottom, 50px), 50px) !important;
+  /* 70px = VK bottom tab bar (56px) + запас */
+  padding-bottom: max(env(safe-area-inset-bottom, 70px), 70px) !important;
+}
+
+/* VK WebView: запрет зума на инпутах (iOS WKWebView зум triggers при font-size < 16px) */
+html.vk-iframe input,
+html.vk-iframe textarea,
+html.vk-iframe select {
+  font-size: 16px !important;
+}
+
+/* VK WebView: запрет авто-увеличения текста */
+html.vk-iframe {
+  -webkit-text-size-adjust: 100% !important;
 }
 
 /* No gradient — solid background for VK */
