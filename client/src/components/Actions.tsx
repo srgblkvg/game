@@ -187,13 +187,6 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const worldCards = cards.filter(c => c.section === 'world');
     const castleCards = cards.filter(c => c.section === 'castle');
     const [activeTab, setActiveTab] = useState<'world' | 'castle'>('world');
-    const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
-
-    const switchTab = (tab: 'world' | 'castle') => {
-        if (tab === activeTab) return;
-        setSlideDir(tab === 'castle' ? 'right' : 'left');
-        setActiveTab(tab);
-    };
 
     // Свайп для переключения табов на мобильных
     const touchStartX = useRef(0);
@@ -201,18 +194,11 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const handleTouchEnd = (e: React.TouchEvent) => {
         const delta = e.changedTouches[0].clientX - touchStartX.current;
         if (Math.abs(delta) < 40) return;
-        if (delta < 0 && activeTab === 'world') switchTab('castle');
-        else if (delta > 0 && activeTab === 'castle') switchTab('world');
+        if (delta < 0 && activeTab === 'world') setActiveTab('castle');
+        else if (delta > 0 && activeTab === 'castle') setActiveTab('world');
     };
 
     const activeCards = activeTab === 'world' ? worldCards : castleCards;
-
-    // После окончания анимации сбрасываем направление
-    useEffect(() => {
-        if (!slideDir) return;
-        const t = setTimeout(() => setSlideDir(null), 250);
-        return () => clearTimeout(t);
-    }, [slideDir]);
 
     return (
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
@@ -224,30 +210,16 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             {/* Категории */}
             <div className="flex justify-center gap-2" data-tutorial="actions-tabs">
                 <button
-                    onClick={() => switchTab('world')}
+                    onClick={() => setActiveTab('world')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'world' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🌍 Мир</button>
                 <button
-                    onClick={() => switchTab('castle')}
+                    onClick={() => setActiveTab('castle')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🏰 Площадь</button>
             </div>
-            {/* Анимированный контейнер карточек */}
-            <div className="overflow-hidden">
-                <div
-                    className="transition-all duration-250 ease-out"
-                    style={slideDir ? {
-                        transform: `translateX(${slideDir === 'right' ? '60px' : '-60px'})`,
-                        opacity: 0.4,
-                    } : {
-                        transform: 'translateX(0)',
-                        opacity: 1,
-                    }}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} />
-                </div>
+            <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+                <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} />
             </div>
         </div>
     );
