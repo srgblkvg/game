@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
@@ -188,6 +188,16 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const castleCards = cards.filter(c => c.section === 'castle');
     const [activeTab, setActiveTab] = useState<'world' | 'castle'>('world');
 
+    // Свайп для переключения табов на мобильных
+    const touchStartX = useRef(0);
+    const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        const delta = e.changedTouches[0].clientX - touchStartX.current;
+        if (Math.abs(delta) < 40) return;
+        if (delta < 0 && activeTab === 'world') setActiveTab('castle');
+        else if (delta > 0 && activeTab === 'castle') setActiveTab('world');
+    };
+
     const activeCards = activeTab === 'world' ? worldCards : castleCards;
 
     return (
@@ -208,7 +218,9 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🏰 Площадь</button>
             </div>
+            <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} />
+            </div>
         </div>
     );
 }
