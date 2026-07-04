@@ -191,7 +191,9 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
 
     const switchTab = (tab: 'world' | 'castle') => {
         if (tab === activeTab) return;
-        setSlideDir(tab === 'castle' ? 'left' : 'right');
+        // Новые карточки заезжают с той стороны, куда двигаемся:
+        // castle (свайп влево) → заезжают справа; world (свайп вправо) → заезжают слева
+        setSlideDir(tab === 'castle' ? 'right' : 'left');
         setActiveTab(tab);
     };
 
