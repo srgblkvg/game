@@ -207,7 +207,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const handleTouchMove = (e: React.TouchEvent) => {
         touchCurrentX.current = e.touches[0].clientX;
         const dx = touchCurrentX.current - touchStartX.current;
-        if (Math.abs(dx) > 5) isDragging.current = true;
+        if (Math.abs(dx) > 10) isDragging.current = true;
         if (!isDragging.current) return;
         // Конвертируем пиксели в проценты от ширины контейнера
         const w = containerRef.current?.offsetWidth || 300;
@@ -220,6 +220,9 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const handleTouchEnd = () => {
         if (!isDragging.current) return;
         isDragging.current = false;
+        // Не переключаем если палец почти не двигался (тап по карточке)
+        const totalDx = Math.abs(touchCurrentX.current - touchStartX.current);
+        if (totalDx < 25) { setAnimating(true); setOffset(0); return; }
         // Притягиваем к ближайшей вкладке (0 = мир, -100 = площадь)
         setActiveTab(offset > -50 ? 'world' : 'castle');
         setAnimating(true);
