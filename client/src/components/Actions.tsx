@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
@@ -188,49 +188,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const castleCards = cards.filter(c => c.section === 'castle');
     const [activeTab, setActiveTab] = useState<'world' | 'castle'>('world');
 
-    // Скролл-свайп: карточки едут за пальцем
-    const containerRef = useRef<HTMLDivElement>(null);
-    const touchStartX = useRef(0);
-    const touchCurrentX = useRef(0);
-    const isDragging = useRef(false);
-    const [offset, setOffset] = useState(0); // px смещения
-    const [animating, setAnimating] = useState(false);
-
-    const baseOffset = activeTab === 'world' ? 0 : -100; // в процентах
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        touchStartX.current = e.touches[0].clientX;
-        touchCurrentX.current = e.touches[0].clientX;
-        isDragging.current = false;
-        setAnimating(false);
-    };
-    const handleTouchMove = (e: React.TouchEvent) => {
-        touchCurrentX.current = e.touches[0].clientX;
-        const dx = touchCurrentX.current - touchStartX.current;
-        if (Math.abs(dx) > 10) isDragging.current = true;
-        if (!isDragging.current) return;
-        // Конвертируем пиксели в проценты от ширины контейнера
-        const w = containerRef.current?.offsetWidth || 300;
-        const dpct = (dx / w) * 100;
-        const raw = baseOffset + dpct;
-        // Ограничиваем: не даём уйти за края
-        const clamped = activeTab === 'world' ? Math.max(-100, Math.min(0, raw)) : Math.max(-100, Math.min(0, raw));
-        setOffset(clamped);
-    };
-    const handleTouchEnd = () => {
-        if (!isDragging.current) return;
-        isDragging.current = false;
-        // Не переключаем если палец почти не двигался (тап по карточке)
-        const totalDx = Math.abs(touchCurrentX.current - touchStartX.current);
-        if (totalDx < 25) { setAnimating(true); setOffset(0); return; }
-        // Притягиваем к ближайшей вкладке (0 = мир, -100 = площадь)
-        setActiveTab(offset > -50 ? 'world' : 'castle');
-        setAnimating(true);
-        setOffset(0);
-    };
-
-    // CSS transform
-    const translatePct = animating ? (activeTab === 'world' ? 0 : -100) : offset;
+    const activeCards = activeTab === 'world' ? worldCards : castleCards;
 
     return (
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
@@ -242,36 +200,15 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             {/* Категории */}
             <div className="flex justify-center gap-2" data-tutorial="actions-tabs">
                 <button
-                    onClick={() => { setAnimating(true); setActiveTab('world'); }}
+                    onClick={() => setActiveTab('world')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'world' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🌍 Мир</button>
                 <button
-                    onClick={() => { setAnimating(true); setActiveTab('castle'); }}
+                    onClick={() => setActiveTab('castle')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🏰 Площадь</button>
             </div>
-            <div
-                ref={containerRef}
-                className="overflow-hidden touch-pan-y"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-            >
-                <div
-                    className="flex"
-                    style={{
-                        transform: `translateX(${translatePct}%)`,
-                        transition: animating ? 'transform 200ms ease-out' : 'none',
-                    }}
-                >
-                    <div className="w-full shrink-0 pr-2">
-                        <CardGrid cards={worldCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={massacreCount} massacreTimeLeft={massacreTimeLeft} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={null} myRegistration={null} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={0} />
-                    </div>
-                    <div className="w-full shrink-0 pl-2">
-                        <CardGrid cards={castleCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={tournamentInfo} myRegistration={myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} />
-                    </div>
-                </div>
-            </div>
+            <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} />
         </div>
     );
 }
