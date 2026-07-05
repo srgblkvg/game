@@ -468,6 +468,7 @@ export default function BestiaryPage() {
               showHealth={battleActive}
               showExp={false}
               showRegenHint={false}
+              showHealButton={false}
               readOnly
               compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : true}
             />
@@ -487,6 +488,7 @@ export default function BestiaryPage() {
                 showHealth={battleActive}
                 showExp={false}
                 showRegenHint={false}
+                showHealButton={false}
                 readOnly
                 compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : true}
                 isMob

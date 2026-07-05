@@ -24,6 +24,7 @@ interface CharacterCardProps {
   highlightedSlots?: string[];
   compact?: boolean | 'mobile' | 'verySmall';
   isMob?: boolean;
+  showHealButton?: boolean;
 }
 
 export default function CharacterCard({
@@ -31,6 +32,7 @@ export default function CharacterCard({
   showExp = true, showRegenHint = true, regenRate = 1, readOnly = false,
   onEquip, availableItems, selectedItemId, highlightedSlots,
   compact = false, isMob = false, hideNoGuild = false,
+  showHealButton = true,
 }: CharacterCardProps) {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
@@ -217,7 +219,7 @@ export default function CharacterCard({
 
       {/* Здоровье */}
       {showHealth && char.currentHp !== undefined && (
-        <HealthBar currentHp={char.currentHp} maxHp={hp} compact={compact} showRegenHint={showRegenHint} regenRate={regenRate} />
+        <HealthBar currentHp={char.currentHp} maxHp={hp} compact={compact} showRegenHint={showRegenHint} regenRate={regenRate} showHealButton={showHealButton} />
       )}
 
       {/* Тултип */}

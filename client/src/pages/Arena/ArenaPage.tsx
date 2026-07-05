@@ -100,6 +100,7 @@ export default function ArenaPage() {
           showHealth={isBattleActive}
           showExp={false}
           showRegenHint={false}
+          showHealButton={false}
           readOnly
           compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
         />
