@@ -12,7 +12,6 @@ import { useServerTime, getRemaining } from '../hooks/useServerTime';
 import { useAcquire } from '../contexts/AcquireContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import Modal from '../components/ui/Modal';
 import { renderBattleLog } from '../utils/battleLog';
 import { formatMoney } from '../utils/money';
 import CharacterCard from '../components/CharacterCard';
@@ -67,6 +66,15 @@ export default function BestiaryPage() {
   useEffect(() => { stepsRef.current = battleSteps; }, [battleSteps]);
   useEffect(() => { if (!user) navigate('/login'); }, [user, navigate]);
   useEffect(() => { if (character?.activeJob) navigate('/jobs'); }, [character?.activeJob, navigate]);
+
+  // Скрывать тултип премиума при клике вне
+  useEffect(() => {
+    if (!showPremiumHint) return;
+    const handler = () => setShowPremiumHint(false);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [showPremiumHint]);
+
   useEffect(() => { loadMobs(); updateCooldown(); }, []);
   useEffect(() => {
     const handler = () => { setIsMobile(window.innerWidth < 600); setIsVerySmall(window.innerWidth < 420); };
@@ -488,28 +496,28 @@ export default function BestiaryPage() {
           {/* Speed controls */}
           {battleActive && !battleDone && (
             <div className="flex justify-center gap-4 mb-4">
-              <Button
-                variant="secondary"
-                size="md"
-                disabled={Number((character as any)?.premium?.until || 0) <= (serverTime || Math.floor(Date.now()/1000))}
-                onClick={() => {
-                  if (Number((character as any)?.premium?.until || 0) > (serverTime || Math.floor(Date.now()/1000))) {
-                    handleSkip();
-                  } else {
-                    setShowPremiumHint(true);
-                  }
-                }}
-              >
-                Пропустить
-              </Button>
+              <div className="relative">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => {
+                    if (Number((character as any)?.premium?.until || 0) > (serverTime || Math.floor(Date.now()/1000))) {
+                      handleSkip();
+                    } else {
+                      setShowPremiumHint(true);
+                    }
+                  }}
+                >
+                  Пропустить
+                </Button>
+                {showPremiumHint && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-3 py-1 text-xs text-[var(--color-accent-gold)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded whitespace-nowrap shadow-lg z-50">
+                    Доступно с Премиум
+                  </div>
+                )}
+              </div>
             </div>
           )}
-          <Modal open={showPremiumHint} onClose={() => setShowPremiumHint(false)}>
-            <div className="text-center py-4">
-              <p className="text-lg text-[var(--color-accent-gold)] mb-2">Доступно с Премиум</p>
-              <Button variant="secondary" size="md" onClick={() => setShowPremiumHint(false)}>OK</Button>
-            </div>
-          </Modal>
 
           {loading && <p className="text-center text-sm mb-4">Загрузка боя...</p>}
 

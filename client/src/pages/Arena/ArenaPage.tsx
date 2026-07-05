@@ -39,6 +39,14 @@ export default function ArenaPage() {
   useEffect(() => { if (!user) navigate('/login'); }, [user, navigate]);
   useEffect(() => { if (character?.activeJob) navigate('/jobs'); }, [character?.activeJob, navigate]);
 
+  // Скрывать тултип премиума при клике вне
+  useEffect(() => {
+    if (!showPremiumHint) return;
+    const handler = () => setShowPremiumHint(false);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [showPremiumHint]);
+
   const {
     opponent,
     battleSteps,
@@ -119,28 +127,28 @@ export default function ArenaPage() {
       {/* Управление скоростью */}
       {battleSteps.length > 0 && currentStep < battleSteps.length - 1 && (
         <div className="flex justify-center gap-4 mb-4">
-          <Button
-            variant="secondary"
-            size="md"
-            disabled={Number((character as any)?.premium?.until || 0) <= Math.floor(Date.now()/1000)}
-            onClick={() => {
-              if (Number((character as any)?.premium?.until || 0) > Math.floor(Date.now()/1000)) {
-                handleSkip();
-              } else {
-                setShowPremiumHint(true);
-              }
-            }}
-          >
-            Пропустить
-          </Button>
+          <div className="relative">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => {
+                if (Number((character as any)?.premium?.until || 0) > Math.floor(Date.now()/1000)) {
+                  handleSkip();
+                } else {
+                  setShowPremiumHint(true);
+                }
+              }}
+            >
+              Пропустить
+            </Button>
+            {showPremiumHint && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-3 py-1 text-xs text-[var(--color-accent-gold)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded whitespace-nowrap shadow-lg z-50">
+                Доступно с Премиум
+              </div>
+            )}
+          </div>
         </div>
       )}
-      <Modal open={showPremiumHint} onClose={() => setShowPremiumHint(false)}>
-        <div className="text-center py-4">
-          <p className="text-lg text-[var(--color-accent-gold)] mb-2">Доступно с Премиум</p>
-          <Button variant="secondary" size="md" onClick={() => setShowPremiumHint(false)}>OK</Button>
-        </div>
-      </Modal>
 
       {/* Кнопки до боя */}
       {!battleSteps.length && (
