@@ -92,6 +92,8 @@ export default function Header() {
     const menuRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
 
+    const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+
     // Закрытие меню по клику вне
     useEffect(() => {
         if (!menuOpen) return;
@@ -198,6 +200,15 @@ export default function Header() {
 
     return (
         <div id="site-header" className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+            {/* Время по центру в VK-отступе */}
+            {isVK && user.role === 'player' && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none"
+                     style={{ height: 'var(--vk-top-offset, 0px)' }}>
+                    <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+                        {formatGameTime(serverNow * 1000)}
+                    </span>
+                </div>
+            )}
             <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
                 {user.role === 'player' && character && (
                     <span className="text-[var(--color-text-primary)] text-sm font-bold">
@@ -218,7 +229,7 @@ export default function Header() {
                     )
                 )}
                 <div className="flex gap-2 ml-auto items-center">
-                    {user.role === 'player' && (
+                    {!isVK && user.role === 'player' && (
                         <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
                             {formatGameTime(serverNow * 1000)}
                         </span>
