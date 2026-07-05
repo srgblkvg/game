@@ -122,12 +122,12 @@ export default function ArenaPage() {
           <Button
             variant="secondary"
             size="md"
+            disabled={Number((character as any)?.premium?.until || 0) <= Math.floor(Date.now()/1000)}
             onClick={() => {
-              if ((character as any)?.premium?.until > Math.floor(Date.now()/1000)) {
+              if (Number((character as any)?.premium?.until || 0) > Math.floor(Date.now()/1000)) {
                 handleSkip();
               } else {
                 setShowPremiumHint(true);
-                setTimeout(() => setShowPremiumHint(false), 2000);
               }
             }}
           >
@@ -135,13 +135,12 @@ export default function ArenaPage() {
           </Button>
         </div>
       )}
-      {showPremiumHint && (
-        <div className="text-center mb-2">
-          <span className="text-xs text-[var(--color-accent-gold)] bg-[var(--color-bg-secondary)] px-3 py-1 rounded-full">
-            Доступно с Премиум
-          </span>
+      <Modal open={showPremiumHint} onClose={() => setShowPremiumHint(false)}>
+        <div className="text-center py-4">
+          <p className="text-lg text-[var(--color-accent-gold)] mb-2">Доступно с Премиум</p>
+          <Button variant="secondary" size="md" onClick={() => setShowPremiumHint(false)}>OK</Button>
         </div>
-      )}
+      </Modal>
 
       {/* Кнопки до боя */}
       {!battleSteps.length && (

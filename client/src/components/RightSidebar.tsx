@@ -49,7 +49,7 @@ export default function RightSidebar() {
                 data-tutorial="right-sidebar"
                 onClick={() => { setOpen(!open); if (!open) window.dispatchEvent(new CustomEvent('closeChatPanel')); }}
                 id="right-sidebar-toggle"
-                className={`fixed right-3 top-[116px] z-[45] flex items-center gap-1.5 rounded-full border shadow-lg cursor-pointer transition-all duration-300 ${
+                className={`fixed right-3 top-[115px] z-[45] flex items-center gap-1.5 rounded-full border shadow-lg cursor-pointer transition-all duration-300 ${
                     open
                         ? 'w-8 h-8 bg-[var(--color-bg-secondary)] border-[var(--color-border-default)] justify-center'
                         : 'px-3 py-1.5 bg-[var(--color-bg-secondary)] border-[var(--color-border-default)] hover:border-[var(--color-accent-warning)]'

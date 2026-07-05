@@ -12,6 +12,7 @@ import { useServerTime, getRemaining } from '../hooks/useServerTime';
 import { useAcquire } from '../contexts/AcquireContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import Modal from '../components/ui/Modal';
 import { renderBattleLog } from '../utils/battleLog';
 import { formatMoney } from '../utils/money';
 import CharacterCard from '../components/CharacterCard';
@@ -490,12 +491,12 @@ export default function BestiaryPage() {
               <Button
                 variant="secondary"
                 size="md"
+                disabled={Number((character as any)?.premium?.until || 0) <= (serverTime || Math.floor(Date.now()/1000))}
                 onClick={() => {
-                  if ((character as any)?.premium?.until > (serverTime || Math.floor(Date.now()/1000))) {
+                  if (Number((character as any)?.premium?.until || 0) > (serverTime || Math.floor(Date.now()/1000))) {
                     handleSkip();
                   } else {
                     setShowPremiumHint(true);
-                    setTimeout(() => setShowPremiumHint(false), 2000);
                   }
                 }}
               >
@@ -503,13 +504,12 @@ export default function BestiaryPage() {
               </Button>
             </div>
           )}
-          {showPremiumHint && (
-            <div className="text-center mb-2">
-              <span className="text-xs text-[var(--color-accent-gold)] bg-[var(--color-bg-secondary)] px-3 py-1 rounded-full">
-                Доступно с Премиум
-              </span>
+          <Modal open={showPremiumHint} onClose={() => setShowPremiumHint(false)}>
+            <div className="text-center py-4">
+              <p className="text-lg text-[var(--color-accent-gold)] mb-2">Доступно с Премиум</p>
+              <Button variant="secondary" size="md" onClick={() => setShowPremiumHint(false)}>OK</Button>
             </div>
-          )}
+          </Modal>
 
           {loading && <p className="text-center text-sm mb-4">Загрузка боя...</p>}
 
