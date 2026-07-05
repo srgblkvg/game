@@ -34,6 +34,16 @@ export default function AdminUsers() {
     const [premiumUserId, setPremiumUserId] = useState('');
     const [premiumDays, setPremiumDays] = useState('7');
 
+    // Выбор игрока — заполняет все ID-инпуты
+    const selectUser = (u: any) => {
+        const id = String(u.id);
+        setTimerUserId(id);
+        setMoneyUserId(id);
+        setFinishJobUserId(id);
+        setPremiumUserId(id);
+        setBanUserId(u.id);
+    };
+
     // Поиск по имени
     const [searchQuery, setSearchQuery] = useState('');
     // Фильтр: все / игроки / гости
@@ -181,7 +191,16 @@ export default function AdminUsers() {
 
     const formatLastLogin = (value: any) => {
         if (!value) return '—';
-        // Unix timestamp (число) — новые записи
+        // Date object (PG driver returns Date for TIMESTAMPTZ)
+        if (value instanceof Date) {
+            const diffSec = Math.floor((Date.now() - value.getTime()) / 1000);
+            if (diffSec < 60) return 'сейчас';
+            if (diffSec < 3600) return `${Math.floor(diffSec / 60)}м`;
+            if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}ч`;
+            if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}д`;
+            return value.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit' });
+        }
+        // Unix timestamp (число)
         if (typeof value === 'number') {
             const diffSec = Math.floor(Date.now() / 1000) - value;
             if (diffSec < 60) return 'сейчас';
@@ -297,7 +316,10 @@ export default function AdminUsers() {
                                 const isExpanded = expandedUserId === u.id;
 
                                 return (
-                                    <tr key={u.id} className={`border-b border-[var(--color-border-light)] ${u.bannedUntil > now ? 'bg-red-900/20' : ''}`}>
+                                    <tr key={u.id}
+                                        className={`border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] ${u.bannedUntil > now ? 'bg-red-900/20' : ''}`}
+                                        onClick={() => selectUser(u)}
+                                    >
                                         <td className="p-1">
                                             {u.avatar && <img src={u.avatar} alt="" className="w-6 h-6 rounded-full object-cover" />}
                                         </td>
