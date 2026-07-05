@@ -115,7 +115,7 @@ export default function GuildViewPage() {
                                 </div>
                             </div>
                         </div>
-                        {!isMember && (
+                        {!isMember && !myGuild && (
                             <div className="mt-3 flex gap-2">
                                 <Button variant="primary" size="md" onClick={handleJoin}>
                                     {guild.joinType === 'open' ? 'Вступить' : guild.joinType === 'request' ? 'Подать заявку' : 'Закрыто'}
