@@ -164,14 +164,9 @@ html.vk-iframe {
 html.vk-iframe[data-theme="light"] {
   background: var(--color-bg-primary) !important;
 }
-/* VK top offset: 44px for mobile (native VK bar), 0 for desktop */
+/* VK top offset: space for native VK client buttons (back/close) */
 html.vk-iframe {
-  --vk-top-offset: 0px;
-}
-@media (max-width: 768px) {
-  html.vk-iframe {
-    --vk-top-offset: max(env(safe-area-inset-top, 44px), 44px);
-  }
+  --vk-top-offset: max(env(safe-area-inset-top, 44px), 44px);
 }
 
 /* Fixed header in VK */
@@ -188,21 +183,19 @@ html.vk-iframe #root {
   padding-top: calc(80px + var(--vk-top-offset)) !important;
 }
 
-/* Shift fixed UI elements down for VK mobile native bar */
-@media (max-width: 768px) {
-  html.vk-iframe #header-popup {
-    top: calc(2.75rem + var(--vk-top-offset)) !important;
-  }
-  html.vk-iframe #right-sidebar-toggle {
-    top: calc(4rem + var(--vk-top-offset)) !important;
-  }
-  html.vk-iframe #right-sidebar-panel {
-    top: calc(80px + var(--vk-top-offset)) !important;
-    height: calc(100vh - 80px - 40px - var(--vk-top-offset)) !important;
-  }
-  html.vk-iframe #notification-toast {
-    top: calc(3.5rem + var(--vk-top-offset)) !important;
-  }
+/* Shift fixed UI elements down for VK native bar */
+html.vk-iframe #header-popup {
+  top: calc(2.75rem + var(--vk-top-offset)) !important;
+}
+html.vk-iframe #right-sidebar-toggle {
+  top: calc(4rem + var(--vk-top-offset)) !important;
+}
+html.vk-iframe #right-sidebar-panel {
+  top: calc(80px + var(--vk-top-offset)) !important;
+  height: calc(100vh - 80px - 40px - var(--vk-top-offset)) !important;
+}
+html.vk-iframe #notification-toast {
+  top: calc(3.5rem + var(--vk-top-offset)) !important;
 }
 /* Remove transparency from right panel */
 html.vk-iframe .right-panel-transparent {
