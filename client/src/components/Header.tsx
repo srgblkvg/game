@@ -214,7 +214,7 @@ export default function Header() {
                     <img
                         src={character.avatar || (character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp')}
                         alt=""
-                        className="w-5 h-5 rounded-full object-cover border border-[var(--color-border-default)] flex-shrink-0"
+                        className="w-6 h-6 rounded-full object-cover border border-[var(--color-border-default)] flex-shrink-0"
                         onError={e => {
                             const img = e.currentTarget;
                             if (!img.dataset.fallback) {
@@ -224,7 +224,7 @@ export default function Header() {
                         }}
                     />
                     <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-[0.6rem] text-[var(--color-text-muted)] truncate leading-none">
+                        <span className="text-xs text-[var(--color-text-muted)] truncate leading-none">
                             {character.username} [{character.level}]
                         </span>
                         {/* HP bar */}
