@@ -11,6 +11,7 @@ import { fetchBattles, fetchCharacter } from '../api';
 import { safeDate } from '../utils/date';
 import { formatGameTime } from '../utils/time';
 import Button from './ui/Button';
+import PlayerBadge from './PlayerBadge';
 
 const breadcrumbMap: Record<string, string> = {
     arena: 'Арена',
@@ -218,33 +219,15 @@ export default function Header() {
             {/* Аватар/ник/HP слева, время по центру */}
             {user.role === 'player' && character && (
                 <div className="flex items-center px-3 pt-6 pb-1 relative">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                        <img
-                            src={character.avatar || (character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp')}
-                            alt=""
-                            className="w-6 h-6 rounded-full object-cover border border-[var(--color-border-default)] flex-shrink-0"
-                            onError={e => {
-                                const img = e.currentTarget;
-                                if (!img.dataset.fallback) {
-                                    img.dataset.fallback = '1';
-                                    img.src = character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp';
-                                }
-                            }}
-                        />
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                            <span className="text-xs text-[var(--color-text-muted)] truncate leading-none">
-                                {character.username} [{character.level}]
-                            </span>
-                            <div className="flex items-center gap-1">
-                                <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden border border-[var(--color-border-light)]" style={{ width: '70px' }}>
-                                    <div style={{ width: `${hpPct}%` }} className="h-full bg-[var(--color-accent-danger)] rounded-full transition-[width] duration-300" />
-                                </div>
-                                <span className="text-[0.5rem] text-[var(--color-text-muted)] tabular-nums leading-none flex-shrink-0">
-                                    {currentHp}/{maxHp}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+                    <PlayerBadge
+                        avatar={character.avatar || null}
+                        username={character.username}
+                        level={character.level}
+                        gender={character.gender || 'male'}
+                        currentHp={currentHp}
+                        maxHp={maxHp}
+                        hpPct={hpPct}
+                    />
                     <span className="absolute left-1/2 -translate-x-1/2 text-xs text-[var(--color-text-muted)] tabular-nums leading-none pointer-events-none">
                         {formatGameTime(serverNow * 1000)}
                     </span>
