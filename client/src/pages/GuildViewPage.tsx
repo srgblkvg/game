@@ -19,6 +19,7 @@ export default function GuildViewPage() {
     const [myWar, setMyWar] = useState<any>(null);
     const [war, setWar] = useState<any>(null);
     const [message, setMessage] = useState('');
+    const [loaded, setLoaded] = useState(false);
 
     useEffect(() => { load(); }, [id]);
 
@@ -38,6 +39,7 @@ export default function GuildViewPage() {
             const data = await r.json();
             if (data.guild) { setMyGuild(data.guild); setMyWar(data.war || null); }
         } catch {}
+        setLoaded(true);
     };
 
     const api = async (url: string, body?: any) => {
@@ -115,7 +117,7 @@ export default function GuildViewPage() {
                                 </div>
                             </div>
                         </div>
-                        {!isMember && !myGuild && (
+                        {loaded && !isMember && !myGuild && (
                             <div className="mt-3 flex gap-2">
                                 <Button variant="primary" size="md" onClick={handleJoin}>
                                     {guild.joinType === 'open' ? 'Вступить' : guild.joinType === 'request' ? 'Подать заявку' : 'Закрыто'}
