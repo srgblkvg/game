@@ -482,7 +482,7 @@ function ArenaFlipCard({ card, disabled, cdSec, btnText, arenaDifficulty, setAre
         </div>
         {modalMsg && (
             <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-                <div className="bg-black/30 backdrop-blur-sm text-white rounded-lg px-6 py-3 shadow-lg text-sm font-medium">
+                <div className="bg-red-600 text-white rounded-lg px-6 py-3 shadow-lg text-sm font-medium">
                     {modalMsg}
                 </div>
             </div>
