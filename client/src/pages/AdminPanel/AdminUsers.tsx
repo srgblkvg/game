@@ -191,7 +191,18 @@ export default function AdminUsers() {
 
     const formatLastLogin = (value: any) => {
         if (!value) return '—';
-        // Date object (PG driver returns Date for TIMESTAMPTZ)
+        // Если это число или числовая строка — Unix timestamp в секундах
+        const num = Number(value);
+        if (!isNaN(num) && num > 1000000000) {
+            const diffSec = Math.floor(Date.now() / 1000) - num;
+            if (diffSec < 60) return 'сейчас';
+            if (diffSec < 3600) return `${Math.floor(diffSec / 60)}м`;
+            if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}ч`;
+            if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}д`;
+            const d = new Date(num * 1000);
+            return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit' });
+        }
+        // Date object (PG driver возвращает Date для TIMESTAMPTZ)
         if (value instanceof Date) {
             const diffSec = Math.floor((Date.now() - value.getTime()) / 1000);
             if (diffSec < 60) return 'сейчас';
@@ -200,16 +211,7 @@ export default function AdminUsers() {
             if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}д`;
             return value.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit' });
         }
-        // Unix timestamp (число)
-        if (typeof value === 'number') {
-            const diffSec = Math.floor(Date.now() / 1000) - value;
-            if (diffSec < 60) return 'сейчас';
-            if (diffSec < 3600) return `${Math.floor(diffSec / 60)}м`;
-            if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}ч`;
-            if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}д`;
-            return fmtSafeDate(value, { day:'2-digit', month:'2-digit' });
-        }
-        // Строка даты — старые записи (парсим как UTC чтобы избежать сдвига)
+        // Строка даты
         const d = new Date(String(value).replace(' ', 'T') + 'Z');
         if (isNaN(d.getTime())) return String(value);
         const diffMs = Date.now() - d.getTime();
@@ -220,7 +222,7 @@ export default function AdminUsers() {
         if (diffHours < 24) return `${diffHours}ч`;
         const diffDays = Math.floor(diffHours / 24);
         if (diffDays < 7) return `${diffDays}д`;
-        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+        return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit' });
     };
 
     const filteredUsers = searchQuery
