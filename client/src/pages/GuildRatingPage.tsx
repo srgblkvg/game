@@ -45,6 +45,7 @@ export default function GuildRatingPage() {
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <span className="text-sm">{isExpanded ? '▼' : '▶'}</span>
                                 <span className="text-sm font-bold w-8 text-center text-[var(--color-text-muted)]">#{rank}</span>
+                                {g.image && <img src={g.image} alt="" className="w-5 h-5 object-contain rounded flex-shrink-0" />}
                                 <h4 className="font-bold text-sm truncate">{g.name}</h4>
                                 {g.warStatus && (
                                     <span className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold"
@@ -59,7 +60,6 @@ export default function GuildRatingPage() {
                                     <span className="text-[0.6rem] text-[var(--color-accent-success)] font-bold px-1.5 py-0.5 rounded border border-[var(--color-accent-success)]">Ваша</span>
                                 )}
                             </div>
-                            {g.image && <img src={g.image} alt="Герб" className="w-8 h-8 object-contain rounded flex-shrink-0 ml-2" />}
                         </div>
                         {isExpanded && (
                             <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
