@@ -1,4 +1,5 @@
 import { Icon } from "@iconify/react";
+import BackButton from '../components/BackButton';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,6 +43,7 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-4">
+            <BackButton />
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Профиль игрока</h2>
                 <Button variant="secondary" size="md" onClick={() => navigate('/rating')}>
