@@ -211,10 +211,10 @@ export default function Header() {
 
     return (
         <div id="site-header" className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
-            {/* XP bar — тонкая полоска в самом верху */}
+            {/* XP bar — полоска в самом верху */}
             {user.role === 'player' && (
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--color-bg-input)] z-50">
-                    <div style={{ width: `${xpPct}%` }} className="h-full bg-[var(--color-accent-success)] transition-[width] duration-500" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-bg-input)] z-50">
+                    <div style={{ width: `${xpPct}%` }} className="h-full bg-[var(--color-accent-purple)] transition-[width] duration-500" />
                 </div>
             )}
             {/* Имя и уровень слева, время по центру в VK-отступе */}
