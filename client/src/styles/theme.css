@@ -166,7 +166,7 @@ html.vk-iframe[data-theme="light"] {
 }
 /* VK top offset: space for native VK client buttons (back/close) */
 html.vk-iframe {
-  --vk-top-offset: max(env(safe-area-inset-top, 44px), 44px);
+  --vk-top-offset: max(env(safe-area-inset-top, 48px), 48px);
 }
 
 /* Fixed header in VK */

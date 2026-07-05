@@ -229,7 +229,7 @@ export default function Header() {
                     </span>
                 </div>
             )}
-            <div className="flex items-center justify-between gap-2 px-3 py-2 flex-wrap">
+            <div className="flex items-center justify-between gap-2 px-3 py-1 flex-wrap">
                 {user.role === 'player' && character && (
                     <span className="text-[var(--color-text-primary)] text-sm font-bold">
                         Серебро: {character.money.toLocaleString()}
