@@ -258,7 +258,7 @@ export default function Header() {
             )}
             {/* Обычный режим: аватар/ник/HP слева, время по центру */}
             {!isVK && user.role === 'player' && character && (
-                <div className="flex items-center px-3 pt-2 pb-1 relative">
+                <div className="flex items-center px-3 pt-6 pb-1 relative">
                     <div className="flex items-center gap-1.5 min-w-0">
                         <img
                             src={character.avatar || (character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp')}
