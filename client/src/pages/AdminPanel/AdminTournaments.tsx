@@ -43,6 +43,8 @@ export default function AdminTournaments() {
     const [divisions, setDivisions] = useState<Division[]>([]);
     const [loading, setLoading] = useState(true);
     const [msg, setMsg] = useState('');
+    const [page, setPage] = useState(1);
+    const LIMIT = 10;
 
     // Форма создания
     const [showForm, setShowForm] = useState(false);
@@ -136,6 +138,9 @@ export default function AdminTournaments() {
 
     if (loading) return <div className="p-4">Загрузка...</div>;
 
+    const totalPages = Math.ceil(tournaments.length / LIMIT);
+    const paged = tournaments.slice((page - 1) * LIMIT, page * LIMIT);
+
     return (
         <div>
             <div className="flex items-center gap-2 mb-4">
@@ -200,7 +205,7 @@ export default function AdminTournaments() {
                             </tr>
                         </thead>
                         <tbody>
-                            {tournaments.map((t: Tournament) => (
+                            {paged.map((t: Tournament) => (
                                 <tr key={t.id} className="border-b border-[var(--color-border-light)]">
                                     <td className="p-1">{t.id}</td>
                                     <td className="p-1">{t.division}</td>
@@ -224,6 +229,13 @@ export default function AdminTournaments() {
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="flex justify-center gap-2 mt-2">
+                        <Button size="md" disabled={page<=1} onClick={()=>setPage(page-1)}>←</Button>
+                        <span className="text-xs text-[var(--color-text-muted)]">{page}/{totalPages}</span>
+                        <Button size="md" disabled={page>=totalPages} onClick={()=>setPage(page+1)}>→</Button>
+                    </div>
+                )}
             </Card>
         </div>
     );

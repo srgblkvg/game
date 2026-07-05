@@ -16,6 +16,10 @@ export default function AdminChat() {
     const [banUserId, setBanUserId] = useState('');
     const [banMinutes, setBanMinutes] = useState('60');
     const [systemText, setSystemText] = useState('');
+    const [msgPage, setMsgPage] = useState(1);
+    const MSG_LIMIT = 10;
+    const msgTotalPages = Math.ceil(messages.length / MSG_LIMIT);
+    const pagedMsgs = messages.slice((msgPage - 1) * MSG_LIMIT, msgPage * MSG_LIMIT);
 
     const loadData = async () => {
         try {
@@ -57,6 +61,7 @@ export default function AdminChat() {
 
             <Card className="mb-4">
                 <h4 className="font-bold mb-2">Блокировка игрока</h4>
+                <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID игрока</label>
                 <input type="number" placeholder="ID игрока" value={banUserId} onChange={e => setBanUserId(e.target.value)} className={inputClass} />
                 <input type="number" placeholder="Минут" value={banMinutes} onChange={e => setBanMinutes(e.target.value)} className={`${inputClass} w-20`} />
                 <Button size="md" className="bg-[#e67e22]" onClick={handleBan}>Заблокировать</Button>
@@ -101,6 +106,7 @@ export default function AdminChat() {
 
             <Card className="mb-4">
                 <h4 className="font-bold mb-2">Удаление</h4>
+                <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID сообщения</label>
                 <input type="number" placeholder="ID сообщения" value={deleteId} onChange={e => setDeleteId(e.target.value)} className={inputClass} />
                 <Button variant="danger" size="md" className="mr-2" onClick={handleDelete}>Удалить одно</Button>
                 <Button variant="danger" size="md" onClick={handleDeleteAll}>Удалить все</Button>
@@ -118,8 +124,11 @@ export default function AdminChat() {
                             </tr>
                         </thead>
                         <tbody>
-                            {messages.map((m: any) => (
-                                <tr key={m.id} className="border-b border-[var(--color-border-light)]">
+                            {pagedMsgs.map((m: any) => (
+                                <tr key={m.id} className="border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)]"
+                                    onClick={() => { setBanUserId(String(m.senderId)); setDeleteId(String(m.id)); }}
+                                    title="Клик: заполнить ID отправителя и ID сообщения"
+                                >
                                     <td className="p-1">{m.id}</td>
                                     <td className="p-1">{m.senderName} (ID {m.senderId})</td>
                                     <td className="p-1">{m.targetId ? `${m.targetName || 'ID ' + m.targetId}` : 'Общий'}</td>
@@ -130,6 +139,13 @@ export default function AdminChat() {
                         </tbody>
                     </table>
                 </div>
+                {msgTotalPages > 1 && (
+                    <div className="flex justify-center gap-2 mt-2">
+                        <Button size="md" disabled={msgPage<=1} onClick={()=>setMsgPage(msgPage-1)}>←</Button>
+                        <span className="text-xs text-[var(--color-text-muted)]">{msgPage}/{msgTotalPages}</span>
+                        <Button size="md" disabled={msgPage>=msgTotalPages} onClick={()=>setMsgPage(msgPage+1)}>→</Button>
+                    </div>
+                )}
             </Card>
         </div>
     );

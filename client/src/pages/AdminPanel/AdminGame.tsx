@@ -95,16 +95,17 @@ export default function AdminGame() {
             )}
             <BulkImageUploader items={actions.map(a => ({ id: a.id, name: a.title, imagePath: a.bg_image }))} title="Массовая загрузка фонов действий" />
             <Card><h3 className="font-bold mb-2">Все действия</h3>
-                <table className="w-full text-sm"><thead><tr className="border-b border-[var(--color-border-default)]"><th className="text-left p-1">Раздел</th><th className="text-left p-1">Название</th><th className="text-left p-1">Путь</th><th className="p-1">Действия</th></tr></thead>
-                    <tbody>{apItems.map((a: any) => (<tr key={a.id} className="border-b border-[var(--color-border-light)]"><td className="p-1">{a.section}</td><td className="p-1">{a.title}</td><td className="p-1 text-xs">{a.path || '—'}</td><td className="p-1"><Button variant="primary" size="md" className="mr-1" onClick={() => setEditingAction(a)}>Ред.</Button><Button variant="danger" size="md" onClick={async () => { if (confirm('Удалить?')) { await api('DELETE', `/api/admin/actions/${a.id}`); loadAll(); } }}>Удалить</Button></td></tr>))}</tbody></table>
+                <table className="w-full text-sm"><thead><tr className="border-b border-[var(--color-border-default)]"><th className="text-left p-1 w-10"></th><th className="text-left p-1">Раздел</th><th className="text-left p-1">Название</th><th className="text-left p-1">Путь</th><th className="p-1">Действия</th></tr></thead>
+                    <tbody>{apItems.map((a: any) => (<tr key={a.id} className="border-b border-[var(--color-border-light)] hover:bg-[var(--color-bg-hover)]"><td className="p-1">{a.bg_image && <img src={a.bg_image} alt="" className="w-8 h-8 object-cover rounded" />}</td><td className="p-1">{a.section}</td><td className="p-1">{a.title}</td><td className="p-1 text-xs">{a.path || '—'}</td><td className="p-1"><Button variant="primary" size="md" className="mr-1" onClick={() => setEditingAction(a)}>Ред.</Button><Button variant="danger" size="md" onClick={async () => { if (confirm('Удалить?')) { await api('DELETE', `/api/admin/actions/${a.id}`); loadAll(); } }}>Удалить</Button></td></tr>))}</tbody></table>
                 {apTotal > 1 && <div className="flex justify-center gap-2 mt-2"><Button size="md" disabled={ap<=1} onClick={()=>setAp(ap-1)}>←</Button><span className="text-xs text-[var(--color-text-muted)]">{ap}/{apTotal}</span><Button size="md" disabled={ap>=apTotal} onClick={()=>setAp(ap+1)}>→</Button></div>}
             </Card>
         </>
     );};
 
     const renderMobsTab = () => {
-        const mpTotal = Math.ceil(mobs.length / LIMIT);
-        const mpItems = mobs.slice((mp - 1) * LIMIT, mp * LIMIT);
+        const sorted = [...mobs].sort((a,b) => (a.location||'').localeCompare(b.location||''));
+        const mpTotal = Math.ceil(sorted.length / LIMIT);
+        const mpItems = sorted.slice((mp - 1) * LIMIT, mp * LIMIT);
         return (
         <>
             {editingMob && (

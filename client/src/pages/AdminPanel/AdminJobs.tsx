@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { fetchAdminJobs, createAdminJob, updateAdminJob, deleteAdminJob, adminFinishJobsByJobId } from '../../api';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -16,6 +17,11 @@ export default function AdminJobs() {
     deleteItem: deleteAdminJob,
     defaultItem: DEFAULT_JOB,
   });
+
+  const [page, setPage] = useState(1);
+  const LIMIT = 10;
+  const totalPages = Math.ceil(crud.items.length / LIMIT);
+  const paged = crud.items.slice((page - 1) * LIMIT, page * LIMIT);
 
   const handleFinishAll = async (jobId: number) => {
     try {
@@ -77,12 +83,13 @@ export default function AdminJobs() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-[var(--color-border-default)]">
-                <th className="text-left p-1">ID</th><th className="text-left p-1">Название</th><th className="text-left p-1">Длит.</th><th className="text-left p-1">Мин.</th><th className="text-left p-1">Макс.</th><th className="text-left p-1">Действия</th>
+                <th className="text-left p-1 w-10"></th><th className="text-left p-1">ID</th><th className="text-left p-1">Название</th><th className="text-left p-1">Длит.</th><th className="text-left p-1">Мин.</th><th className="text-left p-1">Макс.</th><th className="text-left p-1">Действия</th>
               </tr>
             </thead>
             <tbody>
-              {crud.items.map((job: any) => (
-                <tr key={job.id} className="border-b border-[var(--color-border-light)]">
+              {paged.map((job: any) => (
+                <tr key={job.id} className="border-b border-[var(--color-border-light)] hover:bg-[var(--color-bg-hover)]">
+                  <td className="p-1">{job.background && <img src={job.background} alt="" className="w-8 h-8 object-cover rounded" />}</td>
                   <td className="p-1">{job.id}</td><td className="p-1">{job.name}</td><td className="p-1">{job.duration}</td><td className="p-1">{job.rewardMin}</td><td className="p-1">{job.rewardMax}</td>
                   <td className="p-1">
                     <Button variant="primary" size="md" className="mr-1" onClick={() => crud.startEdit(job)}>Ред.</Button>
@@ -94,6 +101,13 @@ export default function AdminJobs() {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex justify-center gap-2 mt-2">
+            <Button size="md" disabled={page<=1} onClick={()=>setPage(page-1)}>←</Button>
+            <span className="text-xs text-[var(--color-text-muted)]">{page}/{totalPages}</span>
+            <Button size="md" disabled={page>=totalPages} onClick={()=>setPage(page+1)}>→</Button>
+          </div>
+        )}
       </Card>
 
       <BulkImageUploader
