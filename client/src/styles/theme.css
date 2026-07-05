@@ -164,9 +164,9 @@ html.vk-iframe {
 html.vk-iframe[data-theme="light"] {
   background: var(--color-bg-primary) !important;
 }
-/* VK top offset: space for native VK client buttons (back/close) */
+/* VK safe-area: only for actual device inset (notch), not arbitrary padding */
 html.vk-iframe {
-  --vk-top-offset: max(env(safe-area-inset-top, 54px), 54px);
+  --vk-top-offset: env(safe-area-inset-top, 0px);
 }
 
 /* Fixed header in VK */
@@ -176,14 +176,13 @@ html.vk-iframe #site-header {
   left: 0 !important;
   right: 0 !important;
   z-index: 40 !important;
-  padding-top: var(--vk-top-offset) !important;
 }
-/* Content offset for fixed header (includes header height + VK offset) */
+/* Content offset for fixed header */
 html.vk-iframe #root {
   padding-top: calc(120px + var(--vk-top-offset)) !important;
 }
 
-/* Shift fixed UI elements down for VK native bar */
+/* Shift fixed UI elements down for VK safe-area */
 html.vk-iframe #header-popup {
   top: calc(2.75rem + var(--vk-top-offset)) !important;
 }
