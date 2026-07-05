@@ -199,6 +199,10 @@ export default function Header() {
         : 0;
     const hpPct = maxHp > 0 ? Math.min(100, Math.max(0, (currentHp / maxHp) * 100)) : 0;
 
+    // XP progress
+    const expForLevel = (lvl: number) => 10 * Math.pow(2, lvl - 1);
+    const xpPct = character ? Math.min(100, Math.max(0, (character.exp / expForLevel(character.level)) * 100)) : 0;
+
     const formatTime = (sec: number) => {
         const m = Math.floor(sec / 60);
         const s = sec % 60;
@@ -207,6 +211,12 @@ export default function Header() {
 
     return (
         <div id="site-header" className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
+            {/* XP bar — тонкая полоска в самом верху */}
+            {user.role === 'player' && (
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--color-bg-input)] z-50">
+                    <div style={{ width: `${xpPct}%` }} className="h-full bg-[var(--color-accent-success)] transition-[width] duration-500" />
+                </div>
+            )}
             {/* Имя и уровень слева, время по центру в VK-отступе */}
             {isVK && user.role === 'player' && character && (
                 <div className="absolute top-0 left-3 flex items-center gap-1.5 pointer-events-none"
