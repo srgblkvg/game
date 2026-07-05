@@ -9,14 +9,14 @@ export class VkAdapter implements PlatformAdapter {
 
     get hasCustomKeyboard() { return true; }
     get hasScrollLock() { return true; }
-    get hasSafeAreaTop() { return false; }
+    get hasSafeAreaTop() { return true; }
     get hasSafeAreaBottom() { return true; }
     get version() {
         return (typeof window !== 'undefined' && (window as any).vkBridge)
             ? 'vkBridge' : 'standalone';
     }
     get bodyClass() { return 'vk-iframe'; }
-    get viewportMeta() { return 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'; }
+    get viewportMeta() { return 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'; }
     get allowSystemKeyboard() { return false; }
 
     get vkUserId(): string | null { return this._vkUser; }

@@ -164,17 +164,17 @@ html.vk-iframe {
 html.vk-iframe[data-theme="light"] {
   background: var(--color-bg-primary) !important;
 }
-/* Fixed header in VK */
+/* Fixed header in VK — отступ сверху под нативные кнопки VK (назад/закрыть) */
 html.vk-iframe #site-header {
   position: fixed !important;
-  top: 0 !important;
+  top: max(env(safe-area-inset-top, 44px), 44px) !important;
   left: 0 !important;
   right: 0 !important;
   z-index: 40 !important;
 }
-/* Content offset for fixed header */
+/* Content offset for fixed header + VK native bar */
 html.vk-iframe #root {
-  padding-top: 80px !important;
+  padding-top: calc(80px + max(env(safe-area-inset-top, 44px), 44px)) !important;
 }
 /* Remove transparency from right panel */
 html.vk-iframe .right-panel-transparent {
