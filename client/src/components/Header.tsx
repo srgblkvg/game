@@ -258,8 +258,8 @@ export default function Header() {
             )}
             {/* Обычный режим: аватар/ник/HP слева, время по центру */}
             {!isVK && user.role === 'player' && character && (
-                <div className="flex items-center px-3 py-1">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <div className="flex items-center px-3 pt-2 pb-1 relative">
+                    <div className="flex items-center gap-1.5 min-w-0">
                         <img
                             src={character.avatar || (character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp')}
                             alt=""
@@ -286,7 +286,7 @@ export default function Header() {
                             </div>
                         </div>
                     </div>
-                    <span className="text-xs text-[var(--color-text-muted)] tabular-nums leading-none flex-shrink-0">
+                    <span className="absolute left-1/2 -translate-x-1/2 text-xs text-[var(--color-text-muted)] tabular-nums leading-none pointer-events-none">
                         {formatGameTime(serverNow * 1000)}
                     </span>
                 </div>
