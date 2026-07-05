@@ -52,13 +52,16 @@ export default function HistoryPage() {
 
     useEffect(()=>{if(!user){navigate('/login');return}loadData()},[user,loadData,navigate]);
 
-    const massacreEntries = massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre' as const,ts:(m.gathering_end || m.created_at) * 1000,data:m}));
+    // Вспомогательная: timestamp → ms (строка/число/секунды)
+    const toMs = (v: any) => typeof v === 'number' ? v * 1000 : v ? new Date(v).getTime() : 0;
+
+    const massacreEntries = massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre' as const,ts:toMs(m.gathering_end || m.created_at),data:m}));
 
     const allEntries = [
         ...battles.map(b=>({id:`b-${b.id}`,type:'battle',ts:new Date(b.createdAt).getTime(),data:b})),
         ...pveBattles.map(b=>({id:`p-${b.id}`,type:'pve',ts:new Date(b.createdAt).getTime(),data:b})),
         ...jobHistory.map(j=>({id:`j-${j.id}`,type:'job',ts:new Date(j.finishedAt).getTime(),data:j})),
-        ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:(t.completedAt || t.createdAt) * 1000,data:t})),
+        ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:toMs(t.completedAt || t.createdAt),data:t})),
         ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt).getTime(),data:q})),
         ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
         ...massacreEntries,
@@ -171,7 +174,7 @@ export default function HistoryPage() {
             const top3 = data.top3 || [];
             const divisionLabel: Record<string,string> = {iron:'Железный',copper:'Медный',bronze:'Бронзовый',silver:'Серебряный',gold:'Золотой',platinum:'Платиновый',diamond:'Алмазный'};
             const divName = data.division==='custom'?data.name||'Турнир':(divisionLabel[data.division]||data.division);
-            return <EntryRow time={fmt(typeof data.completedAt==='number'?data.completedAt*1000:(data.completedAt||data.createdAt))} onClick={()=>navigate('/tournament?tab=completed')}>
+            return <EntryRow time={fmt(toMs(data.completedAt || data.createdAt))} onClick={()=>navigate('/tournament?tab=completed')}>
                 <div>
                 <span><Icon icon="game-icons:trophy" width="14" height="14" className="inline mr-1"/>Турнир «{divName}»{canc?' отменён':' завершён'}</span>
                 {canc?<span className="text-[var(--color-text-muted)] ml-1">Не набралось игроков</span>:
@@ -202,7 +205,7 @@ export default function HistoryPage() {
             const tc = data.turn_count ?? 0;
             const wid = data.winner_id;
             const wname = data.winner_name ?? '?';
-            const ts = data.gathering_end || data.created_at;
+            const ts = toMs(data.gathering_end || data.created_at);
             return <EntryRow time={fmt(ts)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
                 <span><Icon icon="game-icons:battered-axe" width="14" height="14" className="inline mr-1"/>Резня — {pc} участников</span>
                 <span className={`font-bold ml-2 ${wid === user.id ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
