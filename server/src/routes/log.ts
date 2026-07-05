@@ -22,7 +22,7 @@ router.get('/tournament-history', authMiddleware, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 50;
 
     const tournaments = await db.query(`
-        SELECT t.*, tp.snapshotStats
+        SELECT t.*, tp.snapshotStats, t.completedAt
         FROM tournament_participants tp
         JOIN tournaments t ON tp.tournamentId = t.id
         WHERE tp.userId = ? AND t.status IN ('completed', 'cancelled')
@@ -65,7 +65,7 @@ router.get('/massacre-battles', authMiddleware, async (req, res) => {
     const userId = req.userId;
     const limit = parseInt(req.query.limit as string) || 20;
     const battles = await db.query(
-        `SELECT e.id, e.status, e.created_at,
+        `SELECT e.id, e.status, e.created_at, e.gathering_end,
                 (SELECT COUNT(*) FROM massacre_participants WHERE event_id = e.id) as participant_count,
                 (SELECT COUNT(*) FROM massacre_turns WHERE event_id = e.id) as turn_count,
                 (SELECT user_id FROM massacre_participants WHERE event_id = e.id AND alive = TRUE LIMIT 1) as winner_id,
