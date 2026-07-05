@@ -200,7 +200,15 @@ export default function Header() {
 
     return (
         <div id="site-header" className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
-            {/* Время по центру в VK-отступе */}
+            {/* Имя и уровень слева, время по центру в VK-отступе */}
+            {isVK && user.role === 'player' && character && (
+                <div className="absolute top-0 left-3 flex items-center pointer-events-none"
+                     style={{ height: 'var(--vk-top-offset, 0px)' }}>
+                    <span className="text-xs text-[var(--color-text-muted)] truncate max-w-[120px]">
+                        {character.username} [{character.level}]
+                    </span>
+                </div>
+            )}
             {isVK && user.role === 'player' && (
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none"
                      style={{ height: 'var(--vk-top-offset, 0px)' }}>
