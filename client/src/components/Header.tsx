@@ -216,7 +216,7 @@ export default function Header() {
                             }
                         }}
                     />
-                    <span className="text-xs text-[var(--color-text-muted)] truncate max-w-[100px]">
+                    <span className="text-xs text-[var(--color-text-muted)] truncate max-w-[100px] leading-none">
                         {character.username} [{character.level}]
                     </span>
                 </div>
@@ -224,7 +224,7 @@ export default function Header() {
             {isVK && user.role === 'player' && (
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none"
                      style={{ height: 'var(--vk-top-offset, 0px)' }}>
-                    <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+                    <span className="text-xs text-[var(--color-text-muted)] tabular-nums leading-none">
                         {formatGameTime(serverNow * 1000)}
                     </span>
                 </div>
