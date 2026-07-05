@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
-import { useGame } from '../contexts/GameContext';
+import { useGame, getRegenHp } from '../contexts/GameContext';
 import { useServerTime } from '../contexts/ServerTimeContext';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -192,6 +192,13 @@ export default function Header() {
 
     if (!user) return null;
 
+    // HP с регенерацией для VK-бара
+    const maxHp = character?.stats?.hp ?? 100;
+    const currentHp = character
+        ? getRegenHp(character.currentHp, maxHp, serverNow, character.room?.type ?? undefined, character.room?.until ?? undefined)
+        : 0;
+    const hpPct = maxHp > 0 ? Math.min(100, Math.max(0, (currentHp / maxHp) * 100)) : 0;
+
     const formatTime = (sec: number) => {
         const m = Math.floor(sec / 60);
         const s = sec % 60;
@@ -202,23 +209,34 @@ export default function Header() {
         <div id="site-header" className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
             {/* Имя и уровень слева, время по центру в VK-отступе */}
             {isVK && user.role === 'player' && character && (
-                <div className="absolute top-0 left-3 flex items-center gap-1.5 pointer-events-none"
+                <div className="absolute top-0 left-3 flex flex-col justify-center pointer-events-none"
                      style={{ height: 'var(--vk-top-offset, 0px)' }}>
-                    <img
-                        src={character.avatar || (character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp')}
-                        alt=""
-                        className="w-5 h-5 rounded-full object-cover border border-[var(--color-border-default)] flex-shrink-0"
-                        onError={e => {
-                            const img = e.currentTarget;
-                            if (!img.dataset.fallback) {
-                                img.dataset.fallback = '1';
-                                img.src = character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp';
-                            }
-                        }}
-                    />
-                    <span className="text-xs text-[var(--color-text-muted)] truncate max-w-[100px] leading-none">
-                        {character.username} [{character.level}]
-                    </span>
+                    <div className="flex items-center gap-1">
+                        <img
+                            src={character.avatar || (character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp')}
+                            alt=""
+                            className="w-4 h-4 rounded-full object-cover border border-[var(--color-border-default)] flex-shrink-0"
+                            onError={e => {
+                                const img = e.currentTarget;
+                                if (!img.dataset.fallback) {
+                                    img.dataset.fallback = '1';
+                                    img.src = character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp';
+                                }
+                            }}
+                        />
+                        <span className="text-[0.6rem] text-[var(--color-text-muted)] truncate max-w-[90px] leading-none">
+                            {character.username} [{character.level}]
+                        </span>
+                    </div>
+                    {/* HP bar */}
+                    <div className="flex items-center gap-1 mt-0.5">
+                        <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden border border-[var(--color-border-light)] flex-1" style={{ minWidth: '80px' }}>
+                            <div style={{ width: `${hpPct}%` }} className="h-full bg-[var(--color-accent-danger)] rounded-full transition-[width] duration-300" />
+                        </div>
+                        <span className="text-[0.5rem] text-[var(--color-text-muted)] tabular-nums leading-none flex-shrink-0">
+                            {currentHp}/{maxHp}
+                        </span>
+                    </div>
                 </div>
             )}
             {isVK && user.role === 'player' && (
