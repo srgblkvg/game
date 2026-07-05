@@ -102,7 +102,7 @@ router.get('/guild/list', async (req, res) => {
             (SELECT gw2.id FROM guild_wars gw2 WHERE (gw2.attackerGuildId = g.id OR gw2.defenderGuildId = g.id) AND gw2.status IN ('pending','active') LIMIT 1) as warId
         FROM guilds g
         JOIN users u ON g.leaderId = u.id
-        ORDER BY g.treasury DESC, g.level DESC
+        ORDER BY g.level DESC, g.exp DESC
         LIMIT 50
     `, []);
 
