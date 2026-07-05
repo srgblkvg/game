@@ -27,6 +27,8 @@ export default function ArenaPage() {
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
   const [showPremiumHint, setShowPremiumHint] = useState(false);
 
+  const hasPremium = Number((character as any)?.premium?.until || 0) > Math.floor(Date.now()/1000);
+
   useEffect(() => {
     const handler = () => {
       setIsMobile(window.innerWidth < 600);
@@ -131,16 +133,17 @@ export default function ArenaPage() {
             <Button
               variant="secondary"
               size="md"
-              onClick={() => {
-                if (Number((character as any)?.premium?.until || 0) > Math.floor(Date.now()/1000)) {
-                  handleSkip();
-                } else {
-                  setShowPremiumHint(true);
-                }
-              }}
+              disabled={!hasPremium}
+              onClick={hasPremium ? handleSkip : undefined}
             >
               Пропустить
             </Button>
+            {!hasPremium && (
+              <div
+                className="absolute inset-0 cursor-pointer"
+                onClick={e => { e.stopPropagation(); setShowPremiumHint(true); }}
+              />
+            )}
             {showPremiumHint && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-3 py-1 text-xs text-[var(--color-accent-gold)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded whitespace-nowrap shadow-lg z-50">
                 Доступно с Премиум

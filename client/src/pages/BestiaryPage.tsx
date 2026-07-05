@@ -50,6 +50,8 @@ export default function BestiaryPage() {
   const [showPremiumHint, setShowPremiumHint] = useState(false);
   const [tooltipData, _setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
 
+  const hasPremium = Number((character as any)?.premium?.until || 0) > (serverTime || Math.floor(Date.now()/1000));
+
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -500,16 +502,17 @@ export default function BestiaryPage() {
                 <Button
                   variant="secondary"
                   size="md"
-                  onClick={() => {
-                    if (Number((character as any)?.premium?.until || 0) > (serverTime || Math.floor(Date.now()/1000))) {
-                      handleSkip();
-                    } else {
-                      setShowPremiumHint(true);
-                    }
-                  }}
+                  disabled={!hasPremium}
+                  onClick={hasPremium ? handleSkip : undefined}
                 >
                   Пропустить
                 </Button>
+                {!hasPremium && (
+                  <div
+                    className="absolute inset-0 cursor-pointer"
+                    onClick={e => { e.stopPropagation(); setShowPremiumHint(true); }}
+                  />
+                )}
                 {showPremiumHint && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-3 py-1 text-xs text-[var(--color-accent-gold)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded whitespace-nowrap shadow-lg z-50">
                     Доступно с Премиум
