@@ -180,7 +180,7 @@ html.vk-iframe #site-header {
 }
 /* Content offset for fixed header (includes header height + VK offset) */
 html.vk-iframe #root {
-  padding-top: calc(80px + var(--vk-top-offset)) !important;
+  padding-top: calc(120px + var(--vk-top-offset)) !important;
 }
 
 /* Shift fixed UI elements down for VK native bar */
@@ -188,11 +188,11 @@ html.vk-iframe #header-popup {
   top: calc(2.75rem + var(--vk-top-offset)) !important;
 }
 html.vk-iframe #right-sidebar-toggle {
-  top: calc(4rem + var(--vk-top-offset)) !important;
+  top: calc(120px + var(--vk-top-offset)) !important;
 }
 html.vk-iframe #right-sidebar-panel {
-  top: calc(80px + var(--vk-top-offset)) !important;
-  height: calc(100vh - 80px - 40px - var(--vk-top-offset)) !important;
+  top: calc(120px + var(--vk-top-offset)) !important;
+  height: calc(100vh - 120px - 40px - var(--vk-top-offset)) !important;
 }
 html.vk-iframe #notification-toast {
   top: calc(3.5rem + var(--vk-top-offset)) !important;
