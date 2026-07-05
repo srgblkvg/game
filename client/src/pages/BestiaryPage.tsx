@@ -47,6 +47,7 @@ export default function BestiaryPage() {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
+  const [showPremiumHint, setShowPremiumHint] = useState(false);
   const [tooltipData, _setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
 
   const timerRef = useRef<number | null>(null);
@@ -486,9 +487,27 @@ export default function BestiaryPage() {
           {/* Speed controls */}
           {battleActive && !battleDone && (
             <div className="flex justify-center gap-4 mb-4">
-              {(character as any)?.premium?.until > (serverTime || Math.floor(Date.now()/1000)) && (
-                <Button variant="secondary" size="md" onClick={handleSkip}>Пропустить</Button>
-              )}
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  if ((character as any)?.premium?.until > (serverTime || Math.floor(Date.now()/1000))) {
+                    handleSkip();
+                  } else {
+                    setShowPremiumHint(true);
+                    setTimeout(() => setShowPremiumHint(false), 2000);
+                  }
+                }}
+              >
+                Пропустить
+              </Button>
+            </div>
+          )}
+          {showPremiumHint && (
+            <div className="text-center mb-2">
+              <span className="text-xs text-[var(--color-accent-gold)] bg-[var(--color-bg-secondary)] px-3 py-1 rounded-full">
+                Доступно с Премиум
+              </span>
             </div>
           )}
 
