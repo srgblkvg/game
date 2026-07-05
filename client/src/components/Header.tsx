@@ -202,9 +202,21 @@ export default function Header() {
         <div id="site-header" className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
             {/* Имя и уровень слева, время по центру в VK-отступе */}
             {isVK && user.role === 'player' && character && (
-                <div className="absolute top-0 left-3 flex items-center pointer-events-none"
+                <div className="absolute top-0 left-3 flex items-center gap-1.5 pointer-events-none"
                      style={{ height: 'var(--vk-top-offset, 0px)' }}>
-                    <span className="text-xs text-[var(--color-text-muted)] truncate max-w-[120px]">
+                    <img
+                        src={character.avatar || (character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp')}
+                        alt=""
+                        className="w-5 h-5 rounded-full object-cover border border-[var(--color-border-default)] flex-shrink-0"
+                        onError={e => {
+                            const img = e.currentTarget;
+                            if (!img.dataset.fallback) {
+                                img.dataset.fallback = '1';
+                                img.src = character.gender === 'female' ? '/character_woman.webp' : '/character_man.webp';
+                            }
+                        }}
+                    />
+                    <span className="text-xs text-[var(--color-text-muted)] truncate max-w-[100px]">
                         {character.username} [{character.level}]
                     </span>
                 </div>
