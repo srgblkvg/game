@@ -222,9 +222,9 @@ export default function GuildPage() {
             <div className="flex gap-1 my-2">{(['deposit','tax','history'] as const).map(t=>(
                 <button key={t} onClick={()=>setTreasurySubtab(t)} className={`text-xs px-2 py-1 rounded cursor-pointer ${treasurySubtab===t?'bg-[var(--color-accent-info)] text-white':'bg-[var(--color-bg-input)]'}`}>
                     {{deposit:'Внести',tax:'Налог',history:'История'}[t]}</button>))}</div>
-            {treasurySubtab==='deposit'&&<div className="flex gap-2"><input className={inputClass+' flex-1'} type={numType} placeholder="Сумма" value={treasuryAmount} onChange={e=>{const v=e.target.value.replace(/\D/g,'');setTreasuryAmount(v)}}/>
+            {treasurySubtab==='deposit'&&<div className="flex gap-2"><input className={inputClass+' flex-1'} type={numType} placeholder="Сумма" value={treasuryAmount} onChange={e=>{const v=e.target.value.replace(/\D/g,'');setTreasuryAmount(v)}} data-vk-num/>
                 <Button size="md" onClick={handleDeposit} disabled={loading}>Внести</Button></div>}
-            {treasurySubtab==='tax'&&myRank==='leader'&&<div className="flex gap-2"><input className={inputClass+' flex-1'} type={numType} placeholder="0-50%" value={taxRateInput} onChange={e=>{const v=e.target.value.replace(/\D/g,'');setTaxRateInput(v)}}/>
+            {treasurySubtab==='tax'&&myRank==='leader'&&<div className="flex gap-2"><input className={inputClass+' flex-1'} type={numType} placeholder="0-50%" value={taxRateInput} onChange={e=>{const v=e.target.value.replace(/\D/g,'');setTaxRateInput(v)}} data-vk-num/>
                 <Button size="md" onClick={handleTaxRate}>Установить</Button></div>}
             {treasurySubtab==='history'&&<div>
                 <div className="flex gap-1 mb-2">{PERIODS.map(p=>(<button key={p} onClick={()=>loadTreasury(p)} className={`text-xs px-2 py-0.5 rounded cursor-pointer ${treasuryPeriod===p?'bg-[var(--color-accent-info)] text-white':'bg-[var(--color-bg-input)]'}`}>{PLABELS[p]}</button>))}</div>
