@@ -28,6 +28,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         showExp
         regenRate={effectiveRoom && effectiveRoom.until > serverTime ? (effectiveRoom.type === 'closet' ? 3 : effectiveRoom.type === 'bed' ? 10 : 50) : 1}
         readOnly={false}
+        profileId={character.id}
         onEquip={onEquip}
         availableItems={character.inventory}
         selectedItemId={selectedItemId}

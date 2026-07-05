@@ -1,5 +1,6 @@
 // client/src/components/CharacterCard.tsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { slotNames, slotCategories } from '../utils/itemUtils';
 import ItemTooltip from './ItemTooltip';
@@ -25,6 +26,7 @@ interface CharacterCardProps {
   compact?: boolean | 'mobile' | 'verySmall';
   isMob?: boolean;
   showHealButton?: boolean;
+  profileId?: number;
 }
 
 export default function CharacterCard({
@@ -33,7 +35,9 @@ export default function CharacterCard({
   onEquip, availableItems, selectedItemId, highlightedSlots,
   compact = false, isMob = false, hideNoGuild = false,
   showHealButton = true,
+  profileId,
 }: CharacterCardProps) {
+  const navigate = useNavigate();
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
@@ -146,7 +150,11 @@ export default function CharacterCard({
       style={{ width: cardWidth, minWidth: cardWidth, margin: cardMargin }}>
       {/* Имя и уровень */}
       <div className="w-full text-center mb-2">
-        <h2 className="overflow-hidden text-ellipsis whitespace-nowrap max-w-full" style={{ margin: '0 0 -4px 0', fontSize: fontSizeName, lineHeight: '1.1' }}>{char.username}</h2>
+        <h2
+          className={`overflow-hidden text-ellipsis whitespace-nowrap max-w-full${profileId ? ' cursor-pointer hover:text-[var(--color-accent-info)] transition-colors' : ''}`}
+          style={{ margin: '0 0 -4px 0', fontSize: fontSizeName, lineHeight: '1.1' }}
+          onClick={profileId ? () => navigate(`/profile/${profileId}`) : undefined}
+        >{char.username}</h2>
         <div className="h-[0.75rem]">
           <GuildTag guildName={(char as any).guildName} guildId={(char as any).guildId} hideNoGuild={hideNoGuild} />
         </div>
