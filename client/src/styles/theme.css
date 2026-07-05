@@ -187,7 +187,7 @@ html.vk-iframe #header-popup {
   top: calc(2.75rem + var(--vk-top-offset)) !important;
 }
 html.vk-iframe #right-sidebar-toggle {
-  top: calc(120px + var(--vk-top-offset)) !important;
+  top: calc(116px + var(--vk-top-offset)) !important;
 }
 html.vk-iframe #right-sidebar-panel {
   top: calc(120px + var(--vk-top-offset)) !important;
