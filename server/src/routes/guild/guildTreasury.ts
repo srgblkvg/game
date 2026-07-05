@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../../db/index";
 import { isGuildAtWar } from "./guildWar";
 import { updateGuildQuestProgress } from "./guildQuests";
+import { sendToUser } from "../../events";
 
 const router = Router();
 
@@ -30,6 +31,9 @@ router.post('/guild/treasury/deposit', async (req, res) => {
             return r.rows[0];
         });
         res.json({ success: true, treasury: result.treasury });
+        // Обновляем баланс игрока через WS
+        const updatedUser = await db.one('SELECT money, bank FROM users WHERE id = ?', [userId]) as any;
+        if (updatedUser) sendToUser(userId, { type: 'balance', money: updatedUser.money, bank: updatedUser.bank || 0 });
         // Guild quest progress — track donations
         updateGuildQuestProgress(member.guildId).catch(e => console.error('guildQuest donate:', e.message));
     } catch (e: any) {

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
 import { addToTreasury } from '../game/treasury';
+import { sendToUser } from '../events';
 
 const router = Router();
 
@@ -47,6 +48,7 @@ router.post('/bank/deposit', async (req, res) => {
             return (await client.query('SELECT money, bank FROM users WHERE id = $1', [userId])).rows[0] as any;
         });
         res.json({ success: true, pocket: updated.money, bank: updated.bank, commission, deposited: depositAmount });
+        sendToUser(userId, { type: 'balance', money: updated.money, bank: updated.bank });
     } catch (e: any) {
         res.status(400).json({ error: e.message });
     }
@@ -70,6 +72,7 @@ router.post('/bank/withdraw', async (req, res) => {
             return (await client.query('SELECT money, bank FROM users WHERE id = $1', [userId])).rows[0] as any;
         });
         res.json({ success: true, pocket: updated.money, bank: updated.bank, withdrawn: amount });
+        sendToUser(userId, { type: 'balance', money: updated.money, bank: updated.bank });
     } catch (e: any) {
         res.status(400).json({ error: e.message });
     }

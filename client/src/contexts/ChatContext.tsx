@@ -108,6 +108,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               setOnlineUsers(data.users || []);
               break;
             }
+            case 'balance': {
+              window.dispatchEvent(new CustomEvent('balance', { detail: { money: data.money, bank: data.bank || 0 } }));
+              break;
+            }
             case 'userOnline': {
               const u = data.user;
               if (u) setOnlineUsers(p => p.some(o => o.id === u.id) ? p : [...p, u]);
