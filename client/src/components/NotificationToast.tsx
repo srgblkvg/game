@@ -86,7 +86,7 @@ export default function NotificationToast() {
     if (toasts.length === 0) return null;
 
     return createPortal(
-        <div className="fixed top-14 right-3 z-[100] flex flex-col gap-2 max-w-[340px] pointer-events-none">
+        <div id="notification-toast" className="fixed top-14 right-3 z-[100] flex flex-col gap-2 max-w-[340px] pointer-events-none">
             {toasts.map(t => (
                 <div
                     key={t.id}
