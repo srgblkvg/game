@@ -123,33 +123,36 @@ export default function VkKeyboard() {
     return () => clearInterval(id);
   }, [active]);
 
-  // Track active input — show on focus, hide on tap outside
+  // Track active input — show on focus, DON'T hide on tap outside (only via hide button)
   useEffect(() => {
     const onFocus = (e: FocusEvent) => {
       const el = e.target as HTMLElement;
       if (isTextInput(el)) {
-        setActive(el as HTMLInputElement | HTMLTextAreaElement);
-        cursorRef.current = (el as HTMLInputElement).value.length;
+        const input = el as HTMLInputElement | HTMLTextAreaElement;
+        setActive(input);
+        cursorRef.current = input.value.length;
         // Авто-переключение на цифровую клавиатуру для числовых полей
         if (el.hasAttribute('data-vk-num')) {
           setLayout('num');
         }
+        // Центрируем инпут на экране, чтобы не перекрывался клавиатурой и чатом
+        requestAnimationFrame(() => {
+          const headerH = document.getElementById('site-header')?.offsetHeight || 80;
+          const chatH = (document.querySelector('.chat-panel') as HTMLElement)?.offsetHeight || 40;
+          const kbH = kbRef.current?.offsetHeight || 0;
+          const visibleTop = headerH;
+          const visibleBottom = window.innerHeight - kbH - chatH;
+          const visibleH = visibleBottom - visibleTop;
+          const rect = input.getBoundingClientRect();
+          const inputCenter = rect.top + rect.height / 2;
+          const targetCenter = visibleTop + visibleH / 2;
+          const scrollDelta = inputCenter - targetCenter;
+          window.scrollBy({ top: scrollDelta, behavior: 'smooth' });
+        });
       }
     };
-    const onTap = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (isTextInput(target)) return;
-      if (target.closest('.vk-keyboard')) return;
-      setActive(null); setShift(false); setCapsLock(false);
-    };
     document.addEventListener('focusin', onFocus);
-    document.addEventListener('touchstart', onTap);
-    document.addEventListener('mousedown', onTap);
-    return () => {
-      document.removeEventListener('focusin', onFocus);
-      document.removeEventListener('touchstart', onTap);
-      document.removeEventListener('mousedown', onTap);
-    };
+    return () => document.removeEventListener('focusin', onFocus);
   }, []);
 
   const doDelete = useCallback(() => {
@@ -252,6 +255,16 @@ export default function VkKeyboard() {
 
   return (
     <div ref={kbRef} className="vk-keyboard fixed bottom-0 left-0 right-0 z-[10000] select-none bg-[var(--vk-kb-bg,#1a1a2e)] border-t border-[var(--vk-kb-border,#333)] px-1 py-1.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+      {/* Кнопка скрытия клавиатуры */}
+      <div className="flex justify-end mb-1">
+        <div
+          className="flex items-center justify-center rounded text-xs font-medium active:opacity-60 select-none cursor-pointer h-7 px-4 bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text-muted,#aaa)]"
+          role="button" tabIndex={-1}
+          onTouchStart={e => { e.preventDefault(); e.stopPropagation(); }}
+          onTouchEnd={() => { setActive(null); setShift(false); setCapsLock(false); }}
+          onMouseDown={e => e.preventDefault()}
+        >▼ Скрыть</div>
+      </div>
       {keys.map((row, ri) => (
         <div key={ri} className="flex justify-center gap-1 mb-1">
           {row.map((key, ki) => {
@@ -262,10 +275,12 @@ export default function VkKeyboard() {
             const isSpecial = NO_REPEAT.has(key);
             const canRepeat = !isSpecial;
             const char = effectiveShift && SHIFT_MAP[key] ? SHIFT_MAP[key] : key;
+            // Enter shows text, not symbol
+            const display = isEnter ? 'Enter' : char;
 
             let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 select-none cursor-pointer h-10';
             if (isSpace) cls += ' flex-[3] bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)]';
-            else if (isEnter) cls += ' flex-[1.5] bg-[var(--color-accent-info)] text-white';
+            else if (isEnter) cls += ' flex-[1.5] bg-[var(--color-accent-info)] text-white text-xs font-bold';
             else if (isShiftKey) cls += ` flex-1 ${capsLock ? 'bg-[var(--color-accent-success)] text-white' : effectiveShift ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)]'}`;
             else if (isBackspace) cls += ' flex-[1.2] bg-[var(--vk-kb-backspace,#5a2a2a)] text-[var(--vk-kb-backspace-text,#f88)]';
             else if (isSpecial) cls += ' flex-1 bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text-muted,#aaa)] text-xs';
@@ -279,7 +294,7 @@ export default function VkKeyboard() {
                 onMouseDown={e => e.preventDefault()}
                 onMouseUp={stopRepeat}
                 onMouseLeave={stopRepeat}
-              >{char}</div>
+              >{display}</div>
             );
           })}
         </div>
