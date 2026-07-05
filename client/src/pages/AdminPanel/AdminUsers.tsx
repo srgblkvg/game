@@ -241,58 +241,6 @@ export default function AdminUsers() {
 
     return (
         <div>
-            <Card className="mb-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Сброс таймеров */}
-                    <div>
-                        <h3 className="font-bold text-sm mb-1">Сброс таймеров</h3>
-                        <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID игрока</label>
-                        <input type="number" placeholder="ID" value={timerUserId} onChange={e => setTimerUserId(e.target.value)} className={inputClass} />
-                        <div className="flex gap-1 mt-1">
-                            <Button size="md" onClick={() => resetTimers(false)}>Сбросить</Button>
-                            <Button variant="danger" size="md" onClick={() => resetTimers(true)}>Всем</Button>
-                        </div>
-                    </div>
-                    {/* Пополнить баланс */}
-                    <div>
-                        <h3 className="font-bold text-sm mb-1">Пополнить баланс</h3>
-                        <div className="flex gap-1">
-                            <div>
-                                <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID</label>
-                                <input type="number" placeholder="ID" value={moneyUserId} onChange={e => setMoneyUserId(e.target.value)} className={`${inputClass} w-20`} />
-                            </div>
-                            <div>
-                                <label className="text-[0.6rem] text-[var(--color-text-muted)]">Сумма</label>
-                                <input type="number" placeholder="0" value={moneyAmount} onChange={e => setMoneyAmount(e.target.value)} className={`${inputClass} w-20`} />
-                            </div>
-                        </div>
-                        <Button variant="success" size="md" className="mt-1" onClick={handleAddMoney}>Пополнить</Button>
-                    </div>
-                    {/* Выдать премиум */}
-                    <div>
-                        <h3 className="font-bold text-sm mb-1">Выдать премиум</h3>
-                        <div className="flex gap-1">
-                            <div>
-                                <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID</label>
-                                <input type="number" placeholder="ID" value={premiumUserId} onChange={e => setPremiumUserId(e.target.value)} className={`${inputClass} w-20`} />
-                            </div>
-                            <div>
-                                <label className="text-[0.6rem] text-[var(--color-text-muted)]">Дней</label>
-                                <input type="number" placeholder="7" value={premiumDays} onChange={e => setPremiumDays(e.target.value)} className={`${inputClass} w-16`} min="1" />
-                            </div>
-                        </div>
-                        <Button variant="success" size="md" className="mt-1" onClick={handleGrantPremium}>Выдать</Button>
-                    </div>
-                    {/* Завершить работу */}
-                    <div>
-                        <h3 className="font-bold text-sm mb-1">Завершить работу</h3>
-                        <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID игрока</label>
-                        <input type="number" placeholder="ID" value={finishJobUserId} onChange={e => setFinishJobUserId(e.target.value)} className={inputClass} />
-                        <Button size="md" style={{ background: '#f39c12' }} className="mt-1" onClick={() => handleFinishJob(parseInt(finishJobUserId))}>Завершить</Button>
-                    </div>
-                </div>
-            </Card>
-
             {message && <div className="mb-4 p-3 bg-[var(--color-bg-card)] rounded text-sm">{message}</div>}
 
             <Card>
@@ -481,6 +429,59 @@ export default function AdminUsers() {
                         </div>
                     </div>
                 )}
+            </Card>
+
+            {/* Блоки действий с игроками */}
+            <Card className="mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Сброс таймеров */}
+                    <div>
+                        <h3 className="font-bold text-sm mb-1">Сброс таймеров</h3>
+                        <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID игрока</label>
+                        <input type="number" placeholder="ID" value={timerUserId} onChange={e => setTimerUserId(e.target.value)} className={inputClass} />
+                        <div className="flex gap-1 mt-1">
+                            <Button size="md" onClick={() => resetTimers(false)}>Сбросить</Button>
+                            <Button variant="danger" size="md" onClick={() => resetTimers(true)}>Всем</Button>
+                        </div>
+                    </div>
+                    {/* Пополнить баланс */}
+                    <div>
+                        <h3 className="font-bold text-sm mb-1">Пополнить баланс</h3>
+                        <div className="flex gap-1">
+                            <div>
+                                <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID</label>
+                                <input type="number" placeholder="ID" value={moneyUserId} onChange={e => setMoneyUserId(e.target.value)} className={`${inputClass} w-20`} />
+                            </div>
+                            <div>
+                                <label className="text-[0.6rem] text-[var(--color-text-muted)]">Сумма</label>
+                                <input type="number" placeholder="0" value={moneyAmount} onChange={e => setMoneyAmount(e.target.value)} className={`${inputClass} w-20`} />
+                            </div>
+                        </div>
+                        <Button variant="success" size="md" className="mt-1" onClick={handleAddMoney}>Пополнить</Button>
+                    </div>
+                    {/* Выдать премиум */}
+                    <div>
+                        <h3 className="font-bold text-sm mb-1">Выдать премиум</h3>
+                        <div className="flex gap-1">
+                            <div>
+                                <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID</label>
+                                <input type="number" placeholder="ID" value={premiumUserId} onChange={e => setPremiumUserId(e.target.value)} className={`${inputClass} w-20`} />
+                            </div>
+                            <div>
+                                <label className="text-[0.6rem] text-[var(--color-text-muted)]">Дней</label>
+                                <input type="number" placeholder="7" value={premiumDays} onChange={e => setPremiumDays(e.target.value)} className={`${inputClass} w-16`} min="1" />
+                            </div>
+                        </div>
+                        <Button variant="success" size="md" className="mt-1" onClick={handleGrantPremium}>Выдать</Button>
+                    </div>
+                    {/* Завершить работу */}
+                    <div>
+                        <h3 className="font-bold text-sm mb-1">Завершить работу</h3>
+                        <label className="text-[0.6rem] text-[var(--color-text-muted)]">ID игрока</label>
+                        <input type="number" placeholder="ID" value={finishJobUserId} onChange={e => setFinishJobUserId(e.target.value)} className={inputClass} />
+                        <Button size="md" style={{ background: '#f39c12' }} className="mt-1" onClick={() => handleFinishJob(parseInt(finishJobUserId))}>Завершить</Button>
+                    </div>
+                </div>
             </Card>
         </div>
     );
