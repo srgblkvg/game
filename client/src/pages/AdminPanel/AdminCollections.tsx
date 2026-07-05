@@ -18,6 +18,10 @@ export default function AdminCollections() {
     const [editing, setEditing] = useState<CollectionSet | null>(null);
     const [form, setForm] = useState({ name: '', description: '', bonus_percent: 1, sort_order: 0 });
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const limit = 10;
+    const totalPages = Math.ceil(sets.length / limit);
+    const pagedSets = sets.slice((page - 1) * limit, page * limit);
 
     const load = async () => {
         try {
@@ -103,7 +107,7 @@ export default function AdminCollections() {
 
             {/* List */}
             <div className="space-y-2">
-                {sets.map(set => (
+                {pagedSets.map(set => (
                     <div key={set.id} className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-light)] rounded-lg p-3">
                         <div className="flex justify-between items-start">
                             <div>
@@ -120,6 +124,13 @@ export default function AdminCollections() {
                 ))}
                 {sets.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">Нет сетов</p>}
             </div>
+            {totalPages > 1 && (
+                <div className="flex justify-center gap-2 mt-3">
+                    <Button size="md" disabled={page<=1} onClick={()=>setPage(page-1)}>←</Button>
+                    <span className="text-xs text-[var(--color-text-muted)]">{page}/{totalPages}</span>
+                    <Button size="md" disabled={page>=totalPages} onClick={()=>setPage(page+1)}>→</Button>
+                </div>
+            )}
         </div>
     );
 }

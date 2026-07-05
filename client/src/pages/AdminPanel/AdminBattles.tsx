@@ -12,7 +12,7 @@ const stepColors: Record<string, string> = {
   attack: '#e74c3c', info: '#aaa',
 };
 
-const LIMIT = 20;
+const LIMIT = 10;
 
 export default function AdminBattles() {
     const [battles, setBattles] = useState<any[]>([]);

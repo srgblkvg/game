@@ -9,6 +9,8 @@ import BulkImageUploader from '../../components/BulkImageUploader';
 import { inputClass, selectClass, smallInputClass } from '../../utils/formStyles';
 import EditItemModal from './EditItemModal';
 
+const LIMIT = 10;
+
 interface Rarity {
     id: number;
     name: string;
@@ -33,6 +35,8 @@ export default function AdminItems() {
     const [rarities, setRarities] = useState<Rarity[]>([]);
     const [message, setMessage] = useState('');
     const [editingItem, setEditingItem] = useState<any>(null);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [newItem, setNewItem] = useState({
         name: '', slot: 'helmet', rarity_id: 0,
         bonuses: { s: 0, a: 0, d: 0, m: 0 },
@@ -42,8 +46,14 @@ export default function AdminItems() {
     });
 
     const loadItems = async () => {
-        try { setItems(await fetchAdminItems()); } catch (e) { console.error(e); }
+        try {
+            const all = await fetchAdminItems();
+            setItems(all);
+            setTotalPages(Math.ceil(all.length / LIMIT));
+        } catch (e) { console.error(e); }
     };
+
+    const pagedItems = items.slice((page - 1) * LIMIT, page * LIMIT);
 
     const loadRarities = async () => {
         try {
@@ -116,11 +126,12 @@ export default function AdminItems() {
 
             {/* Таблица предметов */}
             <Card>
-                <h3 className="font-bold mb-2">Все предметы</h3>
+                <h3 className="font-bold mb-2">Все предметы ({items.length})</h3>
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-sm">
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
+                                <th className="text-left p-1.5 w-10"></th>
                                 <th className="text-left p-1.5">Название</th>
                                 <th className="text-left p-1.5">Слот</th>
                                 <th className="text-left p-1.5">Редкость</th>
@@ -128,12 +139,15 @@ export default function AdminItems() {
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item: any) => (
-                                <tr key={item.id} className="border-b border-[var(--color-border-light)]">
+                            {pagedItems.map((item: any) => (
+                                <tr key={item.id} className="border-b border-[var(--color-border-light)] hover:bg-[var(--color-bg-hover)]">
+                                    <td className="p-1.5">
+                                        {item.image && <img src={item.image} alt="" className="w-8 h-8 object-contain rounded" />}
+                                    </td>
                                     <td className="p-1.5">{item.name}</td>
                                     <td className="p-1.5">{item.slot}</td>
                                     <td className="p-1.5" style={{ color: item.rarity_color }}>{item.rarity_display}</td>
-                                    <td className="p-1.5">
+                                    <td className="p-1.5 whitespace-nowrap">
                                         <Button variant="primary" size="md" className="mr-1" onClick={() => setEditingItem({ ...item, bonuses: JSON.parse(item.bonuses || '{}'), extra: JSON.parse(item.extra || '{}') })}>Ред.</Button>
                                         <Button variant="danger" size="md" onClick={() => handleDeleteItem(item.id)}>Удалить</Button>
                                     </td>
@@ -142,6 +156,13 @@ export default function AdminItems() {
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                        <Button size="md" disabled={page <= 1} onClick={() => setPage(page - 1)}>←</Button>
+                        <span className="text-xs text-[var(--color-text-muted)]">{page}/{totalPages}</span>
+                        <Button size="md" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>→</Button>
+                    </div>
+                )}
             </Card>
 
             <BulkImageUploader

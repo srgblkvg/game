@@ -13,7 +13,7 @@ export default function AdminFeedback() {
 
     const load = async () => {
         try {
-            const res = await fetch(`${BASE_URL}/admin/feedback?page=${page}&limit=20`, { headers: getHeaders() });
+            const res = await fetch(`${BASE_URL}/admin/feedback?page=${page}&limit=10`, { headers: getHeaders() });
             const data = await res.json();
             if (data.messages) { setMessages(data.messages); setTotalPages(data.totalPages); }
         } catch {}

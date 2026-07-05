@@ -19,6 +19,10 @@ export default function AdminBots() {
   const [count, setCount] = useState(3);
   const [useExisting, setUseExisting] = useState(true);
   const [error, setError] = useState('');
+  const [botPage, setBotPage] = useState(1);
+  const botLimit = 10;
+  const botTotalPages = Math.ceil(bots.length / botLimit);
+  const pagedBots = bots.slice((botPage - 1) * botLimit, botPage * botLimit);
 
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
@@ -111,7 +115,7 @@ export default function AdminBots() {
               </tr>
             </thead>
             <tbody>
-              {bots.map(b => (
+              {pagedBots.map(b => (
                 <tr key={b.id} className="border-b border-[var(--color-border-light)]/30 hover:bg-[var(--color-bg-hover)]">
                   <td className="py-1 px-2 text-[var(--color-text-muted)]">{b.id}</td>
                   <td className="py-1 px-2 font-medium">{b.username}</td>
@@ -122,6 +126,13 @@ export default function AdminBots() {
               ))}
             </tbody>
           </table>
+          {botTotalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-2">
+              <Button size="md" disabled={botPage<=1} onClick={()=>setBotPage(botPage-1)}>←</Button>
+              <span className="text-xs text-[var(--color-text-muted)]">{botPage}/{botTotalPages}</span>
+              <Button size="md" disabled={botPage>=botTotalPages} onClick={()=>setBotPage(botPage+1)}>→</Button>
+            </div>
+          )}
         </div>
       )}
     </div>

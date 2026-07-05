@@ -208,6 +208,11 @@ export default function AdminUsers() {
         ? users.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase()))
         : users;
 
+    const [userPage, setUserPage] = useState(1);
+    const userLimit = 10;
+    const userTotalPages = Math.ceil(filteredUsers.length / userLimit);
+    const pagedUsers = filteredUsers.slice((userPage - 1) * userLimit, userPage * userLimit);
+
     const oauthLabel = (provider: string | null) => {
         if (!provider) return 'Email';
         if (provider === 'yandex') return 'Яндекс';
@@ -266,6 +271,7 @@ export default function AdminUsers() {
                     <table className="w-full border-collapse text-sm min-w-[1300px]">
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
+                                <th className="text-left p-1 w-10"></th>
                                 <th className="text-left p-1">ID</th>
                                 <th className="text-left p-1">Имя</th>
                                 <th className="text-left p-1">Ур.</th>
@@ -284,7 +290,7 @@ export default function AdminUsers() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredUsers.map((u: any) => {
+                            {pagedUsers.map((u: any) => {
                                 const attackRemaining = u.lastAttackTime ? formatRemaining(u.lastAttackTime + 300) : '—';
                                 const jobName = getActiveJobName(u);
                                 const banRemaining = formatBanRemaining(u.bannedUntil);
@@ -292,6 +298,9 @@ export default function AdminUsers() {
 
                                 return (
                                     <tr key={u.id} className={`border-b border-[var(--color-border-light)] ${u.bannedUntil > now ? 'bg-red-900/20' : ''}`}>
+                                        <td className="p-1">
+                                            {u.avatar && <img src={u.avatar} alt="" className="w-6 h-6 rounded-full object-cover" />}
+                                        </td>
                                         <td className="p-1">{u.id}</td>
                                         <td className="p-1">{u.username}{u.isGuest ? <span className="ml-1 text-[var(--color-accent-warning)] text-xs">🎭</span> : ''}</td>
                                         <td className="p-1">{u.level}</td>
@@ -350,6 +359,13 @@ export default function AdminUsers() {
                         </tbody>
                     </table>
                 </div>
+                {userTotalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                        <Button size="md" disabled={userPage <= 1} onClick={() => setUserPage(userPage - 1)}>←</Button>
+                        <span className="text-xs text-[var(--color-text-muted)]">{userPage}/{userTotalPages}</span>
+                        <Button size="md" disabled={userPage >= userTotalPages} onClick={() => setUserPage(userPage + 1)}>→</Button>
+                    </div>
+                )}
 
                 {/* Детали раскрытой строки */}
                 {expandedUserId != null && expandedView === 'info' && (() => {
