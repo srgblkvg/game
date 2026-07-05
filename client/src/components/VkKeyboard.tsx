@@ -220,6 +220,8 @@ export default function VkKeyboard() {
       if (!el) return;
       if (el.tagName === 'INPUT') {
         el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        // Скрываем клавиатуру после Enter на INPUT (не textarea)
+        setActive(null); setShift(false); setCapsLock(false);
       } else {
         insertChar(el, '\n', cursorRef);
       }
