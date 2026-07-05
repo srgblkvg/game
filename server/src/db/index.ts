@@ -70,6 +70,7 @@ function camelRows(rows: any[]): any[] {
              .replace(/^bases$/i, 'baseS').replace(/^basea$/i, 'baseA')
              .replace(/^based$/i, 'baseD').replace(/^basem$/i, 'baseM')
              .replace(/^statpoints$/i, 'statPoints')
+             .replace(/lastloginat$/i, 'lastLoginAt')
              .replace(/^totalbattles$/i, 'totalBattles')
              .replace(/^pvetotalbattles$/i, 'pveTotalBattles')
              .replace(/^pvewins$/i, 'pveWins')
