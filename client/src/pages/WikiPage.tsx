@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
+import BackButton from '../components/BackButton';
 
 export default function WikiPage() {
     const navigate = useNavigate();
@@ -7,7 +8,7 @@ export default function WikiPage() {
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-6">
-            <button onClick={() => navigate('/')} className="text-sm text-[var(--color-accent-info)] hover:underline mb-4 inline-block cursor-pointer">← Вернуться в игру</button>
+            <BackButton />
 
             <h1 className="text-2xl font-bold text-center text-[var(--color-accent-danger)] mb-1">⚔️ MMO Arena</h1>
             <p className="text-center text-[var(--color-text-muted)] text-sm mb-6">Гайд для нового игрока</p>

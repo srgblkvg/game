@@ -1,12 +1,10 @@
-import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
+import BackButton from '../components/BackButton';
 
 export default function RulesPage() {
-    const navigate = useNavigate();
-
     return (
         <div className="max-w-2xl mx-auto px-4 py-6">
-            <button onClick={() => navigate(-1)} className="text-sm text-[var(--color-accent-info)] hover:underline mb-4 inline-block">← Назад</button>
+            <BackButton />
 
             <h1 className="text-xl font-bold text-center mb-1">📜 Правила игры</h1>
             <p className="text-center text-[var(--color-text-muted)] text-sm mb-5">MMO Arena — честная игра для всех</p>
