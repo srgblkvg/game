@@ -219,9 +219,10 @@ export default function VkKeyboard() {
       const el = activeRef.current;
       if (!el) return;
       if (el.tagName === 'INPUT') {
-        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-        // Скрываем клавиатуру после Enter на INPUT (не textarea)
-        setActive(null); setShift(false); setCapsLock(false);
+        const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+        el.dispatchEvent(ev);
+        // Скрываем клавиатуру после Enter на INPUT (не textarea) — с задержкой чтобы input успел обработать
+        setTimeout(() => { setActive(null); setShift(false); setCapsLock(false); }, 50);
       } else {
         insertChar(el, '\n', cursorRef);
       }

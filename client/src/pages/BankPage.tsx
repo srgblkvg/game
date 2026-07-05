@@ -95,7 +95,7 @@ export default function BankPage() {
             {tab==='deposit' && <>
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">Пополнение и снятие</h3>
-                    <input type={inputType} placeholder="Сумма" value={amount} onChange={e=>setAmount(e.target.value)} className={inputClass} min="1" />
+                    <input type={inputType} placeholder="Сумма" value={amount} onChange={e=>{const v=e.target.value.replace(/\D/g,'');setAmount(v)}} className={inputClass} min="1" />
                     {depositCommission > 0 && <p className="text-xs text-[var(--color-text-muted)] mt-1">Комиссия: {formatMoney(depositCommission)} (зачислено: {formatMoney((parseInt(amount)||0) - depositCommission)})</p>}
                     <div className="flex gap-3 mt-3"><Button variant="primary" fullWidth onClick={handleDeposit}>📥 Положить (2%)</Button><Button variant="secondary" fullWidth onClick={handleWithdraw}>📤 Снять (0%)</Button></div>
                 </Card>
