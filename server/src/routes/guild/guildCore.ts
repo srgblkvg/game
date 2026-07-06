@@ -43,7 +43,7 @@ router.get('/guild/my', async (req, res) => {
     if (!member) return res.json({ guild: null });
 
     const members = await db.query(
-        'SELECT gm.userId, gm.rank, gm.joinedAt, u.username, u.level FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC',
+        'SELECT gm.userId, gm.rank, gm.joinedAt, gm.can_quests, gm.can_buildings, gm.can_war, u.username, u.level FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC',
         [member.guildId]
     );
 
