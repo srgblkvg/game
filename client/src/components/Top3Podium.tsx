@@ -18,9 +18,9 @@ interface Top3PodiumProps {
 }
 
 const MEDALS = [
-  { label: '1 место', color: '#ffd700', bg: '#ffd70015', border: '#ffd70040', podium: 'linear-gradient(180deg, #ffd700 0%, #b8960f 100%)', glow: '0 0 20px rgba(255,215,0,0.3)', height: 120 },
-  { label: '2 место', color: '#c0c0c0', bg: '#c0c0c015', border: '#c0c0c040', podium: 'linear-gradient(180deg, #c0c0c0 0%, #808080 100%)', glow: '0 0 15px rgba(192,192,192,0.25)', height: 90 },
-  { label: '3 место', color: '#cd7f32', bg: '#cd7f3215', border: '#cd7f3240', podium: 'linear-gradient(180deg, #cd7f32 0%, #8b5a2b 100%)', glow: '0 0 10px rgba(205,127,50,0.2)', height: 60 },
+  { label: '1 место', color: '#b8860b', bg: '#b8860b18', border: '#b8860b50', podium: '#b8860b', glow: '0 0 20px rgba(184,134,11,0.3)', height: 120 },
+  { label: '2 место', color: '#708090', bg: '#70809018', border: '#70809050', podium: '#708090', glow: '0 0 15px rgba(112,128,144,0.25)', height: 90 },
+  { label: '3 место', color: '#8b4513', bg: '#8b451318', border: '#8b451350', podium: '#8b4513', glow: '0 0 10px rgba(139,69,19,0.2)', height: 60 },
 ];
 
 export default function Top3Podium({ players }: Top3PodiumProps) {
@@ -74,7 +74,7 @@ export default function Top3Podium({ players }: Top3PodiumProps) {
 
                 {/* Trophy before nickname */}
                 <div className="flex items-center gap-0.5 max-w-full">
-                  <span className="text-sm flex-shrink-0">{place === 1 ? '🏆' : '🥈'}</span>
+                  <span className="text-sm flex-shrink-0">{place === 1 ? '🏆' : place === 2 ? '🥈' : '🥉'}</span>
                   <span
                     className="text-xs font-bold truncate"
                     style={{ color: medal.color }}
@@ -86,7 +86,7 @@ export default function Top3Podium({ players }: Top3PodiumProps) {
                 {/* Level + ELO */}
                 <div className="flex items-center gap-2 text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
                   <span>ур. {player.level}</span>
-                  <span style={{ color: medal.color }}>{player.elo} 🏅</span>
+                  <span style={{ color: medal.color }}>{player.elo}</span>
                 </div>
 
                 {/* Guild tag */}
@@ -112,14 +112,16 @@ export default function Top3Podium({ players }: Top3PodiumProps) {
                 opacity: player ? 1 : 0.3,
               }}
             >
-              <span className="text-[0.55rem] font-bold text-white/80">{medal.label}</span>
+              <span className="text-[0.55rem] font-bold text-white/90">{medal.label}</span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Base line */}
-      <div className="h-0.5 rounded-full mx-auto mt-0" style={{ width: '90%', maxWidth: 420, background: 'var(--color-border-light)' }} />
+      {/* Base line — same width as podiums */}
+      <div className="flex justify-center" style={{ paddingLeft: '0.5rem', paddingRight: '0.5rem' }}>
+        <div className="h-0.5 rounded-full" style={{ width: '100%', maxWidth: 420, background: 'var(--color-border-light)' }} />
+      </div>
     </div>
   );
 }
