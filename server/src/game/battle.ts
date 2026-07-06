@@ -35,14 +35,14 @@ export function dodgeChance(defStats: CharStats, atkStats: CharStats): number {
   const extraDodge = (defStats.extra.dodge || 0);
   return Math.max(0,
     (defW / (defW + 500)) *
-    (1 - atkW / (atkW + 100)) +
+    (1 - atkW / (atkW + 100)) / 1.5 +
     Math.min(0.5, extraDodge / (extraDodge + 300))
   );
 }
 
 export function critChance(stats: CharStats): number {
   const extraCrit = (stats.extra.crit || 0);
-  return Math.min(0.8, sv(stats, F.crit) / (sv(stats, F.crit) + 500) + extraCrit / (extraCrit + 300));
+  return Math.min(0.8, sv(stats, F.crit) / (sv(stats, F.crit) + 500) / 1.5 + extraCrit / (extraCrit + 300));
 }
 
 export function critMult(stats: CharStats): number {
@@ -51,7 +51,7 @@ export function critMult(stats: CharStats): number {
 
 export function blockChance(defStats: CharStats): number {
   const extraBlock = (defStats.extra.fullBlock || 0);
-  return Math.min(0.75, sv(defStats, F.block) / (sv(defStats, F.block) + 500) + extraBlock / (extraBlock + 300));
+  return Math.min(0.75, sv(defStats, F.block) / (sv(defStats, F.block) + 500) / 1.5 + extraBlock / (extraBlock + 300));
 }
 
 export function blockReduction(defStats: CharStats, atkStats: CharStats): number {
@@ -61,7 +61,7 @@ export function blockReduction(defStats: CharStats, atkStats: CharStats): number
 
 export function counterChance(defStats: CharStats, atkStats: CharStats, extraBonus: number): number {
   const dSum = sv(defStats, F.counterDef) + sv(atkStats, F.counterTgt);
-  return Math.min(0.5, (dSum > 0 ? sv(defStats, F.counterDef) / dSum * 0.5 : 0) + extraBonus / (extraBonus + 300));
+  return Math.min(0.5, (dSum > 0 ? sv(defStats, F.counterDef) / dSum * 0.5 / 1.5 : 0) + extraBonus / (extraBonus + 300));
 }
 
 export function stunChance(atkStats: CharStats, defStats: CharStats): number {
