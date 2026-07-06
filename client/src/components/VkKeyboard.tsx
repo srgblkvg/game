@@ -54,7 +54,10 @@ function isTextInput(el: HTMLElement): boolean {
 function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string, cursorRef: { current: number }) {
   el.focus();
   const start = cursorRef.current;
-  el.setRangeText(char, start, start, 'end');
+  // Используем .value вместо setRangeText — работает с readonly (нужно для iOS)
+  const val = el.value;
+  el.value = val.substring(0, start) + char + val.substring(start);
+  el.selectionStart = el.selectionEnd = start + 1;
   el.dispatchEvent(new Event('input', { bubbles: true }));
   cursorRef.current = start + 1;
 }
@@ -63,7 +66,9 @@ function deleteChar(el: HTMLInputElement | HTMLTextAreaElement, cursorRef: { cur
   el.focus();
   const start = cursorRef.current;
   if (start > 0) {
-    el.setRangeText('', start - 1, start, 'start');
+    const val = el.value;
+    el.value = val.substring(0, start - 1) + val.substring(start);
+    el.selectionStart = el.selectionEnd = start - 1;
     cursorRef.current = start - 1;
   }
   el.dispatchEvent(new Event('input', { bubbles: true }));
