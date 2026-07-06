@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { collectGuildTax, applyExp, buildPlayerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
+import { dodgeChance, critChance, critMult } from '../game/battle';
 import { addPveRating } from '../game/rating';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty } from '../events';
@@ -143,12 +144,8 @@ router.post('/mob/attack', async (req, res) => {
 
     addStep({ type: 'info', message: `⚔ ${user.username} vs ${mob.name} (ур. ${mob.level})`,
         stats1: { name: user.username, level: user.level, S: userStats.s, A: userStats.a, D: userStats.d, M: userStats.m, HP: maxHpUser },
-        stats2: { name: mob.name, level: mob.level, S: mob.agi, A: mob.agi, D: mob.def, M: 0, HP: maxHpMob }
+        stats2: { name: mob.name, level: mob.level, S: mob.atk, A: mob.agi, D: mob.def, M: mob.mst, HP: maxHpMob }
     });
-
-    const dodgeChance = (agility: number) => Math.max(0, agility / (agility + 50));
-    const critChance = (mst: number) => Math.min(0.8, mst / (mst + 50));
-    const critMult = (mst: number) => 1.5 + 0.5 * (mst / (mst + 50));
 
     let turn: 'player' | 'mob' = userStats.a >= mob.agi ? 'player' : 'mob';
     addStep({ type: 'info', message: turn === 'player' ? 'Вы ходите первым' : `${mob.name} атакует первым` });
@@ -161,7 +158,7 @@ router.post('/mob/attack', async (req, res) => {
         if (turn === 'player') {
             addStep({ type: 'attack', actor: 'attacker', message: 'Вы атакуете!' });
 
-            if (Math.random() < dodgeChance(mob.agi)) {
+            if (Math.random() < dodgeChance(mobStats, userStats)) {
                 addStep({ type: 'dodge', actor: 'defender', message: `${mob.name} уклоняется!` });
                 turn = 'mob';
                 continue;
@@ -171,8 +168,8 @@ router.post('/mob/attack', async (req, res) => {
                 ? Math.floor(user.level + Math.random() * (userStats.s - user.level + 1))
                 : userStats.s;
 
-            if (Math.random() < critChance(userStats.m)) {
-                dmg = Math.round(dmg * critMult(userStats.m));
+            if (Math.random() < critChance(userStats)) {
+                dmg = Math.round(dmg * critMult(userStats));
                 addStep({ type: 'crit', actor: 'attacker', message: 'Крит!' });
             }
 
@@ -183,7 +180,7 @@ router.post('/mob/attack', async (req, res) => {
         } else {
             addStep({ type: 'attack', actor: 'defender', message: `${mob.name} атакует!` });
 
-            if (Math.random() < dodgeChance(userStats.a)) {
+            if (Math.random() < dodgeChance(userStats, mobStats)) {
                 addStep({ type: 'dodge', actor: 'attacker', message: 'Вы уклоняетесь!' });
                 turn = 'player';
                 continue;
@@ -193,8 +190,8 @@ router.post('/mob/attack', async (req, res) => {
                 ? Math.floor(mob.level + Math.random() * (mobStats.s - mob.level + 1))
                 : mobStats.s;
 
-            if (Math.random() < critChance(mobStats.m)) {
-                dmg = Math.round(dmg * critMult(mobStats.m));
+            if (Math.random() < critChance(mobStats)) {
+                dmg = Math.round(dmg * critMult(mobStats));
                 addStep({ type: 'crit', actor: 'defender', message: 'Крит!' });
             }
 
