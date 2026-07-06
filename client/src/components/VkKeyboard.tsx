@@ -54,10 +54,7 @@ function isTextInput(el: HTMLElement): boolean {
 function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string, cursorRef: { current: number }) {
   el.focus();
   const start = cursorRef.current;
-  // Используем .value вместо setRangeText — работает с readonly (нужно для iOS)
-  const val = el.value;
-  el.value = val.substring(0, start) + char + val.substring(start);
-  el.selectionStart = el.selectionEnd = start + 1;
+  el.setRangeText(char, start, start, 'end');
   el.dispatchEvent(new Event('input', { bubbles: true }));
   cursorRef.current = start + 1;
 }
@@ -66,9 +63,7 @@ function deleteChar(el: HTMLInputElement | HTMLTextAreaElement, cursorRef: { cur
   el.focus();
   const start = cursorRef.current;
   if (start > 0) {
-    const val = el.value;
-    el.value = val.substring(0, start - 1) + val.substring(start);
-    el.selectionStart = el.selectionEnd = start - 1;
+    el.setRangeText('', start - 1, start, 'start');
     cursorRef.current = start - 1;
   }
   el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -140,20 +135,23 @@ export default function VkKeyboard() {
         if (el.hasAttribute('data-vk-num')) {
           setLayout('num');
         }
-        // Центрируем инпут на экране, чтобы не перекрывался клавиатурой и чатом
-        requestAnimationFrame(() => {
-          const headerH = document.getElementById('site-header')?.offsetHeight || 80;
-          const chatH = (document.querySelector('.chat-panel') as HTMLElement)?.offsetHeight || 40;
-          const kbH = kbRef.current?.offsetHeight || 0;
-          const visibleTop = headerH;
-          const visibleBottom = window.innerHeight - kbH - chatH;
-          const visibleH = visibleBottom - visibleTop;
-          const rect = input.getBoundingClientRect();
-          const inputCenter = rect.top + rect.height / 2;
-          const targetCenter = visibleTop + visibleH / 2;
-          const scrollDelta = inputCenter - targetCenter;
-          window.scrollBy({ top: scrollDelta, behavior: 'smooth' });
-        });
+        // Центрируем инпут на экране (только Android — на iOS scrollBy триггерит нативную клавиатуру)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (!isIOS) {
+          requestAnimationFrame(() => {
+            const headerH = document.getElementById('site-header')?.offsetHeight || 80;
+            const chatH = (document.querySelector('.chat-panel') as HTMLElement)?.offsetHeight || 40;
+            const kbH = kbRef.current?.offsetHeight || 0;
+            const visibleTop = headerH;
+            const visibleBottom = window.innerHeight - kbH - chatH;
+            const visibleH = visibleBottom - visibleTop;
+            const rect = input.getBoundingClientRect();
+            const inputCenter = rect.top + rect.height / 2;
+            const targetCenter = visibleTop + visibleH / 2;
+            const scrollDelta = inputCenter - targetCenter;
+            window.scrollBy({ top: scrollDelta, behavior: 'smooth' });
+          });
+        }
       }
     };
     document.addEventListener('focusin', onFocus);

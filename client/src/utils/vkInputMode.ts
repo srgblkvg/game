@@ -10,10 +10,6 @@
 export function initVkInputMode() {
   function fixInput(el: HTMLElement) {
     el.setAttribute('inputmode', 'none');
-    // readonly блокирует нативную клавиатуру на iOS (inputmode=\"none\" не всегда работает)
-    // на Android тоже не вредит
-    if (el.tagName === 'INPUT') (el as HTMLInputElement).readOnly = true;
-    // textarea оставляем без readonly — Enter должен добавлять перенос строки
   }
 
   document.querySelectorAll('input, textarea').forEach(el => fixInput(el as HTMLElement));
