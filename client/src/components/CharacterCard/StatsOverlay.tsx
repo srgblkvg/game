@@ -94,13 +94,15 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                 {['crit','dodge','counter','fullBlock'].map(k => {
                   const v = extraStats[k as keyof typeof extraStats];
                   if (!v) return null;
+                  // soft cap: x / (x + 300) → реальный процент
+                  const pct = Math.round((v / (v + 300)) * 100);
                   return (
                     <tr key={k}>
                       <td className={tdStyle}>
                         <Icon icon={BONUS_ICONS[k]} width={iconSize} height={iconSize} className="inline mr-0.5 text-[var(--color-accent-purple)]" />
                         {BONUS_LABELS[k]}
                       </td>
-                      <td className="text-right pl-[2px] text-[var(--color-accent-purple)]">+{v}%</td>
+                      <td className="text-right pl-[2px] text-[var(--color-accent-purple)]">+{pct}%</td>
                     </tr>
                   );
                 })}
