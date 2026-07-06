@@ -81,6 +81,8 @@ router.post('/account/delete', async (req, res) => {
     }
 
     // Удаляем связанные данные
+    await db.run('DELETE FROM guild_members WHERE userId = ?', [userId]);
+    await db.run('DELETE FROM guild_invites WHERE userId = ?', [userId]);
     await db.run('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?', [userId, userId]);
     await db.run('DELETE FROM job_history WHERE userId = ?', [userId]);
     await db.run('DELETE FROM users WHERE id = ?', [userId]);
