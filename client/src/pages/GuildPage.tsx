@@ -288,7 +288,7 @@ export default function GuildPage() {
                         const p = permPopup;
                         setPermPopup(null);
                         try {
-                            await Promise.all(['quests','buildings','war'].map(k=>api('/guild/officer-permissions',{officerId:p.officerId,permission:k}).catch(()=>{})));
+                            await Promise.all(['quests','buildings','war'].map(k=>api('/guild/officer-permissions',{officerId:p.officerId,permission:k,value:p[k]}).catch(()=>{})));
                             load();
                         } catch {}
                     }}>Сохранить</Button></div></Card></div>}

@@ -152,7 +152,7 @@ router.post('/guild/settings', async (req, res) => {
 // Переключение разрешений офицера (только лидер)
 router.post('/guild/officer-permissions', async (req, res) => {
     const userId = req.userId;
-    const { officerId, permission } = req.body; // permission: 'quests' | 'buildings' | 'war'
+    const { officerId, permission, value } = req.body;
 
     if (!officerId || !['quests', 'buildings', 'war'].includes(permission)) {
         return res.status(400).json({ error: 'Укажите officerId и permission (quests/buildings/war)' });
@@ -166,11 +166,11 @@ router.post('/guild/officer-permissions', async (req, res) => {
     if (!officer) return res.status(400).json({ error: 'Этот игрок не офицер вашей гильдии' });
 
     const col = `can_${permission}`;
-    const current = officer[col] || officer[col.toLowerCase()] || false;
+    const newValue = value !== undefined ? !!value : !(officer[col] || officer[col.toLowerCase()] || false);
     await db.run(`UPDATE guild_members SET \"${col}\" = ? WHERE guildId = ? AND userId = ?`,
-        [!current, member.guildId, officerId]);
+        [newValue, member.guildId, officerId]);
 
-    res.json({ success: true, [col]: !current, message: `${permission}: ${!current ? 'включено' : 'выключено'}` });
+    res.json({ success: true, [col]: newValue, message: `${permission}: ${newValue ? 'включено' : 'выключено'}` });
 });
 
 // Заявки на вступление (для лидера/офицеров)
