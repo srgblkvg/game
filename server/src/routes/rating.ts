@@ -43,7 +43,7 @@ router.get('/rating', async (req, res) => {
 
     const total = (await db.one(`SELECT COUNT(*) as cnt FROM users u ${whereClause}`, params) as any).cnt;
     const users = await db.query(`
-        SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, g.name as guildName, u.guildId
+        SELECT u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses, u.avatar, u.gender, g.name as guildName, u.guildId
         FROM users u
         LEFT JOIN guilds g ON u.guildId = g.id
         ${whereClause}

@@ -7,12 +7,14 @@ import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/ui/Card';
 import GuildTag from '../components/GuildTag';
 import Button from '../components/ui/Button';
+import Top3Podium from '../components/Top3Podium';
 
 const LIMIT = 20;
 
 export default function RatingPage() {
     const { user } = useAuth();
     const [players, setPlayers] = useState<any[]>([]);
+    const [top3, setTop3] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [showInfo, setShowInfo] = useState(false);
@@ -53,6 +55,11 @@ export default function RatingPage() {
 
     const initialLoadDone = useRef(false);
 
+    // Load top 3 on mount
+    useEffect(() => {
+        fetchRating(1, 3, '', 0).then(data => setTop3(data.users)).catch(() => {});
+    }, []);
+
     // Initial load: jump to user's page
     useEffect(() => {
         if (!user) return;
@@ -87,6 +94,9 @@ export default function RatingPage() {
         <div className="max-w-xl mx-auto px-4 py-4">
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2"/>Рейтинг игроков</h2>
+
+            {/* Пьедестал Топ-3 */}
+            <Top3Podium players={top3} />
 
             {/* Поиск + фильтр */}
             <div className="flex gap-2 mb-4">
