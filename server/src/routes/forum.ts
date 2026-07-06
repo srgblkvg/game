@@ -11,12 +11,12 @@ router.get('/forum/threads', async (req, res) => {
 
     const threads = await db.query(`
         SELECT t.*,
-               u.username as author_name, u.avatar as author_avatar, u.guildId as author_guild,
+               COALESCE(u.username, 'Пользователь удалён') as author_name, u.avatar as author_avatar, u.guildId as author_guild,
                g.name as author_guild_name,
-               lp.username as last_poster_name, lp.avatar as last_poster_avatar,
+               COALESCE(lp.username, 'Пользователь удалён') as last_poster_name, lp.avatar as last_poster_avatar,
                lp.guildId as last_poster_guild, lg.name as last_poster_guild_name
         FROM forum_threads t
-        JOIN users u ON t.author_id = u.id
+        LEFT JOIN users u ON t.author_id = u.id
         LEFT JOIN users lp ON (SELECT author_id FROM forum_posts WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) = lp.id
         LEFT JOIN guilds g ON u.guildId = g.id
         LEFT JOIN guilds lg ON lp.guildId = lg.id
@@ -37,9 +37,9 @@ router.get('/forum/thread/:id', async (req, res) => {
     const offset = (page - 1) * limit;
 
     const thread = await db.one(`
-        SELECT t.*, u.username as author_name
+        SELECT t.*, COALESCE(u.username, 'Пользователь удалён') as author_name
         FROM forum_threads t
-        JOIN users u ON t.author_id = u.id
+        LEFT JOIN users u ON t.author_id = u.id
         WHERE t.id = ?
     `, [threadId]) as any;
 
@@ -48,10 +48,10 @@ router.get('/forum/thread/:id', async (req, res) => {
     // Первый пост всегда отдельно
     const firstPost = await db.one(`
         SELECT p.*,
-               u.username as author_name, u.avatar as author_avatar,
+               COALESCE(u.username, 'Пользователь удалён') as author_name, u.avatar as author_avatar,
                u.guildId as author_guild, g.name as author_guild_name
         FROM forum_posts p
-        JOIN users u ON p.author_id = u.id
+        LEFT JOIN users u ON p.author_id = u.id
         LEFT JOIN guilds g ON u.guildId = g.id
         WHERE p.thread_id = ?
         ORDER BY p.created_at ASC
@@ -61,10 +61,10 @@ router.get('/forum/thread/:id', async (req, res) => {
     // Остальные посты (без первого)
     const posts = await db.query(`
         SELECT p.*,
-               u.username as author_name, u.avatar as author_avatar,
+               COALESCE(u.username, 'Пользователь удалён') as author_name, u.avatar as author_avatar,
                u.guildId as author_guild, g.name as author_guild_name
         FROM forum_posts p
-        JOIN users u ON p.author_id = u.id
+        LEFT JOIN users u ON p.author_id = u.id
         LEFT JOIN guilds g ON u.guildId = g.id
         WHERE p.thread_id = ? AND p.id != ?
         ORDER BY p.created_at ASC
@@ -164,10 +164,10 @@ router.put('/forum/post/:id', async (req, res) => {
 router.get('/forum/latest', async (_req, res) => {
     const threads = await db.query(`
         SELECT t.*,
-               u.username as author_name,
-               lp.username as last_poster_name
+               COALESCE(u.username, 'Пользователь удалён') as author_name,
+               COALESCE(lp.username, 'Пользователь удалён') as last_poster_name
         FROM forum_threads t
-        JOIN users u ON t.author_id = u.id
+        LEFT JOIN users u ON t.author_id = u.id
         LEFT JOIN users lp ON (SELECT author_id FROM forum_posts WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) = lp.id
         ORDER BY t.updated_at DESC
         LIMIT 3
