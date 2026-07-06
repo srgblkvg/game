@@ -57,10 +57,10 @@ router.post('/guild/:guildId/buildings/upgrade', async (req, res) => {
     if (!guildId || !buildingType) return res.status(400).json({ error: 'guildId и buildingType обязательны' });
     if (!BUILDINGS[buildingType]) return res.status(400).json({ error: 'Неизвестный тип сооружения' });
 
-    // Проверяем права (лидер или офицер)
+    // Проверяем права (лидер или офицер с правом на постройки)
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ? AND guildId = ?', [userId, guildId]) as any;
-    if (!member || member.rank !== 'leader') {
-        return res.status(403).json({ error: 'Только лидер может улучшать сооружения' });
+    if (!member || (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_buildings))) {
+        return res.status(403).json({ error: 'Только лидер или офицер с правом на постройки может улучшать сооружения' });
     }
 
     // Получаем гильдию

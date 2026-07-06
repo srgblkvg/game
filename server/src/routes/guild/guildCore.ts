@@ -149,6 +149,30 @@ router.post('/guild/settings', async (req, res) => {
     res.json({ success: true, ...updated, message: msg || 'Настройки обновлены' });
 });
 
+// Переключение разрешений офицера (только лидер)
+router.post('/guild/officer-permissions', async (req, res) => {
+    const userId = req.userId;
+    const { officerId, permission } = req.body; // permission: 'quests' | 'buildings' | 'war'
+
+    if (!officerId || !['quests', 'buildings', 'war'].includes(permission)) {
+        return res.status(400).json({ error: 'Укажите officerId и permission (quests/buildings/war)' });
+    }
+
+    const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
+    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может менять разрешения' });
+
+    const officer = await db.one('SELECT * FROM guild_members WHERE guildId = ? AND userId = ? AND rank = ?',
+        [member.guildId, officerId, 'officer']) as any;
+    if (!officer) return res.status(400).json({ error: 'Этот игрок не офицер вашей гильдии' });
+
+    const col = `can_${permission}`;
+    const current = officer[col] || officer[col.toLowerCase()] || false;
+    await db.run(`UPDATE guild_members SET \"${col}\" = ? WHERE guildId = ? AND userId = ?`,
+        [!current, member.guildId, officerId]);
+
+    res.json({ success: true, [col]: !current, message: `${permission}: ${!current ? 'включено' : 'выключено'}` });
+});
+
 // Заявки на вступление (для лидера/офицеров)
 router.get('/guild/:id', async (req, res, next) => {
     const guildId = parseInt(req.params.id);
@@ -157,7 +181,7 @@ router.get('/guild/:id', async (req, res, next) => {
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
 
     const members = await db.query(
-        'SELECT gm.userId, gm.rank, gm.joinedAt, u.username, u.level FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC',
+        'SELECT gm.userId, gm.rank, gm.joinedAt, gm.can_quests, gm.can_buildings, gm.can_war, u.username, u.level FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC',
         [guildId]
     );
 

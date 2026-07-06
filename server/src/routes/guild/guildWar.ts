@@ -66,7 +66,9 @@ router.post('/guild/war/declare', async (req, res) => {
     if (!targetGuildId) return res.status(400).json({ error: 'Укажите targetGuildId' });
 
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
-    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может объявить войну' });
+    if (!member || (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_war))) {
+        return res.status(400).json({ error: 'Только лидер или офицер с правом на войну может объявить войну' });
+    }
 
     const myGuildId = member.guildId;
 
@@ -122,7 +124,9 @@ router.post('/guild/war/respond', async (req, res) => {
     const { accept } = req.body; // true — принять, false — отклонить
 
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
-    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может отвечать на войну' });
+    if (!member || (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_war))) {
+        return res.status(400).json({ error: 'Только лидер или офицер с правом на войну может отвечать на войну' });
+    }
 
     const war = await db.one(
         `SELECT * FROM guild_wars WHERE defenderGuildId = ? AND status = 'pending' ORDER BY id DESC LIMIT 1`,

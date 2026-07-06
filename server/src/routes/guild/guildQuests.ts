@@ -112,7 +112,9 @@ router.post('/guild/quest/take', async (req, res) => {
     const { questType, difficulty, requirement, rewardXp } = req.body;
 
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
-    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может управлять заданиями' });
+    if (!member || (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_quests))) {
+        return res.status(400).json({ error: 'Только лидер или офицер с правом на квесты может управлять заданиями' });
+    }
 
     if (!questType || !difficulty || !requirement || !rewardXp) return res.status(400).json({ error: 'Выберите задание' });
 
@@ -151,7 +153,9 @@ router.post('/guild/quest/take', async (req, res) => {
 router.post('/guild/quest/claim', async (req, res) => {
     const userId = req.userId;
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
-    if (!member || member.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может забирать награду' });
+    if (!member || (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_quests))) {
+        return res.status(400).json({ error: 'Только лидер или офицер с правом на квесты может забирать награду' });
+    }
 
     const quest = await db.one(
         "SELECT * FROM guild_quests WHERE guildId = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
