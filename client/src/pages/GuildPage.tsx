@@ -49,6 +49,7 @@ export default function GuildPage() {
     const [treasuryPeriod, setTreasuryPeriod] = useState('week');
     const [war, setWar] = useState<any>(null);
     const [showWarRules, setShowWarRules] = useState(false);
+    const [permPopup, setPermPopup] = useState<any>(null); // { officerId, username, quests, buildings, war }
     const [confirmPopup, setConfirmPopup] = useState<any>(null);
     const [loading, setLoading] = useState(false);
 
@@ -98,10 +99,6 @@ export default function GuildPage() {
     const handleInvite = async () => {
         if (!inviteTargetId) { setError('Выберите игрока'); return; }
         try { await api('/guild/invite',{targetId:inviteTargetId}); msg('Приглашение отправлено!'); setInviteName(''); setInviteTargetId(null); }
-        catch (e: any) { setError(e.message); }
-    };
-    const handleTogglePerm = async (officerId: number, perm: string) => {
-        try { await api('/guild/officer-permissions', { officerId, permission: perm }); load(); }
         catch (e: any) { setError(e.message); }
     };
     const handleLeave = () => setConfirmPopup({ message:'Покинуть гильдию?', onConfirm: async () => { setConfirmPopup(null);
@@ -259,17 +256,32 @@ export default function GuildPage() {
                             {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span></span>
                         {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1">
                             <Button size="md" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
+                            {m.rank==='officer'&&<Button size="md" variant="secondary" onClick={()=>setPermPopup({officerId:m.userId,username:m.username,quests:!!(m.can_quests||m.quests),buildings:!!(m.can_buildings||m.buildings),war:!!(m.can_war||m.war)})}>⚙️</Button>}
                             <Button size="md" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button></div>}
                     </div>
-                    {myRank==='leader'&&m.rank==='officer'&&<div className="flex gap-3 mt-1 text-[0.6rem] text-[var(--color-text-muted)]">
-                        {[{k:'quests',l:'📜 Квесты'},{k:'buildings',l:'🏘️ Постройки'},{k:'war',l:'⚔️ Война'}].map(p=>{
-                            const key = 'can_'+p.k; const on = m[key]||m[p.k];
-                            return <label key={p.k} className="flex items-center gap-1 cursor-pointer" onClick={()=>handleTogglePerm(m.userId,p.k)}>
-                                <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[0.55rem] ${on?'bg-[var(--color-accent-info)] border-[var(--color-accent-info)] text-white':'border-[var(--color-border-light)]'}`}>{on?'✓':''}</span>
-                                {p.l}</label>;
-                        })}</div>}
                 </div>))}</div></Card>
         </div>}
+
+        {/* Permissions popup */}
+        {permPopup&&<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={()=>setPermPopup(null)}>
+            <Card className="max-w-xs w-full" onClick={e=>e.stopPropagation()}>
+                <p className="text-sm font-bold mb-3">Разрешения: {permPopup.username}</p>
+                {[{k:'quests',l:'📜 Квесты'},{k:'buildings',l:'🏘️ Постройки'},{k:'war',l:'⚔️ Война'}].map(p=>(
+                    <label key={p.k} className="flex items-center gap-2 mb-2 cursor-pointer text-sm"
+                        onClick={()=>setPermPopup((prev:any)=>({...prev,[p.k]:!prev[p.k]}))}>
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center text-xs ${permPopup[p.k]?'bg-[var(--color-accent-info)] border-[var(--color-accent-info)] text-white':'border-[var(--color-border-light)]'}`}>{permPopup[p.k]?'✓':''}</span>
+                        {p.l}</label>
+                ))}
+                <div className="flex gap-2 justify-end mt-3">
+                    <Button variant="secondary" size="md" onClick={()=>setPermPopup(null)}>Отмена</Button>
+                    <Button size="md" onClick={async()=>{
+                        const p = permPopup;
+                        setPermPopup(null);
+                        try {
+                            await Promise.all(['quests','buildings','war'].map(k=>api('/guild/officer-permissions',{officerId:p.officerId,permission:k}).catch(()=>{})));
+                            load();
+                        } catch {}
+                    }}>Сохранить</Button></div></Card></div>}
 
         {/* Popup */}
         {confirmPopup&&<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={()=>setConfirmPopup(null)}>
