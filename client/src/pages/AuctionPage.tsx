@@ -215,6 +215,7 @@ export default function AuctionPage() {
             qs.set('page', String(p));
             qs.set('limit', String(limit));
             if (text) qs.set('search', text);
+            if (highlightLotId && p === 1) qs.set('highlightLot', highlightLotId);
             const activeCategory = parsedCategory !== 'all' ? parsedCategory : category;
             if (activeCategory !== 'all') qs.set('category', activeCategory);
             qs.set('sort', sort);

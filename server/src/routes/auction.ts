@@ -154,9 +154,23 @@ router.get('/auction', async (req, res) => {
     const limit = 6;
     const totalCount = filtered.length;
     const totalPages = Math.max(1, Math.ceil(totalCount / limit));
-    const paged = filtered.slice((page - 1) * limit, page * limit);
+    const actualPage = page;
 
     const myLotCount = (await db.one('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ? AND endsat > ?', [req.userId, Math.floor(Date.now() / 1000)]) as any).cnt;
+
+    const highlightLot = parseInt(req.query.highlightLot as string) || 0;
+    if (highlightLot && page === 1) {
+        const idx = filtered.findIndex((l: any) => l.id === highlightLot);
+        if (idx !== -1) {
+            const targetPage = Math.floor(idx / limit) + 1;
+            if (targetPage !== 1) {
+                const paged = filtered.slice((targetPage - 1) * limit, targetPage * limit);
+                return res.json({ lots: paged, totalCount, totalPages, page: targetPage, myLotCount, highlightLot });
+            }
+        }
+    }
+    const paged = filtered.slice((actualPage - 1) * limit, actualPage * limit);
+
     res.json({ lots: paged, totalCount, totalPages, page, myLotCount });
 });
 
