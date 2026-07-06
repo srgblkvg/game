@@ -1,4 +1,4 @@
-import { CharStats, GameItem, PRIMARY_STATS, sumStats, currentStats } from './stats';
+import { CharStats, GameItem, PRIMARY_STATS, currentStats } from './stats';
 import { F, sv } from './stats';
 
 export interface BattleStep {
@@ -69,9 +69,9 @@ export function stunChance(atkStats: CharStats, defStats: CharStats): number {
   return sum > 0 ? sv(atkStats, F.stunAtk) / sum * 0.3 : 0;
 }
 
-// Смешанное распределение урона: 1% мин(level), 98% ~центр(70%), 1% макс(S)
+// Урон: мин = level, макс = сила (S)
 export function rollDamage(stats: CharStats, level: number): number {
-  const S = sumStats(stats);
+  const S = stats.s;
   const roll = Math.random();
   let factor: number;
   if (roll < 0.01) {
