@@ -26,6 +26,7 @@ export default function GuildPage() {
 
     const [guild, setGuild] = useState<any>(null);
     const [members, setMembers] = useState<any[]>([]);
+    const [myPerms, setMyPerms] = useState({ quests: false, buildings: false, war: false });
     const [guildList, setGuildList] = useState<any[]>([]);
     const [requests, setRequests] = useState<any[]>([]);
     const [message, setMessage] = useState('');
@@ -64,6 +65,8 @@ export default function GuildPage() {
                 fetch(`${BASE_URL}/guild/list`, { headers: getHeaders() }).then(r => r.json()),
             ]);
             if (data.guild) { setGuild(data.guild); setMembers(data.members); setTreasuryBalance(data.guild.treasury||0); setTaxRate(data.guild.taxRate||0); setWar(data.war||null);
+                const me = data.members.find((m:any)=>m.userId===user?.id);
+                if (me) setMyPerms({ quests: !!(me.can_quests||me.quests), buildings: !!(me.can_buildings||me.buildings), war: !!(me.can_war||me.war) });
                 if (data.guild.myRank==='leader'||data.guild.myRank==='officer') fetch(`${BASE_URL}/guild/requests`,{headers:getHeaders()}).then(r=>r.json()).then(setRequests).catch(()=>{});
             } else { setGuild(null); setMembers([]); }
             setGuildList(list);
@@ -95,6 +98,10 @@ export default function GuildPage() {
     const handleInvite = async () => {
         if (!inviteTargetId) { setError('Выберите игрока'); return; }
         try { await api('/guild/invite',{targetId:inviteTargetId}); msg('Приглашение отправлено!'); setInviteName(''); setInviteTargetId(null); }
+        catch (e: any) { setError(e.message); }
+    };
+    const handleTogglePerm = async (officerId: number, perm: string) => {
+        try { await api('/guild/officer-permissions', { officerId, permission: perm }); load(); }
         catch (e: any) { setError(e.message); }
     };
     const handleLeave = () => setConfirmPopup({ message:'Покинуть гильдию?', onConfirm: async () => { setConfirmPopup(null);
@@ -142,6 +149,8 @@ export default function GuildPage() {
     }
 
     const myRank = guild.myRank;
+    const canBuild = myRank==='leader'||myPerms.buildings;
+    const canWar = myRank==='leader'||myPerms.war;
 
     return (<div className="max-w-3xl mx-auto px-4 py-4"><BackButton />
           {actionCard && <PageHeader title="Гильдия" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
@@ -177,7 +186,7 @@ export default function GuildPage() {
 
         {/* Tab 0: Обзор */}
         {tab===0 && <div className="space-y-4">
-            <GuildQuestCard guildId={guild.id} myRank={myRank} api={api}/>
+            <GuildQuestCard guildId={guild.id} myRank={myRank} myPerms={myPerms} api={api}/>
             {war ? (<Card className="border-l-4 border-l-red-500"><h3 className="font-bold text-sm flex items-center gap-2 mb-2"><Icon icon="game-icons:crossed-swords" width="18" height="18"/>⚔️ Война</h3>
                 <p className="text-xs">Противник: <b>{war.attackerGuild?.id===guild.id?war.defenderGuild?.name:war.attackerGuild?.name}</b></p>
                 <p className="text-xs text-[var(--color-text-muted)]">{war.status==='pending'?'Ожидание ответа':war.status==='active'?'Активна':war.status}</p>
@@ -185,13 +194,13 @@ export default function GuildPage() {
                     <p className="text-[0.65rem] mt-1 text-red-400">💰 Казна заморожена</p>
                     <Button size="md" variant="danger" className="mt-2" onClick={()=>navigate('/guild/war')}>⚔️ На поле боя</Button>
                 </>}
-                {myRank==='leader'&&war.attackerGuild?.id!==guild.id&&war.status==='pending'&&(<div className="flex gap-2 mt-2">
+                {canWar&&war.attackerGuild?.id!==guild.id&&war.status==='pending'&&(<div className="flex gap-2 mt-2">
                     <Button size="md" onClick={async()=>{await api('/guild/war/respond',{accept:true});load();}}>Принять</Button>
                     <Button size="md" variant="secondary" onClick={async()=>{await api('/guild/war/respond',{accept:false});load();}}>Отклонить</Button></div>)}</Card>
             ) : (<Card><div className="flex items-center gap-2 cursor-pointer" onClick={()=>setShowWarRules(!showWarRules)}>
                 <Icon icon={showWarRules?'game-icons:expand':'game-icons:contract'} width="14" height="14"/><h3 className="font-bold text-sm">⚔️ Война гильдий — правила</h3>
             </div>{showWarRules&&<div className="text-xs text-[var(--color-text-muted)] mt-2 space-y-1">
-                <p>• Лидер объявляет войну через список гильдий</p><p>• 24 часа на ответ, 24 часа боёв</p><p>• Казна замораживается</p></div>}</Card>)}
+                <p>• Лидер или офицер с правом объявляет войну</p><p>• 24 часа на ответ, 24 часа боёв</p><p>• Казна замораживается</p></div>}</Card>)}
         </div>}
 
         {/* Tab 1: Постройки */}
@@ -207,7 +216,7 @@ export default function GuildPage() {
                         <span>След. уровень: +{b.nextBonus}%</span>
                         <span>Цена: {b.cost.toLocaleString()} серебра | Требуется ур. гильдии {b.reqLevel}</span>
                     </div>
-                    {myRank==='leader'&&(
+                    {canBuild&&(
                         <Button size="md" disabled={!b.canBuild}
                             onClick={async()=>{try{await api('/guild/buildings/build',{buildingType:b.type});load();}catch(e:any){setError(e.message);}}}>
                             {b.level>0?'Улучшить':'Построить'}
@@ -244,12 +253,21 @@ export default function GuildPage() {
                     <div className="flex gap-1"><Button size="md" onClick={()=>handleRequest(r.id,true)}>✓</Button><Button size="md" variant="secondary" onClick={()=>handleRequest(r.id,false)}>✗</Button></div></div>))}</div>}
                 {myRank==='leader'&&<div className="mt-2"><Button size="md" variant="secondary" onClick={handleCancelInvites}>Отменить приглашения</Button></div>}</Card>)}
             <Card><h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3><div className="space-y-1">
-                {members.map((m:any)=>(<div key={m.userId} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] text-xs">
-                    <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
-                        {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span></span>
-                    {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1">
-                        <Button size="md" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
-                        <Button size="md" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button></div>}
+                {members.map((m:any)=>(<div key={m.userId} className="py-1 border-b border-[var(--color-border-light)] text-xs">
+                    <div className="flex justify-between items-center">
+                        <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
+                            {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span></span>
+                        {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1">
+                            <Button size="md" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
+                            <Button size="md" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button></div>}
+                    </div>
+                    {myRank==='leader'&&m.rank==='officer'&&<div className="flex gap-3 mt-1 text-[0.6rem] text-[var(--color-text-muted)]">
+                        {[{k:'quests',l:'📜 Квесты'},{k:'buildings',l:'🏘️ Постройки'},{k:'war',l:'⚔️ Война'}].map(p=>{
+                            const key = 'can_'+p.k; const on = m[key]||m[p.k];
+                            return <label key={p.k} className="flex items-center gap-1 cursor-pointer" onClick={()=>handleTogglePerm(m.userId,p.k)}>
+                                <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[0.55rem] ${on?'bg-[var(--color-accent-info)] border-[var(--color-accent-info)] text-white':'border-[var(--color-border-light)]'}`}>{on?'✓':''}</span>
+                                {p.l}</label>;
+                        })}</div>}
                 </div>))}</div></Card>
         </div>}
 
@@ -262,20 +280,21 @@ export default function GuildPage() {
 
 function ExpBar({exp,level}:{exp:number;level:number}){const n=100*Math.pow(2,level-1);return <div className="mt-1"><div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5"><span>Опыт</span><span>{exp}/{n}</span></div><div className="w-full h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden"><div className="h-full bg-[var(--color-accent-gold)] rounded-full transition-all" style={{width:`${Math.min(100,(exp/n)*100)}%`}}/></div></div>}
 
-function GuildQuestCard({guildId:_guildId,myRank,api}:{guildId:number;myRank:string;api:any}){
+function GuildQuestCard({guildId:_guildId,myRank,myPerms,api}:{guildId:number;myRank:string;myPerms:{quests:boolean;buildings:boolean;war:boolean};api:any}){
     const [aq,setAq]=useState<any>(null);const [opts,setOpts]=useState<any[]|null>(null);const [m,setM]=useState('');const [l,setL]=useState(false);
     useEffect(()=>{load();const h=(e:any)=>{if(e.detail?.id)setAq(e.detail)};window.addEventListener('guildQuestProgress',h);return()=>window.removeEventListener('guildQuestProgress',h)},[]);
     const load=async()=>{const r=await fetch('/api/guild/quest',{headers:getHeaders()});const d=await r.json();setAq(d.activeQuest||null);setOpts(d.options||null)};
     const take=async(o:any)=>{setL(true);try{await api('/guild/quest/take',{questType:o.questType,difficulty:o.difficulty,requirement:o.requirement,rewardXp:o.rewardXp});load()}catch(e:any){setM(e.message)}setL(false)};
     const claim=async()=>{setL(true);try{const d=await api('/guild/quest/claim',{});setM(d.message||`+${d.rewardXp} XP!`);load()}catch(e:any){setM(e.message)}setL(false)};
+    const canQuests = myRank==='leader'||myPerms.quests;
     return <Card><h3 className="font-bold text-sm mb-2 flex items-center gap-2"><Icon icon="game-icons:scroll-unfurled" width="16" height="16"/>Задание гильдии</h3>{m&&<p className="text-xs text-green-400 mb-2">{m}</p>}
         {aq?<><p className="text-xs font-medium">{aq.typeName} <span className="text-[0.6rem] text-[var(--color-text-muted)]">{aq.difficultyLabel}</span></p><p className="text-xs text-[var(--color-text-muted)] mb-2">{aq.description}</p>
             <div className="mb-1"><div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5"><span>{aq.progress}/{aq.requirement}</span><span>+{aq.rewardXp} XP</span></div>
             <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full"><div className="h-full bg-[var(--color-accent-info)] rounded-full" style={{width:`${Math.min(100,(aq.progress/aq.requirement)*100)}%`}}/></div></div>
-            {myRank==='leader'&&aq.progress>=aq.requirement&&<Button variant="primary" size="md" onClick={claim} disabled={l} className="mt-2">Забрать</Button>}</>
+            {canQuests&&aq.progress>=aq.requirement&&<Button variant="primary" size="md" onClick={claim} disabled={l} className="mt-2">Забрать</Button>}</>
         :opts?<><p className="text-xs text-[var(--color-text-muted)] mb-2">Выберите задание:</p><div className="space-y-2">{opts.map((o:any,i:number)=>(<div key={i} className="border border-[var(--color-border-light)] rounded-lg p-2">
             <div className="flex justify-between mb-1"><span className="text-xs font-medium">{o.typeName}</span><span className="text-[0.6rem] text-[var(--color-text-muted)]">{o.difficultyLabel}</span></div>
             <p className="text-xs text-[var(--color-text-muted)] mb-1">{o.description}</p><div className="flex justify-between"><span className="text-[0.6rem] text-yellow-400">+{o.rewardXp} XP</span>
-            {myRank==='leader'&&<Button variant="primary" size="md" onClick={()=>take(o)} disabled={l}>Взять</Button>}</div></div>))}</div>
-            {myRank!=='leader'&&<p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">Ожидайте выбора лидера</p>}</>:null}</Card>;
+            {canQuests&&<Button variant="primary" size="md" onClick={()=>take(o)} disabled={l}>Взять</Button>}</div></div>))}</div>
+            {!canQuests&&<p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">Ожидайте выбора лидера</p>}</>:null}</Card>;
 }
