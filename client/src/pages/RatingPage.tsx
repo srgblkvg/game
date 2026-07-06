@@ -95,36 +95,6 @@ export default function RatingPage() {
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2"/>Рейтинг игроков</h2>
 
-            {/* Пьедестал Топ-3 */}
-            <Top3Podium players={top3} />
-
-            {/* Поиск + фильтр */}
-            <div className="flex gap-2 mb-4">
-                <input
-                    type="text"
-                    placeholder="Поиск по нику..."
-                    value={searchInput}
-                    onChange={e => setSearchInput(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm"
-                />
-                {searchInput && (
-                    <Button size="md" variant="danger" onClick={() => { setSearchInput(''); setSearch(''); }}>
-                        ✕
-                    </Button>
-                )}
-            </div>
-            <div className="mb-4">
-                <select
-                    value={minElo}
-                    onChange={e => { setMinElo(parseInt(e.target.value)); setPage(1); }}
-                    className="w-full px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm"
-                >
-                    {rankFilters.map(r => (
-                        <option key={r.min} value={r.min}>{r.label}</option>
-                    ))}
-                </select>
-            </div>
-
             {/* Инструкция */}
             <Card className="mb-4">
                 <div
@@ -201,6 +171,36 @@ export default function RatingPage() {
                     </div>
                 )}
             </Card>
+
+            {/* Пьедестал Топ-3 */}
+            <Top3Podium players={top3} />
+
+            {/* Поиск + фильтр */}
+            <div className="flex gap-2 mb-4">
+                <input
+                    type="text"
+                    placeholder="Поиск по нику..."
+                    value={searchInput}
+                    onChange={e => setSearchInput(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm"
+                />
+                {searchInput && (
+                    <Button size="md" variant="danger" onClick={() => { setSearchInput(''); setSearch(''); }}>
+                        ✕
+                    </Button>
+                )}
+            </div>
+            <div className="mb-4">
+                <select
+                    value={minElo}
+                    onChange={e => { setMinElo(parseInt(e.target.value)); setPage(1); }}
+                    className="w-full px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm"
+                >
+                    {rankFilters.map(r => (
+                        <option key={r.min} value={r.min}>{r.label}</option>
+                    ))}
+                </select>
+            </div>
 
             <Card>
                 {players.length === 0 ? (
