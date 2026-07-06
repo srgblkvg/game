@@ -250,15 +250,25 @@ export default function GuildPage() {
                     <div className="flex gap-1"><Button size="md" onClick={()=>handleRequest(r.id,true)}>✓</Button><Button size="md" variant="secondary" onClick={()=>handleRequest(r.id,false)}>✗</Button></div></div>))}</div>}
                 {myRank==='leader'&&<div className="mt-2"><Button size="md" variant="secondary" onClick={handleCancelInvites}>Отменить приглашения</Button></div>}</Card>)}
             <Card><h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3><div className="space-y-1">
-                {members.map((m:any)=>(<div key={m.userId} className="py-1 border-b border-[var(--color-border-light)] text-xs">
+                {[...members].sort((a:any,b:any)=>{
+                    const rankOrder = (r:string)=>r==='leader'?0:r==='officer'?1:2;
+                    const ro = rankOrder(a.rank)-rankOrder(b.rank);
+                    if (ro!==0) return ro;
+                    return (b.level||0)-(a.level||0);
+                }).map((m:any)=>(<div key={m.userId} className="py-1 border-b border-[var(--color-border-light)] text-xs">
                     <div className="flex justify-between items-center">
                         <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
-                            {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span></span>
-                        {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1">
-                            <Button size="md" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
-                            {m.rank==='officer'&&<Button size="md" variant="secondary" onClick={()=>setPermPopup({officerId:m.userId,username:m.username,quests:!!(m.can_quests||m.quests),buildings:!!(m.can_buildings||m.buildings),war:!!(m.can_war||m.war)})}>⚙️</Button>}
+                            {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span>
+                            {m.rank==='officer'&&<span className="ml-1 text-[0.6rem]">
+                                {(m.can_quests||m.quests)?'📜':''}{(m.can_buildings||m.buildings)?'🏘️':''}{(m.can_war||m.war)?'⚔️':''}
+                            </span>}</span>
+                        {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1 items-center">
                             <Button size="md" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button></div>}
                     </div>
+                    {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1 mt-1">
+                        {m.rank==='officer'&&<Button size="md" variant="secondary" onClick={()=>setPermPopup({officerId:m.userId,username:m.username,quests:!!(m.can_quests||m.quests),buildings:!!(m.can_buildings||m.buildings),war:!!(m.can_war||m.war)})}>⚙️</Button>}
+                        <Button size="md" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
+                    </div>}
                 </div>))}</div></Card>
         </div>}
 
