@@ -62,26 +62,28 @@ router.post('/vk-bridge', async (req: Request, res: Response) => {
       // Проверяем что персонаж не удалён (есть level и hp)
       const char = await db.one('SELECT level, currentHp FROM users WHERE id = ?', [existing.id]);
       if (!char || char.level < 1 || char.currentHp < 1) {
-        // Персонаж удалён — удаляем старого пользователя и создаём нового
-        await db.run('DELETE FROM users WHERE id = ?', [existing.id]);
-        logger.info(`[VK Bridge Auth] Deleted stale user ${existing.id}, recreating for VK ${vkUserId}`);
-        // Падаем в блок создания ниже
-      } else {
-        await db.run('UPDATE users SET lastLoginAt = ? WHERE id = ?', [now, existing.id]);
-
-        const token = jwt.sign(
-          { userId: existing.id, role: 'player', username: existing.username, jti: crypto.randomUUID() },
-          JWT_SECRET,
-          { expiresIn: '7d' },
+        // Персонаж удалён — сбрасываем до начального состояния
+        const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
+        await db.run(
+          'UPDATE users SET level = 1, currentHp = ?, lastHpUpdate = ?, s=5, a=5, d=5, m=5, statPoints=0, exp=0, elo=1000 WHERE id = ?',
+          [startHp, now, existing.id],
         );
-
-        auditLoginSuccess(existing.username, existing.id);
-
-        return res.json({
-          token,
-          user: { id: existing.id, username: existing.username, role: 'player' },
-        });
+        logger.info(`[VK Bridge Auth] Reset stale user ${existing.id} for VK ${vkUserId}`);
       }
+      await db.run('UPDATE users SET lastLoginAt = ? WHERE id = ?', [now, existing.id]);
+
+      const token = jwt.sign(
+        { userId: existing.id, role: 'player', username: existing.username, jti: crypto.randomUUID() },
+        JWT_SECRET,
+        { expiresIn: '7d' },
+      );
+
+      auditLoginSuccess(existing.username, existing.id);
+
+      return res.json({
+        token,
+        user: { id: existing.id, username: existing.username, role: 'player' },
+      });
     }
 
     // Создаём нового пользователя
