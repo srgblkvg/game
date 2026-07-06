@@ -24,7 +24,8 @@ router.get('/rating', async (req, res) => {
     const search = (req.query.search as string) || '';
     const minElo = parseInt(req.query.minElo as string) || 0;
     const maxElo = parseInt(req.query.maxElo as string) || 0;
-    const offset = (page - 1) * limit;
+    const skip = parseInt(req.query.skip as string) || 0;
+    const offset = (page - 1) * limit + skip;
 
     let whereClause = 'WHERE u.id > 0';
     const params: any[] = [];

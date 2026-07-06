@@ -10,6 +10,7 @@ import Button from '../components/ui/Button';
 import Top3Podium from '../components/Top3Podium';
 
 const LIMIT = 20;
+const SKIP_TOP = 3;
 
 export default function RatingPage() {
     const { user } = useAuth();
@@ -66,10 +67,10 @@ export default function RatingPage() {
         let cancelled = false;
         (async () => {
             try {
-                const data = await fetchRating(1, LIMIT, search, minElo);
+                const data = await fetchRating(1, LIMIT, search, minElo, 0, SKIP_TOP);
                 if (cancelled) return;
                 setPlayers(data.users);
-                setTotalPages(Math.ceil(data.total / LIMIT));
+                setTotalPages(Math.max(1, Math.ceil((data.total - SKIP_TOP) / LIMIT)));
                 if (data.myPage && data.myPage !== 1) {
                     setPage(data.myPage);
                 }
@@ -84,9 +85,9 @@ export default function RatingPage() {
     // Subsequent loads: pagination, search, filter
     useEffect(() => {
         if (!initialLoadDone.current) return;
-        fetchRating(page, LIMIT, search, minElo).then(data => {
+        fetchRating(page, LIMIT, search, minElo, 0, SKIP_TOP).then(data => {
             setPlayers(data.users);
-            setTotalPages(Math.ceil(data.total / LIMIT));
+            setTotalPages(Math.max(1, Math.ceil((data.total - SKIP_TOP) / LIMIT)));
         }).catch(console.error);
     }, [page, search, minElo]);
 
@@ -225,7 +226,7 @@ export default function RatingPage() {
                                             onClick={() => navigate(`/profile/${p.id}`)}
                                             className={`cursor-pointer hover:text-[var(--color-accent-info)] transition-colors block truncate ${isMe ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-primary)]'}`}
                                         >
-                                            {i + 1 + (page - 1) * LIMIT}. {p.username} {isMe ? '(Вы)' : ''}
+                                            {i + 1 + (page - 1) * LIMIT + SKIP_TOP}. {p.username} {isMe ? '(Вы)' : ''}
                                         </span>
                                         <span className="sm:hidden"><GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                                     </td>

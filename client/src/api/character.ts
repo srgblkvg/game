@@ -60,11 +60,12 @@ export async function fetchPublicProfile(userId: number) {
     return res.json();
 }
 
-export async function fetchRating(page = 1, limit = 20, search = '', minElo = 0, maxElo = 0) {
+export async function fetchRating(page = 1, limit = 20, search = '', minElo = 0, maxElo = 0, skip = 0) {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (search) params.set('search', search);
     if (minElo) params.set('minElo', String(minElo));
     if (maxElo) params.set('maxElo', String(maxElo));
+    if (skip) params.set('skip', String(skip));
     const res = await fetch(`${BASE_URL}/rating?${params}`, {
         headers: getHeaders()
     });
