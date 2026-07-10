@@ -110,6 +110,28 @@ export default function ProfilePage() {
                     <StatItem icon="game-icons:arrow-dunk" label="Улучшено" value={profile.craftUpgraded || 0} />
                     <StatItem icon="game-icons:broken-shield" label="Сломано" value={profile.craftBroken || 0} />
 
+                    {/* Резня */}
+                    <h3 className="text-xs font-bold text-[var(--color-accent-danger)] uppercase tracking-wider mt-3">
+                        ⚔️ Резня
+                    </h3>
+                    <StatItem icon="game-icons:crossed-swords" label="Участий" value={profile.massacreParticipations || 0} />
+                    <StatItem icon="game-icons:trophy" label="Побед" value={profile.massacreWins || 0} />
+
+                    {/* Аукцион */}
+                    <h3 className="text-xs font-bold text-[var(--color-accent-warning)] uppercase tracking-wider mt-3">
+                        📦 Аукцион
+                    </h3>
+                    <StatItem icon="game-icons:pay-money" label="Куплено лотов" value={profile.auctionBought || 0} />
+                    <StatItem icon="game-icons:cash" label="Продано лотов" value={profile.auctionSold || 0} />
+
+                    {/* Игорный дом */}
+                    <h3 className="text-xs font-bold text-[var(--color-accent-purple)] uppercase tracking-wider mt-3">
+                        🎰 Игорный дом
+                    </h3>
+                    <StatItem icon="game-icons:card-play" label="Игр сыграно" value={profile.casinoGamesPlayed || 0} />
+                    <StatItem icon="game-icons:cash" label="Выиграно" value={formatMoney(profile.casinoWon || 0)} />
+                    <StatItem icon="game-icons:pay-money" label="Проиграно" value={formatMoney(profile.casinoLost || 0)} />
+
                     {/* Дата регистрации */}
                     {profile.createdAt && (
                         <h3 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-3">

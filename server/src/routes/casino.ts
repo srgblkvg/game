@@ -174,6 +174,14 @@ router.post('/casino/blackjack/start', async (req, res) => {
             if (payout > 0) {
                 await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [payout, userId]);
             }
+            // Статистика казино (если игра завершилась мгновенно — блэкджек)
+            if (status !== 'playing') {
+                const { won: _bjwon, lost: _bjlost } = getCasinoStatUpdate(status, bet, payout);
+                await client.query(
+                    'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + $1, casino_lost = casino_lost + $2 WHERE id = $3',
+                    [_bjwon, _bjlost, userId]
+                );
+            }
 
             res.json({
                 gameId: gameResult.rows[0].id,
@@ -318,6 +326,12 @@ router.post('/casino/blackjack/stand', async (req, res) => {
             if (payout > 0) {
                 await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [payout, userId]);
             }
+            // Статистика казино
+            const { won: _swon, lost: _slost } = getCasinoStatUpdate(status, game.bet, payout);
+            await client.query(
+                'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + $1, casino_lost = casino_lost + $2 WHERE id = $3',
+                [_swon, _slost, userId]
+            );
 
             return {
                 status, result,
@@ -426,6 +440,12 @@ router.post('/casino/blackjack/double', async (req, res) => {
             if (payout > 0) {
                 await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [payout, userId]);
             }
+            // Статистика казино
+            const { won: _dwon, lost: _dlost } = getCasinoStatUpdate(status, newBet, payout);
+            await client.query(
+                'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + $1, casino_lost = casino_lost + $2 WHERE id = $3',
+                [_dwon, _dlost, userId]
+            );
 
             return {
                 status, result,
@@ -472,6 +492,12 @@ router.post('/casino/blackjack/surrender', async (req, res) => {
             if (returnAmount > 0) {
                 await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [returnAmount, userId]);
             }
+            // Статистика казино
+            const { won: _surwon, lost: _surlost } = getCasinoStatUpdate('surrender', game.bet, returnAmount);
+            await client.query(
+                'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + $1, casino_lost = casino_lost + $2 WHERE id = $3',
+                [_surwon, _surlost, userId]
+            );
 
             const dealerCards: Card[] = JSON.parse(game.dealer_cards || '[]');
 
@@ -495,3 +521,12 @@ router.post('/casino/blackjack/surrender', async (req, res) => {
 });
 
 export default router;
+
+// Хелпер: обновление статов казино у пользователя
+// casino_won = чистая прибыль от побед, casino_lost = чистый убыток от поражений
+function getCasinoStatUpdate(status: string, bet: number, payout: number): { won: number; lost: number } {
+    if (status === 'player_won') return { won: payout - bet, lost: 0 };
+    if (status === 'dealer_won') return { won: 0, lost: bet };
+    if (status === 'surrender') return { won: 0, lost: bet - payout };
+    return { won: 0, lost: 0 }; // push
+}

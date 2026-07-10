@@ -22,7 +22,7 @@ router.get('/character/public/:userId', async (req, res) => {
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
     const user: any = await db.one(
-        'SELECT u.id, u.username, u.level, u.totalBattles, u.wins, u.equipment, u.currentHp, u.gender, u.avatar, u.baseS, u.baseA, u.baseD, u.baseM, u.pveTotalBattles, u.pveWins, u.tournamentCount, u.tournamentWins, u.totalJobMoney, u.totalPveMoneyWon, u.totalPvpMoneyWon, u.totalPveMoneyLost, u.totalPvpMoneyLost, u.totalJobSeconds, u.craftCreated, u.craftUpgraded, u.craftBroken, u.createdAt, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?',
+        'SELECT u.id, u.username, u.level, u.totalBattles, u.wins, u.equipment, u.currentHp, u.gender, u.avatar, u.baseS, u.baseA, u.baseD, u.baseM, u.pveTotalBattles, u.pveWins, u.tournamentCount, u.tournamentWins, u.totalJobMoney, u.totalPveMoneyWon, u.totalPvpMoneyWon, u.totalPveMoneyLost, u.totalPvpMoneyLost, u.totalJobSeconds, u.craftCreated, u.craftUpgraded, u.craftBroken, u.createdAt, u.casino_games_played, u.casino_won, u.casino_lost, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?',
         [userId]
     );
 
@@ -62,6 +62,30 @@ router.get('/character/public/:userId', async (req, res) => {
         avatar: user.avatar || null,
         guildName: user.guildName || null,
         guildId: user.guildId || null,
+        // Резня
+        massacreParticipations: (await db.one(
+            'SELECT COUNT(*) as cnt FROM massacre_participants WHERE user_id = ?',
+            [userId]
+        ) as any).cnt || 0,
+        massacreWins: (await db.one(
+            `SELECT COUNT(*) as cnt FROM massacre_participants mp
+             JOIN massacre_events me ON mp.event_id = me.id
+             WHERE mp.user_id = ? AND mp.alive = TRUE AND me.status = 'completed'`,
+            [userId]
+        ) as any).cnt || 0,
+        // Аукцион
+        auctionBought: (await db.one(
+            'SELECT COUNT(*) as cnt FROM auction_history WHERE buyerid = ?',
+            [userId]
+        ) as any).cnt || 0,
+        auctionSold: (await db.one(
+            'SELECT COUNT(*) as cnt FROM auction_history WHERE sellerid = ?',
+            [userId]
+        ) as any).cnt || 0,
+        // Казино
+        casinoGamesPlayed: user.casino_games_played || 0,
+        casinoWon: user.casino_won || 0,
+        casinoLost: user.casino_lost || 0,
     });
 });
 

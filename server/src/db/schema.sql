@@ -226,7 +226,10 @@ CREATE TABLE IF NOT EXISTS users (
   guildId INTEGER DEFAULT NULL,
   avatar TEXT,
   arenaOpponentId INTEGER DEFAULT NULL,
-  tutorial_completed INTEGER DEFAULT 0
+  tutorial_completed INTEGER DEFAULT 0,
+  casino_games_played INTEGER DEFAULT 0,
+  casino_won INTEGER DEFAULT 0,
+  casino_lost INTEGER DEFAULT 0
 );
 
 -- ====== admins ======
