@@ -43,6 +43,9 @@ router.get('/tavern', async (req, res) => {
     const stats = await buildPlayerStats(user, 'arena');
     const maxHp = stats.hp;
 
+    const adHealCooldownSec = 1800;
+    const adHealRemaining = Math.max(0, adHealCooldownSec - (now - (user.adhealat || 0)));
+
     res.json({
         currentHp: user.currentHp,
         maxHp,
@@ -51,6 +54,7 @@ router.get('/tavern', async (req, res) => {
         drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
         rooms: Object.entries(rooms).map(([key, r]) => ({ key, ...r })),
         drinks: Object.entries(drinks).map(([key, d]) => ({ key, ...d })),
+        adHealRemaining,
     });
 });
 
