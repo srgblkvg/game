@@ -81,6 +81,32 @@ router.post('/tavern/heal', async (req, res) => {
     res.json({ success: true, hpAfter: user.currentHp + healAmount, cost });
 });
 
+// Бесплатное полное лечение за просмотр рекламы (VK)
+router.post('/tavern/heal-ad', async (req, res) => {
+    const userId = req.userId;
+    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const cooldownSec = 1800; // 30 минут
+    const lastAdHeal = user.adhealat || 0;
+    if (now - lastAdHeal < cooldownSec) {
+        const remaining = cooldownSec - (now - lastAdHeal);
+        const min = Math.ceil(remaining / 60);
+        return res.status(400).json({ error: `Реклама будет доступна через ${min} мин.` });
+    }
+
+    const guildBonus = await getGuildBonus(req.userId, 'arena');
+    const stats = await buildPlayerStats(user, 'arena');
+    const maxHp = stats.hp;
+    const missingHp = maxHp - user.currentHp;
+    if (missingHp <= 0) return res.status(400).json({ error: 'HP уже полное' });
+
+    await db.run('UPDATE users SET currentHp = ?, adhealat = ? WHERE id = ?', [user.currentHp + missingHp, now, userId]);
+
+    res.json({ success: true, hpAfter: user.currentHp + missingHp });
+});
+
 // Аренда комнаты
 router.post('/tavern/room', async (req, res) => {
     const userId = req.userId;

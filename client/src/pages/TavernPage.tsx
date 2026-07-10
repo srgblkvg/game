@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import { useAcquire } from '../contexts/AcquireContext';
 import { useServerTime } from '../contexts/ServerTimeContext';
 import { fetchCharacter } from '../api/character';
@@ -29,6 +30,7 @@ export default function TavernPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { showAcquire } = useAcquire();
+    const { showToast } = useToast();
     const { now } = useServerTime();
 
     const [tavern, setTavern] = useState<any>(null);
@@ -69,6 +71,28 @@ export default function TavernPage() {
         try { const d = await api('/tavern/quests/claim',{questId}); setMessage(`Награда: +${d.rewardXp} XP, +${formatMoney(d.rewardMoney)}`); setError(''); showAcquire({name:'Квест выполнен!',rarity_id:3},1,`+${d.rewardXp} XP, ${formatMoney(d.rewardMoney)}`); loadQuests(); load(); } catch(e:any){setError(e.message)}
     };
 
+    const [adLoading, setAdLoading] = useState(false);
+    const handleAdHeal = async () => {
+        setAdLoading(true); setError('');
+        try {
+            const bridge = (window as any).vkBridge;
+            if (!bridge) { setError('Реклама доступна только в VK'); setAdLoading(false); return; }
+            // Проверяем доступность рекламы
+            const check: any = await bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' });
+            if (!check?.result) { setError('Реклама сейчас недоступна'); setAdLoading(false); return; }
+            // Показываем рекламу
+            await bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' });
+            // После успешного просмотра — лечим
+            const r = await fetch(`${BASE_URL}/tavern/heal-ad`, { method: 'POST', headers: getHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error);
+            showToast('❤️ Здоровье полностью восстановлено!', 'success');
+            load();
+        } catch (e: any) {
+            if (e.message !== 'Ads unavailable') setError(e.message || 'Не удалось показать рекламу');
+        } finally { setAdLoading(false); }
+    };
+
     if (!tavern) return <div className="p-4">Загрузка...</div>;
     const missingHp = Math.max(0, (character?.stats?.hp || tavern.maxHp) - tavern.currentHp);
 
@@ -80,7 +104,7 @@ export default function TavernPage() {
             {message && <p className="mb-4 text-sm text-[var(--color-accent-success)]">{message}</p>}
             {error && <p className="mb-4 text-sm text-[var(--color-accent-danger)]">{error}</p>}
 
-            {tab==='heal' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Восстановите здоровье за монеты. Быстрое лечение — половина недостающего HP, полное — всё сразу.</p><Card><h3 className="font-bold mb-2">Мгновенное лечение</h3><p className="text-xs text-[var(--color-text-muted)] mb-3">Недостаёт HP: {missingHp} (2 монеты за HP)</p><div className="flex gap-3"><Button variant="danger" fullWidth onClick={()=>handleHeal(false)} disabled={missingHp<=0}>50% — {formatMoney(Math.ceil(missingHp*0.5)*2)}</Button><Button variant="danger" fullWidth onClick={()=>handleHeal(true)} disabled={missingHp<=0}>Всё — {formatMoney(missingHp*2)}</Button></div></Card></>}
+            {tab==='heal' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Восстановите здоровье за монеты. Быстрое лечение — половина недостающего HP, полное — всё сразу.</p><Card><h3 className="font-bold mb-2">Мгновенное лечение</h3><p className="text-xs text-[var(--color-text-muted)] mb-3">Недостаёт HP: {missingHp} (2 монеты за HP)</p><div className="flex gap-3 flex-wrap"><Button variant="danger" fullWidth onClick={()=>handleHeal(false)} disabled={missingHp<=0}>50% — {formatMoney(Math.ceil(missingHp*0.5)*2)}</Button><Button variant="danger" fullWidth onClick={()=>handleHeal(true)} disabled={missingHp<=0}>Всё — {formatMoney(missingHp*2)}</Button></div>{(document.documentElement.classList.contains('vk-iframe')) && <div className="mt-3 pt-3 border-t border-[var(--color-border-light)]"><Button variant="primary" fullWidth onClick={handleAdHeal} disabled={missingHp<=0 || adLoading}>{adLoading ? '⏳ Загрузка...' : '▶️ За рекламу — бесплатно'}</Button><p className="text-[0.6rem] text-[var(--color-text-muted)] mt-1">Полное восстановление HP за просмотр рекламы. Доступно раз в 30 минут.</p></div>}</Card></>}
             {tab==='room' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Арендуйте комнату для ускоренной регенерации HP. Во время аренды здоровье восстанавливается быстрее. Можно продлить, арендовав ту же комнату повторно.</p><div className="space-y-3">{tavern.rooms.map((room:any)=><Card key={room.key}><h3 className="font-bold">{room.name}</h3><p className="text-xs text-[var(--color-text-muted)] mb-2">Регенерация: ×{room.rate}</p><div className="flex gap-2"><Button variant="primary" size="md" onClick={()=>handleRent(room.key,1)}>1 ч — {formatMoney(room.cost1h)}</Button><Button variant="secondary" size="md" onClick={()=>handleRent(room.key,8)}>8 ч — {formatMoney(room.cost8h)}</Button></div></Card>)}</div></>}
             {tab==='drink' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Напитки временно увеличивают характеристики на 1 час. Повторное употребление того же напитка продлевает действие. При употреблении другого напитка эффект заменяется.</p>{(() => { const cats: Record<string, any[]> = {}; for (const d of tavern.drinks) { const c = d.category || 'Прочее'; if (!cats[c]) cats[c] = []; cats[c].push(d); } return Object.entries(cats).sort(([a], [b]) => a === 'Универсальные' ? -1 : b === 'Универсальные' ? 1 : a.localeCompare(b)).map(([cat, items]) => { const expanded = expandedCats[cat]; return <div key={cat} className="mb-4"><h3 className="text-sm font-bold mb-2 text-[var(--color-accent-info)] cursor-pointer select-none flex items-center gap-1" onClick={() => setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }))}><span className="text-xs">{expanded ? '▼' : '▶'}</span>{cat}</h3>{expanded && <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{items.map((drink:any)=><Card key={drink.key} className="flex flex-col"><div className="w-full h-20 bg-[var(--color-bg-input)] rounded mb-2 flex items-center justify-center text-2xl"><Icon icon="game-icons:potion-ball" width="32" height="32"/></div><h3 className="font-bold text-xs mb-1">{drink.name}</h3><div className="text-[0.65rem] text-[var(--color-text-muted)] mb-2 flex-1">{Object.entries(drink.bonuses as Record<string,number>).map(([k,v])=><span key={k} className="block">{statNames[k]||k}: +{v}</span>)}<span className="block">1 час</span></div><Button variant="danger" size="md" fullWidth onClick={()=>handleDrink(drink.key)}>{formatMoney(drink.cost)}</Button></Card>)}</div>}</div>; }) })()}</>}
 
