@@ -20,7 +20,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
   const regenHp = getRegenHp(character.currentHp, stats.hp, serverTime, effectiveRoom?.type, effectiveRoom?.until);
 
   return (
-    <div className="w-full sm:w-[200px] flex flex-col items-center sm:items-start">
+    <div className="w-full sm:w-[240px] flex flex-col items-center sm:items-start">
       <CharacterCard
         char={toCharCardData(character, { currentHp: regenHp, maxHp: stats.hp })}
         side="left"
