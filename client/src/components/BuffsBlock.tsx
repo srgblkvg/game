@@ -199,8 +199,9 @@ function BuffRow({ icon, label, active, detail, time, onClick, dataTutorial }: {
     return (
         <div data-tutorial-buff={dataTutorial} className="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1 min-w-0" onClick={onClick}>
             <Icon icon={icon} width="12" height="12" className={`${active ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-muted)]'} flex-shrink-0`} />
-            <span className={`${active ? 'text-[var(--color-text-primary)] font-medium' : 'text-[var(--color-text-muted)]'} min-w-0 break-all leading-tight`}>
-                {label}{detail ? `: ${detail}` : ''}
+            <span className={`${active ? 'text-[var(--color-text-primary)] font-medium' : 'text-[var(--color-text-muted)]'} min-w-0 leading-tight`}>
+                {label}{detail ? ': ' : ''}
+                {detail && <span className="whitespace-nowrap">{detail}</span>}
             </span>
             <span className="ml-auto text-[var(--color-text-muted)] tabular-nums">{time}</span>
         </div>
