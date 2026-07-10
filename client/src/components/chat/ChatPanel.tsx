@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
 import { useGlobalChat } from '../../contexts/ChatContext';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchRecentMessages, fetchPrivateMessages, findUserByUsername } from '../../api/chat';
 import { fetchUsersByIds, saveOpenTabs } from '../../api/character';
 import { fetchCharacter } from '../../api/character';
@@ -25,6 +26,7 @@ export default function ChatPanel() {
     const currentUsername = character?.username || user?.username || '';
     const isPlayer = user?.role === 'player';
     const visible = isPlayer && auth.token;
+    const { showToast } = useToast();
 
     const [privateChatWith, setPrivateChatWith] = useState<number | null>(null);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -337,10 +339,10 @@ export default function ChatPanel() {
             if (found?.id) {
                 navigate(`/profile/${found.id}`);
             } else {
-                alert('Игрок не найден');
+                showToast('Игрок не найден', 'warning');
             }
         } catch (e) {
-            alert('Не удалось найти игрока');
+            showToast('Не удалось найти игрока');
         }
     }, [contextMenu, onlineUsers, navigate]);
 

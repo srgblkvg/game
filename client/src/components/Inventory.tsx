@@ -9,6 +9,7 @@ import LongPressItemSlot from './LongPressItemSlot';
 import LongPressResourceSlot from './LongPressResourceSlot';
 import ItemTooltip from './ItemTooltip';
 import { useGlobalChat } from '../contexts/ChatContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface InventoryProps {
     onItemClick?: (item: any) => void;
@@ -57,6 +58,7 @@ export default function Inventory({
     const { user } = useAuth();
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const { sendItemLink } = useGlobalChat();
+    const { showToast } = useToast();
 
     const [sortEquipment, setSortEquipment] = useState<SortOrder>(
         () => (localStorage.getItem('invSort') as SortOrder) || 'none'
@@ -115,7 +117,7 @@ export default function Inventory({
             const result = await expandInventory();
             setCharacter({ ...character, inventorySlots: result.inventorySlots, money: result.moneyAfter });
         } catch (err: any) {
-            alert(err.message);
+            showToast(err.message);
         }
     };
 

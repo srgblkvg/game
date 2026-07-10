@@ -1,6 +1,7 @@
 import { useGame } from '../contexts/GameContext';
 import { equipItem } from '../api';
 import { slotNames, slotCategories } from '../utils/itemUtils';
+import { useToast } from '../contexts/ToastContext';
 
 interface SlotSelectionModalProps {
     slotId: string;
@@ -10,6 +11,7 @@ interface SlotSelectionModalProps {
 
 export default function SlotSelectionModal({ slotId, onClose, onEquip }: SlotSelectionModalProps) {
     const { character, setCharacter } = useGame();
+    const { showToast } = useToast();
     if (!character) return null;
 
     const handleEquip = async (itemId: string) => {
@@ -25,7 +27,7 @@ export default function SlotSelectionModal({ slotId, onClose, onEquip }: SlotSel
             onClose();
             onEquip?.();
         } catch (err: any) {
-            alert(err.message);
+            showToast(err.message);
         }
     };
 

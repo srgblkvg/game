@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchCharacter } from '../../api/character';
 import { changeUsername, changePassword, changeGender, deleteAccount, registerGuest, resendCode } from '../../api';
 import Button from '../../components/ui/Button';
@@ -12,6 +13,7 @@ import { inputClass } from '../../utils/formStyles';
 export default function AccountPage() {
     const { user, loginUser, logout } = useAuth();
     const { character, setCharacter } = useGame();
+    const { showToast } = useToast();
     const navigate = useNavigate();
     const isVK = localStorage.getItem('isVK') === '1';
 
@@ -150,7 +152,7 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                         onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            if (file.size > 512 * 1024) { alert('Файл слишком большой (макс. 512 КБ)'); return; }
+                            if (file.size > 512 * 1024) { showToast('Файл слишком большой (макс. 512 КБ)', 'warning'); return; }
                             const reader = new FileReader();
                             reader.onload = async () => {
                                 try {
@@ -161,13 +163,13 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                                     });
                                     const data = await res.json();
                                     if (data.success) {
-                                        alert('Аватар обновлён!');
+                                        showToast('Аватар обновлён!', 'success');
                                         const fresh = await fetchCharacter();
                                         setCharacter(fresh);
                                     } else {
-                                        alert(data.error || 'Ошибка');
+                                        showToast(data.error || 'Ошибка');
                                     }
-                                } catch { alert('Ошибка загрузки'); }
+                                } catch { showToast('Ошибка загрузки'); }
                             };
                             reader.readAsDataURL(file);
                         }}

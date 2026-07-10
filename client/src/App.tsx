@@ -15,6 +15,7 @@ import ChatPanel from './components/chat/ChatPanel';
 import Header from './components/Header';
 import RightSidebar from './components/RightSidebar';
 import NotificationToast from './components/NotificationToast';
+import { ToastProvider } from './contexts/ToastContext';
 import ScrollToTop from './components/ScrollToTop';
 import MetrikaTracker from './components/MetrikaTracker';
 // TODO: удалить после ответа поддержки VK ↓
@@ -65,6 +66,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ToastProvider>
       <ScrollToTop />
       <MetrikaTracker />
       <Header />
@@ -123,6 +125,7 @@ function App() {
       {/* TODO: удалить после ответа поддержки VK ↓ */}
       <VkKeyboard />
       {/* TODO: удалить после ответа поддержки VK ↑ */}
+    </ToastProvider>
     </BrowserRouter>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter, enterArena, equipItem } from '../api';
 import LeftSidebar from '../components/LeftSidebar';
@@ -16,6 +17,7 @@ import { getHeaders } from '../api/helpers';
 export default function HomePage() {
   const { user } = useAuth();
   const { character, setCharacter } = useGame();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [noOpponentModal, setNoOpponentModal] = useState<string | null>(null);
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export default function HomePage() {
         const otherSlot = slotId === 'ring1' ? 'ring2' : 'ring1';
         const otherItem = character!.equipment[otherSlot];
         if (item && otherItem && otherItem.name === item.name) {
-          alert('Нельзя надеть два одинаковых кольца!');
+          showToast('Нельзя надеть два одинаковых кольца!', 'warning');
           return;
         }
       }
@@ -72,7 +74,7 @@ export default function HomePage() {
       const data = await equipItem(slotId, effectiveItemId);
       setCharacter({ ...character!, inventory: data.inventory, equipment: data.equipment, currentHp: data.currentHp ?? Math.max(1, character!.currentHp), stats: data.stats ?? character!.stats });
       setSelectedInventoryItemId(null);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { showToast(err.message); }
   };
 
 

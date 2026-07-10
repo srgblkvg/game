@@ -1,8 +1,10 @@
 import { equipItem } from '../api';
 import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 
 export function useEquipment(onEquip?: () => void) {
     const { character, setCharacter } = useGame();
+    const { showToast } = useToast();
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -24,7 +26,7 @@ setCharacter({
             });
             onEquip?.();
         } catch (err: any) {
-            alert(err.message);
+            showToast(err.message);
         }
     };
 
@@ -42,7 +44,7 @@ setCharacter({
                 });
                 onEquip?.();
             } catch (err: any) {
-                alert(err.message);
+                showToast(err.message);
             }
         }
         // если слот пуст – просто возвращаем false, чтобы родитель открыл модальное окно
