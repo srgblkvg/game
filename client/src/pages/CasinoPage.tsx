@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
+import BackButton from '../components/BackButton';
+import PageHeader from '../components/ui/PageHeader';
 import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
 import { formatMoney } from '../utils/money';
@@ -60,13 +61,16 @@ function statusLabel(status: string, result?: string): string {
 }
 
 export default function CasinoPage() {
-    const navigate = useNavigate();
     const { showToast } = useToast();
     const [tab, setTab] = useState('blackjack');
     const [game, setGame] = useState<GameState | null>(null);
     const [bet, setBet] = useState('');
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(0);
+    const [actionCard, setActionCard] = useState<any>(null);
+
+    // Загрузить карточку действия
+    useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/casino'); if (c) setActionCard(c); }).catch(() => {}); }, []);
 
     // Загрузить баланс
     const loadBalance = async () => {
@@ -186,13 +190,9 @@ export default function CasinoPage() {
     const isFinished = game && game.status !== 'playing';
 
     return (
-        <div className="max-w-2xl mx-auto">
-            <button
-                onClick={() => navigate(-1)}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-sm mb-2 cursor-pointer"
-            >← Назад</button>
-
-            <h1 className="text-xl font-bold mb-1">🎰 Игорный дом</h1>
+        <div className="max-w-2xl mx-auto px-4 py-4">
+            <BackButton />
+            {actionCard && <PageHeader title="Игорный дом" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Испытай удачу в азартных играх! Доступные игры будут добавляться.
             </p>
