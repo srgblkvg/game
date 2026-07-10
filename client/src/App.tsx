@@ -49,6 +49,7 @@ const CastlePage = lazy(() => import('./pages/CastlePage'));
 const ForumPage = lazy(() => import('./pages/ForumPage'));
 const ForumThreadPage = lazy(() => import('./pages/ForumThreadPage'));
 const MassacrePage = lazy(() => import('./pages/MassacrePage'));
+const CasinoPage = lazy(() => import('./pages/CasinoPage'));
 
 function Loading() {
   return (
@@ -111,6 +112,7 @@ function App() {
             <Route path="/forum" element={user?.role === 'player' ? <ForumPage /> : <Navigate to="/login" />} />
             <Route path="/forum/:id" element={user?.role === 'player' ? <ForumThreadPage /> : <Navigate to="/login" />} />
             <Route path="/massacre" element={user?.role === 'player' ? <MassacrePage /> : <Navigate to="/login" />} />
+            <Route path="/casino" element={user?.role === 'player' ? <CasinoPage /> : <Navigate to="/login" />} />
             <Route path="/feedback" element={user?.role === 'player' ? <FeedbackPage /> : <Navigate to="/login" />} />
             <Route path="/collections" element={user?.role === 'player' ? <CollectionsPage /> : <Navigate to="/login" />} />
             <Route path="/guild/:id" element={user?.role === 'player' ? <GuildViewPage /> : <Navigate to="/login" />} />

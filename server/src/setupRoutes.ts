@@ -45,6 +45,7 @@ import yukassaRoutes from './routes/yukassa';
 import treasuryRoutes from './routes/treasury';
 import forumRoutes from './routes/forum';
 import massacreRoutes from './routes/massacre';
+import casinoRoutes from './routes/casino';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -151,6 +152,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/overflow', overflowRoutes);
   app.use('/api', forumRoutes);
   app.use('/api', massacreRoutes);
+  app.use('/api', casinoRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);

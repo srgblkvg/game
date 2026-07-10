@@ -620,3 +620,19 @@ CREATE TABLE IF NOT EXISTS massacre_turns (
   message TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ====== casino_games ======
+CREATE TABLE IF NOT EXISTS casino_games (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  game_type TEXT NOT NULL DEFAULT 'blackjack',
+  bet INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'playing',
+  player_cards TEXT NOT NULL DEFAULT '[]',
+  dealer_cards TEXT NOT NULL DEFAULT '[]',
+  deck TEXT NOT NULL DEFAULT '[]',
+  player_score INTEGER DEFAULT 0,
+  dealer_score INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  finished_at TIMESTAMPTZ
+);
