@@ -4,6 +4,10 @@ import Button from '../components/ui/Button';
 import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
 import { formatMoney } from '../utils/money';
+import { inputClass } from '../utils/formStyles';
+
+const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+const inputType = isVK ? 'text' : 'number';
 
 interface Card {
     suit: string;
@@ -213,12 +217,14 @@ export default function CasinoPage() {
                                 <div className="flex-1">
                                     <label className="text-[0.6rem] text-[var(--color-text-muted)]">Ставка</label>
                                     <input
-                                        type="number"
+                                        type={inputType}
+                                        inputMode={isVK ? "none" : undefined}
+                                        data-vk-num={isVK ? "true" : undefined}
+                                        autoComplete="off"
                                         value={bet}
-                                        onChange={e => setBet(e.target.value)}
+                                        onChange={e => { const v = e.target.value.replace(/\D/g, ''); setBet(v); }}
                                         placeholder="Любая сумма > 0"
-                                        className="w-full bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-light)] rounded px-3 py-2 text-sm"
-                                        min="1"
+                                        className={inputClass}
                                     />
                                 </div>
                                 <Button variant="danger" size="md" onClick={startGame} disabled={loading}>
