@@ -104,7 +104,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     ].filter(Boolean) as string[];
 
     return (
-        <Card className="mt-4 w-full" data-tutorial="buffs-block">
+        <Card className="mt-4 w-full overflow-hidden" data-tutorial="buffs-block">
             <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setCollapsed(!collapsed)}>
                 <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xs flex-shrink-0">{collapsed ? '▶' : '▼'}</span>
@@ -197,9 +197,9 @@ function BuffRow({ icon, label, active, detail, time, onClick, dataTutorial }: {
     icon: string; label: string; active: boolean; detail?: string; time: string; onClick: () => void; dataTutorial?: string;
 }) {
     return (
-        <div data-tutorial-buff={dataTutorial} className="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1" onClick={onClick}>
-            <Icon icon={icon} width="12" height="12" className={active ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-muted)]'} />
-            <span className={active ? 'text-[var(--color-text-primary)] font-medium' : 'text-[var(--color-text-muted)]'}>
+        <div data-tutorial-buff={dataTutorial} className="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1 min-w-0" onClick={onClick}>
+            <Icon icon={icon} width="12" height="12" className={`${active ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-muted)]'} flex-shrink-0`} />
+            <span className={`${active ? 'text-[var(--color-text-primary)] font-medium' : 'text-[var(--color-text-muted)]'} truncate min-w-0`}>
                 {label}{detail ? `: ${detail}` : ''}
             </span>
             <span className="ml-auto text-[var(--color-text-muted)] tabular-nums">{time}</span>
