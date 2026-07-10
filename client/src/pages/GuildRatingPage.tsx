@@ -79,7 +79,7 @@ export default function GuildRatingPage() {
                                                 Лидер:{' '}
                                                 <span
                                                     className="text-[var(--color-accent-info)] cursor-pointer hover:underline"
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/profile/${g.leaderUserId}`); }}
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/profile/${g.leaderuserId}`); }}
                                                 >
                                                     👑 {g.leaderName}
                                                 </span>
