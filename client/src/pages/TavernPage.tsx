@@ -87,8 +87,9 @@ export default function TavernPage() {
             // Проверяем доступность рекламы
             const check: any = await bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' });
             if (!check?.result) { setError('Реклама сейчас недоступна'); setAdLoading(false); return; }
-            // Показываем рекламу
-            await bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' });
+            // Показываем рекламу и ждём результат
+            const adResult: any = await bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' });
+            if (!adResult?.result) { setError('Нужно досмотреть рекламу до конца'); setAdLoading(false); return; }
             // После успешного просмотра — лечим
             const r = await fetch(`${BASE_URL}/tavern/heal-ad`, { method: 'POST', headers: getHeaders() });
             const d = await r.json();
