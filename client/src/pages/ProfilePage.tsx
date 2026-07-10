@@ -88,6 +88,13 @@ export default function ProfilePage() {
                     <StatItem icon="game-icons:cash" label="Выбито" value={formatMoney(profile.totalPveMoneyWon || 0)} />
                     <StatItem icon="game-icons:pay-money" label="Потеряно" value={formatMoney(profile.totalPveMoneyLost || 0)} />
 
+                    {/* Резня */}
+                    <h3 className="text-xs font-bold text-[var(--color-accent-danger)] uppercase tracking-wider mt-3">
+                        ⚔️ Резня
+                    </h3>
+                    <StatItem icon="game-icons:crossed-swords" label="Участий" value={profile.massacreParticipations || 0} />
+                    <StatItem icon="game-icons:trophy" label="Побед" value={profile.massacreWins || 0} />
+
                     {/* Турниры */}
                     <h3 className="text-xs font-bold text-[var(--color-accent-info)] uppercase tracking-wider mt-3">
                         🏆 Турниры
@@ -109,13 +116,6 @@ export default function ProfilePage() {
                     <StatItem icon="game-icons:anvil" label="Создано" value={profile.craftCreated || 0} />
                     <StatItem icon="game-icons:arrow-dunk" label="Улучшено" value={profile.craftUpgraded || 0} />
                     <StatItem icon="game-icons:broken-shield" label="Сломано" value={profile.craftBroken || 0} />
-
-                    {/* Резня */}
-                    <h3 className="text-xs font-bold text-[var(--color-accent-danger)] uppercase tracking-wider mt-3">
-                        ⚔️ Резня
-                    </h3>
-                    <StatItem icon="game-icons:crossed-swords" label="Участий" value={profile.massacreParticipations || 0} />
-                    <StatItem icon="game-icons:trophy" label="Побед" value={profile.massacreWins || 0} />
 
                     {/* Аукцион */}
                     <h3 className="text-xs font-bold text-[var(--color-accent-warning)] uppercase tracking-wider mt-3">
