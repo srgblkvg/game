@@ -26,7 +26,7 @@ interface GameState {
 }
 
 const SUIT_ICONS: Record<string, string> = { H: '♥', D: '♦', C: '♣', S: '♠' };
-const SUIT_COLORS: Record<string, string> = { H: 'text-red-500', D: 'text-red-400', C: 'text-gray-300', S: 'text-gray-300' };
+const SUIT_COLORS: Record<string, string> = { H: 'text-red-600', D: 'text-red-600', C: 'text-gray-900', S: 'text-gray-900' };
 
 function parseCard(cardStr: string): Card | null {
     if (!cardStr || cardStr === '??') return null;
@@ -36,7 +36,7 @@ function parseCard(cardStr: string): Card | null {
 }
 
 function cardDisplay(card: Card): { text: string; color: string } {
-    return { text: `${card.rank}${SUIT_ICONS[card.suit] || ''}`, color: SUIT_COLORS[card.suit] || 'text-white' };
+    return { text: `${card.rank}${SUIT_ICONS[card.suit] || ''}`, color: SUIT_COLORS[card.suit] || 'text-gray-900' };
 }
 
 function statusLabel(status: string, result?: string): string {
@@ -251,7 +251,7 @@ export default function CasinoPage() {
                                         );
                                         const d = cardDisplay(card);
                                         return (
-                                            <div key={i} className={`w-14 h-20 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border-default)] flex flex-col items-center justify-center ${d.color}`}>
+                                            <div key={i} className={`w-14 h-20 rounded-lg bg-white border border-gray-300 flex flex-col items-center justify-center ${d.color}`}>
                                                 <span className="text-lg font-bold leading-tight">{card.rank}</span>
                                                 <span className="text-base leading-tight">{SUIT_ICONS[card.suit]}</span>
                                             </div>
@@ -271,7 +271,7 @@ export default function CasinoPage() {
                                         if (!card) return null;
                                         const d = cardDisplay(card);
                                         return (
-                                            <div key={i} className={`w-14 h-20 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border-default)] flex flex-col items-center justify-center ${d.color}`}>
+                                            <div key={i} className={`w-14 h-20 rounded-lg bg-white border border-gray-300 flex flex-col items-center justify-center ${d.color}`}>
                                                 <span className="text-lg font-bold leading-tight">{card.rank}</span>
                                                 <span className="text-base leading-tight">{SUIT_ICONS[card.suit]}</span>
                                             </div>
@@ -282,11 +282,11 @@ export default function CasinoPage() {
 
                             {/* Статус / результат */}
                             {isFinished && (
-                                <div className={`text-center p-2 rounded-lg text-sm font-bold ${
-                                    game.status === 'player_won' ? 'bg-green-900/30 text-green-400' :
-                                    game.status === 'dealer_won' ? 'bg-red-900/30 text-red-400' :
-                                    game.status === 'surrender' ? 'bg-yellow-900/30 text-yellow-400' :
-                                    'bg-gray-800 text-gray-300'
+                                <div className={`text-center p-2 rounded-lg text-sm font-bold bg-[var(--color-bg-input)] ${
+                                    game.status === 'player_won' ? 'text-[var(--color-accent-success)]' :
+                                    game.status === 'dealer_won' ? 'text-[var(--color-accent-danger)]' :
+                                    game.status === 'surrender' ? 'text-[var(--color-accent-warning)]' :
+                                    'text-[var(--color-text-muted)]'
                                 }`}>
                                     {statusLabel(game.status, game.result)}
                                     {game.payout !== undefined && (
