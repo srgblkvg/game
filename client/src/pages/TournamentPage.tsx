@@ -18,11 +18,6 @@ const isVK = typeof document !== 'undefined' && document.documentElement.classLi
 const numType = isVK ? 'text' : 'number';
 const vkNumAttrs = isVK ? { inputMode: 'none' as const, 'data-vk-num': 'true' } : {};
 
-const divisionIcons: Record<string, string> = {
-    copper: '🥉', bronze: '🥉', iron: '🥈', steel: '🥈', silver: '🥈',
-    gold: '🥇', platinum: '🥇', mithril: '🥇', adamant: '👑', orichalcum: '💎',
-};
-
 const divisionLabels: Record<string, string> = {
     copper: 'Медный', bronze: 'Бронзовый', iron: 'Железный', steel: 'Стальной', silver: 'Серебряный',
     gold: 'Золотой', platinum: 'Платиновый', mithril: 'Мифриловый', adamant: 'Адамантиновый', orichalcum: 'Орихалковый',
@@ -50,11 +45,6 @@ const statusTextClasses: Record<string, string> = {
 function tournamentLabel(t: any): string {
     if (t.type === 'custom') return t.name || 'Турнир';
     return divisionLabels[t.division] || t.division;
-}
-
-function tournamentIcon(t: any): string {
-    if (t.type === 'custom') return '🎪';
-    return divisionIcons[t.division] || '🏆';
 }
 
 function formatTimer(seconds: number): string {
@@ -151,7 +141,7 @@ export default function TournamentPage() {
             <Card key={t.id} className={`mb-3 ${joinable ? (t.type === 'custom' ? 'border-[#a0a0ff]' : divisionBorderClasses[t.division] || '') : ''}`}>
                 <div className="flex justify-between items-start mb-2">
                     <h3 className={`font-bold text-sm ${t.type === 'custom' ? 'text-[#a0a0ff]' : divisionTextClasses[t.division] || ''}`}>
-                        {tournamentIcon(t)} {tournamentLabel(t)}
+                        {tournamentLabel(t)}
                         {t.type === 'official' && <span className="text-xs text-[var(--color-text-muted)] ml-1">(офиц.)</span>}
                         {t.type === 'custom' && <span className="text-xs text-[var(--color-accent-purple)] ml-1">(игрок)</span>}
                     </h3>
@@ -382,7 +372,7 @@ export default function TournamentPage() {
                         <Card key={t.id} className="mb-3">
                             <div className="flex justify-between items-start mb-1">
                                 <h3 className={`font-bold text-sm ${divisionTextClasses[t.division] || 'text-[#a0a0ff]'}`}>
-                                    {tournamentIcon(t)} {tournamentLabel(t)}
+                                    {tournamentLabel(t)}
                                     {t.type === 'custom' && <span className="text-xs text-[var(--color-accent-purple)] ml-1">игрок</span>}
                                 </h3>
                                 <span className="text-xs text-[var(--color-text-muted)]">{fmtSafeDate(t.completedAt || t.createdAt, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
