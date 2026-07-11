@@ -106,11 +106,19 @@ export default function VkKeyboard() {
   }, [active]);
 
   // Force-keep input focus while keyboard is visible (Android WebView loses it)
+  // Also detect when focus was moved programmatically (e.g. after form submit) and hide
   useEffect(() => {
     if (!active) return;
     const id = setInterval(() => {
       const el = activeRef.current;
       if (!el) return;
+      // Если элемент потерял фокус (программный blur или удалён из DOM) — скрываем клавиатуру
+      if (document.activeElement !== el) {
+        setActive(null);
+        setShift(false);
+        setCapsLock(false);
+        return;
+      }
       // Сохраняем позицию курсора перед focus (Android сбрасывает)
       const s = el.selectionStart;
       const e = el.selectionEnd;

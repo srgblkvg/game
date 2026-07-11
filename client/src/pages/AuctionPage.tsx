@@ -282,13 +282,14 @@ export default function AuctionPage() {
             showAcquire(item, count, 'Выставлено на аукцион');
             const fresh = await fetchCharacter(); setCharacter(fresh);
             setMessage(''); setSellItemId(''); setStartPrice(''); setBuyoutPrice(''); setSellCount(1);
+            (document.activeElement as HTMLElement)?.blur();
             load(1);
         } catch (e: any) { setError(e.message); }
     };
     const handleBid = async (lotId: number, amount: string, minBid: number) => {
         const amt = parseInt(amount);
         if (!amt || amt < minBid) { setError(`Мин. ставка: ${formatMoney(minBid)}`); return; }
-        try { await api('/auction/bid', { lotId, amount: amt }); setMessage('Ставка сделана!'); setBidAmount(prev => { const n = { ...prev }; delete n[lotId]; return n; }); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
+        try { await api('/auction/bid', { lotId, amount: amt }); setMessage('Ставка сделана!'); setBidAmount(prev => { const n = { ...prev }; delete n[lotId]; return n; }); (document.activeElement as HTMLElement)?.blur(); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
         catch (e: any) { setError(e.message); }
     };
     const handleBuyout = async (lotId: number) => {
@@ -296,6 +297,7 @@ export default function AuctionPage() {
             await api('/auction/buyout', { lotId });
             const lot = lots.find(l => l.id === lotId);
             if (lot) showAcquire(lot.itemData, lot.itemData.count || 1, 'Выкуплено');
+            (document.activeElement as HTMLElement)?.blur();
             setMessage(''); load(page); const fresh = await fetchCharacter(); setCharacter(fresh);
         } catch (e: any) { setError(e.message); }
     };
