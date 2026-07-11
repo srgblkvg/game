@@ -229,11 +229,16 @@ export default function ThreadPage() {
     const handleReplyClick = (text: string, parentId: number) => {
         setReplyText(text);
         setReplyParentId(parentId);
-        setTimeout(() => {
-            replyRef.current?.scrollIntoView({ behavior: 'smooth' });
-            replyRef.current?.focus();
-        }, 50);
     };
+
+    useEffect(() => {
+        if (replyParentId !== null && replyText) {
+            setTimeout(() => {
+                replyRef.current?.scrollIntoView({ behavior: 'smooth' });
+                replyRef.current?.focus();
+            }, 100);
+        }
+    }, [replyParentId, replyText]);
 
     const handleToggleClose = async () => {
         try {
