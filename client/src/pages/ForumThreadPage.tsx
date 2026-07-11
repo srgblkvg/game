@@ -32,7 +32,7 @@ function stripQuotes(text: string): string {
     return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
 }
 
-function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId }: any) {
+function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId, replyTargetId }: any) {
     const [expanded, setExpanded] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editText, setEditText] = useState('');
@@ -41,6 +41,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
     const dateStr = fmtSafeDate(post.updated_at || post.created_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const isEdited = !!post.updated_at;
     const canEdit = userId && post.author_id === userId;
+    const isReplyTarget = replyTargetId && post.id === replyTargetId;
 
     const handleSaveEdit = async () => {
         if (!editText.trim()) return;
@@ -60,7 +61,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
 
     return (
         <div className={depth > 0 ? 'ml-4 sm:ml-6 border-l-2 border-[var(--color-border-light)] pl-3' : ''}>
-            <Card className={`mb-2 ${isFirst ? 'border-l-4 border-l-[var(--color-accent-info)] bg-[var(--color-bg-card)]' : ''}`}>
+            <Card className={`mb-2 ${isFirst ? 'border-l-4 border-l-[var(--color-accent-info)] bg-[var(--color-bg-card)]' : ''} ${isReplyTarget && !isFirst ? 'border-l-4 border-l-[var(--color-accent-warning)]' : ''}`}>
                 <div className="flex items-start gap-3 mt-1">
                     <img src={post.author_avatar || '/character_man.webp'} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 bg-[var(--color-bg-input)]" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <div className="flex-1 min-w-0">
@@ -103,7 +104,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
             {children && children.length > 0 && (
                 <div>
                     {children.map((child: any) => (
-                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} userId={userId} />
+                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} userId={userId} replyTargetId={replyTargetId} />
                     ))}
                 </div>
             )}
@@ -330,8 +331,8 @@ export default function ThreadPage() {
                 </Card>
             )}
 
-            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} userId={user?.id} />}
-            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} userId={user?.id} />)}
+            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} userId={user?.id} replyTargetId={replyParentId ?? undefined} />}
+            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} userId={user?.id} replyTargetId={replyParentId ?? undefined} />)}
 
             {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mb-4">
