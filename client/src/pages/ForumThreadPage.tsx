@@ -12,8 +12,6 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import MdToolbar from '../components/ui/MdToolbar';
 
-const MAX_QUOTE_LENGTH = 300;
-
 // Настройка marked
 marked.setOptions({
     breaks: true,     // перенос строки → <br>
@@ -50,6 +48,8 @@ const FORUM_STYLES = `
 .forum-content th { background: var(--color-bg-input); }
 .forum-content hr { border: none; border-top: 1px solid var(--color-border-light); margin: 0.75rem 0; }
 .forum-content img { max-width: 100%; border-radius: 4px; }
+`;
+
 function stripQuotes(text: string): string {
     return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
 }
