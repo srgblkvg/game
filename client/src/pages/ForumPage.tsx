@@ -20,6 +20,11 @@ export default function ForumPage() {
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
 
+    // Опрос
+    const [hasPoll, setHasPoll] = useState(false);
+    const [pollQuestion, setPollQuestion] = useState('');
+    const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+
     const load = async (pg = 1) => {
         try {
             const res = await fetch(`/api/forum/threads?page=${pg}&limit=10`, { headers: getHeaders() });
@@ -32,23 +37,54 @@ export default function ForumPage() {
 
     useEffect(() => { load(); }, []);
 
+    const resetForm = () => {
+        setNewTitle('');
+        setNewContent('');
+        setHasPoll(false);
+        setPollQuestion('');
+        setPollOptions(['', '']);
+        setShowNew(false);
+    };
+
     const handleCreate = async () => {
         if (!newTitle.trim() || !newContent.trim()) { setError('Заполните название и текст'); return; }
+        if (hasPoll) {
+            if (!pollQuestion.trim()) { setError('Введите вопрос опроса'); return; }
+            const valid = pollOptions.filter(o => o.trim());
+            if (valid.length < 2) { setError('Нужно минимум 2 варианта ответа'); return; }
+        }
         setCreating(true);
         try {
+            const body: any = { title: newTitle, content: newContent };
+            if (hasPoll) {
+                body.poll = {
+                    question: pollQuestion,
+                    options: pollOptions.filter(o => o.trim()),
+                };
+            }
             const res = await fetch('/api/forum/thread', {
                 method: 'POST',
                 headers: getHeaders(),
-                body: JSON.stringify({ title: newTitle, content: newContent }),
+                body: JSON.stringify(body),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
-            setShowNew(false);
-            setNewTitle('');
-            setNewContent('');
+            resetForm();
             navigate(`/forum/${data.id}`);
         } catch (e: any) { setError(e.message); }
         finally { setCreating(false); }
+    };
+
+    const addOption = () => {
+        if (pollOptions.length < 10) setPollOptions([...pollOptions, '']);
+    };
+    const removeOption = (i: number) => {
+        if (pollOptions.length > 2) setPollOptions(pollOptions.filter((_, idx) => idx !== i));
+    };
+    const updateOption = (i: number, val: string) => {
+        const next = [...pollOptions];
+        next[i] = val;
+        setPollOptions(next);
     };
 
     return (
@@ -91,9 +127,36 @@ export default function ForumPage() {
                 </div>
             )}
 
-            <Modal open={showNew} onClose={() => setShowNew(false)} title="Новая тема">
+            <Modal open={showNew} onClose={resetForm} title="Новая тема">
                 <input className={inputClass + ' mb-2'} placeholder="Название темы" value={newTitle} onChange={e => setNewTitle(e.target.value)} maxLength={200} />
-                <textarea className={inputClass + ' mb-3 min-h-[120px]'} placeholder="Текст сообщения" value={newContent} onChange={e => setNewContent(e.target.value)} />
+                <textarea className={inputClass + ' mb-3 min-h-[120px]'} placeholder="Текст сообщения (поддерживается Markdown)" value={newContent} onChange={e => setNewContent(e.target.value)} />
+
+                {/* Опрос */}
+                <div className="mb-3 border-t border-[var(--color-border-light)] pt-3">
+                    <label className="flex items-center gap-2 text-sm mb-2 cursor-pointer" onClick={() => setHasPoll(!hasPoll)}>
+                        <input type="checkbox" checked={hasPoll} onChange={e => setHasPoll(e.target.checked)} className="cursor-pointer" />
+                        <Icon icon="game-icons:checked-shield" width="16" height="16" />
+                        Добавить голосование
+                    </label>
+                    {hasPoll && (
+                        <div className="space-y-2 pl-2 border-l-2 border-[var(--color-accent-info)]">
+                            <input className={inputClass} placeholder="Вопрос голосования" value={pollQuestion} onChange={e => setPollQuestion(e.target.value)} maxLength={200} />
+                            {pollOptions.map((opt, i) => (
+                                <div key={i} className="flex gap-1">
+                                    <input className={inputClass + ' flex-1'} placeholder={`Вариант ${i + 1}`} value={opt}
+                                        onChange={e => updateOption(i, e.target.value)} maxLength={100} />
+                                    {pollOptions.length > 2 && (
+                                        <Button variant="secondary" size="md" onClick={() => removeOption(i)}>✕</Button>
+                                    )}
+                                </div>
+                            ))}
+                            {pollOptions.length < 10 && (
+                                <Button variant="secondary" size="md" onClick={addOption}>+ Добавить вариант</Button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
                 <Button variant="primary" size="md" fullWidth disabled={creating} onClick={handleCreate}>
                     {creating ? 'Создание...' : 'Создать тему'}
                 </Button>

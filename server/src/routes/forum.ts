@@ -73,18 +73,37 @@ router.get('/forum/thread/:id', async (req, res) => {
 
     const total = (await db.one('SELECT COUNT(*) as cnt FROM forum_posts WHERE thread_id = ?', [threadId]) as any).cnt;
     const totalPages = Math.max(1, Math.ceil((total - 1) / limit));
-    // Если page = 1, показываем первый пост + 9 остальных
-    // Если page = 2, показываем первый пост + след. 9 (пропуская 9 из page 1)
 
-    res.json({ thread, firstPost, posts, total, page, totalPages: Math.max(1, totalPages) });
+    // Опрос
+    let poll: any = null;
+    const pollRow = await db.one('SELECT * FROM forum_polls WHERE thread_id = ?', [threadId]) as any;
+    if (pollRow) {
+        const options = await db.query(
+            'SELECT * FROM forum_poll_options WHERE poll_id = ? ORDER BY id',
+            [pollRow.id]
+        ) as any[];
+        poll = { ...pollRow, options };
+    }
+
+    res.json({ thread, firstPost, posts, total, page, totalPages: Math.max(1, totalPages), poll });
 });
 
 // Создать тему
 router.post('/forum/thread', async (req, res) => {
     const userId = req.userId;
-    const { title, content } = req.body;
+    const { title, content, poll } = req.body;
     if (!title || !content) return res.status(400).json({ error: 'Название и текст обязательны' });
     if (title.length > 200) return res.status(400).json({ error: 'Название слишком длинное' });
+
+    // Валидация опроса
+    if (poll) {
+        if (!poll.question || !poll.question.trim()) return res.status(400).json({ error: 'Вопрос опроса обязателен' });
+        if (!Array.isArray(poll.options) || poll.options.length < 2 || poll.options.length > 10) {
+            return res.status(400).json({ error: 'Нужно от 2 до 10 вариантов ответа' });
+        }
+        const validOptions = poll.options.filter((o: any) => o && String(o).trim());
+        if (validOptions.length < 2) return res.status(400).json({ error: 'Нужно минимум 2 непустых варианта' });
+    }
 
     const now = new Date().toISOString();
     const result = await db.run(
@@ -98,7 +117,69 @@ router.post('/forum/thread', async (req, res) => {
         [threadId, userId, content, now]
     );
 
+    // Создать опрос
+    if (poll) {
+        const pollResult = await db.run(
+            'INSERT INTO forum_polls (thread_id, question) VALUES (?, ?)',
+            [threadId, poll.question.trim()]
+        );
+        const pollId = Number((pollResult as any).lastInsertRowid);
+
+        const validOptions = poll.options.filter((o: any) => o && String(o).trim());
+        for (const opt of validOptions) {
+            await db.run(
+                'INSERT INTO forum_poll_options (poll_id, option_text) VALUES (?, ?)',
+                [pollId, String(opt).trim()]
+            );
+        }
+    }
+
     res.json({ id: threadId });
+});
+
+// Голосовать в опросе
+router.post('/forum/poll/vote', async (req, res) => {
+    const userId = req.userId;
+    const { threadId, optionId } = req.body;
+    if (!threadId || !optionId) return res.status(400).json({ error: 'threadId и optionId обязательны' });
+
+    const poll = await db.one(
+        'SELECT p.* FROM forum_polls p WHERE p.thread_id = ?',
+        [threadId]
+    ) as any;
+    if (!poll) return res.status(404).json({ error: 'Опрос не найден' });
+
+    // Проверить, что option принадлежит этому опросу
+    const option = await db.one(
+        'SELECT * FROM forum_poll_options WHERE id = ? AND poll_id = ?',
+        [optionId, poll.id]
+    ) as any;
+    if (!option) return res.status(400).json({ error: 'Вариант не найден' });
+
+    // Проверить, не голосовал ли уже
+    const existing = await db.one(
+        'SELECT * FROM forum_poll_votes WHERE poll_id = ? AND user_id = ?',
+        [poll.id, userId]
+    ) as any;
+    if (existing) return res.status(400).json({ error: 'Вы уже голосовали' });
+
+    await db.run(
+        'INSERT INTO forum_poll_votes (poll_id, option_id, user_id) VALUES (?, ?, ?)',
+        [poll.id, optionId, userId]
+    );
+    await db.run(
+        'UPDATE forum_poll_options SET votes_count = votes_count + 1 WHERE id = ?',
+        [optionId]
+    );
+
+    // Вернуть обновлённые результаты
+    const options = await db.query(
+        'SELECT * FROM forum_poll_options WHERE poll_id = ? ORDER BY id',
+        [poll.id]
+    ) as any[];
+    const totalVotes = options.reduce((sum: number, o: any) => sum + (o.votes_count || 0), 0);
+
+    res.json({ success: true, options, totalVotes });
 });
 
 // Ответить в тему

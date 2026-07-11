@@ -8,31 +8,28 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
 import { useAuth } from '../contexts/AuthContext';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const MAX_QUOTE_LENGTH = 300;
 
-function stripQuotes(text: string): string {
-    return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
+// Настройка marked
+marked.setOptions({
+    breaks: true,     // перенос строки → <br>
+    gfm: true,        // GitHub Flavored Markdown (таблицы, списки задач и т.д.)
+});
+
+function renderMd(content: string): string {
+    const raw = marked.parse(content, { async: false }) as string;
+    return DOMPurify.sanitize(raw, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'del', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'ul', 'ol', 'li', 'a', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'img', 'span'],
+        ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target'],
+    });
 }
 
-function renderContent(content: string): string {
-    const lines = content.split('\n');
-    const parts: { type: 'quote' | 'text'; text: string }[] = [];
-    let current: { type: 'quote' | 'text'; text: string } = { type: 'text', text: '' };
-    for (const line of lines) {
-        const isQuote = line.startsWith('>');
-        if (isQuote !== (current.type === 'quote')) {
-            if (current.text) parts.push(current);
-            current = { type: isQuote ? 'quote' : 'text', text: '' };
-        }
-        current.text += (current.text ? '\n' : '') + (isQuote ? line.replace(/^>\s?/, '') : line);
-    }
-    if (current.text) parts.push(current);
-    return parts.map(p =>
-        p.type === 'quote'
-            ? `<blockquote class="border-l-2 border-[var(--color-accent-info)] pl-3 my-2 text-sm text-[var(--color-text-muted)]">${p.text}</blockquote>`
-            : `<span>${p.text}</span>`
-    ).join('\n');
+function stripQuotes(text: string): string {
+    return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
 }
 
 function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId }: any) {
@@ -63,12 +60,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
 
     return (
         <div className={depth > 0 ? 'ml-4 sm:ml-6 border-l-2 border-[var(--color-border-light)] pl-3' : ''}>
-            <Card className={`mb-2 ${isFirst ? 'border border-[#f59e0b]/30 relative mt-3' : ''}`}>
-                {isFirst && (
-                    <div className="absolute -top-2.5 -left-2.5 bg-[var(--color-bg-secondary)] border border-[#f59e0b]/30 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-[0_0_6px_rgba(245,158,11,0.3)]">
-                        📢
-                    </div>
-                )}
+            <Card className={`mb-2 ${isFirst ? 'border-l-4 border-l-[var(--color-accent-info)] bg-[var(--color-bg-card)]' : ''}`}>
                 <div className="flex items-start gap-3 mt-1">
                     <img src={post.author_avatar || '/character_man.webp'} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 bg-[var(--color-bg-input)]" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <div className="flex-1 min-w-0">
@@ -80,9 +72,8 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">{dateStr}</span>
                             {isEdited && <span className="text-[0.55rem] text-[var(--color-text-muted)]">(ред.)</span>}
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">#{post.id}</span>
-                            {isFirst && <span className="text-[0.55rem] text-[var(--color-accent-warning)] font-bold">Автор</span>}
                         </div>
-                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: editing ? '<span></span>' : renderContent(displayContent) }} />
+                        <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words forum-content" dangerouslySetInnerHTML={{ __html: editing ? '<span></span>' : renderMd(displayContent) }} />
                         {editing && (
                             <div className="mt-2">
                                 <textarea className={inputClass + ' min-h-[100px] mb-2'} value={editText}
@@ -96,15 +87,16 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId 
                         {isLong && !editing && (
                             <button className="text-xs text-[var(--color-accent-info)] mt-1 cursor-pointer hover:underline" onClick={() => setExpanded(!expanded)}>{expanded ? 'Свернуть' : 'Читать дальше'}</button>
                         )}
-                        <button className="text-xs text-[var(--color-text-muted)] mt-1.5 cursor-pointer hover:text-[var(--color-accent-info)]"
-                            onClick={() => {
-                                const cleaned = stripQuotes(post.content.slice(0, MAX_QUOTE_LENGTH));
-                                onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
-                            }}>Ответить</button>
-                        {canEdit && !editing && (
-                            <button className="text-xs text-[var(--color-text-muted)] mt-1.5 ml-2 cursor-pointer hover:text-[var(--color-accent-info)]"
-                                onClick={() => { setEditText(post.content); setEditing(true); }}>✎</button>
-                        )}
+                        <div className="flex gap-2 mt-1.5 items-center">
+                            <button className="text-xs text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent-info)]"
+                                onClick={() => {
+                                    const cleaned = stripQuotes(post.content.slice(0, MAX_QUOTE_LENGTH));
+                                    onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
+                                }}>Ответить</button>
+                            {canEdit && !editing && (
+                                <Button variant="secondary" size="md" onClick={() => { setEditText(post.content); setEditing(true); }}>✎</Button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </Card>
@@ -138,6 +130,8 @@ export default function ThreadPage() {
     const [error, setError] = useState('');
     const [editingTitle, setEditingTitle] = useState(false);
     const [newTitle, setNewTitle] = useState('');
+    const [poll, setPoll] = useState<any>(null);
+    const [pollVoting, setPollVoting] = useState(false);
     const replyRef = useRef<HTMLTextAreaElement>(null);
 
     const isAuthor = user && thread && user.id === thread.author_id;
@@ -150,6 +144,7 @@ export default function ThreadPage() {
                 if (!res.ok) throw new Error(data.error);
                 setThread(data.thread);
                 setFirstPost(data.firstPost || null);
+                setPoll(data.poll || null);
                 const lastPg = data.totalPages || 1;
                 setTotalPages(lastPg);
                 if (lastPg <= 1) {
@@ -176,6 +171,7 @@ export default function ThreadPage() {
             setPosts(data.posts || []);
             setTotalPages(data.totalPages || 1);
             setPageState(data.page || 1);
+            if (data.poll) setPoll(data.poll);
         } catch (e: any) { setError(e.message); }
     };
 
@@ -240,6 +236,21 @@ export default function ThreadPage() {
         } catch (e: any) { setError(e.message); }
     };
 
+    const handleVote = async (optionId: number) => {
+        setPollVoting(true);
+        try {
+            const res = await fetch('/api/forum/poll/vote', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ threadId: parseInt(id!), optionId }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            setPoll((prev: any) => ({ ...prev, options: data.options }));
+        } catch (e: any) { setError(e.message); }
+        finally { setPollVoting(false); }
+    };
+
     const buildTree = (flatPosts: any[]) => {
         const map = new Map<number, any>();
         const roots: any[] = [];
@@ -283,6 +294,41 @@ export default function ThreadPage() {
                 </h1>
             )}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
+
+            {poll && (
+                <Card className="mb-4 border-l-4 border-l-[var(--color-accent-info)]">
+                    <h3 className="font-bold text-sm mb-2 flex items-center gap-2">
+                        <Icon icon="game-icons:checked-shield" width="18" height="18" />
+                        {poll.question}
+                    </h3>
+                    <div className="space-y-1.5">
+                        {poll.options.map((opt: any) => {
+                            const totalVotes = poll.options.reduce((s: number, o: any) => s + (o.votes_count || 0), 0);
+                            const pct = totalVotes > 0 ? Math.round((opt.votes_count || 0) / totalVotes * 100) : 0;
+                            return (
+                                <div key={opt.id} className="text-sm">
+                                    <button
+                                        className="w-full text-left p-1.5 rounded border border-[var(--color-border-light)] hover:border-[var(--color-accent-info)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-default"
+                                        onClick={() => handleVote(opt.id)}
+                                        disabled={pollVoting}
+                                    >
+                                        <div className="flex justify-between items-center">
+                                            <span>{opt.option_text}</span>
+                                            <span className="text-xs text-[var(--color-text-muted)]">{opt.votes_count || 0} голосов ({pct}%)</span>
+                                        </div>
+                                        <div className="mt-1 h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                            <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                        </div>
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                        Всего голосов: {poll.options.reduce((s: number, o: any) => s + (o.votes_count || 0), 0)}
+                    </p>
+                </Card>
+            )}
 
             {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} userId={user?.id} />}
             {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} userId={user?.id} />)}
