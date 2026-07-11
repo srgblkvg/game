@@ -10,8 +10,6 @@ const TOOLS = [
     { label: 'S', title: 'Зачёркнутый', prefix: '~~', suffix: '~~', placeholder: 'текст', className: 'line-through' },
     { label: 'H', title: 'Заголовок', prefix: '### ', suffix: '', placeholder: 'Заголовок', className: 'font-bold' },
     { label: '"', title: 'Цитата', prefix: '> ', suffix: '', placeholder: 'цитата', className: '' },
-    { label: '<>', title: 'Код', prefix: '`', suffix: '`', placeholder: 'code', className: '' },
-    { label: '🔗', title: 'Ссылка', prefix: '[', suffix: '](url)', placeholder: 'текст', className: '' },
     { label: '•', title: 'Список', prefix: '- ', suffix: '', placeholder: 'элемент', className: '' },
 ];
 
