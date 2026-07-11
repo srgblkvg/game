@@ -11,7 +11,9 @@ import Modal from '../components/ui/Modal';
 import MdToolbar from '../components/ui/MdToolbar';
 
 export default function ForumPage() {
-    const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+    const isVKMobile = typeof document !== 'undefined'
+        && document.documentElement.classList.contains('vk-iframe')
+        && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     const navigate = useNavigate();
     const [threads, setThreads] = useState<any[]>([]);
     const [page, setPage] = useState(1);
@@ -131,11 +133,11 @@ export default function ForumPage() {
 
             <Modal open={showNew} onClose={resetForm} title="Новая тема" width="640px">
                 <input className={inputClass + ' mb-2'} placeholder="Название темы" value={newTitle} onChange={e => setNewTitle(e.target.value)} maxLength={200} />
-                {!isVK && <MdToolbar textareaId="forum-new-content" />}
+                {!isVKMobile && <MdToolbar textareaId="forum-new-content" />}
                 <textarea id="forum-new-content" className={inputClass + ' mb-3 min-h-[200px]'} placeholder="Текст сообщения" value={newContent} onChange={e => setNewContent(e.target.value)} />
 
                 {/* Опрос */}
-                {!isVK && (<div className="mb-3 border-t border-[var(--color-border-light)] pt-3">
+                {!isVKMobile && (<div className="mb-3 border-t border-[var(--color-border-light)] pt-3">
                     <label className="flex items-center gap-2 text-sm mb-2 cursor-pointer" onClick={() => setHasPoll(!hasPoll)}>
                         <input type="checkbox" checked={hasPoll} onChange={e => setHasPoll(e.target.checked)} className="cursor-pointer" />
                         <Icon icon="game-icons:checked-shield" width="16" height="16" />

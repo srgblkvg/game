@@ -140,7 +140,9 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
 }
 
 export default function ThreadPage() {
-    const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+    const isVKMobile = typeof document !== 'undefined'
+        && document.documentElement.classList.contains('vk-iframe')
+        && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     const { id } = useParams<{ id: string }>();
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
