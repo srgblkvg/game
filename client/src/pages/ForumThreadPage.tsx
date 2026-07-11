@@ -90,7 +90,6 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
                             )}
                             <span className="text-[0.6rem] text-[var(--color-text-muted)]">{dateStr}</span>
                             {isEdited && <span className="text-[0.55rem] text-[var(--color-text-muted)]">(ред.)</span>}
-                            <span className="text-[0.6rem] text-[var(--color-text-muted)]">#{post.id}</span>
                         </div>
                         <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words forum-content" dangerouslySetInnerHTML={{ __html: editing ? '<span></span>' : renderMd(displayContent) }} />
                         {editing && (
