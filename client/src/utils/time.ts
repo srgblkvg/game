@@ -62,19 +62,19 @@ export function formatLastSeen(value: any): string {
     if (diffSec < 60) return 'сейчас';
 
     const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin} мин`;
+    if (diffMin < 60) return `${diffMin} мин назад`;
 
     const diffHours = Math.floor(diffMin / 60);
-    if (diffHours < 24) return `${diffHours} ч.`;
+    if (diffHours < 24) return `${diffHours} ч. назад`;
 
     const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 30) return `${diffDays} дн.`;
+    if (diffDays < 30) return `${diffDays} дн. назад`;
 
     const diffMonths = Math.floor(diffDays / 30);
-    if (diffMonths < 12) return `${diffMonths}м`;
+    if (diffMonths < 12) return `${diffMonths}м назад`;
 
     const diffYears = Math.floor(diffDays / 365);
-    return `${diffYears} г.`;
+    return `${diffYears} г. назад`;
 }
 
 /** Возвращает {text, online} — online=true если lastLoginAt ≤ 5 мин назад */
