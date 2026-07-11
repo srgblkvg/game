@@ -1,20 +1,18 @@
 import Button from './Button';
-import { Icon } from '@iconify/react';
 
 interface MdToolbarProps {
     textareaId: string;
-    onInsert?: () => void;
 }
 
 const TOOLS = [
-    { icon: 'game-icons:plain-dagger', label: 'Жирный', prefix: '**', suffix: '**', placeholder: 'текст' },
-    { icon: 'game-icons:feather', label: 'Курсив', prefix: '*', suffix: '*', placeholder: 'текст' },
-    { icon: 'game-icons:quill', label: 'Зачёркнутый', prefix: '~~', suffix: '~~', placeholder: 'текст' },
-    { icon: 'game-icons:scroll-unfurled', label: 'Заголовок', prefix: '### ', suffix: '', placeholder: 'Заголовок' },
-    { icon: 'game-icons:speech-bubble', label: 'Цитата', prefix: '> ', suffix: '', placeholder: 'цитата' },
-    { icon: 'game-icons:pc', label: 'Код', prefix: '`', suffix: '`', placeholder: 'code' },
-    { icon: 'game-icons:linked-rings', label: 'Ссылка', prefix: '[', suffix: '](url)', placeholder: 'текст' },
-    { icon: 'game-icons:perspective-dice-six-faces-random', label: 'Список', prefix: '- ', suffix: '', placeholder: 'элемент' },
+    { label: 'B', title: 'Жирный', prefix: '**', suffix: '**', placeholder: 'текст', className: 'font-bold' },
+    { label: 'I', title: 'Курсив', prefix: '*', suffix: '*', placeholder: 'текст', className: 'italic' },
+    { label: 'S', title: 'Зачёркнутый', prefix: '~~', suffix: '~~', placeholder: 'текст', className: 'line-through' },
+    { label: 'H', title: 'Заголовок', prefix: '### ', suffix: '', placeholder: 'Заголовок', className: 'font-bold' },
+    { label: '"', title: 'Цитата', prefix: '> ', suffix: '', placeholder: 'цитата', className: '' },
+    { label: '<>', title: 'Код', prefix: '`', suffix: '`', placeholder: 'code', className: '' },
+    { label: '🔗', title: 'Ссылка', prefix: '[', suffix: '](url)', placeholder: 'текст', className: '' },
+    { label: '•', title: 'Список', prefix: '- ', suffix: '', placeholder: 'элемент', className: '' },
 ];
 
 export default function MdToolbar({ textareaId }: MdToolbarProps) {
@@ -30,17 +28,14 @@ export default function MdToolbar({ textareaId }: MdToolbarProps) {
         const after = ta.value.substring(end);
         ta.value = before + prefix + selected + suffix + after;
 
-        // Восстановить фокус и выделение
         ta.focus();
         const newCursor = start + prefix.length + selected.length + suffix.length;
         if (!ta.value.substring(start, end)) {
-            // Если не было выделения — выделяем placeholder для замены
             ta.setSelectionRange(start + prefix.length, start + prefix.length + placeholder.length);
         } else {
             ta.setSelectionRange(newCursor, newCursor);
         }
 
-        // Триггерим onChange
         ta.dispatchEvent(new Event('input', { bubbles: true }));
     };
 
@@ -48,13 +43,13 @@ export default function MdToolbar({ textareaId }: MdToolbarProps) {
         <div className="flex gap-0.5 flex-wrap mb-2">
             {TOOLS.map(t => (
                 <Button
-                    key={t.label}
+                    key={t.title}
                     variant="secondary"
                     size="md"
-                    title={t.label}
+                    title={t.title}
                     onClick={() => insert(t.prefix, t.suffix, t.placeholder)}
                 >
-                    <Icon icon={t.icon} width="14" height="14" />
+                    <span className={`text-xs ${t.className}`}>{t.label}</span>
                 </Button>
             ))}
         </div>
