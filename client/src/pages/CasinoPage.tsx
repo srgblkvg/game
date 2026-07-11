@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Button from '../components/ui/Button';
 import BackButton from '../components/BackButton';
 import PageHeader from '../components/ui/PageHeader';
@@ -9,37 +9,6 @@ import { inputClass } from '../utils/formStyles';
 
 const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
 const inputType = isVK ? 'text' : 'number';
-
-// Анимации карт
-const cardKeyframes = `
-@keyframes card-deal {
-  0% { transform: translate(80px, -60px) scale(0.3) rotate(-15deg); opacity: 0; }
-  60% { transform: translate(10px, -5px) scale(1.05) rotate(2deg); opacity: 1; }
-  100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
-}
-@keyframes card-deal-delayed {
-  0%, 40% { transform: translate(80px, -60px) scale(0.3) rotate(-15deg); opacity: 0; }
-  100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
-}
-@keyframes card-flip {
-  0% { transform: rotateY(0deg); }
-  50% { transform: rotateY(90deg); }
-  100% { transform: rotateY(0deg); }
-}
-.animate-card-deal { animation: card-deal 0.4s ease-out forwards; }
-.animate-card-deal-delayed { animation: card-deal-delayed 0.55s ease-out forwards; }
-.animate-card-flip { animation: card-flip 0.5s ease-in-out; }
-.card-back {
-  background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 50%, #1a365d 100%);
-  border: 2px solid #c5a34f;
-  backface-visibility: hidden;
-}
-.card-stagger-0 { animation-delay: 0s; }
-.card-stagger-1 { animation-delay: 0.25s; }
-.card-stagger-2 { animation-delay: 0.5s; }
-.card-stagger-3 { animation-delay: 0.75s; }
-.card-stagger-4 { animation-delay: 1s; }
-`;
 
 interface Card {
     suit: string;
@@ -75,13 +44,6 @@ function cardDisplay(card: Card): { text: string; color: string } {
     return { text: `${card.rank}${SUIT_ICONS[card.suit] || ''}`, color: SUIT_COLORS[card.suit] || 'text-gray-900' };
 }
 
-function getStaggerClass(newCards: Set<number>, index: number): string {
-    const sorted = [...newCards].sort((a, b) => a - b);
-    const pos = sorted.indexOf(index);
-    if (pos < 0) return '';
-    return `card-stagger-${Math.min(pos, 4)}`;
-}
-
 function statusLabel(status: string, result?: string): string {
     if (status === 'playing') return 'Игра идёт...';
     if (status === 'player_won') {
@@ -107,13 +69,6 @@ export default function CasinoPage() {
     const [balance, setBalance] = useState(0);
     const [actionCard, setActionCard] = useState<any>(null);
 
-    // Анимации: отслеживаем предыдущее состояние для определения новых карт
-    const prevPlayerCount = useRef(0);
-    const prevDealerCount = useRef(0);
-    const [newPlayerCards, setNewPlayerCards] = useState<Set<number>>(new Set());
-    const [newDealerCards, setNewDealerCards] = useState<Set<number>>(new Set());
-    const [flipDealerCard, setFlipDealerCard] = useState(false);
-
     // Загрузить карточку действия
     useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/casino'); if (c) setActionCard(c); }).catch(() => {}); }, []);
 
@@ -132,45 +87,11 @@ export default function CasinoPage() {
             const r = await fetch('/api/casino/active', { headers: getHeaders() });
             const d = await r.json();
             if (d.game) {
-                applyAnimations(d.game);
                 setGame(d.game);
             } else {
                 setGame(null);
             }
         } catch {}
-    };
-
-    // Определить какие карты новые и запустить анимации
-    const applyAnimations = (newGame: GameState) => {
-        const oldPCount = prevPlayerCount.current;
-        const oldDCount = prevDealerCount.current;
-        const newPCount = newGame.player_cards.length;
-        // Дилер: считаем только реальные карты (не '??')
-        const realDealerCards = newGame.dealer_cards.filter(c => c !== '??');
-        const newDCount = realDealerCards.length;
-
-        // Все новые карты игрока (может быть несколько при старте)
-        const pNew = new Set<number>();
-        if (newPCount > oldPCount) {
-            for (let i = oldPCount; i < newPCount; i++) pNew.add(i);
-        }
-        setNewPlayerCards(pNew);
-
-        // Все новые карты дилера
-        const dNew = new Set<number>();
-        if (newDCount > oldDCount) {
-            for (let i = oldDCount; i < newDCount; i++) dNew.add(i);
-        }
-        setNewDealerCards(dNew);
-
-        // Flip скрытой карты дилера (когда игра кончилась и вторая карта была '??')
-        if (newGame.status !== 'playing' && oldDCount === 1 && newDCount >= 2 && !flipDealerCard) {
-            setFlipDealerCard(true);
-            setTimeout(() => setFlipDealerCard(false), 600);
-        }
-
-        prevPlayerCount.current = newPCount;
-        prevDealerCount.current = newDCount;
     };
 
     useEffect(() => { loadBalance(); loadGame(); }, []);
@@ -195,7 +116,6 @@ export default function CasinoPage() {
             });
             const d = await r.json();
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
-            applyAnimations(d);
             setGame(d);
             loadBalance();
         } catch { showToast('Ошибка сети'); }
@@ -212,7 +132,6 @@ export default function CasinoPage() {
             });
             const d = await r.json();
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
-            applyAnimations(d);
             setGame(d);
             if (d.status !== 'playing') loadBalance();
         } catch { showToast('Ошибка сети'); }
@@ -229,7 +148,6 @@ export default function CasinoPage() {
             });
             const d = await r.json();
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
-            applyAnimations(d);
             setGame(d);
             loadBalance();
         } catch { showToast('Ошибка сети'); }
@@ -246,7 +164,6 @@ export default function CasinoPage() {
             });
             const d = await r.json();
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
-            applyAnimations(d);
             setGame(d);
             loadBalance();
         } catch { showToast('Ошибка сети'); }
@@ -263,7 +180,6 @@ export default function CasinoPage() {
             });
             const d = await r.json();
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
-            applyAnimations(d);
             setGame(d);
             loadBalance();
         } catch { showToast('Ошибка сети'); }
@@ -275,7 +191,6 @@ export default function CasinoPage() {
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-4">
-            <style>{cardKeyframes}</style>
             <BackButton />
             {actionCard && <PageHeader title="Игорный дом" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
@@ -337,25 +252,12 @@ export default function CasinoPage() {
                                 <div className="flex gap-2">
                                     {game.dealer_cards.map((c, i) => {
                                         const card = parseCard(c);
-                                        const isNew = newDealerCards.has(i);
-                                        const stagger = getStaggerClass(newDealerCards, i);
-                                        const isHidden = !card;
-                                        const isFlipping = isHidden && isFinished && i === 1;
-                                        if (isHidden) return (
-                                            <div key={i} className={`w-14 h-20 rounded-lg flex items-center justify-center text-2xl shadow-md
-                                                ${isFlipping ? 'animate-card-flip' : ''}
-                                                ${isNew ? `animate-card-deal ${stagger}` : ''}
-                                                ${isFlipping ? 'bg-white border border-gray-300' : 'card-back'}`}>
-                                                {isFlipping ? (
-                                                    <span className="text-lg font-bold text-gray-900">?</span>
-                                                ) : (
-                                                    <span className="text-[var(--color-text-muted)]">?</span>
-                                                )}
-                                            </div>
+                                        if (!card) return (
+                                            <div key={i} className="w-14 h-20 rounded-lg border-2 border-dashed border-[var(--color-border-default)] flex items-center justify-center text-2xl text-[var(--color-text-muted)]">?</div>
                                         );
                                         const d = cardDisplay(card);
                                         return (
-                                            <div key={i} className={`w-14 h-20 rounded-lg bg-white border border-gray-300 flex flex-col items-center justify-center shadow-md ${d.color} ${isNew ? `animate-card-deal-delayed ${stagger}` : ''} ${isFlipping ? 'animate-card-flip' : ''}`}>
+                                            <div key={i} className={`w-14 h-20 rounded-lg bg-white border border-gray-300 flex flex-col items-center justify-center ${d.color}`}>
                                                 <span className="text-lg font-bold leading-tight">{card.rank}</span>
                                                 <span className="text-base leading-tight">{SUIT_ICONS[card.suit]}</span>
                                             </div>
@@ -374,10 +276,8 @@ export default function CasinoPage() {
                                         const card = parseCard(c);
                                         if (!card) return null;
                                         const d = cardDisplay(card);
-                                        const isNew = newPlayerCards.has(i);
-                                        const stagger = getStaggerClass(newPlayerCards, i);
                                         return (
-                                            <div key={i} className={`w-14 h-20 rounded-lg bg-white border border-gray-300 flex flex-col items-center justify-center shadow-md ${d.color} ${isNew ? `animate-card-deal ${stagger}` : ''}`}>
+                                            <div key={i} className={`w-14 h-20 rounded-lg bg-white border border-gray-300 flex flex-col items-center justify-center ${d.color}`}>
                                                 <span className="text-lg font-bold leading-tight">{card.rank}</span>
                                                 <span className="text-base leading-tight">{SUIT_ICONS[card.suit]}</span>
                                             </div>
@@ -420,7 +320,7 @@ export default function CasinoPage() {
                             {/* Новая игра */}
                             {isFinished && (
                                 <div className="flex gap-2 justify-center">
-                                    <Button variant="danger" size="md" onClick={() => { setGame(null); setBet(''); prevPlayerCount.current = 0; prevDealerCount.current = 0; }}>
+                                    <Button variant="danger" size="md" onClick={() => { setGame(null); setBet(''); }}>
                                         Новая игра
                                     </Button>
                                 </div>
