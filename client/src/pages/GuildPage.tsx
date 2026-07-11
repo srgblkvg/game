@@ -10,6 +10,7 @@ import { fetchCharacter } from '../api/character';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
+import { formatLastSeen } from '../utils/time';
 
 const TABS = ['🏚️ Обзор', '🏘️ Постройки', '💰 Казна', '👥 Участники'];
 const PERIODS = ['today','week','month','all'] as const;
@@ -259,6 +260,7 @@ export default function GuildPage() {
                     <div className="flex justify-between items-center">
                         <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
                             {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span>
+                            <span className="text-[var(--color-text-muted)] ml-1">· {formatLastSeen(m.lastLoginAt)}</span>
                             {m.rank==='officer'&&<span className="ml-1 text-[0.6rem]">
                                 {(m.can_quests||m.quests)?'📜':''}{(m.can_buildings||m.buildings)?'🏘️':''}{(m.can_war||m.war)?'⚔️':''}
                             </span>}</span>
