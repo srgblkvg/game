@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { applyExp } from '../db/helpers';
+import { applyExp, collectGuildTax } from '../db/helpers';
 import { markDirty } from '../events';
 import { getToday, getSnapshot, getProgress, getMidnightTS, QUEST_INFO, DIFFICULTIES, BASE_REWARDS, QUEST_TYPES, type QuestType, type DiffKey } from '../game/questData';
 
@@ -138,8 +138,10 @@ router.post('/tavern/quests/claim', async (req, res) => {
         return res.status(400).json({ error: `Прогресс: ${prog}/${quest.requirement}` });
     }
 
+    // Налог гильдии
+    const rewardAfterTax = await collectGuildTax(userId, quest.rewardMoney, 'tax_quest');
     await db.run('UPDATE users SET money = money + ? WHERE id = ?',
-        [quest.rewardMoney, userId]);
+        [rewardAfterTax, userId]);
 
     // Получаем текущие exp/level для applyExp
     const user = await db.one('SELECT exp, level, statPoints FROM users WHERE id = ?', [userId]) as any;
@@ -164,7 +166,7 @@ router.post('/tavern/quests/claim', async (req, res) => {
         [userId, quest.questType, newDiff, newReq, Math.round(rw.xp * d.rewardXpMult), Math.round(rw.money * d.rewardMoneyMult), 'available', JSON.stringify(await getSnapshot(userId)), today]);
 
     const updated = await db.one('SELECT money, exp, level, statPoints FROM users WHERE id = ?', [userId]) as any;
-    res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: quest.rewardMoney, money: updated.money, exp: updated.exp, level: updated.level, statPoints: updated.statPoints, levelsGained });
+    res.json({ success: true, rewardXp: quest.rewardXp, rewardMoney: rewardAfterTax, money: updated.money, exp: updated.exp, level: updated.level, statPoints: updated.statPoints, levelsGained });
     // Вместо sendDailyQuestsUpdate — dirty-флаг
     markDirty(userId, 'quests');
 });

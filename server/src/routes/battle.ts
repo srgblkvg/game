@@ -3,7 +3,7 @@ import { db } from '../db/index';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty } from '../events';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
-import { getBaseStats, buildPlayerStats, USER_BATTLE_FIELDS_GUILD, applyExp } from '../db/helpers';
+import { getBaseStats, buildPlayerStats, USER_BATTLE_FIELDS_GUILD, applyExp, collectGuildTax } from '../db/helpers';
 import { runBattle } from '../game/battle';
 import { calcElo } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
@@ -99,8 +99,12 @@ router.post('/battle', async (req, res) => {
     const attExp = await applyExp(attacker.id, result.winnerId === attacker.id ? result.expGained : 0, attacker.exp, attacker.level, attacker.statPoints || 0);
 
     const attackerMoneyDelta = attackerWins ? moneyStolen : -moneyStolen;
+    // Налог гильдии с PvP-дохода победителя
+    const attackerMoneyAfterTax = attackerWins && moneyStolen > 0
+        ? await collectGuildTax(attacker.id, moneyStolen, 'tax_pvp')
+        : attackerMoneyDelta;
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`,
-        [attExp.newLevel, attExp.newExp, attackerMoneyDelta, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
+        [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
             attackerWins ? moneyStolen : 0, attackerWins ? 0 : moneyStolen, attacker.id]);
 
     // VK Leaderboard — атакующий
@@ -143,7 +147,7 @@ router.post('/battle', async (req, res) => {
         hpAfter: result.attackerHpAfter,
         hpDefenderAfter: result.defenderHpAfter,
         expGained: result.winnerId === attacker.id ? result.expGained : 0,
-        moneyGained: attackerWins ? moneyStolen : 0,
+        moneyGained: attackerWins ? attackerMoneyAfterTax : 0,
         newLevel: attExp.newLevel,
         newExp: attExp.newExp,
         levelsGained: attExp.levelsGained,
