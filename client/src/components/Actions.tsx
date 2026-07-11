@@ -133,7 +133,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 const next = suitable[0];
                 const now = Math.floor(Date.now() / 1000);
                 setNextTournamentSec(Math.max(0, next.registrationOpensAt - now));
-                setNextTournamentLabel(`${next.icon || '🏆'} ${next.label || next.division}`);
+                setNextTournamentLabel(next.label || next.division);
                 return;
             }
         }
