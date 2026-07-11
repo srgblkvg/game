@@ -50,10 +50,6 @@ const FORUM_STYLES = `
 .forum-content img { max-width: 100%; border-radius: 4px; }
 `;
 
-function stripQuotes(text: string): string {
-    return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
-}
-
 function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId, replyTargetId, isClosed }: any) {
     const [expanded, setExpanded] = useState(false);
     const [editing, setEditing] = useState(false);
@@ -115,8 +111,9 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
                             <div className="flex gap-2 mt-1.5 items-center">
                                 <button className="text-xs text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent-info)]"
                                     onClick={() => {
-                                        const cleaned = stripQuotes(post.content);
-                                        onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
+                                        const lines = post.content.split('\n');
+                                        const quoted = lines.map(l => l.startsWith('>') ? l : `> ${l}`).join('\n');
+                                        onReply(`> ${post.author_name}:\n${quoted}\n\n`, post.id);
                                     }}>Ответить</button>
                                 {canEdit && !editing && (
                                     <Button variant="secondary" size="md" onClick={() => { setEditText(post.content); setEditing(true); }}>✎</Button>
