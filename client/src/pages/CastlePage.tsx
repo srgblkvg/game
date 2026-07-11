@@ -2,6 +2,7 @@ import PageHeader from '../components/ui/PageHeader';
 import { getHeaders } from '../api/helpers';
 import { useState, useEffect } from 'react';
 import BackButton from '../components/BackButton';
+import Button from '../components/ui/Button';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
@@ -64,10 +65,13 @@ export default function CastlePage() {
 
             {/* Форум */}
             <div className="mb-4">
-                <h2 className="text-sm font-bold mb-1 flex items-center gap-1 cursor-pointer hover:text-[var(--color-accent-info)]"
-                    onClick={() => navigate('/forum')}>
-                    <Icon icon="game-icons:discussion" width="16" height="16" />Форум
-                </h2>
+                <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-sm font-bold flex items-center gap-1 cursor-pointer hover:text-[var(--color-accent-info)]"
+                        onClick={() => navigate('/forum')}>
+                        <Icon icon="game-icons:discussion" width="16" height="16" />Форум
+                    </h2>
+                    <Button variant="secondary" size="md" onClick={() => navigate('/forum')}>Перейти</Button>
+                </div>
                 <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">Обсуждаемое:</p>
                 {latestThreads.length === 0 ? (
                     <p className="text-xs text-[var(--color-text-muted)]">Тем пока нет</p>
