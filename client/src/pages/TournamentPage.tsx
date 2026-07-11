@@ -14,6 +14,10 @@ import GuildTag from "../components/GuildTag";
 import BracketTree from "../components/BracketTree";
 import Card from '../components/ui/Card';
 
+const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+const numType = isVK ? 'text' : 'number';
+const vkNumAttrs = isVK ? { inputMode: 'none' as const, 'data-vk-num': 'true' } : {};
+
 const divisionIcons: Record<string, string> = {
     copper: '🥉', bronze: '🥉', iron: '🥈', steel: '🥈', silver: '🥈',
     gold: '🥇', platinum: '🥇', mithril: '🥇', adamant: '👑', orichalcum: '💎',
@@ -328,32 +332,32 @@ export default function TournamentPage() {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
                             <label className="text-[var(--color-text-muted)]">Название</label>
-                            <input className={inputClass} value={cf.name} onChange={e => setCf({ ...cf, name: e.target.value })} placeholder="Мой турнир" />
+                            <input className={inputClass} value={cf.name} onChange={e => setCf({ ...cf, name: e.target.value })} placeholder="Мой турнир" autoComplete="off" />
                         </div>
                         <div>
                             <label className="text-[var(--color-text-muted)]">Призовой фонд</label>
-                            <input className={inputClass} type="number" value={cf.prizePool} onChange={e => setCf({ ...cf, prizePool: Number(e.target.value) })} min={0} />
+                            <input className={inputClass} type={numType} {...vkNumAttrs} autoComplete="off" value={cf.prizePool} onChange={e => { const v = isVK ? e.target.value.replace(/\D/g, '') : e.target.value; setCf({ ...cf, prizePool: Number(v) || 0 }); }} min={0} />
                         </div>
                         <div>
                             <label className="text-[var(--color-text-muted)]">Входной взнос</label>
-                            <input className={inputClass} type="number" value={cf.entryFee} onChange={e => setCf({ ...cf, entryFee: Number(e.target.value) })} min={0} />
+                            <input className={inputClass} type={numType} {...vkNumAttrs} autoComplete="off" value={cf.entryFee} onChange={e => { const v = isVK ? e.target.value.replace(/\D/g, '') : e.target.value; setCf({ ...cf, entryFee: Number(v) || 0 }); }} min={0} />
                         </div>
                         <div>
                             <label className="text-[var(--color-text-muted)]">Время на сбор (мин)</label>
-                            <input className={inputClass} type="number" value={cf.registrationMinutes} onChange={e => setCf({ ...cf, registrationMinutes: Number(e.target.value) })} min={5} max={120} />
+                            <input className={inputClass} type={numType} {...vkNumAttrs} autoComplete="off" value={cf.registrationMinutes} onChange={e => { const v = isVK ? e.target.value.replace(/\D/g, '') : e.target.value; setCf({ ...cf, registrationMinutes: Number(v) || 0 }); }} min={5} max={120} />
                         </div>
                         <div>
                             <label className="text-[var(--color-text-muted)]">Макс. игроков</label>
-                            <input className={inputClass} type="number" value={cf.maxPlayers} onChange={e => setCf({ ...cf, maxPlayers: Number(e.target.value) })} min={2} max={16} />
+                            <input className={inputClass} type={numType} {...vkNumAttrs} autoComplete="off" value={cf.maxPlayers} onChange={e => { const v = isVK ? e.target.value.replace(/\D/g, '') : e.target.value; setCf({ ...cf, maxPlayers: Number(v) || 0 }); }} min={2} max={16} />
                         </div>
                         <div className="flex gap-2">
                             <div className="flex-1">
                                 <label className="text-[var(--color-text-muted)]">Мин. уровень</label>
-                                <input className={inputClass} type="number" value={cf.minLevel} onChange={e => setCf({ ...cf, minLevel: Number(e.target.value) })} min={1} />
+                                <input className={inputClass} type={numType} {...vkNumAttrs} autoComplete="off" value={cf.minLevel} onChange={e => { const v = isVK ? e.target.value.replace(/\D/g, '') : e.target.value; setCf({ ...cf, minLevel: Number(v) || 0 }); }} min={1} />
                             </div>
                             <div className="flex-1">
                                 <label className="text-[var(--color-text-muted)]">Макс. уровень</label>
-                                <input className={inputClass} type="number" value={cf.maxLevel} onChange={e => setCf({ ...cf, maxLevel: Number(e.target.value) })} min={1} />
+                                <input className={inputClass} type={numType} {...vkNumAttrs} autoComplete="off" value={cf.maxLevel} onChange={e => { const v = isVK ? e.target.value.replace(/\D/g, '') : e.target.value; setCf({ ...cf, maxLevel: Number(v) || 0 }); }} min={1} />
                             </div>
                         </div>
                     </div>
