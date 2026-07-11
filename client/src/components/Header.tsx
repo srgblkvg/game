@@ -233,6 +233,9 @@ export default function Header() {
                     <span className="absolute left-1/2 -translate-x-1/2 text-xs text-[var(--color-text-muted)] tabular-nums leading-none pointer-events-none">
                         {formatGameTime(serverNow * 1000)}
                     </span>
+                    <div className="ml-auto">
+                        <AudioPlayer />
+                    </div>
                 </div>
             )}
             <div className="flex items-center justify-between gap-2 px-3 py-1 flex-wrap">
@@ -255,7 +258,6 @@ export default function Header() {
                     )
                 )}
                 <div className="flex gap-2 ml-auto items-center">
-                    <AudioPlayer />
                     {user.role === 'player' && (
                         <button
                             onClick={handleHistoryClick}
