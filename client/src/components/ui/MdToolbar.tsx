@@ -1,9 +1,8 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import Button from './Button';
 
 interface MdToolbarProps {
     textareaId: string;
-    onChange: (value: string) => void;
 }
 
 const TOOLS = [
@@ -15,8 +14,28 @@ const TOOLS = [
     { label: '•', title: 'Список', prefix: '- ', suffix: '', placeholder: 'элемент', className: '' },
 ];
 
-export default function MdToolbar({ textareaId, onChange }: MdToolbarProps) {
-    const pendingSelection = useRef<{ start: number; end: number } | null>(null);
+const pendingSelections = new Map<string, { start: number; end: number }>();
+
+export function setMdSelection(textareaId: string, start: number, end: number) {
+    pendingSelections.set(textareaId, { start, end });
+}
+
+export default function MdToolbar({ textareaId }: MdToolbarProps) {
+    // Восстанавливаем позицию курсора после каждого рендера
+    useEffect(() => {
+        const sel = pendingSelections.get(textareaId);
+        if (sel) {
+            pendingSelections.delete(textareaId);
+            const ta = document.getElementById(textareaId) as HTMLTextAreaElement | null;
+            if (ta) {
+                // Небольшая задержка чтобы React закончил обновление DOM
+                requestAnimationFrame(() => {
+                    ta.focus();
+                    ta.setSelectionRange(sel.start, sel.end);
+                });
+            }
+        }
+    });
 
     const insert = useCallback((prefix: string, suffix: string, placeholder: string) => {
         const ta = document.getElementById(textareaId) as HTMLTextAreaElement | null;
@@ -30,30 +49,28 @@ export default function MdToolbar({ textareaId, onChange }: MdToolbarProps) {
         const after = ta.value.substring(end);
         const newValue = before + prefix + selected + suffix + after;
 
-        // Сохраняем позицию курсора для восстановления после рендера React
         const hasSelection = !!ta.value.substring(start, end);
         if (hasSelection) {
             const newCursor = start + prefix.length + selected.length + suffix.length;
-            pendingSelection.current = { start: newCursor, end: newCursor };
+            setMdSelection(textareaId, newCursor, newCursor);
         } else {
-            pendingSelection.current = {
-                start: start + prefix.length,
-                end: start + prefix.length + placeholder.length,
-            };
+            setMdSelection(textareaId,
+                start + prefix.length,
+                start + prefix.length + placeholder.length
+            );
         }
 
-        onChange(newValue);
-
-        // Восстанавливаем курсор после React-рендера
-        requestAnimationFrame(() => {
-            const el = document.getElementById(textareaId) as HTMLTextAreaElement | null;
-            if (el && pendingSelection.current) {
-                el.focus();
-                el.setSelectionRange(pendingSelection.current.start, pendingSelection.current.end);
-                pendingSelection.current = null;
-            }
-        });
-    }, [textareaId, onChange]);
+        // Сохраняем напрямую в DOM и диспатчим input для React
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype, 'value'
+        )?.set;
+        if (nativeInputValueSetter) {
+            nativeInputValueSetter.call(ta, newValue);
+        } else {
+            ta.value = newValue;
+        }
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }, [textareaId]);
 
     return (
         <div className="flex gap-0.5 flex-wrap mb-2">
