@@ -12,6 +12,7 @@ import { safeDate } from '../utils/date';
 import { formatGameTime } from '../utils/time';
 import Button from './ui/Button';
 import PlayerBadge from './PlayerBadge';
+import AudioPlayer from './AudioPlayer';
 
 const breadcrumbMap: Record<string, string> = {
     arena: 'Арена',
@@ -266,6 +267,11 @@ export default function Header() {
                                 <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
                             )}
                         </button>
+                    )}
+                    {user.role === 'player' && (
+                        <div className="relative">
+                            <AudioPlayer />
+                        </div>
                     )}
                     {user.role === 'player' && (
                         <div ref={menuRef} className="relative">
