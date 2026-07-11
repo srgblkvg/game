@@ -34,6 +34,11 @@ export interface Notification {
 const clients = new Map<number, WebSocket>();
 const onlineUsers = new Map<number, OnlineUser>();
 
+/** Проверить, онлайн ли пользователь (есть активное WS-соединение) */
+export function isUserOnline(userId: number): boolean {
+  return onlineUsers.has(userId);
+}
+
 // ---------- Dirty-флаги для serverTick ----------
 type DirtyType = 'quests' | 'rating' | 'notifications';
 const userDirtyFlags = new Map<number, Set<DirtyType>>();

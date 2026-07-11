@@ -187,11 +187,10 @@ export default function GuildViewPage() {
                                         {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
                                     </span>
                                     {(() => {
-                                        const ls = getLastSeen(m.lastLoginAt);
-                                        if (ls.online) {
+                                        if (m.online) {
                                             return <span className="text-green-500 dark:text-green-400 ml-auto font-medium">В игре</span>;
                                         }
-                                        return <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level} · Был в игре: {ls.text}</span>;
+                                        return <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level} · Был в игре: {getLastSeen(m.lastLoginAt).text}</span>;
                                     })()}
                                 </div>
                             ))}

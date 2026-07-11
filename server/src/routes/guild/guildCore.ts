@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../../db/index";
 import { isGuildAtWar } from "./guildWar";
 import { getGuildBuildings, buildBuilding } from "../../game/guildBuildings";
+import { isUserOnline } from "../../websocket";
 
 const router = Router();
 
@@ -47,6 +48,12 @@ router.get('/guild/my', async (req, res) => {
         [member.guildId]
     );
 
+    // Добавляем флаг online из WebSocket
+    const membersWithOnline = (members as any[]).map((m: any) => ({
+        ...m,
+        online: isUserOnline(m.userId),
+    }));
+
     const inviteCount = await db.one(
         "SELECT COUNT(*) as cnt FROM guild_invites WHERE guildId = ? AND status = 'pending'",
         [member.guildId]
@@ -88,7 +95,7 @@ router.get('/guild/my', async (req, res) => {
             pendingInvites: inviteCount.cnt,
             buildings: await getGuildBuildings(userId),
         },
-        members,
+        members: membersWithOnline,
         war: warInfo,
     });
 });
@@ -185,6 +192,11 @@ router.get('/guild/:id', async (req, res, next) => {
         [guildId]
     );
 
+    const membersWithOnline = (members as any[]).map((m: any) => ({
+        ...m,
+        online: isUserOnline(m.userId),
+    }));
+
     const memberCount = members.length;
 
     // Информация о войне
@@ -204,7 +216,7 @@ router.get('/guild/:id', async (req, res, next) => {
         };
     }
 
-    res.json({ guild: { ...guild, memberCount }, members, war: warInfo });
+    res.json({ guild: { ...guild, memberCount }, members: membersWithOnline, war: warInfo });
 });
 
 // Вступить в открытую гильдию

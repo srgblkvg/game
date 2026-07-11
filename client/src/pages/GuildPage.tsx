@@ -264,11 +264,10 @@ export default function GuildPage() {
                                 {(m.can_quests||m.quests)?'📜':''}{(m.can_buildings||m.buildings)?'🏘️':''}{(m.can_war||m.war)?'⚔️':''}
                             </span>}</span>
                         {(() => {
-                            const ls = getLastSeen(m.lastLoginAt);
-                            if (ls.online) {
+                            if (m.online) {
                                 return <span className="text-green-500 dark:text-green-400 whitespace-nowrap font-medium">В игре</span>;
                             }
-                            return <span className="text-[var(--color-text-muted)] whitespace-nowrap">Был в игре: {ls.text}</span>;
+                            return <span className="text-[var(--color-text-muted)] whitespace-nowrap">Был в игре: {getLastSeen(m.lastLoginAt).text}</span>;
                         })()}
                     </div>
                     {myRank==='leader'&&m.rank!=='leader'&&<div className="flex justify-between items-center mt-1">
