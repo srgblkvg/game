@@ -98,7 +98,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
                         <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words forum-content" dangerouslySetInnerHTML={{ __html: editing ? '<span></span>' : renderMd(displayContent) }} />
                         {editing && (
                             <div className="mt-2">
-                                <MdToolbar textareaId={`forum-edit-${post.id}`} />
+                                <MdToolbar textareaId={`forum-edit-${post.id}`} onChange={setEditText} />
                                 <textarea id={`forum-edit-${post.id}`} className={inputClass + ' min-h-[100px] mb-2'} value={editText}
                                     onChange={e => setEditText(e.target.value)} />
                                 <div className="flex gap-2">
@@ -391,7 +391,7 @@ export default function ThreadPage() {
                             <button className="ml-2 text-[var(--color-accent-danger)]" onClick={() => { setReplyParentId(null); setReplyText(''); }}>отмена</button>
                         </p>
                     )}
-                    <MdToolbar textareaId="reply-input" />
+                    <MdToolbar textareaId="reply-input" onChange={setReplyText} />
                     <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[150px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
                     <Button variant="primary" size="md" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
                 </Card>
