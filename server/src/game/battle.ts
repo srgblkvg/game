@@ -56,7 +56,7 @@ export function blockChance(defStats: CharStats): number {
 
 export function blockReduction(defStats: CharStats, atkStats: CharStats): number {
   const ratio = sv(defStats, F.block) / Math.max(1, sv(atkStats, F.damage));
-  return Math.min(0.75, 0.7 * ratio);
+  return Math.min(0.75, 0.9 * ratio);
 }
 
 export function counterChance(defStats: CharStats, atkStats: CharStats, extraBonus: number): number {
