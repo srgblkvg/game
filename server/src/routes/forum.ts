@@ -143,6 +143,11 @@ router.post('/forum/poll/vote', async (req, res) => {
     const { threadId, optionId } = req.body;
     if (!threadId || !optionId) return res.status(400).json({ error: 'threadId и optionId обязательны' });
 
+    // Проверить, что тема не закрыта
+    const thread = await db.one('SELECT is_closed FROM forum_threads WHERE id = ?', [threadId]) as any;
+    if (!thread) return res.status(404).json({ error: 'Тема не найдена' });
+    if (thread.is_closed) return res.status(403).json({ error: 'Тема закрыта' });
+
     const poll = await db.one(
         'SELECT p.* FROM forum_polls p WHERE p.thread_id = ?',
         [threadId]
@@ -221,8 +226,9 @@ router.put('/forum/thread/:id', async (req, res) => {
     const userId = req.userId;
     const { title } = req.body;
     if (!title) return res.status(400).json({ error: 'Название обязательно' });
-    const thread = await db.one('SELECT id, author_id FROM forum_threads WHERE id = ?', [parseInt(req.params.id)]);
+    const thread = await db.one('SELECT id, author_id, is_closed FROM forum_threads WHERE id = ?', [parseInt(req.params.id)]);
     if (!thread) return res.status(404).json({ error: 'Тема не найдена' });
+    if (thread.is_closed) return res.status(403).json({ error: 'Тема закрыта' });
     if (thread.author_id !== userId) return res.status(403).json({ error: 'Только автор может редактировать тему' });
     await db.run('UPDATE forum_threads SET title = ? WHERE id = ?', [title, thread.id]);
     res.json({ success: true });
@@ -233,8 +239,12 @@ router.put('/forum/post/:id', async (req, res) => {
     const userId = req.userId;
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'Текст обязателен' });
-    const post = await db.one('SELECT id, author_id FROM forum_posts WHERE id = ?', [parseInt(req.params.id)]);
+    const post = await db.one(
+        'SELECT p.id, p.author_id, t.is_closed FROM forum_posts p JOIN forum_threads t ON p.thread_id = t.id WHERE p.id = ?',
+        [parseInt(req.params.id)]
+    ) as any;
     if (!post) return res.status(404).json({ error: 'Сообщение не найдено' });
+    if (post.is_closed) return res.status(403).json({ error: 'Тема закрыта' });
     if (post.author_id !== userId) return res.status(403).json({ error: 'Только автор может редактировать' });
     await db.run('UPDATE forum_posts SET content = ?, updated_at = ? WHERE id = ?',
         [content, new Date().toISOString(), post.id]);

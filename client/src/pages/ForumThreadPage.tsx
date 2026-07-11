@@ -55,7 +55,7 @@ function stripQuotes(text: string): string {
     return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
 }
 
-function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId, replyTargetId }: any) {
+function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId, replyTargetId, isClosed }: any) {
     const [expanded, setExpanded] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editText, setEditText] = useState('');
@@ -63,7 +63,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
     const displayContent = editing ? editText : (isLong && !expanded ? post.content.slice(0, 500) + '...' : post.content);
     const dateStr = fmtSafeDate(post.updated_at || post.created_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const isEdited = !!post.updated_at;
-    const canEdit = userId && post.author_id === userId;
+    const canEdit = userId && post.author_id === userId && !isClosed;
     const isReplyTarget = replyTargetId && post.id === replyTargetId;
 
     const handleSaveEdit = async () => {
@@ -111,23 +111,25 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
                         {isLong && !editing && (
                             <button className="text-xs text-[var(--color-accent-info)] mt-1 cursor-pointer hover:underline" onClick={() => setExpanded(!expanded)}>{expanded ? 'Свернуть' : 'Читать дальше'}</button>
                         )}
-                        <div className="flex gap-2 mt-1.5 items-center">
-                            <button className="text-xs text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent-info)]"
-                                onClick={() => {
-                                    const cleaned = stripQuotes(post.content.slice(0, MAX_QUOTE_LENGTH));
-                                    onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
-                                }}>Ответить</button>
-                            {canEdit && !editing && (
-                                <Button variant="secondary" size="md" onClick={() => { setEditText(post.content); setEditing(true); }}>✎</Button>
-                            )}
-                        </div>
+                        {!isClosed && (
+                            <div className="flex gap-2 mt-1.5 items-center">
+                                <button className="text-xs text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent-info)]"
+                                    onClick={() => {
+                                        const cleaned = stripQuotes(post.content.slice(0, MAX_QUOTE_LENGTH));
+                                        onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
+                                    }}>Ответить</button>
+                                {canEdit && !editing && (
+                                    <Button variant="secondary" size="md" onClick={() => { setEditText(post.content); setEditing(true); }}>✎</Button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </Card>
             {children && children.length > 0 && (
                 <div>
                     {children.map((child: any) => (
-                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} userId={userId} replyTargetId={replyTargetId} />
+                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} userId={userId} replyTargetId={replyTargetId} isClosed={isClosed} />
                     ))}
                 </div>
             )}
@@ -310,7 +312,9 @@ export default function ThreadPage() {
                     {thread.is_closed && <span className="text-xs text-[var(--color-accent-danger)] border border-[var(--color-accent-danger)] rounded px-1.5 py-0.5">Закрыто</span>}
                     {isAuthor && (
                         <div className="flex gap-1 ml-auto">
-                            <Button variant="secondary" size="md" onClick={() => { setNewTitle(thread.title); setEditingTitle(true); }}>✎</Button>
+                            {!thread.is_closed && (
+                                <Button variant="secondary" size="md" onClick={() => { setNewTitle(thread.title); setEditingTitle(true); }}>✎</Button>
+                            )}
                             <Button variant="secondary" size="md" onClick={handleToggleClose}>
                                 {thread.is_closed ? 'Открыть' : 'Закрыть'}
                             </Button>
@@ -335,7 +339,7 @@ export default function ThreadPage() {
                                     <button
                                         className="w-full text-left p-1.5 rounded border border-[var(--color-border-light)] hover:border-[var(--color-accent-info)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-default"
                                         onClick={() => handleVote(opt.id)}
-                                        disabled={pollVoting}
+                                        disabled={pollVoting || thread.is_closed}
                                     >
                                         <div className="flex justify-between items-center">
                                             <span>{opt.option_text}</span>
@@ -355,8 +359,8 @@ export default function ThreadPage() {
                 </Card>
             )}
 
-            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} userId={user?.id} replyTargetId={replyParentId ?? undefined} />}
-            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} userId={user?.id} replyTargetId={replyParentId ?? undefined} />)}
+            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} userId={user?.id} replyTargetId={replyParentId ?? undefined} isClosed={thread.is_closed} />}
+            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} userId={user?.id} replyTargetId={replyParentId ?? undefined} isClosed={thread.is_closed} />)}
 
             {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mb-4">
