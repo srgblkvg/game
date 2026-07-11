@@ -8,6 +8,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
 import Modal from '../components/ui/Modal';
+import MdToolbar from '../components/ui/MdToolbar';
 
 export default function ForumPage() {
     const navigate = useNavigate();
@@ -129,7 +130,8 @@ export default function ForumPage() {
 
             <Modal open={showNew} onClose={resetForm} title="Новая тема">
                 <input className={inputClass + ' mb-2'} placeholder="Название темы" value={newTitle} onChange={e => setNewTitle(e.target.value)} maxLength={200} />
-                <textarea className={inputClass + ' mb-3 min-h-[120px]'} placeholder="Текст сообщения (поддерживается Markdown)" value={newContent} onChange={e => setNewContent(e.target.value)} />
+                <MdToolbar textareaId="forum-new-content" />
+                <textarea id="forum-new-content" className={inputClass + ' mb-3 min-h-[120px]'} placeholder="Текст сообщения (поддерживается Markdown)" value={newContent} onChange={e => setNewContent(e.target.value)} />
 
                 {/* Опрос */}
                 <div className="mb-3 border-t border-[var(--color-border-light)] pt-3">

@@ -10,6 +10,7 @@ import { inputClass } from '../utils/formStyles';
 import { useAuth } from '../contexts/AuthContext';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import MdToolbar from '../components/ui/MdToolbar';
 
 const MAX_QUOTE_LENGTH = 300;
 
@@ -100,7 +101,8 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
                         <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words forum-content" dangerouslySetInnerHTML={{ __html: editing ? '<span></span>' : renderMd(displayContent) }} />
                         {editing && (
                             <div className="mt-2">
-                                <textarea className={inputClass + ' min-h-[100px] mb-2'} value={editText}
+                                <MdToolbar textareaId={`forum-edit-${post.id}`} />
+                                <textarea id={`forum-edit-${post.id}`} className={inputClass + ' min-h-[100px] mb-2'} value={editText}
                                     onChange={e => setEditText(e.target.value)} />
                                 <div className="flex gap-2">
                                     <Button variant="success" size="md" onClick={handleSaveEdit}>Сохранить</Button>
@@ -382,6 +384,7 @@ export default function ThreadPage() {
                             <button className="ml-2 text-[var(--color-accent-danger)]" onClick={() => { setReplyParentId(null); setReplyText(''); }}>отмена</button>
                         </p>
                     )}
+                    <MdToolbar textareaId="reply-input" />
                     <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[100px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
                     <Button variant="primary" size="md" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
                 </Card>
