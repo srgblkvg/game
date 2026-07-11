@@ -35,6 +35,9 @@ const FORUM_STYLES = `
     font-size: 0.8rem;
     color: var(--color-text-muted);
     opacity: 0.85;
+    background: var(--color-bg-input);
+    padding: 0.4rem 0.75rem;
+    border-radius: 0 4px 4px 0;
 }
 .forum-content h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.25rem; }
 .forum-content h2 { font-size: 1.1rem; font-weight: 700; margin: 0.5rem 0 0.25rem; }
