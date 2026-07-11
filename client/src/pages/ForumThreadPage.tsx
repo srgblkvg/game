@@ -112,7 +112,9 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
                                 <button className="text-xs text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent-info)]"
                                     onClick={() => {
                                         const lines = post.content.split('\n');
-                                        const quoted = lines.map((l: string) => l.startsWith('>') ? l : `> ${l}`).join('\n');
+                                        // Пропускаем вложенные цитаты (>), оставляем только текст автора
+                                        const ownLines = lines.filter((l: string) => !l.startsWith('>'));
+                                        const quoted = ownLines.map((l: string) => `> ${l}`).join('\n');
                                         onReply(`> ${post.author_name}:\n${quoted}\n\n`, post.id);
                                     }}>Ответить</button>
                                 {canEdit && !editing && (
