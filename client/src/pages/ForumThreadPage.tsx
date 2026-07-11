@@ -50,8 +50,6 @@ const FORUM_STYLES = `
 .forum-content th { background: var(--color-bg-input); }
 .forum-content hr { border: none; border-top: 1px solid var(--color-border-light); margin: 0.75rem 0; }
 .forum-content img { max-width: 100%; border-radius: 4px; }
-`;
-
 function stripQuotes(text: string): string {
     return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
 }
@@ -117,7 +115,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
                             <div className="flex gap-2 mt-1.5 items-center">
                                 <button className="text-xs text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent-info)]"
                                     onClick={() => {
-                                        const cleaned = stripQuotes(post.content.slice(0, MAX_QUOTE_LENGTH));
+                                        const cleaned = stripQuotes(post.content);
                                         onReply(`> ${post.author_name}:\n> ${cleaned}\n\n`, post.id);
                                     }}>Ответить</button>
                                 {canEdit && !editing && (
