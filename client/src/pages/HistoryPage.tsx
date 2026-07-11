@@ -189,7 +189,7 @@ export default function HistoryPage() {
             </EntryRow>;
         }
         if (type === 'quest') {
-            return <EntryRow time={(data.createdAt || '').replace('T', ' ').slice(0, 19)} onClick={()=>navigate('/tavern?tab=quests')}>
+            return <EntryRow time={fmt(data.createdAt)} onClick={()=>navigate('/tavern?tab=quests')}>
                 <span className="text-[var(--color-accent-success)]"><Icon icon="game-icons:notebook" width="14" height="14" className="inline mr-1"/>Квест «{data.typeName}»</span>
                 {data.rewardXp>0&&<span className="text-[var(--color-accent-purple)] ml-1">+{data.rewardXp} XP</span>}
                 <span className="text-[var(--color-text-accent)] ml-1">{formatMoney(data.rewardMoney)}</span>
