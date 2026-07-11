@@ -54,7 +54,7 @@ const FORUM_STYLES = `
 .forum-content img { max-width: 100%; border-radius: 4px; }
 `;
 
-function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId, replyTargetId, isClosed }: any) {
+function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId, replyTargetId, isClosed, isVK }: any) {
     const [expanded, setExpanded] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editText, setEditText] = useState('');
@@ -98,7 +98,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
                         <div className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words forum-content" dangerouslySetInnerHTML={{ __html: editing ? '<span></span>' : renderMd(displayContent) }} />
                         {editing && (
                             <div className="mt-2">
-                                <MdToolbar textareaId={`forum-edit-${post.id}`} />
+                                {!isVK && <MdToolbar textareaId={`forum-edit-${post.id}`} />}
                                 <textarea id={`forum-edit-${post.id}`} className={inputClass + ' min-h-[100px] mb-2'} value={editText}
                                     onChange={e => setEditText(e.target.value)} />
                                 <div className="flex gap-2">
@@ -131,7 +131,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
             {children && children.length > 0 && (
                 <div>
                     {children.map((child: any) => (
-                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} userId={userId} replyTargetId={replyTargetId} isClosed={isClosed} />
+                        <PostCard key={child.id} post={child} children={child.children} onReply={onReply} depth={depth + 1} userId={userId} replyTargetId={replyTargetId} isClosed={isClosed} isVK={isVK} />
                     ))}
                 </div>
             )}
@@ -140,6 +140,7 @@ function PostCard({ post, children, onReply, depth = 0, isFirst = false, userId,
 }
 
 export default function ThreadPage() {
+    const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
     const { id } = useParams<{ id: string }>();
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -368,8 +369,8 @@ export default function ThreadPage() {
                 </Card>
             )}
 
-            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} userId={user?.id} replyTargetId={replyParentId ?? undefined} isClosed={thread.is_closed} />}
-            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} userId={user?.id} replyTargetId={replyParentId ?? undefined} isClosed={thread.is_closed} />)}
+            {firstPost && <PostCard post={firstPost} onReply={handleReplyClick} isFirst={true} userId={user?.id} replyTargetId={replyParentId ?? undefined} isClosed={thread.is_closed} isVK={isVK} />}
+            {tree.map(p => <PostCard key={p.id} post={p} children={p.children} onReply={handleReplyClick} userId={user?.id} replyTargetId={replyParentId ?? undefined} isClosed={thread.is_closed} isVK={isVK} />)}
 
             {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mb-4">
@@ -391,7 +392,7 @@ export default function ThreadPage() {
                             <button className="ml-2 text-[var(--color-accent-danger)]" onClick={() => { setReplyParentId(null); setReplyText(''); }}>отмена</button>
                         </p>
                     )}
-                    <MdToolbar textareaId="reply-input" />
+                    {!isVK && <MdToolbar textareaId="reply-input" />}
                     <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[150px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
                     <Button variant="primary" size="md" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
                 </Card>
