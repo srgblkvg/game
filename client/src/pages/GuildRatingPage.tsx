@@ -74,7 +74,6 @@ export default function GuildRatingPage() {
                                         <div className="text-xs text-[var(--color-text-muted)] space-y-0.5">
                                             <p>Уровень: {g.level}</p>
                                             <p>Участники: {g.memberCount}/20</p>
-                                            <p>Казна: {(g.treasury || 0).toLocaleString()} серебра</p>
                                             <p>
                                                 Лидер:{' '}
                                                 <span

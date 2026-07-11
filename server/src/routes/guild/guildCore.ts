@@ -103,7 +103,7 @@ router.get('/guild/my', async (req, res) => {
 // Список гильдий (должен быть до /guild/:id)
 router.get('/guild/list', async (req, res) => {
     const guilds = await db.query(`
-        SELECT g.*, u.username as leaderName, u.id as leaderUserId,
+        SELECT g.id, g.name, g.description, g.image, g.joinType, g.level, g.exp, g.leaderId, u.username as leaderName, u.id as leaderUserId,
             (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount,
             (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status IN ('pending','active') LIMIT 1) as warStatus,
             (SELECT gw2.id FROM guild_wars gw2 WHERE (gw2.attackerGuildId = g.id OR gw2.defenderGuildId = g.id) AND gw2.status IN ('pending','active') LIMIT 1) as warId
@@ -184,7 +184,7 @@ router.post('/guild/officer-permissions', async (req, res) => {
 router.get('/guild/:id', async (req, res, next) => {
     const guildId = parseInt(req.params.id);
     if (isNaN(guildId)) return next();
-    const guild = await db.one('SELECT g.*, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?', [guildId]) as any;
+    const guild = await db.one('SELECT g.id, g.name, g.description, g.image, g.joinType, g.level, g.exp, g.leaderId, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?', [guildId]) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
 
     const members = await db.query(
