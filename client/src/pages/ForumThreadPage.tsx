@@ -28,6 +28,29 @@ function renderMd(content: string): string {
     });
 }
 
+const FORUM_STYLES = `
+.forum-content blockquote {
+    border-left: 2px solid var(--color-accent-info);
+    padding-left: 0.75rem;
+    margin: 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+.forum-content h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.25rem; }
+.forum-content h2 { font-size: 1.1rem; font-weight: 700; margin: 0.5rem 0 0.25rem; }
+.forum-content h3 { font-size: 1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
+.forum-content ul, .forum-content ol { padding-left: 1.5rem; margin: 0.25rem 0; }
+.forum-content code { background: var(--color-bg-input); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
+.forum-content pre { background: var(--color-bg-input); padding: 0.5rem; border-radius: 4px; overflow-x: auto; margin: 0.5rem 0; }
+.forum-content pre code { background: none; padding: 0; }
+.forum-content a { color: var(--color-accent-info); text-decoration: underline; }
+.forum-content table { border-collapse: collapse; width: 100%; margin: 0.5rem 0; }
+.forum-content th, .forum-content td { border: 1px solid var(--color-border-light); padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+.forum-content th { background: var(--color-bg-input); }
+.forum-content hr { border: none; border-top: 1px solid var(--color-border-light); margin: 0.75rem 0; }
+.forum-content img { max-width: 100%; border-radius: 4px; }
+`;
+
 function stripQuotes(text: string): string {
     return text.split('\n').filter(line => !line.startsWith('>')).join('\n').trim();
 }
@@ -270,6 +293,7 @@ export default function ThreadPage() {
 
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
+            <style>{FORUM_STYLES}</style>
             <BackButton />
             {editingTitle ? (
                 <div className="mb-4">
