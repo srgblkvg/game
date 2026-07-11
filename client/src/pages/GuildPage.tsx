@@ -260,16 +260,17 @@ export default function GuildPage() {
                     <div className="flex justify-between items-center">
                         <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
                             {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span>
-                            <span className="text-[var(--color-text-muted)] ml-1">· {formatLastSeen(m.lastLoginAt)}</span>
                             {m.rank==='officer'&&<span className="ml-1 text-[0.6rem]">
                                 {(m.can_quests||m.quests)?'📜':''}{(m.can_buildings||m.buildings)?'🏘️':''}{(m.can_war||m.war)?'⚔️':''}
                             </span>}</span>
-                        {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1 items-center">
-                            <Button size="md" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button></div>}
+                        <span className="text-[var(--color-text-muted)] whitespace-nowrap">Был в игре: {formatLastSeen(m.lastLoginAt)}</span>
                     </div>
-                    {myRank==='leader'&&m.rank!=='leader'&&<div className="flex gap-1 mt-1">
-                        {m.rank==='officer'&&<Button size="md" variant="secondary" onClick={()=>setPermPopup({officerId:m.userId,username:m.username,quests:!!(m.can_quests||m.quests),buildings:!!(m.can_buildings||m.buildings),war:!!(m.can_war||m.war)})}>⚙️</Button>}
-                        <Button size="md" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
+                    {myRank==='leader'&&m.rank!=='leader'&&<div className="flex justify-between items-center mt-1">
+                        <div className="flex gap-1">
+                            {m.rank==='officer'&&<Button size="md" variant="secondary" onClick={()=>setPermPopup({officerId:m.userId,username:m.username,quests:!!(m.can_quests||m.quests),buildings:!!(m.can_buildings||m.buildings),war:!!(m.can_war||m.war)})}>⚙️</Button>}
+                            <Button size="md" variant="secondary" onClick={()=>handleRole(m.userId,m.username,m.rank==='officer'?'member':'officer')}>{m.rank==='officer'?'Разжаловать':'Повысить'}</Button>
+                        </div>
+                        <Button size="md" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button>
                     </div>}
                 </div>))}</div></Card>
         </div>}
