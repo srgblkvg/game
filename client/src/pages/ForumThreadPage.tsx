@@ -31,9 +31,10 @@ const FORUM_STYLES = `
 .forum-content blockquote {
     border-left: 2px solid var(--color-accent-info);
     padding-left: 0.75rem;
-    margin: 0.5rem 0;
-    font-size: 0.875rem;
+    margin: 0.25rem 0;
+    font-size: 0.8rem;
     color: var(--color-text-muted);
+    opacity: 0.85;
 }
 .forum-content h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.25rem; }
 .forum-content h2 { font-size: 1.1rem; font-weight: 700; margin: 0.5rem 0 0.25rem; }
