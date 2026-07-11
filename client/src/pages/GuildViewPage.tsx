@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { fmtSafeDate } from '../utils/date';
-import { formatLastSeen } from '../utils/time';
+import { getLastSeen } from '../utils/time';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
@@ -186,7 +186,13 @@ export default function GuildViewPage() {
                                     <span className="text-[var(--color-text-muted)] text-[0.6rem]">
                                         {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
                                     </span>
-                                    <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level} · {formatLastSeen(m.lastLoginAt)}</span>
+                                    {(() => {
+                                        const ls = getLastSeen(m.lastLoginAt);
+                                        if (ls.online) {
+                                            return <span className="text-green-500 dark:text-green-400 ml-auto font-medium">В игре</span>;
+                                        }
+                                        return <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level} · Был в игре: {ls.text}</span>;
+                                    })()}
                                 </div>
                             ))}
                         </div>

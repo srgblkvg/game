@@ -76,3 +76,25 @@ export function formatLastSeen(value: any): string {
     const diffYears = Math.floor(diffDays / 365);
     return `${diffYears} г.`;
 }
+
+/** Возвращает {text, online} — online=true если lastLoginAt ≤ 5 мин назад */
+export function getLastSeen(value: any): { text: string; online: boolean } {
+    const text = formatLastSeen(value);
+    if (text === '—' || value == null) return { text, online: false };
+
+    let date: Date;
+    if (value instanceof Date) {
+        date = value;
+    } else if (typeof value === 'number') {
+        date = new Date(value * 1000);
+    } else if (typeof value === 'string' && /^\d+$/.test(value)) {
+        date = new Date(Number(value) * 1000);
+    } else {
+        const d = safeDate(value);
+        if (!d) return { text, online: false };
+        date = d;
+    }
+
+    const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
+    return { text, online: diffSec < 300 };
+}

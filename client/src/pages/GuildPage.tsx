@@ -10,7 +10,7 @@ import { fetchCharacter } from '../api/character';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
-import { formatLastSeen } from '../utils/time';
+import { getLastSeen } from '../utils/time';
 
 const TABS = ['🏚️ Обзор', '🏘️ Постройки', '💰 Казна', '👥 Участники'];
 const PERIODS = ['today','week','month','all'] as const;
@@ -263,7 +263,13 @@ export default function GuildPage() {
                             {m.rank==='officer'&&<span className="ml-1 text-[0.6rem]">
                                 {(m.can_quests||m.quests)?'📜':''}{(m.can_buildings||m.buildings)?'🏘️':''}{(m.can_war||m.war)?'⚔️':''}
                             </span>}</span>
-                        <span className="text-[var(--color-text-muted)] whitespace-nowrap">Был в игре: {formatLastSeen(m.lastLoginAt)}</span>
+                        {(() => {
+                            const ls = getLastSeen(m.lastLoginAt);
+                            if (ls.online) {
+                                return <span className="text-green-500 dark:text-green-400 whitespace-nowrap font-medium">В игре</span>;
+                            }
+                            return <span className="text-[var(--color-text-muted)] whitespace-nowrap">Был в игре: {ls.text}</span>;
+                        })()}
                     </div>
                     {myRank==='leader'&&m.rank!=='leader'&&<div className="flex justify-between items-center mt-1">
                         <div className="flex gap-1">
