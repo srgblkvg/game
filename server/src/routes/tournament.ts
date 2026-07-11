@@ -438,8 +438,6 @@ export async function autoAdvance(tournamentId: number) {
 
 export async function getOrCreateTournament(type?: string) {
     const now = Math.floor(Date.now() / 1000);
-    const typeFilter = type ? "AND type = ?" : "";
-    const params: any[] = type ? [type] : [];
 
     // Ищем активные турниры по каждому дивизиону (только official)
     const activeByDivision: Record<string, any> = {};
@@ -455,8 +453,7 @@ export async function getOrCreateTournament(type?: string) {
     }
 
     // Для дивизионов без активного турнира — создаём новый official с 30-мин окном
-    // (но не раньше чем через час после завершения предыдущего)
-    // и только если есть игроки этого уровня
+    // Каждый дивизион создаётся в ОТДЕЛЬНОЙ транзакции чтобы избежать гонки
     for (const div of divisions) {
         if (!activeByDivision[div.name]) {
             // Проверяем: есть ли игроки в этом дивизионе
@@ -464,7 +461,8 @@ export async function getOrCreateTournament(type?: string) {
                 'SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND level >= ? AND level <= ?',
                 [div.minLevel, div.maxLevel]
             ) as any).cnt;
-            if (playerCount === 0) continue; // нет игроков — не создаём турнир
+            if (playerCount === 0) continue;
+
             // Проверяем: когда завершился последний турнир этого дивизиона
             const lastCompleted = await db.one(
                 "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1",
@@ -475,24 +473,29 @@ export async function getOrCreateTournament(type?: string) {
                   : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
                 if (Date.now() < ts + 14400 * 1000) continue;
             }
+
             const pool = await calcDivisionPool(div.tier);
-            // Перепроверяем (гонка между параллельными запросами)
-            const recheck = await db.one(
-                `SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress') AND type = 'official'`,
-                [div.name]
-            ) as any;
-            if (recheck) continue;
-            await db.run(
-                'INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                [div.name, 'registration', now, now + REGISTRATION_WINDOW, pool, new Date().toISOString(), 'official', MAX_PLAYERS]
-            );
+
+            // Транзакция: проверка + вставка атомарно
+            try {
+                await db.tx(async (client) => {
+                    const recheck = (await client.query(
+                        `SELECT id FROM tournaments WHERE division = $1 AND status IN ('registration', 'in_progress') AND type = 'official' FOR UPDATE`,
+                        [div.name]
+                    )).rows[0];
+                    if (recheck) return; // уже создан в другой горутине
+
+                    await client.query(
+                        'INSERT INTO tournaments (division, status, registrationstart, registrationend, prizepool, createdat, type, maxplayers) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                        [div.name, 'registration', now, now + REGISTRATION_WINDOW, pool, new Date().toISOString(), 'official', MAX_PLAYERS]
+                    );
+                });
+            } catch {} // если транзакция упала — уже создан
         }
     }
 
-    let query = "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress')";
-    if (type) query += " AND type = ?";
-    query += " ORDER BY id DESC";
-    return await db.query(query, params) as any[];
+    const query = "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC";
+    return await db.query(query, []) as any[];
 }
 
 // ---------------------------------------------------------------------------
