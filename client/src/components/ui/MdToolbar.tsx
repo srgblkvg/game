@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import Button from './Button';
 
 interface MdToolbarProps {
