@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useLayoutEffect } from 'react';
 import Button from './Button';
 
 interface MdToolbarProps {
@@ -14,26 +14,17 @@ const TOOLS = [
     { label: '•', title: 'Список', prefix: '- ', suffix: '', placeholder: 'элемент', className: '' },
 ];
 
-const pendingSelections = new Map<string, { start: number; end: number }>();
-
-export function setMdSelection(textareaId: string, start: number, end: number) {
-    pendingSelections.set(textareaId, { start, end });
-}
+let pendingSel: { id: string; start: number; end: number } | null = null;
 
 export default function MdToolbar({ textareaId }: MdToolbarProps) {
-    // Восстанавливаем позицию курсора после каждого рендера
-    useEffect(() => {
-        const sel = pendingSelections.get(textareaId);
-        if (sel) {
-            pendingSelections.delete(textareaId);
+    useLayoutEffect(() => {
+        if (pendingSel && pendingSel.id === textareaId) {
             const ta = document.getElementById(textareaId) as HTMLTextAreaElement | null;
             if (ta) {
-                // Небольшая задержка чтобы React закончил обновление DOM
-                requestAnimationFrame(() => {
-                    ta.focus();
-                    ta.setSelectionRange(sel.start, sel.end);
-                });
+                ta.focus();
+                ta.setSelectionRange(pendingSel.start, pendingSel.end);
             }
+            pendingSel = null;
         }
     });
 
@@ -43,32 +34,32 @@ export default function MdToolbar({ textareaId }: MdToolbarProps) {
 
         const start = ta.selectionStart;
         const end = ta.selectionEnd;
-        const selected = ta.value.substring(start, end) || placeholder;
+        const hasSelection = start !== end;
+        const selected = hasSelection ? ta.value.substring(start, end) : placeholder;
 
         const before = ta.value.substring(0, start);
         const after = ta.value.substring(end);
         const newValue = before + prefix + selected + suffix + after;
 
-        const hasSelection = !!ta.value.substring(start, end);
         if (hasSelection) {
             const newCursor = start + prefix.length + selected.length + suffix.length;
-            setMdSelection(textareaId, newCursor, newCursor);
+            pendingSel = { id: textareaId, start: newCursor, end: newCursor };
         } else {
-            setMdSelection(textareaId,
-                start + prefix.length,
-                start + prefix.length + placeholder.length
-            );
+            pendingSel = {
+                id: textareaId,
+                start: start + prefix.length,
+                end: start + prefix.length + placeholder.length,
+            };
         }
 
-        // Сохраняем напрямую в DOM и диспатчим input для React
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        // Прямая установка value через нативный сеттер
+        const nativeSetter = Object.getOwnPropertyDescriptor(
             window.HTMLTextAreaElement.prototype, 'value'
         )?.set;
-        if (nativeInputValueSetter) {
-            nativeInputValueSetter.call(ta, newValue);
-        } else {
-            ta.value = newValue;
+        if (nativeSetter) {
+            nativeSetter.call(ta, newValue);
         }
+        // Диспатчим input для React-стейта
         ta.dispatchEvent(new Event('input', { bubbles: true }));
     }, [textareaId]);
 
