@@ -385,7 +385,7 @@ export default function ThreadPage() {
                         </p>
                     )}
                     <MdToolbar textareaId="reply-input" />
-                    <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[100px] mb-2'} placeholder="Ваш ответ..." value={replyText} onChange={e => setReplyText(e.target.value)} />
+                    <textarea ref={replyRef} id="reply-input" className={inputClass + ' min-h-[150px] mb-2'} placeholder="Ваш ответ... (поддерживается Markdown)" value={replyText} onChange={e => setReplyText(e.target.value)} />
                     <Button variant="primary" size="md" onClick={handleReply} disabled={sending || !replyText.trim()}>{sending ? 'Отправка...' : 'Ответить'}</Button>
                 </Card>
             )}

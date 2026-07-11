@@ -128,10 +128,10 @@ export default function ForumPage() {
                 </div>
             )}
 
-            <Modal open={showNew} onClose={resetForm} title="Новая тема">
+            <Modal open={showNew} onClose={resetForm} title="Новая тема" width="640px">
                 <input className={inputClass + ' mb-2'} placeholder="Название темы" value={newTitle} onChange={e => setNewTitle(e.target.value)} maxLength={200} />
                 <MdToolbar textareaId="forum-new-content" />
-                <textarea id="forum-new-content" className={inputClass + ' mb-3 min-h-[120px]'} placeholder="Текст сообщения (поддерживается Markdown)" value={newContent} onChange={e => setNewContent(e.target.value)} />
+                <textarea id="forum-new-content" className={inputClass + ' mb-3 min-h-[200px]'} placeholder="Текст сообщения (поддерживается Markdown)" value={newContent} onChange={e => setNewContent(e.target.value)} />
 
                 {/* Опрос */}
                 <div className="mb-3 border-t border-[var(--color-border-light)] pt-3">
