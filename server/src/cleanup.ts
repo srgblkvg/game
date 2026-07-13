@@ -4,11 +4,24 @@ import { db } from './db/index';
 export async function cleanupOldData() {
   const weekAgo = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
   const weekAgoISO = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const dayAgoISO = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   
   const results: string[] = [];
   
-  // Турнирные матчи (по completedAt турнира)
-  const tm = await db.run(`DELETE FROM tournament_matches WHERE tournamentId IN (SELECT id FROM tournaments WHERE status = 'completed' AND completedAt < ?)`, [weekAgo]);
+  // Авто-отмена турниров, зависших в in_progress дольше суток
+  const stuckCnt = await db.run(
+    `UPDATE tournaments SET status = 'cancelled' WHERE status = 'in_progress' AND createdat < ?`,
+    [dayAgoISO]
+  );
+  if (stuckCnt.changes > 0) {
+    results.push(`stuck_tournaments_cancelled: ${stuckCnt.changes}`);
+  }
+  
+  // Турнирные матчи (по completedAt турнира + cancelled)
+  const tm = await db.run(
+    `DELETE FROM tournament_matches WHERE tournamentId IN (SELECT id FROM tournaments WHERE status IN ('completed', 'cancelled') AND completedat IS NOT NULL AND completedat < ?)`,
+    [weekAgo]
+  );
   results.push(`tournament_matches: ${tm.changes}`);
   
   // Турниры завершённые

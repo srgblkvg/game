@@ -197,6 +197,24 @@ export async function resolveCurrentRound(tournamentId: number): Promise<number>
 async function advanceWinners(tournamentId: number, finishedRound: number) {
     const nextRound = finishedRound + 1;
 
+    // Sanity guard: жёсткий предел раундов — не даём лавине разрастись
+    // ceil(log2(MAX_PLAYERS=128)) + 2 = 9, берём с запасом 32
+    if (nextRound > 32) {
+        console.error(`[advanceWinners] tid=${tournamentId} nextRound=${nextRound} exceeds limit — forcing finish`);
+        await finishTournament(tournamentId);
+        return;
+    }
+
+    // Идемпотентность: если матчи этого раунда уже созданы — пропускаем
+    const existingCnt = (await db.one(
+        'SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = ? AND round = ?',
+        [tournamentId, nextRound]
+    ) as any)?.cnt || 0;
+    if (existingCnt > 0) {
+        console.log(`[advanceWinners] tid=${tournamentId} round=${nextRound} already has ${existingCnt} matches — skipping`);
+        return;
+    }
+
     const winners = await db.query(`
         SELECT winnerId FROM tournament_matches
         WHERE tournamentId = ? AND round = ? AND winnerId IS NOT NULL
@@ -358,6 +376,14 @@ async function finishTournament(tournamentId: number) {
 // ---------------------------------------------------------------------------
 
 export async function autoAdvance(tournamentId: number) {
+    // Advisory lock per-tournament — защита от параллельных вызовов
+    // pg_try_advisory_xact_lock возвращает true если лок получен, false если уже занят
+    const locked = (await db.one('SELECT pg_try_advisory_xact_lock(?) as locked', [tournamentId]) as any)?.locked;
+    if (!locked) {
+        // Другой вызов уже обрабатывает этот турнир — просто выходим
+        return;
+    }
+
     const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [tournamentId]) as any;
     if (!t) return;
 
