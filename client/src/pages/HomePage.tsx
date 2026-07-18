@@ -91,7 +91,7 @@ export default function HomePage() {
       {character.totalBattles === 0 && character.level <= 1 && character.money <= 100 && (!character.inventory || character.inventory.length === 0) && (
         <div className="mb-4 p-3 bg-[rgba(52,152,219,0.1)] border border-[rgba(52,152,219,0.3)] rounded-lg text-sm text-[var(--color-text-secondary)] text-center">
           👋 Добро пожаловать в MMO Arena!<br />
-          Рекомендуем ознакомиться с <span className="text-[var(--color-accent-info)] underline font-bold cursor-pointer" onClick={() => navigate('/wiki')}>📖 Руководство для новичков</span> — там всё про охоту, арену, гильдии, ремесло и чат.<br /><span className="text-[0.7rem] text-[var(--color-text-muted)]">Используя игру, вы принимаете <a href="/rules" className="text-[var(--color-accent-info)] underline">правила</a> и <a href="/privacy" className="text-[var(--color-accent-info)] underline">политику конфиденциальности</a>.</span>
+          Рекомендуем ознакомиться с <span className="text-[var(--color-accent-info)] underline font-bold cursor-pointer" onClick={() => navigate('/wiki')}>📖 Руководство для новичков</span> — там всё про охоту, арену, гильдии, ремесло и чат.<br /><span className="text-[0.7rem] text-[var(--color-text-muted)]">Используя игру, вы принимаете <span className="text-[var(--color-accent-info)] underline cursor-pointer" onClick={() => navigate('/rules')}>правила</span> и <span className="text-[var(--color-accent-info)] underline cursor-pointer" onClick={() => navigate('/privacy')}>политику конфиденциальности</span></span>
         </div>
       )}
       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-6 justify-center items-center sm:items-start">
