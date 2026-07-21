@@ -358,7 +358,7 @@ export default function CraftPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-[var(--color-accent-gold)]">
-                  {isVK ? `${p.vkPrice} гол.` : `${p.rubPrice} ₽`}
+                  {isVK ? `${p.vkPrice} голосов` : `${p.rubPrice} ₽`}
                 </span>
                 <Button variant="danger" size="md" disabled={packBuying}
                   onClick={() => buyPack(p)}>

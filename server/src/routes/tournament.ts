@@ -398,20 +398,6 @@ export async function autoAdvance(tournamentId: number) {
         return;
     }
 
-    // Предупреждение за 5 минут — системное сообщение в чат (один раз)
-    if (t.status === 'registration' && now >= t.registrationEnd - 300 && now < t.registrationEnd) {
-        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const already = await db.one("SELECT id FROM chat_messages WHERE senderId = 0 AND content LIKE '%регистрация закроется через%' AND createdAt > ?", [fiveMinAgo]);
-        if (!already) {
-            const label = t.type === 'custom' ? (t.name || 'Турнир') : (divisions.find(d => d.name === t.division)?.label || t.division);
-            const secLeft = t.registrationEnd - now;
-            const minLeft = Math.floor(secLeft / 60);
-            const participants = (await db.one('SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?', [tournamentId]) as any).cnt;
-            await db.run('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)',
-                [0, null, `Турнир «${label}» — регистрация закроется через ${minLeft} мин! (${participants}/${MAX_PLAYERS} уч.)`]);
-        }
-    }
-
     if (t.status === 'in_progress') {
         const matchCount = (await db.one('SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = ?', [tournamentId]) as any).cnt;
         if (matchCount === 0) {
