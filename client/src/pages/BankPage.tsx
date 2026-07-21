@@ -85,6 +85,13 @@ export default function BankPage() {
         { item: 'silver_10000', amount: 10000, vkPrice: 28, rubPrice: 199, label: '10000 серебра' },
       ];
 
+      const craftPacks = [
+        { item: 'craft_rare', title: 'Сундук «Редкий»', vkPrice: 14, rubPrice: 99,
+          desc: '3× Эссенция мрака + 3× Камень улучшения + 1000 серебра' },
+        { item: 'craft_epic', title: 'Сундук «Эпический»', vkPrice: 28, rubPrice: 199,
+          desc: '3× Сердцевина бездны + 5× Камень улучшения + 3000 серебра' },
+      ];
+
       const buySilver = (tier: typeof tiers[number]) => {
         if (isVK) {
           setExchangeBuying(true);
@@ -163,6 +170,30 @@ export default function BankPage() {
               {exchangeMsg}
             </p>
           )}
+
+          {/* Сундуки с материалами */}
+          <h3 className="font-bold text-sm mb-2 mt-4 pt-3 border-t border-[var(--color-border-light)]">📦 Сундуки для ремесла</h3>
+          <div className="space-y-2">
+            {craftPacks.map(p => (
+              <div key={p.item} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{p.title}</p>
+                  <p className="text-[0.6rem] text-[var(--color-text-muted)]">{p.desc}</p>
+                  <p className="text-xs text-[var(--color-accent-gold)]">
+                    {isVK ? `${p.vkPrice} голосов` : `${p.rubPrice} ₽`}
+                  </p>
+                </div>
+                <Button
+                  variant="danger"
+                  size="md"
+                  onClick={() => buySilver({ item: p.item, amount: 0, vkPrice: p.vkPrice, rubPrice: p.rubPrice, label: p.title } as any)}
+                  disabled={exchangeBuying}
+                >
+                  {isVK ? '🛒' : '💳'} Купить
+                </Button>
+              </div>
+            ))}
+          </div>
         </Card>
       );
     };

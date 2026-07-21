@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { YooKassa, CurrencyEnum } from 'yookassa-sdk';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
-import { deliverStarterPack, deliverSilver } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack } from './donate';
 import logger from '../logger';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
 import { authMiddleware } from '../middleware/auth';
@@ -29,7 +29,7 @@ db.run(`ALTER TABLE yukassa_payments ADD COLUMN IF NOT EXISTS item TEXT DEFAULT 
 interface ShopItem {
   title: string;
   price: number;
-  type: 'premium' | 'starter_pack' | 'silver';
+  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack';
   days?: number;
   silverAmount?: number;
 }
@@ -41,6 +41,8 @@ const ITEMS: Record<string, ShopItem> = {
   silver_1000:  { title: '1000 серебра',                 price: 49,  type: 'silver',        silverAmount: 1000 },
   silver_5000:  { title: '5000 серебра',                 price: 99,  type: 'silver',        silverAmount: 5000 },
   silver_10000: { title: '10000 серебра',                price: 199, type: 'silver',        silverAmount: 10000 },
+  craft_rare:   { title: 'Сундук «Редкий»',              price: 99,  type: 'craft_pack' },
+  craft_epic:   { title: 'Сундук «Эпический»',           price: 199, type: 'craft_pack' },
 };
 
 // Старые тарифы (по дням) для обратной совместимости
@@ -125,7 +127,7 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
   }
 });
 
-async function processDelivery(userId: number, itemType: string, days: number, silverAmount: number): Promise<void> {
+async function processDelivery(userId: number, itemType: string, days: number, silverAmount: number, itemKey?: string): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
 
   if (itemType === 'premium' || (!itemType && days > 0)) {
@@ -141,6 +143,10 @@ async function processDelivery(userId: number, itemType: string, days: number, s
     if (!result.success) throw new Error(result.error || 'Delivery failed');
   } else if (itemType === 'silver') {
     const result = await deliverSilver(userId, silverAmount);
+    if (!result.success) throw new Error(result.error || 'Delivery failed');
+  } else if (itemType === 'craft_pack') {
+    const packType = itemKey === 'craft_rare' ? 'rare' : 'epic';
+    const result = await deliverCraftPack(userId, packType);
     if (!result.success) throw new Error(result.error || 'Delivery failed');
   }
 }
@@ -204,7 +210,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
       const now = Math.floor(Date.now() / 1000);
 
       try {
-        await processDelivery(userId, itemType, days, silverAmount);
+        await processDelivery(userId, itemType, days, silverAmount, metadata.item || '');
       } catch (err: any) {
         logger.error(`[YooKassa] Delivery error for payment ${paymentId}: ${err.message}`);
         return res.status(500).json({ error: err.message });

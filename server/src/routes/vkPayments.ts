@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverSilver } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 
@@ -27,7 +27,7 @@ const APP_SECRET = process.env.VK_APP_SECRET || '';
 interface VkItem {
   title: string;
   price: number;
-  type: 'premium' | 'starter_pack' | 'silver';
+  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack';
   days?: number;
   amount?: number;
 }
@@ -39,6 +39,8 @@ const ITEMS: Record<string, VkItem> = {
   silver_1000:  { title: '1000 серебра',                 price: 7,  type: 'silver',        amount: 1000 },
   silver_5000:  { title: '5000 серебра',                 price: 14, type: 'silver',        amount: 5000 },
   silver_10000: { title: '10000 серебра',                price: 28, type: 'silver',        amount: 10000 },
+  craft_rare:   { title: 'Сундук «Редкий»',              price: 14, type: 'craft_pack' },
+  craft_epic:   { title: 'Сундук «Эпический»',           price: 28, type: 'craft_pack' },
 };
 
 // Проверка подписи запроса от VK
@@ -145,6 +147,13 @@ router.post('/', async (req: Request, res: Response) => {
           processed = true;
         } else if (item.type === 'silver') {
           const result = await deliverSilver(character.id, item.amount || 0);
+          if (!result.success) {
+            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          }
+          processed = true;
+        } else if (item.type === 'craft_pack') {
+          const packType = itemName === 'craft_rare' ? 'rare' : 'epic';
+          const result = await deliverCraftPack(character.id, packType);
           if (!result.success) {
             return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
           }

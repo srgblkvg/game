@@ -275,6 +275,98 @@ export default function CraftPage() {
 
     const hasItemsInSlots = craftSlots.some(s => s !== null);
 
+    const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+
+    // Сундуки с материалами
+    const CraftPacks = () => {
+      const [packMsg, setPackMsg] = useState('');
+      const [packBuying, setPackBuying] = useState(false);
+
+      const packs = [
+        {
+          item: 'craft_rare', title: 'Сундук «Редкий»', vkPrice: 14, rubPrice: 99,
+          material: 'Эссенция мрака ×3', stones: 'Камень улучшения ×3', silver: 1000,
+          desc: 'Крафт случайного редкого предмета (шанс 75%)',
+        },
+        {
+          item: 'craft_epic', title: 'Сундук «Эпический»', vkPrice: 28, rubPrice: 199,
+          material: 'Сердцевина бездны ×3', stones: 'Камень улучшения ×5', silver: 3000,
+          desc: 'Крафт случайного эпического предмета (шанс 70%)',
+        },
+      ];
+
+      const buyPack = (pack: typeof packs[number]) => {
+        if (isVK) {
+          setPackBuying(true);
+          (window as any).vkBridge?.send('VKWebAppShowOrderBox', { type: 'item', item: pack.item })
+          .then((data: any) => {
+            if (data?.status === 'cancelled') { setPackBuying(false); return; }
+            setPackMsg('Оплата открыта. Материалы поступят в инвентарь.');
+          })
+          .catch(() => setPackBuying(false));
+        } else {
+          setPackBuying(true);
+          fetch('/api/yukassa/create-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+            body: JSON.stringify({ item: pack.item }),
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.confirmation_url) {
+              window.open(data.confirmation_url, '_blank');
+              setPackMsg('Оплата открыта. Материалы поступят в инвентарь.');
+            } else {
+              setPackMsg('❌ ' + (data.error || 'Ошибка'));
+            }
+          })
+          .catch(() => setPackMsg('❌ Ошибка сети'))
+          .finally(() => setPackBuying(false));
+        }
+      };
+
+      useEffect(() => {
+        const handler = () => {
+          setPackMsg('✅ Материалы добавлены в инвентарь!');
+          setPackBuying(false);
+        };
+        window.addEventListener('paymentStatus', handler);
+        return () => window.removeEventListener('paymentStatus', handler);
+      }, []);
+
+      return (
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {packs.map(p => (
+            <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col"
+              style={{ borderColor: p.item === 'craft_rare' ? '#3498db' : '#9b59b6' }}>
+              <h3 className="font-bold text-sm mb-1">{p.title}</h3>
+              <div className="text-xs text-[var(--color-text-muted)] space-y-0.5 mb-2 flex-1">
+                <p>🔮 {p.material}</p>
+                <p>💎 {p.stones}</p>
+                <p>💰 {formatMoney(p.silver)}</p>
+                <p className="text-[0.6rem] italic">{p.desc}</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-[var(--color-accent-gold)]">
+                  {isVK ? `${p.vkPrice} гол.` : `${p.rubPrice} ₽`}
+                </span>
+                <Button variant="danger" size="md" disabled={packBuying}
+                  onClick={() => buyPack(p)}>
+                  {isVK ? '🛒' : '💳'} Купить
+                </Button>
+              </div>
+            </div>
+          ))}
+          {packMsg && (
+            <div className="sm:col-span-2 text-center text-sm font-bold"
+              style={{ color: packMsg.startsWith('✅') ? 'var(--color-accent-success)' : packMsg.startsWith('❌') ? 'var(--color-accent-danger)' : 'var(--color-accent-info)' }}>
+              {packMsg}
+            </div>
+          )}
+        </div>
+      );
+    };
+
     const getRecipeCategory = (recipe: any): string => recipe.category?.name || getRecipeCategoryFallback(recipe);
 
     const groupedRecipes = useMemo(() => {
@@ -303,6 +395,9 @@ export default function CraftPage() {
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Создавайте материалы и улучшайте предметы в верстаке. Добывайте ресурсы в PvE, крафтите материалы из трёх предыдущей редкости. Улучшайте снаряжение камнями — с шансом на успех.
             </p>
+
+            {/* Сундуки с материалами */}
+            <CraftPacks />
 
             {/* Инструкция */}
             <Card className="mb-4">
