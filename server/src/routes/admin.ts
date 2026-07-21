@@ -239,4 +239,33 @@ router.post('/premium', async (req, res) => {
     res.json({ success: true, premiumUntil: newUntil, message: `${user.username}: премиум до ${untilDate} (${days} дн.)` });
 });
 
+// GET /api/admin/donate/history — история донат-платежей
+router.get('/donate/history', async (_req, res) => {
+  try {
+    const vk = await db.query(`
+      SELECT vp.id, 'vk' as platform, vp.item, vp.status, '' as amount,
+             u.username, u.id as user_id, vp.created_at
+      FROM vk_payments vp
+      LEFT JOIN users u ON vp.character_id = u.id
+      ORDER BY vp.created_at DESC LIMIT 100
+    `, []) as any[];
+
+    const yk = await db.query(`
+      SELECT yp.id, 'yukassa' as platform, COALESCE(yp.item, 'premium') as item, yp.status, yp.amount,
+             u.username, u.id as user_id, yp.created_at
+      FROM yukassa_payments yp
+      LEFT JOIN users u ON yp.user_id = u.id
+      ORDER BY yp.created_at DESC LIMIT 100
+    `, []) as any[];
+
+    const all = [...vk, ...yk]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 200);
+
+    res.json(all);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

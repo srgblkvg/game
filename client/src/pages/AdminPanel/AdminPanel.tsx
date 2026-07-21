@@ -14,6 +14,7 @@ import AdminOnline from './AdminOnline';
 import AdminFeedback from './AdminFeedback';
 import AdminCollections from './AdminCollections';
 import AdminBots from './AdminBots';
+import AdminDonate from './AdminDonate';
 import Button from '../../components/ui/Button';
 import { inputClass } from '../../utils/formStyles';
 
@@ -30,6 +31,7 @@ const tabs = [
     { key: 'feedback', label: 'Обращения' },
     { key: 'collections', label: 'Коллекция' },
     { key: 'bots', label: 'Боты' },
+    { key: 'donate', label: 'Донат' },
 ] as const;
 type Tab = typeof tabs[number]['key'];
 
@@ -132,6 +134,7 @@ export default function AdminPanel() {
             {tab === 'feedback' && <AdminFeedback />}
             {tab === 'collections' && <AdminCollections />}
             {tab === 'bots' && <AdminBots />}
+            {tab === 'donate' && <AdminDonate />}
         </div>
     );
 }
