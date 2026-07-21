@@ -13,6 +13,14 @@ interface Payment {
   createdAt: string;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  chargeable: '✅ Выдан',
+  succeeded: '✅ Выдан',
+  refunded: '↩ Возврат',
+  pending: '⏳ Ожидает',
+  canceled: '❌ Отмена',
+};
+
 const ITEM_LABELS: Record<string, string> = {
   premium_7d: 'Премиум 7д',
   premium_30d: 'Премиум 30д',
@@ -89,7 +97,7 @@ export default function AdminDonate() {
                 <td className="py-1 px-2">{p.amount || (p.status === 'chargeable' ? '✓' : '-')}</td>
                 <td className="py-1 px-2">
                   <span className={p.status === 'chargeable' || p.status === 'succeeded' ? 'text-[var(--color-accent-success)]' : p.status === 'refunded' ? 'text-[var(--color-accent-danger)]' : 'text-[var(--color-text-muted)]'}>
-                    {p.status}
+                    {STATUS_LABELS[p.status] || p.status}
                   </span>
                 </td>
                 <td className="py-1 px-2 text-[var(--color-text-muted)]">{fmtSafeDate(p.createdAt)}</td>
