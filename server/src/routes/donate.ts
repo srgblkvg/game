@@ -167,6 +167,7 @@ router.get('/starter-pack/preview', authMiddleware, async (_req: Request, res: R
       } : null,
     });
   } catch (err: any) {
+    logger.error(`[Donate] starter-pack/preview error: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

@@ -13,18 +13,14 @@ const SLOT_LABELS: Record<string, string> = {
   gloves: 'Перчатки', boots: 'Ботинки', amulet: 'Амулет', ring: 'Кольцо', belt: 'Пояс',
 };
 
-const IMG_BASE = 'https://mmoarena.ru/';
-
-interface PackPreview {
-  equipment: any[];
-  fragment: any | null;
-}
+const SLOT_ORDER = ['weapon1', 'shield', 'helmet', 'chest', 'gloves', 'boots', 'amulet', 'ring', 'belt'];
 
 export default function StarterPackPage() {
   const navigate = useNavigate();
   const isVK = localStorage.getItem('isVK') === '1';
 
-  const [preview, setPreview] = useState<PackPreview | null>(null);
+  const [equipment, setEquipment] = useState<any[]>([]);
+  const [fragment, setFragment] = useState<any>(null);
   const [purchased, setPurchased] = useState(false);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
@@ -42,7 +38,6 @@ export default function StarterPackPage() {
 
   const hideTooltip = useCallback(() => setTooltip(null), []);
 
-  // Позиционируем тултип
   useEffect(() => {
     if (!tooltip || !tooltipRef.current) return;
     const el = tooltipRef.current;
@@ -57,13 +52,36 @@ export default function StarterPackPage() {
   }, [tooltip]);
 
   useEffect(() => {
+    // Статус покупки
     fetch('/api/donate/starter-pack/status', { headers: getHeaders() })
       .then(r => r.json()).then(d => setPurchased(d.purchased)).catch(() => {});
 
+    // Загружаем состав через preview, с fallback на /api/items
     fetch('/api/donate/starter-pack/preview', { headers: getHeaders() })
       .then(r => r.json())
-      .then(d => setPreview(d))
-      .catch(() => {})
+      .then(data => {
+        if (data.equipment && data.equipment.length > 0) {
+          setEquipment(data.equipment);
+          setFragment(data.fragment);
+        } else {
+          throw new Error('empty');
+        }
+      })
+      .catch(() => {
+        // Fallback: загружаем через старый API
+        fetch('/api/items', { headers: getHeaders() })
+          .then(r => r.json())
+          .then((allItems: any[]) => {
+            const common = allItems.filter((i: any) => i.rarity_id === 1);
+            const picked: any[] = [];
+            for (const slot of SLOT_ORDER) {
+              const match = common.find((i: any) => i.slot === slot);
+              if (match) picked.push(match);
+            }
+            setEquipment(picked);
+          })
+          .catch(() => {});
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -112,7 +130,12 @@ export default function StarterPackPage() {
 
   if (loading) return <div className="flex items-center justify-center py-20"><div className="text-[var(--color-text-muted)] text-sm">Загрузка...</div></div>;
 
-  const imageUrl = (img: string | null) => img ? IMG_BASE + img : '';
+  const imageUrl = (img: string | null) => {
+    if (!img) return '';
+    // Убираем ведущий слеш если есть (у craft_items пути с /, у items без)
+    const clean = img.startsWith('/') ? img.slice(1) : img;
+    return 'https://mmoarena.ru/' + clean;
+  };
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
@@ -138,7 +161,7 @@ export default function StarterPackPage() {
             <div className="mb-3">
               <p className="text-xs text-[var(--color-accent-info)] mb-2">⚔️ Полный комплект обычной экипировки (9 предметов):</p>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {(preview?.equipment || []).map((item, i) => {
+                {equipment.map((item, i) => {
                   const color = getRarityColor(item);
                   return (
                     <div
@@ -163,8 +186,8 @@ export default function StarterPackPage() {
             {/* Материалы */}
             <div className="mb-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
               <div className="flex items-center gap-2 mb-1">
-                {preview?.fragment?.image ? (
-                  <img src={imageUrl(preview.fragment.image)} alt="Фрагмент ужаса" className="w-8 h-8 object-contain rounded" />
+                {fragment?.image ? (
+                  <img src={imageUrl(fragment.image)} alt="Фрагмент ужаса" className="w-8 h-8 object-contain rounded" />
                 ) : (
                   <span className="text-lg">🔮</span>
                 )}
