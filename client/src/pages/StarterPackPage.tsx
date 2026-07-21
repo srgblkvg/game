@@ -81,6 +81,8 @@ export default function StarterPackPage() {
             setEquipment(picked);
           })
           .catch(() => {});
+        // Фрагмент: хардкод-путь (файл в client/dist/fragment/)
+        setFragment({ name: 'Фрагмент ужаса', image: '/fragment/fragment_green.webp', rarity_id: 2 });
       })
       .finally(() => setLoading(false));
   }, []);
@@ -166,7 +168,7 @@ export default function StarterPackPage() {
                   return (
                     <div
                       key={i}
-                      className="flex flex-col items-center p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)] cursor-default relative"
+                      className="flex flex-col items-center p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)] cursor-pointer relative"
                       onMouseEnter={e => showTooltip(item, e)}
                       onMouseLeave={hideTooltip}
                     >
@@ -186,11 +188,12 @@ export default function StarterPackPage() {
             {/* Материалы */}
             <div className="mb-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
               <div className="flex items-center gap-2 mb-1">
-                {fragment?.image ? (
-                  <img src={imageUrl(fragment.image)} alt="Фрагмент ужаса" className="w-8 h-8 object-contain rounded" />
-                ) : (
-                  <span className="text-lg">🔮</span>
-                )}
+                <img
+                  src={imageUrl(fragment?.image || '/fragment/fragment_green.webp')}
+                  alt="Фрагмент ужаса"
+                  className="w-8 h-8 object-contain rounded"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
                 <p className="text-xs text-[var(--color-accent-success)]">4× Фрагмент ужаса</p>
               </div>
               <p className="text-[0.6rem] text-[var(--color-text-muted)]">Необычный материал для крафта. Используется в рецептах улучшения и создания предметов.</p>
