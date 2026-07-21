@@ -47,26 +47,34 @@ export async function deliverStarterPack(userId: number): Promise<{ success: boo
 
     // 2. 4 шт Фрагмента ужаса (craft_item, rarity_id=2)
     const fragmentItem = await db.one(
-      "SELECT id, name, rarity_id, type, image FROM craft_items WHERE name = 'Фрагмент ужаса'"
+      "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Фрагмент ужаса'"
     ) as any;
-
-    const craftItems: any[] = [];
-    if (fragmentItem) {
-      for (let i = 0; i < 4; i++) {
-        craftItems.push({
-          id: Date.now() + Math.random() + i,
-          name: fragmentItem.name,
-          type: fragmentItem.type,
-          rarity_id: fragmentItem.rarity_id,
-          image: fragmentItem.image || null,
-        });
-      }
-    }
 
     // 3. Добавляем всё в инвентарь
     const inventory = JSON.parse(user.inventory || '[]');
     for (const item of packItems) inventory.push(item);
-    for (const item of craftItems) inventory.push(item);
+
+    // Фрагмент ужаса — стакается с существующими
+    if (fragmentItem) {
+      const existing = inventory.find((i: any) =>
+        (i.type === 'craft_item' || i.type === 'material') && i.id === fragmentItem.id
+      );
+      if (existing) {
+        existing.count = (existing.count || 0) + 4;
+      } else {
+        inventory.push({
+          type: 'craft_item',
+          id: fragmentItem.id,
+          name: fragmentItem.name,
+          rarity_id: fragmentItem.rarity_id,
+          rarity_display: fragmentItem.rarity_display,
+          rarity_color: fragmentItem.rarity_color,
+          count: 4,
+          itemType: fragmentItem.type || 'craft',
+          image: fragmentItem.image || null,
+        });
+      }
+    }
 
     // 4. Считаем премиум и серебро
     const currentPremium = Math.max(user.premiumUntil || 0, now);
