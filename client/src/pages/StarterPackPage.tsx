@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { getHeaders } from '../api/helpers';
+import { getRarityColor } from '../utils/itemUtils';
+import ItemStats from '../components/ItemStats';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
@@ -10,43 +13,56 @@ const SLOT_LABELS: Record<string, string> = {
   gloves: 'Перчатки', boots: 'Ботинки', amulet: 'Амулет', ring: 'Кольцо', belt: 'Пояс',
 };
 
-const SLOT_ORDER = ['weapon1', 'shield', 'helmet', 'chest', 'gloves', 'boots', 'amulet', 'ring', 'belt'];
+const IMG_BASE = 'https://mmoarena.ru/';
 
-interface PackItem {
-  name: string;
-  slot: string;
-  image: string | null;
+interface PackPreview {
+  equipment: any[];
+  fragment: any | null;
 }
 
 export default function StarterPackPage() {
   const navigate = useNavigate();
   const isVK = localStorage.getItem('isVK') === '1';
 
-  const [items, setItems] = useState<PackItem[]>([]);
+  const [preview, setPreview] = useState<PackPreview | null>(null);
   const [purchased, setPurchased] = useState(false);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
   const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    // Проверяем статус покупки
-    fetch('/api/donate/starter-pack/status', { headers: getHeaders() })
-      .then(r => r.json())
-      .then(d => setPurchased(d.purchased))
-      .catch(() => {});
+  // Тултип
+  const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [tooltipPos, setTooltipPos] = useState({ left: 0, top: 0 });
 
-    // Загружаем обычные предметы для показа
-    fetch('/api/items', { headers: getHeaders() })
+  const showTooltip = useCallback((item: any, e: React.MouseEvent) => {
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setTooltip({ item, x: rect.left + rect.width / 2, y: rect.top });
+  }, []);
+
+  const hideTooltip = useCallback(() => setTooltip(null), []);
+
+  // Позиционируем тултип
+  useEffect(() => {
+    if (!tooltip || !tooltipRef.current) return;
+    const el = tooltipRef.current;
+    const rect = el.getBoundingClientRect();
+    const M = 8;
+    let left = tooltip.x - rect.width / 2;
+    let top = tooltip.y - rect.height - M;
+    if (top < M) top = tooltip.y + M;
+    if (left < M) left = M;
+    if (left + rect.width > window.innerWidth - M) left = window.innerWidth - rect.width - M;
+    setTooltipPos({ left, top });
+  }, [tooltip]);
+
+  useEffect(() => {
+    fetch('/api/donate/starter-pack/status', { headers: getHeaders() })
+      .then(r => r.json()).then(d => setPurchased(d.purchased)).catch(() => {});
+
+    fetch('/api/donate/starter-pack/preview', { headers: getHeaders() })
       .then(r => r.json())
-      .then((allItems: any[]) => {
-        const common = allItems.filter((i: any) => i.rarity_id === 1);
-        const picked: PackItem[] = [];
-        for (const slot of SLOT_ORDER) {
-          const match = common.find((i: any) => i.slot === slot);
-          if (match) picked.push({ name: match.name, slot: match.slot, image: match.image });
-        }
-        setItems(picked);
-      })
+      .then(d => setPreview(d))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -55,16 +71,9 @@ export default function StarterPackPage() {
     if (isVK) {
       setBuying(true);
       setMessage('');
-      (window as any).vkBridge?.send('VKWebAppShowOrderBox', {
-        type: 'item',
-        item: 'starter_pack',
-      })
+      (window as any).vkBridge?.send('VKWebAppShowOrderBox', { type: 'item', item: 'starter_pack' })
       .then((data: any) => {
-        if (data?.status === 'cancelled') {
-          setMessage('');
-          setBuying(false);
-          return;
-        }
+        if (data?.status === 'cancelled') { setMessage(''); setBuying(false); return; }
         setMessage('Оплата открыта. Ожидайте подтверждения...');
       })
       .catch(() => { setMessage(''); setBuying(false); });
@@ -91,7 +100,6 @@ export default function StarterPackPage() {
     }
   };
 
-  // WS уведомление об успешной оплате
   useEffect(() => {
     const handler = () => {
       setPurchased(true);
@@ -104,8 +112,7 @@ export default function StarterPackPage() {
 
   if (loading) return <div className="flex items-center justify-center py-20"><div className="text-[var(--color-text-muted)] text-sm">Загрузка...</div></div>;
 
-  const imageUrl = (img: string | null) =>
-    img ? `https://mmoarena.ru/${img}` : '';
+  const imageUrl = (img: string | null) => img ? IMG_BASE + img : '';
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
@@ -124,7 +131,6 @@ export default function StarterPackPage() {
         </Card>
       ) : (
         <>
-          {/* Состав набора */}
           <Card className="p-4 mb-4">
             <h3 className="font-bold text-sm mb-3">Состав набора:</h3>
 
@@ -132,23 +138,38 @@ export default function StarterPackPage() {
             <div className="mb-3">
               <p className="text-xs text-[var(--color-accent-info)] mb-2">⚔️ Полный комплект обычной экипировки (9 предметов):</p>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {items.map((item, i) => (
-                  <div key={i} className="flex flex-col items-center p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
-                    {item.image ? (
-                      <img src={imageUrl(item.image)} alt={item.name} className="w-10 h-10 object-contain mb-1" />
-                    ) : (
-                      <div className="w-10 h-10 flex items-center justify-center text-xl mb-1">❓</div>
-                    )}
-                    <span className="text-[0.6rem] text-[var(--color-text-muted)] text-center leading-tight">{SLOT_LABELS[item.slot] || item.slot}</span>
-                    <span className="text-[0.65rem] text-[var(--color-text-primary)] text-center leading-tight">{item.name}</span>
-                  </div>
-                ))}
+                {(preview?.equipment || []).map((item, i) => {
+                  const color = getRarityColor(item);
+                  return (
+                    <div
+                      key={i}
+                      className="flex flex-col items-center p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)] cursor-default relative"
+                      onMouseEnter={e => showTooltip(item, e)}
+                      onMouseLeave={hideTooltip}
+                    >
+                      {item.image ? (
+                        <img src={imageUrl(item.image)} alt={item.name} className="w-10 h-10 object-contain mb-1" />
+                      ) : (
+                        <div className="w-10 h-10 flex items-center justify-center text-xl mb-1" style={{ color }}>?</div>
+                      )}
+                      <span className="text-[0.6rem] text-[var(--color-text-muted)] text-center leading-tight">{SLOT_LABELS[item.slot] || item.slot}</span>
+                      <span className="text-[0.65rem] text-center leading-tight" style={{ color }}>{item.name}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Материалы */}
             <div className="mb-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
-              <p className="text-xs text-[var(--color-accent-success)] mb-1">🔮 4× Фрагмент ужаса</p>
+              <div className="flex items-center gap-2 mb-1">
+                {preview?.fragment?.image ? (
+                  <img src={imageUrl(preview.fragment.image)} alt="Фрагмент ужаса" className="w-8 h-8 object-contain rounded" />
+                ) : (
+                  <span className="text-lg">🔮</span>
+                )}
+                <p className="text-xs text-[var(--color-accent-success)]">4× Фрагмент ужаса</p>
+              </div>
               <p className="text-[0.6rem] text-[var(--color-text-muted)]">Необычный материал для крафта. Используется в рецептах улучшения и создания предметов.</p>
             </div>
 
@@ -165,7 +186,6 @@ export default function StarterPackPage() {
             </div>
           </Card>
 
-          {/* Цена и покупка */}
           <Card className="p-4 mb-4">
             <div className="text-center mb-3">
               <span className="text-2xl font-bold text-[var(--color-accent-gold)]">
@@ -186,6 +206,22 @@ export default function StarterPackPage() {
         <div className={`rounded-xl p-3 mb-3 text-center text-sm font-bold ${message.startsWith('✅') ? 'bg-[var(--color-accent-success)]/15 text-[var(--color-accent-success)]' : message.startsWith('❌') ? 'bg-[var(--color-accent-danger)]/15 text-[var(--color-accent-danger)]' : 'bg-[var(--color-bg-secondary)] text-[var(--color-accent-info)] border border-[var(--color-border-light)]'}`}>
           {message}
         </div>
+      )}
+
+      {/* Тултип */}
+      {tooltip && createPortal(
+        <div
+          ref={tooltipRef}
+          className="fixed bg-[var(--color-bg-secondary)] rounded-lg p-[0.7rem] z-[99999] text-[var(--color-text-primary)] text-xs max-w-[220px] pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.8)] border border-solid"
+          style={{
+            left: tooltipPos.left,
+            top: tooltipPos.top,
+            borderColor: getRarityColor(tooltip.item),
+          }}
+        >
+          <ItemStats item={tooltip.item} imageSize={36} />
+        </div>,
+        document.body
       )}
     </div>
   );
