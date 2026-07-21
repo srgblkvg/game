@@ -151,7 +151,7 @@ router.get('/starter-pack/preview', authMiddleware, async (_req: Request, res: R
 
     // Фрагмент ужаса
     const fragment = await db.one(
-      "SELECT id, name, rarity_id, type, image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Фрагмент ужаса'"
+      "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Фрагмент ужаса'"
     ) as any;
 
     res.json({
