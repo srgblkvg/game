@@ -36,11 +36,13 @@ export default function ShopPage() {
     const [message, setMessage] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [todayCount, setTodayCount] = useState(0);
+    const [starterPackPurchased, setStarterPackPurchased] = useState(true); // по умолчанию true чтобы не мелькал
     const dailyLimit = 10;
     useEffect(() => {
         if (!user) { navigate('/login'); return; }
         fetchShopItems().then(setItems).catch(console.error).finally(() => setLoading(false));
         fetch('/api/shop/stats', { headers: getHeaders() }).then(r => r.json()).then(d => setTodayCount(d.todayCount || 0)).catch(() => {});
+        fetch('/api/donate/starter-pack/status', { headers: getHeaders() }).then(r => r.json()).then(d => setStarterPackPurchased(d.purchased)).catch(() => {});
     }, [user, navigate]);
 
     const handleBuy = async (itemId: number) => {
@@ -96,6 +98,24 @@ export default function ShopPage() {
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Базовые предметы экипировки для первых шагов в игре. Нельзя надеть два одинаковых кольца.
             </p>
+
+            {!starterPackPurchased && (
+                <div
+                    onClick={() => navigate('/starter-pack')}
+                    className="mb-3 p-3 rounded-xl border-2 border-[var(--color-accent-gold)] bg-gradient-to-r from-[var(--color-bg-card)] to-[var(--color-bg-secondary)] cursor-pointer hover:brightness-110 transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">🎁</span>
+                        <div className="flex-1">
+                            <p className="text-sm font-bold" style={{ color: '#f1c40f' }}>Стартовый набор</p>
+                            <p className="text-xs text-[var(--color-text-muted)]">Полный комплект экипировки, материалы, серебро и 7 дней премиума</p>
+                        </div>
+                        <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: '#f1c40f', color: '#000' }}>
+                            {localStorage.getItem('isVK') === '1' ? '14 голосов' : '99 ₽'}
+                        </span>
+                    </div>
+                </div>
+            )}
             <p className="text-xs text-[var(--color-text-muted)] mb-3">
                 Куплено сегодня: {todayCount}/{dailyLimit}
             </p>

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
+import { deliverStarterPack, deliverSilver } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 
@@ -23,15 +24,24 @@ db.run(`CREATE TABLE IF NOT EXISTS vk_payments (
 const APP_SECRET = process.env.VK_APP_SECRET || '';
 
 // Товары для VK Payments (цены в голосах: 1 голос ≈ 7₽)
-const ITEMS: Record<string, { title: string; price: number; days: number }> = {
-  premium_7d: { title: 'Премиум MMO Arena — 7 дней', price: 14, days: 7 },
-  premium_30d: { title: 'Премиум MMO Arena — 30 дней', price: 42, days: 30 },
+interface VkItem {
+  title: string;
+  price: number;
+  type: 'premium' | 'starter_pack' | 'silver';
+  days?: number;
+  amount?: number;
+}
+
+const ITEMS: Record<string, VkItem> = {
+  premium_7d:   { title: 'Премиум MMO Arena — 7 дней',  price: 14, type: 'premium',       days: 7 },
+  premium_30d:  { title: 'Премиум MMO Arena — 30 дней', price: 42, type: 'premium',       days: 30 },
+  starter_pack: { title: 'Стартовый набор',              price: 14, type: 'starter_pack' },
+  silver_1000:  { title: '1000 серебра',                 price: 7,  type: 'silver',        amount: 1000 },
+  silver_5000:  { title: '5000 серебра',                 price: 14, type: 'silver',        amount: 5000 },
+  silver_10000: { title: '10000 серебра',                price: 28, type: 'silver',        amount: 10000 },
 };
 
 // Проверка подписи запроса от VK
-// Алгоритм: MD5(concatenated sorted key=value pairs + secret_key)
-// https://dev.vk.com/ru/api/payments/getting-started#Подпись
-// https://pkg.go.dev/github.com/SevereCloud/vksdk/payments#Callback.Sign
 function verifySignature(params: Record<string, string>): boolean {
   const sig = params.sig;
   if (!sig || !APP_SECRET) return false;
@@ -53,7 +63,6 @@ router.post('/', async (req: Request, res: Response) => {
     return res.json({ error: { error_code: 1, error_msg: 'Empty body' } });
   }
 
-  // DEBUG: логируем сырой запрос для диагностики подписи
   logger.info(`[VK Payments RAW] body keys: ${Object.keys(params).sort().join(', ')}`);
 
   if (!verifySignature(params)) {
@@ -89,11 +98,11 @@ router.post('/', async (req: Request, res: Response) => {
   if (type === 'order_status_change' || type === 'order_status_change_test') {
     const orderId = params.order_id || '';
     const itemName = params.item || '';
-    const userId = parseInt(params.user_id || '0', 10);
+    const vkUserId = parseInt(params.user_id || '0', 10);
     const status = params.status || '';
     const item = ITEMS[itemName];
 
-    logger.info(`[VK Payments] order status: ${status}, item: ${itemName}, user: ${userId}, test: ${type === 'order_status_change_test'}`);
+    logger.info(`[VK Payments] order status: ${status}, item: ${itemName}, user: ${vkUserId}, test: ${type === 'order_status_change_test'}`);
 
     if (!item) {
       return res.json({ error: { error_code: 20, error_msg: 'Item not found' } });
@@ -106,34 +115,52 @@ router.post('/', async (req: Request, res: Response) => {
         // Ищем игрока по VK oauthId
         const character = await db.one(
           "SELECT id, premiumUntil FROM users WHERE oauthProvider = 'vk' AND oauthId = ?",
-          [String(userId)],
+          [String(vkUserId)],
         );
 
         if (!character) {
-          logger.warn(`[VK Payments] Character not found for VK user ${userId}`);
+          logger.warn(`[VK Payments] Character not found for VK user ${vkUserId}`);
           return res.json({ error: { error_code: 1, error_msg: 'Character not found' } });
         }
 
-        // Продлеваем премиум
-        const currentUntil = Math.max(character.premiumUntil || 0, now);
-        const newUntil = currentUntil + item.days * 86400;
+        let processed = false;
 
-        await db.run(
-          'UPDATE users SET premiumUntil = ? WHERE id = ?',
-          [newUntil, character.id],
-        );
+        if (item.type === 'premium') {
+          // Продлеваем премиум
+          const currentUntil = Math.max(character.premiumUntil || 0, now);
+          const newUntil = currentUntil + (item.days || 0) * 86400;
 
-        // Уведомляем через WS
-        sendToUser(character.id, { type: 'paymentStatus', status: 'success', platform: 'vk', until: newUntil });
+          await db.run(
+            'UPDATE users SET premiumUntil = ? WHERE id = ?',
+            [newUntil, character.id],
+          );
 
-        // Логируем
-        await db.run(
-          `INSERT INTO vk_payments (order_id, user_id, character_id, item, status, processed_at)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [orderId, userId, character.id as number, itemName, status, now],
-        );
+          sendToUser(character.id, { type: 'paymentStatus', status: 'success', platform: 'vk', until: newUntil });
+          processed = true;
+        } else if (item.type === 'starter_pack') {
+          const result = await deliverStarterPack(character.id);
+          if (!result.success) {
+            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          }
+          processed = true;
+        } else if (item.type === 'silver') {
+          const result = await deliverSilver(character.id, item.amount || 0);
+          if (!result.success) {
+            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          }
+          processed = true;
+        }
 
-        logger.info(`[VK Payments] Premium ${item.days}d granted to char ${character.id} (VK user ${userId})`);
+        if (processed) {
+          // Логируем
+          await db.run(
+            `INSERT INTO vk_payments (order_id, user_id, character_id, item, status, processed_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [orderId, vkUserId, character.id as number, itemName, status, now],
+          );
+
+          logger.info(`[VK Payments] ${item.type} delivered to char ${character.id} (VK user ${vkUserId})`);
+        }
 
         return res.json({ response: { order_id: orderId, app_order_id: 0 } });
       } catch (err: any) {
@@ -147,7 +174,7 @@ router.post('/', async (req: Request, res: Response) => {
       await db.run(
         `INSERT INTO vk_payments (order_id, user_id, character_id, item, status, processed_at)
          VALUES (?, ?, 0, ?, ?, ?)`,
-        [orderId, userId, itemName, status, now],
+        [orderId, vkUserId, itemName, status, now],
       );
     }
 
@@ -160,10 +187,9 @@ router.post('/', async (req: Request, res: Response) => {
 // GET /api/vk/payments/latest — последний статус платежа текущего юзера
 router.get('/latest', authMiddleware, async (req: Request, res: Response) => {
   try {
-    // Ищем character по userId
     const user = await db.one('SELECT id FROM users WHERE id = ?', [(req as any).userId]);
     if (!user) return res.json({ status: 'not_found' });
-    
+
     const payment = await db.one(
       'SELECT status FROM vk_payments WHERE character_id = ? ORDER BY id DESC LIMIT 1',
       [user.id]

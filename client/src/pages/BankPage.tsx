@@ -18,7 +18,7 @@ export default function BankPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
 
-    const [tab, setTab] = useState<'info' | 'deposit' | 'transfer'>('info');
+    const [tab, setTab] = useState<'info' | 'deposit' | 'transfer' | 'exchange'>('info');
     const [_pocket, setPocket] = useState(0);
     const [_bank, setBank] = useState(0);
     const [accountNumber, setAccountNumber] = useState('');
@@ -73,13 +73,107 @@ export default function BankPage() {
 
     const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>(safeDate(b.createdAt)?.getTime()||0)-(safeDate(a.createdAt)?.getTime()||0)).slice(0,20);
 
+    // Компонент вкладки Обмен
+    const ExchangeTab = () => {
+      const [exchangeMsg, setExchangeMsg] = useState('');
+      const [exchangeBuying, setExchangeBuying] = useState(false);
+      const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+
+      const tiers = [
+        { item: 'silver_1000', amount: 1000, vkPrice: 7, rubPrice: 49, label: '1000 серебра' },
+        { item: 'silver_5000', amount: 5000, vkPrice: 14, rubPrice: 99, label: '5000 серебра' },
+        { item: 'silver_10000', amount: 10000, vkPrice: 28, rubPrice: 199, label: '10000 серебра' },
+      ];
+
+      const buySilver = (tier: typeof tiers[number]) => {
+        if (isVK) {
+          setExchangeBuying(true);
+          setExchangeMsg('');
+          (window as any).vkBridge?.send('VKWebAppShowOrderBox', {
+            type: 'item',
+            item: tier.item,
+          })
+          .then((data: any) => {
+            if (data?.status === 'cancelled') { setExchangeMsg(''); setExchangeBuying(false); return; }
+            setExchangeMsg('Оплата открыта. Серебро зачислится автоматически.');
+          })
+          .catch(() => { setExchangeMsg(''); setExchangeBuying(false); });
+        } else {
+          setExchangeBuying(true);
+          setExchangeMsg('');
+          const token = localStorage.getItem('token');
+          fetch('/api/yukassa/create-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ item: tier.item }),
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.confirmation_url) {
+              window.open(data.confirmation_url, '_blank');
+              setExchangeMsg('Оплата открыта. Серебро зачислится автоматически.');
+            } else {
+              setExchangeMsg('❌ ' + (data.error || 'Не удалось создать платёж'));
+            }
+          })
+          .catch(() => setExchangeMsg('❌ Ошибка сети'))
+          .finally(() => setExchangeBuying(false));
+        }
+      };
+
+      // WS уведомление об успешной оплате
+      useEffect(() => {
+        const handler = () => {
+          setExchangeMsg('✅ Серебро зачислено в кошелёк!');
+          setExchangeBuying(false);
+          loadBank();
+        };
+        window.addEventListener('paymentStatus', handler);
+        return () => window.removeEventListener('paymentStatus', handler);
+      }, []);
+
+      return (
+        <Card className="mb-3">
+          <h3 className="font-bold text-sm mb-2">💰 Обменять на серебро</h3>
+          <p className="text-xs text-[var(--color-text-muted)] mb-3">
+            Серебро зачисляется мгновенно в кошелёк.
+          </p>
+          <div className="space-y-2">
+            {tiers.map(t => (
+              <div key={t.item} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{formatMoney(t.amount)}</p>
+                  <p className="text-xs text-[var(--color-accent-gold)]">
+                    {isVK ? `${t.vkPrice} голосов` : `${t.rubPrice} ₽`}
+                  </p>
+                </div>
+                <Button
+                  variant="danger"
+                  size="md"
+                  onClick={() => buySilver(t)}
+                  disabled={exchangeBuying}
+                >
+                  {isVK ? '🛒' : '💳'} Купить
+                </Button>
+              </div>
+            ))}
+          </div>
+          {exchangeMsg && (
+            <p className={`mt-2 text-sm font-bold text-center ${exchangeMsg.startsWith('✅') ? 'text-[var(--color-accent-success)]' : exchangeMsg.startsWith('❌') ? 'text-[var(--color-accent-danger)]' : 'text-[var(--color-accent-info)]'}`}>
+              {exchangeMsg}
+            </p>
+          )}
+        </Card>
+      );
+    };
+
     return (
         <div className="max-w-md mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Банк" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}
             <Card className="mb-3"><div className="flex justify-between items-center"><div><p className="text-xs text-[var(--color-text-muted)]">В кошельке</p><p className="text-sm font-bold">{formatMoney(_pocket)}</p></div><div className="text-right"><p className="text-xs text-[var(--color-text-muted)]">В банке</p><p className="text-sm font-bold text-[var(--color-accent-success)]">{formatMoney(_bank)}</p></div></div></Card>
-            <div className="flex gap-2 mb-3">{(['info','deposit','transfer'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'История операций':t==='deposit'?'Пополнить/Снять':'Переводы'}</Button>)}</div>
+            <div className="flex gap-2 mb-3">{(['info','deposit','transfer','exchange'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'История операций':t==='deposit'?'Пополнить/Снять':t==='transfer'?'Переводы':'Обмен'}</Button>)}</div>
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
@@ -122,6 +216,8 @@ export default function BankPage() {
                     <div className="space-y-2">{transfers.map((t:any)=>{const out=t.fromUserId===user?.id;return<div key={t.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?t.amount:t.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${t.toAccount}`:`от ${t.fromAccount}`}</span><span className="ml-auto text-[var(--color-text-muted)]">{fmtSafeDate(t.createdAt)}</span></div><div className="text-[var(--color-text-muted)]">{out?`Кому: ${t.toUsername}`:`От: счёт ${t.fromAccount}`}{t.commission>0&&out?`, ком. ${t.commission}`:''}</div></div>})}</div>}
                 </Card>
             </>}
+
+            {tab==='exchange' && <ExchangeTab />}
         </div>
     );
 }

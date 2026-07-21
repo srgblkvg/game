@@ -46,6 +46,7 @@ import treasuryRoutes from './routes/treasury';
 import forumRoutes from './routes/forum';
 import massacreRoutes from './routes/massacre';
 import casinoRoutes from './routes/casino';
+import donateRoutes from './routes/donate';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -153,6 +154,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', forumRoutes);
   app.use('/api', massacreRoutes);
   app.use('/api', casinoRoutes);
+  app.use('/api/donate', donateRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);
