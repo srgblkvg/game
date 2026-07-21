@@ -87,9 +87,13 @@ export default function BankPage() {
 
       const craftPacks = [
         { item: 'craft_rare', title: 'Сундук «Редкий»', vkPrice: 14, rubPrice: 99,
-          desc: '3× Эссенция мрака + 3× Камень улучшения + 1000 серебра' },
+          matImg: '/fragment/fragment_blue.webp', matLabel: 'Эссенция мрака ×3',
+          stoneImg: '/stone/stoneUpgrade_gray.webp', stoneLabel: 'Камень улучшения ×3',
+          silver: '1000 серебра' },
         { item: 'craft_epic', title: 'Сундук «Эпический»', vkPrice: 28, rubPrice: 199,
-          desc: '3× Сердцевина бездны + 5× Камень улучшения + 3000 серебра' },
+          matImg: '/fragment/fragment_purple.webp', matLabel: 'Сердцевина бездны ×3',
+          stoneImg: '/stone/stoneUpgrade_gray.webp', stoneLabel: 'Камень улучшения ×5',
+          silver: '3000 серебра' },
       ];
 
       const buySilver = (tier: typeof tiers[number]) => {
@@ -178,7 +182,18 @@ export default function BankPage() {
               <div key={p.item} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
                 <div className="flex-1">
                   <p className="text-sm font-bold">{p.title}</p>
-                  <p className="text-[0.6rem] text-[var(--color-text-muted)]">{p.desc}</p>
+                  <div className="text-[0.6rem] text-[var(--color-text-muted)] space-y-0.5 mt-0.5">
+                    <span className="inline-flex items-center gap-1">
+                      <img src={`https://mmoarena.ru${p.matImg}`} alt="" className="w-4 h-4 object-contain" />
+                      {p.matLabel}
+                    </span>
+                    {' + '}
+                    <span className="inline-flex items-center gap-1">
+                      <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-4 h-4 object-contain" />
+                      {p.stoneLabel}
+                    </span>
+                    {' + '}{p.silver}
+                  </div>
                   <p className="text-xs text-[var(--color-accent-gold)]">
                     {isVK ? `${p.vkPrice} голосов` : `${p.rubPrice} ₽`}
                   </p>

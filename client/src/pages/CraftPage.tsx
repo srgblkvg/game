@@ -285,12 +285,16 @@ export default function CraftPage() {
       const packs = [
         {
           item: 'craft_rare', title: 'Сундук «Редкий»', vkPrice: 14, rubPrice: 99,
-          material: 'Эссенция мрака ×3', stones: 'Камень улучшения ×3', silver: 1000,
+          material: 'Эссенция мрака ×3', materialImg: '/fragment/fragment_blue.webp',
+          stones: 'Камень улучшения ×3', stoneImg: '/stone/stoneUpgrade_gray.webp',
+          silver: 1000,
           desc: 'Крафт случайного редкого предмета (шанс 75%)',
         },
         {
           item: 'craft_epic', title: 'Сундук «Эпический»', vkPrice: 28, rubPrice: 199,
-          material: 'Сердцевина бездны ×3', stones: 'Камень улучшения ×5', silver: 3000,
+          material: 'Сердцевина бездны ×3', materialImg: '/fragment/fragment_purple.webp',
+          stones: 'Камень улучшения ×5', stoneImg: '/stone/stoneUpgrade_gray.webp',
+          silver: 3000,
           desc: 'Крафт случайного эпического предмета (шанс 70%)',
         },
       ];
@@ -340,9 +344,15 @@ export default function CraftPage() {
             <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col"
               style={{ borderColor: p.item === 'craft_rare' ? '#3498db' : '#9b59b6' }}>
               <h3 className="font-bold text-sm mb-1">{p.title}</h3>
-              <div className="text-xs text-[var(--color-text-muted)] space-y-0.5 mb-2 flex-1">
-                <p>🔮 {p.material}</p>
-                <p>💎 {p.stones}</p>
+              <div className="text-xs text-[var(--color-text-muted)] space-y-1 mb-2 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-5 h-5 object-contain" />
+                  {p.material}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-5 h-5 object-contain" />
+                  {p.stones}
+                </div>
                 <p>💰 {formatMoney(p.silver)}</p>
                 <p className="text-[0.6rem] italic">{p.desc}</p>
               </div>
