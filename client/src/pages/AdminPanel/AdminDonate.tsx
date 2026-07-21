@@ -10,7 +10,7 @@ interface Payment {
   amount: string;
   username: string;
   user_id: number;
-  createdAt: string;
+  created_at: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -100,7 +100,7 @@ export default function AdminDonate() {
                     {STATUS_LABELS[p.status] || p.status}
                   </span>
                 </td>
-                <td className="py-1 px-2 text-[var(--color-text-muted)]">{fmtSafeDate(p.createdAt)}</td>
+                <td className="py-1 px-2 text-[var(--color-text-muted)]">{fmtSafeDate(p.created_at)}</td>
               </tr>
             ))}
           </tbody>
