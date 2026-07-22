@@ -162,10 +162,16 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
 
             // Записать шаги в БД
             for (const step of result.steps) {
+                // При контратаке actor='defender' (защитник атакует), target='attacker' (урон в атакующего)
+                const stepActorId = step.actor === 'defender' ? targetId : userId;
+                const stepActorName = step.actor === 'defender' ? target.name : s.name;
+                const stepTargetId = step.target === 'attacker' ? userId : (step.target === 'defender' ? targetId : null);
+                const stepTargetName = step.target === 'attacker' ? s.name : (step.target === 'defender' ? target.name : null);
+
                 await db.run(
                     `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, target_id, target_name, action_type, damage, message)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [eventId, turnNum, userId, s.name, targetId, target.name, step.type, step.damage || 0, step.message]
+                    [eventId, turnNum, stepActorId, stepActorName, stepTargetId, stepTargetName, step.type, step.damage || 0, step.message]
                 );
             }
 
