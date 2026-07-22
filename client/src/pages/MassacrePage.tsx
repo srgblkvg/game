@@ -126,7 +126,7 @@ export default function MassacrePage() {
             if (!res.ok) { setError(data.error); setLoading(false); return; }
             setJoined(true);
             if (character) {
-                setCharacter({ ...character, money: character.money - 100 });
+                setCharacter({ ...character, money: character.money - (state?.event?.entry_fee || 10) });
             }
             fetchState();
         } catch { setError('Ошибка сети'); }
@@ -237,7 +237,7 @@ export default function MassacrePage() {
           {actionCard && <PageHeader title="Резня" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
-                Хаотичный массовый PvP-бой без правил. Вход — {formatMoney(100)}. Сбор участников длится 30 минут,
+                Хаотичный массовый PvP-бой без правил. Вход — {formatMoney(state?.event?.entry_fee || 10)}. Сбор участников длится 30 минут,
                 затем все сражаются, атакуя случайного противника.
                 Победитель получает +10 опыта и весь призовой фонд. Выживает сильнейший!
             </p>
@@ -260,10 +260,10 @@ export default function MassacrePage() {
                             variant="danger"
                             size="md"
                             onClick={handleJoin}
-                            disabled={loading || character.money < 100}
+                            disabled={loading || character.money < (state?.event?.entry_fee || 10)}
                             className="w-full sm:w-auto"
                         >
-                            {loading ? 'Вступление...' : `Вступить (${formatMoney(100)})`}
+                            {loading ? 'Вступление...' : `Вступить (${formatMoney(state?.event?.entry_fee || 10)})`}
                         </Button>
                     ) : (
                         <p className="text-[var(--color-accent-success)] text-sm font-bold">
@@ -272,7 +272,7 @@ export default function MassacrePage() {
                         </p>
                     )}
 
-                    {character.money < 100 && !joined && (
+                    {character.money < (state?.event?.entry_fee || 10) && !joined && (
                         <p className="text-[var(--color-accent-danger)] text-xs mt-2">Недостаточно серебра</p>
                     )}
                 </Card>
