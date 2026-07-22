@@ -78,7 +78,7 @@ router.post('/tavern/heal', async (req, res) => {
 
     if (user.money < cost) return res.status(400).json({ error: `Недостаточно монет (нужно ${cost})` });
 
-    await db.run('UPDATE users SET money = money - ?, currentHp = ? WHERE id = ?', [cost, user.currentHp + healAmount, userId]);
+    await db.run('UPDATE users SET money = money - ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?', [cost, user.currentHp + healAmount, Math.floor(Date.now() / 1000), userId]);
 
     addToTreasury(cost, 'tavern_heal').catch(() => {});
 
@@ -106,7 +106,7 @@ router.post('/tavern/heal-ad', async (req, res) => {
     const missingHp = maxHp - user.currentHp;
     if (missingHp <= 0) return res.status(400).json({ error: 'HP уже полное' });
 
-    await db.run('UPDATE users SET currentHp = ?, adhealat = ? WHERE id = ?', [user.currentHp + missingHp, now, userId]);
+    await db.run('UPDATE users SET currentHp = ?, lastHpUpdate = ?, adhealat = ? WHERE id = ?', [user.currentHp + missingHp, now, now, userId]);
 
     res.json({ success: true, hpAfter: user.currentHp + missingHp });
 });

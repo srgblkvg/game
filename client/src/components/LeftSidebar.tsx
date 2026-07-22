@@ -17,7 +17,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
   const stats = character.stats || { s: 0, a: 0, d: 0, m: 0, hp: 100 };
   // Премиум активирует комнату «Чулан», если нет своей
   const effectiveRoom = character.room || ((character.premium?.until || 0) > serverTime ? { type: 'closet' as const, until: character.premium!.until } : null);
-  const regenHp = getRegenHp(character.currentHp, stats.hp, serverTime, effectiveRoom?.type, effectiveRoom?.until);
+  const regenHp = getRegenHp(character.currentHp, stats.hp, character.lastHpUpdate || serverTime, serverTime, effectiveRoom?.type, effectiveRoom?.until);
 
   return (
     <div className="w-full sm:w-[240px] flex flex-col items-center sm:items-start">

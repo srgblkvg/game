@@ -99,12 +99,11 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | null>(null);
 
-// HP regen snapshot: { hp, time } — обновляется при setCharacter
-let _hpSnapshot = { hp: 100, time: Math.floor(Date.now() / 1000) };
-
-/** Вычислить текущий HP с учётом регенерации (1 HP / 10 сек, ×rate от комнаты) */
-export function getRegenHp(currentHp: number, maxHp: number, serverTime: number, roomType?: string | null, roomUntil?: number): number {
-  const elapsed = serverTime - _hpSnapshot.time;
+/** Вычислить текущий HP с учётом регенерации (1 HP / 10 сек, ×rate от комнаты).
+ *  Принимает lastHpUpdate — unix-секунды последнего обновления HP сервером.
+ *  Не зависит от глобального состояния — всегда даёт детерминированный результат. */
+export function getRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, serverTime: number, roomType?: string | null, roomUntil?: number): number {
+  const elapsed = serverTime - lastHpUpdate;
   if (elapsed <= 0) return Math.min(currentHp, maxHp);
 
   // Базовый реген: 1 HP каждые 10 секунд
@@ -116,19 +115,12 @@ export function getRegenHp(currentHp: number, maxHp: number, serverTime: number,
   }
 
   const regenAmount = Math.floor(elapsed / 10) * regenRate;
-  return Math.min(maxHp, _hpSnapshot.hp + regenAmount);
+  return Math.min(maxHp, currentHp + regenAmount);
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [character, setCharacter] = useState<Character | null>(null);
   const [serverTime, setServerTime] = useState(Math.floor(Date.now() / 1000));
-
-  // Обновляем снапшот HP при изменении character
-  useEffect(() => {
-    if (character) {
-      _hpSnapshot = { hp: character.currentHp, time: character.lastHpUpdate || serverTime };
-    }
-  }, [character]);
 
   useEffect(() => {
     const handler = (e: Event) => setServerTime((e as CustomEvent).detail);

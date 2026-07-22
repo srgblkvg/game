@@ -142,7 +142,7 @@ router.get('/character/me', async (req, res) => {
         baseStats: { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 },
         currentHp, stats, lastAttackTime: user.lastAttackTime || 0,
         protectionUntil: user.protectionUntil || 0,
-        lastHpUpdate: user.lastHpUpdate || 0,
+        lastHpUpdate: now,  // регенерация уже применена сервером до now
         lastPveAttackTime: user.lastPveAttackTime || 0,
         pvpCdSec: (user.premiumUntil || 0) > now ? 300 : 600,
         pveCdSec: (user.premiumUntil || 0) > now ? 150 : 300,

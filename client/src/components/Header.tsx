@@ -81,7 +81,7 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
 
 export default function Header() {
     const { user } = useAuth();
-    const { character, setCharacter } = useGame();
+    const { character, setCharacter, serverTime } = useGame();
     const { now: serverNow } = useServerTime();
     const { messages } = useGlobalChat();
     const { theme, toggleTheme } = useTheme();
@@ -195,7 +195,7 @@ export default function Header() {
     // HP с регенерацией для VK-бара
     const maxHp = character?.stats?.hp ?? 100;
     const currentHp = character
-        ? getRegenHp(character.currentHp, maxHp, serverNow, character.room?.type ?? undefined, character.room?.until ?? undefined)
+        ? getRegenHp(character.currentHp, maxHp, character.lastHpUpdate || serverTime, serverTime, character.room?.type ?? undefined, character.room?.until ?? undefined)
         : 0;
     const hpPct = maxHp > 0 ? Math.min(100, Math.max(0, (currentHp / maxHp) * 100)) : 0;
 
