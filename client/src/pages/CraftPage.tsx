@@ -531,18 +531,46 @@ export default function CraftPage() {
                     )}
 
                     {/* Инфо об улучшении */}
-                    {upgradeInfo && (
+                    {upgradeInfo && (() => {
+                        const item = upgradeInfo.item;
+                        const curLvl = item.upgradeLevel || 0;
+                        const nextLvl = upgradeInfo.nextLevel;
+                        const scaleStat = (base: number, lvl: number) => Math.round(base * (1 + lvl * 0.1));
+                        const statNames: Record<string, string> = { s: 'Сила', a: 'Ловк', d: 'Защ', m: 'Маг', crit: 'Крит', dodge: 'Уклон', counter: 'Контр', fullBlock: 'Блок' };
+                        const bonuses = item.bonuses || {};
+                        const extra = item.extra || {};
+                        const allStats: [string, number][] = [];
+                        for (const k of ['s','a','d','m']) if (bonuses[k]) allStats.push([k, bonuses[k]]);
+                        for (const k of ['crit','dodge','counter','fullBlock']) if (extra[k]) allStats.push([k, extra[k]]);
+
+                        return (
                         <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
-                            <div>Улучшение до уровня +{upgradeInfo.nextLevel}</div>
+                            <div>Улучшение до уровня +{nextLvl}</div>
                             <div>Шанс: {upgradeInfo.chance}%</div>
                             <div>Стоимость: {formatMoney(upgradeInfo.cost)}</div>
-                            {upgradeInfo.nextLevel <= 6 ? (
+                            {allStats.length > 0 && (
+                                <div className="mt-1 text-[var(--color-text-muted)]">
+                                    {allStats.map(([k, base]) => {
+                                        const cur = scaleStat(base, curLvl);
+                                        const next = scaleStat(base, nextLvl);
+                                        const same = cur === next;
+                                        return (
+                                            <div key={k}>
+                                                {statNames[k] || k}: {cur} → <span className={same ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-accent-success)]'}>{next}</span>
+                                                {same && <span className="text-[0.6rem] text-[var(--color-text-muted)] ml-1">(без изменений)</span>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {nextLvl <= 6 ? (
                                 <div className="text-[var(--color-accent-warning)] mt-1">При неудаче разрушится только камень</div>
                             ) : (
                                 <div className="text-[var(--color-accent-danger)] font-bold mt-1">ВНИМАНИЕ!!! При неудаче предмет будет разрушен!!!</div>
                             )}
                         </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Кнопки */}
                     <div className="flex flex-col gap-2 items-center mt-2">
