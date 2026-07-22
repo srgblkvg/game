@@ -1,11 +1,12 @@
 // server/src/game/massacre.ts — боевая логика Резни
 import { db } from '../db/index';
-import { pushNotification } from '../events';
+import { pushNotification, markDirty } from '../events';
 import {
     dodgeChance, critChance, critMult, blockChance, blockReduction,
     counterChance, stunChance, rollDamage, BattleStep
 } from './battle';
 import { CharStats } from './stats';
+import { updateGuildQuestProgress } from '../routes/guild/guildQuests';
 
 // Импортируем типы/функции которых нет в экспорте battle.ts
 function runTurnLocal(
@@ -77,8 +78,10 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
 
     if (participants.length < 2) {
         // Недостаточно участников — отменяем, возвращаем деньги
+        const event = await db.one('SELECT entry_fee FROM massacre_events WHERE id = ?', [eventId]) as any;
+        const refund = event?.entry_fee || 10;
         for (const p of participants) {
-            await db.run('UPDATE users SET money = money + ? WHERE id = ?', [100, p.user_id]);
+            await db.run('UPDATE users SET money = money + ? WHERE id = ?', [refund, p.user_id]);
         }
         await db.run(`UPDATE massacre_events SET status = 'cancelled' WHERE id = ?`, [eventId]);
         // Уведомить единственного участника
@@ -174,6 +177,18 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
                      VALUES (?, ?, ?, ?, ?, ?, 'death', 0, ?)`,
                     [eventId, turnNum, userId, s.name, targetId, target.name, `${target.name} пал от руки ${s.name}!`]
                 );
+
+                // Засчитать PvP-победу убийце (для квестов)
+                await db.run(
+                    `INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    [userId, targetId, userId, '[]', '[]', s.hp, 0]
+                );
+                const killerGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]).catch(() => null) as any;
+                if (killerGuild?.guildId) {
+                    updateGuildQuestProgress(killerGuild.guildId).catch(e => console.error('[massacre] guildQuest kill:', e.message));
+                }
+                markDirty(userId, 'quests');
             }
 
             // Проверить оглушение
@@ -202,7 +217,9 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
     );
 
     // Призовой фонд
-    const prizePool = participants.length * 100;
+    const eventFee = await db.one('SELECT entry_fee FROM massacre_events WHERE id = ?', [eventId]).catch(() => null) as any;
+    const entryFee = eventFee?.entry_fee || 10;
+    const prizePool = participants.length * entryFee;
 
     // Награда победителю: +10 XP и весь сбор
     await db.run('UPDATE users SET money = money + ?, exp = exp + ? WHERE id = ?', [prizePool, 10, winnerId]);
