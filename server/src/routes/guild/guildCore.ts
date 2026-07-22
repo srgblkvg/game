@@ -146,6 +146,10 @@ router.post('/guild/settings', async (req, res) => {
         await db.run('UPDATE guilds SET description = ? WHERE id = ?', [description, member.guildId]);
     }
     if (image !== undefined) {
+        // Валидация: только data:image/... или пустая строка (сброс)
+        if (image !== '' && !String(image).startsWith('data:image/')) {
+            return res.status(400).json({ error: 'Изображение должно быть в формате data:image/...' });
+        }
         await db.run('UPDATE guilds SET image = ? WHERE id = ?', [image, member.guildId]);
     }
 
