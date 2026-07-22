@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
-import { useGame, getRegenHp } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { useServerTime } from '../contexts/ServerTimeContext';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -81,7 +81,7 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
 
 export default function Header() {
     const { user } = useAuth();
-    const { character, setCharacter } = useGame();
+    const { character, setCharacter, regenHp } = useGame();
     const { now: serverNow } = useServerTime();
     const { messages } = useGlobalChat();
     const { theme, toggleTheme } = useTheme();
@@ -192,11 +192,9 @@ export default function Header() {
 
     if (!user) return null;
 
-    // HP с регенерацией для VK-бара
+    // HP — единое значение из GameContext (сервер + регенерация)
     const maxHp = character?.stats?.hp ?? 100;
-    const currentHp = character
-        ? getRegenHp(character.currentHp, maxHp, character.lastHpUpdate || serverNow, serverNow, character.room?.type ?? undefined, character.room?.until ?? undefined)
-        : 0;
+    const currentHp = regenHp;
     const hpPct = maxHp > 0 ? Math.min(100, Math.max(0, (currentHp / maxHp) * 100)) : 0;
 
     // XP progress

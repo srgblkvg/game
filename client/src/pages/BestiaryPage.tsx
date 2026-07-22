@@ -25,7 +25,7 @@ export default function BestiaryPage() {
   const [actionCard, setActionCard] = useState<any>(null);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/bestiary'); if (c) setActionCard(c); }).catch(() => {}); }, []);
   const { user } = useAuth();
-  const { character, setCharacter } = useGame();
+  const { character, setCharacter, regenHp } = useGame();
   const serverTime = useServerTime();
   const navigate = useNavigate();
   const { showAcquire } = useAcquire();
@@ -338,8 +338,8 @@ export default function BestiaryPage() {
     // Start battle immediately
     if (!character || cooldownRemaining > 0) return;
     setPhase('battle');
-    const startHp = character.currentHp;
-    const pStats = character.stats || { hp: character.currentHp || 100 };
+    const startHp = regenHp;
+    const pStats = character.stats || { hp: regenHp || 100 };
     initialHpRef.current = { player: startHp, mob: mob.hp };
     setPlayerMaxHp(pStats.hp);
     setPlayerHp(startHp);

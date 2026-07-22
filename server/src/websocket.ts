@@ -218,6 +218,7 @@ export async function setupWebSocket(server: any) {
       const placeholders = userIds.map(() => '?').join(',');
       const rows = await db.query(
         `SELECT u.id, u.money, u.bank, u.guildId,
+                u.currentHp, u.lastHpUpdate,
                 COALESCE(u.auction_sales, 0) as auctionSales,
                 COALESCE(u.bank_transfers, 0) as bankTransfers
          FROM users u WHERE u.id IN (${placeholders})`,
@@ -275,6 +276,8 @@ export async function setupWebSocket(server: any) {
         if (stats) {
           payload.money = stats.money || 0;
           payload.bank = stats.bank || 0;
+          payload.currentHp = stats.currenthp ?? stats.currentHp ?? 0;
+          payload.lastHpUpdate = stats.lasthpupdate ?? stats.lastHpUpdate ?? 0;
           payload.auctionSales = stats.auctionsales ?? stats.auctionSales ?? 0;
           payload.bankTransfers = stats.banktransfers ?? stats.bankTransfers ?? 0;
           if (stats.guildid && tickCount % 3 === 0) {

@@ -53,6 +53,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               const time = data.time || Math.floor(Date.now() / 1000);
               window.dispatchEvent(new CustomEvent('serverTick', { detail: time }));
               window.dispatchEvent(new CustomEvent('balance', { detail: { money: data.money, bank: data.bank || 0 } }));
+              // HP — актуальное значение с сервера
+              if (data.currentHp != null) {
+                window.dispatchEvent(new CustomEvent('hpTick', { detail: { currentHp: data.currentHp, lastHpUpdate: data.lastHpUpdate } }));
+              }
               // Уведомления
               if (data.notifications && data.notifications.length > 0) {
                 window.dispatchEvent(new CustomEvent('notifications', { detail: data.notifications }));

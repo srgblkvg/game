@@ -1,7 +1,7 @@
 import CharacterCard from './CharacterCard';
 import StatAllocation from './StatAllocation';
 import BuffsBlock from './BuffsBlock';
-import { useGame, getRegenHp, type Character } from '../contexts/GameContext';
+import { useGame, type Character } from '../contexts/GameContext';
 import { toCharCardData } from '../utils/character';
 
 interface LeftSidebarProps {
@@ -13,11 +13,10 @@ interface LeftSidebarProps {
 
 export default function LeftSidebar({ character, onEquip, selectedItemId, highlightedSlots }: LeftSidebarProps) {
   if (!character) return null;
-  const { serverTime } = useGame();
+  const { serverTime, regenHp } = useGame();
   const stats = character.stats || { s: 0, a: 0, d: 0, m: 0, hp: 100 };
   // Премиум активирует комнату «Чулан», если нет своей
   const effectiveRoom = character.room || ((character.premium?.until || 0) > serverTime ? { type: 'closet' as const, until: character.premium!.until } : null);
-  const regenHp = getRegenHp(character.currentHp, stats.hp, character.lastHpUpdate || serverTime, serverTime, effectiveRoom?.type, effectiveRoom?.until);
 
   return (
     <div className="w-full sm:w-[240px] flex flex-col items-center sm:items-start">
