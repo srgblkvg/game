@@ -689,11 +689,7 @@ router.get('/tournament', async (req, res) => {
     }
 
     res.json({ tournaments: result, userLevel: user.level, tab: 'active', typeFilter,
-        upcomingOfficial,
-        warnings: await db.query(
-            "SELECT id, division, type, registrationEnd FROM tournaments WHERE status = 'registration' AND registrationEnd > ? AND registrationEnd <= ?",
-            [now, now + 300]
-        ) as any[]
+        upcomingOfficial
     });
 });
 
