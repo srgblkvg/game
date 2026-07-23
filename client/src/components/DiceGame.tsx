@@ -4,7 +4,7 @@ import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
 import { formatMoney } from '../utils/money';
 
-const ENTRY_FEE = 10;
+const BETS = [10, 100, 1000];
 const MAX_REROLLS = 2;
 
 const DICE_FACES: Record<number, string> = {
@@ -41,8 +41,16 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
     const [keep, setKeep] = useState<Set<number>>(new Set());
     const [result, setResult] = useState<FinishResult | null>(null);
     const [loading, setLoading] = useState(false);
-    const [canAfford, setCanAfford] = useState(true);
+    const [balance, setBalance] = useState(0);
+    const [bet, setBet] = useState(10);
     const { showToast } = useToast();
+
+    useEffect(() => {
+        fetch('/api/character/me', { headers: getHeaders() })
+            .then(r => r.json())
+            .then(data => setBalance(data.money || 0))
+            .catch(() => {});
+    }, []);
 
     const toggleKeep = (idx: number) => {
         if (!game) return;
@@ -55,7 +63,11 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
     const startGame = async () => {
         setLoading(true);
         try {
-            const r = await fetch('/api/dice/play', { method: 'POST', headers: getHeaders() });
+            const r = await fetch('/api/dice/play', {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bet }),
+            });
             const data = await r.json();
             if (!r.ok) { showToast(data.error || 'Ошибка', 'error'); return; }
             setGame(data);
@@ -102,32 +114,43 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
         finally { setLoading(false); }
     };
 
-    useEffect(() => {
-        fetch('/api/character/me', { headers: getHeaders() })
-            .then(r => r.json())
-            .then(data => setCanAfford(data.money >= ENTRY_FEE))
-            .catch(() => {});
-    }, []);
+    const canAfford = (b: number) => balance >= b;
 
     return (
         <div>
             {!game && !result && (
-                <div className="flex flex-col items-center gap-3">
-                    <div className="text-5xl">🎲</div>
-                    <p className="text-sm text-[var(--color-text-muted)] text-center">
-                        Брось 5 кубиков. Оставь нужные, перебрось остальные<br />
-                        (до {MAX_REROLLS} раз). Собери комбинацию!
+                <div className="flex flex-col gap-3">
+                    <p className="text-sm text-[var(--color-text-secondary)] text-left">
+                        Брось 5 кубиков. Оставь нужные, перебрось остальные (до {MAX_REROLLS} раз). Собери комбинацию!
                     </p>
-                    <div className="text-[0.65rem] text-[var(--color-text-muted)] grid grid-cols-2 gap-x-4 gap-y-0.5">
+                    <div className="text-[0.65rem] text-[var(--color-text-muted)] text-left space-y-0.5">
                         {PAYOUT_TABLE.map(([name, mult]) => (
-                            <div key={name} className="flex justify-between gap-2">
+                            <div key={name} className="flex justify-between max-w-[240px]">
                                 <span>{name}</span>
                                 <span className="text-[var(--color-text-accent)]">{mult}</span>
                             </div>
                         ))}
                     </div>
-                    <Button onClick={startGame} disabled={loading || !canAfford}>
-                        {!canAfford ? 'Недостаточно серебра' : loading ? '...' : `Играть (${ENTRY_FEE} сер.)`}
+
+                    {/* Выбор ставки */}
+                    <div className="flex gap-2">
+                        {BETS.map(b => (
+                            <button
+                                key={b}
+                                onClick={() => setBet(b)}
+                                className={`cursor-pointer px-3 py-1 rounded text-sm font-bold transition-colors ${
+                                    bet === b
+                                        ? 'bg-[var(--color-accent-primary)] text-white'
+                                        : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'
+                                } ${!canAfford(b) ? 'opacity-40' : ''}`}
+                            >
+                                {b} сер.
+                            </button>
+                        ))}
+                    </div>
+
+                    <Button onClick={startGame} disabled={loading || !canAfford(bet)}>
+                        {!canAfford(bet) ? 'Недостаточно серебра' : loading ? '...' : 'Играть'}
                     </Button>
                 </div>
             )}
@@ -135,7 +158,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
             {game && (
                 <div className="flex flex-col items-center gap-3">
                     <div className="text-xs text-[var(--color-text-secondary)]">
-                        Перебросов: {game.rerollsUsed}/{MAX_REROLLS}
+                        Ставка: {formatMoney(game.entryFee)} | Перебросов: {game.rerollsUsed}/{MAX_REROLLS}
                     </div>
                     <div className="flex gap-2 justify-center flex-wrap">
                         {game.dice.map((d, i) => (
@@ -187,8 +210,8 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                     <div className="text-xs text-[var(--color-text-secondary)]">
                         {result.profit > 0 ? `(прибыль: +${result.profit} сер.)` : result.profit < 0 ? `(убыток: ${result.profit} сер.)` : '(свои назад)'}
                     </div>
-                    <Button onClick={startGame} disabled={loading || !canAfford} size="sm">
-                        {!canAfford ? 'Недостаточно серебра' : loading ? '...' : `Ещё раз (${ENTRY_FEE} сер.)`}
+                    <Button onClick={startGame} disabled={loading || !canAfford(bet)} size="sm">
+                        {!canAfford(bet) ? 'Недостаточно серебра' : loading ? '...' : 'Ещё раз'}
                     </Button>
                 </div>
             )}

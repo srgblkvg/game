@@ -4,7 +4,6 @@ import { collectGuildTax } from '../db/helpers';
 
 const router = Router();
 
-const ENTRY_FEE = 10;
 
 // Комбинации (от высшей к низшей)
 type ComboName = 'poker' | 'quads' | 'fullhouse' | 'straight' | 'set' | 'twopair' | 'pair' | 'none';
@@ -47,6 +46,8 @@ function getCombo(dice: number[]): ComboName {
 // Начать игру
 router.post('/dice/play', async (req, res) => {
     const userId = req.userId;
+    const { bet: betRaw } = req.body as { bet?: number };
+    const bet = ([10, 100, 1000].includes(betRaw!) ? betRaw! : 10);
 
     // Проверить, нет ли уже активной игры
     const active = await db.one(
@@ -65,25 +66,25 @@ router.post('/dice/play', async (req, res) => {
 
     // Проверить баланс
     const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
-    if (user.money < ENTRY_FEE) {
+    if (user.money < bet) {
         return res.status(400).json({ error: 'Недостаточно серебра' });
     }
 
     // Снять плату
-    await db.run('UPDATE users SET money = money - ? WHERE id = ?', [ENTRY_FEE, userId]);
+    await db.run('UPDATE users SET money = money - ? WHERE id = ?', [bet, userId]);
 
     // Налог гильдии
-    await collectGuildTax(userId, ENTRY_FEE, 'tax_dice').catch(() => {});
+    await collectGuildTax(userId, bet, 'tax_dice').catch(() => {});
 
     // Бросить кости
     const dice = rollDice();
     const result = await db.run(
         "INSERT INTO dice_games (user_id, entry_fee, dice, rerolls, status) VALUES (?, ?, ?, 0, 'active')",
-        [userId, ENTRY_FEE, JSON.stringify(dice)]
+        [userId, bet, JSON.stringify(dice)]
     );
     const gameId = result.lastInsertRowid;
 
-    res.json({ gameId, dice, rerollsUsed: 0, maxRerolls: 2, entryFee: ENTRY_FEE });
+    res.json({ gameId, dice, rerollsUsed: 0, maxRerolls: 2, entryFee: bet });
 });
 
 // Перебросить выбранные кости
