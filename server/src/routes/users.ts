@@ -70,7 +70,7 @@ router.get('/character/public/:userId', async (req, res) => {
         massacreWins: (await db.one(
             `SELECT COUNT(*) as cnt FROM massacre_participants mp
              JOIN massacre_events me ON mp.event_id = me.id
-             WHERE mp.user_id = ? AND mp.alive = TRUE AND me.status = 'completed'`,
+             WHERE mp.user_id = ? AND mp.alive = TRUE AND me.status = 'finished'`,
             [userId]
         ) as any).cnt || 0,
         // Аукцион
