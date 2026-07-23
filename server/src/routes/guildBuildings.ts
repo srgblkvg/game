@@ -42,7 +42,7 @@ router.get('/guild/:guildId/buildings', async (req, res) => {
             nextCost: cost,
             nextBonus: nextLevel * cfg.bonusPerLevel,
             reqLevel,
-            canUpgrade: guild.level >= reqLevel && guild.treasury >= cost,
+            canBuild: guild.level >= reqLevel && guild.treasury >= cost,
         });
     }
     res.json(result);
