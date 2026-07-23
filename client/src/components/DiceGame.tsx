@@ -4,7 +4,6 @@ import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
 import { formatMoney } from '../utils/money';
 
-const BETS = [10, 100, 1000];
 const MAX_REROLLS = 2;
 
 const DICE_FACES: Record<number, string> = {
@@ -42,7 +41,6 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
     const [result, setResult] = useState<FinishResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(0);
-    const [bet, setBet] = useState(10);
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -65,8 +63,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
         try {
             const r = await fetch('/api/dice/play', {
                 method: 'POST',
-                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bet }),
+                headers: getHeaders(),
             });
             const data = await r.json();
             if (!r.ok) { showToast(data.error || 'Ошибка', 'error'); return; }
@@ -114,8 +111,6 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
         finally { setLoading(false); }
     };
 
-    const canAfford = (b: number) => balance >= b;
-
     return (
         <div>
             {!game && !result && (
@@ -132,27 +127,9 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                         ))}
                     </div>
 
-                    {/* Выбор ставки + кнопка */}
-                    <div className="flex gap-2 items-end">
-                        <div className="flex gap-1.5">
-                            {BETS.map(b => (
-                                <button
-                                    key={b}
-                                    onClick={() => setBet(b)}
-                                    className={`cursor-pointer px-3 py-1.5 rounded text-sm font-bold transition-colors ${
-                                        bet === b
-                                            ? 'bg-[var(--color-accent-primary)] text-[var(--color-text-primary)] border-2 border-[var(--color-text-primary)]'
-                                            : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] border-2 border-transparent'
-                                    } ${!canAfford(b) ? 'opacity-40' : ''}`}
-                                >
-                                    {b} сер.
-                                </button>
-                            ))}
-                        </div>
-                        <Button onClick={startGame} disabled={loading || !canAfford(bet)} variant="danger">
-                            {!canAfford(bet) ? 'Недостаточно' : loading ? '...' : 'Играть'}
-                        </Button>
-                    </div>
+                    <Button onClick={startGame} disabled={loading || balance < 10} variant="danger" size="md">
+                        {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : 'Играть (10 сер.)'}
+                    </Button>
                 </div>
             )}
 
@@ -211,8 +188,8 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                     <div className="text-xs text-[var(--color-text-secondary)]">
                         {result.profit > 0 ? `(прибыль: +${result.profit} сер.)` : result.profit < 0 ? `(убыток: ${result.profit} сер.)` : '(свои назад)'}
                     </div>
-                    <Button onClick={startGame} disabled={loading || !canAfford(bet)} size="sm">
-                        {!canAfford(bet) ? 'Недостаточно серебра' : loading ? '...' : 'Ещё раз'}
+                    <Button onClick={startGame} disabled={loading || balance < 10} size="sm">
+                        {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : 'Ещё раз'}
                     </Button>
                 </div>
             )}

@@ -46,8 +46,7 @@ function getCombo(dice: number[]): ComboName {
 // Начать игру
 router.post('/dice/play', async (req, res) => {
     const userId = req.userId;
-    const { bet: betRaw } = req.body as { bet?: number };
-    const bet = ([10, 100, 1000].includes(betRaw!) ? betRaw! : 10);
+    const bet = 10;
 
     // Проверить, нет ли уже активной игры
     const active = await db.one(
