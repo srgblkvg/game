@@ -141,7 +141,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                                     onClick={() => setBet(b)}
                                     className={`cursor-pointer px-3 py-1.5 rounded text-sm font-bold transition-colors ${
                                         bet === b
-                                            ? 'bg-[var(--color-accent-primary)] text-white dark:text-black ring-2 ring-[var(--color-accent-primary)]/50 border border-black/20'
+                                            ? 'bg-[var(--color-accent-primary)] text-white dark:ring-2 dark:ring-[var(--color-accent-primary)]/50'
                                             : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'
                                     } ${!canAfford(b) ? 'opacity-40' : ''}`}
                                 >
