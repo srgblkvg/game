@@ -259,7 +259,7 @@ export default function GuildPage() {
                 }).map((m:any)=>(<div key={m.userId} className="py-1 border-b border-[var(--color-border-light)] text-xs">
                     <div className="flex justify-between items-center">
                         <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
-                            {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} <span className="text-[var(--color-text-muted)]">ур.{m.level}</span>
+                            {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'} {m.username} ур.{m.level}
                             {m.rank==='officer'&&<span className="ml-1 text-[0.6rem]">
                                 {(m.can_quests||m.quests)?'📜':''}{(m.can_buildings||m.buildings)?'🏘️':''}{(m.can_war||m.war)?'⚔️':''}
                             </span>}</span>
