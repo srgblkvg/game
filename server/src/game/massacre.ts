@@ -1,6 +1,8 @@
 // server/src/game/massacre.ts — боевая логика Резни
 import { db } from '../db/index';
 import { pushNotification, markDirty } from '../events';
+import { applyExp } from '../db/helpers';
+import { sendLeaderboardLevel } from '../vkLeaderboard';
 import {
     dodgeChance, critChance, critMult, blockChance, blockReduction,
     counterChance, stunChance, rollDamage, BattleStep
@@ -229,7 +231,16 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
     const prizePool = participants.length * entryFee;
 
     // Награда победителю: +10 XP и весь сбор
-    await db.run('UPDATE users SET money = money + ?, exp = exp + ? WHERE id = ?', [prizePool, 10, winnerId]);
+    const winner = await db.one('SELECT exp, level, statPoints, oauthProvider, oauthId FROM users WHERE id = ?', [winnerId]) as any;
+    const expGain = 10;
+    const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(winnerId, expGain, winner.exp || 0, winner.level || 1, winner.statPoints || 0);
+    await db.run('UPDATE users SET money = money + ?, exp = ?, level = ?, statPoints = ? WHERE id = ?',
+        [prizePool, newExp, newLevel, newStatPoints, winnerId]);
+
+    // VK Leaderboard
+    if (levelsGained > 0 && winner.oauthProvider === 'vk' && winner.oauthId) {
+        sendLeaderboardLevel(winnerId, newLevel, String(winner.oauthId)).catch(() => {});
+    }
 
     // Обновить статус события
     await db.run(`UPDATE massacre_events SET status = 'finished' WHERE id = ?`, [eventId]);
