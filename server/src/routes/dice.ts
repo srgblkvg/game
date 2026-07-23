@@ -135,6 +135,11 @@ router.post('/dice/finish', async (req, res) => {
     if (winAmount > 0) {
         await db.run('UPDATE users SET money = money + ? WHERE id = ?', [winAmount, userId]);
     }
+    // Общая статистика казино (кости + блэкджек)
+    await db.run(
+        'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + ?, casino_lost = casino_lost + ? WHERE id = ?',
+        [winAmount, game.entry_fee, userId]
+    );
     await db.run("UPDATE dice_games SET status = 'finished', combo = ?, payout = ? WHERE id = ?",
         [combo, winAmount, gameId]);
 
