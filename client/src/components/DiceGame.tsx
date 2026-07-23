@@ -132,26 +132,27 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                         ))}
                     </div>
 
-                    {/* Выбор ставки */}
-                    <div className="flex gap-2">
-                        {BETS.map(b => (
-                            <button
-                                key={b}
-                                onClick={() => setBet(b)}
-                                className={`cursor-pointer px-3 py-1 rounded text-sm font-bold transition-colors ${
-                                    bet === b
-                                        ? 'bg-[var(--color-accent-primary)] text-white'
-                                        : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'
-                                } ${!canAfford(b) ? 'opacity-40' : ''}`}
-                            >
-                                {b} сер.
-                            </button>
-                        ))}
+                    {/* Выбор ставки + кнопка */}
+                    <div className="flex gap-2 items-end">
+                        <div className="flex gap-1.5">
+                            {BETS.map(b => (
+                                <button
+                                    key={b}
+                                    onClick={() => setBet(b)}
+                                    className={`cursor-pointer px-3 py-1.5 rounded text-sm font-bold transition-colors ${
+                                        bet === b
+                                            ? 'bg-[var(--color-accent-primary)] text-white ring-2 ring-[var(--color-accent-primary)]/30'
+                                            : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'
+                                    } ${!canAfford(b) ? 'opacity-40' : ''}`}
+                                >
+                                    {b} сер.
+                                </button>
+                            ))}
+                        </div>
+                        <Button onClick={startGame} disabled={loading || !canAfford(bet)} variant="danger">
+                            {!canAfford(bet) ? 'Недостаточно' : loading ? '...' : 'Играть'}
+                        </Button>
                     </div>
-
-                    <Button onClick={startGame} disabled={loading || !canAfford(bet)}>
-                        {!canAfford(bet) ? 'Недостаточно серебра' : loading ? '...' : 'Играть'}
-                    </Button>
                 </div>
             )}
 
