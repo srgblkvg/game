@@ -115,7 +115,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
         <div>
             {!game && !result && (
                 <div className="flex flex-col gap-3">
-                    <p className="text-sm text-[var(--color-text-secondary)] text-left">
+                    <p className="text-sm text-[var(--color-text-muted)] text-left">
                         Брось 5 кубиков. Оставь нужные, перебрось остальные (до {MAX_REROLLS} раз). Собери комбинацию!
                     </p>
                     <div className="text-[0.65rem] text-[var(--color-text-muted)] text-left space-y-0.5">
@@ -127,9 +127,11 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                         ))}
                     </div>
 
-                    <Button onClick={startGame} disabled={loading || balance < 10} variant="danger" size="md">
-                        {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : 'Играть (10 сер.)'}
-                    </Button>
+                    <div className="flex justify-end">
+                        <Button onClick={startGame} disabled={loading || balance < 10} variant="danger" size="md">
+                            {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : 'Играть (10 сер.)'}
+                        </Button>
+                    </div>
                 </div>
             )}
 
