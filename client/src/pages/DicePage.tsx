@@ -34,7 +34,7 @@ export default function DicePage() {
     const [result, setResult] = useState<FinishResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [canAfford, setCanAfford] = useState(true);
-    const toast = useToast();
+    const { showToast } = useToast();
 
     const toggleKeep = (idx: number) => {
         if (!game) return;
@@ -53,14 +53,14 @@ export default function DicePage() {
             });
             const data = await r.json();
             if (!r.ok) {
-                toast.error(data.error || 'Ошибка');
+                showToast(data.error || 'Ошибка', 'error');
                 return;
             }
             setGame(data);
             setKeep(new Set());
             setResult(null);
         } catch {
-            toast.error('Ошибка соединения');
+            showToast('Ошибка соединения', 'error');
         } finally {
             setLoading(false);
         }
@@ -77,13 +77,13 @@ export default function DicePage() {
             });
             const data = await r.json();
             if (!r.ok) {
-                toast.error(data.error || 'Ошибка');
+                showToast(data.error || 'Ошибка', 'error');
                 return;
             }
             setGame({ ...game, dice: data.dice, rerollsUsed: data.rerollsUsed });
             setKeep(new Set());
         } catch {
-            toast.error('Ошибка соединения');
+            showToast('Ошибка соединения', 'error');
         } finally {
             setLoading(false);
         }
@@ -100,14 +100,14 @@ export default function DicePage() {
             });
             const data = await r.json();
             if (!r.ok) {
-                toast.error(data.error || 'Ошибка');
+                showToast(data.error || 'Ошибка', 'error');
                 return;
             }
             setResult(data);
             setGame(null);
             setKeep(new Set());
         } catch {
-            toast.error('Ошибка соединения');
+            showToast('Ошибка соединения', 'error');
         } finally {
             setLoading(false);
         }
@@ -115,7 +115,7 @@ export default function DicePage() {
 
     // Check if user can afford
     useEffect(() => {
-        fetch('/api/character', { headers: getHeaders() })
+        fetch('/api/character/me', { headers: getHeaders() })
             .then(r => r.json())
             .then(data => setCanAfford(data.money >= ENTRY_FEE))
             .catch(() => {});
