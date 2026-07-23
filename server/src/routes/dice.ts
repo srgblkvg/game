@@ -50,11 +50,17 @@ router.post('/dice/play', async (req, res) => {
 
     // Проверить, нет ли уже активной игры
     const active = await db.one(
-        "SELECT id FROM dice_games WHERE user_id = ? AND status = 'active'",
+        "SELECT id, entry_fee, created_at FROM dice_games WHERE user_id = ? AND status = 'active'",
         [userId]
     ).catch(() => null);
     if (active) {
-        return res.status(400).json({ error: 'У вас уже есть активная игра' });
+        // Если игра старше 5 минут — авто-завершить как брошенную
+        const age = Date.now() - new Date(active.created_at).getTime();
+        if (age > 5 * 60 * 1000) {
+            await db.run("UPDATE dice_games SET status = 'expired', combo = 'none', payout = 0 WHERE id = ?", [active.id]);
+        } else {
+            return res.status(400).json({ error: 'У вас уже есть активная игра' });
+        }
     }
 
     // Проверить баланс
