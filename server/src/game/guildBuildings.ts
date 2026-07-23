@@ -100,8 +100,11 @@ export async function getGuildBuildings(userId: number) {
 export async function buildBuilding(userId: number, buildingType: BuildingType) {
     const user = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]) as any;
     if (!user?.guildid) throw new Error('Не в гильдии');
-    const member = await db.one('SELECT rank FROM guild_members WHERE userId = ? AND guildId = ?', [userId, user.guildid]) as any;
-    if (!member || member.rank !== 'leader') throw new Error('Только лидер');
+    const member = await db.one('SELECT rank, can_buildings FROM guild_members WHERE userid = ? AND guildid = ?', [userId, user.guildid]) as any;
+    if (!member) throw new Error('Не в гильдии');
+    if (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_buildings)) {
+        throw new Error('Только лидер или офицер с правом на постройки');
+    }
 
     const guild = await db.one('SELECT level, treasury FROM guilds WHERE id = ?', [user.guildid]) as any;
     const row = await db.one('SELECT level FROM guild_buildings WHERE guildId = ? AND buildingType = ?', [user.guildid, buildingType]).catch(() => null);
