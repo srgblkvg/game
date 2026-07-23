@@ -190,6 +190,7 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
                      VALUES (?, ?, ?, ?, ?, ?, ?)`,
                     [userId, targetId, userId, '[]', '[]', s.hp, 0]
                 );
+                await db.run('UPDATE users SET wins = wins + 1 WHERE id = ?', [userId]);
                 const killerGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]).catch(() => null) as any;
                 if (killerGuild?.guildId) {
                     updateGuildQuestProgress(killerGuild.guildId).catch(e => console.error('[massacre] guildQuest kill:', e.message));
