@@ -75,7 +75,7 @@ router.post('/dice/play', async (req, res) => {
         "INSERT INTO dice_games (user_id, entry_fee, dice, rerolls, status) VALUES (?, ?, ?, 0, 'active') RETURNING id",
         [userId, ENTRY_FEE, JSON.stringify(dice)]
     );
-    const gameId = (result as any).lastID || (result as any).id;
+    const gameId = result.lastInsertRowid;
 
     res.json({ gameId, dice, rerollsUsed: 0, maxRerolls: 2, entryFee: ENTRY_FEE });
 });
