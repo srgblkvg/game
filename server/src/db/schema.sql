@@ -639,3 +639,16 @@ CREATE TABLE IF NOT EXISTS casino_games (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   finished_at TIMESTAMPTZ
 );
+
+-- ====== dice_games ======
+CREATE TABLE IF NOT EXISTS dice_games (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  entry_fee INTEGER NOT NULL DEFAULT 10,
+  dice TEXT NOT NULL DEFAULT '[]',
+  rerolls INTEGER NOT NULL DEFAULT 0,
+  combo TEXT,
+  payout INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
