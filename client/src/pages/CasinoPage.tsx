@@ -6,6 +6,7 @@ import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
 import { formatMoney } from '../utils/money';
 import { inputClass } from '../utils/formStyles';
+import DiceGame from '../components/DiceGame';
 
 const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
 const inputType = isVK ? 'text' : 'number';
@@ -203,6 +204,10 @@ export default function CasinoPage() {
                     onClick={() => setTab('blackjack')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${tab === 'blackjack' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🃏 Блэкджек</button>
+                <button
+                    onClick={() => setTab('dice')}
+                    className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${tab === 'dice' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >🎲 Кости</button>
             </div>
 
             {tab === 'blackjack' && (
@@ -327,6 +332,12 @@ export default function CasinoPage() {
                             )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {tab === 'dice' && (
+                <div className="bg-[var(--color-bg-secondary)] rounded-xl p-4 border border-[var(--color-border-default)]">
+                    <DiceGame onBalanceChange={loadBalance} />
                 </div>
             )}
         </div>
