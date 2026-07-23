@@ -72,7 +72,7 @@ router.post('/dice/play', async (req, res) => {
     // Бросить кости
     const dice = rollDice();
     const result = await db.run(
-        "INSERT INTO dice_games (user_id, entry_fee, dice, rerolls, status) VALUES (?, ?, ?, 0, 'active') RETURNING id",
+        "INSERT INTO dice_games (user_id, entry_fee, dice, rerolls, status) VALUES (?, ?, ?, 0, 'active')",
         [userId, ENTRY_FEE, JSON.stringify(dice)]
     );
     const gameId = result.lastInsertRowid;
