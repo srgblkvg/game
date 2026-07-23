@@ -9,13 +9,13 @@ const router = Router();
 type ComboName = 'poker' | 'quads' | 'fullhouse' | 'straight' | 'set' | 'twopair' | 'pair' | 'none';
 
 const PAYOUTS: Record<ComboName, { name: string; mult: number }> = {
-    poker:     { name: 'Покер',       mult: 50 },
-    quads:     { name: 'Каре',        mult: 20 },
-    fullhouse: { name: 'Фулл-хаус',   mult: 10 },
-    straight:  { name: 'Стрит',       mult: 7 },
-    set:       { name: 'Сет',         mult: 4 },
-    twopair:   { name: 'Две пары',    mult: 2 },
-    pair:      { name: 'Пара',        mult: 1 },
+    poker:     { name: 'Покер',       mult: 25 },
+    quads:     { name: 'Каре',        mult: 10 },
+    fullhouse: { name: 'Фулл-хаус',   mult: 6 },
+    straight:  { name: 'Стрит',       mult: 4 },
+    set:       { name: 'Сет',         mult: 2 },
+    twopair:   { name: 'Две пары',    mult: 1 },
+    pair:      { name: 'Пара',        mult: 0 },
     none:      { name: 'Ничего',      mult: 0 },
 };
 
