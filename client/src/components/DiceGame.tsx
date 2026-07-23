@@ -118,9 +118,9 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                     <p className="text-sm text-[var(--color-text-muted)] text-left">
                         Брось 5 кубиков. Оставь нужные, перебрось остальные (до {MAX_REROLLS} раз). Собери комбинацию!
                     </p>
-                    <div className="text-[0.65rem] text-[var(--color-text-muted)] text-center space-y-0.5">
+                    <div className="text-[0.65rem] text-[var(--color-text-muted)] text-left space-y-0.5">
                         {PAYOUT_TABLE.map(([name, mult]) => (
-                            <div key={name} className="flex justify-between max-w-[200px] mx-auto">
+                            <div key={name} className="flex justify-between max-w-[200px]">
                                 <span>{name}</span>
                                 <span className="text-[var(--color-text-accent)]">{mult}</span>
                             </div>
