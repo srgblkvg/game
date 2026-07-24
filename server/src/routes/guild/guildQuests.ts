@@ -36,7 +36,7 @@ export async function updateGuildQuestProgress(guildId: number) {
     let currentValue = 0;
     if (activeQuest.questType === 'donate') {
         const g = await db.one('SELECT treasury FROM guilds WHERE id = ?', [guildId]) as any;
-        currentValue = (g?.treasury || 0) - (snap.treasury || 0);
+        currentValue = Math.max(0, (g?.treasury || 0) - (snap.treasury || 0));
     } else {
         const field = GUILD_QUEST_INFO[activeQuest.questType as GuildQuestType]?.snapshotFields;
         if (field && userIds.length > 0) {
