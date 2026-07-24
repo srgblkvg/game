@@ -323,12 +323,12 @@ router.post('/guild/war/attack', async (req, res) => {
     ) as any).cnt;
     if (myAttacks >= 3) return res.status(400).json({ error: 'Вы исчерпали лимит атак (3)' });
 
-    // Лимит: 3 атаки на защитника
+    // Лимит: 5 атак на защитника
     const targetAttacks = (await db.one(
         'SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND defenderId = ?',
         [war.id, targetId]
     ) as any).cnt;
-    if (targetAttacks >= 3) return res.status(400).json({ error: 'Этого игрока уже атаковали максимум раз (3)' });
+    if (targetAttacks >= 5) return res.status(400).json({ error: 'Этого игрока уже атаковали максимум раз (5)' });
 
     // Кулдаун: 5 минут с последней атаки
     const lastAttack = await db.one(
