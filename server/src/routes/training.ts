@@ -39,10 +39,11 @@ router.get('/training', async (req, res) => {
     const cooldownUntil = trainingAt + COOLDOWN_MS;
     const onCooldown = cooldownUntil > now;
 
-    // Стоимость для каждого стата
+    // Стоимость для каждого стата (растёт от текущего значения стата)
     const costs: Record<string, number> = {};
+    const statValues = { s: user.bases, a: user.basea, d: user.based, m: user.basem };
     for (const stat of ['s', 'a', 'd', 'm']) {
-        costs[stat] = Math.floor(10 * Math.pow(user.level, 3) * STAT_MULTIPLIERS[stat]!);
+        costs[stat] = Math.floor(10 * Math.pow(statValues[stat as keyof typeof statValues] + 1, 3) * STAT_MULTIPLIERS[stat]!);
     }
 
     res.json({
@@ -83,8 +84,10 @@ router.post('/training', async (req, res) => {
         });
     }
 
-    // Проверить деньги
-    const cost = Math.floor(10 * Math.pow(user.level, 3) * STAT_MULTIPLIERS[stat]!);
+    // Проверить деньги (стоимость от текущего значения стата)
+    const statCol = STAT_COLUMNS[stat] as keyof typeof user;
+    const currentStat = (user as any)[statCol] || 0;
+    const cost = Math.floor(10 * Math.pow(currentStat + 1, 3) * STAT_MULTIPLIERS[stat]!);
     if (user.money < cost) {
         return res.status(400).json({ error: `Недостаточно серебра (нужно ${cost})` });
     }
