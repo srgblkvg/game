@@ -47,6 +47,7 @@ import forumRoutes from './routes/forum';
 import massacreRoutes from './routes/massacre';
 import casinoRoutes from './routes/casino';
 import diceRoutes from './routes/dice';
+import trainingRoutes from './routes/training';
 import donateRoutes from './routes/donate';
 
 export function setupRoutes(app: Express) {
@@ -156,6 +157,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', massacreRoutes);
   app.use('/api', casinoRoutes);
   app.use('/api', diceRoutes);
+  app.use('/api', trainingRoutes);
   app.use('/api/donate', donateRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
