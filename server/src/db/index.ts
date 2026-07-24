@@ -6,7 +6,7 @@ const pool = new Pool({
   database: process.env.PGDATABASE || 'game',
   user: process.env.PGUSER || 'game',
   password: process.env.PGPASSWORD || 'game123',
-  max: 5,
+  max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });
