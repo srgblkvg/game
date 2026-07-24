@@ -52,6 +52,13 @@ export async function isGuildAtWar(guildId: number): Promise<any> {
             `UPDATE guild_wars SET status = 'ended', endedAt = ?, winnerGuildId = ? WHERE id = ?`,
             [now, winnerId, war.id]
         );
+
+        // Обновить статистику гильдий
+        await db.run('UPDATE guilds SET wars_participated = wars_participated + 1 WHERE id = ?', [war.attackerGuildId]);
+        await db.run('UPDATE guilds SET wars_participated = wars_participated + 1 WHERE id = ?', [war.defenderGuildId]);
+        if (winnerId) {
+            await db.run('UPDATE guilds SET wars_won = wars_won + 1 WHERE id = ?', [winnerId]);
+        }
     }
     return await db.one(
         `SELECT * FROM guild_wars WHERE (attackerGuildId = ? OR defenderGuildId = ?) AND status IN ('pending', 'active') LIMIT 1`,
@@ -420,5 +427,27 @@ router.post('/guild/war/attack', async (req, res) => {
 });
 
 // Установить ставку налога (только лидер)
+
+// Все активные войны (публичный список)
+router.get('/guild/war/active', async (_req, res) => {
+    const wars = await db.query(
+        `SELECT gw.*, ag.name as attacker_name, dg.name as defender_name
+         FROM guild_wars gw
+         JOIN guilds ag ON gw.attackerGuildId = ag.id
+         JOIN guilds dg ON gw.defenderGuildId = dg.id
+         WHERE gw.status = 'active'
+         ORDER BY gw.id DESC`
+    ) as any[];
+
+    res.json({ wars: wars.map(w => ({
+        id: w.id,
+        attackerGuild: { id: w.attackerGuildId, name: w.attacker_name },
+        defenderGuild: { id: w.defenderGuildId, name: w.defender_name },
+        attackerScore: w.attackerScore || 0,
+        defenderScore: w.defenderScore || 0,
+        declaredAt: w.declaredAt,
+        expiresAt: w.expiresAt,
+    }))});
+});
 
 export default router;

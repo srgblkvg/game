@@ -21,10 +21,12 @@ export default function CastlePage() {
     const navigate = useNavigate();
     const [treasury, setTreasury] = useState<number | null>(null);
     const [latestThreads, setLatestThreads] = useState<any[]>([]);
+    const [activeWars, setActiveWars] = useState<any[]>([]);
 
     useEffect(() => {
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
         fetch('/api/forum/latest').then(r => r.json()).then(d => setLatestThreads(Array.isArray(d) ? d : [])).catch(() => {});
+        fetch('/api/guild/war/active', { headers: getHeaders() }).then(r => r.json()).then(d => setActiveWars(d.wars || [])).catch(() => {});
     }, []);
 
     return (
@@ -62,6 +64,41 @@ export default function CastlePage() {
                     </Card>
                 ))}
             </div>
+
+            {/* Конфликты */}
+            {activeWars.length > 0 && (
+                <div className="mb-4">
+                    <div className="flex items-center justify-between mb-1">
+                        <h2 className="text-sm font-bold flex items-center gap-1 cursor-pointer hover:text-[var(--color-accent-info)]"
+                            onClick={() => navigate('/conflicts')}>
+                            <Icon icon="game-icons:crossed-swords" width="16" height="16" />Конфликты ({activeWars.length})
+                        </h2>
+                        <Button variant="secondary" size="md" onClick={() => navigate('/conflicts')}>Все</Button>
+                    </div>
+                    <div className="space-y-2">
+                        {activeWars.slice(0, 3).map((war: any) => {
+                            const expiresIn = Math.max(0, new Date(war.expiresAt).getTime() - Date.now());
+                            const hoursLeft = Math.floor(expiresIn / (1000 * 60 * 60));
+                            return (
+                                <Card key={war.id} className="p-2 cursor-pointer hover:border-[var(--color-accent-info)] transition-colors"
+                                    onClick={() => navigate('/conflicts')}>
+                                    <div className="flex items-center gap-1 text-xs">
+                                        <span className="font-bold truncate">{war.attackerGuild.name}</span>
+                                        <span className="text-[var(--color-accent-danger)] text-[0.65rem]">VS</span>
+                                        <span className="font-bold truncate">{war.defenderGuild.name}</span>
+                                        <span className="ml-auto text-[0.65rem] font-bold">
+                                            {war.attackerScore}:{war.defenderScore}
+                                        </span>
+                                    </div>
+                                    <div className="text-[0.6rem] text-[var(--color-text-muted)] text-right">
+                                        {expiresIn > 0 ? `${hoursLeft}ч` : '...'}
+                                    </div>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Форум */}
             <div className="mb-4">
