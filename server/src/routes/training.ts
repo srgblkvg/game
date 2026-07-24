@@ -55,8 +55,6 @@ router.get('/training', async (req, res) => {
     }
 
     res.json({
-        level: user.level,
-        money: user.money,
         onCooldown,
         cooldownUntil: onCooldown ? Math.floor(cooldownUntil / 1000) : 0,
         costs,

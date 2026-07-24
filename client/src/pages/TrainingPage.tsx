@@ -5,7 +5,6 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
-import { formatMoney } from '../utils/money';
 
 const STAT_CONFIG: Record<string, { label: string; icon: string; multiplier: number }> = {
     s: { label: 'Сила', icon: '💪', multiplier: 1.8 },
@@ -22,8 +21,6 @@ function formatTime(sec: number): string {
 
 export default function TrainingPage() {
     const { showToast } = useToast();
-    const [level, setLevel] = useState(0);
-    const [money, setMoney] = useState(0);
     const [onCooldown, setOnCooldown] = useState(false);
     const [cooldownSec, setCooldownSec] = useState(0);
     const [costs, setCosts] = useState<Record<string, number>>({});
@@ -36,8 +33,6 @@ export default function TrainingPage() {
         try {
             const r = await fetch('/api/training', { headers: getHeaders() });
             const d = await r.json();
-            setLevel(d.level);
-            setMoney(d.money);
             setCosts(d.costs);
             setStats(d.stats);
             setOnCooldown(d.onCooldown);
@@ -59,7 +54,7 @@ export default function TrainingPage() {
             if (remaining <= 0) {
                 if (timerRef.current) clearInterval(timerRef.current);
                 setOnCooldown(false);
-                loadStatus(); // обновить баланс после кулдауна
+                loadStatus();
             }
         }, 1000);
     };
@@ -90,9 +85,8 @@ export default function TrainingPage() {
             }
             showToast(d.message, 'success');
             setStats(prev => ({ ...prev, [stat]: prev[stat]! + 1 }));
-            setMoney(prev => prev - d.cost);
             setOnCooldown(true);
-            const sec = 60 * 60; // 1 час
+            const sec = 60 * 60;
             setCooldownSec(sec);
             startTimer(sec);
         } catch { showToast('Ошибка соединения', 'error'); }
@@ -114,7 +108,7 @@ export default function TrainingPage() {
             <BackButton />
             <PageHeader title="Полигон" />
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
-                Тренируйте базовые статы. Одна тренировка в час. Стоимость растёт с уровнем.
+                Тренируйте базовые статы. Одна тренировка в час.
             </p>
 
             {/* Текущие статы */}
@@ -129,7 +123,7 @@ export default function TrainingPage() {
             </div>
 
             <div className="text-xs text-[var(--color-text-muted)] text-right mb-3">
-                Баланс: {formatMoney(money)} | Уровень: {level}
+                Первая — 10 сер., далее кубический рост
             </div>
 
             {/* Кулдаун */}
@@ -146,7 +140,6 @@ export default function TrainingPage() {
                 <div className="space-y-2">
                     {Object.entries(STAT_CONFIG).map(([key, cfg]) => {
                         const cost = costs[key] || 0;
-                        const canAfford = money >= cost;
                         return (
                             <Card key={key} className="flex items-center gap-3 p-3">
                                 <span className="text-xl">{cfg.icon}</span>
@@ -160,10 +153,10 @@ export default function TrainingPage() {
                                     <Button
                                         variant="danger"
                                         size="md"
-                                        disabled={loading || !canAfford}
+                                        disabled={loading}
                                         onClick={() => train(key)}
                                     >
-                                        {canAfford ? formatMoney(cost) : 'Мало серебра'}
+                                        {cost} сер.
                                     </Button>
                                 </div>
                             </Card>
