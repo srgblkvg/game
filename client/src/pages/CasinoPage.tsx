@@ -84,7 +84,17 @@ export default function CasinoPage() {
         } catch {}
     };
 
-    // Загрузить активную игру
+    // Загрузить счётчик дневного лимита (не трогает game)
+    const loadCounters = async () => {
+        try {
+            const r = await fetch('/api/casino/active', { headers: getHeaders() });
+            const d = await r.json();
+            setTodayGames(d.todayGames || 0);
+            setRemaining(d.remaining ?? 10);
+        } catch {}
+    };
+
+    // Загрузить активную игру + счётчик (при монтировании)
     const loadGame = async () => {
         try {
             const r = await fetch('/api/casino/active', { headers: getHeaders() });
@@ -138,7 +148,7 @@ export default function CasinoPage() {
             const d = await r.json();
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
-            if (d.status !== 'playing') { loadBalance(); loadGame(); }
+            if (d.status !== 'playing') { loadBalance(); loadCounters(); }
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -155,7 +165,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
-            loadGame();
+            loadCounters();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -172,7 +182,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
-            loadGame();
+            loadCounters();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -189,7 +199,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
-            loadGame();
+            loadCounters();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
