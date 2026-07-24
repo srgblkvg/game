@@ -59,17 +59,6 @@ router.post('/vk-bridge', async (req: Request, res: Response) => {
     );
 
     if (existing) {
-      // Проверяем что персонаж не удалён (есть level и hp)
-      const char = await db.one('SELECT level, currentHp FROM users WHERE id = ?', [existing.id]);
-      if (!char || char.level < 1 || char.currentHp < 1) {
-        // Персонаж удалён — сбрасываем до начального состояния
-        const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
-        await db.run(
-          'UPDATE users SET level = 1, currentHp = ?, lastHpUpdate = ?, baseS=5, baseA=5, baseD=5, baseM=5, statPoints=0, exp=0, elo=1000 WHERE id = ?',
-          [startHp, now, existing.id],
-        );
-        logger.info(`[VK Bridge Auth] Reset stale user ${existing.id} for VK ${vkUserId}`);
-      }
       await db.run('UPDATE users SET lastLoginAt = ? WHERE id = ?', [now, existing.id]);
 
       const token = jwt.sign(
