@@ -27,6 +27,8 @@ export default function TrainingPage() {
     const [stats, setStats] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(false);
     const [loaded, setLoaded] = useState(false);
+    const [bgImage, setBgImage] = useState('');
+    const [icon, setIcon] = useState('game-icons:weight-lifting-up');
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const loadStatus = async () => {
@@ -61,6 +63,14 @@ export default function TrainingPage() {
 
     useEffect(() => {
         loadStatus();
+        // Загрузить фон и иконку из actions_config
+        fetch('/api/actions', { headers: getHeaders() })
+            .then(r => r.json())
+            .then(d => {
+                const card = d.find((c: any) => c.path === '/training');
+                if (card) { setBgImage(card.bg_image || ''); setIcon(card.icon || 'game-icons:weight-lifting-up'); }
+            })
+            .catch(() => {});
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, []);
 
@@ -97,7 +107,7 @@ export default function TrainingPage() {
         return (
             <div className="max-w-2xl mx-auto px-4 py-4">
                 <BackButton />
-                <PageHeader title="Лудус" />
+                <PageHeader title="Лудус" icon={icon} bgImage={bgImage} />
                 <p className="text-sm text-[var(--color-text-muted)] text-center py-4">Загрузка...</p>
             </div>
         );
@@ -106,7 +116,7 @@ export default function TrainingPage() {
     return (
         <div className="max-w-2xl mx-auto px-4 py-4">
             <BackButton />
-            <PageHeader title="Лудус" />
+            <PageHeader title="Лудус" icon={icon} bgImage={bgImage} />
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Тренируйте базовые статы. Одна тренировка в час.
             </p>
