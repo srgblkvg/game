@@ -169,16 +169,18 @@ router.post('/guild/quest/claim', async (req, res) => {
 
     const g = await db.one('SELECT exp, level FROM guilds WHERE id = ?', [member.guildId]) as any;
     let newLevel = g.level;
+    let currentExp = g.exp;
     let leveledUp = false;
-    while (g.exp >= 100 * Math.pow(2, newLevel - 1)) {
+    while (currentExp >= 100 * Math.pow(2, newLevel - 1)) {
+      currentExp -= 100 * Math.pow(2, newLevel - 1);
       newLevel++;
       leveledUp = true;
     }
     if (leveledUp) {
-      await db.run('UPDATE guilds SET level = ? WHERE id = ?', [newLevel, member.guildId]);
-      sendToGuild(member.guildId, { type: 'guildLevelUp', level: newLevel, exp: g.exp });
+      await db.run('UPDATE guilds SET level = ?, exp = ? WHERE id = ?', [newLevel, currentExp, member.guildId]);
+      sendToGuild(member.guildId, { type: 'guildLevelUp', level: newLevel, exp: currentExp });
     }
-    sendToGuild(member.guildId, { type: 'guildExp', exp: g.exp, level: leveledUp ? newLevel : g.level });
+    sendToGuild(member.guildId, { type: 'guildExp', exp: currentExp, level: leveledUp ? newLevel : g.level });
 
     res.json({ success: true, rewardXp: quest.rewardXp, leveledUp, message: `+${quest.rewardXp} опыта гильдии!` });
 });
