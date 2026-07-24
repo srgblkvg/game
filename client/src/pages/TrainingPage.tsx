@@ -97,7 +97,7 @@ export default function TrainingPage() {
         return (
             <div className="max-w-2xl mx-auto px-4 py-4">
                 <BackButton />
-                <PageHeader title="Полигон" />
+                <PageHeader title="Лудус" />
                 <p className="text-sm text-[var(--color-text-muted)] text-center py-4">Загрузка...</p>
             </div>
         );
@@ -106,7 +106,7 @@ export default function TrainingPage() {
     return (
         <div className="max-w-2xl mx-auto px-4 py-4">
             <BackButton />
-            <PageHeader title="Полигон" />
+            <PageHeader title="Лудус" />
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Тренируйте базовые статы. Одна тренировка в час.
             </p>
