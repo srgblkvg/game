@@ -19,6 +19,13 @@ const STAT_COLUMNS: Record<string, string> = {
     s: 'bases',
 };
 
+const TRAINED_COLUMNS: Record<string, string> = {
+    d: 'trained_d',
+    a: 'trained_a',
+    m: 'trained_m',
+    s: 'trained_s',
+};
+
 const STAT_LABELS: Record<string, string> = {
     s: 'Сила',
     a: 'Ловкость',
@@ -30,7 +37,7 @@ const STAT_LABELS: Record<string, string> = {
 router.get('/training', async (req, res) => {
     const userId = req.userId;
     const user = await db.one(
-        'SELECT level, money, based, basea, basem, bases, training_at FROM users WHERE id = ?',
+        'SELECT level, money, based, basea, basem, bases, trained_s, trained_a, trained_d, trained_m, training_at FROM users WHERE id = ?',
         [userId]
     ) as any;
 
@@ -39,11 +46,12 @@ router.get('/training', async (req, res) => {
     const cooldownUntil = trainingAt + COOLDOWN_MS;
     const onCooldown = cooldownUntil > now;
 
-    // Стоимость для каждого стата (растёт от текущего значения стата)
+    // Стоимость от счётчика тренировок (не от базовых статов)
+    const trainedValues = { s: user.trained_s, a: user.trained_a, d: user.trained_d, m: user.trained_m };
     const costs: Record<string, number> = {};
-    const statValues = { s: user.bases, a: user.basea, d: user.based, m: user.basem };
     for (const stat of ['s', 'a', 'd', 'm']) {
-        costs[stat] = Math.floor(10 * Math.pow(statValues[stat as keyof typeof statValues] + 1, 3) * STAT_MULTIPLIERS[stat]!);
+        const trained = trainedValues[stat as keyof typeof trainedValues] || 0;
+        costs[stat] = Math.floor(10 * Math.pow(trained + 1, 3) * STAT_MULTIPLIERS[stat]!);
     }
 
     res.json({
@@ -71,7 +79,7 @@ router.post('/training', async (req, res) => {
     }
 
     const user = await db.one(
-        'SELECT level, money, based, basea, basem, bases, training_at FROM users WHERE id = ?',
+        'SELECT level, money, based, basea, basem, bases, trained_s, trained_a, trained_d, trained_m, training_at FROM users WHERE id = ?',
         [userId]
     ) as any;
 
@@ -84,25 +92,26 @@ router.post('/training', async (req, res) => {
         });
     }
 
-    // Проверить деньги (стоимость от текущего значения стата)
-    const statCol = STAT_COLUMNS[stat] as keyof typeof user;
-    const currentStat = (user as any)[statCol] || 0;
-    const cost = Math.floor(10 * Math.pow(currentStat + 1, 3) * STAT_MULTIPLIERS[stat]!);
+    // Стоимость от счётчика тренировок
+    const trainedCol = TRAINED_COLUMNS[stat]!;
+    const trained = (user as any)[trainedCol] || 0;
+    const cost = Math.floor(10 * Math.pow(trained + 1, 3) * STAT_MULTIPLIERS[stat]!);
+
     if (user.money < cost) {
         return res.status(400).json({ error: `Недостаточно серебра (нужно ${cost})` });
     }
 
-    const column = STAT_COLUMNS[stat]!;
+    const baseColumn = STAT_COLUMNS[stat]!;
     const label = STAT_LABELS[stat]!;
 
     const now = new Date().toISOString();
     await db.run(
-        `UPDATE users SET ${column} = ${column} + 1, money = money - ?, training_at = ? WHERE id = ?`,
+        `UPDATE users SET ${baseColumn} = ${baseColumn} + 1, ${trainedCol} = ${trainedCol} + 1, money = money - ?, training_at = ? WHERE id = ?`,
         [cost, now, userId]
     );
 
     const updated = await db.one(
-        `SELECT ${column} as new_val FROM users WHERE id = ?`,
+        `SELECT ${baseColumn} as new_val FROM users WHERE id = ?`,
         [userId]
     ) as any;
 
