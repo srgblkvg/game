@@ -51,7 +51,7 @@ router.get('/training', async (req, res) => {
     const costs: Record<string, number> = {};
     for (const stat of ['s', 'a', 'd', 'm']) {
         const trained = trainedValues[stat as keyof typeof trainedValues] || 0;
-        costs[stat] = Math.floor(10 * Math.pow(trained + 1, 3) * STAT_MULTIPLIERS[stat]!);
+        costs[stat] = trained === 0 ? 10 : Math.floor(10 * Math.pow(trained + 1, 3) * STAT_MULTIPLIERS[stat]!);
     }
 
     res.json({
@@ -95,7 +95,7 @@ router.post('/training', async (req, res) => {
     // Стоимость от счётчика тренировок
     const trainedCol = TRAINED_COLUMNS[stat]!;
     const trained = (user as any)[trainedCol] || 0;
-    const cost = Math.floor(10 * Math.pow(trained + 1, 3) * STAT_MULTIPLIERS[stat]!);
+    const cost = trained === 0 ? 10 : Math.floor(10 * Math.pow(trained + 1, 3) * STAT_MULTIPLIERS[stat]!);
 
     if (user.money < cost) {
         return res.status(400).json({ error: `Недостаточно серебра (нужно ${cost})` });
