@@ -69,6 +69,9 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
       return res.status(401).json({ error: 'Не авторизован' });
     }
 
+    const user = await db.one('SELECT email FROM users WHERE id = ?', [userId]) as any;
+    const customerEmail = user?.email || '';
+
     const yoo = getSdk();
     if (!yoo) {
       return res.status(500).json({ error: 'ЮKassa не настроена' });
@@ -94,7 +97,7 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
     const now = Math.floor(Date.now() / 1000);
     const price = item.price.toFixed(2);
 
-    const payment = await yoo.payments.create({
+    const paymentData: any = {
       amount: { value: price, currency: CurrencyEnum.RUB },
       confirmation: { type: 'redirect', return_url: 'https://mmoarena.ru/premium' },
       description: item.title,
@@ -106,7 +109,20 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
         silverAmount: item.silverAmount || 0,
       },
       capture: true,
-    });
+    };
+    if (customerEmail) {
+      paymentData.receipt = {
+        customer: { email: customerEmail },
+        items: [{
+          description: item.title,
+          quantity: '1',
+          amount: { value: price, currency: CurrencyEnum.RUB },
+          vat_code: 1, // без НДС
+        }],
+      };
+    }
+
+    const payment = await yoo.payments.create(paymentData);
 
     await db.run(
       `INSERT INTO yukassa_payments (payment_id, user_id, item, days, amount, status, processed_at)
