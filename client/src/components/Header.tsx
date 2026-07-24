@@ -33,6 +33,7 @@ const breadcrumbMap: Record<string, string> = {
     war: 'Поле боя',
     massacre: 'Резня',
     casino: 'Игорный дом',
+    training: 'Лудус',
     dice: 'Кости',
     feedback: 'Обратная связь',
     collections: 'Коллекция',
