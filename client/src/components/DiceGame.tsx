@@ -41,13 +41,30 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
     const [result, setResult] = useState<FinishResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(0);
+    const [todayGames, setTodayGames] = useState(0);
+    const [remaining, setRemaining] = useState(10);
     const { showToast } = useToast();
+
+    const loadStatus = async () => {
+        try {
+            const r = await fetch('/api/dice/status', { headers: getHeaders() });
+            const d = await r.json();
+            if (d.activeGame) {
+                setGame(d.activeGame);
+            } else {
+                setGame(null);
+            }
+            setTodayGames(d.todayGames || 0);
+            setRemaining(d.remaining ?? 10);
+        } catch {}
+    };
 
     useEffect(() => {
         fetch('/api/character/me', { headers: getHeaders() })
             .then(r => r.json())
             .then(data => setBalance(data.money || 0))
             .catch(() => {});
+        loadStatus();
     }, []);
 
     const toggleKeep = (idx: number) => {
@@ -71,6 +88,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
             setKeep(new Set());
             setResult(null);
             onBalanceChange?.();
+            loadStatus();
         } catch { showToast('Ошибка соединения', 'error'); }
         finally { setLoading(false); }
     };
@@ -107,6 +125,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
             setGame(null);
             setKeep(new Set());
             onBalanceChange?.();
+            loadStatus();
         } catch { showToast('Ошибка соединения', 'error'); }
         finally { setLoading(false); }
     };
@@ -127,11 +146,22 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                         ))}
                     </div>
 
-                    <div className="flex justify-end">
-                        <Button onClick={startGame} disabled={loading || balance < 10} variant="danger" size="md">
-                            {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : 'Играть (10 сер.)'}
-                        </Button>
-                    </div>
+                    {remaining <= 0 ? (
+                        <p className="text-sm text-[var(--color-accent-danger)] text-center py-2">
+                            🚫 Дневной лимит исчерпан (10/10). Возвращайтесь завтра!
+                        </p>
+                    ) : (
+                        <>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-[var(--color-text-muted)]">
+                                    Игр сегодня: <span className={remaining <= 3 ? 'text-[var(--color-accent-warning)]' : ''}>{todayGames}/10</span>
+                                </span>
+                                <Button onClick={startGame} disabled={loading || balance < 10 || remaining <= 0} variant="danger" size="md">
+                                    {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : 'Играть (10 сер.)'}
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -190,8 +220,8 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                     <div className="text-xs text-[var(--color-text-secondary)]">
                         {result.profit > 0 ? `(прибыль: +${result.profit} сер.)` : result.profit < 0 ? `(убыток: ${result.profit} сер.)` : '(свои назад)'}
                     </div>
-                    <Button onClick={startGame} disabled={loading || balance < 10} size="sm">
-                        {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : 'Ещё раз'}
+                    <Button onClick={startGame} disabled={loading || balance < 10 || remaining <= 0} size="sm">
+                        {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : remaining <= 0 ? 'Лимит исчерпан' : 'Ещё раз'}
                     </Button>
                 </div>
             )}

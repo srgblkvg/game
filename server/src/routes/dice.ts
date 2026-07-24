@@ -4,6 +4,46 @@ import { collectGuildTax } from '../db/helpers';
 
 const router = Router();
 
+const DAILY_LIMIT = 10;
+
+// Посчитать сегодняшние игры в кости
+async function countTodayGames(userId: number): Promise<number> {
+    const row = await db.one(
+        "SELECT COUNT(*) as cnt FROM dice_games WHERE user_id = ? AND created_at::date = CURRENT_DATE",
+        [userId]
+    );
+    return row.cnt || 0;
+}
+
+// Статус: активная игра + дневной лимит
+router.get('/dice/status', async (req, res) => {
+    const userId = req.userId;
+    const active = await db.one(
+        "SELECT id, entry_fee, dice, rerolls, created_at FROM dice_games WHERE user_id = ? AND status = 'active'",
+        [userId]
+    ).catch(() => null);
+
+    const todayCount = await countTodayGames(userId);
+    const remaining = Math.max(0, DAILY_LIMIT - todayCount);
+
+    if (active) {
+        res.json({
+            activeGame: {
+                gameId: active.id,
+                dice: JSON.parse(active.dice || '[]'),
+                rerollsUsed: active.rerolls,
+                maxRerolls: 2,
+                entryFee: active.entry_fee,
+            },
+            todayGames: todayCount,
+            dailyLimit: DAILY_LIMIT,
+            remaining,
+        });
+    } else {
+        res.json({ activeGame: null, todayGames: todayCount, dailyLimit: DAILY_LIMIT, remaining });
+    }
+});
+
 
 // Комбинации (от высшей к низшей)
 type ComboName = 'poker' | 'quads' | 'fullhouse' | 'straight' | 'set' | 'twopair' | 'pair' | 'none';
@@ -47,6 +87,10 @@ function getCombo(dice: number[]): ComboName {
 router.post('/dice/play', async (req, res) => {
     const userId = req.userId;
     const bet = 10;
+
+    // Проверить дневной лимит
+    const todayCount = await countTodayGames(userId);
+    if (todayCount >= DAILY_LIMIT) return res.status(400).json({ error: `Дневной лимит исчерпан (${todayCount}/${DAILY_LIMIT}). Возвращайтесь завтра!` });
 
     // Проверить, нет ли уже активной игры
     const active = await db.one(
