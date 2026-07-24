@@ -41,6 +41,8 @@ const ITEMS: Record<string, ShopItem> = {
   silver_1000:  { title: '1000 серебра',                 price: 49,  type: 'silver',        silverAmount: 1000 },
   silver_5000:  { title: '5000 серебра',                 price: 99,  type: 'silver',        silverAmount: 5000 },
   silver_10000: { title: '10000 серебра',                price: 199, type: 'silver',        silverAmount: 10000 },
+  silver_50000: { title: '50000 серебра',                price: 799, type: 'silver',        silverAmount: 50000 },
+  silver_100000:{ title: '100000 серебра',               price: 1399, type: 'silver',        silverAmount: 100000 },
   craft_rare:   { title: 'Сундук «Редкий»',              price: 99,  type: 'craft_pack' },
   craft_epic:   { title: 'Сундук «Эпический»',           price: 199, type: 'craft_pack' },
 };

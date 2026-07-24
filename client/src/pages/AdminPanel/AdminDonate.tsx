@@ -28,6 +28,8 @@ const ITEM_LABELS: Record<string, string> = {
   silver_1000: '1000💰',
   silver_5000: '5000💰',
   silver_10000: '10000💰',
+  silver_50000: '50000💰',
+  silver_100000: '100000💰',
   craft_rare: 'Сундук Редкий',
   craft_epic: 'Сундук Эпический',
 };

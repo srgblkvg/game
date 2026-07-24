@@ -39,6 +39,8 @@ const ITEMS: Record<string, VkItem> = {
   silver_1000:  { title: '1000 серебра',                 price: 7,  type: 'silver',        amount: 1000 },
   silver_5000:  { title: '5000 серебра',                 price: 14, type: 'silver',        amount: 5000 },
   silver_10000: { title: '10000 серебра',                price: 28, type: 'silver',        amount: 10000 },
+  silver_50000: { title: '50000 серебра',                price: 114, type: 'silver',        amount: 50000 },
+  silver_100000:{ title: '100000 серебра',               price: 200, type: 'silver',        amount: 100000 },
   craft_rare:   { title: 'Сундук «Редкий»',              price: 14, type: 'craft_pack' },
   craft_epic:   { title: 'Сундук «Эпический»',           price: 28, type: 'craft_pack' },
 };
