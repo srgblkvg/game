@@ -42,7 +42,7 @@ router.get('/training', async (req, res) => {
     // Стоимость для каждого стата
     const costs: Record<string, number> = {};
     for (const stat of ['s', 'a', 'd', 'm']) {
-        costs[stat] = Math.floor(10 * user.level * user.level * STAT_MULTIPLIERS[stat]!);
+        costs[stat] = Math.floor(10 * Math.pow(user.level, 3) * STAT_MULTIPLIERS[stat]!);
     }
 
     res.json({
@@ -84,7 +84,7 @@ router.post('/training', async (req, res) => {
     }
 
     // Проверить деньги
-    const cost = Math.floor(10 * user.level * user.level * STAT_MULTIPLIERS[stat]!);
+    const cost = Math.floor(10 * Math.pow(user.level, 3) * STAT_MULTIPLIERS[stat]!);
     if (user.money < cost) {
         return res.status(400).json({ error: `Недостаточно серебра (нужно ${cost})` });
     }
