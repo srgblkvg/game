@@ -4,6 +4,7 @@ import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { deliverStarterPack, deliverSilver, deliverCraftPack } from './donate';
 import logger from '../logger';
+import { sendPaymentReceipt } from '../email';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
 import { authMiddleware } from '../middleware/auth';
 
@@ -107,6 +108,8 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
         type: item.type,
         days: item.days || 0,
         silverAmount: item.silverAmount || 0,
+        amount: price,
+        itemTitle: item.title,
       },
       capture: true,
     };
@@ -240,6 +243,12 @@ router.post('/webhook', async (req: Request, res: Response) => {
       );
 
       logger.info(`[YooKassa] ${itemType} delivered to user ${userId} (payment ${paymentId})`);
+
+      // Отправить чек на почту
+      const itemTitle = metadata.itemTitle || ITEMS[metadata.item as string]?.title || itemType;
+      db.one('SELECT email FROM users WHERE id = ?', [userId])
+        .then((u: any) => { if (u?.email) sendPaymentReceipt(u.email, itemTitle, String(verified.amount?.value || '')); })
+        .catch(() => {});
     } else if (event === 'payment.canceled') {
       const now = Math.floor(Date.now() / 1000);
       await db.run(

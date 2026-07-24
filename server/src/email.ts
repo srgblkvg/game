@@ -9,6 +9,32 @@ const transporter = nodemailer.createTransport({
 
 const FROM = 'noreply@mmoarena.ru';
 
+export async function sendPaymentReceipt(email: string, itemName: string, amount: string): Promise<boolean> {
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to: email,
+      subject: `MMO Arena — чек об оплате: ${itemName}`,
+      text: `Спасибо за покупку!\\n\\nТовар: ${itemName}\\nСумма: ${amount} ₽\\n\\nСредства зачислены в игру.\\n\\nmmoarena.ru`,
+      html: `<div style="font-family: sans-serif; max-width: 400px; margin: 0 auto;">
+        <h2 style="color: #c084fc;">MMO Arena</h2>
+        <p>Спасибо за покупку!</p>
+        <div style="padding: 16px; background: #1e1e2e; border-radius: 8px; margin: 16px 0;">
+          <p style="color: #cdd6f4; margin: 4px 0;"><strong>Товар:</strong> ${itemName}</p>
+          <p style="color: #cdd6f4; margin: 4px 0;"><strong>Сумма:</strong> ${amount} ₽</p>
+        </div>
+        <p style="color: #6c7086; font-size: 14px;">Средства зачислены в игру.</p>
+        <p style="color: #6c7086; font-size: 12px;">mmoarena.ru</p>
+      </div>`,
+    });
+    logger.info({ email, itemName }, 'Payment receipt sent');
+    return true;
+  } catch (err) {
+    logger.error({ err, email }, 'Failed to send payment receipt');
+    return false;
+  }
+}
+
 export async function sendVerificationCode(email: string, code: string): Promise<boolean> {
   try {
     await transporter.sendMail({
