@@ -82,6 +82,17 @@ function drawCards(deck: Card[], count: number): { drawn: Card[]; remaining: Car
     return { drawn, remaining };
 }
 
+const DAILY_LIMIT = 10;
+
+// Посчитать сегодняшние игры пользователя по типу
+async function countTodayGames(gameType: string, userId: number): Promise<number> {
+    const row = await db.one(
+        "SELECT COUNT(*) as cnt FROM casino_games WHERE user_id = ? AND game_type = ? AND created_at::date = CURRENT_DATE",
+        [userId, gameType]
+    );
+    return row.cnt || 0;
+}
+
 // Получить активную игру пользователя
 router.get('/casino/active', async (req, res) => {
     const userId = req.userId;
@@ -89,7 +100,12 @@ router.get('/casino/active', async (req, res) => {
         "SELECT * FROM casino_games WHERE user_id = ? AND status = 'playing' ORDER BY created_at DESC LIMIT 1",
         [userId]
     );
-    if (!game) return res.json({ game: null });
+
+    // Счётчик сегодняшних игр (для всех типов)
+    const todayBJ = await countTodayGames('blackjack', userId);
+    const remaining = Math.max(0, DAILY_LIMIT - todayBJ);
+
+    if (!game) return res.json({ game: null, todayGames: todayBJ, dailyLimit: DAILY_LIMIT, remaining });
 
     // Не показываем вторую карту дилера до конца игры
     const dealerCards: string[] = JSON.parse(game.dealer_cards || '[]');
@@ -108,7 +124,10 @@ router.get('/casino/active', async (req, res) => {
             dealer_score: dealerCards.length > 0 ? calculateScore([dealerCards[0]!]).score : 0,
             can_double: JSON.parse(game.player_cards || '[]').length === 2,
             can_surrender: JSON.parse(game.player_cards || '[]').length === 2,
-        }
+        },
+        todayGames: todayBJ,
+        dailyLimit: DAILY_LIMIT,
+        remaining,
     });
 });
 
@@ -124,6 +143,10 @@ router.post('/casino/blackjack/start', async (req, res) => {
         [userId]
     );
     if (active) return res.status(400).json({ error: 'У вас уже есть активная игра. Завершите её.' });
+
+    // Проверить дневной лимит
+    const todayCount = await countTodayGames('blackjack', userId);
+    if (todayCount >= DAILY_LIMIT) return res.status(400).json({ error: `Дневной лимит исчерпан (${todayCount}/${DAILY_LIMIT}). Возвращайтесь завтра!` });
 
     // Проверить деньги
     try {

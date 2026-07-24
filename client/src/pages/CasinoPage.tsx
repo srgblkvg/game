@@ -69,6 +69,8 @@ export default function CasinoPage() {
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(0);
     const [actionCard, setActionCard] = useState<any>(null);
+    const [todayGames, setTodayGames] = useState(0);
+    const [remaining, setRemaining] = useState(10);
 
     // Загрузить карточку действия
     useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/casino'); if (c) setActionCard(c); }).catch(() => {}); }, []);
@@ -92,6 +94,8 @@ export default function CasinoPage() {
             } else {
                 setGame(null);
             }
+            setTodayGames(d.todayGames || 0);
+            setRemaining(d.remaining ?? 10);
         } catch {}
     };
 
@@ -218,6 +222,12 @@ export default function CasinoPage() {
                             <p className="text-sm text-[var(--color-text-muted)]">
                                 Сделайте ставку. Блэкджек оплачивается 3:2. Дилер добирает до 17.
                             </p>
+                            {remaining <= 0 ? (
+                                <p className="text-sm text-[var(--color-accent-danger)] text-center py-2">
+                                    🚫 Дневной лимит исчерпан (10/10). Возвращайтесь завтра!
+                                </p>
+                            ) : (
+                                <>
                             <div className="flex gap-2 items-end">
                                 <div className="flex-1">
                                     <label className="text-[0.6rem] text-[var(--color-text-muted)]">Ставка</label>
@@ -232,11 +242,16 @@ export default function CasinoPage() {
                                         className={inputClass}
                                     />
                                 </div>
-                                <Button variant="danger" size="md" onClick={startGame} disabled={loading}>
+                                <Button variant="danger" size="md" onClick={startGame} disabled={loading || remaining <= 0}>
                                     {loading ? '...' : 'Играть'}
                                 </Button>
                             </div>
-                            <p className="text-xs text-[var(--color-text-muted)]">Баланс: {formatMoney(balance)}</p>
+                            <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
+                                <span>Баланс: {formatMoney(balance)}</span>
+                                <span>Игр сегодня: <span className={remaining <= 3 ? 'text-[var(--color-accent-warning)]' : ''}>{todayGames}/10</span></span>
+                            </div>
+                                </>
+                            )}
                         </div>
                     )}
 
@@ -325,7 +340,7 @@ export default function CasinoPage() {
                             {/* Новая игра */}
                             {isFinished && (
                                 <div className="flex gap-2 justify-center">
-                                    <Button variant="danger" size="md" onClick={() => { setGame(null); setBet(''); }}>
+                                    <Button variant="danger" size="md" onClick={() => { setGame(null); setBet(''); loadGame(); }}>
                                         Новая игра
                                     </Button>
                                 </div>

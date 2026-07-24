@@ -5,7 +5,7 @@ import DiceGame from '../components/DiceGame';
 export default function DicePage() {
     return (
         <div className="max-w-lg mx-auto px-3 py-4">
-            <PageHeader title="Кости" breadcrumbs={[{ label: 'Кости' }]} />
+            <PageHeader title="Кости" />
             <BackButton />
             <div className="bg-[var(--color-bg-secondary)] rounded-xl p-4 border border-[var(--color-border-default)] mt-4">
                 <DiceGame />
