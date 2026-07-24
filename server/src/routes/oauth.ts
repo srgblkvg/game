@@ -211,7 +211,7 @@ router.get('/vk/callback', async (req, res) => {
         }
 
         if (!displayName) displayName = `id${vkUserId}`;
-        const user = await findOrCreateUser('vkontakte', vkUserId, displayName);
+        const user = await findOrCreateUser('vk', vkUserId, displayName);
         const jwtToken = await makeToken(user.id, 'player');
 
         // Логируем IP и аудит
