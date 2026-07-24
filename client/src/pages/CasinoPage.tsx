@@ -71,6 +71,7 @@ export default function CasinoPage() {
     const [actionCard, setActionCard] = useState<any>(null);
     const [todayGames, setTodayGames] = useState(0);
     const [remaining, setRemaining] = useState(10);
+    const [countersLoaded, setCountersLoaded] = useState(false);
 
     // Загрузить карточку действия
     useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/casino'); if (c) setActionCard(c); }).catch(() => {}); }, []);
@@ -91,6 +92,7 @@ export default function CasinoPage() {
             const d = await r.json();
             setTodayGames(d.todayGames || 0);
             setRemaining(d.remaining ?? 10);
+            setCountersLoaded(true);
         } catch {}
     };
 
@@ -106,6 +108,7 @@ export default function CasinoPage() {
             }
             setTodayGames(d.todayGames || 0);
             setRemaining(d.remaining ?? 10);
+            setCountersLoaded(true);
         } catch {}
     };
 
@@ -235,7 +238,9 @@ export default function CasinoPage() {
                             <p className="text-sm text-[var(--color-text-muted)]">
                                 Сделайте ставку. Блэкджек оплачивается 3:2. Дилер добирает до 17.
                             </p>
-                            {remaining <= 0 ? (
+                            {!countersLoaded ? (
+                                <p className="text-sm text-[var(--color-text-muted)] text-center py-2">Загрузка...</p>
+                            ) : remaining <= 0 ? (
                                 <p className="text-sm text-[var(--color-accent-danger)] text-center py-2">
                                     🚫 Дневной лимит исчерпан (10/10). Возвращайтесь завтра!
                                 </p>

@@ -43,6 +43,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
     const [balance, setBalance] = useState(0);
     const [todayGames, setTodayGames] = useState(0);
     const [remaining, setRemaining] = useState(10);
+    const [countersLoaded, setCountersLoaded] = useState(false);
     const { showToast } = useToast();
 
     const loadStatus = async () => {
@@ -56,6 +57,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
             }
             setTodayGames(d.todayGames || 0);
             setRemaining(d.remaining ?? 10);
+            setCountersLoaded(true);
         } catch {}
     };
 
@@ -146,7 +148,9 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                         ))}
                     </div>
 
-                    {remaining <= 0 ? (
+                    {!countersLoaded ? (
+                        <p className="text-sm text-[var(--color-text-muted)] text-center py-2">Загрузка...</p>
+                    ) : remaining <= 0 ? (
                         <p className="text-sm text-[var(--color-accent-danger)] text-center py-2">
                             🚫 Дневной лимит исчерпан (10/10). Возвращайтесь завтра!
                         </p>
