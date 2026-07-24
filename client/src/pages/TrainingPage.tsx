@@ -122,10 +122,6 @@ export default function TrainingPage() {
                 ))}
             </div>
 
-            <div className="text-xs text-[var(--color-text-muted)] text-right mb-3">
-                Первая — 10 сер., далее кубический рост
-            </div>
-
             {/* Кулдаун */}
             {onCooldown ? (
                 <Card className="p-4 text-center">
