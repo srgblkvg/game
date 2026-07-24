@@ -138,7 +138,7 @@ export default function CasinoPage() {
             const d = await r.json();
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
-            if (d.status !== 'playing') loadBalance();
+            if (d.status !== 'playing') { loadBalance(); loadGame(); }
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -155,6 +155,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
+            loadGame();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -171,6 +172,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
+            loadGame();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -187,6 +189,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
+            loadGame();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
