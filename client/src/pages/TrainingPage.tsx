@@ -117,6 +117,7 @@ export default function TrainingPage() {
         <div className="max-w-2xl mx-auto px-4 py-4">
             <BackButton />
             <PageHeader title="Лудус" icon={icon} bgImage={bgImage} />
+            <p className="text-xs text-[var(--color-text-muted)] mb-3">Мир → Лудус</p>
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Тренируйте базовые статы. Одна тренировка в час.
             </p>
