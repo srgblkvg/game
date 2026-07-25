@@ -61,7 +61,7 @@ export default function AchievementsBlock() {
                         const progressLabel = lastTier ? `${fmtNum(a.progress)}/${fmtNum(lastTier.threshold)}` : '?';
                         return (
                             <div key={a.key} className="flex items-center gap-2 text-xs">
-                                <span className="text-base">{a.icon}</span>
+                                <span className="text-base w-5 text-center flex-shrink-0">{a.icon}</span>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1">
                                         <span className="truncate">{a.name}</span>
