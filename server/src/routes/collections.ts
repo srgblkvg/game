@@ -21,7 +21,7 @@ router.get('/collections', async (req, res) => {
         LEFT JOIN collection_set_items si ON si.set_id = s.id
         LEFT JOIN items i ON i.name = si.item_name AND i.slot = si.slot
         LEFT JOIN rarities r ON i.rarity_id = r.id
-        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot
+        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = i.rarity_id
         ORDER BY s.sort_order, s.id
     `, [userId]) as any[];
 
