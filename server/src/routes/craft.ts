@@ -29,13 +29,18 @@ router.get('/craft/recipes', async (req, res) => {
     `, [recipe.id]);
 
         if (recipe.result_type === 'item') {
-            recipe.result = await db.one(`
+            const rawResult = await db.one(`
         SELECT i.id, i.name, i.slot, i.rarity_id, i.image, i.bonuses, i.extra,
                r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id
         WHERE i.id = ?
-      `, [recipe.result_id]) || null;
+      `, [recipe.result_id]) as any;
+            recipe.result = rawResult ? {
+                ...rawResult,
+                bonuses: typeof rawResult.bonuses === 'string' ? JSON.parse(rawResult.bonuses || '{}') : (rawResult.bonuses || {}),
+                extra: typeof rawResult.extra === 'string' ? JSON.parse(rawResult.extra || '{}') : (rawResult.extra || {}),
+            } : null;
         } else if (recipe.result_type === 'random_item') {
             // result_id = rarity_id, показываем инфо о редкости
             recipe.result = await db.one(
