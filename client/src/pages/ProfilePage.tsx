@@ -87,22 +87,42 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex flex-col items-center gap-6 mt-4">
-                <CharacterCard
-                    char={{
-                        username: profile.username,
-                        level: profile.level,
-                        equipment: profile.equipment,
-                        stats: profile.stats,
-                        gender: profile.gender || 'male',
-                        guildName: profile.guildName,
-                        guildId: profile.guildId,
-                        avatar: profile.avatar || null,
-                    }}
-                    side="left"
-                    showHealth={false}
-                    showExp={false}
-                    readOnly
-                />
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 w-full justify-center">
+                    <CharacterCard
+                        char={{
+                            username: profile.username,
+                            level: profile.level,
+                            equipment: profile.equipment,
+                            stats: profile.stats,
+                            gender: profile.gender || 'male',
+                            guildName: profile.guildName,
+                            guildId: profile.guildId,
+                            avatar: profile.avatar || null,
+                        }}
+                        side="left"
+                        showHealth={false}
+                        showExp={false}
+                        readOnly
+                    />
+
+                    <div className="flex flex-col items-center sm:items-start gap-3 min-w-[160px] pt-2">
+                        {achScore > 0 && (
+                            <div className="text-sm font-bold text-[var(--color-accent-gold)]">
+                                🏆 Достижения — {achScore} очк.
+                            </div>
+                        )}
+                        {profile.createdAt && (
+                            <div className="text-xs text-[var(--color-text-muted)]">
+                                📅 {fmtSafeDate(profile.createdAt, { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                            </div>
+                        )}
+                        {user && user.id !== Number(userId) && (
+                            <Button variant="danger" size="md" onClick={(e) => { e.stopPropagation(); handleWriteMessage(); }}>
+                                Написать сообщение
+                            </Button>
+                        )}
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                     <StatSection title="PvP (Арена)" icon="⚔️" color="var(--color-text-accent)">
@@ -150,30 +170,8 @@ export default function ProfilePage() {
                         <StatItem icon="game-icons:cash" label="Выиграно" value={formatMoney(profile.casinoWon || 0)} />
                         <StatItem icon="game-icons:pay-money" label="Проиграно" value={formatMoney(profile.casinoLost || 0)} />
                     </StatSection>
-
-                    {/* Full-width row */}
-                    <div className="sm:col-span-2 flex flex-wrap items-center gap-3 text-xs">
-                        {achScore > 0 && (
-                            <span className="font-bold text-[var(--color-accent-gold)]">
-                                🏆 Достижения — {achScore} очк.
-                            </span>
-                        )}
-                        {profile.createdAt && (
-                            <span className="text-[var(--color-text-muted)]">
-                                📅 {fmtSafeDate(profile.createdAt, { year: 'numeric', month: '2-digit', day: '2-digit' })}
-                            </span>
-                        )}
-                    </div>
                 </div>
             </div>
-
-            {user && user.id !== Number(userId) && (
-                <div className="flex justify-center mt-6">
-                    <Button variant="danger" size="md" onClick={(e) => { e.stopPropagation(); handleWriteMessage(); }}>
-                        Написать сообщение
-                    </Button>
-                </div>
-            )}
         </div>
     );
 }
