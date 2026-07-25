@@ -176,7 +176,7 @@ router.get('/character/me', async (req, res) => {
         drinkBonuses,
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,
-        collectionCount: collectionCount || 0,
+        collectionCount: totalCollectionBonus,
         collectionSetBonus: completedSetBonus?.total || 0,
         collectedItems: collectedItems || [],
         guildBonus,

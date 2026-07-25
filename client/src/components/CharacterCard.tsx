@@ -199,7 +199,7 @@ export default function CharacterCard({
           baseStats={(char as any).baseStats || { s: 5, a: 5, d: 5, m: 5 }}
           equipmentBonuses={eqBonuses}
           extraStats={exStats}
-          collectionBonus={collBonus + collSetBonus}
+          collectionBonus={collBonus}
           collectionSetBonus={collSetBonus}
           guildBonus={gBonus}
           buildings={buildingsList}

@@ -194,8 +194,8 @@ export default function CollectionsPage() {
         return <div className="p-4 max-w-4xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
     }
 
-    const totalPercent = Math.round(((collectionCount + collectionSetBonus) / totalCollectionItems) * 100);
-    const totalBonus = collectionCount + collectionSetBonus;
+    const totalPercent = Math.round((collectionCount / totalCollectionItems) * 100);
+    const totalBonus = collectionCount;
 
     return (
         <div className="p-4 max-w-4xl mx-auto">
@@ -205,7 +205,7 @@ export default function CollectionsPage() {
             <div className="mb-3 p-3 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-secondary)]">
                 <p className="text-xs font-medium mb-1">Текущий бонус</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                    Собрано: <span className="text-[var(--color-accent-gold)] font-medium">{collectionCount}/{totalCollectionItems}</span>
+                    Собрано: <span className="text-[var(--color-accent-gold)] font-medium">{collectionCount - collectionSetBonus}/{totalCollectionItems}</span>
                     {collectionSetBonus > 0 && (
                         <span> + <span className="text-[var(--color-accent-gold)] font-medium">{collectionSetBonus}%</span> за закрытые сеты</span>
                     )}
