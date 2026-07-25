@@ -35,11 +35,9 @@ function AchievementRow({ a }: { a: AchievementData }) {
         if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
     }, []);
 
-    const handleTouchStart = (e: React.TouchEvent) => {
+    const handleTouchStart = () => {
         longPressRef.current = setTimeout(() => {
             setShowTooltip(true);
-            // Prevent default context menu
-            e.preventDefault();
         }, 500);
     };
 
