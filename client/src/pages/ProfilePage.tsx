@@ -87,7 +87,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex flex-col items-center gap-6 mt-4">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 w-full justify-center">
+                <div className="flex flex-col sm:flex-row items-center sm:items-stretch gap-6 w-full justify-center">
                     <CharacterCard
                         char={{
                             username: profile.username,
