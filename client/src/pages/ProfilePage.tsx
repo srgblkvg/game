@@ -124,7 +124,7 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
                     <StatSection title="PvP (Арена)" icon="⚔️" color="var(--color-text-accent)">
                         <StatItem icon="game-icons:crossed-swords" label="Боёв" value={profile.totalBattles || 0} />
                         <StatItem icon="game-icons:trophy" label="Побед" value={profile.wins || 0} />
