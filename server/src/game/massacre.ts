@@ -253,13 +253,10 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
             [s.hp, s.alive, s.stunned, eventId, userId]
         );
         // Достижение за выживание в резне
-        if (s.alive && userId !== winnerId) {
+        if (s.alive) {
             checkAchievement(userId, 'massacre').catch(() => {});
         }
     }
-
-    // Достижение победителю
-    checkAchievement(winnerId, 'massacre').catch(() => {});
 
     // Разослать уведомления ВСЕМ участникам
     for (const [userId] of state) {
