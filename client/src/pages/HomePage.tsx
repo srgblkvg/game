@@ -10,7 +10,9 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { getCompatibleSlots } from '../utils/itemUtils';
 import { getRemaining } from '../hooks/useServerTime';
-import TutorialFlow from '../components/TutorialFlow';
+import TutorialOverlay from '../components/TutorialOverlay';
+import tutorialSteps from '../data/tutorialSteps';
+import { getHeaders } from '../api/helpers';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -30,10 +32,10 @@ export default function HomePage() {
     // Header already polls character — no need for duplicate interval here
   }, [user, setCharacter]);
 
-  // Показываем туториал тем, кто ещё не прошёл
+  // Показываем туториал тем, кто ещё не прошёл (флаг в БД)
   useEffect(() => {
     if (!character) return;
-    if (!character.tutorialCompleted && (character.tutorialStep || 0) < 6) {
+    if (!character.tutorialCompleted) {
       const t = setTimeout(() => setShowTutorial(true), 500);
       return () => clearTimeout(t);
     }
@@ -117,10 +119,15 @@ export default function HomePage() {
       </Modal>
 
       {showTutorial && (
-        <TutorialFlow
-          onComplete={() => {
+        <TutorialOverlay
+          steps={tutorialSteps}
+          onComplete={async () => {
             setShowTutorial(false);
-            setCharacter(prev => prev ? { ...prev, tutorialCompleted: 1, tutorialStep: 6 } : prev);
+            // Обновляем персонажа локально, чтобы не переоткрылся при следующем poll
+            setCharacter(prev => prev ? { ...prev, tutorialCompleted: 1 } : prev);
+            try {
+              await fetch('/api/character/tutorial-done', { method: 'POST', headers: getHeaders() });
+            } catch {}
           }}
         />
       )}
