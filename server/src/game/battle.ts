@@ -107,10 +107,11 @@ interface TurnContext {
   target: 'attacker' | 'defender';
 }
 
-function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor: number; hpTarget: number; stunnedTarget: boolean } {
+function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor: number; hpTarget: number; stunnedTarget: boolean; poisonApplied: { damage: number; turns: number } | undefined } {
   let hpActor = ctx.hpActor;
   let hpTarget = ctx.hpTarget;
   let stunnedTarget = false;
+  let poisonApplied: { damage: number; turns: number } | undefined;
 
   addStep({ type: 'attack', actor: ctx.actor, message: `${ctx.actorName} атакует!` });
 
@@ -129,7 +130,7 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
         hp1: ctx.actor === 'attacker' ? hpActor : hpTarget, hp2: ctx.actor === 'attacker' ? hpTarget : hpActor,
         maxHp1: ctx.maxHpActor, maxHp2: ctx.maxHpTarget });
     }
-    return { hpActor, hpTarget, stunnedTarget };
+    return { hpActor, hpTarget, stunnedTarget, poisonApplied: undefined };
   }
 
   // Попадание
@@ -193,12 +194,14 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
       maxHp1: ctx.maxHpActor, maxHp2: ctx.maxHpTarget });
   }
 
-  // PoisonOnHit (Отшельник 3pc): apply poison on hit
+  // PoisonOnHit (Отшельник 3pc): apply poison DoT over 3 turns
   const poison = ctx.actorStats.poisonOnHit || 0;
   if (poison > 0 && dmg > 0 && hpTarget > 0) {
+    const resiliencePct = ctx.targetStats.resiliencePct || 0;
+    const poisonTurns = Math.max(1, Math.round(3 * (1 - resiliencePct / 100)));
     const poisonDmg = Math.round(ctx.maxHpTarget * poison / 100);
-    addStep({ type: 'info', message: `Яд наносит ${poisonDmg} урона!` });
-    hpTarget = Math.max(0, hpTarget - poisonDmg);
+    poisonApplied = { damage: poisonDmg, turns: poisonTurns };
+    addStep({ type: 'info', message: `Яд на ${poisonTurns} хода (-${poisonDmg}/ход)!` });
   }
 
   if (dmg > 0 && Math.random() < stunChance(ctx.actorStats, ctx.targetStats) * (1 - (ctx.targetStats.resiliencePct || 0) / 100)) {
@@ -206,7 +209,7 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
     addStep({ type: 'stun', actor: ctx.target, message: `${ctx.targetName} оглушён!` });
   }
 
-  return { hpActor, hpTarget, stunnedTarget };
+  return { hpActor, hpTarget, stunnedTarget, poisonApplied: poisonApplied! };
 }
 
 // ── Главная функция боя ──
@@ -221,12 +224,31 @@ export function runBattle(
   let hpD = (defender.currentHp != null) ? defender.currentHp : statsD.hp;
   let stunnedA = false;
   let stunnedD = false;
+  let poisonOnA: { damage: number; turnsLeft: number } | null = null;
+  let poisonOnD: { damage: number; turnsLeft: number } | null = null;
   const log: string[] = [];
   const steps: BattleStep[] = [];
 
   const addStep = (step: BattleStep) => {
     steps.push(step);
     log.push(step.message);
+  };
+
+  // Helper: apply poison DoT at start of turn
+  const applyPoison = (name: string, actor: 'attacker' | 'defender', hp: number, maxHp: number) => {
+    const poison = actor === 'attacker' ? poisonOnA : poisonOnD;
+    if (!poison || poison.turnsLeft <= 0) return hp;
+    const dmg = Math.min(poison.damage, hp);
+    hp = Math.max(0, hp - dmg);
+    addStep({ type: 'damage', actor, damage: dmg, message: `${name} получает ${dmg} урона от яда (ходов: ${poison.turnsLeft - 1})`,
+      hp1: actor === 'attacker' ? hp : (hpD > 0 ? hpD : 0), hp2: actor === 'attacker' ? (hpA > 0 ? hpA : 0) : hp,
+      maxHp1: maxHpA, maxHp2: maxHpD });
+    poison.turnsLeft--;
+    if (poison.turnsLeft <= 0) {
+      if (actor === 'attacker') poisonOnA = null;
+      else poisonOnD = null;
+    }
+    return hp;
   };
 
   const maxHpA = statsA.hp;
@@ -251,6 +273,10 @@ export function runBattle(
 
   while (hpA > 0 && hpD > 0) {
     if (turn === 'A') {
+      // Poison DoT on attacker's turn
+      hpA = applyPoison(attacker.name, 'attacker', hpA, maxHpA);
+      if (hpA <= 0) break;
+
       if (stunnedA) {
         addStep({ type: 'stun', actor: 'attacker', message: `${attacker.name} оглушён и пропускает ход` });
         stunnedA = false;
@@ -268,8 +294,15 @@ export function runBattle(
       hpA = result.hpActor;
       hpD = result.hpTarget;
       stunnedD = result.stunnedTarget;
+      if (result.poisonApplied) {
+        poisonOnD = { damage: result.poisonApplied.damage, turnsLeft: result.poisonApplied.turns };
+      }
       turn = 'D';
     } else {
+      // Poison DoT on defender's turn
+      hpD = applyPoison(defender.name, 'defender', hpD, maxHpD);
+      if (hpD <= 0) break;
+
       if (stunnedD) {
         addStep({ type: 'stun', actor: 'defender', message: `${defender.name} оглушён и пропускает ход` });
         stunnedD = false;
@@ -287,6 +320,9 @@ export function runBattle(
       hpD = result.hpActor;
       hpA = result.hpTarget;
       stunnedA = result.stunnedTarget;
+      if (result.poisonApplied) {
+        poisonOnA = { damage: result.poisonApplied.damage, turnsLeft: result.poisonApplied.turns };
+      }
       turn = 'A';
     }
   }
