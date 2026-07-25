@@ -13,8 +13,6 @@ interface AchievementData {
     tiers: { tier: number; name: string; icon: string; threshold: number; achieved: boolean; current: boolean }[];
 }
 
-const VISIBLE_LIMIT = 5;
-
 function fmtNum(n: number): string {
     if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'М';
     if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'к';
@@ -25,7 +23,6 @@ export default function AchievementsBlock() {
     const { character } = useGame();
     const [achievements, setAchievements] = useState<AchievementData[]>([]);
     const [collapsed, setCollapsed] = useState(true);
-    const [showAll, setShowAll] = useState(false);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -39,8 +36,6 @@ export default function AchievementsBlock() {
 
     const earnedCount = achievements.filter(a => a.highestTier > 0).length;
     const totalCount = achievements.length;
-    const visible = showAll ? achievements : achievements.slice(0, VISIBLE_LIMIT);
-    const hiddenCount = achievements.length - VISIBLE_LIMIT;
 
     if (!character || achievements.length === 0) return null;
 
@@ -59,9 +54,9 @@ export default function AchievementsBlock() {
             </div>
 
             {!collapsed && (
-                <div className="mt-2 space-y-2">
+                <div className="mt-2 space-y-2 max-h-[11.5rem] overflow-y-auto">
                     {loading && <div className="text-xs text-[var(--color-text-muted)] text-center py-2">Загрузка...</div>}
-                    {visible.map(a => {
+                    {achievements.map(a => {
                         const lastTier = a.tiers?.[a.tiers.length - 1];
                         const progressLabel = lastTier ? `${fmtNum(a.progress)}/${fmtNum(lastTier.threshold)}` : '?';
                         return (
@@ -100,14 +95,6 @@ export default function AchievementsBlock() {
                             </div>
                         );
                     })}
-                    {hiddenCount > 0 && !showAll && (
-                        <div
-                            className="text-xs text-[var(--color-accent-info)] cursor-pointer hover:underline text-center py-1"
-                            onClick={(e) => { e.stopPropagation(); setShowAll(true); }}
-                        >
-                            ещё {hiddenCount}...
-                        </div>
-                    )}
                 </div>
             )}
         </Card>
