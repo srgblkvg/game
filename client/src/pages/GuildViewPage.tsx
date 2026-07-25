@@ -174,24 +174,21 @@ export default function GuildViewPage() {
                     <Card>
                         <h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3>
                         <div className="space-y-1">
-                            {members.map((m: any) => (
-                                <div key={m.userId} className="flex items-center gap-2 text-xs py-1 border-b border-[var(--color-border-light)]">
-                                    <span className="w-6 text-center">
-                                        {m.rank === 'leader' ? '👑' : m.rank === 'officer' ? '🛡️' : '⚔️'}
-                                    </span>
-                                    <span className="text-[var(--color-accent-info)] cursor-pointer hover:underline"
+                            {[...members].sort((a: any, b: any) => {
+                                const rankOrder = (r: string) => r === 'leader' ? 0 : r === 'officer' ? 1 : 2;
+                                const ro = rankOrder(a.rank) - rankOrder(b.rank);
+                                if (ro !== 0) return ro;
+                                return (b.level || 0) - (a.level || 0);
+                            }).map((m: any) => (
+                                <div key={m.userId} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] text-xs">
+                                    <span className="cursor-pointer hover:text-[var(--color-accent-info)]"
                                         onClick={() => navigate(`/profile/${m.userId}`)}>
-                                        {m.username}
+                                        {m.rank === 'leader' ? '👑' : m.rank === 'officer' ? '🛡️' : '⚔️'} {m.username} ур.{m.level}
                                     </span>
-                                    <span className="text-[var(--color-text-muted)] text-[0.6rem]">
-                                        {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
-                                    </span>
-                                    {(() => {
-                                        if (m.online) {
-                                            return <span className="text-green-500 dark:text-green-400 ml-auto font-medium">В игре</span>;
-                                        }
-                                        return <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level} · Был в игре: {getLastSeen(m.lastLoginAt).text}</span>;
-                                    })()}
+                                    {m.online
+                                        ? <span className="text-green-500 dark:text-green-400 whitespace-nowrap font-medium">В игре</span>
+                                        : <span className="text-[var(--color-text-muted)] whitespace-nowrap">Был в игре: {getLastSeen(m.lastLoginAt).text}</span>
+                                    }
                                 </div>
                             ))}
                         </div>
