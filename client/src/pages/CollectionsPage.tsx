@@ -94,6 +94,7 @@ export default function CollectionsPage() {
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
     const [sets, setSets] = useState<CollectionSet[]>([]);
     const [collectionCount, setCollectionCount] = useState(0);
+    const [collectionSetBonus, setCollectionSetBonus] = useState(0);
     const [totalCollectionItems, setTotalCollectionItems] = useState(225);
     const [loading, setLoading] = useState(true);
 
@@ -113,6 +114,7 @@ export default function CollectionsPage() {
                 setItems(shopItems);
                 setSets(collectionData.sets || []);
                 setCollectionCount(character.collectionCount || 0);
+                setCollectionSetBonus(character.collectionSetBonus || 0);
                 setTotalCollectionItems(character.totalCollectionItems || 189);
 
                 const inv = character.inventory || [];
@@ -166,6 +168,7 @@ export default function CollectionsPage() {
 
             setInventoryItems(charRes.inventory || []);
             setCollectionCount(charRes.collectionCount || 0);
+            setCollectionSetBonus(charRes.collectionSetBonus || 0);
             setSets(collRes.sets || []);
 
             const newOwned = new Set<string>();
@@ -191,7 +194,8 @@ export default function CollectionsPage() {
         return <div className="p-4 max-w-4xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
     }
 
-    const totalPercent = Math.round((collectionCount / totalCollectionItems) * 100);
+    const totalPercent = Math.round(((collectionCount + collectionSetBonus) / totalCollectionItems) * 100);
+    const totalBonus = collectionCount + collectionSetBonus;
 
     return (
         <div className="p-4 max-w-4xl mx-auto">
@@ -202,8 +206,11 @@ export default function CollectionsPage() {
                 <p className="text-xs font-medium mb-1">Текущий бонус</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
                     Собрано: <span className="text-[var(--color-accent-gold)] font-medium">{collectionCount}/{totalCollectionItems}</span>
-                    {collectionCount > 0 && (
-                        <span> — <span className="text-[var(--color-accent-success)]">+{collectionCount}%</span> к Силе, Ловкости, Защите, Мастерству и HP</span>
+                    {collectionSetBonus > 0 && (
+                        <span> + <span className="text-[var(--color-accent-gold)] font-medium">{collectionSetBonus}%</span> за закрытые сеты</span>
+                    )}
+                    {totalBonus > 0 && (
+                        <span> — <span className="text-[var(--color-accent-success)]">+{totalBonus}%</span> к Силе, Ловкости, Защите, Мастерству и HP</span>
                     )}
                 </p>
             </div>

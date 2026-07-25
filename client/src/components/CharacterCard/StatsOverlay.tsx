@@ -9,6 +9,7 @@ interface StatsOverlayProps {
   equipmentBonuses?: { s: number; a: number; d: number; m: number };
   extraStats?: { crit: number; dodge: number; counter: number; fullBlock: number };
   collectionBonus?: number;
+  collectionSetBonus?: number;
   guildBonus?: number;
   buildings?: { type: string; icon: string; label: string; level: number; bonus: number }[];
   setBonuses?: string[];
@@ -36,7 +37,7 @@ const BONUS_LABELS: Record<string, string> = {
   'fullBlock': 'Блок',
 };
 
-export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, guildBonus, buildings, setBonuses, noFlip }: StatsOverlayProps) {
+export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, collectionSetBonus, guildBonus, buildings, setBonuses, noFlip }: StatsOverlayProps) {
   const [flipped, setFlipped] = useState(false);
   const [animating, setAnimating] = useState(false);
   const isMobile = compact === 'mobile' || compact === 'verySmall';
@@ -119,6 +120,14 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                   </td>
                   <td className="text-right pl-[2px] text-[var(--color-accent-gold)]">+{collectionBonus}%</td>
                 </tr>
+                {(collectionSetBonus ?? 0) > 0 && (
+                  <tr>
+                    <td className={tdStyle + ' pl-3'}>
+                      <span className="text-[0.55rem] text-[var(--color-text-muted)]">↳ закрытые сеты</span>
+                    </td>
+                    <td className="text-right pl-[2px] text-[var(--color-accent-gold)]">+{collectionSetBonus}%</td>
+                  </tr>
+                )}
               </>
             )}
             {(guildBonus ?? 0) > 0 && (

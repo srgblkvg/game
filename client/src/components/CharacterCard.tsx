@@ -59,6 +59,7 @@ export default function CharacterCard({
   const eqBonuses = stats?.bonuses || (char as any).equipmentBonuses || { s: 0, a: 0, d: 0, m: 0 };
   const exStats = stats?.extra || (char as any).extraStats || { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
   const collBonus = Number((char as any).collectionCount ?? (char as any).collectionBonus ?? 0);
+  const collSetBonus = Number((char as any).collectionSetBonus ?? 0);
   const gBonus = Number((char as any).guildBonus ?? 0);
   const buildingsList = (char as any).buildings || [];
 
@@ -199,6 +200,7 @@ export default function CharacterCard({
           equipmentBonuses={eqBonuses}
           extraStats={exStats}
           collectionBonus={collBonus}
+          collectionSetBonus={collSetBonus}
           guildBonus={gBonus}
           buildings={buildingsList}
           setBonuses={stats?.setBonuses}
