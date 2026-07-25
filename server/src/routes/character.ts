@@ -116,7 +116,7 @@ router.get('/character/me', async (req, res) => {
 
     const now = Math.floor(Date.now() / 1000);
     const maxHp = stats.hp;
-    let currentHp = await applyHpRegen({
+    const hpRegenParams: any = {
         id: user.id,
         currentHp: user.currentHp,
         maxHp,
@@ -124,7 +124,9 @@ router.get('/character/me', async (req, res) => {
         roomType: user.roomType,
         roomUntil: user.roomUntil,
         premiumUntil: user.premiumUntil,
-    });
+    };
+    if (stats.hermitRegen) hpRegenParams.hermitRegen = true;
+    let currentHp = await applyHpRegen(hpRegenParams);
 
     // Если currentHp > maxHp (например после изменения бонусов) — ограничиваем
     if (currentHp > maxHp) {

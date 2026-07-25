@@ -105,6 +105,7 @@ export interface CharStats extends StatRecord {
     counterOnHit?: number;    // % шанс ответки при ударе
     poisonOnHit?: number;     // % яда от HP при атаке
     blockPen?: number;        // % пробивание блока
+    hermitRegen?: boolean;    // Отшельник: +100% реген HP вне боя
     setBonuses?: string[];    // список активных сет-бонусов (для тултипа)
 }
 
@@ -185,7 +186,7 @@ export function currentStats(
             if (count >= 3) { extra.fullBlock = Math.round(extra.fullBlock * 1.1); setBonuses.push('Гладиатор: +10% блок'); }
             if (count >= 4) { st = scaleKeep(st, 1.1); setBonuses.push('Гладиатор: +10% ко всем статам'); }
         } else if (set === 'Отшельник' || set === 'hermit') {
-            if (count >= 2) { setBonuses.push('Отшельник: +10% реген HP'); }
+            if (count >= 2) { st.hermitRegen = true; setBonuses.push('Отшельник: +100% реген HP (вне боя)'); }
             if (count >= 3) { st.poisonOnHit = 3; setBonuses.push('Отшельник: яд 3% HP на 3 хода'); }
             if (count >= 4) { extra.dodge = Math.round(extra.dodge * 1.15); setBonuses.push('Отшельник: +15% уклонение'); }
         }

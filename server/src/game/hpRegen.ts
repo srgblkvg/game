@@ -15,6 +15,7 @@ export async function applyHpRegen(user: {
     roomType?: string | null;
     roomUntil?: number;
     premiumUntil?: number;
+    hermitRegen?: boolean;
 }): Promise<number> {
     const now = Math.floor(Date.now() / 1000);
     const HP_REGEN_SECONDS = 10;
@@ -31,6 +32,9 @@ export async function applyHpRegen(user: {
     } else if (hasPremium) {
         regenRate = 3; // премиум = чулан
     }
+
+    // Отшельник 2pc: +100% реген HP вне боя
+    if (user.hermitRegen) regenRate *= 2;
 
     const elapsed = now - (user.lastHpUpdate || now);
     if (elapsed > 0 && hp < maxHp) {
