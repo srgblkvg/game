@@ -165,6 +165,7 @@ router.get('/character/me', async (req, res) => {
         buildings,
         totalCollectionItems: totalCollectionItems || 189,
         tutorialCompleted: user.tutorialCompleted || 0,
+        tutorialStep: user.tutorialStep || 0,
     });
 });
 
