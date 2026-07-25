@@ -13,15 +13,15 @@ router.get('/collections', async (req, res) => {
 
     // Сеты и их статус — с предметами
     const sets = await db.query(`
-        SELECT s.*, si.item_name, si.slot,
-               i.rarity_id, i.image, i.bonuses, i.extra,
+        SELECT s.*, si.item_name, si.slot, si.rarity_id,
+               i.image, i.bonuses, i.extra,
                r.display_name as rarity_display, r.color as rarity_color,
                CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END as collected
         FROM collection_sets s
         LEFT JOIN collection_set_items si ON si.set_id = s.id
-        LEFT JOIN items i ON i.name = si.item_name AND i.slot = si.slot
-        LEFT JOIN rarities r ON i.rarity_id = r.id
-        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = i.rarity_id
+        LEFT JOIN items i ON i.name = si.item_name AND i.slot = si.slot AND i.rarity_id = si.rarity_id
+        LEFT JOIN rarities r ON si.rarity_id = r.id
+        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = si.rarity_id
         ORDER BY s.sort_order, s.id
     `, [userId]) as any[];
 

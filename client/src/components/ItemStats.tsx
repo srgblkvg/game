@@ -122,14 +122,25 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       )}
 
       {/* Set bonuses */}
-      {!resource && item.extra?.set && (
+      {!resource && item.extra?.set && (() => {
+        let equippedCount = 0;
+        try {
+          const { character } = useGame();
+          if (character?.equipment) {
+            for (const eq of Object.values(character.equipment)) {
+              if ((eq as any)?.extra?.set === item.extra.set) equippedCount++;
+            }
+          }
+        } catch {}
+        return (
         <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)]">
-          <div className="text-center font-bold text-[var(--color-accent-purple)]">Сет: {item.extra.set}</div>
-          {item.extra.setBonus2 && <div className="text-[var(--color-text-muted)] mt-0.5">2 предмета: {item.extra.setBonus2}</div>}
-          {item.extra.setBonus3 && <div className="text-[var(--color-text-muted)]">3 предмета: {item.extra.setBonus3}</div>}
-          {item.extra.setBonus4 && <div className="text-[var(--color-text-muted)]">4 предмета: {item.extra.setBonus4}</div>}
+          <div className="text-center font-bold text-[var(--color-accent-purple)]">Сет: {item.extra.set} ({equippedCount}/4)</div>
+          {item.extra.setBonus2 && <div className={`mt-0.5 ${equippedCount >= 2 ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}`}>2 предмета: {item.extra.setBonus2} {equippedCount >= 2 ? '✓' : ''}</div>}
+          {item.extra.setBonus3 && <div className={`${equippedCount >= 3 ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}`}>3 предмета: {item.extra.setBonus3} {equippedCount >= 3 ? '✓' : ''}</div>}
+          {item.extra.setBonus4 && <div className={`${equippedCount >= 4 ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}`}>4 предмета: {item.extra.setBonus4} {equippedCount >= 4 ? '✓' : ''}</div>}
         </div>
-      )}
+        );
+      })()}
 
       {/* Artifact effect */}
       {!resource && item.extra?.effect && (
