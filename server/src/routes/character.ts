@@ -78,6 +78,20 @@ router.get('/character/me', async (req, res) => {
 
     const drinkBonuses = getDrinkBonuses(user);
     const collectionCount = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt;
+    
+    // Бонус за полностью собранные сеты коллекции
+    const completedSetBonus = await db.one(`
+      SELECT COALESCE(SUM(cs.bonus_percent), 0) as total
+      FROM collection_sets cs
+      WHERE cs.id IN (
+        SELECT si.set_id
+        FROM collection_set_items si
+        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = si.rarity_id
+        GROUP BY si.set_id
+        HAVING COUNT(*) = COUNT(c.id)
+      )
+    `, [userId]) as any;
+    const totalCollectionBonus = (collectionCount || 0) + (completedSetBonus?.total || 0);
     const collectedItems = await db.query('SELECT itemName, slot FROM collections WHERE userId = ?', [userId]) as any[];
     const guildBonus = await getGuildBonus(userId, 'arena');
     const buildings = await getGuildBuildings(userId);
@@ -162,7 +176,7 @@ router.get('/character/me', async (req, res) => {
         drinkBonuses,
         openPrivateTabs, gender: user.gender || 'male',
         statPoints: user.statPoints || 0,
-        collectionCount: collectionCount || 0,
+        collectionCount: totalCollectionBonus,
         collectedItems: collectedItems || [],
         guildBonus,
         buildings,

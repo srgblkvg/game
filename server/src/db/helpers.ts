@@ -161,8 +161,23 @@ export async function buildPlayerStats(userRow: any, context: BattleContext): Pr
   const drinks = getDrinkBonuses(userRow);
   const r = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userRow.id]);
   const collCnt = r?.cnt || 0;
+  
+  // Бонус за полностью собранные сеты коллекции
+  const completedSetBonus = await db.one(`
+    SELECT COALESCE(SUM(cs.bonus_percent), 0) as total
+    FROM collection_sets cs
+    WHERE cs.id IN (
+      SELECT si.set_id
+      FROM collection_set_items si
+      LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = si.rarity_id
+      GROUP BY si.set_id
+      HAVING COUNT(*) = COUNT(c.id)
+    )
+  `, [userRow.id]) as any;
+  
+  const totalCollBonus = collCnt + (completedSetBonus?.total || 0);
   const gb = await getGuildBonus(userRow.id, context);
-  return currentStats(base, equip, drinks, collCnt, gb);
+  return currentStats(base, equip, drinks, totalCollBonus, gb);
 }
 
 // --- Уровни (чистые функции) ---
