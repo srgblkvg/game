@@ -28,6 +28,12 @@ export function scaleStats(s: StatRecord, mult: number): StatRecord {
   };
 }
 
+/** Масштабировать статы с сохранением кастомных полей (вампиризм, ярость и т.д.) */
+function scaleKeep(st: any, mult: number): any {
+  const scaled = scaleStats({ s: st.s, a: st.a, d: st.d, m: st.m }, mult);
+  return { ...st, s: scaled.s, a: scaled.a, d: scaled.d, m: scaled.m };
+}
+
 /** Сложить два StatRecord */
 export function addStats(a: StatRecord, b: StatRecord): StatRecord {
   return {
@@ -155,12 +161,12 @@ export function currentStats(
             if (count >= 3) { extra.crit = Math.round(extra.crit * 1.15); setBonuses.push('Дуэлянт: +15% крит'); }
             if (count >= 4) { st.vampirism = (st.vampirism || 0) + 5; setBonuses.push('Дуэлянт: крит восстанавливает 5% HP'); }
         } else if (set === 'Берсерк' || set === 'berserk') {
-            if (count >= 2) { st = scaleStats(st, 1.1); setBonuses.push('Берсерк: +10% урон'); }
+            if (count >= 2) { st = scaleKeep(st, 1.1); setBonuses.push('Берсерк: +10% урон'); }
             if (count >= 3) { st.rageDmg = 20; st.rageThreshold = 0.5; setBonuses.push('Берсерк: +20% урона при HP<50%'); }
             if (count >= 4) { st.blockPen = 20; setBonuses.push('Берсерк: игнор 20% брони'); }
         } else if (set === 'Страж' || set === 'guardian') {
             if (count >= 2) { extra.fullBlock = Math.round(extra.fullBlock * 1.1); setBonuses.push('Страж: +10% блок'); }
-            if (count >= 3) { st = scaleStats(st, 1 + 0.15); setBonuses.push('Страж: +15% защита'); }
+            if (count >= 3) { st = scaleKeep(st, 1.15); setBonuses.push('Страж: +15% защита'); }
             if (count >= 4) { st.counterOnHit = 30; setBonuses.push('Страж: 30% ответный удар'); }
         } else if (set === 'Буревестник' || set === 'storm') {
             if (count >= 2) { st.a = Math.round(st.a * 1.1); setBonuses.push('Буревестник: +10% ловкость'); }
@@ -168,16 +174,16 @@ export function currentStats(
             if (count >= 4) { extra.dodge = Math.round(extra.dodge * 1.2); setBonuses.push('Буревестник: +20% уклонение'); }
         } else if (set === 'Жнец' || set === 'reaper') {
             if (count >= 2) { st.vampirism = (st.vampirism || 0) + 5; setBonuses.push('Жнец: +5% вампиризм'); }
-            if (count >= 3) { st = scaleStats(st, 1.15); setBonuses.push('Жнец: +15% урон'); }
+            if (count >= 3) { st = scaleKeep(st, 1.15); setBonuses.push('Жнец: +15% урон'); }
             if (count >= 4) { st.execute = true; setBonuses.push('Жнец: добивание <10% HP'); }
         } else if (set === 'Крушитель' || set === 'crusher') {
             if (count >= 2) { st.blockPen = 25; setBonuses.push('Крушитель: +25% пробивание блока'); }
             if (count >= 3) { extra.crit = Math.round(extra.crit * 1.1); setBonuses.push('Крушитель: +10% крит'); }
-            if (count >= 4) { st = scaleStats(st, 1.15); setBonuses.push('Крушитель: +15% урон'); }
+            if (count >= 4) { st = scaleKeep(st, 1.15); setBonuses.push('Крушитель: +15% урон'); }
         } else if (set === 'Гладиатор' || set === 'gladiator') {
-            if (count >= 2) { st = scaleStats(st, 1.15); extra.counter = Math.round(extra.counter * 1.15); setBonuses.push('Гладиатор: +15% урон, +15% контратака'); }
+            if (count >= 2) { st = scaleKeep(st, 1.15); extra.counter = Math.round(extra.counter * 1.15); setBonuses.push('Гладиатор: +15% урон, +15% контратака'); }
             if (count >= 3) { extra.fullBlock = Math.round(extra.fullBlock * 1.1); setBonuses.push('Гладиатор: +10% блок'); }
-            if (count >= 4) { st = scaleStats(st, 1.1); setBonuses.push('Гладиатор: +10% ко всем статам'); }
+            if (count >= 4) { st = scaleKeep(st, 1.1); setBonuses.push('Гладиатор: +10% ко всем статам'); }
         } else if (set === 'Отшельник' || set === 'hermit') {
             if (count >= 2) { setBonuses.push('Отшельник: +10% реген HP'); }
             if (count >= 3) { st.poisonOnHit = 3; setBonuses.push('Отшельник: яд 3% HP на 3 хода'); }
@@ -198,12 +204,12 @@ export function currentStats(
 
     // Бонус коллекции
     if (collectionBonus && collectionBonus > 0) {
-        st = scaleStats(st, 1 + collectionBonus / 100);
+        st = scaleKeep(st, 1 + collectionBonus / 100);
     }
 
     // Бонус гильдейских сооружений
     if (guildBonus && guildBonus > 0) {
-        st = scaleStats(st, 1 + guildBonus / 100);
+        st = scaleKeep(st, 1 + guildBonus / 100);
     }
 
     return {
