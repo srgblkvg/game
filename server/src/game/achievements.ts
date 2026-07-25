@@ -116,7 +116,7 @@ export const ACHIEVEMENT_TRACKS: AchievementTrack[] = [
             { tier: 2, name: 'Серебро', icon: '🥈', threshold: 50 },
             { tier: 3, name: 'Золото', icon: '🥇', threshold: 100 },
             { tier: 4, name: 'Алмаз', icon: '💎', threshold: 150 },
-            { tier: 5, name: 'Легенда', icon: '👑', threshold: 189 },
+            { tier: 5, name: 'Легенда', icon: '👑', threshold: 225 },
         ],
     },
     {

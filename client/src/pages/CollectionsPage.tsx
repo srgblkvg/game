@@ -94,7 +94,7 @@ export default function CollectionsPage() {
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
     const [sets, setSets] = useState<CollectionSet[]>([]);
     const [collectionCount, setCollectionCount] = useState(0);
-    const [totalCollectionItems, setTotalCollectionItems] = useState(189);
+    const [totalCollectionItems, setTotalCollectionItems] = useState(225);
     const [loading, setLoading] = useState(true);
 
     const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null);
@@ -214,8 +214,8 @@ export default function CollectionsPage() {
                     <summary className="cursor-pointer hover:text-[var(--color-text-primary)] font-medium">Как работает коллекция?</summary>
                     <p className="mt-1">
                         Каждый собранный предмет даёт <span className="text-[var(--color-accent-success)]">+1%</span> к основным характеристикам (Сила, Ловкость, Защита, Мастерство) и HP.
-                        В одном сете <span className="text-[var(--color-accent-gold)]">27</span> предметов (9 слотов × 3 варианта). Всего <span className="text-[var(--color-accent-gold)]">7</span> сетов — <span className="text-[var(--color-accent-gold)]">189</span> предметов.
-                        Максимальный бонус: <span className="text-[var(--color-accent-gold)]">+189%</span>.
+                        В одном сете <span className="text-[var(--color-accent-gold)]">27</span> предметов (9 слотов × 3 варианта). Всего <span className="text-[var(--color-accent-gold)]">16</span> сетов — <span className="text-[var(--color-accent-gold)]">225</span> предметов.
+                        Максимальный бонус: <span className="text-[var(--color-accent-gold)]">+225%</span>.
                     </p>
                 </details>
             </div>
