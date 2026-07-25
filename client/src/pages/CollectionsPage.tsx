@@ -38,6 +38,7 @@ interface CollectionSet {
     totalItems: number;
     collectedCount: number;
     completed: boolean;
+    items?: ShopItem[];
 }
 
 const slotOrder = ['helmet', 'chest', 'gloves', 'boots', 'weapon1', 'shield', 'amulet', 'ring', 'belt'];
@@ -225,7 +226,6 @@ export default function CollectionsPage() {
                     <SetBlock
                         key={set.id}
                         set={set}
-                        items={items}
                         ownedKeys={ownedKeys}
                         collectionKeys={collectionKeys}
                         inventoryItems={inventoryItems}
@@ -261,18 +261,17 @@ export default function CollectionsPage() {
     );
 }
 
-function SetBlock({ set, items, ownedKeys, collectionKeys, inventoryItems, onAddToCollection }: {
+function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToCollection }: {
     set: CollectionSet;
-    items: ShopItem[];
     ownedKeys: Set<string>;
     collectionKeys: Set<string>;
     inventoryItems: InventoryItem[];
     onAddToCollection: (item: ShopItem) => void;
 }) {
     const [collapsed, setCollapsed] = useState(true);
-    const [tooltip, setTooltip] = useState<{ item: ShopItem; x: number; y: number } | null>(null);
+    const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
 
-    const showTooltip = useCallback((item: ShopItem, e: React.TouchEvent | React.MouseEvent) => {
+    const showTooltip = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
         const pos = 'touches' in e ? e.touches[0] : e;
         setTooltip({ item, x: pos.clientX, y: pos.clientY });
     }, []);
@@ -289,16 +288,14 @@ function SetBlock({ set, items, ownedKeys, collectionKeys, inventoryItems, onAdd
         };
     }, [tooltip]);
 
-    // Filter items that belong to this set (by name+slot from collection_set_items via API)
-    // We don't have set items from API, so we use items matching the set's collected items
-    // Instead, use all items grouped by rarity which matches the default sets
-    const rarityId = set.sort_order - 1; // hack: sort_order matches rarity+1
-    const setItems = items.filter(item => item.rarity_id === rarityId).sort((a, b) => slotOrder.indexOf(a.slot) - slotOrder.indexOf(b.slot));
+    // Filter items that belong to this set — from API response
+    const blockItems = (set.items || []).sort((a: ShopItem, b: ShopItem) => slotOrder.indexOf(a.slot) - slotOrder.indexOf(b.slot));
 
-    const color = ['#888888', '#cccccc', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e74c3c'][rarityId] || '#888';
+    // Color from first item's rarity, or fallback
+    const color = blockItems[0]?.rarity_color || '#888';
 
     // Есть ли предметы в инвентаре, которые можно добавить в этот сет
-    const hasAddableItems = setItems.some(item => {
+    const hasAddableItems = blockItems.some(item => {
         if (collectionKeys.has(`${item.name}|${item.slot}`)) return false;
         return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot);
     });
@@ -321,7 +318,7 @@ function SetBlock({ set, items, ownedKeys, collectionKeys, inventoryItems, onAdd
             </div>
             {!collapsed && (
                 <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-10 gap-1.5">
-                    {setItems.map(item => {
+                    {blockItems.map((item: ShopItem) => {
                         const owned = ownedKeys.has(`${item.name}|${item.slot}`);
                         const collected = collectionKeys.has(`${item.name}|${item.slot}`);
                         const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot);
