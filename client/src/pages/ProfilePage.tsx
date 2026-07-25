@@ -105,7 +105,7 @@ export default function ProfilePage() {
                         readOnly
                     />
 
-                    <div className="flex flex-col items-center sm:items-start gap-3 min-w-[160px] pt-2">
+                    <div className="flex flex-col items-center sm:items-start justify-center gap-3 min-w-[160px]">
                         {achScore > 0 && (
                             <div className="text-sm font-bold text-[var(--color-accent-gold)]">
                                 🏆 Достижения — {achScore} очк.
@@ -113,7 +113,7 @@ export default function ProfilePage() {
                         )}
                         {profile.createdAt && (
                             <div className="text-xs text-[var(--color-text-muted)]">
-                                📅 {fmtSafeDate(profile.createdAt, { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                                Дата регистрации: {fmtSafeDate(profile.createdAt, { year: 'numeric', month: '2-digit', day: '2-digit' })}
                             </div>
                         )}
                         {user && user.id !== Number(userId) && (
