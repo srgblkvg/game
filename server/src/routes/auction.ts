@@ -472,6 +472,11 @@ router.post('/auction/buy-partial', async (req, res) => {
         const newCurrentBid = lot.currentBid ? Math.max(newStartPrice, Math.floor(lot.currentBid * remainingCount / stackCount)) : null;
         await db.run(`UPDATE auction_lots SET itemData = ?, startPrice = ?, buyoutPrice = ?, currentBid = ? WHERE id = ?`,
             [JSON.stringify(newItemData), newStartPrice, newBuyoutPrice, newCurrentBid, lotId]);
+        // Вернуть разницу лидеру ставки
+        if (lot.currentBidderId && newCurrentBid && newCurrentBid < lot.currentBid) {
+            const refund = lot.currentBid - newCurrentBid;
+            await db.run('UPDATE users SET money = money + ? WHERE id = ?', [refund, lot.currentBidderId]);
+        }
     }
 
     // Списываем деньги покупателю и начисляем продавцу
