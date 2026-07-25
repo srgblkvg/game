@@ -33,16 +33,18 @@ export function dodgeChance(defStats: CharStats, atkStats: CharStats): number {
   const defW = sv(defStats, F.dodgeDef);
   const atkW = sv(atkStats, F.dodgePen);
   const extraDodge = (defStats.extra.dodge || 0);
+  const luckBonus = (defStats.luckBoost || 0) / 100;
   return Math.max(0,
     (defW / (defW + 500)) *
     (1 - atkW / (atkW + 100)) / 1.5 +
     Math.min(0.5, extraDodge / (extraDodge + 300))
-  );
+  ) + luckBonus;
 }
 
 export function critChance(stats: CharStats): number {
   const extraCrit = (stats.extra.crit || 0);
-  return Math.min(0.8, sv(stats, F.crit) / (sv(stats, F.crit) + 500) / 1.5 + extraCrit / (extraCrit + 300));
+  const luckBonus = (stats.luckBoost || 0) / 100;
+  return Math.min(0.8, sv(stats, F.crit) / (sv(stats, F.crit) + 500) / 1.5 + extraCrit / (extraCrit + 300)) + luckBonus;
 }
 
 export function critMult(stats: CharStats): number {
@@ -133,6 +135,12 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
   // Попадание
   addStep({ type: 'info', message: `Попадание!` });
   let dmg = rollDamage(ctx.actorStats, ctx.actorLevel);
+  // Rage bonus: +% урон при HP<30%
+  const rageDmg = ctx.actorStats.rageDmg || 0;
+  if (rageDmg > 0 && hpActor < ctx.maxHpActor * 0.3) {
+    dmg = Math.round(dmg * (1 + rageDmg / 100));
+    addStep({ type: 'info', message: `Ярость! +${rageDmg}% урона` });
+  }
   if (Math.random() < critChance(ctx.actorStats)) {
     dmg *= critMult(ctx.actorStats);
     addStep({ type: 'crit', actor: ctx.actor, message: `Крит!` });
@@ -143,7 +151,11 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
     dmg = 0;
     addStep({ type: 'fullBlock', actor: ctx.target, message: `ПОЛНЫЙ БЛОК!` });
   } else if (Math.random() < blockChance(ctx.targetStats)) {
-    const blocked = dmg * blockReduction(ctx.targetStats, ctx.actorStats);
+    let blockReduce = blockReduction(ctx.targetStats, ctx.actorStats);
+    // BlockPen: reduce block effectiveness
+    const blockPen = ctx.actorStats.blockPen || 0;
+    if (blockPen > 0) blockReduce = Math.max(0, blockReduce * (1 - blockPen / 100));
+    const blocked = dmg * blockReduce;
     dmg -= blocked;
     addStep({ type: 'block', actor: ctx.target, message: `Блок (-${Math.round(blocked)})` });
   }
@@ -152,6 +164,42 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
   addStep({ type: 'damage', actor: ctx.actor, target: ctx.target, damage: dmg, message: `Урон: ${dmg}`,
     hp1: ctx.actor === 'attacker' ? hpActor : hpTarget, hp2: ctx.actor === 'attacker' ? hpTarget : hpActor,
     maxHp1: ctx.maxHpActor, maxHp2: ctx.maxHpTarget });
+
+  // Vampirism: restore % of damage as HP
+  const vamp = ctx.actorStats.vampirism || 0;
+  if (vamp > 0 && dmg > 0) {
+    const heal = Math.round(dmg * vamp / 100);
+    if (heal > 0) {
+      hpActor = Math.min(ctx.maxHpActor, hpActor + heal);
+      addStep({ type: 'info', message: `Вампиризм +${heal} HP` });
+    }
+  }
+
+  // Execute: instakill if target < 10% max HP
+  if (ctx.actorStats.execute && hpTarget > 0 && hpTarget < ctx.maxHpTarget * 0.1) {
+    addStep({ type: 'info', message: `Добивание! ${ctx.targetName} повержен!` });
+    hpTarget = 0;
+  }
+
+  // CounterOnHit (Страж 4pc): chance to counter when receiving damage
+  const counterOnHit = ctx.targetStats.counterOnHit || 0;
+  if (counterOnHit > 0 && dmg > 0 && hpTarget > 0 && Math.random() < counterOnHit / 100) {
+    addStep({ type: 'counter', actor: ctx.target, message: `${ctx.targetName} отвечает ударом!` });
+    let cdmg = Math.round(ctx.targetStats.s * 0.5);
+    hpActor = Math.max(0, hpActor - cdmg);
+    addStep({ type: 'damage', actor: ctx.target, target: ctx.actor, damage: cdmg, message: `Ответный урон: ${cdmg}`,
+      hp1: ctx.actor === 'attacker' ? hpActor : hpTarget, hp2: ctx.actor === 'attacker' ? hpTarget : hpActor,
+      maxHp1: ctx.maxHpActor, maxHp2: ctx.maxHpTarget });
+  }
+
+  // PoisonOnHit (Отшельник 3pc): apply poison on hit
+  const poison = ctx.actorStats.poisonOnHit || 0;
+  if (poison > 0 && dmg > 0 && hpTarget > 0) {
+    const poisonDmg = Math.round(ctx.maxHpTarget * poison / 100);
+    addStep({ type: 'info', message: `Яд наносит ${poisonDmg} урона!` });
+    hpTarget = Math.max(0, hpTarget - poisonDmg);
+  }
+
   if (dmg > 0 && Math.random() < stunChance(ctx.actorStats, ctx.targetStats)) {
     stunnedTarget = true;
     addStep({ type: 'stun', actor: ctx.target, message: `${ctx.targetName} оглушён!` });
@@ -189,8 +237,15 @@ export function runBattle(
       drinks: defender.drinkBonuses, collection: defender.collectionBonus, guildBonus: defender.guildBonus }
   });
 
-  // Кто ходит первым
-  let turn: 'A' | 'D' = statsA.a >= statsD.a ? 'A' : 'D';
+  // Кто ходит первым (Буревестник 3pc = всегда первый)
+  let turn: 'A' | 'D';
+  if (statsA.alwaysFirst && !statsD.alwaysFirst) {
+    turn = 'A';
+  } else if (statsD.alwaysFirst && !statsA.alwaysFirst) {
+    turn = 'D';
+  } else {
+    turn = statsA.a >= statsD.a ? 'A' : 'D';
+  }
   addStep({ type: 'info', message: `${turn === 'A' ? attacker.name : defender.name} ходит первым` });
 
   while (hpA > 0 && hpD > 0) {
