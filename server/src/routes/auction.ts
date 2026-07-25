@@ -536,7 +536,12 @@ router.post('/auction/reset-badge', async (req, res) => {
 // История сделок
 router.get('/auction/history', async (req, res) => {
     const userId = req.userId;
-    const limit = parseInt(req.query.limit as string) || 30;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    const totalRow = await db.one('SELECT COUNT(*) as cnt FROM auction_history', []) as any;
+    const total = totalRow?.cnt || 0;
 
     const history = await db.query(`
         SELECT h.*, s.username as sellerName, b.username as buyerName
@@ -544,10 +549,10 @@ router.get('/auction/history', async (req, res) => {
         JOIN users s ON h.sellerId = s.id
         LEFT JOIN users b ON h.buyerId = b.id
         ORDER BY h.id DESC
-        LIMIT ?
-    `, [limit]);
+        LIMIT ? OFFSET ?
+    `, [limit, offset]);
 
-    res.json(history);
+    res.json({ history, total, page, totalPages: Math.ceil(total / limit) });
 });
 
 export default router;
