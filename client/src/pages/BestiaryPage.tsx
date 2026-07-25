@@ -437,7 +437,7 @@ export default function BestiaryPage() {
           <div className="space-y-4">
             {(diffGroups || []).map(diff => {
               const groupFloors = floors.filter(f => floorsData.some(fd => fd.name === f && (fd.difficulty||0) === diff.difficulty));
-              if (groupFloors.length === 0 && user?.id !== 1) return null;
+              if (groupFloors.length === 0 && user?.username !== 'TODD') return null;
               return <FloorGroup key={diff.label} diff={diff} floors={groupFloors} getFloorInfo={getFloorInfo} floorBgMap={floorBgMap} cooldownRemaining={cooldownRemaining} selectFloor={selectFloor} />;
             })}
           </div>
