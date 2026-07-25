@@ -222,12 +222,13 @@ router.post('/mob/attack', async (req, res) => {
             ];
 
             let rarityRoll = Math.random();
-            let selectedRarity = 0;
+            let selectedRarity = -1;
             for (const lt of lootTable) {
                 if (rarityRoll < lt.chance) { selectedRarity = lt.rarity; break; }
                 rarityRoll -= lt.chance;
             }
 
+            if (selectedRarity >= 0) {
             const craftItem = await db.one(
                 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ?',
                 [selectedRarity]
@@ -259,6 +260,7 @@ router.post('/mob/attack', async (req, res) => {
 
                 addStep({ type: 'money', message: `Добыто: ${craftItem.display_name} материал` });
             }
+            } // if (selectedRarity >= 0)
         }
 
         // 5% шанс на Камень улучшения (Хлам) при победе
