@@ -135,9 +135,9 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
   // Попадание
   addStep({ type: 'info', message: `Попадание!` });
   let dmg = rollDamage(ctx.actorStats, ctx.actorLevel);
-  // Rage bonus: +% урон при HP<30%
+  // Rage bonus: +% урон при HP<50%
   const rageDmg = ctx.actorStats.rageDmg || 0;
-  if (rageDmg > 0 && hpActor < ctx.maxHpActor * 0.3) {
+  if (rageDmg > 0 && hpActor < ctx.maxHpActor * 0.5) {
     dmg = Math.round(dmg * (1 + rageDmg / 100));
     addStep({ type: 'info', message: `Ярость! +${rageDmg}% урона` });
   }
