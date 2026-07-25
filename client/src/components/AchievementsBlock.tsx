@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useGame } from '../contexts/GameContext';
 import { getHeaders } from '../api/helpers';
 import Card from './ui/Card';
@@ -96,9 +97,16 @@ function AchievementRow({ a }: { a: AchievementData }) {
                 {progressLabel}
             </span>
 
-            {/* Tooltip */}
-            {showTooltip && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 pointer-events-none">
+            {/* Tooltip — rendered to body to avoid overflow clipping */}
+            {showTooltip && rowRef.current && createPortal(
+                <div
+                    className="fixed z-[100] pointer-events-none"
+                    style={{
+                        top: rowRef.current.getBoundingClientRect().top - 8,
+                        left: rowRef.current.getBoundingClientRect().left + rowRef.current.getBoundingClientRect().width / 2,
+                        transform: 'translate(-50%, -100%)',
+                    }}
+                >
                     <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border-default)] rounded-lg px-3 py-1.5 shadow-xl whitespace-nowrap text-xs">
                         <div className="text-[var(--color-text-primary)]">
                             {a.name}: <b>{fmtNum(a.progress)}</b>
@@ -113,7 +121,8 @@ function AchievementRow({ a }: { a: AchievementData }) {
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
