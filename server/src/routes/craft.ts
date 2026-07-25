@@ -158,6 +158,7 @@ router.post('/craft/execute', async (req, res) => {
                 FROM items i
                 JOIN rarities r ON i.rarity_id = r.id
                 WHERE i.rarity_id = ?
+                  AND (i.extra IS NULL OR i.extra::text NOT LIKE '%"set"%')
                 ORDER BY RANDOM() LIMIT 1
             `, [rarityId]) as any;
             if (!randomItem) return res.status(500).json({ error: 'Нет предметов такой редкости' });

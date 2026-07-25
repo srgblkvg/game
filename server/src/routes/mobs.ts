@@ -320,12 +320,15 @@ router.post('/mob/attack', async (req, res) => {
 
         // Случайный предмет — каждый уровень редкости проверяется отдельно
         const itemTable = getItemDropTable(mob.level);
+        const isHellFloor = ['Врата Бездны', 'Огненные чертоги', 'Тронный зал', 'Ледяная бездна', 'Престол падших'].includes(mob.location);
         for (const entry of itemTable) {
             if (Math.random() < entry.chance) {
-                const randomItem = await db.one(
-                    'SELECT i.*, r.display_name, r.color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.rarity_id = ? ORDER BY RANDOM() LIMIT 1',
-                    [entry.rarity]
-                ) as any;
+                let itemQuery = 'SELECT i.*, r.display_name, r.color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.rarity_id = ?';
+                if (!isHellFloor) {
+                    itemQuery += " AND (i.extra IS NULL OR i.extra::text NOT LIKE '%\"set\"%')";
+                }
+                itemQuery += ' ORDER BY RANDOM() LIMIT 1';
+                const randomItem = await db.one(itemQuery, [entry.rarity]) as any;
                 if (randomItem) {
                     const inv = JSON.parse(user.inventory || '[]');
                     const drop = {
