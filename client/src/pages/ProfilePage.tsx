@@ -105,7 +105,7 @@ export default function ProfilePage() {
                         readOnly
                     />
 
-                    <div className="flex flex-col items-center sm:items-start justify-center gap-3 min-w-[160px]">
+                    <div className="flex flex-col items-center justify-center gap-3 min-w-[160px]">
                         {achScore > 0 && (
                             <div className="text-sm font-bold text-[var(--color-accent-gold)]">
                                 🏆 Достижения — {achScore} очк.
