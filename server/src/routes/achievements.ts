@@ -117,6 +117,12 @@ router.get('/achievements/:userId', async (req, res) => {
                 name: currentTier.name,
                 icon: currentTier.icon,
             } : null,
+            tiers: track.tiers.map(t => ({
+                tier: t.tier,
+                name: t.name,
+                icon: t.icon,
+                threshold: t.threshold,
+            })),
         });
     }
 

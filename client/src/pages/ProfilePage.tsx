@@ -8,6 +8,13 @@ import { fetchPublicProfile } from '../api/character';
 import Button from '../components/ui/Button';
 import { fmtSafeDate } from '../utils/date';
 import { formatMoney } from '../utils/money';
+import { getHeaders } from '../api/helpers';
+
+function fmtNum(n: number): string {
+    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'М';
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'к';
+    return String(n);
+}
 
 export default function ProfilePage() {
     const { userId } = useParams<{ userId: string }>();
@@ -15,6 +22,7 @@ export default function ProfilePage() {
     const navigate = useNavigate();
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [achievements, setAchievements] = useState<any[]>([]);
 
     useEffect(() => {
         if (!userId) return;
@@ -22,6 +30,10 @@ export default function ProfilePage() {
             .then(data => setProfile(data))
             .catch(console.error)
             .finally(() => setLoading(false));
+        fetch(`/api/achievements/${userId}`, { headers: getHeaders() })
+            .then(r => r.json())
+            .then(data => setAchievements(Array.isArray(data) ? data : []))
+            .catch(() => {});
     }, [userId]);
 
     if (loading) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
@@ -131,6 +143,28 @@ export default function ProfilePage() {
                     <StatItem icon="game-icons:card-play" label="Игр сыграно" value={profile.casinoGamesPlayed || 0} />
                     <StatItem icon="game-icons:cash" label="Выиграно" value={formatMoney(profile.casinoWon || 0)} />
                     <StatItem icon="game-icons:pay-money" label="Проиграно" value={formatMoney(profile.casinoLost || 0)} />
+
+                    {/* Достижения */}
+                    {achievements.length > 0 && (
+                        <>
+                            <h3 className="text-xs font-bold text-[var(--color-accent-gold)] uppercase tracking-wider mt-3">
+                                🏆 Достижения
+                            </h3>
+                            {achievements.map((a: any) => {
+                                const lastTier = a.tiers?.[a.tiers.length - 1];
+                                return (
+                                    <p key={a.key} className="text-sm flex items-center gap-1.5">
+                                        <span className="text-[var(--color-text-muted)] shrink-0">{a.icon}</span>
+                                        <span className="text-[var(--color-text-muted)] truncate">{a.name}</span>
+                                        {a.currentTier && <span>{a.currentTier.icon}</span>}
+                                        <span className="text-[var(--color-text-muted)] ml-auto text-xs whitespace-nowrap">
+                                            {fmtNum(a.progress)}/{lastTier ? fmtNum(lastTier.threshold) : '?'}
+                                        </span>
+                                    </p>
+                                );
+                            })}
+                        </>
+                    )}
 
                     {/* Дата регистрации */}
                     {profile.createdAt && (
