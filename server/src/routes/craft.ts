@@ -30,7 +30,7 @@ router.get('/craft/recipes', async (req, res) => {
 
         if (recipe.result_type === 'item') {
             recipe.result = await db.one(`
-        SELECT i.id, i.name, i.slot, i.rarity_id, i.image,
+        SELECT i.id, i.name, i.slot, i.rarity_id, i.image, i.bonuses, i.extra,
                r.display_name as rarity_display, r.color as rarity_color
         FROM items i
         JOIN rarities r ON i.rarity_id = r.id

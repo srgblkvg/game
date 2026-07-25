@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import ItemIcon from '../../components/ui/ItemIcon';
+import ItemTooltip from '../../components/ItemTooltip';
 
 interface Props {
   groupedRecipes: Record<string, any[]>;
@@ -9,7 +11,19 @@ interface Props {
 }
 
 export default function RecipeList({ groupedRecipes, openCategories, activeRecipe, onToggleCategory, onRecipeClick }: Props) {
+  const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
+
   if (Object.keys(groupedRecipes).length === 0) return null;
+
+  const handleMouseEnter = (e: React.MouseEvent, recipe: any) => {
+    if (recipe.result && recipe.result_type !== 'random_item' && recipe.result_type !== 'craft_item') {
+      setTooltip({ item: recipe.result, x: e.clientX, y: e.clientY });
+    }
+  };
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (tooltip) setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+  };
+  const handleMouseLeave = () => setTooltip(null);
 
   return (
     <div className="mb-4 max-h-[400px] overflow-y-auto bg-[var(--color-bg-secondary)] rounded-lg p-2">
@@ -29,6 +43,9 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
                 <div
                   key={recipe.id}
                   onClick={() => onRecipeClick(recipe)}
+                  onMouseEnter={(e) => handleMouseEnter(e, recipe)}
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={handleMouseLeave}
                   className={`flex items-center justify-between py-1 px-2 border-b border-[var(--color-border-light)] text-xs cursor-pointer ${
                     activeRecipe?.id === recipe.id ? 'bg-[var(--color-bg-card-hover)]' : 'bg-transparent'
                   }`}
@@ -63,6 +80,7 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
           )}
         </div>
       ))}
+      {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />}
     </div>
   );
 }
