@@ -8,6 +8,7 @@ import { updateGuildQuestProgress } from './guild';
 import { markDirty } from '../events';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getGuildBonus } from '../game/guildBuildings';
+import { checkAchievement, trackIncome } from './achievements';
 
 const router = Router();
 
@@ -390,8 +391,14 @@ router.post('/mob/attack', async (req, res) => {
     // Налог гильдии (PvE)
     const goldAfterTax = await collectGuildTax(userId, goldGained, 'tax_pve');
 
-    await db.run(`UPDATE users SET level=?, exp=?, money=money+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`,
-        [newLevel, newExp, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId]);
+    await db.run(`UPDATE users SET level=?, exp=?, money=money+?, total_income=total_income+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`,
+        [newLevel, newExp, goldAfterTax, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId]);
+
+    // Достижения
+    if (playerWon) {
+        checkAchievement(userId, 'pve_wins').catch(() => {});
+        if (goldAfterTax > 0) trackIncome(userId, goldAfterTax).catch(() => {});
+    }
 
     // VK Leaderboard
     if (levelsGained > 0 && user.oauthProvider === 'vk' && user.oauthId) {

@@ -90,6 +90,17 @@ export interface Character {
   pveRating?: number;
   tutorialCompleted?: number;
   tutorialStep?: number;
+  totalIncome?: number;
+  achievements?: AchievementSummary[];
+}
+
+interface AchievementSummary {
+  key: string;
+  name: string;
+  icon: string;
+  progress: number;
+  highestTier: number;
+  currentTier: { tier: number; name: string; icon: string } | null;
 }
 
 interface GameContextType {

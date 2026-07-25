@@ -1,6 +1,7 @@
 import CharacterCard from './CharacterCard';
 import StatAllocation from './StatAllocation';
 import BuffsBlock from './BuffsBlock';
+import AchievementsBlock from './AchievementsBlock';
 import { useGame, type Character } from '../contexts/GameContext';
 import { toCharCardData } from '../utils/character';
 
@@ -35,6 +36,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
       />
       <StatAllocation />
       <BuffsBlock room={effectiveRoom} drink={character.drink} premium={character.premium} inventory={character.inventory} equipment={character.equipment} collectionCount={character.collectionCount || 0} totalCollectionItems={character.totalCollectionItems || 189} />
+      <AchievementsBlock />
     </div>
   );
 }

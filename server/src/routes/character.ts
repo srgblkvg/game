@@ -6,6 +6,7 @@ import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
 import { updateGuildQuestProgress } from './guild';
 import { getGuildBonus, getGuildBuildings } from '../game/guildBuildings';
+import { getTrackTier, TRACK_MAP } from '../game/achievements';
 import { markDirty } from '../events';
 
 const router = Router();
@@ -166,6 +167,7 @@ router.get('/character/me', async (req, res) => {
         totalCollectionItems: totalCollectionItems || 189,
         tutorialCompleted: user.tutorialCompleted || 0,
         tutorialStep: user.tutorialStep || 0,
+        totalIncome: user.totalIncome || 0,
     });
 });
 

@@ -104,7 +104,8 @@ function camelRows(rows: any[]): any[] {
              .replace(/^defenderguildid$/i, 'defenderGuildId')
              .replace(/^arenatopponentid$/i, 'arenaOpponentId')
              .replace(/^tutorial_completed$/i, 'tutorialCompleted')
-             .replace(/^tutorial_step$/i, 'tutorialStep');
+             .replace(/^tutorial_step$/i, 'tutorialStep')
+             .replace(/^total_income$/i, 'totalIncome');
       if (cc !== key) row[cc] = row[key];
     }
   }

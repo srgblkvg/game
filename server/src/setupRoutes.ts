@@ -50,6 +50,7 @@ import diceRoutes from './routes/dice';
 import trainingRoutes from './routes/training';
 import donateRoutes from './routes/donate';
 import tutorialRoutes from './routes/tutorial';
+import achievementsRoutes from './routes/achievements';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -160,6 +161,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', diceRoutes);
   app.use('/api', trainingRoutes);
   app.use('/api', tutorialRoutes);
+  app.use('/api', achievementsRoutes);
   app.use('/api/donate', donateRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
