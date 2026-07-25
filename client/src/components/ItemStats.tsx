@@ -120,6 +120,24 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
         </div>
       )}
 
+      {/* Set bonuses */}
+      {!resource && item.extra?.set && (
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)]">
+          <div className="text-center font-bold text-[var(--color-accent-purple)]">Сет: {item.extra.set}</div>
+          {item.extra.setBonus2 && <div className="text-[var(--color-text-muted)] mt-0.5">2 предмета: {item.extra.setBonus2}</div>}
+          {item.extra.setBonus3 && <div className="text-[var(--color-text-muted)]">3 предмета: {item.extra.setBonus3}</div>}
+          {item.extra.setBonus4 && <div className="text-[var(--color-text-muted)]">4 предмета: {item.extra.setBonus4}</div>}
+        </div>
+      )}
+
+      {/* Artifact effect */}
+      {!resource && item.extra?.effect && (
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center">
+          <span className="font-bold text-[var(--color-accent-gold)]">Артефакт</span>
+          <div className="text-[var(--color-text-accent)]">{item.extra.effectDesc || item.extra.effect}</div>
+        </div>
+      )}
+
       {/* Коллекция */}
       {!resource && item.name && item.slot && (
         <div className={`text-xs mt-1 pt-1 border-t border-[var(--color-border-light)] text-center font-bold ${inCollection ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-warning)]'}`}>
