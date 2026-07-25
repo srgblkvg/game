@@ -16,7 +16,7 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
   if (Object.keys(groupedRecipes).length === 0) return null;
 
   const handleMouseEnter = (e: React.MouseEvent, recipe: any) => {
-    const rtype = recipe.result_type || recipe.resultType;
+    const rtype = recipe.result_type;
     if (recipe.result && rtype !== 'random_item' && rtype !== 'craft_item') {
       setTooltip({ item: recipe.result, x: e.clientX, y: e.clientY });
     }
