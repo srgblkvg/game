@@ -2,6 +2,7 @@
 import { db } from '../db/index';
 import { pushNotification, markDirty } from '../events';
 import { applyExp } from '../db/helpers';
+import { checkAchievement } from '../routes/achievements';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import {
     dodgeChance, critChance, critMult, blockChance, blockReduction,
@@ -251,7 +252,14 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
             `UPDATE massacre_participants SET hp_current = ?, alive = ?, stunned = ? WHERE event_id = ? AND user_id = ?`,
             [s.hp, s.alive, s.stunned, eventId, userId]
         );
+        // Достижение за выживание в резне
+        if (s.alive && userId !== winnerId) {
+            checkAchievement(userId, 'massacre').catch(() => {});
+        }
     }
+
+    // Достижение победителю
+    checkAchievement(winnerId, 'massacre').catch(() => {});
 
     // Разослать уведомления ВСЕМ участникам
     for (const [userId] of state) {
