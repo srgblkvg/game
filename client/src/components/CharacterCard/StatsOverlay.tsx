@@ -118,16 +118,8 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                     <Icon icon="game-icons:book-cover" width={iconSize} height={iconSize} className="inline mr-0.5 text-[var(--color-accent-gold)]" />
                     Коллекция
                   </td>
-                  <td className="text-right pl-[2px] text-[var(--color-accent-gold)]">+{collectionBonus}%</td>
+                  <td className="text-right pl-[2px] text-[var(--color-accent-gold)]">+{(collectionBonus ?? 0) + (collectionSetBonus ?? 0)}%</td>
                 </tr>
-                {(collectionSetBonus ?? 0) > 0 && (
-                  <tr>
-                    <td className={tdStyle + ' pl-3'}>
-                      <span className="text-[0.55rem] text-[var(--color-text-muted)]">↳ закрытые сеты</span>
-                    </td>
-                    <td className="text-right pl-[2px] text-[var(--color-accent-gold)]">+{collectionSetBonus}%</td>
-                  </tr>
-                )}
               </>
             )}
             {(guildBonus ?? 0) > 0 && (
