@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { checkAchievement } from './achievements';
 import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty } from '../events';

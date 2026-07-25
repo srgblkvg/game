@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { getHeaders } from '../api/helpers';
+import Card from './ui/Card';
 
 interface AchievementData {
     key: string;
@@ -33,9 +34,9 @@ export default function AchievementsBlock() {
     if (!character || achievements.length === 0) return null;
 
     return (
-        <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)] overflow-hidden">
+        <Card className="mt-4 w-full" data-tutorial="achievements">
             <div
-                className="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-[var(--color-bg-hover)]"
+                className="flex items-center justify-between cursor-pointer select-none"
                 onClick={() => setCollapsed(!collapsed)}
             >
                 <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -47,7 +48,7 @@ export default function AchievementsBlock() {
             </div>
 
             {!collapsed && (
-                <div className="px-3 pb-3 space-y-2 max-h-80 overflow-y-auto">
+                <div className="mt-2 space-y-2 max-h-80 overflow-y-auto">
                     {loading && <div className="text-xs text-[var(--color-text-muted)] text-center py-2">Загрузка...</div>}
                     {achievements.map(a => (
                         <div key={a.key} className="flex items-center gap-2 text-xs">
@@ -61,7 +62,6 @@ export default function AchievementsBlock() {
                                         </span>
                                     )}
                                 </div>
-                                {/* Progress bar */}
                                 {a.tiers && a.tiers.length > 0 && (
                                     <div className="flex gap-0.5 mt-0.5">
                                         {a.tiers.map(t => (
@@ -87,6 +87,6 @@ export default function AchievementsBlock() {
                     ))}
                 </div>
             )}
-        </div>
+        </Card>
     );
 }

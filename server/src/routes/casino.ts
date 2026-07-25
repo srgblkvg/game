@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { checkAchievement } from './achievements';
 
 const router = Router();
 
@@ -204,6 +205,7 @@ router.post('/casino/blackjack/start', async (req, res) => {
                     'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + $1, casino_lost = casino_lost + $2 WHERE id = $3',
                     [_bjwon, _bjlost, userId]
                 );
+                checkAchievement(userId, 'casino').catch(() => {});
             }
 
             res.json({
@@ -355,6 +357,7 @@ router.post('/casino/blackjack/stand', async (req, res) => {
                 'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + $1, casino_lost = casino_lost + $2 WHERE id = $3',
                 [_swon, _slost, userId]
             );
+            checkAchievement(userId, 'casino').catch(() => {});
 
             return {
                 status, result,
@@ -469,6 +472,7 @@ router.post('/casino/blackjack/double', async (req, res) => {
                 'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + $1, casino_lost = casino_lost + $2 WHERE id = $3',
                 [_dwon, _dlost, userId]
             );
+            checkAchievement(userId, 'casino').catch(() => {});
 
             return {
                 status, result,
@@ -521,6 +525,7 @@ router.post('/casino/blackjack/surrender', async (req, res) => {
                 'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + $1, casino_lost = casino_lost + $2 WHERE id = $3',
                 [_surwon, _surlost, userId]
             );
+            checkAchievement(userId, 'casino').catch(() => {});
 
             const dealerCards: Card[] = JSON.parse(game.dealer_cards || '[]');
 

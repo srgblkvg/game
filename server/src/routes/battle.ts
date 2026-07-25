@@ -9,6 +9,7 @@ import { calcElo } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
 import { getGuildBonus } from '../game/guildBuildings';
+import { checkAchievement, trackIncome } from './achievements';
 import { battleSchema } from '../validation';
 
 const router = Router();
@@ -119,6 +120,12 @@ router.post('/battle', async (req, res) => {
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
         [defExp.newLevel, defExp.newExp, defenderMoneyDelta, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
             !attackerWins ? moneyStolen : 0, !attackerWins ? 0 : moneyStolen, defender.id]);
+
+    // Достижения — защитник
+    if (!attackerWins) {
+        checkAchievement(defender.id, 'pvp_wins').catch(() => {});
+        if (moneyStolen > 0) trackIncome(defender.id, moneyStolen).catch(() => {});
+    }
 
     // VK Leaderboard — защитник
     if (defExp.levelsGained > 0 && defender.oauthProvider === 'vk' && defender.oauthId) {

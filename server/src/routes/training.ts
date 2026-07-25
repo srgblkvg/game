@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { checkAchievement } from './achievements';
 
 const router = Router();
 
@@ -107,6 +108,8 @@ router.post('/training', async (req, res) => {
         `UPDATE users SET ${baseColumn} = ${baseColumn} + 1, ${trainedCol} = ${trainedCol} + 1, money = money - ?, training_at = ? WHERE id = ?`,
         [cost, now, userId]
     );
+
+    checkAchievement(userId, 'training').catch(() => {});
 
     const updated = await db.one(
         `SELECT ${baseColumn} as new_val FROM users WHERE id = ?`,
