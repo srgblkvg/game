@@ -135,9 +135,10 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
   // Попадание
   addStep({ type: 'info', message: `Попадание!` });
   let dmg = rollDamage(ctx.actorStats, ctx.actorLevel);
-  // Rage bonus: +% урон при HP<50%
+  // Rage bonus: +% урон при низком HP
   const rageDmg = ctx.actorStats.rageDmg || 0;
-  if (rageDmg > 0 && hpActor < ctx.maxHpActor * 0.5) {
+  const rageThreshold = ctx.actorStats.rageThreshold || 0.5;
+  if (rageDmg > 0 && hpActor < ctx.maxHpActor * rageThreshold) {
     dmg = Math.round(dmg * (1 + rageDmg / 100));
     addStep({ type: 'info', message: `Ярость! +${rageDmg}% урона` });
   }
@@ -200,7 +201,7 @@ function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor:
     hpTarget = Math.max(0, hpTarget - poisonDmg);
   }
 
-  if (dmg > 0 && Math.random() < stunChance(ctx.actorStats, ctx.targetStats)) {
+  if (dmg > 0 && Math.random() < stunChance(ctx.actorStats, ctx.targetStats) * (1 - (ctx.targetStats.resiliencePct || 0) / 100)) {
     stunnedTarget = true;
     addStep({ type: 'stun', actor: ctx.target, message: `${ctx.targetName} оглушён!` });
   }

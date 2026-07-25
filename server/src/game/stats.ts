@@ -90,7 +90,8 @@ export interface CharStats extends StatRecord {
     drinks: StatRecord;
     collection: number;
     vampirism?: number;      // % вампиризм
-    rageDmg?: number;        // +% урон при HP<30%
+    rageDmg?: number;        // +% урон при низком HP
+    rageThreshold?: number;   // порог HP для ярости (0-1)
     luckBoost?: number;       // +% ко всем шансам
     resiliencePct?: number;   // -% длительность контроля
     alwaysFirst?: boolean;    // первый ход
@@ -155,7 +156,7 @@ export function currentStats(
             if (count >= 4) { st.vampirism = (st.vampirism || 0) + 5; setBonuses.push('Дуэлянт: крит восстанавливает 5% HP'); }
         } else if (set === 'Берсерк' || set === 'berserk') {
             if (count >= 2) { st = scaleStats(st, 1.1); setBonuses.push('Берсерк: +10% урон'); }
-            if (count >= 3) { st.rageDmg = 20; setBonuses.push('Берсерк: +20% урона при HP<50%'); }
+            if (count >= 3) { st.rageDmg = 20; st.rageThreshold = 0.5; setBonuses.push('Берсерк: +20% урона при HP<50%'); }
             if (count >= 4) { st.blockPen = 20; setBonuses.push('Берсерк: игнор 20% брони'); }
         } else if (set === 'Страж' || set === 'guardian') {
             if (count >= 2) { extra.fullBlock = Math.round(extra.fullBlock * 1.1); setBonuses.push('Страж: +10% блок'); }
@@ -190,7 +191,7 @@ export function currentStats(
         const effect = (item.extra as any)?.effect;
         if (!effect) continue;
         if (effect === 'vampirism') { st.vampirism = (st.vampirism || 0) + 5; }
-        else if (effect === 'rage') { st.rageDmg = (st.rageDmg || 0) + 20; }
+        else if (effect === 'rage') { st.rageDmg = (st.rageDmg || 0) + 20; st.rageThreshold = Math.min(st.rageThreshold || 1, 0.3); }
         else if (effect === 'luck') { st.luckBoost = 5; }
         else if (effect === 'resilience') { st.resiliencePct = 30; }
     }
