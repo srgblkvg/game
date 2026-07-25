@@ -201,6 +201,7 @@ export default function CharacterCard({
           collectionBonus={collBonus}
           guildBonus={gBonus}
           buildings={buildingsList}
+          setBonuses={stats?.setBonuses}
           noFlip={readOnly}
         />
 
