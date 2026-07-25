@@ -6,70 +6,12 @@ import { checkAchievement } from '../routes/achievements';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import {
     dodgeChance, critChance, critMult, blockChance, blockReduction,
-    counterChance, stunChance, rollDamage, BattleStep
+    counterChance, stunChance, rollDamage, BattleStep, runTurn, TurnContext
 } from './battle';
 import { CharStats } from './stats';
 import { updateGuildQuestProgress } from '../routes/guild/guildQuests';
 
-// Импортируем типы/функции которых нет в экспорте battle.ts
-function runTurnLocal(
-    actorName: string, targetName: string,
-    actorStats: CharStats, targetStats: CharStats,
-    actorLevel: number,
-    hpActor: number, hpTarget: number,
-    maxHpActor: number, maxHpTarget: number,
-): { hpActor: number; hpTarget: number; stunnedTarget: boolean; steps: BattleStep[] } {
-    let hpA = hpActor;
-    let hpT = hpTarget;
-    let stunned = false;
-    const steps: BattleStep[] = [];
-
-    const addStep = (s: BattleStep) => steps.push(s);
-
-    addStep({ type: 'attack', actor: 'attacker', message: `${actorName} атакует ${targetName}!` });
-
-    if (Math.random() < dodgeChance(targetStats, actorStats)) {
-        addStep({ type: 'dodge', actor: 'defender', message: `${targetName} уклоняется!` });
-        if (Math.random() < counterChance(targetStats, actorStats, targetStats.extra.counter || 0)) {
-            addStep({ type: 'counter', actor: 'defender', message: `${targetName} контратакует!` });
-            let cdmg = targetStats.s;
-            if (Math.random() < critChance(targetStats)) {
-                cdmg *= critMult(targetStats);
-                addStep({ type: 'crit', actor: 'defender', message: 'Крит!' });
-            }
-            cdmg = Math.max(0, Math.round(cdmg));
-            hpA = Math.max(0, hpA - cdmg);
-            addStep({ type: 'damage', actor: 'defender', target: 'attacker', damage: cdmg, message: `${targetName} наносит ${cdmg} урона!` });
-        }
-        return { hpActor: hpA, hpTarget: hpT, stunnedTarget: false, steps };
-    }
-
-    // Попадание
-    let dmg = rollDamage(actorStats, actorLevel);
-    if (Math.random() < critChance(actorStats)) {
-        dmg *= critMult(actorStats);
-        addStep({ type: 'crit', actor: 'attacker', message: 'Крит!' });
-    }
-    const fb = (targetStats.extra.fullBlock || 0);
-    if (Math.random() < fb / (fb + 300)) {
-        dmg = 0;
-        addStep({ type: 'fullBlock', actor: 'defender', message: 'ПОЛНЫЙ БЛОК!' });
-    } else if (Math.random() < blockChance(targetStats)) {
-        const blocked = dmg * blockReduction(targetStats, actorStats);
-        dmg -= blocked;
-        addStep({ type: 'block', actor: 'defender', message: `Блок (-${Math.round(blocked)})` });
-    }
-    dmg = Math.max(0, Math.round(dmg));
-    hpT = Math.max(0, hpT - dmg);
-    addStep({ type: 'damage', actor: 'attacker', target: 'defender', damage: dmg, message: `${actorName} наносит ${dmg} урона!` });
-
-    if (dmg > 0 && Math.random() < stunChance(actorStats, targetStats)) {
-        stunned = true;
-        addStep({ type: 'stun', actor: 'attacker', message: `${targetName} оглушён!` });
-    }
-
-    return { hpActor: hpA, hpTarget: hpT, stunnedTarget: stunned, steps };
-}
+// Импортируем runTurn из battle.ts для единой механики
 
 export async function runMassacreBattle(eventId: number): Promise<void> {
     // Загрузить участников — через raw чтобы обойти pgLowerIdentifiers
@@ -151,20 +93,23 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
             const defStats = target.stats;
 
             // Один ход
-            const result = runTurnLocal(
-                s.name, target.name,
-                atkStats, defStats,
-                s.level,
-                s.hp, target.hp,
-                s.maxHp, target.maxHp,
-            );
+            const ctx: TurnContext = {
+                actorName: s.name, targetName: target.name,
+                actorStats: atkStats, targetStats: defStats,
+                actorLevel: s.level,
+                hpActor: s.hp, hpTarget: target.hp,
+                maxHpActor: s.maxHp, maxHpTarget: target.maxHp,
+                actor: 'attacker', target: 'defender',
+            };
+            const steps: BattleStep[] = [];
+            const result = runTurn(ctx, (step) => steps.push(step));
 
             // Применить урон
             s.hp = result.hpActor;
             target.hp = result.hpTarget;
 
             // Записать шаги в БД
-            for (const step of result.steps) {
+            for (const step of steps) {
                 // При контратаке actor='defender' (защитник атакует), target='attacker' (урон в атакующего)
                 const stepActorId = step.actor === 'defender' ? targetId : userId;
                 const stepActorName = step.actor === 'defender' ? target.name : s.name;

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { collectGuildTax, applyExp, buildPlayerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
-import { dodgeChance, critChance, critMult } from '../game/battle';
+import { dodgeChance, critChance, critMult, runBattle } from '../game/battle';
 import { addPveRating } from '../game/rating';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty } from '../events';
@@ -151,60 +151,34 @@ router.post('/mob/attack', async (req, res) => {
     let turn: 'player' | 'mob' = userStats.a >= mob.agi ? 'player' : 'mob';
     addStep({ type: 'info', message: turn === 'player' ? 'Вы ходите первым' : `${mob.name} атакует первым` });
 
-    let turns = 0;
-    const maxTurns = 100;
-
-    while (hpUser > 0 && hpMob > 0 && turns < maxTurns) {
-        turns++;
-        if (turn === 'player') {
-            addStep({ type: 'attack', actor: 'attacker', message: 'Вы атакуете!' });
-
-            if (Math.random() < dodgeChance(mobStats, userStats)) {
-                addStep({ type: 'dodge', actor: 'defender', message: `${mob.name} уклоняется!` });
-                turn = 'mob';
-                continue;
-            }
-
-            let dmg = userStats.s > user.level
-                ? Math.floor(user.level + Math.random() * (userStats.s - user.level + 1))
-                : userStats.s;
-
-            if (Math.random() < critChance(userStats)) {
-                dmg = Math.round(dmg * critMult(userStats));
-                addStep({ type: 'crit', actor: 'attacker', message: 'Крит!' });
-            }
-
-            dmg = Math.max(0, Math.round(dmg));
-            addStep({ type: 'damage', damage: dmg, target: 'mob', actor: 'attacker', message: `Урон: ${dmg}` });
-            hpMob = Math.max(0, hpMob - dmg);
-            turn = 'mob';
-        } else {
-            addStep({ type: 'attack', actor: 'defender', message: `${mob.name} атакует!` });
-
-            if (Math.random() < dodgeChance(userStats, mobStats)) {
-                addStep({ type: 'dodge', actor: 'attacker', message: 'Вы уклоняетесь!' });
-                turn = 'player';
-                continue;
-            }
-
-            let dmg = mobStats.s > mob.level
-                ? Math.floor(mob.level + Math.random() * (mobStats.s - mob.level + 1))
-                : mobStats.s;
-
-            if (Math.random() < critChance(mobStats)) {
-                dmg = Math.round(dmg * critMult(mobStats));
-                addStep({ type: 'crit', actor: 'defender', message: 'Крит!' });
-            }
-
-            dmg = Math.max(0, Math.round(dmg));
-            addStep({ type: 'damage', damage: dmg, target: 'player', message: `Урон: ${dmg}` });
-            hpUser = Math.max(0, hpUser - dmg);
-            turn = 'player';
+    // Используем общий движок боя для всех механик (яд, вампиризм, ярость и др.)
+    const battleResult = runBattle(
+        {
+            id: userId, name: user.username,
+            base: { s: user.bases, a: user.basea, d: user.based, m: user.basem },
+            equipment: JSON.parse(user.equipment || '{}'),
+            level: user.level, money: user.money || 0,
+            currentHp: hpUser,
+            drinkBonuses: userStats.drinks, collectionBonus: userStats.collection,
+            guildBonus, stats: userStats,
+        },
+        {
+            id: -(mob.id), name: mob.name,
+            base: { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst },
+            equipment: {}, level: mob.level, money: 0,
+            currentHp: hpMob, stats: mobStats,
         }
+    );
+
+    // Переназначаем steps от runBattle (уже содержат hp1/hp2 благодаря нашему addStep wrapper)
+    // runBattle возвращает свои steps — копируем их в наш массив
+    for (const bs of battleResult.steps) {
+        addStep({ ...bs });
     }
 
-    const playerWon = hpMob <= 0;
-    addStep({ type: 'end', message: playerWon ? `${user.username} побеждает ${mob.name}!` : `${mob.name} побеждает!` });
+    const playerWon = battleResult.winnerId === userId;
+    hpUser = battleResult.attackerHpAfter;
+    hpMob = battleResult.defenderHpAfter;
 
     // XP: зависит от моба и разницы уровней
     let expGained = 0;

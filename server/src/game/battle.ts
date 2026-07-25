@@ -93,7 +93,7 @@ export function rollDamage(stats: CharStats, level: number): number {
 
 // ── Один ход боя (symmetrical — работает для обеих сторон) ──
 
-interface TurnContext {
+export interface TurnContext {
   actorName: string;
   targetName: string;
   actorStats: CharStats;
@@ -107,7 +107,7 @@ interface TurnContext {
   target: 'attacker' | 'defender';
 }
 
-function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor: number; hpTarget: number; stunnedTarget: boolean; poisonApplied: { damage: number; turns: number } | undefined } {
+export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor: number; hpTarget: number; stunnedTarget: boolean; poisonApplied: { damage: number; turns: number } | undefined } {
   let hpActor = ctx.hpActor;
   let hpTarget = ctx.hpTarget;
   let stunnedTarget = false;
