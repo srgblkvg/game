@@ -77,16 +77,16 @@ router.get('/collections/set-items', async (req, res) => {
 // Добавить предмет в коллекцию (удаляет из инвентаря)
 router.post('/collections/add', async (req, res) => {
     const userId = req.userId;
-    const { itemName, slot, itemId } = req.body;
+    const { itemName, slot, itemId, rarityId } = req.body;
 
     if (!itemName || !slot) {
         return res.status(400).json({ error: 'itemName и slot обязательны' });
     }
 
-    // Проверяем что предмет ещё не в коллекции
+    // Проверяем что предмет ещё не в коллекции (имя+слот+редкость)
     const existing = await db.one(
-        'SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ?',
-        [userId, itemName, slot]
+        'SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ? AND rarity_id = ?',
+        [userId, itemName, slot, rarityId || 0]
     );
 
     if (existing) {

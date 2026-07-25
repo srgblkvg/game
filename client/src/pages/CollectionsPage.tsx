@@ -127,7 +127,7 @@ export default function CollectionsPage() {
                 const collItems = collectionData.items || [];
                 const coll = new Set<string>();
                 for (const c of collItems) {
-                    coll.add(`${c.itemName}|${c.slot}`);
+                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}`);
                 }
                 setCollectionKeys(coll);
 
@@ -154,7 +154,7 @@ export default function CollectionsPage() {
             const res = await fetch('/api/collections/add', {
                 method: 'POST',
                 headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itemName: selectedShopItem.name, slot: selectedShopItem.slot, itemId: selectedInvItem.id }),
+                body: JSON.stringify({ itemName: selectedShopItem.name, slot: selectedShopItem.slot, itemId: selectedInvItem.id, rarityId: selectedShopItem.rarity_id }),
             });
             const data = await res.json();
             if (!res.ok) { setMessage(data.error || 'Ошибка'); return; }
@@ -176,7 +176,7 @@ export default function CollectionsPage() {
 
             const newColl = new Set<string>();
             for (const c of (collRes.items || [])) {
-                newColl.add(`${c.itemName}|${c.slot}`);
+                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}`);
             }
             setCollectionKeys(newColl);
 
@@ -296,7 +296,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
 
     // Есть ли предметы в инвентаре, которые можно добавить в этот сет
     const hasAddableItems = blockItems.some(item => {
-        if (collectionKeys.has(`${item.name}|${item.slot}`)) return false;
+        if (collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`)) return false;
         return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot);
     });
 
@@ -320,7 +320,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
                 <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-10 gap-1.5">
                     {blockItems.map((item: ShopItem) => {
                         const owned = ownedKeys.has(`${item.name}|${item.slot}`);
-                        const collected = collectionKeys.has(`${item.name}|${item.slot}`);
+                        const collected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
                         const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot);
 
                         return (
