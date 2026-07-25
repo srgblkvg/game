@@ -16,7 +16,7 @@ const statNameRu: Record<string, string> = {
   fullBlock: 'Полный блок', block: 'Блок',
 };
 
-export default function ItemStats({ item, showImage = true, imageSize = 48, extra }: ItemStatsProps) {
+export default function ItemStats({ item, showImage = true, imageSize = 48, extra, viewEquipment }: ItemStatsProps) {
   if (!item) return null;
   const color = getRarityColor(item);
   const img = getItemImage(item);
@@ -33,6 +33,12 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       );
     }
   } catch {}
+
+  // Equipment for set counting: prefer passed viewEquipment, fallback to own character
+  let eqForSet: Record<string, any> | null = viewEquipment || null;
+  if (!eqForSet) {
+    try { eqForSet = useGame().character?.equipment || null; } catch { eqForSet = null; }
+  }
 
   const getBonus = (base: number) => {
     if (!base || upgradeLevel === 0) return base;
@@ -125,14 +131,11 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       {/* Set bonuses */}
       {!resource && item.extra?.set && (() => {
         let equippedCount = 0;
-        try {
-          const { character } = useGame();
-          if (character?.equipment) {
-            for (const eq of Object.values(character.equipment)) {
-              if ((eq as any)?.extra?.set === item.extra.set) equippedCount++;
-            }
+        if (eqForSet) {
+          for (const piece of Object.values(eqForSet)) {
+            if ((piece as any)?.extra?.set === item.extra.set) equippedCount++;
           }
-        } catch {}
+        }
         return (
         <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)]">
           <div className="text-center font-bold text-[var(--color-accent-purple)]">Сет: {item.extra.set} ({equippedCount}/4)</div>
