@@ -79,7 +79,14 @@ router.get('/guild/quest', async (req, res) => {
         return res.json({ activeQuest: questData, options: null });
     }
 
-    // Нет активного — генерируем 3 варианта
+    // Проверяем сохранённые варианты
+    const guild = await db.one('SELECT quest_options FROM guilds WHERE id = ?', [member.guildId]) as any;
+    const storedOptions = guild?.quest_options;
+    if (storedOptions && Array.isArray(storedOptions) && storedOptions.length > 0) {
+        return res.json({ activeQuest: null, options: storedOptions });
+    }
+
+    // Нет сохранённых — генерируем 3 варианта и сохраняем
     const options: any[] = [];
     const usedTypes = new Set<string>();
     for (let i = 0; i < 3; i++) {
@@ -102,6 +109,9 @@ router.get('/guild/quest', async (req, res) => {
             difficultyLabel: d.label,
         });
     }
+
+    // Сохраняем сгенерированные варианты
+    await db.run('UPDATE guilds SET quest_options = ? WHERE id = ?', [JSON.stringify(options), member.guildId]);
 
     res.json({ activeQuest: null, options });
 });
@@ -145,6 +155,9 @@ router.post('/guild/quest/take', async (req, res) => {
         'INSERT INTO guild_quests (guildId, questType, difficulty, requirement, rewardXp, snapshot) VALUES (?, ?, ?, ?, ?, ?)',
         [member.guildId, questType, difficulty, requirement, rewardXp, JSON.stringify(snapshot)]
     );
+
+    // Очищаем сохранённые варианты
+    await db.run('UPDATE guilds SET quest_options = ? WHERE id = ?', ['[]', member.guildId]);
 
     res.json({ success: true, message: 'Задание взято!' });
 });
