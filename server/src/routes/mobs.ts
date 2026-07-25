@@ -17,36 +17,36 @@ function getItemDropTable(level: number): { rarity: number; chance: number }[] {
     const table: { rarity: number; chance: number }[] = [];
     
     if (level <= 10) {
-        table.push({ rarity: 0, chance: 0.20 }); // Хлам 20%
-        table.push({ rarity: 1, chance: 0.05 }); // Обычный 5%
+        table.push({ rarity: 0, chance: 0.07 }); // Хлам 7%
+        table.push({ rarity: 1, chance: 0.02 }); // Обычный 2%
     } else if (level <= 25) {
-        table.push({ rarity: 0, chance: 0.20 });
-        table.push({ rarity: 1, chance: 0.15 }); // Обычный 15%
-        table.push({ rarity: 2, chance: 0.05 }); // Необычный 5%
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.05 }); // Обычный 5%
+        table.push({ rarity: 2, chance: 0.02 }); // Необычный 2%
     } else if (level <= 45) {
-        table.push({ rarity: 0, chance: 0.20 });
-        table.push({ rarity: 1, chance: 0.20 });
-        table.push({ rarity: 2, chance: 0.15 }); // Необычный 15%
-        table.push({ rarity: 3, chance: 0.05 }); // Редкий 5%
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.07 });
+        table.push({ rarity: 2, chance: 0.05 }); // Необычный 5%
+        table.push({ rarity: 3, chance: 0.02 }); // Редкий 2%
     } else if (level <= 65) {
-        table.push({ rarity: 1, chance: 0.20 });
-        table.push({ rarity: 2, chance: 0.20 });
-        table.push({ rarity: 3, chance: 0.15 }); // Редкий 15%
-        table.push({ rarity: 4, chance: 0.05 }); // Эпик 5%
+        table.push({ rarity: 1, chance: 0.07 });
+        table.push({ rarity: 2, chance: 0.07 });
+        table.push({ rarity: 3, chance: 0.05 }); // Редкий 5%
+        table.push({ rarity: 4, chance: 0.02 }); // Эпик 2%
     } else if (level <= 85) {
-        table.push({ rarity: 2, chance: 0.20 });
-        table.push({ rarity: 3, chance: 0.20 });
-        table.push({ rarity: 4, chance: 0.15 }); // Эпик 15%
-        table.push({ rarity: 5, chance: 0.05 }); // Легендарный 5%
+        table.push({ rarity: 2, chance: 0.07 });
+        table.push({ rarity: 3, chance: 0.07 });
+        table.push({ rarity: 4, chance: 0.05 }); // Эпик 5%
+        table.push({ rarity: 5, chance: 0.02 }); // Легендарный 2%
     } else if (level <= 100) {
-        table.push({ rarity: 3, chance: 0.20 });
-        table.push({ rarity: 4, chance: 0.20 });
-        table.push({ rarity: 5, chance: 0.20 }); // Легендарный 20%
-        table.push({ rarity: 6, chance: 0.05 }); // Мифический 5%
+        table.push({ rarity: 3, chance: 0.07 });
+        table.push({ rarity: 4, chance: 0.07 });
+        table.push({ rarity: 5, chance: 0.07 }); // Легендарный 7%
+        table.push({ rarity: 6, chance: 0.02 }); // Мифический 2%
     } else {
-        table.push({ rarity: 4, chance: 0.20 });
-        table.push({ rarity: 5, chance: 0.20 });
-        table.push({ rarity: 6, chance: 0.15 }); // Мифический 15%
+        table.push({ rarity: 4, chance: 0.07 });
+        table.push({ rarity: 5, chance: 0.07 });
+        table.push({ rarity: 6, chance: 0.05 }); // Мифический 5%
     }
     return table;
 }

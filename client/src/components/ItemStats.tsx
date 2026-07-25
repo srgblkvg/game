@@ -7,6 +7,7 @@ interface ItemStatsProps {
   showImage?: boolean;
   imageSize?: number;
   extra?: ReactNode;
+  viewEquipment?: Record<string, any>;
 }
 
 const statNameRu: Record<string, string> = {
