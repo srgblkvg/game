@@ -206,11 +206,17 @@ router.post('/mob/attack', async (req, res) => {
     const playerWon = hpMob <= 0;
     addStep({ type: 'end', message: playerWon ? `${user.username} побеждает ${mob.name}!` : `${mob.name} побеждает!` });
 
-    // XP: +0 если моб слабее, +1 равный, +2 сильнее
+    // XP: зависит от моба и разницы уровней
     let expGained = 0;
     if (playerWon) {
-        if (mob.level > user.level + 2) expGained = 2;
-        else if (Math.abs(mob.level - user.level) <= 2) expGained = 1;
+        const xp = mob.xp || 1;
+        if (mob.level > user.level) {
+            expGained = xp;                              // моб сильнее — полный XP
+        } else if (mob.level === user.level) {
+            expGained = Math.max(1, Math.floor(xp / 2)); // равный — половина
+        } else if (mob.level >= user.level - 2) {
+            expGained = 1;                               // моб чуть слабее — 1
+        }
     }
 
     // Золото
