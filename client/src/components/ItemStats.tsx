@@ -44,9 +44,10 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       if ((v as number) > 0) rows.push([statNameRu[k] || k, getBonus(v as number)]);
     }
   }
+  const extraSkip = ['set','setBonus2','setBonus3','setBonus4','effect','effectValue','effectDesc'];
   if (item.extra) {
     for (const [k, v] of Object.entries(item.extra)) {
-      if ((v as number) > 0) rows.push([statNameRu[k] || k, v as number]);
+      if ((v as number) > 0 && !extraSkip.includes(k)) rows.push([statNameRu[k] || k, v as number]);
     }
   }
 
