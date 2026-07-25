@@ -126,7 +126,8 @@ router.get('/achievements/:userId', async (req, res) => {
         });
     }
 
-    res.json(result);
+    const totalScore = result.reduce((sum, a) => sum + a.highestTier, 0);
+    res.json({ achievements: result, score: totalScore });
 });
 
 // Track income (called from income sources, excluding donations/transfers)

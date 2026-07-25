@@ -23,6 +23,7 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [achievements, setAchievements] = useState<any[]>([]);
+    const [achScore, setAchScore] = useState(0);
 
     useEffect(() => {
         if (!userId) return;
@@ -32,7 +33,14 @@ export default function ProfilePage() {
             .finally(() => setLoading(false));
         fetch(`/api/achievements/${userId}`, { headers: getHeaders() })
             .then(r => r.json())
-            .then(data => setAchievements(Array.isArray(data) ? data : []))
+            .then(data => {
+                if (data && data.achievements) {
+                    setAchievements(data.achievements);
+                    setAchScore(data.score || 0);
+                } else {
+                    setAchievements(Array.isArray(data) ? data : []);
+                }
+            })
             .catch(() => {});
     }, [userId]);
 
@@ -148,7 +156,7 @@ export default function ProfilePage() {
                     {achievements.length > 0 && (
                         <>
                             <h3 className="text-xs font-bold text-[var(--color-accent-gold)] uppercase tracking-wider mt-3">
-                                🏆 Достижения
+                                🏆 Достижения ({achScore} очк.)
                             </h3>
                             {achievements.map((a: any) => {
                                 const lastTier = a.tiers?.[a.tiers.length - 1];
