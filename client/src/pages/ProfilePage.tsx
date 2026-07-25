@@ -81,6 +81,30 @@ export default function ProfilePage() {
                     readOnly
                 />
 
+                {/* Достижения под карточкой */}
+                {achievements.length > 0 && (
+                    <div className="w-full max-w-[200px] mt-4">
+                        <h3 className="text-xs font-bold text-[var(--color-accent-gold)] uppercase tracking-wider mb-2">
+                            🏆 Достижения
+                        </h3>
+                        <div className="space-y-1.5">
+                            {achievements.map((a: any) => {
+                                const lastTier = a.tiers?.[a.tiers.length - 1];
+                                return (
+                                    <p key={a.key} className="text-sm flex items-center gap-1.5">
+                                        <span className="shrink-0">{a.icon}</span>
+                                        <span className="text-[var(--color-text-muted)] truncate text-xs">{a.name}</span>
+                                        {a.currentTier && <span className="text-xs">{a.currentTier.icon}</span>}
+                                        <span className="text-[var(--color-text-muted)] ml-auto text-[0.6rem] whitespace-nowrap">
+                                            {fmtNum(a.progress)}/{lastTier ? fmtNum(lastTier.threshold) : '?'}
+                                        </span>
+                                    </p>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-2 min-w-[280px]">
                     {/* PvP */}
                     <h3 className="text-xs font-bold text-[var(--color-text-accent)] uppercase tracking-wider mt-2">
@@ -143,28 +167,6 @@ export default function ProfilePage() {
                     <StatItem icon="game-icons:card-play" label="Игр сыграно" value={profile.casinoGamesPlayed || 0} />
                     <StatItem icon="game-icons:cash" label="Выиграно" value={formatMoney(profile.casinoWon || 0)} />
                     <StatItem icon="game-icons:pay-money" label="Проиграно" value={formatMoney(profile.casinoLost || 0)} />
-
-                    {/* Достижения */}
-                    {achievements.length > 0 && (
-                        <>
-                            <h3 className="text-xs font-bold text-[var(--color-accent-gold)] uppercase tracking-wider mt-3">
-                                🏆 Достижения
-                            </h3>
-                            {achievements.map((a: any) => {
-                                const lastTier = a.tiers?.[a.tiers.length - 1];
-                                return (
-                                    <p key={a.key} className="text-sm flex items-center gap-1.5">
-                                        <span className="text-[var(--color-text-muted)] shrink-0">{a.icon}</span>
-                                        <span className="text-[var(--color-text-muted)] truncate">{a.name}</span>
-                                        {a.currentTier && <span>{a.currentTier.icon}</span>}
-                                        <span className="text-[var(--color-text-muted)] ml-auto text-xs whitespace-nowrap">
-                                            {fmtNum(a.progress)}/{lastTier ? fmtNum(lastTier.threshold) : '?'}
-                                        </span>
-                                    </p>
-                                );
-                            })}
-                        </>
-                    )}
 
                     {/* Дата регистрации */}
                     {profile.createdAt && (
