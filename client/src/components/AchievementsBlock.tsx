@@ -54,7 +54,7 @@ export default function AchievementsBlock() {
             </div>
 
             {!collapsed && (
-                <div className="mt-2 space-y-2 max-h-[11.5rem] overflow-y-auto pr-1">)
+                <div className="mt-2 space-y-2 max-h-[11.5rem] overflow-y-auto pr-1">
                     {loading && <div className="text-xs text-[var(--color-text-muted)] text-center py-2">Загрузка...</div>}
                     {achievements.map(a => {
                         const lastTier = a.tiers?.[a.tiers.length - 1];
