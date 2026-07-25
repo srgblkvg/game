@@ -118,7 +118,7 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                     <Icon icon="game-icons:book-cover" width={iconSize} height={iconSize} className="inline mr-0.5 text-[var(--color-accent-gold)]" />
                     Коллекция
                   </td>
-                  <td className="text-right pl-[2px] text-[var(--color-accent-gold)]">+{(collectionBonus ?? 0) + (collectionSetBonus ?? 0)}%</td>
+                  <td className="text-right pl-[2px] text-[var(--color-accent-gold)]">+{collectionBonus}%</td>
                 </tr>
               </>
             )}
