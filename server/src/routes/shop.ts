@@ -48,18 +48,11 @@ async function generateDailyOffers() {
 
   const offers: { itemId: number; itemType: string; quantity: number; rarityId: number }[] = [];
 
-  // Камни
-  const stonePacks = [
-    { id: 8, qty: 1, weight: 8 },
-    { id: 8, qty: 3, weight: 5 },
-    { id: 8, qty: 5, weight: 3 },
-  ];
+  // Камни — ровно 1 лот, первый, случайный размер
+  const stoneSizes = [1, 3, 5];
+  const stoneQty = stoneSizes[Math.floor(Math.random() * stoneSizes.length)]!;
   const ci = await db.one('SELECT rarity_id FROM craft_items WHERE id = 8') as any;
-  for (const pack of stonePacks) {
-    if (Math.random() * 100 < pack.weight * 2) {
-      offers.push({ itemId: pack.id, itemType: 'craft_item', quantity: pack.qty, rarityId: ci.rarity_id });
-    }
-  }
+  offers.push({ itemId: 8, itemType: 'craft_item', quantity: stoneQty, rarityId: ci.rarity_id });
 
   // Добираем предметами до 10 (из памяти)
   // Группируем по редкости для быстрого доступа
