@@ -55,7 +55,7 @@ router.get('/guild/my', async (req, res) => {
     }));
 
     const inviteCount = await db.one(
-        "SELECT COUNT(*) as cnt FROM guild_invites WHERE guildId = ? AND status = 'pending'",
+        "SELECT COUNT(*) as cnt FROM guild_invites WHERE guildId = ? AND status = 'pending' AND invitedBy = 0",
         [member.guildId]
     ) as any;
 
