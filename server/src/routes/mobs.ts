@@ -136,7 +136,12 @@ router.post('/mob/attack', async (req, res) => {
     const steps: any[] = [];
 
     const addStep = (step: any) => {
-        // Не перезаписываем hp1/hp2 если runBattle уже их выставил
+        steps.push(step);
+        log.push(step.message);
+    };
+
+    // Хелпер для начальных шагов — добавляет hp/maxHp из замыкания
+    const addInitialStep = (step: any) => {
         if (step.hp1 === undefined) step.hp1 = hpUser;
         if (step.hp2 === undefined) step.hp2 = hpMob;
         if (step.maxHp1 === undefined) step.maxHp1 = maxHpUser;
@@ -145,13 +150,13 @@ router.post('/mob/attack', async (req, res) => {
         log.push(step.message);
     };
 
-    addStep({ type: 'info', message: `⚔ ${user.username} vs ${mob.name} (ур. ${mob.level})`,
+    addInitialStep({ type: 'info', message: `⚔ ${user.username} vs ${mob.name} (ур. ${mob.level})`,
         stats1: { name: user.username, level: user.level, S: userStats.s, A: userStats.a, D: userStats.d, M: userStats.m, HP: maxHpUser },
         stats2: { name: mob.name, level: mob.level, S: mob.atk, A: mob.agi, D: mob.def, M: mob.mst, HP: maxHpMob }
     });
 
     let turn: 'player' | 'mob' = userStats.a >= mob.agi ? 'player' : 'mob';
-    addStep({ type: 'info', message: turn === 'player' ? 'Вы ходите первым' : `${mob.name} атакует первым` });
+    addInitialStep({ type: 'info', message: turn === 'player' ? 'Вы ходите первым' : `${mob.name} атакует первым` });
 
     // Используем общий движок боя для всех механик (яд, вампиризм, ярость и др.)
     const battleResult = runBattle(
@@ -172,8 +177,7 @@ router.post('/mob/attack', async (req, res) => {
         }
     );
 
-    // Переназначаем steps от runBattle (уже содержат hp1/hp2 благодаря нашему addStep wrapper)
-    // runBattle возвращает свои steps — копируем их в наш массив
+    // Копируем шаги от runBattle (hp1/hp2 уже внутри где нужно)
     for (const bs of battleResult.steps) {
         addStep({ ...bs });
     }
