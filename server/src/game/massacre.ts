@@ -81,10 +81,12 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
                 continue;
             }
 
-            // Выбрать случайную живую цель (не себя)
-            const targets = Array.from(state.entries()).filter(([id, t]) => t.alive && id !== userId);
+            // Выбрать цель с наибольшим HP (не себя)
+            const targets = Array.from(state.entries())
+                .filter(([id, t]) => t.alive && id !== userId)
+                .sort((a, b) => b[1].hp - a[1].hp);
             if (targets.length === 0) break;
-            const entry = targets[Math.floor(Math.random() * targets.length)]!;
+            const entry = targets[0]!;
             const targetId = entry[0];
             const target = entry[1];
 
