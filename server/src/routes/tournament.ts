@@ -25,13 +25,13 @@ const divisions = [
 ];
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
 
-// Расчёт призового фонда дивизиона: 50% казны * tier / TIERS_TOTAL
+// Расчёт призового фонда дивизиона: 30% казны * tier / TIERS_TOTAL
 async function calcDivisionPool(tier: number): Promise<number> {
     try {
         const { getTreasury } = await import('../game/treasury');
         const treasury = await getTreasury();
-        const half = Math.floor(treasury * 0.5);
-        return Math.floor(half * tier / TIERS_TOTAL);
+        const share = Math.floor(treasury * 0.3);
+        return Math.floor(share * tier / TIERS_TOTAL);
     } catch { return 0; }
 }
 
