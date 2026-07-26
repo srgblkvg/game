@@ -27,42 +27,32 @@ router.get('/items', async (req, res) => {
 
 // Веса редкостей для генерации
 const RARITY_WEIGHTS: [number, number][] = [
-  [0, 40],  // хлам
-  [1, 25],  // обычный
-  [2, 15],  // необычный
-  [3, 10],  // редкий
-  [4, 5],   // эпик
-  [5, 3],   // лег
-  [6, 2],   // мифик
+  [0, 40], [1, 25], [2, 15], [3, 10], [4, 5], [5, 3], [6, 2],
 ];
 
 const STONE_PRICE = 2000;
 const OFFERS_PER_DAY = 10;
 
-// Сгенерировать предложения на сегодня
 async function generateDailyOffers() {
   const today = new Date().toISOString().slice(0, 10);
-
-  // Проверить что ещё не сгенерированы
   const existing = await db.one('SELECT COUNT(*) as cnt FROM shop_offers WHERE date = $1', [today]) as any;
   if (existing.cnt > 0) return;
 
   const offers: { itemId: number; itemType: string; quantity: number; rarityId: number }[] = [];
 
-  // Добавляем паки камней как отдельные «лоты»
   const stonePacks = [
-    { id: 9, qty: 1, weight: 8 },   // Камень хлам ×1
-    { id: 9, qty: 3, weight: 5 },   // Камень хлам ×3
-    { id: 9, qty: 5, weight: 3 },   // Камень хлам ×5
+    { id: 8, qty: 1, weight: 8 },
+    { id: 8, qty: 3, weight: 5 },
+    { id: 8, qty: 5, weight: 3 },
   ];
 
   for (const pack of stonePacks) {
-    if (Math.random() * 100 < pack.weight * 2) { // примерно 16%/10%/6% шанс
-      offers.push({ itemId: pack.id, itemType: 'craft_item', quantity: pack.qty, rarityId: 0 });
+    if (Math.random() * 100 < pack.weight * 2) {
+      const ci = await db.one('SELECT rarity_id FROM craft_items WHERE id = $1', [pack.id]) as any;
+      offers.push({ itemId: pack.id, itemType: 'craft_item', quantity: pack.qty, rarityId: ci.rarity_id });
     }
   }
 
-  // Добираем предметами до 10
   while (offers.length < OFFERS_PER_DAY) {
     const rarity = weightedRandom(RARITY_WEIGHTS);
     const item = await db.one(
@@ -73,8 +63,6 @@ async function generateDailyOffers() {
       [rarity]
     ).catch(() => null);
     if (!item) continue;
-
-    // Не дублировать
     if (offers.some(o => o.itemId === item.id && o.itemType === 'item')) continue;
     offers.push({ itemId: item.id, itemType: 'item', quantity: 1, rarityId: item.rarity_id });
   }
@@ -97,56 +85,56 @@ function weightedRandom(weights: [number, number][]): number {
   return weights[weights.length - 1]![0];
 }
 
-// Получить сегодняшние предложения
 router.get('/shop', async (req, res) => {
   await generateDailyOffers();
   const today = new Date().toISOString().slice(0, 10);
-  const offers = await db.query(
-    'SELECT o.*, i.name, i.slot, i.bonuses, i.extra, i.image, i.cost, i.rarity_id, r.display_name as rarity_display, r.color as rarity_color FROM shop_offers o LEFT JOIN items i ON o.item_type = $2 AND o.item_id = i.id LEFT JOIN rarities r ON o.rarity_id = r.id WHERE o.date = $1 ORDER BY o.id',
-    [today, 'item']
+
+  const itemOffers = await db.query(
+    `SELECT o.*, i.name, i.slot, i.bonuses, i.extra, i.image, i.cost,
+            r.display_name as rarity_display, r.color as rarity_color
+     FROM shop_offers o
+     LEFT JOIN items i ON o.item_id = i.id
+     LEFT JOIN rarities r ON o.rarity_id = r.id
+     WHERE o.date = $1 AND o.item_type = 'item'
+     ORDER BY o.id`,
+    [today]
   ) as any[];
 
-  // Добавляем инфо о камнях
   const craftOffers = await db.query(
-    'SELECT o.*, c.name, c.image, c.rarity_id FROM shop_offers o JOIN craft_items c ON o.item_id = c.id WHERE o.date = $1 AND o.item_type = $2',
-    [today, 'craft_item']
+    `SELECT o.*, c.name, c.image,
+            r.display_name as rarity_display, r.color as rarity_color
+     FROM shop_offers o
+     JOIN craft_items c ON o.item_id = c.id
+     JOIN rarities r ON c.rarity_id = r.id
+     WHERE o.date = $1 AND o.item_type = 'craft_item'
+     ORDER BY o.id`,
+    [today]
   ) as any[];
 
-  const result = offers.map(o => ({
-    id: o.id,
-    itemId: o.item_id,
-    itemType: 'item',
-    quantity: o.quantity,
-    name: o.name,
-    slot: o.slot,
-    bonuses: o.bonuses ? JSON.parse(o.bonuses) : {},
-    extra: o.extra ? JSON.parse(o.extra) : {},
-    image: o.image,
-    rarity_id: o.rarity_id,
-    rarity_display: o.rarity_display,
-    rarity_color: o.rarity_color,
-    price: o.cost ?? Math.floor(100 * Math.pow(10, o.rarity_id)),
-  }));
+  const result: any[] = [];
+
+  for (const o of itemOffers) {
+    result.push({
+      id: o.id, itemId: o.item_id, itemType: 'item', quantity: o.quantity,
+      name: o.name, slot: o.slot,
+      bonuses: o.bonuses ? JSON.parse(o.bonuses) : {},
+      extra: o.extra ? JSON.parse(o.extra) : {},
+      image: o.image, rarity_id: o.rarity_id,
+      rarity_display: o.rarity_display, rarity_color: o.rarity_color,
+      price: o.cost ?? Math.floor(100 * Math.pow(10, o.rarity_id)),
+    });
+  }
 
   for (const co of craftOffers) {
     result.push({
-      id: co.id,
-      itemId: co.item_id,
-      itemType: 'craft_item',
-      quantity: co.quantity,
-      name: `${co.name} ×${co.quantity}`,
-      slot: null,
-      bonuses: {},
-      extra: {},
-      image: co.image,
-      rarity_id: co.rarity_id,
-      rarity_display: 'Хлам',
-      rarity_color: '#888888',
+      id: co.id, itemId: co.item_id, itemType: 'craft_item', quantity: co.quantity,
+      name: `${co.name} ×${co.quantity}`, slot: null,
+      bonuses: {}, extra: {}, image: co.image,
+      rarity_id: co.rarity_id, rarity_display: co.rarity_display, rarity_color: co.rarity_color,
       price: STONE_PRICE * co.quantity,
     });
   }
 
-  // Кто уже купил сегодня
   const userId = req.userId;
   const bought = await db.query(
     'SELECT offer_id FROM shop_purchases WHERE user_id = $1 AND date = $2',
@@ -154,7 +142,6 @@ router.get('/shop', async (req, res) => {
   ) as any[];
   const boughtIds = new Set(bought.map((b: any) => b.offer_id));
 
-  // Сколько всего покупок за сегодня
   const todayCount = (await db.one(
     'SELECT COUNT(*) as cnt FROM shop_purchases WHERE user_id = $1 AND date = $2',
     [userId, today]
@@ -162,13 +149,11 @@ router.get('/shop', async (req, res) => {
 
   res.json({
     offers: result.map(o => ({ ...o, bought: boughtIds.has(o.id) })),
-    todayCount,
-    dailyLimit: DAILY_LIMIT,
+    todayCount, dailyLimit: DAILY_LIMIT,
     nextRefresh: getNextRefreshTime(),
   });
 });
 
-// Купить предложение
 router.post('/shop/buy', async (req, res) => {
   const userId = req.userId;
   const { offerId } = req.body;
@@ -176,14 +161,12 @@ router.post('/shop/buy', async (req, res) => {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Лимит покупок
   const todayCount = (await db.one(
     'SELECT COUNT(*) as cnt FROM shop_purchases WHERE user_id = $1 AND date = $2',
     [userId, today]
   ) as any).cnt;
   if (todayCount >= DAILY_LIMIT) return res.status(400).json({ error: 'Лимит покупок (10 в сутки)' });
 
-  // Проверить что уже не куплен
   const already = await db.one(
     'SELECT id FROM shop_purchases WHERE user_id = $1 AND offer_id = $2 AND date = $3',
     [userId, offerId, today]
@@ -196,13 +179,12 @@ router.post('/shop/buy', async (req, res) => {
   ) as any;
   if (!offer) return res.status(404).json({ error: 'Предложение не найдено' });
 
-  // Цена
   let price: number;
   let itemName: string;
 
   if (offer.item_type === 'craft_item') {
     price = STONE_PRICE * offer.quantity;
-    const ci = await db.one('SELECT name, image FROM craft_items WHERE id = $1', [offer.item_id]) as any;
+    const ci = await db.one('SELECT name FROM craft_items WHERE id = $1', [offer.item_id]) as any;
     itemName = `${ci.name} ×${offer.quantity}`;
   } else {
     const item = await db.one('SELECT name, cost, rarity_id FROM items WHERE id = $1', [offer.item_id]) as any;
@@ -216,29 +198,22 @@ router.post('/shop/buy', async (req, res) => {
   const inventory = JSON.parse(user.inventory || '[]');
 
   if (offer.item_type === 'craft_item') {
-    // Добавить камни в инвентарь
     const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === offer.item_id);
     if (existing) {
       existing.count = (existing.count || 0) + offer.quantity;
     } else {
       const ci = await db.one('SELECT id, name, rarity_id, type, image FROM craft_items WHERE id = $1', [offer.item_id]) as any;
       inventory.push({
-        id: ci.id,
-        name: ci.name,
-        type: 'craft_item',
-        rarity_id: ci.rarity_id,
-        count: offer.quantity,
-        image: ci.image,
-        itemType: ci.type,
+        id: ci.id, name: ci.name, type: 'craft_item',
+        rarity_id: ci.rarity_id, count: offer.quantity,
+        image: ci.image, itemType: ci.type,
       });
     }
   } else {
-    // Предмет экипировки
     const equipmentCount = inventory.filter(
       (i: any) => !i.type || (i.type !== 'material' && i.type !== 'craft_item')
     ).length;
-    const maxSlots = user.inventorySlots || 10;
-    if (equipmentCount >= maxSlots) return res.status(400).json({ error: 'Инвентарь заполнен' });
+    if (equipmentCount >= (user.inventorySlots || 10)) return res.status(400).json({ error: 'Инвентарь заполнен' });
 
     const item = await db.one(
       'SELECT i.*, r.display_name as rarity_display, r.color as rarity_color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.id = $1',
@@ -246,25 +221,17 @@ router.post('/shop/buy', async (req, res) => {
     ) as any;
 
     inventory.push({
-      id: Date.now() + Math.random(),
-      name: item.name,
-      slot: item.slot,
-      rarity_id: item.rarity_id,
-      rarity_display: item.rarity_display,
-      rarity_color: item.rarity_color,
-      bonuses: JSON.parse(item.bonuses || '{}'),
-      extra: JSON.parse(item.extra || '{}'),
+      id: Date.now() + Math.random(), name: item.name, slot: item.slot,
+      rarity_id: item.rarity_id, rarity_display: item.rarity_display, rarity_color: item.rarity_color,
+      bonuses: JSON.parse(item.bonuses || '{}'), extra: JSON.parse(item.extra || '{}'),
       image: item.image || null,
     });
   }
 
   await db.run('UPDATE users SET money = money - $1, inventory = $2 WHERE id = $3',
     [price, JSON.stringify(inventory), userId]);
-
-  // Отметить покупку
   await db.run('INSERT INTO shop_purchases (user_id, offer_id, date) VALUES ($1, $2, $3)',
     [userId, offerId, today]);
-
   addToTreasury(Math.floor(price * 0.22), 'shop_sale').catch(() => {});
 
   res.json({ success: true, moneyAfter: user.money - price, itemName });
