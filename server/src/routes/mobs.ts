@@ -125,6 +125,7 @@ router.post('/mob/attack', async (req, res) => {
     // Статы моба (s=atk, a=agi, d=def, m=mst)
     const mobBase = { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst };
     const mobStats = currentStats(mobBase, {});
+    mobStats.hp = mob.hp; // мобы имеют ручной HP в БД, не S+A+M
 
     // Упрощённый бой (подобно PvP, но моб — всегда defender)
     let hpUser = user.currentHp ?? userStats.hp;
