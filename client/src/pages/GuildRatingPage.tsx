@@ -6,6 +6,7 @@ import { getHeaders, BASE_URL } from '../api/helpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 
 export default function GuildRatingPage() {
     const { user } = useAuth();
@@ -13,13 +14,45 @@ export default function GuildRatingPage() {
     const navigate = useNavigate();
     const [guilds, setGuilds] = useState<any[]>([]);
     const [expanded, setExpanded] = useState<Set<number>>(new Set());
+    const [myGuild, setMyGuild] = useState<any>(null);
+    const [myMembers, setMyMembers] = useState<any[]>([]);
+    const [myWar, setMyWar] = useState<any>(null);
 
     useEffect(() => { if (!user) navigate('/login');
         fetch(`${BASE_URL}/guild/list`, { headers: getHeaders() })
             .then(r => r.json()).then(setGuilds).catch(() => {});
+        fetch(`${BASE_URL}/guild/my`, { headers: getHeaders() })
+            .then(r => r.json()).then(d => { if (d.guild) { setMyGuild(d.guild); setMyMembers(d.members || []); setMyWar(d.war || null); } }).catch(() => {});
     }, [user]);
 
     const myGuildId = character?.guildId;
+
+    const canDeclare = (g: any) => {
+        if (!myGuild) return false;
+        if (g.id === myGuildId) return false;
+        if (myGuild.myRank !== 'leader' && myGuild.myRank !== 'officer') return false;
+        if (myGuild.myRank === 'officer') {
+            const me = myMembers.find((m: any) => m.userId === user?.id);
+            if (!me?.can_war) return false;
+        }
+        if (myWar) return false;
+        if (g.warStatus) return false;
+        return true;
+    };
+
+    const handleDeclare = async (g: any) => {
+        if (!confirm(`Объявить войну гильдии «${g.name}»?\nКазна обеих гильдий будет заморожена на 24 часа.`)) return;
+        try {
+            const r = await fetch(`${BASE_URL}/guild/war/declare`, {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetGuildId: g.id }),
+            });
+            const d = await r.json();
+            if (!r.ok) { alert(d.error); return; }
+            navigate('/guild');
+        } catch {}
+    };
 
     const toggle = (id: number) => {
         setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -58,6 +91,11 @@ export default function GuildRatingPage() {
                                 )}
                                 {isMyGuild && (
                                     <span className="text-[0.6rem] text-[var(--color-accent-success)] font-bold px-1.5 py-0.5 rounded border border-[var(--color-accent-success)]">Ваша</span>
+                                )}
+                                {canDeclare(g) && (
+                                    <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); handleDeclare(g); }}>
+                                        ⚔️ Война
+                                    </Button>
                                 )}
                             </div>
                         </div>
