@@ -259,7 +259,7 @@ export default function Inventory({
                             onLongPress={handleLongPress}
                             highlighted={isSelected}
                         />
-                        {equipTarget?.id === item?.id && (
+                        {item && equipTarget?.id === item?.id && (
                             <div className="absolute inset-0 flex items-center justify-center z-10">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); equipItem(item); setEquipTarget(null); }}
