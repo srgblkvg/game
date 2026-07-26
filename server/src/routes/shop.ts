@@ -38,32 +38,37 @@ async function generateDailyOffers() {
   const existing = await db.one('SELECT COUNT(*) as cnt FROM shop_offers WHERE date = $1', [today]) as any;
   if (existing.cnt > 0) return;
 
+  // Загружаем все подходящие предметы одним запросом
+  const allItems = await db.query(
+    `SELECT id, rarity_id FROM items WHERE sellable = true 
+     AND rarity_id != 7 
+     AND (extra IS NULL OR extra::text NOT LIKE '%"set"%')`,
+    []
+  ) as any[];
+
   const offers: { itemId: number; itemType: string; quantity: number; rarityId: number }[] = [];
 
+  // Камни
   const stonePacks = [
     { id: 8, qty: 1, weight: 8 },
     { id: 8, qty: 3, weight: 5 },
     { id: 8, qty: 5, weight: 3 },
   ];
-
+  const ci = await db.one('SELECT rarity_id FROM craft_items WHERE id = 8') as any;
   for (const pack of stonePacks) {
     if (Math.random() * 100 < pack.weight * 2) {
-      const ci = await db.one('SELECT rarity_id FROM craft_items WHERE id = $1', [pack.id]) as any;
       offers.push({ itemId: pack.id, itemType: 'craft_item', quantity: pack.qty, rarityId: ci.rarity_id });
     }
   }
 
+  // Добираем предметами до 10 (из памяти)
+  const usedIds = new Set<number>();
   while (offers.length < OFFERS_PER_DAY) {
     const rarity = weightedRandom(RARITY_WEIGHTS);
-    const item = await db.one(
-      `SELECT id, rarity_id FROM items WHERE rarity_id = $1 AND sellable = true 
-       AND rarity_id != 7 
-       AND (extra IS NULL OR extra::text NOT LIKE '%"set"%')
-       ORDER BY RANDOM() LIMIT 1`,
-      [rarity]
-    ).catch(() => null);
-    if (!item) continue;
-    if (offers.some(o => o.itemId === item.id && o.itemType === 'item')) continue;
+    const pool = allItems.filter(i => i.rarity_id === rarity && !usedIds.has(i.id));
+    if (pool.length === 0) continue;
+    const item = pool[Math.floor(Math.random() * pool.length)]!;
+    usedIds.add(item.id);
     offers.push({ itemId: item.id, itemType: 'item', quantity: 1, rarityId: item.rarity_id });
   }
 
