@@ -33,9 +33,9 @@ const RARITY_WEIGHTS: [number, number][] = [
 const STONE_PRICE = 2000;
 const OFFERS_PER_DAY = 10;
 
-async function generateDailyOffers() {
+async function generateDailyOffers(userId: number) {
   const today = new Date().toISOString().slice(0, 10);
-  const existing = await db.one('SELECT COUNT(*) as cnt FROM shop_offers WHERE date = $1', [today]) as any;
+  const existing = await db.one('SELECT COUNT(*) as cnt FROM shop_offers WHERE user_id = $1 AND date = $2', [userId, today]) as any;
   if (existing.cnt > 0) return;
 
   // Загружаем все подходящие предметы одним запросом
@@ -75,8 +75,8 @@ async function generateDailyOffers() {
 
   for (const o of offers) {
     await db.run(
-      'INSERT INTO shop_offers (item_id, item_type, quantity, date, rarity_id) VALUES ($1, $2, $3, $4, $5)',
-      [o.itemId, o.itemType, o.quantity, today, o.rarityId]
+      'INSERT INTO shop_offers (item_id, item_type, quantity, date, rarity_id, user_id) VALUES ($1, $2, $3, $4, $5, $6)',
+      [o.itemId, o.itemType, o.quantity, today, o.rarityId, userId]
     );
   }
 }
@@ -92,7 +92,8 @@ function weightedRandom(weights: [number, number][]): number {
 }
 
 router.get('/shop', async (req, res) => {
-  await generateDailyOffers();
+  const userId = req.userId;
+  await generateDailyOffers(userId);
   const today = new Date().toISOString().slice(0, 10);
 
   const itemOffers = await db.query(
@@ -101,9 +102,9 @@ router.get('/shop', async (req, res) => {
      FROM shop_offers o
      LEFT JOIN items i ON o.item_id = i.id
      LEFT JOIN rarities r ON o.rarity_id = r.id
-     WHERE o.date = $1 AND o.item_type = 'item'
+     WHERE o.user_id = $1 AND o.date = $2 AND o.item_type = 'item'
      ORDER BY o.id`,
-    [today]
+    [userId, today]
   ) as any[];
 
   const craftOffers = await db.query(
@@ -112,9 +113,9 @@ router.get('/shop', async (req, res) => {
      FROM shop_offers o
      JOIN craft_items c ON o.item_id = c.id
      JOIN rarities r ON c.rarity_id = r.id
-     WHERE o.date = $1 AND o.item_type = 'craft_item'
+     WHERE o.user_id = $1 AND o.date = $2 AND o.item_type = 'craft_item'
      ORDER BY o.id`,
-    [today]
+    [userId, today]
   ) as any[];
 
   const result: any[] = [];
@@ -141,7 +142,6 @@ router.get('/shop', async (req, res) => {
     });
   }
 
-  const userId = req.userId;
   const bought = await db.query(
     'SELECT offer_id FROM shop_purchases WHERE user_id = $1 AND date = $2',
     [userId, today]
@@ -180,8 +180,8 @@ router.post('/shop/buy', async (req, res) => {
   if (already) return res.status(400).json({ error: 'Вы уже купили этот товар сегодня' });
 
   const offer = await db.one(
-    'SELECT * FROM shop_offers WHERE id = $1 AND date = $2',
-    [offerId, today]
+    'SELECT * FROM shop_offers WHERE id = $1 AND user_id = $2 AND date = $3',
+    [offerId, userId, today]
   ) as any;
   if (!offer) return res.status(404).json({ error: 'Предложение не найдено' });
 
