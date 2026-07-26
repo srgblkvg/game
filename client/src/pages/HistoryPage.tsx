@@ -83,7 +83,7 @@ export default function HistoryPage() {
     const tabs = [
         {key:'all',label:'Все'},{key:'battles',label:'PvP'},{key:'pve',label:'Охота'},
         {key:'jobs',label:'Работы'},{key:'tournaments',label:'Турниры'},{key:'quests',label:'Квесты'},
-        {key:'messages',label:'Сообщения'},{key:'massacre',label:'Резня'},
+        {key:'messages',label:'Сообщения'},{key:'massacre',label:'Лотерея'},
     ] as const;
 
     if(!user) return null;
@@ -207,7 +207,7 @@ export default function HistoryPage() {
             const wname = data.winner_name ?? '?';
             const ts = toMs(data.gathering_end || data.created_at);
             return <EntryRow time={fmt(ts)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
-                <span><Icon icon="game-icons:battered-axe" width="14" height="14" className="inline mr-1"/>Резня — {pc} участников</span>
+                <span><Icon icon="game-icons:fist" width="14" height="14" className="inline mr-1"/>Кровавая лотерея — {pc} участников</span>
                 <span className={`font-bold ml-2 ${wid === user.id ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
                     {wid === user.id ? `🏆 ${wname}` : data.participated ? 'Поражение' : '⚔️'}
                 </span>

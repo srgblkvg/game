@@ -234,13 +234,12 @@ export default function MassacrePage() {
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
-          {actionCard && <PageHeader title="Резня" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
+          {actionCard && <PageHeader title="Кровавая лотерея" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
-                Хаотичный массовый PvP-бой без правил. Вход — {formatMoney(state?.event?.entry_fee || 10)}. Сбор участников длится 30 минут,
-                затем все сражаются, атакуя случайного противника.
-                Победитель получает +10 опыта и весь призовой фонд. Выживает сильнейший!
-            </p>
+                Хаотичный массовый кулачный бой без экипировки и усилений. Здесь не решает — откуда ты и во что одет.
+                Снимай экипировку и выходи на арену. Победитель один!
+ </p>
 
             {/* Сбор участников */}
             {isGathering && (
@@ -268,7 +267,7 @@ export default function MassacrePage() {
                     ) : (
                         <p className="text-[var(--color-accent-success)] text-sm font-bold">
                             <Icon icon="game-icons:checked-shield" width="14" height="14" className="inline mr-1" />
-                            Вы в резне! Ожидайте начала боя...
+                            Вы в лотерее! Ожидайте начала боя..."
                         </p>
                     )}
 

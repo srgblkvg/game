@@ -139,7 +139,7 @@ export default function ProfilePage() {
                         <StatItem icon="game-icons:pay-money" label="Потеряно" value={formatMoney(profile.totalPveMoneyLost || 0)} />
                     </StatSection>
 
-                    <StatSection title="Резня" icon="⚔️" color="var(--color-accent-danger)">
+                    <StatSection title="Кровавая лотерея" icon="👊" color="var(--color-accent-danger)">
                         <StatItem icon="game-icons:crossed-swords" label="Участий" value={profile.massacreParticipations || 0} />
                         <StatItem icon="game-icons:trophy" label="Побед" value={profile.massacreWins || 0} />
                     </StatSection>

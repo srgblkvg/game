@@ -31,7 +31,7 @@ const breadcrumbMap: Record<string, string> = {
     premium: 'Премиум',
     guild: 'Гильдия',
     war: 'Поле боя',
-    massacre: 'Резня',
+    massacre: 'Кровавая лотерея',
     casino: 'Игорный дом',
     training: 'Лудус',
     dice: 'Кости',

@@ -53,7 +53,7 @@ export default function WikiPage() {
                 </Card>
                 <Card className="p-2">
                     <span className="text-lg">🗡️</span>
-                    <h4 className="text-sm text-[var(--color-accent-success)]">Резня</h4>
+                    <h4 className="text-sm text-[var(--color-accent-success)]">Кровавая лотерея</h4>
                     <p className="text-[0.6rem] text-[var(--color-text-muted)]">PvP-ивент: платный вход, все против всех. Игроки ходят по очереди, последний выживший забирает банк.</p>
                 </Card>
             </div>
