@@ -62,10 +62,18 @@ async function generateDailyOffers() {
   }
 
   // Добираем предметами до 10 (из памяти)
+  // Группируем по редкости для быстрого доступа
+  const byRarity = new Map<number, any[]>();
+  for (const item of allItems) {
+    if (!byRarity.has(item.rarity_id)) byRarity.set(item.rarity_id, []);
+    byRarity.get(item.rarity_id)!.push(item);
+  }
   const usedIds = new Set<number>();
-  while (offers.length < OFFERS_PER_DAY) {
+  let safety = 0;
+  while (offers.length < OFFERS_PER_DAY && safety < 1000) {
+    safety++;
     const rarity = weightedRandom(RARITY_WEIGHTS);
-    const pool = allItems.filter(i => i.rarity_id === rarity && !usedIds.has(i.id));
+    const pool = (byRarity.get(rarity) || []).filter((i: any) => !usedIds.has(i.id));
     if (pool.length === 0) continue;
     const item = pool[Math.floor(Math.random() * pool.length)]!;
     usedIds.add(item.id);
