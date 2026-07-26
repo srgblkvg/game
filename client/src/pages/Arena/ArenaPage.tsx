@@ -185,7 +185,7 @@ export default function ArenaPage() {
       {battleSteps.length > 0 && (
         <div>
           <div ref={logContainerRef} className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed">
-            {renderBattleLog(visibleSteps)}
+            {renderBattleLog(visibleSteps, false, true)}
           </div>
           {currentStep >= battleSteps.length - 1 && battleResult && (
             <div className="text-center mt-4">
