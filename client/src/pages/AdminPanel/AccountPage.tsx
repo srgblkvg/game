@@ -131,7 +131,7 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
 
             {!isVK && user.isGuest && (
                 <Card className="mb-4 border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-gold)]/5">
-                    <p className="text-sm text-[var(--color-accent-gold)] mb-2">🎁 Привяжите почту или OAuth — получите <b>3 дня премиума</b>!</p>
+                    <p className="text-sm text-[var(--color-accent-gold)] mb-2">🎁 Привяжите почту или OAuth — получите <b>1 день премиума</b>!</p>
                     <div className="flex gap-2">
                         <a href="/api/oauth/yandex" className="text-xs px-2 py-1 rounded bg-[#FC3F1D] text-white no-underline">Яндекс ID</a>
                         <a href="/api/oauth/vk" className="text-xs px-2 py-1 rounded bg-[#0077FF] text-white no-underline">VK ID</a>

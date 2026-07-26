@@ -37,7 +37,7 @@ const BONUS_LABELS: Record<string, string> = {
   'fullBlock': 'Блок',
 };
 
-export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, collectionSetBonus, guildBonus, buildings, setBonuses, noFlip }: StatsOverlayProps) {
+export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, collectionSetBonus: _collectionSetBonus, guildBonus, buildings, setBonuses, noFlip }: StatsOverlayProps) {
   const [flipped, setFlipped] = useState(false);
   const [animating, setAnimating] = useState(false);
   const isMobile = compact === 'mobile' || compact === 'verySmall';
