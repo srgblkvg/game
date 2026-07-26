@@ -245,7 +245,7 @@ export default function BestiaryPage() {
       }, 800);
       showEffectText(crSide, 'КРИТ!', '#e74c3c');
     } else if (step.type === 'stun') {
-      const sSide = step.actor === 'attacker' ? 'right' : 'left';
+      const sSide = step.actor === 'attacker' ? 'left' : 'right';
       const frame = sSide === 'left' ? leftFrame : rightFrame;
       frame?.classList.add('stunned');
       setTimeout(() => frame?.classList.remove('stunned'), 800);
