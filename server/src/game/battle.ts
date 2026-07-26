@@ -341,17 +341,19 @@ export function runBattle(
     else if (attacker.level === defender.level) expGained = 1;
   }
 
-  // --- ограбление монет ---
+  // --- ограбление монет (только PvP, не PvE) ---
   let moneyStolen = 0;
-  const loserId = winnerId === attacker.id ? defender.id : attacker.id;
-  const loserMoney = loserId === defender.id ? defender.money || 0 : attacker.money || 0;
-  if (loserMoney > 0) {
-    const percent = 0.1 + Math.random() * 0.4;
-    moneyStolen = Math.max(1, Math.floor(loserMoney * percent));
-  }
-  if (moneyStolen > 0) {
-    const loserName = winnerId === attacker.id ? defender.name : attacker.name;
-    addStep({ type: 'money', amount: moneyStolen, message: `${winnerName} забирает ${moneyStolen} монет у ${loserName}!` });
+  if (attacker.id > 0 && defender.id > 0) {
+    const loserId = winnerId === attacker.id ? defender.id : attacker.id;
+    const loserMoney = loserId === defender.id ? defender.money || 0 : attacker.money || 0;
+    if (loserMoney > 0) {
+      const percent = 0.1 + Math.random() * 0.4;
+      moneyStolen = Math.max(1, Math.floor(loserMoney * percent));
+    }
+    if (moneyStolen > 0) {
+      const loserName = winnerId === attacker.id ? defender.name : attacker.name;
+      addStep({ type: 'money', amount: moneyStolen, message: `${winnerName} забирает ${moneyStolen} монет у ${loserName}!` });
+    }
   }
 
   return {
