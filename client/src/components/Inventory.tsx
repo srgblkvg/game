@@ -10,9 +10,10 @@ import LongPressResourceSlot from './LongPressResourceSlot';
 import ItemTooltip from './ItemTooltip';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useToast } from '../contexts/ToastContext';
+import { getHeaders, BASE_URL } from '../api/helpers';
 
 interface InventoryProps {
-    onItemClick?: (item: any) => void;
+    onItemClick?: (item: any) => void; // kept for compatibility, now handled internally
     onMaterialClick?: (item: any) => void;
     inventoryOverride?: any[];
     selectedItemId?: string | null;
@@ -47,7 +48,6 @@ const getLocalizedType = (type: string): string => {
 };
 
 export default function Inventory({
-    onItemClick,
     onMaterialClick,
     inventoryOverride,
     selectedItemId,
@@ -59,6 +59,46 @@ export default function Inventory({
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const { sendItemLink } = useGlobalChat();
     const { showToast } = useToast();
+
+    const equipItem = async (item: any) => {
+        if (!character) return;
+        const equipment = character.equipment || {};
+
+        let slotId = item.slot;
+
+        // Кольца: выбираем слот
+        if (slotId === 'ring' || slotId?.startsWith('ring')) {
+            const ring1 = equipment.ring1;
+            const ring2 = equipment.ring2;
+
+            // Проверка на дубликат
+            if ((ring1 && ring1.name === item.name) || (ring2 && ring2.name === item.name)) {
+                showToast('Нельзя надеть два одинаковых кольца');
+                return;
+            }
+
+            if (!ring1) { slotId = 'ring1'; }
+            else if (!ring2) { slotId = 'ring2'; }
+            else {
+                // Заменяем худшее: сравниваем редкость, потом уровень улучшения
+                const r1 = (ring1.rarity_id ?? 0) + (ring1.upgradeLevel ?? 0) * 0.1;
+                const r2 = (ring2.rarity_id ?? 0) + (ring2.upgradeLevel ?? 0) * 0.1;
+                slotId = r1 <= r2 ? 'ring1' : 'ring2';
+            }
+        }
+
+        try {
+            const r = await fetch(`${BASE_URL}/character/equip`, {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slotId, itemId: item.id }),
+            });
+            const d = await r.json();
+            if (!r.ok) { showToast(d.error || 'Ошибка'); return; }
+            setCharacter((prev: any) => prev ? { ...prev, equipment: d.equipment, inventory: d.inventory, currentHp: d.currentHp } : prev);
+            showToast('Надето', 'success');
+        } catch { showToast('Ошибка соединения', 'error'); }
+    };
 
     const [sortEquipment, setSortEquipment] = useState<SortOrder>(
         () => (localStorage.getItem('invSort') as SortOrder) || 'none'
@@ -206,9 +246,9 @@ export default function Inventory({
                                     if (e.shiftKey) {
                                         e.stopPropagation();
                                         sendItemLink(item.id, item);
-                                    } else if (onItemClick) {
+                                    } else {
                                         setTooltipData(null);
-                                        onItemClick(item);
+                                        equipItem(item);
                                     }
                                 }
                             }}
