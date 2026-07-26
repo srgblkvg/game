@@ -295,9 +295,9 @@ export default function BestiaryPage() {
       executeStep(step, playerActor ? 'right' : 'left');
     }
 
-    // Apply damage
+    // Apply damage (player = attacker in PvE)
     if (step.type === 'damage' && step.damage) {
-      if (step.target === 'player') {
+      if (step.target === 'attacker') {
         setPlayerHp(prev => Math.max(0, prev - step.damage));
         showDamageNumber('left', step.damage);
       } else {
