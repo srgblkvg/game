@@ -59,5 +59,9 @@ export async function cleanupOldData() {
   const gi = await db.run(`DELETE FROM guild_invites WHERE status = 'pending' AND createdat < ?`, [weekAgoISO]);
   results.push(`guild_invites: ${gi.changes}`);
 
+  // Орфанные записи guild_members (юзер удалён, запись осталась)
+  const gmo = await db.run(`DELETE FROM guild_members WHERE userId NOT IN (SELECT id FROM users)`);
+  if (gmo.changes > 0) results.push(`orphan_guild_members: ${gmo.changes}`);
+
   console.log(`[cleanup] ${new Date().toISOString()}: ${results.join(', ')}`);
 }
