@@ -36,7 +36,7 @@ export default function NoMoneyModal() {
             <p>⚔️ PvP-бои и охота на мобов</p>
             <p>🔨 Работы в городе</p>
             <p>📦 Продажа предметов на аукционе</p>
-            <p>💎 Купить серебро за голоса ВК</p>
+            <p>💎 Купить серебро</p>
           </div>
 
           <div className="flex gap-2 justify-center">

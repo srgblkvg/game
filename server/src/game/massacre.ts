@@ -81,12 +81,11 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
                 continue;
             }
 
-            // Выбрать цель: 70% шанс — с наибольшим HP, 30% — случайная (чтобы не было видно подкрутки)
+            // Выбрать случайную живую цель (не себя)
             const aliveTargets = Array.from(state.entries())
                 .filter(([id, t]) => t.alive && id !== userId);
             if (aliveTargets.length === 0) break;
-            aliveTargets.sort((a, b) => b[1].hp - a[1].hp);
-            const entry = Math.random() < 0.7 ? aliveTargets[0]! : aliveTargets[Math.floor(Math.random() * aliveTargets.length)]!;
+            const entry = aliveTargets[Math.floor(Math.random() * aliveTargets.length)]!;
             const targetId = entry[0];
             const target = entry[1];
 
