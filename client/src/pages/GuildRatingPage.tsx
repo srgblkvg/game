@@ -40,18 +40,10 @@ export default function GuildRatingPage() {
         return true;
     };
 
+    const [warTarget, setWarTarget] = useState<any>(null);
+
     const handleDeclare = async (g: any) => {
-        if (!confirm(`Объявить войну гильдии «${g.name}»?\nКазна обеих гильдий будет заморожена на 24 часа.`)) return;
-        try {
-            const r = await fetch(`${BASE_URL}/guild/war/declare`, {
-                method: 'POST',
-                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ targetGuildId: g.id }),
-            });
-            const d = await r.json();
-            if (!r.ok) { alert(d.error); return; }
-            navigate('/guild');
-        } catch {}
+        setWarTarget(g);
     };
 
     const toggle = (id: number) => {
@@ -138,6 +130,42 @@ export default function GuildRatingPage() {
                     </Card>
                     );
                 })
+            )}
+            {/* Модалка подтверждения войны */}
+            {warTarget && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setWarTarget(null)}>
+                    <Card className="max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-lg mb-3 text-center">⚔️ Объявить войну</h3>
+                        <p className="text-sm mb-2">Противник: <span className="font-bold text-[var(--color-accent-danger)]">{warTarget.name}</span></p>
+                        <div className="text-xs text-[var(--color-text-muted)] space-y-1.5 mb-4">
+                            <p className="font-bold text-[var(--color-text-primary)]">Как проходит война:</p>
+                            <p>• ⏳ <b>24 часа</b> на ответ противника</p>
+                            <p>• ⚔️ После принятия — <b>24 часа</b> боёв</p>
+                            <p>• 🛡️ Каждая гильдия может быть атакована <b>5 раз</b></p>
+                            <p>• 🏆 Побеждает гильдия с наибольшим счётом</p>
+                            <p className="font-bold text-[var(--color-accent-warning)] mt-1">⚠️ Ограничения:</p>
+                            <p>• 💰 Казна заморожена до конца войны</p>
+                            <p>• 🚫 Нельзя покинуть гильдию</p>
+                            <p>• 📛 Нельзя исключать участников</p>
+                        </div>
+                        <div className="flex gap-2 justify-center">
+                            <Button variant="secondary" size="md" onClick={() => setWarTarget(null)}>Отмена</Button>
+                            <Button variant="danger" size="md" onClick={async () => {
+                                setWarTarget(null);
+                                try {
+                                    const r = await fetch(`${BASE_URL}/guild/war/declare`, {
+                                        method: 'POST',
+                                        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ targetGuildId: warTarget.id }),
+                                    });
+                                    const d = await r.json();
+                                    if (!r.ok) { alert(d.error); return; }
+                                    navigate('/guild');
+                                } catch {}
+                            }}>⚔️ Объявить войну</Button>
+                        </div>
+                    </Card>
+                </div>
             )}
         </div>
     );

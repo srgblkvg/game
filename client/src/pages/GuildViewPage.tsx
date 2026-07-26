@@ -75,13 +75,10 @@ export default function GuildViewPage() {
         && !myWar
         && !war;
 
+    const [showWarModal, setShowWarModal] = useState(false);
+
     const handleDeclareWar = async () => {
-        if (!confirm(`Объявить войну гильдии «${guild.name}»?\nКазна обеих гильдий будет заморожена на 24 часа.`)) return;
-        try {
-            const d = await api('/guild/war/declare', { targetGuildId: guild.id });
-            setMessage(d.message);
-            load();
-        } catch (e: any) { setMessage(e.message); }
+        setShowWarModal(true);
     };
 
     return (
@@ -194,6 +191,37 @@ export default function GuildViewPage() {
                         </div>
                     </Card>
                 </>
+            )}
+            {/* Модалка подтверждения войны */}
+            {showWarModal && guild && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowWarModal(false)}>
+                    <Card className="max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-lg mb-3 text-center">⚔️ Объявить войну</h3>
+                        <p className="text-sm mb-2">Противник: <span className="font-bold text-[var(--color-accent-danger)]">{guild.name}</span></p>
+                        <div className="text-xs text-[var(--color-text-muted)] space-y-1.5 mb-4">
+                            <p className="font-bold text-[var(--color-text-primary)]">Как проходит война:</p>
+                            <p>• ⏳ <b>24 часа</b> на ответ противника</p>
+                            <p>• ⚔️ После принятия — <b>24 часа</b> боёв</p>
+                            <p>• 🛡️ Каждая гильдия может быть атакована <b>5 раз</b></p>
+                            <p>• 🏆 Побеждает гильдия с наибольшим счётом</p>
+                            <p className="font-bold text-[var(--color-accent-warning)] mt-1">⚠️ Ограничения:</p>
+                            <p>• 💰 Казна заморожена до конца войны</p>
+                            <p>• 🚫 Нельзя покинуть гильдию</p>
+                            <p>• 📛 Нельзя исключать участников</p>
+                        </div>
+                        <div className="flex gap-2 justify-center">
+                            <Button variant="secondary" size="md" onClick={() => setShowWarModal(false)}>Отмена</Button>
+                            <Button variant="danger" size="md" onClick={async () => {
+                                setShowWarModal(false);
+                                try {
+                                    const d = await api('/guild/war/declare', { targetGuildId: guild.id });
+                                    setMessage(d.message);
+                                    load();
+                                } catch (e: any) { setMessage(e.message); }
+                            }}>⚔️ Объявить войну</Button>
+                        </div>
+                    </Card>
+                </div>
             )}
         </div>
     );
