@@ -61,6 +61,17 @@ export default function Inventory({
     const { showToast } = useToast();
     const [equipTarget, setEquipTarget] = useState<any>(null);
 
+    // Закрытие кнопки «Надеть» при клике вне
+    useEffect(() => {
+        if (!equipTarget) return;
+        const handler = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('.equip-slot')) setEquipTarget(null);
+        };
+        document.addEventListener('click', handler);
+        return () => document.removeEventListener('click', handler);
+    }, [equipTarget]);
+
     const equipItem = async (item: any) => {
         if (!character) return;
         const equipment = character.equipment || {};
@@ -237,7 +248,7 @@ export default function Inventory({
                     const isSelected = selectedItemId && item && item.id === selectedItemId;
 
                     return (
-                        <div key={idx} className="relative">
+                        <div key={idx} className="relative equip-slot">
                         <LongPressItemSlot
                             item={item}
                             draggable={!!item && !isCraftItem(item)}
