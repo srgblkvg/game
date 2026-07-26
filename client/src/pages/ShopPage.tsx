@@ -7,6 +7,7 @@ import { useGame } from '../contexts/GameContext';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { formatMoney } from '../utils/money';
 import { getRarityColor } from '../utils/itemUtils';
+import { showNoMoney } from '../components/NoMoneyModal';
 import ItemStats from '../components/ItemStats';
 import Button from '../components/ui/Button';
 
@@ -57,7 +58,7 @@ export default function ShopPage() {
         body: JSON.stringify({ offerId }),
       });
       const d = await r.json();
-      if (!r.ok) { setMessage(d.error); return; }
+      if (!r.ok) { showNoMoney(d.error); return; }
       setMessage(d.itemName ? `Куплено: ${d.itemName}` : 'Куплено!');
       setCharacter(prev => prev ? { ...prev, money: d.moneyAfter } : prev);
       loadShop();

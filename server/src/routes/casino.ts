@@ -223,7 +223,7 @@ router.post('/casino/blackjack/start', async (req, res) => {
             });
         });
     } catch (e: any) {
-        if (e.message === 'no_money') return res.status(400).json({ error: 'Недостаточно денег' });
+        if (e.message === 'no_money') return res.status(400).json({ error: `Недостаточно серебра. Нужно ${bet}, проверьте баланс` });
         throw e;
     }
 });
@@ -487,7 +487,7 @@ router.post('/casino/blackjack/double', async (req, res) => {
     } catch (e: any) {
         if (e.message === 'no_game') return res.status(400).json({ error: 'Нет активной игры' });
         if (e.message === 'not_allowed') return res.status(400).json({ error: 'Удвоение доступно только на первых двух картах' });
-        if (e.message === 'no_money') return res.status(400).json({ error: 'Недостаточно денег для удвоения' });
+        if (e.message === 'no_money') return res.status(400).json({ error: 'Недостаточно серебра для удвоения. Проверьте баланс' });
         if (e.message === 'no_cards') return res.status(500).json({ error: 'В колоде закончились карты' });
         throw e;
     }

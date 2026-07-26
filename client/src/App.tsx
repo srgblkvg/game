@@ -16,6 +16,7 @@ import Header from './components/Header';
 import RightSidebar from './components/RightSidebar';
 import NotificationToast from './components/NotificationToast';
 import { ToastProvider } from './contexts/ToastContext';
+import NoMoneyModal from './components/NoMoneyModal';
 import ScrollToTop from './components/ScrollToTop';
 import MetrikaTracker from './components/MetrikaTracker';
 // TODO: удалить после ответа поддержки VK ↓
@@ -135,6 +136,7 @@ function App() {
       {/* TODO: удалить после ответа поддержки VK ↓ */}
       <VkKeyboard />
       {/* TODO: удалить после ответа поддержки VK ↑ */}
+      <NoMoneyModal />
     </ToastProvider>
     </BrowserRouter>
   );

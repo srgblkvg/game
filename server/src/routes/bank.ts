@@ -39,7 +39,7 @@ router.post('/bank/deposit', async (req, res) => {
         const updated = await db.tx(async (client) => {
             const user = (await client.query('SELECT money FROM users WHERE id = $1', [userId])).rows[0] as any;
             if (!user) throw new Error('User not found');
-            if (user.money < amount) throw new Error('Недостаточно монет');
+            if (user.money < amount) throw new Error(`Недостаточно серебра. Нужно ${amount}, есть ${user.money}`);
 
             await client.query('UPDATE users SET money = money - $1, bank = bank + $2 WHERE id = $3', [amount, depositAmount, userId]);
             await client.query('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES ($1, $2, $3, $4, $5)', [userId, 'deposit', amount, commission, depositAmount]);
@@ -64,7 +64,7 @@ router.post('/bank/withdraw', async (req, res) => {
         const updated = await db.tx(async (client) => {
             const user = (await client.query('SELECT bank FROM users WHERE id = $1', [userId])).rows[0] as any;
             if (!user) throw new Error('User not found');
-            if (user.bank < amount) throw new Error('Недостаточно монет в банке');
+            if (user.bank < amount) throw new Error(`Недостаточно серебра в банке. Нужно ${amount}, есть ${user.bank}`);
 
             await client.query('UPDATE users SET money = money + $1, bank = bank - $2 WHERE id = $3', [amount, amount, userId]);
             await client.query('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES ($1, $2, $3, $4, $5)', [userId, 'withdraw', amount, 0, amount]);
@@ -98,7 +98,7 @@ router.post('/bank/transfer', async (req, res) => {
             // Проверяем и списываем с банка отправителя
             let sender = (await client.query('SELECT bank, accountnumber FROM users WHERE id = $1', [userId])).rows[0] as any;
             if (!sender) throw new Error('User not found');
-            if (sender.bank < transferAmount) throw new Error('Недостаточно серебра в банке');
+            if (sender.bank < transferAmount) throw new Error(`Недостаточно серебра в банке. Нужно ${transferAmount}, есть ${sender.bank}`);
 
             // Авто-генерация номера счёта отправителя, если нет
             if (!sender.accountnumber) {

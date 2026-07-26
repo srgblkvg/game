@@ -199,7 +199,7 @@ router.post('/shop/buy', async (req, res) => {
   }
 
   const user = await db.one('SELECT money, inventory, inventorySlots FROM users WHERE id = $1', [userId]) as any;
-  if (user.money < price) return res.status(400).json({ error: 'Недостаточно серебра' });
+  if (user.money < price) return res.status(400).json({ error: `Недостаточно серебра. Нужно ${price}, есть ${user.money}` });
 
   const inventory = JSON.parse(user.inventory || '[]');
 

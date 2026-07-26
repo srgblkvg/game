@@ -446,7 +446,7 @@ router.post('/auction/buy-partial', async (req, res) => {
     const cost = pricePerItem * quantity;
 
     const user = await db.one('SELECT money, inventory FROM users WHERE id = ?', [userId]) as any;
-    if (!user || user.money < cost) return res.status(400).json({ error: 'Недостаточно монет' });
+    if (!user || user.money < cost) return res.status(400).json({ error: `Недостаточно серебра. Нужно ${cost}, есть ${user?.money || 0}` });
 
     // Комиссия 10% пропорционально
     const commission = Math.floor(cost * 0.1);

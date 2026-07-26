@@ -30,6 +30,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     const showToast = useCallback((message: string, type: ToastType = 'error') => {
+        // Перехват сообщений о нехватке денег → модальное окно
+        const lower = message.toLowerCase();
+        if (lower.includes('недостаточно') && (lower.includes('серебра') || lower.includes('монет') || lower.includes('денег') || lower.includes('бронзы'))) {
+            window.dispatchEvent(new CustomEvent('noMoney', { detail: { message, amount: undefined } }));
+            return;
+        }
         const id = nextId++;
         setToasts(prev => {
             const next = [...prev, { id, message, type, fading: false }];

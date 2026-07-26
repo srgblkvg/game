@@ -156,7 +156,7 @@ router.post('/character/expand-inventory', async (req, res) => {
 
     const currentSlots = user.inventorySlots || 10;
     const price = 100 * Math.pow(2, currentSlots - 10);
-    if (user.money < price) return res.status(400).json({ error: 'Недостаточно монет' });
+    if (user.money < price) return res.status(400).json({ error: `Недостаточно серебра. Нужно ${price}, есть ${user.money}` });
 
     await db.run('UPDATE users SET money = money - ?, inventorySlots = inventorySlots + 1 WHERE id = ?',
         [price, userId]);

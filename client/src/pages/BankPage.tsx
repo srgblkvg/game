@@ -1,6 +1,6 @@
 import PageHeader from '../components/ui/PageHeader';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { fmtSafeDate, safeDate } from '../utils/date';
@@ -18,7 +18,10 @@ export default function BankPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
 
-    const [tab, setTab] = useState<'info' | 'deposit' | 'transfer' | 'exchange'>('info');
+    const [searchParams] = useSearchParams();
+    const [tab, setTab] = useState<'info' | 'deposit' | 'transfer' | 'exchange'>(
+      (searchParams.get('tab') as any) || 'info'
+    );
     const [_pocket, setPocket] = useState(0);
     const [_bank, setBank] = useState(0);
     const [accountNumber, setAccountNumber] = useState('');
