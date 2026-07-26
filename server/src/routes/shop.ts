@@ -112,7 +112,7 @@ router.post('/shop/buy', async (req, res) => {
     // Логируем покупку для дневного лимита
     db.run('INSERT INTO shop_purchase_log (user_id, item_id) VALUES (?, ?)', [userId, itemId]).catch(() => {});
 
-    addToTreasury(price, 'shop_sale').catch(() => {});
+    addToTreasury(Math.floor(price * 0.22), 'shop_sale').catch(() => {});
 
     res.json({ success: true, moneyAfter: user.money - price });
 });
