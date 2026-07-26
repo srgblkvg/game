@@ -36,13 +36,13 @@ export default function NoMoneyModal() {
             <p>⚔️ PvP-бои и охота на мобов</p>
             <p>🔨 Работы в городе</p>
             <p>📦 Продажа предметов на аукционе</p>
-            <p>💎 Обменять голоса ВК на серебро</p>
+            <p>💎 Купить серебро за голоса ВК</p>
           </div>
 
           <div className="flex gap-2 justify-center">
             <Button variant="secondary" size="md" onClick={() => setData(null)}>Закрыть</Button>
             <Button size="md" onClick={() => { setData(null); navigate('/bank?tab=exchange'); }}>
-              💎 Обменять
+              💎 Купить
             </Button>
           </div>
         </div>
