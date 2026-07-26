@@ -128,7 +128,7 @@ router.get('/massacre/log/:eventId', async (req, res) => {
     if (!event) return res.status(404).json({ error: 'Событие не найдено' });
 
     const turns = await db.query(
-        `SELECT * FROM massacre_turns WHERE event_id = ? ORDER BY turn_number`,
+        `SELECT * FROM massacre_turns WHERE event_id = ? ORDER BY turn_number, id`,
         [eventId]
     ) as any[];
 
