@@ -43,6 +43,7 @@ export function renderBattleLog(steps: BattleStep[], compact?: boolean) {
   const stats2 = initStep?.stats2;
 
   let lastActor: string | null = null;
+  let turnToggle = false;
   let lastHp1: number | null = null;
   let lastHp2: number | null = null;
 
@@ -94,7 +95,10 @@ export function renderBattleLog(steps: BattleStep[], compact?: boolean) {
         if (compact && step.type !== 'attack' && step.type !== 'damage' && step.type !== 'end' && step.type !== 'money') return null;
 
         const isNewTurn = step.actor && step.type === 'attack' && lastActor !== null && step.actor !== lastActor;
-        if (step.type === 'attack') lastActor = step.actor ?? null;
+        if (step.type === 'attack' && step.actor !== lastActor) {
+          if (lastActor !== null) turnToggle = !turnToggle;
+          lastActor = step.actor ?? null;
+        }
 
         const icon = stepIcons[step.type];
         const hasHp = step.hp1 != null || step.hp2 != null;
@@ -104,7 +108,7 @@ export function renderBattleLog(steps: BattleStep[], compact?: boolean) {
         return (
           <div key={i}>
             {isNewTurn && <div className="border-t border-[var(--color-border-light)] my-1" />}
-            <div className="mb-0.5 flex items-center gap-1" style={{ color: stepColors[step.type] || 'var(--color-text-muted)' }}>
+            <div className={`mb-0.5 flex items-center gap-1 ${turnToggle ? 'bg-[var(--color-bg-input)] rounded px-1' : ''}`} style={{ color: stepColors[step.type] || 'var(--color-text-muted)' }}>
               {icon && <Icon icon={icon} width="14" height="14" className="flex-shrink-0" />}
               <span className="text-xs">{step.message}</span>
             </div>
