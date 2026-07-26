@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,17 +60,25 @@ export default function Inventory({
     const { sendItemLink } = useGlobalChat();
     const { showToast } = useToast();
     const [equipTarget, setEquipTarget] = useState<any>(null);
+    const equipTargetRef = useRef<any>(null);
+    useEffect(() => { equipTargetRef.current = equipTarget; }, [equipTarget]);
 
-    // Закрытие кнопки «Надеть» при клике вне
+    // Закрытие кнопки «Надеть» при клике/тапе вне этого слота
     useEffect(() => {
-        if (!equipTarget) return;
-        const handler = (e: MouseEvent) => {
+        const handler = (e: Event) => {
+            if (!equipTargetRef.current) return;
             const target = e.target as HTMLElement;
-            if (!target.closest('.equip-slot')) setEquipTarget(null);
+            // Оставляем только если клик внутри того же слота где кнопка
+            const slot = target.closest('.equip-slot');
+            if (!slot || !slot.querySelector('.equip-btn-visible')) setEquipTarget(null);
         };
-        document.addEventListener('click', handler);
-        return () => document.removeEventListener('click', handler);
-    }, [equipTarget]);
+        document.addEventListener('mousedown', handler);
+        document.addEventListener('touchstart', handler);
+        return () => {
+            document.removeEventListener('mousedown', handler);
+            document.removeEventListener('touchstart', handler);
+        };
+    }, []);
 
     const equipItem = async (item: any) => {
         if (!character) return;
@@ -271,7 +279,7 @@ export default function Inventory({
                             highlighted={isSelected}
                         />
                         {item && equipTarget?.id === item?.id && (
-                            <div className="absolute inset-0 flex items-center justify-center z-10">
+                            <div className="absolute inset-0 flex items-center justify-center z-10 equip-btn-visible">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); equipItem(item); setEquipTarget(null); }}
                                     className="bg-[var(--color-accent-info)] text-white text-xs font-bold px-2 py-1 rounded shadow-lg"
