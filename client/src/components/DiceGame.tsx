@@ -41,6 +41,7 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
     const [result, setResult] = useState<FinishResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(0);
+    const [bet, setBet] = useState(10);
     const [todayGames, setTodayGames] = useState(0);
     const [remaining, setRemaining] = useState(10);
     const [countersLoaded, setCountersLoaded] = useState(false);
@@ -82,7 +83,8 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
         try {
             const r = await fetch('/api/dice/play', {
                 method: 'POST',
-                headers: getHeaders(),
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bet }),
             });
             const data = await r.json();
             if (!r.ok) { showToast(data.error || 'Ошибка', 'error'); return; }
@@ -156,12 +158,22 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                         </p>
                     ) : (
                         <>
+                            <div className="flex gap-1 justify-center">
+                                {[10, 100, 1000].map(b => (
+                                    <button key={b} onClick={() => setBet(b)}
+                                        className={`px-3 py-1 text-xs rounded cursor-pointer transition-colors ${
+                                            bet === b ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'
+                                        }`}>
+                                        {b} сер.
+                                    </button>
+                                ))}
+                            </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-[var(--color-text-muted)]">
                                     Игр сегодня: <span className={remaining <= 3 ? 'text-[var(--color-accent-warning)]' : ''}>{todayGames}/10</span>
                                 </span>
-                                <Button onClick={startGame} disabled={loading || balance < 10 || remaining <= 0} variant="danger" size="md">
-                                    {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : 'Играть (10 сер.)'}
+                                <Button onClick={startGame} disabled={loading || balance < bet || remaining <= 0} variant="danger" size="md">
+                                    {balance < bet ? `Недостаточно серебра` : loading ? '...' : `Играть (${bet} сер.)`}
                                 </Button>
                             </div>
                         </>
@@ -224,8 +236,8 @@ export default function DiceGame({ onBalanceChange }: { onBalanceChange?: () => 
                     <div className="text-xs text-[var(--color-text-secondary)]">
                         {result.profit > 0 ? `(прибыль: +${result.profit} сер.)` : result.profit < 0 ? `(убыток: ${result.profit} сер.)` : '(свои назад)'}
                     </div>
-                    <Button onClick={startGame} disabled={loading || balance < 10 || remaining <= 0} size="sm">
-                        {balance < 10 ? 'Недостаточно серебра' : loading ? '...' : remaining <= 0 ? 'Лимит исчерпан' : 'Ещё раз'}
+                    <Button onClick={startGame} disabled={loading || balance < bet || remaining <= 0} size="sm">
+                        {balance < bet ? 'Недостаточно серебра' : loading ? '...' : remaining <= 0 ? 'Лимит исчерпан' : 'Ещё раз'}
                     </Button>
                 </div>
             )}

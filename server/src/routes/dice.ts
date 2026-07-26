@@ -86,7 +86,7 @@ function getCombo(dice: number[]): ComboName {
 // Начать игру
 router.post('/dice/play', async (req, res) => {
     const userId = req.userId;
-    const bet = 10;
+    const bet = [10, 100, 1000].includes(req.body.bet) ? req.body.bet : 10;
 
     // Проверить дневной лимит
     const todayCount = await countTodayGames(userId);
