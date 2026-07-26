@@ -80,7 +80,7 @@ router.post('/tavern/heal', async (req, res) => {
 
     await db.run('UPDATE users SET money = money - ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?', [cost, user.currentHp + healAmount, Math.floor(Date.now() / 1000), userId]);
 
-    addToTreasury(cost, 'tavern_heal').catch(() => {});
+    addToTreasury(Math.floor(cost * 0.22), 'tavern_heal').catch(() => {});
 
     res.json({ success: true, hpAfter: user.currentHp + healAmount, cost });
 });
@@ -138,7 +138,7 @@ router.post('/tavern/room', async (req, res) => {
     await db.run('UPDATE users SET money = money - ?, roomType = ?, roomUntil = ? WHERE id = ?',
         [cost, roomType, until, userId]);
 
-    addToTreasury(cost, 'tavern_room').catch(() => {});
+    addToTreasury(Math.floor(cost * 0.22), 'tavern_room').catch(() => {});
 
     res.json({ success: true, room: { type: roomType, name: room.name, until, rate: room.rate } });
 });
@@ -167,7 +167,7 @@ router.post('/tavern/drink', async (req, res) => {
     await db.run('UPDATE users SET money = money - ?, activeDrink = ?, drinkUntil = ? WHERE id = ?',
         [drink.cost, drinkType, until, userId]);
 
-    addToTreasury(drink.cost, 'tavern').catch(() => {});
+    addToTreasury(Math.floor(drink.cost * 0.22), 'tavern').catch(() => {});
 
     res.json({ success: true, drink: { type: drinkType, name: drink.name, bonuses: drink.bonuses, until } });
 });

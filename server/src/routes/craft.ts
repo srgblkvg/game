@@ -311,7 +311,7 @@ router.post('/craft/upgrade', async (req, res) => {
         }
 
         await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
-        addToTreasury(actualCost, 'craft_upgrade').catch(() => {});
+        addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade').catch(() => {});
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
         if (u?.guildId) { updateGuildQuestProgress(u.guildId).catch(e => console.error('guildQuest craft:', e.message)); }
         markDirty(userId, 'quests');

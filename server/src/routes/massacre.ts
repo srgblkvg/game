@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { buildPlayerStats } from '../db/helpers';
-import { addToTreasury } from '../game/treasury';
 
 const router = Router();
 
@@ -107,7 +106,7 @@ router.post('/massacre/join', async (req, res) => {
     await db.run('UPDATE users SET money = money - ? WHERE id = ?', [event.entry_fee, userId]);
 
     // Добавить в казну замка
-    await addToTreasury(event.entry_fee, 'massacre');
+    // В казну не идёт — резня для игроков
 
     // Добавить участника
     await db.run(
