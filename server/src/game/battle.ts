@@ -32,7 +32,8 @@ interface BattleResult {
 export function dodgeChance(defStats: CharStats, atkStats: CharStats): number {
   const defW = sv(defStats, F.dodgeDef);
   const atkW = sv(atkStats, F.dodgePen);
-  const extraDodge = (defStats.extra.dodge || 0);
+  const extra = defStats.extra || {};
+  const extraDodge = (extra.dodge || 0);
   const luckBonus = (defStats.luckBoost || 0) / 100;
   return Math.max(0,
     (defW / (defW + 500)) *
@@ -42,7 +43,8 @@ export function dodgeChance(defStats: CharStats, atkStats: CharStats): number {
 }
 
 export function critChance(stats: CharStats): number {
-  const extraCrit = (stats.extra.crit || 0);
+  const ex = stats.extra || {};
+  const extraCrit = (ex.crit || 0);
   const luckBonus = (stats.luckBoost || 0) / 100;
   return Math.min(0.8, sv(stats, F.crit) / (sv(stats, F.crit) + 500) / 1.5 + extraCrit / (extraCrit + 300)) + luckBonus;
 }

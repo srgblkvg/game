@@ -108,7 +108,7 @@ router.post('/massacre/join', async (req, res) => {
     const d = user.baseD + (user.td || 0);
     const m = user.baseM + (user.tm || 0);
     const hp = s + a + m;
-    const stats = { s, a, d, m, hp, bonuses: {}, extra: {}, drinks: {}, collection: 0 };
+    const stats = { s, a, d, m, hp, maxHp: hp, bonuses: {} as any, extra: {} as any, drinks: {} as any, collection: 0 };
 
     // Списать деньги
     await db.run('UPDATE users SET money = money - ? WHERE id = ?', [event.entry_fee, userId]);
