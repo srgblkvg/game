@@ -30,6 +30,7 @@ export default function GuildPage() {
     const [myPerms, setMyPerms] = useState({ quests: false, buildings: false, war: false });
     const [guildList, setGuildList] = useState<any[]>([]);
     const [requests, setRequests] = useState<any[]>([]);
+    const [myRequests, setMyRequests] = useState<any[]>([]);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [tab, setTab] = useState(0);
@@ -70,7 +71,9 @@ export default function GuildPage() {
                 const me = data.members.find((m:any)=>m.userId===user?.id);
                 if (me) setMyPerms({ quests: !!(me.can_quests||me.quests), buildings: !!(me.can_buildings||me.buildings), war: !!(me.can_war||me.war) });
                 if (data.guild.myRank==='leader'||data.guild.myRank==='officer') fetch(`${BASE_URL}/guild/requests`,{headers:getHeaders()}).then(r=>r.json()).then(setRequests).catch(()=>{});
-            } else { setGuild(null); setMembers([]); }
+            } else { setGuild(null); setMembers([]);
+                fetch(`${BASE_URL}/guild/my-requests`,{headers:getHeaders()}).then(r=>r.json()).then(setMyRequests).catch(()=>{});
+            }
             setGuildList(list);
         } catch (e: any) { setError(e.message); }
     };
@@ -95,6 +98,10 @@ export default function GuildPage() {
     };
     const handleJoin = async (gid: number, jt: string) => {
         try { await api(jt==='open'?`/guild/join/${gid}`:`/guild/request/${gid}`,{}); msg(jt==='open'?'Вступили!':'Заявка отправлена!'); const f=await fetchCharacter(); setCharacter(f); load(); }
+        catch (e: any) { setError(e.message); }
+    };
+    const handleCancelRequest = async (id: number) => {
+        try { await api(`/guild/cancel-request/${id}`,{}); msg('Заявка отменена'); load(); }
         catch (e: any) { setError(e.message); }
     };
     const handleInvite = async () => {
@@ -139,6 +146,15 @@ export default function GuildPage() {
                 <select className={inputClass+' mb-2'} value={createJoinType} onChange={e=>setCreateJoinType(e.target.value as any)}>
                     <option value="open">Открытая</option><option value="request">По заявке</option><option value="invite">Закрытая</option></select>
                 <Button onClick={handleCreate}>Создать (10000 серебра)</Button></Card>)}
+            {myRequests.length > 0 && <Card className="mb-4 border-[var(--color-accent-warning)]/30">
+                <h3 className="font-bold text-sm mb-2">📨 Ваши заявки</h3>
+                {myRequests.map((r: any) => (
+                    <div key={r.id} className="flex justify-between items-center py-1 text-xs border-b border-[var(--color-border-light)] last:border-0">
+                        <span>🏚️ {r.guildName} <span className="text-[var(--color-text-muted)]">— ожидает рассмотрения</span></span>
+                        <Button size="sm" variant="secondary" onClick={() => handleCancelRequest(r.id)}>Отменить</Button>
+                    </div>
+                ))}
+            </Card>}
             <h3 className="font-bold text-sm mb-2">Гильдии</h3>
             {guildList.map((g:any)=>(<Card key={g.id} className="mb-2"><div className="flex justify-between items-center">
                 <div><h4 className="font-bold text-sm">{g.name}</h4><p className="text-xs text-[var(--color-text-muted)]">Ур.{g.level} • {g.memberCount} уч.</p></div>

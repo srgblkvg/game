@@ -19,6 +19,32 @@ router.get('/guild/requests', async (req, res) => {
     res.json(requests);
 });
 
+// Мои заявки в гильдии
+router.get('/guild/my-requests', async (req, res) => {
+    const userId = req.userId;
+    const requests = await db.query(`
+        SELECT gi.*, g.name as guildName
+        FROM guild_invites gi
+        JOIN guilds g ON gi.guildId = g.id
+        WHERE gi.userId = ? AND gi.status = 'pending' AND gi.invitedBy = 0
+        ORDER BY gi.createdAt DESC
+    `, [userId]);
+    res.json(requests);
+});
+
+// Отменить свою заявку
+router.post('/guild/cancel-request/:id', async (req, res) => {
+    const userId = req.userId;
+    const requestId = parseInt(req.params.id);
+    const invite = await db.one(
+        "SELECT * FROM guild_invites WHERE id = ? AND userId = ? AND invitedBy = 0 AND status = 'pending'",
+        [requestId, userId]
+    ) as any;
+    if (!invite) return res.status(404).json({ error: 'Заявка не найдена' });
+    await db.run("UPDATE guild_invites SET status = 'declined' WHERE id = ?", [requestId]);
+    res.json({ success: true });
+});
+
 // Мои приглашения
 router.get('/guild/invites', async (req, res) => {
     const userId = req.userId;
