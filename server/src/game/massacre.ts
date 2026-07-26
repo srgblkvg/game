@@ -183,7 +183,7 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
     await db.run(
         `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, action_type, message)
          VALUES (?, ?, ?, ?, 'victory', ?)`,
-        [eventId, turnNum + 1, winnerId, winnerState.name, `${winnerState.name} — победитель резни!`]
+        [eventId, turnNum + 1, winnerId, winnerState.name, `${winnerState.name} — победитель кровавой лотереи!`]
     );
 
     // Призовой фонд: сборы + временный бонус 1000
