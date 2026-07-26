@@ -12,16 +12,16 @@ const MAX_PLAYERS = 8;
 const REGISTRATION_WINDOW = 60 * 60; // 1 час
 
 const divisions = [
-    { name: 'copper',    label: 'Медный',      tier: 1,  minLevel: 1,  maxLevel: 5,  icon: '🥉' },
-    { name: 'bronze',    label: 'Бронзовый',    tier: 2,  minLevel: 3,  maxLevel: 7,  icon: '🥉' },
-    { name: 'iron',      label: 'Железный',     tier: 3,  minLevel: 5,  maxLevel: 9,  icon: '🥈' },
-    { name: 'steel',     label: 'Стальной',     tier: 4,  minLevel: 7,  maxLevel: 11, icon: '🥈' },
-    { name: 'silver',    label: 'Серебряный',   tier: 5,  minLevel: 9,  maxLevel: 13, icon: '🥈' },
-    { name: 'gold',      label: 'Золотой',      tier: 6,  minLevel: 11, maxLevel: 15, icon: '🥇' },
-    { name: 'platinum',  label: 'Платиновый',   tier: 7,  minLevel: 13, maxLevel: 17, icon: '🥇' },
-    { name: 'mithril',   label: 'Мифриловый',   tier: 8,  minLevel: 15, maxLevel: 19, icon: '🥇' },
-    { name: 'adamant',   label: 'Адамантиновый',tier: 9,  minLevel: 17, maxLevel: 21, icon: '👑' },
-    { name: 'orichalcum',label: 'Орихалковый',  tier: 10, minLevel: 19, maxLevel: 999,icon: '💎' },
+    { name: 'copper',    label: 'Медный',      tier: 1,  minLevel: 1,  maxLevel: 3,  icon: '🥉' },
+    { name: 'bronze',    label: 'Бронзовый',    tier: 2,  minLevel: 2,  maxLevel: 4,  icon: '🥉' },
+    { name: 'iron',      label: 'Железный',     tier: 3,  minLevel: 3,  maxLevel: 5,  icon: '🥈' },
+    { name: 'steel',     label: 'Стальной',     tier: 4,  minLevel: 4,  maxLevel: 6,  icon: '🥈' },
+    { name: 'silver',    label: 'Серебряный',   tier: 5,  minLevel: 5,  maxLevel: 7,  icon: '🥈' },
+    { name: 'gold',      label: 'Золотой',      tier: 6,  minLevel: 6,  maxLevel: 8,  icon: '🥇' },
+    { name: 'platinum',  label: 'Платиновый',   tier: 7,  minLevel: 7,  maxLevel: 9,  icon: '🥇' },
+    { name: 'mithril',   label: 'Мифриловый',   tier: 8,  minLevel: 8,  maxLevel: 10, icon: '🥇' },
+    { name: 'adamant',   label: 'Адамантиновый',tier: 9,  minLevel: 9,  maxLevel: 11, icon: '👑' },
+    { name: 'orichalcum',label: 'Орихалковый',  tier: 10, minLevel: 10, maxLevel: 999, icon: '💎' },
 ];
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
 
