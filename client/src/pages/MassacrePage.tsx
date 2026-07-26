@@ -237,8 +237,8 @@ export default function MassacrePage() {
           {actionCard && <PageHeader title="Кровавая лотерея" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
-                Хаотичный массовый кулачный бой без экипировки и усилений. Здесь не решает — откуда ты и во что одет.
-                Снимай экипировку и выходи на арену. Победитель один!
+                Хаотичный кулачный бой без экипировки и усилений. Только сила и удача.
+                Не важно, откуда ты и во что одет — здесь решает случай. Победитель один!
  </p>
 
             {/* Сбор участников */}
