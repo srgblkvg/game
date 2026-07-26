@@ -253,6 +253,9 @@ export default function MassacrePage() {
                     <p className="text-sm mb-4">
                         Участников: <span className="font-bold text-[var(--color-accent-warning)]">{state!.event!.participant_count}</span>
                     </p>
+                    <p className="text-lg font-bold text-[var(--color-text-accent)] mb-4">
+                        🏆 Призовой фонд: {formatMoney((state as any).prizePool || 0)}
+                    </p>
 
                     {!joined ? (
                         <Button

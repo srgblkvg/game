@@ -56,6 +56,7 @@ router.get('/massacre/state', async (req, res) => {
 
     res.json({
         event: { id: event.id, status: event.status, entry_fee: event.entry_fee, participant_count: participantCount, gathering_end: event.gathering_end },
+        prizePool: participantCount * event.entry_fee + 1000,
         myParticipation: myPart.cnt > 0,
         timeLeft,
         lastEvent: lastEvent ? { id: lastEvent.id, participant_count: lastEvent.participant_count } : null,

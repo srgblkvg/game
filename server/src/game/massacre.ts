@@ -186,10 +186,10 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
         [eventId, turnNum + 1, winnerId, winnerState.name, `${winnerState.name} — победитель резни!`]
     );
 
-    // Призовой фонд
+    // Призовой фонд: сборы + временный бонус 1000
     const eventFee = await db.one('SELECT entry_fee FROM massacre_events WHERE id = ?', [eventId]).catch(() => null) as any;
     const entryFee = eventFee?.entry_fee || 10;
-    const prizePool = participants.length * entryFee;
+    const prizePool = participants.length * entryFee + 1000;
 
     // Награда победителю: +10 XP и весь сбор
     const winner = await db.one('SELECT exp, level, statPoints, oauthProvider, oauthId FROM users WHERE id = ?', [winnerId]) as any;
