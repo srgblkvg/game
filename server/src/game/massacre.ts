@@ -109,15 +109,19 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
             s.hp = result.hpActor;
             target.hp = result.hpTarget;
 
-            // Записать шаги в БД (с HP для отладки)
+            // Записать шаги в БД (HP из шага — отражает состояние на момент шага)
             for (const step of steps) {
-                // При контратаке actor='defender' (защитник атакует), target='attacker' (урон в атакующего)
                 const stepActorId = step.actor === 'defender' ? targetId : userId;
                 const stepActorName = step.actor === 'defender' ? target.name : s.name;
                 const stepTargetId = step.target === 'attacker' ? userId : (step.target === 'defender' ? targetId : null);
                 const stepTargetName = step.target === 'attacker' ? s.name : (step.target === 'defender' ? target.name : null);
 
-                const hpInfo = ` [${s.name} ${s.hp}/${s.maxHp} | ${target.name} ${target.hp}/${target.maxHp}]`;
+                // HP на момент шага: из step если есть, иначе текущее состояние
+                const hp1 = step.hp1 != null ? step.hp1 : s.hp;
+                const hp2 = step.hp2 != null ? step.hp2 : target.hp;
+                const max1 = step.maxHp1 ?? s.maxHp;
+                const max2 = step.maxHp2 ?? target.maxHp;
+                const hpInfo = ` [${s.name} ${hp1}/${max1} | ${target.name} ${hp2}/${max2}]`;
                 await db.run(
                     `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, target_id, target_name, action_type, damage, message)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
