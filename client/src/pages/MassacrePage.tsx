@@ -413,13 +413,16 @@ export default function MassacrePage() {
                         {turns.map((t, i) => {
                             const act = actionLabels[t.action_type] || { icon: '❓', color: '#aaa', label: t.action_type };
                             const isMy = t.isMyTurn;
+                            const evenTurn = t.turn_number % 2 === 0;
                             return (
                                 <div
                                     key={i}
                                     className={`px-2 py-1 rounded border ${
                                         isMy
                                             ? 'bg-[#3d2e00] border-[#5a4200]'
-                                            : 'border-transparent'
+                                            : evenTurn
+                                                ? 'bg-[var(--color-bg-input)] border-transparent'
+                                                : 'border-transparent'
                                     }`}
                                 >
                                     <span className="text-[0.6rem] text-[var(--color-text-muted)] mr-1">
