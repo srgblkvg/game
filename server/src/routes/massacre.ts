@@ -1,7 +1,6 @@
 // server/src/routes/massacre.ts
 import { Router } from 'express';
 import { db } from '../db/index';
-import { buildPlayerStats } from '../db/helpers';
 
 const router = Router();
 
@@ -86,9 +85,12 @@ router.post('/massacre/join', async (req, res) => {
         return res.status(400).json({ error: 'Вы уже в резне' });
     }
 
-    // Загрузить игрока
+    // Загрузить игрока (голые статы: база + лудус, без экипировки/напитков/гильдии)
     const user = await db.one(
-        `SELECT id, username, level, baseS, baseA, baseD, baseM, money, currentHp, equipment, activeDrink, drinkUntil, premiumUntil, guildId FROM users WHERE id = ?`,
+        `SELECT id, username, level, baseS, baseA, baseD, baseM, money, currentHp, 
+                COALESCE(trained_s,0) as ts, COALESCE(trained_a,0) as ta, 
+                COALESCE(trained_d,0) as td, COALESCE(trained_m,0) as tm
+         FROM users WHERE id = ?`,
         [userId]
     ) as any;
 
@@ -99,8 +101,13 @@ router.post('/massacre/join', async (req, res) => {
         return res.status(400).json({ error: `Недостаточно серебра (нужно ${event.entry_fee})` });
     }
 
-    // Получить статы
-    const stats = await buildPlayerStats(user, 'arena');
+    // Голые статы: база + лудус
+    const s = user.baseS + (user.ts || 0);
+    const a = user.baseA + (user.ta || 0);
+    const d = user.baseD + (user.td || 0);
+    const m = user.baseM + (user.tm || 0);
+    const hp = s + a + m;
+    const stats = { s, a, d, m, hp, bonuses: {}, extra: {}, drinks: {}, collection: 0 };
 
     // Списать деньги
     await db.run('UPDATE users SET money = money - ? WHERE id = ?', [event.entry_fee, userId]);
