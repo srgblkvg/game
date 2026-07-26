@@ -128,7 +128,7 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
       hpActor = Math.max(0, hpActor - cdmg);
       addStep({ type: 'damage', actor: ctx.target, target: ctx.actor, damage: cdmg, message: `Урон: ${cdmg}`,
         hp1: ctx.actor === 'attacker' ? hpActor : hpTarget, hp2: ctx.actor === 'attacker' ? hpTarget : hpActor,
-        maxHp1: ctx.maxHpActor, maxHp2: ctx.maxHpTarget });
+        maxHp1: ctx.actor === 'attacker' ? ctx.maxHpActor : ctx.maxHpTarget, maxHp2: ctx.actor === 'attacker' ? ctx.maxHpTarget : ctx.maxHpActor });
     }
     return { hpActor, hpTarget, stunnedTarget, poisonApplied: undefined };
   }
@@ -165,7 +165,7 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
   hpTarget = Math.max(0, hpTarget - dmg);
   addStep({ type: 'damage', actor: ctx.actor, target: ctx.target, damage: dmg, message: `Урон: ${dmg}`,
     hp1: ctx.actor === 'attacker' ? hpActor : hpTarget, hp2: ctx.actor === 'attacker' ? hpTarget : hpActor,
-    maxHp1: ctx.maxHpActor, maxHp2: ctx.maxHpTarget });
+    maxHp1: ctx.actor === 'attacker' ? ctx.maxHpActor : ctx.maxHpTarget, maxHp2: ctx.actor === 'attacker' ? ctx.maxHpTarget : ctx.maxHpActor });
 
   // Vampirism: restore % of damage as HP
   const vamp = ctx.actorStats.vampirism || 0;
@@ -191,7 +191,7 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
     hpActor = Math.max(0, hpActor - cdmg);
     addStep({ type: 'damage', actor: ctx.target, target: ctx.actor, damage: cdmg, message: `Ответный урон: ${cdmg}`,
       hp1: ctx.actor === 'attacker' ? hpActor : hpTarget, hp2: ctx.actor === 'attacker' ? hpTarget : hpActor,
-      maxHp1: ctx.maxHpActor, maxHp2: ctx.maxHpTarget });
+      maxHp1: ctx.actor === 'attacker' ? ctx.maxHpActor : ctx.maxHpTarget, maxHp2: ctx.actor === 'attacker' ? ctx.maxHpTarget : ctx.maxHpActor });
   }
 
   // PoisonOnHit (Отшельник 3pc): apply poison DoT over 3 turns
@@ -242,7 +242,7 @@ export function runBattle(
     hp = Math.max(0, hp - dmg);
     addStep({ type: 'damage', actor, damage: dmg, message: `${name} получает ${dmg} урона от яда (ходов: ${poison.turnsLeft - 1})`,
       hp1: actor === 'attacker' ? hp : (hpD > 0 ? hpD : 0), hp2: actor === 'attacker' ? (hpA > 0 ? hpA : 0) : hp,
-      maxHp1: maxHpA, maxHp2: maxHpD });
+      maxHp1: actor === 'attacker' ? maxHpA : maxHpD, maxHp2: actor === 'attacker' ? maxHpD : maxHpA });
     poison.turnsLeft--;
     if (poison.turnsLeft <= 0) {
       if (actor === 'attacker') poisonOnA = null;

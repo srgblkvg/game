@@ -135,10 +135,11 @@ router.post('/mob/attack', async (req, res) => {
     const steps: any[] = [];
 
     const addStep = (step: any) => {
-        step.hp1 = hpUser;
-        step.hp2 = hpMob;
-        step.maxHp1 = maxHpUser;
-        step.maxHp2 = maxHpMob;
+        // Не перезаписываем hp1/hp2 если runBattle уже их выставил
+        if (step.hp1 === undefined) step.hp1 = hpUser;
+        if (step.hp2 === undefined) step.hp2 = hpMob;
+        if (step.maxHp1 === undefined) step.maxHp1 = maxHpUser;
+        if (step.maxHp2 === undefined) step.maxHp2 = maxHpMob;
         steps.push(step);
         log.push(step.message);
     };
