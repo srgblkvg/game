@@ -59,6 +59,7 @@ export default function Inventory({
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const { sendItemLink } = useGlobalChat();
     const { showToast } = useToast();
+    const [equipTarget, setEquipTarget] = useState<any>(null);
 
     const equipItem = async (item: any) => {
         if (!character) return;
@@ -236,8 +237,8 @@ export default function Inventory({
                     const isSelected = selectedItemId && item && item.id === selectedItemId;
 
                     return (
+                        <div key={idx} className="relative">
                         <LongPressItemSlot
-                            key={idx}
                             item={item}
                             draggable={!!item && !isCraftItem(item)}
                             onDragStart={item && !isCraftItem(item) ? (e) => handleDragStart(e, item.id) : undefined}
@@ -248,7 +249,7 @@ export default function Inventory({
                                         sendItemLink(item.id, item);
                                     } else {
                                         setTooltipData(null);
-                                        equipItem(item);
+                                        setEquipTarget(equipTarget?.id === item.id ? null : item);
                                     }
                                 }
                             }}
@@ -258,6 +259,15 @@ export default function Inventory({
                             onLongPress={handleLongPress}
                             highlighted={isSelected}
                         />
+                        {equipTarget?.id === item?.id && (
+                            <div className="absolute inset-0 flex items-center justify-center z-10">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); equipItem(item); setEquipTarget(null); }}
+                                    className="bg-[var(--color-accent-info)] text-white text-xs font-bold px-2 py-1 rounded shadow-lg"
+                                >Надеть</button>
+                            </div>
+                        )}
+                        </div>
                     );
                 })}
             </div>
