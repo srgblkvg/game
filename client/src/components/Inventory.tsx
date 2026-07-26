@@ -13,12 +13,14 @@ import { useToast } from '../contexts/ToastContext';
 import { getHeaders, BASE_URL } from '../api/helpers';
 
 interface InventoryProps {
-    onItemClick?: (item: any) => void; // kept for compatibility, now handled internally
+    onItemClick?: (item: any) => void;
     onMaterialClick?: (item: any) => void;
     inventoryOverride?: any[];
     selectedItemId?: string | null;
     onDragStartItem?: () => void;
     collapsible?: boolean;
+    /** true (default): клик показывает кнопку Надеть. false: вызывает onItemClick */
+    clickToEquip?: boolean;
 }
 
 type SortOrder = 'none' | 'asc' | 'desc';
@@ -48,11 +50,13 @@ const getLocalizedType = (type: string): string => {
 };
 
 export default function Inventory({
+    onItemClick,
     onMaterialClick,
     inventoryOverride,
     selectedItemId,
     onDragStartItem,
     collapsible = true,
+    clickToEquip = true,
 }: InventoryProps) {
     const { character, setCharacter } = useGame();
     const { user } = useAuth();
@@ -266,9 +270,12 @@ export default function Inventory({
                                     if (e.shiftKey) {
                                         e.stopPropagation();
                                         sendItemLink(item.id, item);
-                                    } else {
+                                    } else if (clickToEquip) {
                                         setTooltipData(null);
                                         setEquipTarget(equipTarget?.id === item.id ? null : item);
+                                    } else if (onItemClick) {
+                                        setTooltipData(null);
+                                        onItemClick(item);
                                     }
                                 }
                             }}

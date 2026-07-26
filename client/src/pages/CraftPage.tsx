@@ -626,6 +626,7 @@ export default function CraftPage() {
                 <div className="flex-1 min-w-[300px]" onDragOver={handleDragOver} onDrop={handleDropOnInventory}>
                     <Inventory
                         collapsible={false}
+                        clickToEquip={false}
                         onItemClick={handleItemClick}
                         onMaterialClick={handleMaterialClick}
                         inventoryOverride={displayInventory}
