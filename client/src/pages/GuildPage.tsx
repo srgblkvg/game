@@ -214,7 +214,9 @@ export default function GuildPage() {
             ) : (<Card><div className="flex items-center gap-2 cursor-pointer" onClick={()=>setShowWarRules(!showWarRules)}>
                 <Icon icon={showWarRules?'game-icons:expand':'game-icons:contract'} width="14" height="14"/><h3 className="font-bold text-sm">⚔️ Война гильдий — правила</h3>
             </div>{showWarRules&&<div className="text-xs text-[var(--color-text-muted)] mt-2 space-y-1">
-                <p>• Лидер или офицер с правом объявляет войну</p><p>• 24 часа на ответ, 24 часа боёв</p><p>• Казна замораживается</p></div>}</Card>)}
+                <p>• Лидер или офицер с правом объявляет войну</p><p>• 24 часа на ответ, 24 часа боёв</p><p>• Казна замораживается</p></div>}
+            {canWar&&<div className="mt-2"><Button size="md" variant="danger" onClick={()=>navigate('/guild/rating')}>⚔️ Найти соперника</Button></div>}
+            </Card>)}
         </div>}
 
         {/* Tab 1: Постройки */}
