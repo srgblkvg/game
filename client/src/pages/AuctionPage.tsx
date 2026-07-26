@@ -518,7 +518,18 @@ export default function AuctionPage() {
                                         <div onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                                             onTouchStart={e => handleTouchStart(e, item)} onTouchEnd={handleTouchEnd} onContextMenu={e => e.preventDefault()}
                                             className="cursor-default flex gap-3 flex-1 min-w-0">
-                                            <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-10 h-10 object-contain rounded shrink-0" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                            <div className="relative shrink-0">
+                                                <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-10 h-10 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                                {(item.upgradeLevel ?? 0) > 0 && (
+                                                    <span style={{
+                                                        position: 'absolute', top: -4, right: -4,
+                                                        background: 'var(--color-text-accent)', color: '#000',
+                                                        borderRadius: '50%', width: '16px', height: '16px',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '9px', fontWeight: 'bold', lineHeight: 1,
+                                                    }}>+{item.upgradeLevel}</span>
+                                                )}
+                                            </div>
                                             <div className="min-w-0 flex-1">
                                                 <h3 className="font-bold text-sm truncate">{item.name}{item.upgradeLevel > 0 && <span className="text-[var(--color-text-accent)] ml-1">+{item.upgradeLevel}</span>}{isStack && <span className="text-xs text-[var(--color-accent-info)] ml-1">x{stackCount}</span>}</h3>
                                                 <p className="text-xs text-[var(--color-text-muted)]">{item.rarity_display} • {lot.sellerName}</p>
