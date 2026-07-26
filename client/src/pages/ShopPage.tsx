@@ -114,8 +114,14 @@ export default function ShopPage() {
                 <div className="flex-1">
                   {offer.itemType === 'craft_item' ? (
                     <div className="flex flex-col items-center gap-1">
-                      {offer.image && <img src={offer.image} alt="" className="w-10 h-10 object-contain" />}
-                      <span className="text-xs font-medium text-center">{offer.name}</span>
+                      {offer.image ? (
+                        <div className="rounded-lg border-2" style={{ borderColor: color }}>
+                          <img src={offer.image} alt="" className="w-10 h-10 object-contain rounded-md" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg border-2 flex items-center justify-center text-lg" style={{ borderColor: color }}>💎</div>
+                      )}
+                      <span className="text-[0.65rem] text-[var(--color-text-muted)] text-center leading-tight">{offer.name}</span>
                     </div>
                   ) : (
                     <ItemStats item={offer} imageSize={40} />
