@@ -108,7 +108,7 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
             s.hp = result.hpActor;
             target.hp = result.hpTarget;
 
-            // Записать шаги в БД
+            // Записать шаги в БД (с HP для отладки)
             for (const step of steps) {
                 // При контратаке actor='defender' (защитник атакует), target='attacker' (урон в атакующего)
                 const stepActorId = step.actor === 'defender' ? targetId : userId;
@@ -116,20 +116,34 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
                 const stepTargetId = step.target === 'attacker' ? userId : (step.target === 'defender' ? targetId : null);
                 const stepTargetName = step.target === 'attacker' ? s.name : (step.target === 'defender' ? target.name : null);
 
+                const hpInfo = ` [${s.name} ${s.hp}/${s.maxHp} | ${target.name} ${target.hp}/${target.maxHp}]`;
                 await db.run(
                     `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, target_id, target_name, action_type, damage, message)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [eventId, turnNum, stepActorId, stepActorName, stepTargetId, stepTargetName, step.type, step.damage || 0, step.message]
+                    [eventId, turnNum, stepActorId, stepActorName, stepTargetId, stepTargetName, step.type, step.damage || 0, step.message + hpInfo]
                 );
+            }
+
+            // Проверить смерть атакующего (мог умереть от контратаки/вампиризма)
+            if (s.hp <= 0) {
+                s.alive = false;
+                s.hp = 0;
+                await db.run(
+                    `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, action_type, damage, message)
+                     VALUES (?, ?, ?, ?, 'death', 0, ?)`,
+                    [eventId, turnNum, userId, s.name, `${s.name} пал от ответного удара ${target.name}! [${s.name} 0/${s.maxHp}]`]
+                );
+                continue; // пропускаем остальную обработку для этого умершего
             }
 
             // Проверить смерть цели
             if (target.hp <= 0) {
                 target.alive = false;
+                target.hp = 0;
                 await db.run(
                     `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, target_id, target_name, action_type, damage, message)
                      VALUES (?, ?, ?, ?, ?, ?, 'death', 0, ?)`,
-                    [eventId, turnNum, userId, s.name, targetId, target.name, `${target.name} пал от руки ${s.name}!`]
+                    [eventId, turnNum, userId, s.name, targetId, target.name, `${target.name} пал от руки ${s.name}! [${target.name} 0/${target.maxHp}]`]
                 );
 
                 // Засчитать PvP-победу убийце (для квестов)
