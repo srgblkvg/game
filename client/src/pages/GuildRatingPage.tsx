@@ -141,12 +141,14 @@ export default function GuildRatingPage() {
                             <p className="font-bold text-[var(--color-text-primary)]">Как проходит война:</p>
                             <p>• ⏳ <b>24 часа</b> на ответ противника</p>
                             <p>• ⚔️ После принятия — <b>24 часа</b> боёв</p>
-                            <p>• 🛡️ Каждая гильдия может быть атакована <b>5 раз</b></p>
+                            <p>• 🛡️ Каждый участник может быть атакован до <b>5 раз</b></p>
+                            <p>• ⚔️ Каждый участник может атаковать до <b>3 раз</b></p>
                             <p>• 🏆 Побеждает гильдия с наибольшим счётом</p>
                             <p className="font-bold text-[var(--color-accent-warning)] mt-1">⚠️ Ограничения:</p>
                             <p>• 💰 Казна заморожена до конца войны</p>
                             <p>• 🚫 Нельзя покинуть гильдию</p>
                             <p>• 📛 Нельзя исключать участников</p>
+                            <p>• 🚷 Нельзя принять новых участников</p>
                         </div>
                         <div className="flex gap-2 justify-center">
                             <Button variant="secondary" size="md" onClick={() => setWarTarget(null)}>Отмена</Button>
