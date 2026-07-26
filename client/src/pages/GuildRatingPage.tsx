@@ -92,12 +92,12 @@ export default function GuildRatingPage() {
                                 {isMyGuild && (
                                     <span className="text-[0.6rem] text-[var(--color-accent-success)] font-bold px-1.5 py-0.5 rounded border border-[var(--color-accent-success)]">Ваша</span>
                                 )}
-                                {canDeclare(g) && (
-                                    <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); handleDeclare(g); }}>
-                                        ⚔️ Война
-                                    </Button>
-                                )}
                             </div>
+                            {canDeclare(g) && (
+                                <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); handleDeclare(g); }}>
+                                    ⚔️ Война
+                                </Button>
+                            )}
                         </div>
                         {isExpanded && (
                             <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
