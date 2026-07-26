@@ -33,8 +33,8 @@ const DIVISION_ICONS: Record<string, string> = {
 };
 
 const DIVISION_LEVELS: Record<string, [number, number]> = {
-    copper: [1, 5], bronze: [3, 7], iron: [5, 9], steel: [7, 11], silver: [9, 13],
-    gold: [11, 15], platinum: [13, 17], mithril: [15, 19], adamant: [17, 21], orichalcum: [19, 999],
+    copper: [1, 3], bronze: [2, 4], iron: [3, 5], steel: [4, 6], silver: [5, 7],
+    gold: [6, 8], platinum: [7, 9], mithril: [8, 10], adamant: [9, 11], orichalcum: [10, 999],
 };
 
 function formatTimer(seconds: number): string {
