@@ -113,15 +113,23 @@ export default function ShopPage() {
               >
                 <div className="flex-1">
                   {offer.itemType === 'craft_item' ? (
-                    <div className="flex flex-col items-center gap-1">
-                      {offer.image ? (
-                        <div className="rounded-lg border-2" style={{ borderColor: color }}>
-                          <img src={offer.image} alt="" className="w-10 h-10 object-contain rounded-md" />
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div
+                          className="flex-shrink-0 rounded flex items-center justify-center"
+                          style={{
+                            width: 40, height: 40,
+                            border: `2px solid ${color}`,
+                            background: offer.image ? `url(${offer.image}) center / contain no-repeat` : color,
+                          }}
+                        />
+                        <div className="font-bold text-xs leading-tight" style={{ color }}>
+                          {offer.name}
                         </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg border-2 flex items-center justify-center text-lg" style={{ borderColor: color }}>💎</div>
-                      )}
-                      <span className="text-[0.65rem] text-[var(--color-text-muted)] text-center leading-tight">{offer.name}</span>
+                      </div>
+                      <div className="text-xs text-center text-[var(--color-text-muted)]">
+                        Редкость: {offer.rarity_display || 'Хлам'}
+                      </div>
                     </div>
                   ) : (
                     <ItemStats item={offer} imageSize={40} />
