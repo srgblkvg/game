@@ -289,18 +289,18 @@ export default function CraftPage() {
 
       const packs = [
         {
-          item: 'craft_rare', title: 'Сундук «Редкий»', vkPrice: 14, rubPrice: 99,
+          item: 'craft_rare', title: 'Рунный набор', vkPrice: 14, rubPrice: 99,
           material: 'Сердцевина бездны ×5', materialImg: '/fragment/fragment_purple.webp',
           stones: 'Рунный булыжник ×6', stoneImg: '/stone/stoneUpgrade_gray.webp',
           silver: 10000,
-          desc: 'Крафт случайного редкого предмета (шанс 75%)',
+          desc: 'Материалы для крафта случайного эпического предмета (шанс 70%)',
         },
         {
-          item: 'craft_epic', title: 'Сундук «Эпический»', vkPrice: 28, rubPrice: 199,
+          item: 'craft_epic', title: 'Большой рунный набор', vkPrice: 28, rubPrice: 199,
           material: 'Искра погибели ×5', materialImg: '/fragment/fragment_yellow.webp',
           stones: 'Рунный булыжник ×10', stoneImg: '/stone/stoneUpgrade_gray.webp',
           silver: 30000,
-          desc: 'Крафт случайного эпического предмета (шанс 70%)',
+          desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%)',
         },
       ];
 
@@ -351,11 +351,15 @@ export default function CraftPage() {
               <h3 className="font-bold text-sm mb-1">{p.title}</h3>
               <div className="text-xs text-[var(--color-text-muted)] space-y-1 mb-2 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-5 h-5 object-contain" />
+                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                    <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-4 h-4 object-contain" />
+                  </div>
                   {p.material}
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-5 h-5 object-contain" />
+                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                    <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-4 h-4 object-contain" />
+                  </div>
                   {p.stones}
                 </div>
                 <p>💰 {formatMoney(p.silver)}</p>
