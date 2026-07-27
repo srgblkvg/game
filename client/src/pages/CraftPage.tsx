@@ -102,7 +102,12 @@ export default function CraftPage() {
         // Камень любой редкости улучшает предмет
         const nextLevel = (item.upgradeLevel || 0) + 1;
         fetchUpgradeInfo(nextLevel, item.rarity_id)
-            .then((data: any) => setUpgradeInfo({ item, stone, nextLevel, chance: data.chance, cost: data.money_cost }))
+            .then((data: any) => {
+                const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
+                const bonus = STONE_BONUS[stone.rarity_id] || 0;
+                const totalChance = Math.min(100, data.chance + bonus);
+                setUpgradeInfo({ item, stone, nextLevel, chance: totalChance, cost: data.money_cost });
+            })
             .catch(() => setUpgradeInfo(null));
     }, [craftSlots]);
 
