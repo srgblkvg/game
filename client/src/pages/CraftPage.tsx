@@ -22,6 +22,109 @@ import Card from '../components/ui/Card';
 import RecipeList from './CraftPage/RecipeList';
 import CraftPopup from './CraftPage/CraftPopup';
 
+const PACKS = [
+  {
+    item: 'craft_rare', title: 'Рунный набор', vkPrice: 14, rubPrice: 99,
+    material: 'Сердцевина бездны ×5', materialImg: '/fragment/fragment_purple.webp',
+    stones: 'Рунный булыжник ×6', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    silver: 10000,
+    desc: 'Материалы для крафта случайного эпического предмета (шанс 70%)',
+  },
+  {
+    item: 'craft_epic', title: 'Большой рунный набор', vkPrice: 28, rubPrice: 199,
+    material: 'Искра погибели ×5', materialImg: '/fragment/fragment_yellow.webp',
+    stones: 'Рунный булыжник ×10', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    silver: 30000,
+    desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%)',
+  },
+];
+
+function CraftPacks({ isVK }: { isVK: boolean }) {
+  const [packMsg, setPackMsg] = useState('');
+  const [packBuying, setPackBuying] = useState(false);
+
+  const buyPack = (pack: typeof PACKS[number]) => {
+    if (isVK) {
+      setPackBuying(true);
+      (window as any).vkBridge?.send('VKWebAppShowOrderBox', { type: 'item', item: pack.item })
+      .then((data: any) => {
+        if (data?.status === 'cancelled') { setPackBuying(false); return; }
+        setPackMsg('Оплата открыта. Материалы поступят в инвентарь.');
+      })
+      .catch(() => setPackBuying(false));
+    } else {
+      setPackBuying(true);
+      fetch('/api/yukassa/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ item: pack.item }),
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.confirmation_url) {
+          window.open(data.confirmation_url, '_blank');
+          setPackMsg('Оплата открыта. Материалы поступят в инвентарь.');
+        } else {
+          setPackMsg('❌ ' + (data.error || 'Ошибка'));
+        }
+      })
+      .catch(() => setPackMsg('❌ Ошибка сети'))
+      .finally(() => setPackBuying(false));
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => {
+      setPackMsg('✅ Материалы добавлены в инвентарь!');
+      setPackBuying(false);
+    };
+    window.addEventListener('paymentStatus', handler);
+    return () => window.removeEventListener('paymentStatus', handler);
+  }, []);
+
+  return (
+    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {PACKS.map(p => (
+        <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col"
+          style={{ borderColor: p.item === 'craft_rare' ? '#3498db' : '#9b59b6' }}>
+          <h3 className="font-bold text-sm mb-1">{p.title}</h3>
+          <div className="text-xs text-[var(--color-text-muted)] space-y-1 mb-2 flex-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-4 h-4 object-contain" />
+              </div>
+              {p.material}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-4 h-4 object-contain" />
+              </div>
+              {p.stones}
+            </div>
+            <p>💰 {formatMoney(p.silver)}</p>
+            <p className="text-[0.6rem] italic">{p.desc}</p>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-[var(--color-accent-gold)]">
+              {isVK ? `${p.vkPrice} голосов` : `${p.rubPrice} ₽`}
+            </span>
+            <Button variant="danger" size="md" disabled={packBuying}
+              onClick={() => buyPack(p)}>
+              {isVK ? '🛒' : '💳'} Купить
+            </Button>
+          </div>
+        </div>
+      ))}
+      {packMsg && (
+        <div className="sm:col-span-2 text-center text-sm font-bold"
+          style={{ color: packMsg.startsWith('✅') ? 'var(--color-accent-success)' : packMsg.startsWith('❌') ? 'var(--color-accent-danger)' : 'var(--color-accent-info)' }}>
+          {packMsg}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CraftPage() {
   const [actionCard, setActionCard] = useState<any>(null);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/craft'); if (c) setActionCard(c); }).catch(() => {}); }, []);
@@ -282,110 +385,6 @@ export default function CraftPage() {
 
     const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
 
-    // Сундуки с материалами
-    const CraftPacks = () => {
-      const [packMsg, setPackMsg] = useState('');
-      const [packBuying, setPackBuying] = useState(false);
-
-      const packs = [
-        {
-          item: 'craft_rare', title: 'Рунный набор', vkPrice: 14, rubPrice: 99,
-          material: 'Сердцевина бездны ×5', materialImg: '/fragment/fragment_purple.webp',
-          stones: 'Рунный булыжник ×6', stoneImg: '/stone/stoneUpgrade_gray.webp',
-          silver: 10000,
-          desc: 'Материалы для крафта случайного эпического предмета (шанс 70%)',
-        },
-        {
-          item: 'craft_epic', title: 'Большой рунный набор', vkPrice: 28, rubPrice: 199,
-          material: 'Искра погибели ×5', materialImg: '/fragment/fragment_yellow.webp',
-          stones: 'Рунный булыжник ×10', stoneImg: '/stone/stoneUpgrade_gray.webp',
-          silver: 30000,
-          desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%)',
-        },
-      ];
-
-      const buyPack = (pack: typeof packs[number]) => {
-        if (isVK) {
-          setPackBuying(true);
-          (window as any).vkBridge?.send('VKWebAppShowOrderBox', { type: 'item', item: pack.item })
-          .then((data: any) => {
-            if (data?.status === 'cancelled') { setPackBuying(false); return; }
-            setPackMsg('Оплата открыта. Материалы поступят в инвентарь.');
-          })
-          .catch(() => setPackBuying(false));
-        } else {
-          setPackBuying(true);
-          fetch('/api/yukassa/create-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-            body: JSON.stringify({ item: pack.item }),
-          })
-          .then(r => r.json())
-          .then(data => {
-            if (data.confirmation_url) {
-              window.open(data.confirmation_url, '_blank');
-              setPackMsg('Оплата открыта. Материалы поступят в инвентарь.');
-            } else {
-              setPackMsg('❌ ' + (data.error || 'Ошибка'));
-            }
-          })
-          .catch(() => setPackMsg('❌ Ошибка сети'))
-          .finally(() => setPackBuying(false));
-        }
-      };
-
-      useEffect(() => {
-        const handler = () => {
-          setPackMsg('✅ Материалы добавлены в инвентарь!');
-          setPackBuying(false);
-        };
-        window.addEventListener('paymentStatus', handler);
-        return () => window.removeEventListener('paymentStatus', handler);
-      }, []);
-
-      return (
-        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {packs.map(p => (
-            <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col"
-              style={{ borderColor: p.item === 'craft_rare' ? '#3498db' : '#9b59b6' }}>
-              <h3 className="font-bold text-sm mb-1">{p.title}</h3>
-              <div className="text-xs text-[var(--color-text-muted)] space-y-1 mb-2 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                    <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-4 h-4 object-contain" />
-                  </div>
-                  {p.material}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                    <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-4 h-4 object-contain" />
-                  </div>
-                  {p.stones}
-                </div>
-                <p>💰 {formatMoney(p.silver)}</p>
-                <p className="text-[0.6rem] italic">{p.desc}</p>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-[var(--color-accent-gold)]">
-                  {isVK ? `${p.vkPrice} голосов` : `${p.rubPrice} ₽`}
-                </span>
-                <Button variant="danger" size="md" disabled={packBuying}
-                  onClick={() => buyPack(p)}>
-                  {isVK ? '🛒' : '💳'} Купить
-                </Button>
-              </div>
-            </div>
-          ))}
-          {packMsg && (
-            <div className="sm:col-span-2 text-center text-sm font-bold"
-              style={{ color: packMsg.startsWith('✅') ? 'var(--color-accent-success)' : packMsg.startsWith('❌') ? 'var(--color-accent-danger)' : 'var(--color-accent-info)' }}>
-              {packMsg}
-            </div>
-          )}
-        </div>
-      );
-    };
-
     const getRecipeCategory = (recipe: any): string => recipe.category?.name || getRecipeCategoryFallback(recipe);
 
     const groupedRecipes = useMemo(() => {
@@ -416,7 +415,7 @@ export default function CraftPage() {
             </p>
 
             {/* Сундуки с материалами */}
-            <CraftPacks />
+            <CraftPacks isVK={isVK} />
 
             {/* Инструкция */}
             <Card className="mb-4">
