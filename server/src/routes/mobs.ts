@@ -10,6 +10,17 @@ import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getGuildBonus } from '../game/guildBuildings';
 import { checkAchievement, trackIncome } from './achievements';
 
+// Шансы дропа камней улучшения (независимые роллы на каждого моба)
+const STONE_DROP_CHANCES: Record<string, number> = {
+    'Камень улучшения (Хлам)': 0.05,
+    'Камень улучшения (Обычный)': 0.04,
+    'Камень улучшения (Необычный)': 0.03,
+    'Камень улучшения (Редкий)': 0.02,
+    'Камень улучшения (Эпический)': 0.01,
+    'Камень улучшения (Легендарный)': 0.005,
+    'Камень улучшения (Мифический)': 0.002,
+};
+
 const router = Router();
 
 // Шансы дропа предметов по редкостям в зависимости от уровня моба
@@ -65,10 +76,11 @@ router.get('/mobs', async (req, res) => {
     }
 
     // Обогащаем мобов изображениями лута
-    // Получаем инфо о камне улучшения (хлам)
-    const junkStone = await db.one(
-        "SELECT image, name FROM craft_items WHERE name = 'Камень улучшения (Хлам)'"
-    ) as any;
+
+    // Все камни улучшения (для лут-превью)
+    const allStones = await db.query(
+        "SELECT name, image FROM craft_items WHERE type = 'upgrade' ORDER BY rarity_id", []
+    ) as any[];
 
     const enriched = mobs.map((m) => {
         const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
@@ -84,9 +96,12 @@ router.get('/mobs', async (req, res) => {
                 lootImages.push({ rarity: r, name: craftInfo[r].name, image: craftInfo[r].image, chance });
             }
         }
-        // Камень улучшения (Хлам) — 5% у всех мобов
-        if (junkStone) {
-            lootImages.push({ rarity: -1, name: junkStone.name, image: junkStone.image, chance: 0.05 });
+        // Все камни улучшения
+        for (const stone of allStones) {
+            const chance = STONE_DROP_CHANCES[stone.name] || 0;
+            if (chance > 0) {
+                lootImages.push({ rarity: -1, name: stone.name, image: stone.image, chance });
+            }
         }
         const itemTable = getItemDropTable(m.level);
         return { ...m, lootImages, itemDropTable: itemTable };
@@ -269,35 +284,36 @@ router.post('/mob/attack', async (req, res) => {
             } // if (selectedRarity >= 0)
         }
 
-        // 5% шанс на Камень улучшения (Хлам) при победе
-        if (Math.random() < 0.05) {
-            const junkStone = await db.one(
-                "SELECT id, name, rarity_id, type, image FROM craft_items WHERE name = 'Камень улучшения (Хлам)'"
+        // Камни улучшения — независимые роллы для каждого типа
+        for (const [stoneName, chance] of Object.entries(STONE_DROP_CHANCES)) {
+            if (Math.random() >= chance) continue;
+            const stone = await db.one(
+                "SELECT id, name, rarity_id, type, image FROM craft_items WHERE name = ?",
+                [stoneName]
             ) as any;
-            if (junkStone) {
-                const inventory = JSON.parse(user.inventory || '[]');
-                const stoneDrop = {
-                    type: 'craft_item',
-                    id: junkStone.id,
-                    name: junkStone.name,
-                    rarity_id: junkStone.rarity_id,
-                    rarity_display: 'Хлам',
-                    rarity_color: '#888888',
-                    count: 1,
-                    itemType: junkStone.type || 'upgrade',
-                    image: junkStone.image || null,
-                };
-                const existing2 = inventory.find((i: any) => i.type === 'craft_item' && i.id === junkStone.id);
-                if (existing2) {
-                    existing2.count = (existing2.count || 0) + 1;
-                } else {
-                    inventory.push(stoneDrop);
-                }
-                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-                materialDropped = materialDropped || stoneDrop;
-                user.inventory = JSON.stringify(inventory);
-                addStep({ type: 'money', message: 'Добыто: Камень улучшения (Хлам)' });
+            if (!stone) continue;
+            const inventory = JSON.parse(user.inventory || '[]');
+            const stoneDrop = {
+                type: 'craft_item',
+                id: stone.id,
+                name: stone.name,
+                rarity_id: stone.rarity_id,
+                rarity_display: 'Хлам',
+                rarity_color: '#888888',
+                count: 1,
+                itemType: stone.type || 'upgrade',
+                image: stone.image || null,
+            };
+            const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === stone.id);
+            if (existing) {
+                existing.count = (existing.count || 0) + 1;
+            } else {
+                inventory.push(stoneDrop);
             }
+            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+            materialDropped = materialDropped || stoneDrop;
+            user.inventory = JSON.stringify(inventory);
+            addStep({ type: 'money', message: `Добыто: ${stone.name}` });
         }
 
         // Случайный предмет — каждый уровень редкости проверяется отдельно

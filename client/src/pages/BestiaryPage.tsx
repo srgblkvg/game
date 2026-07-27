@@ -354,11 +354,17 @@ export default function BestiaryPage() {
       const drops: any[] = [];
       if (result.materialDropped) drops.push(result.materialDropped);
       if (result.itemsDropped?.length) drops.push(...result.itemsDropped);
-      // Камень улучшения мог выпасть вместе с материалом (тогда он только в steps)
-      const hasStoneInSteps = result.steps?.some((s: any) => s.message?.includes('Камень улучшения'));
-      const hasStoneInMaterial = result.materialDropped?.itemType === 'upgrade';
-      if (hasStoneInSteps && !hasStoneInMaterial) {
-        drops.push({ name: 'Камень улучшения (Хлам)', rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888', count: 1, type: 'craft_item', itemType: 'upgrade' });
+      // Камни улучшения, выпавшие после материала (только в steps)
+      const stoneSteps = result.steps?.filter((s: any) => s.message?.startsWith('Добыто: Камень улучшения'));
+      if (stoneSteps?.length) {
+        const hasStoneInMaterial = result.materialDropped?.itemType === 'upgrade';
+        for (const s of stoneSteps) {
+          const stoneName = s.message.replace('Добыто: ', '');
+          // Не дублируем если уже в materialDropped
+          if (!hasStoneInMaterial || result.materialDropped?.name !== stoneName) {
+            drops.push({ name: stoneName, rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888', count: 1, type: 'craft_item', itemType: 'upgrade' });
+          }
+        }
       }
       // Дропы будут показаны после завершения анимации
       pendingDropsRef.current = drops;

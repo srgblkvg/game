@@ -268,6 +268,10 @@ router.post('/craft/upgrade', async (req, res) => {
     }
 
     const { chance, money_cost } = upgradeData;
+    // Бонус к шансу от редкости камня
+    const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
+    const stoneBonus = STONE_BONUS[stone.rarity_id] || 0;
+    const finalChance = Math.min(100, chance + stoneBonus);
     const actualCost = Math.max(1, Math.floor(money_cost / 4));
 
     if (user.money < actualCost) {
@@ -285,7 +289,7 @@ router.post('/craft/upgrade', async (req, res) => {
 
     const newMoney = user.money - actualCost;
 
-    const success = Math.random() * 100 < chance;
+    const success = Math.random() * 100 < finalChance;
 
     if (success) {
         // Находим предмет в новом инвентаре (индекс мог измениться после удаления камня)
