@@ -203,18 +203,15 @@ export default function GuildPage() {
             <GuildQuestCard guildId={guild.id} myRank={myRank} myPerms={myPerms} api={api}/>
             {war ? (<Card className="border-l-4 border-l-red-500"><h3 className="font-bold text-sm flex items-center gap-2 mb-2"><Icon icon="game-icons:crossed-swords" width="18" height="18"/>⚔️ Война</h3>
                 <p className="text-xs">Противник: <b>{war.attackerGuild?.id===guild.id?war.defenderGuild?.name:war.attackerGuild?.name}</b></p>
-                <p className="text-xs text-[var(--color-text-muted)]">{war.status==='pending'?'Ожидание ответа':war.status==='active'?'Активна':war.status}</p>
+                <p className="text-xs text-[var(--color-text-muted)]">{war.status==='active'?'Активна':war.status}</p>
                 {war.status==='active'&&<>
                     <p className="text-[0.65rem] mt-1 text-red-400">💰 Казна заморожена</p>
                     <Button size="md" variant="danger" className="mt-2" onClick={()=>navigate('/guild/war')}>⚔️ На поле боя</Button>
-                </>}
-                {canWar&&war.attackerGuild?.id!==guild.id&&war.status==='pending'&&(<div className="flex gap-2 mt-2">
-                    <Button size="md" onClick={async()=>{await api('/guild/war/respond',{accept:true});load();}}>Принять</Button>
-                    <Button size="md" variant="secondary" onClick={async()=>{await api('/guild/war/respond',{accept:false});load();}}>Отклонить</Button></div>)}</Card>
+                </>}</Card>
             ) : (<Card><div className="flex items-center gap-2 cursor-pointer" onClick={()=>setShowWarRules(!showWarRules)}>
                 <Icon icon={showWarRules?'game-icons:expand':'game-icons:contract'} width="14" height="14"/><h3 className="font-bold text-sm">⚔️ Война гильдий — правила</h3>
             </div>{showWarRules&&<div className="text-xs text-[var(--color-text-muted)] mt-2 space-y-1">
-                <p>• Лидер или офицер с правом объявляет войну</p><p>• 24 часа на ответ, 24 часа боёв</p><p>• Казна замораживается</p></div>}
+                <p>• Лидер или офицер с правом объявляет войну</p><p>• Война начинается сразу и длится 3 суток</p><p>• Казна замораживается</p></div>}
             {canWar&&<div className="mt-2"><Button size="md" variant="danger" onClick={()=>navigate('/guild/rating')}>⚔️ Найти соперника</Button></div>}
             </Card>)}
         </div>}

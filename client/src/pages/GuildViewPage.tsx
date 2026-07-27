@@ -142,11 +142,11 @@ export default function GuildViewPage() {
                                 ⚔️ Поле битвы
                                 <span className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold"
                                     style={{
-                                        color: war.status === 'pending' ? 'var(--color-war-pending-text)' : 'var(--color-war-active-text)',
-                                        backgroundColor: war.status === 'pending' ? 'var(--color-war-pending-bg)' : 'var(--color-war-active-bg)',
+                                        color: 'var(--color-war-active-text)',
+                                        backgroundColor: 'var(--color-war-active-bg)',
                                     }}
                                 >
-                                    {war.status === 'pending' ? 'Ожидает ответа' : 'Активна'}
+                                    Активна
                                 </span>
                             </h3>
                             <div className="text-xs space-y-1">

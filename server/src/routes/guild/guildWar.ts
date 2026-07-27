@@ -10,11 +10,6 @@ const router = Router();
 
 export async function isGuildAtWar(guildId: number): Promise<any> {
     const now = new Date().toISOString();
-    // Авто-отмена просроченных pending войн
-    await db.run(
-        `UPDATE guild_wars SET status = 'cancelled', endedAt = ? WHERE status = 'pending' AND expiresAt <= ?`,
-        [now, now]
-    );
     // Авто-завершение просроченных active войн (с переводом казны)
     const expiredWars = await db.query(
         `SELECT * FROM guild_wars WHERE status = 'active' AND expiresAt <= ?`,
@@ -61,7 +56,7 @@ export async function isGuildAtWar(guildId: number): Promise<any> {
         }
     }
     return await db.one(
-        `SELECT * FROM guild_wars WHERE (attackerGuildId = ? OR defenderGuildId = ?) AND status IN ('pending', 'active') LIMIT 1`,
+        `SELECT * FROM guild_wars WHERE (attackerGuildId = ? OR defenderGuildId = ?) AND status = 'active' LIMIT 1`,
         [guildId, guildId]
     ) as any || null;
 }
@@ -95,14 +90,15 @@ router.post('/guild/war/declare', async (req, res) => {
     if (theirWar) return res.status(400).json({ error: 'Целевая гильдия уже участвует в войне' });
 
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
     await db.run(
-        'INSERT INTO guild_wars (attackerGuildId, defenderGuildId, declaredAt, expiresAt) VALUES (?, ?, ?, ?)',
-        [myGuildId, targetGuildId, now.toISOString(), expiresAt]
+        'INSERT INTO guild_wars (attackerGuildId, defenderGuildId, declaredAt, expiresAt, status) VALUES (?, ?, ?, ?, ?)',
+        [myGuildId, targetGuildId, now.toISOString(), expiresAt, 'active']
     );
 
     const myGuild = await db.one('SELECT name FROM guilds WHERE id = ?', [myGuildId]) as any;
+    const targetGuildName = (await db.one('SELECT name FROM guilds WHERE id = ?', [targetGuildId]) as any)?.name || '';
 
     // Уведомление лидеру защищающейся гильдии через ЛС
     const defenderLeader = await db.one(
@@ -110,7 +106,7 @@ router.post('/guild/war/declare', async (req, res) => {
         [targetGuildId]
     ) as any;
     if (defenderLeader) {
-        const msg = `⚔️ Гильдия «${myGuild.name}» объявила вам войну! У вас 24 часа чтобы принять или отклонить. Страница гильдии →`;
+        const msg = `⚔️ Гильдия «${myGuild.name}» напала на вас! Война продлится 3 суток. Приготовьтесь к обороне!`;
         const info = await db.run(
             'INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)',
             [0, defenderLeader.id, msg, JSON.stringify({ type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name })]
@@ -122,35 +118,12 @@ router.post('/guild/war/declare', async (req, res) => {
         }});
     }
 
-    res.json({ success: true, message: `Война объявлена гильдии «${targetGuild.name}»` });
+    res.json({ success: true, message: `Война объявлена гильдии «${targetGuild.name}»! 3 суток на битву.` });
 });
 
-// Ответить на объявление войны (только лидер защищающейся гильдии)
-router.post('/guild/war/respond', async (req, res) => {
-    const userId = req.userId;
-    const { accept } = req.body; // true — принять, false — отклонить
-
-    const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
-    if (!member || (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_war))) {
-        return res.status(400).json({ error: 'Только лидер или офицер с правом на войну может отвечать на войну' });
-    }
-
-    const war = await db.one(
-        `SELECT * FROM guild_wars WHERE defenderGuildId = ? AND status = 'pending' ORDER BY id DESC LIMIT 1`,
-        [member.guildId]
-    ) as any;
-    if (!war) return res.status(404).json({ error: 'Нет входящих объявлений войны' });
-
-    const now = new Date().toISOString();
-
-    if (accept) {
-        const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-        await db.run('UPDATE guild_wars SET status = ?, acceptedAt = ?, expiresAt = ? WHERE id = ?', ['active', now, newExpiresAt, war.id]);
-        res.json({ success: true, message: 'Война принята! Казна заморожена на 24 часа.' });
-    } else {
-        await db.run('UPDATE guild_wars SET status = ?, endedAt = ? WHERE id = ?', ['cancelled', now, war.id]);
-        res.json({ success: true, message: 'Война отклонена.' });
-    }
+// Ответ на войну больше не требуется — война начинается сразу
+router.post('/guild/war/respond', async (_req, res) => {
+    res.status(400).json({ error: 'Войны начинаются сразу. Подтверждение не требуется.' });
 });
 
 // Статус войны для моей гильдии
