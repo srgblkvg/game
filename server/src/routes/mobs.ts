@@ -109,11 +109,13 @@ router.get('/mobs', async (req, res) => {
                 lootImages.push({ rarity: r, name: craftInfo[r].name, image: craftInfo[r].image, chance });
             }
         }
-        // Все камни улучшения
+        // Все камни улучшения (веса → реальные шансы при 5% ролле)
+        const totalStoneWeight = Object.values(STONE_DROP_CHANCES).reduce((s, w) => s + w, 0);
         for (const stone of allStones) {
-            const chance = STONE_DROP_CHANCES[stone.name] || 0;
-            if (chance > 0) {
-                lootImages.push({ rarity: -1, name: stone.name, image: stone.image, chance });
+            const weight = STONE_DROP_CHANCES[stone.name] || 0;
+            if (weight > 0) {
+                const realChance = (weight / totalStoneWeight) * 0.05;
+                lootImages.push({ rarity: -1, name: stone.name, image: stone.image, chance: realChance });
             }
         }
         const itemTable = getItemDropTable(m.level);
@@ -297,36 +299,45 @@ router.post('/mob/attack', async (req, res) => {
             } // if (selectedRarity >= 0)
         }
 
-        // Камни улучшения — независимые роллы для каждого типа
-        for (const [stoneName, chance] of Object.entries(STONE_DROP_CHANCES)) {
-            if (Math.random() >= chance) continue;
+        // Камни улучшения — один ролл 5%, выбор по весам
+        if (Math.random() < 0.05) {
+            // Веса для выбора типа камня
+            const stoneWeights: [string, number][] = Object.entries(STONE_DROP_CHANCES);
+            const totalWeight = stoneWeights.reduce((s, [, w]) => s + w, 0);
+            let roll = Math.random() * totalWeight;
+            let pickedName = (stoneWeights[0]?.[0]) || '';
+            for (const [name, weight] of stoneWeights) {
+                roll -= weight;
+                if (roll <= 0) { pickedName = name; break; }
+            }
             const stone = await db.one(
                 "SELECT id, name, rarity_id, type, image FROM craft_items WHERE name = ?",
-                [stoneName]
+                [pickedName]
             ) as any;
-            if (!stone) continue;
-            const inventory = JSON.parse(user.inventory || '[]');
-            const stoneDrop = {
-                type: 'craft_item',
-                id: stone.id,
-                name: stone.name,
-                rarity_id: stone.rarity_id,
-                rarity_display: 'Хлам',
-                rarity_color: '#888888',
-                count: 1,
-                itemType: stone.type || 'upgrade',
-                image: stone.image || null,
-            };
-            const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === stone.id);
-            if (existing) {
-                existing.count = (existing.count || 0) + 1;
-            } else {
-                inventory.push(stoneDrop);
+            if (stone) {
+                const inventory = JSON.parse(user.inventory || '[]');
+                const stoneDrop = {
+                    type: 'craft_item',
+                    id: stone.id,
+                    name: stone.name,
+                    rarity_id: stone.rarity_id,
+                    rarity_display: 'Хлам',
+                    rarity_color: '#888888',
+                    count: 1,
+                    itemType: stone.type || 'upgrade',
+                    image: stone.image || null,
+                };
+                const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === stone.id);
+                if (existing) {
+                    existing.count = (existing.count || 0) + 1;
+                } else {
+                    inventory.push(stoneDrop);
+                }
+                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+                materialDropped = materialDropped || stoneDrop;
+                user.inventory = JSON.stringify(inventory);
+                addStep({ type: 'money', message: `Добыто: ${stone.name}` });
             }
-            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-            materialDropped = materialDropped || stoneDrop;
-            user.inventory = JSON.stringify(inventory);
-            addStep({ type: 'money', message: `Добыто: ${stone.name}` });
         }
 
         // Мифический ресурс — 5% с конкретных монстров
