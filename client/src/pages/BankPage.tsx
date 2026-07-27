@@ -83,11 +83,11 @@ export default function BankPage() {
       const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
 
       const tiers = [
-        { item: 'silver_1000', amount: 1000, vkPrice: 7, rubPrice: 49, label: '1000 серебра' },
-        { item: 'silver_5000', amount: 5000, vkPrice: 14, rubPrice: 99, label: '5000 серебра' },
-        { item: 'silver_10000', amount: 10000, vkPrice: 28, rubPrice: 199, label: '10000 серебра' },
-        { item: 'silver_50000', amount: 50000, vkPrice: 114, rubPrice: 799, label: '50000 серебра' },
-        { item: 'silver_100000', amount: 100000, vkPrice: 200, rubPrice: 1399, label: '100000 серебра' },
+        { item: 'silver_10000', amount: 10000, vkPrice: 7, rubPrice: 49, label: '10000 серебра' },
+        { item: 'silver_50000', amount: 50000, vkPrice: 14, rubPrice: 99, label: '50000 серебра' },
+        { item: 'silver_100000', amount: 100000, vkPrice: 28, rubPrice: 199, label: '100000 серебра' },
+        { item: 'silver_500000', amount: 500000, vkPrice: 114, rubPrice: 799, label: '500000 серебра' },
+        { item: 'silver_1000000', amount: 1000000, vkPrice: 200, rubPrice: 1399, label: '1 000 000 серебра' },
       ];
 
       const buySilver = (tier: typeof tiers[number]) => {

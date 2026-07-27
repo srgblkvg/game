@@ -25,11 +25,11 @@ const ITEM_LABELS: Record<string, string> = {
   premium_7d: 'Премиум 7д',
   premium_30d: 'Премиум 30д',
   starter_pack: 'Стартовый набор',
-  silver_1000: '1000💰',
-  silver_5000: '5000💰',
   silver_10000: '10000💰',
   silver_50000: '50000💰',
   silver_100000: '100000💰',
+  silver_500000: '500000💰',
+  silver_1000000: '1M💰',
   craft_rare: 'Сундук Редкий',
   craft_epic: 'Сундук Эпический',
 };

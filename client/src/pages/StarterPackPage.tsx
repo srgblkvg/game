@@ -72,7 +72,7 @@ export default function StarterPackPage() {
         fetch('/api/items', { headers: getHeaders() })
           .then(r => r.json())
           .then((allItems: any[]) => {
-            const common = allItems.filter((i: any) => i.rarity_id === 1);
+            const common = allItems.filter((i: any) => i.rarity_id === 2);
             const picked: any[] = [];
             for (const slot of SLOT_ORDER) {
               const match = common.find((i: any) => i.slot === slot);
@@ -82,7 +82,7 @@ export default function StarterPackPage() {
           })
           .catch(() => {});
         // Фрагмент: хардкод-путь (файл в client/dist/fragment/)
-        setFragment({ name: 'Фрагмент ужаса', image: '/fragment/fragment_green.webp', rarity_id: 2 });
+        setFragment({ name: 'Эссенция мрака', image: '/fragment/fragment_blue.webp', rarity_id: 3 });
       })
       .finally(() => setLoading(false));
   }, []);
@@ -145,7 +145,7 @@ export default function StarterPackPage() {
 
       <h1 className="text-xl font-bold text-center mb-1">🎁 Стартовый набор</h1>
       <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
-        Одноразовый набор для быстрого старта. Включает полный комплект обычной экипировки, материалы для крафта, серебро и премиум.
+        Одноразовый набор для быстрого старта. Включает полный комплект необычной экипировки, редкие материалы для крафта, серебро и премиум.
       </p>
 
       {purchased ? (
@@ -161,7 +161,7 @@ export default function StarterPackPage() {
 
             {/* Экипировка */}
             <div className="mb-3">
-              <p className="text-xs text-[var(--color-accent-info)] mb-2">⚔️ Полный комплект обычной экипировки (9 предметов):</p>
+              <p className="text-xs text-[var(--color-accent-info)] mb-2">⚔️ Полный комплект необычной экипировки (9 предметов):</p>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {equipment.map((item, i) => {
                   const color = getRarityColor(item);
@@ -189,19 +189,19 @@ export default function StarterPackPage() {
             <div className="mb-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
               <div className="flex items-center gap-2 mb-1">
                 <img
-                  src={imageUrl(fragment?.image || '/fragment/fragment_green.webp')}
-                  alt="Фрагмент ужаса"
+                  src={imageUrl(fragment?.image || '/fragment/fragment_blue.webp')}
+                  alt="Эссенция мрака"
                   className="w-8 h-8 object-contain rounded"
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
-                <p className="text-xs text-[var(--color-accent-success)]">4× Фрагмент ужаса</p>
+                <p className="text-xs text-[var(--color-accent-success)]">4× Эссенция мрака</p>
               </div>
-              <p className="text-[0.6rem] text-[var(--color-text-muted)]">Необычный материал для крафта. Используется в рецептах улучшения и создания предметов.</p>
+              <p className="text-[0.6rem] text-[var(--color-text-muted)]">Редкий материал для крафта. Используется в рецептах улучшения и создания предметов.</p>
             </div>
 
             {/* Серебро */}
             <div className="mb-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
-              <p className="text-xs text-[var(--color-accent-warning)] mb-1">💰 {formatMoney(1000)}</p>
+              <p className="text-xs text-[var(--color-accent-warning)] mb-1">💰 {formatMoney(10000)}</p>
               <p className="text-[0.6rem] text-[var(--color-text-muted)]">Хватит на первые покупки в магазине или взнос в гильдию.</p>
             </div>
 

@@ -25,11 +25,11 @@ export async function deliverStarterPack(userId: number): Promise<{ success: boo
 
     const now = Math.floor(Date.now() / 1000);
 
-    // 1. Собираем фулл сет обычных предметов (rarity_id=1, по одному на слот)
+    // 1. Собираем фулл сет необычных предметов (rarity_id=2, по одному на слот)
     const packItems: any[] = [];
     for (const slot of ALL_SLOTS) {
       const item = await db.one(
-        'SELECT id, name, slot, rarity_id, bonuses, extra, image FROM items WHERE rarity_id = 1 AND slot = ? ORDER BY id LIMIT 1',
+        'SELECT id, name, slot, rarity_id, bonuses, extra, image FROM items WHERE rarity_id = 2 AND slot = ? ORDER BY id LIMIT 1',
         [slot]
       ) as any;
       if (item) {
@@ -45,16 +45,16 @@ export async function deliverStarterPack(userId: number): Promise<{ success: boo
       }
     }
 
-    // 2. 4 шт Фрагмента ужаса (craft_item, rarity_id=2)
+    // 2. 4 шт Эссенции мрака (craft_item, rarity_id=3)
     const fragmentItem = await db.one(
-      "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Фрагмент ужаса'"
+      "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Эссенция мрака'"
     ) as any;
 
     // 3. Добавляем всё в инвентарь
     const inventory = JSON.parse(user.inventory || '[]');
     for (const item of packItems) inventory.push(item);
 
-    // Фрагмент ужаса — стакается с существующими
+    // Эссенция мрака — стакается с существующими
     if (fragmentItem) {
       const existing = inventory.find((i: any) =>
         (i.type === 'craft_item' || i.type === 'material') && i.id === fragmentItem.id
@@ -79,7 +79,7 @@ export async function deliverStarterPack(userId: number): Promise<{ success: boo
     // 4. Считаем премиум и серебро
     const currentPremium = Math.max(user.premiumUntil || 0, now);
     const newPremiumUntil = currentPremium + 7 * 86400; // 7 дней
-    const newMoney = (user.money || 0) + 1000;
+    const newMoney = (user.money || 0) + 10000;
 
     // 5. Атомарное обновление
     await db.run(
@@ -90,7 +90,7 @@ export async function deliverStarterPack(userId: number): Promise<{ success: boo
     // Уведомление
     sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate', until: newPremiumUntil });
 
-    logger.info(`[Donate] Starter pack delivered to user ${userId}: ${packItems.length} items + 4 fragments + 1000 silver + 7d premium`);
+    logger.info(`[Donate] Starter pack delivered to user ${userId}: ${packItems.length} items + 4 essences + 10000 silver + 7d premium`);
 
     return { success: true };
   } catch (err: any) {
@@ -126,8 +126,8 @@ export async function deliverCraftPack(userId: number, packType: 'rare' | 'epic'
     if (!user) return { success: false, error: 'Пользователь не найден' };
 
     const packs: Record<string, { material: string; matCount: number; stone: string; stoneCount: number; silver: number }> = {
-      rare: { material: 'Эссенция мрака', matCount: 3, stone: 'Камень улучшения (Хлам)', stoneCount: 3, silver: 1000 },
-      epic: { material: 'Сердцевина бездны', matCount: 3, stone: 'Камень улучшения (Хлам)', stoneCount: 5, silver: 3000 },
+      rare: { material: 'Сердцевина бездны', matCount: 5, stone: 'Камень улучшения (Хлам)', stoneCount: 6, silver: 10000 },
+      epic: { material: 'Искра погибели', matCount: 5, stone: 'Камень улучшения (Хлам)', stoneCount: 10, silver: 30000 },
     };
 
     const pack = packs[packType];
@@ -201,14 +201,14 @@ router.get('/starter-pack/status', authMiddleware, async (req: Request, res: Res
 // GET /api/donate/starter-pack/preview — состав набора (для страницы)
 router.get('/starter-pack/preview', authMiddleware, async (_req: Request, res: Response) => {
   try {
-    // Обычные предметы по одному на слот
+    // Необычные предметы по одному на слот
     const equipment: any[] = [];
     for (const slot of ALL_SLOTS) {
       const item = await db.one(
         `SELECT i.id, i.name, i.slot, i.rarity_id, i.bonuses, i.extra, i.image,
                 r.display_name as rarity_display, r.color as rarity_color
          FROM items i JOIN rarities r ON i.rarity_id = r.id
-         WHERE i.rarity_id = 1 AND i.slot = ? ORDER BY i.id LIMIT 1`,
+         WHERE i.rarity_id = 2 AND i.slot = ? ORDER BY i.id LIMIT 1`,
         [slot]
       ) as any;
       if (item) {
@@ -225,9 +225,9 @@ router.get('/starter-pack/preview', authMiddleware, async (_req: Request, res: R
       }
     }
 
-    // Фрагмент ужаса
+    // Эссенция мрака
     const fragment = await db.one(
-      "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Фрагмент ужаса'"
+      "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Эссенция мрака'"
     ) as any;
 
     res.json({
