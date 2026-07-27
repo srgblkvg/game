@@ -124,7 +124,7 @@ export default function CollectionsPage() {
 
                 const owned = new Set<string>();
                 for (const invItem of inv) {
-                    if (invItem.name && invItem.slot) owned.add(`${invItem.name}|${invItem.slot}`);
+                    if (invItem.name && invItem.slot && invItem.rarity_id != null) owned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
                 }
                 setOwnedKeys(owned);
 
@@ -141,7 +141,7 @@ export default function CollectionsPage() {
     }, []);
 
     const handleAddToCollection = (shopItem: ShopItem) => {
-        const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot);
+        const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot && inv.rarity_id === shopItem.rarity_id);
         if (matching.length === 0) {
             setMessage('Нет подходящих предметов в инвентаре');
             return;
@@ -176,7 +176,7 @@ export default function CollectionsPage() {
 
             const newOwned = new Set<string>();
             for (const invItem of (charRes.inventory || [])) {
-                if (invItem.name && invItem.slot) newOwned.add(`${invItem.name}|${invItem.slot}`);
+                if (invItem.name && invItem.slot && invItem.rarity_id != null) newOwned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
             }
             setOwnedKeys(newOwned);
 
@@ -307,7 +307,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
     // Есть ли предметы в инвентаре, которые можно добавить в этот сет
     const hasAddableItems = blockItems.some(item => {
         if (collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`)) return false;
-        return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot);
+        return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id);
     });
 
     return (
@@ -329,9 +329,9 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
             {!collapsed && (
                 <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-10 gap-1.5">
                     {blockItems.map((item: ShopItem) => {
-                        const owned = ownedKeys.has(`${item.name}|${item.slot}`);
+                        const owned = ownedKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
                         const collected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
-                        const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot);
+                        const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id);
 
                         return (
                             <CollectionSlot
