@@ -29,7 +29,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
     const { character } = useGame();
     if (character?.collectedItems && item.name && item.slot) {
       inCollection = character.collectedItems.some(
-        (c: any) => c.itemName === item.name && c.slot === item.slot
+        (c: any) => c.itemName === item.name && c.slot === item.slot && (c.rarity_id ?? c.rarity_Id) === item.rarity_id
       );
     }
   } catch {}
