@@ -3,6 +3,7 @@ import { getHeaders } from '../api/helpers';
 import { getItemImage } from '../utils/itemUtils';
 import ItemTooltip from '../components/ItemTooltip';
 import { useLongPress } from '../hooks/useLongPress';
+import { useGame } from '../contexts/GameContext';
 
 interface ShopItem {
     id: number;
@@ -88,6 +89,7 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
 }
 
 export default function CollectionsPage() {
+    const { setCharacter } = useGame();
     const [items, setItems] = useState<ShopItem[]>([]);
     const [ownedKeys, setOwnedKeys] = useState<Set<string>>(new Set());
     const [collectionKeys, setCollectionKeys] = useState<Set<string>>(new Set());
@@ -167,6 +169,7 @@ export default function CollectionsPage() {
             ]);
 
             setInventoryItems(charRes.inventory || []);
+            setCharacter((prev: any) => ({ ...prev, inventory: charRes.inventory, collectionCount: charRes.collectionCount, collectionSetBonus: charRes.collectionSetBonus, collectedItems: charRes.collectedItems }));
             setCollectionCount(charRes.collectionCount || 0);
             setCollectionSetBonus(charRes.collectionSetBonus || 0);
             setSets(collRes.sets || []);
