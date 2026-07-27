@@ -23,15 +23,15 @@ export async function applyHpRegen(user: {
     const maxHp = user.maxHp;
 
     let regenRate = 1;
-    // Премиум даёт чулан (×3), если нет лучшей комнаты
-    const hasPremium = (user.premiumUntil || 0) > now;
+    // Комната
     if (user.roomType && (user.roomUntil || 0) > now) {
         if (user.roomType === 'closet') regenRate = 3;
         else if (user.roomType === 'bed') regenRate = 10;
         else if (user.roomType === 'chamber') regenRate = 50;
-    } else if (hasPremium) {
-        regenRate = 3; // премиум = чулан
     }
+    // Премиум: ×3 к регену (работает и без комнаты)
+    const hasPremium = (user.premiumUntil || 0) > now;
+    if (hasPremium) regenRate *= 3;
 
     // Отшельник 2pc: +100% реген HP вне боя
     if (user.hermitRegen) regenRate *= 2;

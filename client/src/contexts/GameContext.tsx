@@ -123,9 +123,8 @@ function calcRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, ser
     if (roomType === 'closet') regenRate = 3;
     else if (roomType === 'bed') regenRate = 10;
     else if (roomType === 'chamber') regenRate = 50;
-  } else if (premiumUntil && premiumUntil > serverTime) {
-    regenRate = 3;
   }
+  if (premiumUntil && premiumUntil > serverTime) regenRate *= 3;
 
   const regenAmount = Math.floor(elapsed / 10) * regenRate;
   return Math.min(maxHp, currentHp + regenAmount);

@@ -132,7 +132,7 @@ export default function WikiPage() {
 
             <h2 className="text-lg font-bold text-[var(--color-accent-danger)] mt-6 mb-2 pb-1 border-b border-[var(--color-border-light)]">⭐ Премиум</h2>
             <Card className="p-3 mb-3">
-                <p className="text-xs text-[var(--color-text-muted)]"><strong>Бонусы:</strong> кулдаун Охоты 150с (вместо 300с), регенерация HP ×3 (как Чулан) если нет активной комнаты.</p>
+                <p className="text-xs text-[var(--color-text-muted)]"><strong>Бонусы:</strong> кулдаун Охоты 150с (вместо 300с), регенерация HP ×3 (умножается на бонус комнаты).</p>
                 {!isVK && <p className="text-xs text-[var(--color-text-muted)]"><strong>Получение:</strong> 1 день за привязку аккаунта, покупка через магазин (VK Pay / ЮKassa).</p>}
                 {isVK && <p className="text-xs text-[var(--color-text-muted)]"><strong>Получение:</strong> покупка через магазин (голоса VK).</p>}
             </Card>
