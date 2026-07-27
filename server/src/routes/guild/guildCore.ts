@@ -105,8 +105,8 @@ router.get('/guild/list', async (req, res) => {
     const guilds = await db.query(`
         SELECT g.id, g.name, g.description, g.image, g.joinType, g.level, g.exp, g.leaderId, u.username as leaderName, u.id as leaderUserId,
             (SELECT COUNT(*) FROM guild_members gm2 JOIN users u2 ON gm2.userId = u2.id WHERE gm2.guildId = g.id) as memberCount,
-            (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status IN ('pending','active') LIMIT 1) as warStatus,
-            (SELECT gw2.id FROM guild_wars gw2 WHERE (gw2.attackerGuildId = g.id OR gw2.defenderGuildId = g.id) AND gw2.status IN ('pending','active') LIMIT 1) as warId
+            (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status = 'active' LIMIT 1) as warStatus,
+            (SELECT gw2.id FROM guild_wars gw2 WHERE (gw2.attackerGuildId = g.id OR gw2.defenderGuildId = g.id) AND gw2.status = 'active' LIMIT 1) as warId
         FROM guilds g
         JOIN users u ON g.leaderId = u.id
         ORDER BY g.level DESC, g.exp DESC

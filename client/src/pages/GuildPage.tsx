@@ -50,6 +50,7 @@ export default function GuildPage() {
     const [treasurySubtab, setTreasurySubtab] = useState<'deposit'|'tax'|'history'>('deposit');
     const [treasuryPeriod, setTreasuryPeriod] = useState('week');
     const [war, setWar] = useState<any>(null);
+    const [warTimeLeft, setWarTimeLeft] = useState('');
     const [showWarRules, setShowWarRules] = useState(false);
     const [permPopup, setPermPopup] = useState<any>(null); // { officerId, username, quests, buildings, war }
     const [confirmPopup, setConfirmPopup] = useState<any>(null);
@@ -78,6 +79,24 @@ export default function GuildPage() {
         } catch (e: any) { setError(e.message); }
     };
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
+
+    // Таймер войны
+    useEffect(() => {
+        if (!war?.expiresAt) { setWarTimeLeft(''); return; }
+        const tick = () => {
+            const now = Date.now();
+            const end = new Date(war.expiresAt).getTime();
+            const left = Math.max(0, Math.floor((end - now) / 1000));
+            if (left <= 0) { setWarTimeLeft('Завершена'); return; }
+            const h = Math.floor(left / 3600);
+            const m = Math.floor((left % 3600) / 60);
+            const s = left % 60;
+            setWarTimeLeft(`${h}ч ${m}м ${s}с`);
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [war?.expiresAt]);
 
     const loadTreasury = async (period: string) => {
         setTreasuryPeriod(period);
@@ -203,7 +222,7 @@ export default function GuildPage() {
             <GuildQuestCard guildId={guild.id} myRank={myRank} myPerms={myPerms} api={api}/>
             {war ? (<Card className="border-l-4 border-l-red-500"><h3 className="font-bold text-sm flex items-center gap-2 mb-2"><Icon icon="game-icons:crossed-swords" width="18" height="18"/>⚔️ Война</h3>
                 <p className="text-xs">Противник: <b>{war.attackerGuild?.id===guild.id?war.defenderGuild?.name:war.attackerGuild?.name}</b></p>
-                <p className="text-xs text-[var(--color-text-muted)]">{war.status==='active'?'Активна':war.status}</p>
+                <p className="text-xs text-[var(--color-text-muted)]">{war.status==='active'?<span>Активна · <span className="text-[var(--color-accent-warning)]">{warTimeLeft}</span></span>:war.status}</p>
                 {war.status==='active'&&<>
                     <p className="text-[0.65rem] mt-1 text-red-400">💰 Казна заморожена</p>
                     <Button size="md" variant="danger" className="mt-2" onClick={()=>navigate('/guild/war')}>⚔️ На поле боя</Button>
@@ -211,7 +230,7 @@ export default function GuildPage() {
             ) : (<Card><div className="flex items-center gap-2 cursor-pointer" onClick={()=>setShowWarRules(!showWarRules)}>
                 <Icon icon={showWarRules?'game-icons:expand':'game-icons:contract'} width="14" height="14"/><h3 className="font-bold text-sm">⚔️ Война гильдий — правила</h3>
             </div>{showWarRules&&<div className="text-xs text-[var(--color-text-muted)] mt-2 space-y-1">
-                <p>• Лидер или офицер с правом объявляет войну</p><p>• Война начинается сразу и длится 3 суток</p><p>• Казна замораживается</p></div>}
+                <p>• Лидер или офицер с правом объявляет войну</p><p>• Война начинается сразу и длится 72 часа</p><p>• Казна замораживается</p></div>}
             {canWar&&<div className="mt-2"><Button size="md" variant="danger" onClick={()=>navigate('/guild/rating')}>⚔️ Найти соперника</Button></div>}
             </Card>)}
         </div>}

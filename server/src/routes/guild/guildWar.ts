@@ -106,7 +106,7 @@ router.post('/guild/war/declare', async (req, res) => {
         [targetGuildId]
     ) as any;
     if (defenderLeader) {
-        const msg = `⚔️ Гильдия «${myGuild.name}» напала на вас! Война продлится 3 суток. Приготовьтесь к обороне!`;
+        const msg = `⚔️ Гильдия «${myGuild.name}» напала на вас! Война продлится 72 часа. Приготовьтесь к обороне!`;
         const info = await db.run(
             'INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)',
             [0, defenderLeader.id, msg, JSON.stringify({ type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name })]
