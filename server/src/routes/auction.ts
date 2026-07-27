@@ -50,7 +50,7 @@ db.run(`CREATE TABLE IF NOT EXISTS auction_history (
 db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auction_sales INTEGER DEFAULT 0`).catch(() => {});
 
 // Мин. цены по редкости
-const priceFloor: Record<number, number> = { 0: 30, 1: 300, 2: 3000, 3: 30000, 4: 300000, 5: 3000000, 6: 30000000 };
+const priceFloor: Record<number, number> = { 0: 5, 1: 20, 2: 100, 3: 400, 4: 1500, 5: 6000, 6: 20000 };
 
 // API: получить минимальные цены (для клиента)
 router.get('/auction/price-floor', async (req, res) => {
