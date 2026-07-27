@@ -3,25 +3,37 @@ import { db } from '../db/index';
 import { collectGuildTax } from '../db/helpers';
 
 const router = Router();
-
 const DAILY_LIMIT = 10;
 
-// Посчитать сегодняшние игры в кости
+// Таблица для игр в кости
+db.run(`CREATE TABLE IF NOT EXISTS dice_games (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    entry_fee INTEGER NOT NULL,
+    dice TEXT NOT NULL,
+    rerolls INTEGER DEFAULT 0,
+    combo TEXT,
+    payout INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT NOW()
+)`).catch(() => {});
+
+// Посчитать сегодняшние игры
 async function countTodayGames(userId: number): Promise<number> {
     const row = await db.one(
         "SELECT COUNT(*) as cnt FROM dice_games WHERE user_id = ? AND created_at::date = CURRENT_DATE",
         [userId]
-    );
+    ) as any;
     return row.cnt || 0;
 }
 
 // Статус: активная игра + дневной лимит
 router.get('/dice/status', async (req, res) => {
-    const userId = req.userId;
+    const userId = (req as any).userId;
     const active = await db.one(
         "SELECT id, entry_fee, dice, rerolls, created_at FROM dice_games WHERE user_id = ? AND status = 'active'",
         [userId]
-    ).catch(() => null);
+    ).catch(() => null) as any;
 
     const todayCount = await countTodayGames(userId);
     const remaining = Math.max(0, DAILY_LIMIT - todayCount);
@@ -44,26 +56,23 @@ router.get('/dice/status', async (req, res) => {
     }
 });
 
-
-// Комбинации (от высшей к низшей)
-type ComboName = 'poker' | 'quads' | 'fullhouse' | 'straight' | 'set' | 'twopair' | 'pair' | 'none';
-
-const PAYOUTS: Record<ComboName, { name: string; mult: number }> = {
-    poker:     { name: 'Покер',       mult: 1000 },
-    quads:     { name: 'Каре',        mult: 50 },
-    fullhouse: { name: 'Фулл-хаус',   mult: 12 },
-    straight:  { name: 'Стрит',       mult: 8 },
-    set:       { name: 'Сет',         mult: 5 },
-    twopair:   { name: 'Две пары',    mult: 2 },
-    pair:      { name: 'Пара',        mult: 0 },
-    none:      { name: 'Ничего',      mult: 0 },
+// Таблица выплат (казино — пара и две пары = проигрыш)
+const PAYOUTS: Record<string, { name: string; mult: number }> = {
+    poker: { name: 'Покер', mult: 100 },
+    quads: { name: 'Каре', mult: 25 },
+    fullhouse: { name: 'Фулл-хаус', mult: 8 },
+    straight: { name: 'Стрит', mult: 5 },
+    set: { name: 'Сет', mult: 3 },
+    twopair: { name: 'Две пары', mult: 0 },
+    pair: { name: 'Пара', mult: 0 },
+    none: { name: 'Ничего', mult: 0 },
 };
 
 function rollDice(): number[] {
     return Array.from({ length: 5 }, () => Math.floor(Math.random() * 6) + 1);
 }
 
-function getCombo(dice: number[]): ComboName {
+function getCombo(dice: number[]): string {
     const counts = new Map<number, number>();
     for (const d of dice) counts.set(d, (counts.get(d) || 0) + 1);
     const vals = [...counts.values()].sort((a, b) => b - a);
@@ -85,20 +94,21 @@ function getCombo(dice: number[]): ComboName {
 
 // Начать игру
 router.post('/dice/play', async (req, res) => {
-    const userId = req.userId;
+    const userId = (req as any).userId;
     const bet = [10, 100, 1000].includes(req.body.bet) ? req.body.bet : 10;
 
-    // Проверить дневной лимит
+    // Дневной лимит
     const todayCount = await countTodayGames(userId);
-    if (todayCount >= DAILY_LIMIT) return res.status(400).json({ error: `Дневной лимит исчерпан (${todayCount}/${DAILY_LIMIT}). Возвращайтесь завтра!` });
+    if (todayCount >= DAILY_LIMIT)
+        return res.status(400).json({ error: `Дневной лимит исчерпан (${todayCount}/${DAILY_LIMIT})` });
 
-    // Проверить, нет ли уже активной игры
+    // Проверить активную игру
     const active = await db.one(
         "SELECT id, entry_fee, created_at FROM dice_games WHERE user_id = ? AND status = 'active'",
         [userId]
-    ).catch(() => null);
+    ).catch(() => null) as any;
+
     if (active) {
-        // Если игра старше 5 минут — авто-завершить как брошенную
         const age = Date.now() - new Date(active.created_at).getTime();
         if (age > 5 * 60 * 1000) {
             await db.run("UPDATE dice_games SET status = 'expired', combo = 'none', payout = 0 WHERE id = ?", [active.id]);
@@ -107,16 +117,12 @@ router.post('/dice/play', async (req, res) => {
         }
     }
 
-    // Проверить баланс
+    // Баланс
     const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
-    if (user.money < bet) {
-        return res.status(400).json({ error: 'Недостаточно серебра' });
-    }
+    if (user.money < bet) return res.status(400).json({ error: 'Недостаточно серебра' });
 
     // Снять плату
     await db.run('UPDATE users SET money = money - ? WHERE id = ?', [bet, userId]);
-
-    // Налог гильдии
     await collectGuildTax(userId, bet, 'tax_dice').catch(() => {});
 
     // Бросить кости
@@ -125,15 +131,15 @@ router.post('/dice/play', async (req, res) => {
         "INSERT INTO dice_games (user_id, entry_fee, dice, rerolls, status) VALUES (?, ?, ?, 0, 'active')",
         [userId, bet, JSON.stringify(dice)]
     );
-    const gameId = result.lastInsertRowid;
+    const gameId = (result as any).lastInsertRowid;
 
     res.json({ gameId, dice, rerollsUsed: 0, maxRerolls: 2, entryFee: bet });
 });
 
-// Перебросить выбранные кости
+// Перебросить
 router.post('/dice/reroll', async (req, res) => {
-    const userId = req.userId;
-    const { gameId, keep } = req.body as { gameId: number; keep: number[] };
+    const userId = (req as any).userId;
+    const { gameId, keep } = req.body;
 
     const game = await db.one(
         "SELECT * FROM dice_games WHERE id = ? AND user_id = ? AND status = 'active'",
@@ -145,24 +151,20 @@ router.post('/dice/reroll', async (req, res) => {
 
     const currentDice: number[] = JSON.parse(game.dice);
     if (!keep || !Array.isArray(keep) || keep.some((i: number) => i < 0 || i >= 5)) {
-        return res.status(400).json({ error: 'Некорректный выбор костей (keep: индексы 0-4)' });
+        return res.status(400).json({ error: 'Некорректный выбор костей' });
     }
 
     const keepSet = new Set(keep);
     const newDice = currentDice.map((d, i) => keepSet.has(i) ? d : Math.floor(Math.random() * 6) + 1);
 
-    await db.run(
-        "UPDATE dice_games SET dice = ?, rerolls = rerolls + 1 WHERE id = ?",
-        [JSON.stringify(newDice), gameId]
-    );
-
+    await db.run("UPDATE dice_games SET dice = ?, rerolls = rerolls + 1 WHERE id = ?", [JSON.stringify(newDice), gameId]);
     res.json({ dice: newDice, rerollsUsed: game.rerolls + 1, maxRerolls: 2 });
 });
 
-// Завершить игру и получить выигрыш
+// Завершить игру
 router.post('/dice/finish', async (req, res) => {
-    const userId = req.userId;
-    const { gameId } = req.body as { gameId: number };
+    const userId = (req as any).userId;
+    const { gameId } = req.body;
 
     const game = await db.one(
         "SELECT * FROM dice_games WHERE id = ? AND user_id = ? AND status = 'active'",
@@ -173,19 +175,21 @@ router.post('/dice/finish', async (req, res) => {
 
     const dice: number[] = JSON.parse(game.dice);
     const combo = getCombo(dice);
-    const payout = PAYOUTS[combo];
+    const payout = PAYOUTS[combo] || { name: '???', mult: 0 };
     const winAmount = payout.mult * game.entry_fee;
 
     if (winAmount > 0) {
         await db.run('UPDATE users SET money = money + ? WHERE id = ?', [winAmount, userId]);
     }
-    // Общая статистика казино (кости + блэкджек)
+
     await db.run(
         'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + ?, casino_lost = casino_lost + ? WHERE id = ?',
         [winAmount, game.entry_fee, userId]
     );
-    await db.run("UPDATE dice_games SET status = 'finished', combo = ?, payout = ? WHERE id = ?",
-        [combo, winAmount, gameId]);
+    await db.run(
+        "UPDATE dice_games SET status = 'finished', combo = ?, payout = ? WHERE id = ?",
+        [combo, winAmount, gameId]
+    );
 
     res.json({
         dice,
@@ -196,13 +200,13 @@ router.post('/dice/finish', async (req, res) => {
     });
 });
 
-// Получить историю игр
+// История игр
 router.get('/dice/history', async (req, res) => {
-    const userId = req.userId;
+    const userId = (req as any).userId;
     const history = await db.query(
         "SELECT dice, combo, payout, entry_fee, created_at FROM dice_games WHERE user_id = ? AND status = 'finished' ORDER BY id DESC LIMIT 20",
         [userId]
-    );
+    ) as any[];
     res.json(history);
 });
 

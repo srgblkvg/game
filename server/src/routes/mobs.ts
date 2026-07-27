@@ -340,9 +340,9 @@ router.post('/mob/attack', async (req, res) => {
             }
         }
 
-        // Мифический ресурс — 5% с конкретных монстров
+        // Мифический ресурс — 1% с конкретных монстров
         const mythicName = MYTHIC_RESOURCE_DROPS[mob.id];
-        if (mythicName && Math.random() < 0.05) {
+        if (mythicName && Math.random() < 0.01) {
             const mythicItem = await db.one(
                 "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?",
                 [mythicName]
