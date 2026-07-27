@@ -253,6 +253,7 @@ export default function AuctionPage() {
     const getAutoMinPrice = () => {
         const item = getSelectedItem();
         if (!item) return 0;
+        if (item.itemType === 'upgrade') return 2000;
         const rarity = item.rarity_id ?? 0;
         return PRICE_FLOOR[rarity] || 5;
     };
@@ -264,7 +265,7 @@ export default function AuctionPage() {
             void (isMaterial ? (item.count || 1) : 1);
             setSellCount(1);
             const rarity = item.rarity_id ?? 0;
-            const floor = PRICE_FLOOR[rarity] || 5;
+            const floor = item.itemType === 'upgrade' ? 2000 : (PRICE_FLOOR[rarity] || 5);
             setStartPrice(String(floor));
             setBuyoutPrice('');
         }

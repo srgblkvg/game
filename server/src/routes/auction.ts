@@ -185,7 +185,8 @@ router.post('/auction/sell', async (req, res) => {
     const itemCount = isMaterial ? Math.max(1, count || (itemData.count || 1)) : 1;
 
     const rarity = itemData.rarity_id ?? 0;
-    const floor = (priceFloor[rarity] || 5);
+    const isUpgrade = itemData.itemType === 'upgrade';
+    const floor = isUpgrade ? 2000 : (priceFloor[rarity] || 5);
     // Цена указана за 1 шт — умножаем на количество
     const totalStartPrice = startPrice * itemCount;
     const totalBuyoutPrice = buyoutPrice ? buyoutPrice * itemCount : null;
