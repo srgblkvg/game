@@ -34,22 +34,22 @@ router.get('/character/me', async (req, res) => {
 
     inventory = await Promise.all(inventory.map(async (item: any) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
-            if (item.rarity_id === undefined) {
+            if (item.rarity_id === undefined || !item.image) {
                 const craftRow = await db.one(CRAFT_DATA_SQL, [Number(item.id)]) as any;
                 if (craftRow) {
                     changed = true;
                     return {
                         ...item,
-                        rarity_id: craftRow.rarity_id,
+                        rarity_id: item.rarity_id ?? craftRow.rarity_id,
                         rarity_display: craftRow.rarity_display,
                         rarity_color: craftRow.rarity_color,
                         itemType: item.itemType || craftRow.type || 'craft',
-                        image: item.image ?? craftRow.image ?? null,
+                        image: craftRow.image || item.image || null,
                     };
                 }
             }
         } else if (item.slot) {
-            if (item.rarity_id === undefined) {
+            if (item.rarity_id === undefined || !item.image) {
                 const itemRow = await db.one(ITEM_DATA_SQL, [item.name, item.slot]) as any;
                 if (itemRow) {
                     changed = true;
