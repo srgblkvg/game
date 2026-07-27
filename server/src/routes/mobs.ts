@@ -21,6 +21,19 @@ const STONE_DROP_CHANCES: Record<string, number> = {
     'Руна Рубина': 0.001,
 };
 
+// Редкие мифические ресурсы — 5% с конкретных монстров (начиная со Смерти)
+const MYTHIC_RESOURCE_DROPS: Record<number, string> = {
+    30: 'Кровь демона',       // Смерть (100)
+    47: 'Эссенция гнева',     // Бес-кровопускатель (110)
+    48: 'Пыльца фей',         // Одержимый рыцарь (115)
+    49: 'Кристалл душ',       // Инкуб-искуситель (118)
+    50: 'Чешуя василиска',    // Архидемон (122)
+    51: 'Кровь демона',       // Василиск адский (125)
+    52: 'Эссенция гнева',     // Лорд пламени (130)
+    53: 'Пыльца фей',         // Костяной дракон (135)
+    54: 'Кристалл душ',       // Падший серафим (140)
+};
+
 const router = Router();
 
 // Шансы дропа предметов по редкостям в зависимости от уровня моба
@@ -314,6 +327,39 @@ router.post('/mob/attack', async (req, res) => {
             materialDropped = materialDropped || stoneDrop;
             user.inventory = JSON.stringify(inventory);
             addStep({ type: 'money', message: `Добыто: ${stone.name}` });
+        }
+
+        // Мифический ресурс — 5% с конкретных монстров
+        const mythicName = MYTHIC_RESOURCE_DROPS[mob.id];
+        if (mythicName && Math.random() < 0.05) {
+            const mythicItem = await db.one(
+                "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?",
+                [mythicName]
+            ) as any;
+            if (mythicItem) {
+                const inventory = JSON.parse(user.inventory || '[]');
+                const mythicDrop = {
+                    type: 'craft_item',
+                    id: mythicItem.id,
+                    name: mythicItem.name,
+                    rarity_id: mythicItem.rarity_id,
+                    rarity_display: mythicItem.display_name,
+                    rarity_color: mythicItem.color,
+                    count: 1,
+                    itemType: mythicItem.type || 'craft',
+                    image: mythicItem.image || null,
+                };
+                const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === mythicItem.id);
+                if (existing) {
+                    existing.count = (existing.count || 0) + 1;
+                } else {
+                    inventory.push(mythicDrop);
+                }
+                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+                materialDropped = materialDropped || mythicDrop;
+                user.inventory = JSON.stringify(inventory);
+                addStep({ type: 'money', message: `Добыто: ${mythicItem.name}` });
+            }
         }
 
         // Случайный предмет — каждый уровень редкости проверяется отдельно
