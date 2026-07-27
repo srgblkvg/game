@@ -155,6 +155,8 @@ router.post('/character/expand-inventory', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const currentSlots = user.inventorySlots || 10;
+    const MAX_SLOTS = 30;
+    if (currentSlots >= MAX_SLOTS) return res.status(400).json({ error: `Достигнут максимум слотов (${MAX_SLOTS})` });
     const price = 100 * Math.pow(2, currentSlots - 10);
     if (user.money < price) return res.status(400).json({ error: `Недостаточно серебра. Нужно ${price}, есть ${user.money}` });
 

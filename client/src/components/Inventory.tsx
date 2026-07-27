@@ -299,9 +299,13 @@ export default function Inventory({
             </div>
 
             <div className="flex justify-between items-center">
-                <button onClick={handleExpand} className="bg-[var(--color-accent-info)] border-none text-white px-3 py-1.5 rounded cursor-pointer text-sm font-medium">
-                    + Слот ({formatMoney(priceForNextSlot)})
-                </button>
+                {maxSlots < 30 ? (
+                    <button onClick={handleExpand} className="bg-[var(--color-accent-info)] border-none text-white px-3 py-1.5 rounded cursor-pointer text-sm font-medium">
+                        + Слот ({formatMoney(priceForNextSlot)})
+                    </button>
+                ) : (
+                    <span className="text-xs text-[var(--color-text-muted)]">Макс. слотов</span>
+                )}
             </div>
 
             {hasMore && <div className="mt-2 text-[var(--color-text-muted)] text-xs">Есть ещё предметы вне инвентаря.</div>}
