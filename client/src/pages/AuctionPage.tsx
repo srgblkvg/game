@@ -16,7 +16,7 @@ import { formatMoney } from '../utils/money';
 import { fmtSafeDate } from '../utils/date';
 import { getItemImage } from '../utils/itemUtils';
 
-const PRICE_FLOOR: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
+const PRICE_FLOOR: Record<number, number> = { 0: 30, 1: 300, 2: 3000, 3: 30000, 4: 300000, 5: 3000000, 6: 30000000 };
 
 const findItemById = (inventory: any[] | undefined, id: string): any => {
     if (!inventory) return undefined;
