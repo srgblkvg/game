@@ -260,7 +260,7 @@ export default function Inventory({
                     const isSelected = selectedItemId && item && item.id === selectedItemId;
 
                     return (
-                        <div key={idx} className="relative equip-slot">
+                        <div key={item?.id ?? `empty-${idx}`} className="relative equip-slot">
                         <LongPressItemSlot
                             item={item}
                             draggable={!!item && !isCraftItem(item)}
