@@ -119,6 +119,9 @@ export default function AuctionPage() {
     const { showAcquire } = useAcquire();
 
     const [lots, setLots] = useState<any[]>([]);
+    const [groups, setGroups] = useState<any[]>([]);
+    const [viewMode, setViewMode] = useState<'groups' | 'list'>('groups');
+    const [groupFilter, setGroupFilter] = useState<string | null>(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [tab, setTab] = useState<'buy' | 'sell' | 'history'>('buy');
@@ -227,6 +230,7 @@ export default function AuctionPage() {
             const res = await fetch(`${BASE_URL}/auction?${qs}`, { headers: getHeaders() });
             const data = await res.json();
             setLots(Array.isArray(data.lots) ? data.lots : []);
+            setGroups(Array.isArray(data.groups) ? data.groups : []);
             setTotalCount(data.totalCount || 0);
             setTotalPages(data.totalPages || 1);
             setPage(data.page || 1);
@@ -494,7 +498,53 @@ export default function AuctionPage() {
                         ))}
                     </div>
 
-                    {/* Top pagination */}
+                    {/* View toggle: Группы / Список */}
+                    {!groupFilter && groups.length > 0 && (
+                        <div className="flex gap-2 mb-3">
+                            <button onClick={() => { setViewMode('groups'); setGroupFilter(null); }}
+                                className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'groups' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
+                                📦 Группы
+                            </button>
+                            <button onClick={() => setViewMode('list')}
+                                className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'list' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
+                                📋 Списком
+                            </button>
+                            {groupFilter && (
+                                <button onClick={() => { setGroupFilter(null); setViewMode('groups'); }}
+                                    className="px-2 py-1 rounded text-xs cursor-pointer bg-[var(--color-bg-input)] text-[var(--color-text-muted)]">
+                                    ← Назад к группам
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Group view */}
+                    {viewMode === 'groups' && !groupFilter && groups.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                            {groups.map((g: any, i: number) => {
+                                const item = g.item;
+                                return (
+                                    <div key={i} onClick={() => { setGroupFilter(`${item.name}|${item.slot}|${item.rarity_id}`); setViewMode('list'); }}
+                                        className="rounded-lg p-2 border border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer hover:border-[var(--color-accent-info)] transition-colors">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <img src={getItemImage(item) || '/items/default.webp'} alt={item.name}
+                                                className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-xs font-bold truncate">{item.name}</div>
+                                                <div className="text-[0.6rem] text-[var(--color-text-muted)]">{item.rarity_display} · ×{g.count}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-[0.65rem] text-[var(--color-text-muted)] space-y-0.5">
+                                            <div>Мин. ставка: {formatMoney(g.minBid)}</div>
+                                            {g.minBuyout && <div>Мин. выкуп: {formatMoney(g.minBuyout)}</div>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* List view (or group-filtered) */}                    {/* Top pagination */}
                     {totalPages > 1 && renderPagination()}
 
                     {loading ? (
@@ -502,7 +552,13 @@ export default function AuctionPage() {
                     ) : lots.length === 0 ? (
                         <p className="text-sm text-[var(--color-text-muted)]">{totalCount === 0 ? 'Нет активных лотов' : 'Нет лотов по фильтру'}</p>
                     ) : (
-                        lots.map((lot: any) => {
+                        (() => {
+                            const displayLots = groupFilter
+                                ? lots.filter((l: any) => `${l.itemData?.name || ''}|${l.itemData?.slot || ''}|${l.itemData?.rarity_id ?? ''}` === groupFilter)
+                                : lots;
+                            if (groupFilter && displayLots.length === 0) return <p className="text-sm text-[var(--color-text-muted)]">Нет лотов в этой группе</p>;
+                            if (!groupFilter && viewMode === 'groups') return null;
+                            return displayLots.map((lot: any) => {
                             const item = lot.itemData;
                             const stackCount = item.count || 1;
                             const isStack = stackCount > 1;
@@ -576,7 +632,7 @@ export default function AuctionPage() {
                                 </div>
                             );
                         })
-                    )}
+                        })() )}
 
                     {/* Bottom pagination */}
                     {renderPagination()}

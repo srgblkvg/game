@@ -171,7 +171,29 @@ router.get('/auction', async (req, res) => {
     }
     const paged = filtered.slice((actualPage - 1) * limit, actualPage * limit);
 
-    res.json({ lots: paged, totalCount, totalPages, page, myLotCount });
+    // Группировка лотов (одинаковые предметы = name+slot+rarity)
+    const groupsMap = new Map<string, { item: any; count: number; minBid: number; minBuyout: number | null }>();
+    for (const lot of filtered) {
+        const key = `${lot.itemData?.name || ''}|${lot.itemData?.slot || ''}|${lot.itemData?.rarity_id ?? ''}`;
+        const bid = lot.currentBid || lot.startPrice;
+        const buyout = lot.buyoutPrice || null;
+        const existing = groupsMap.get(key);
+        if (existing) {
+            existing.count++;
+            if (bid < existing.minBid) existing.minBid = bid;
+            if (buyout !== null && (existing.minBuyout === null || buyout < existing.minBuyout)) existing.minBuyout = buyout;
+        } else {
+            groupsMap.set(key, {
+                item: lot.itemData,
+                count: 1,
+                minBid: bid,
+                minBuyout: buyout,
+            });
+        }
+    }
+    const groups = [...groupsMap.values()];
+
+    res.json({ lots: paged, groups, totalCount, totalPages, page, myLotCount });
 });
 
 // Создать лот
