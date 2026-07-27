@@ -211,8 +211,9 @@ export default function AuctionPage() {
         return () => window.removeEventListener('auctionChanged', handler);
     }, [page, auctionSearch, category, sort, groupFilter]);
 
-    const load = async (pg?: number) => {
+    const load = async (pg?: number, groupKey?: string) => {
         setLoading(true);
+        const activeGroupKey = groupKey !== undefined ? groupKey : groupFilter;
         try {
             const p = pg || page;
             const { text, stats, category: parsedCategory } = parseSearch(auctionSearch);
@@ -223,7 +224,7 @@ export default function AuctionPage() {
             if (highlightLotId && p === 1) qs.set('highlightLot', highlightLotId);
             const activeCategory = parsedCategory !== 'all' ? parsedCategory : category;
             if (activeCategory !== 'all') qs.set('category', activeCategory);
-            if (groupFilter) qs.set('group', groupFilter);
+            if (activeGroupKey) qs.set('group', activeGroupKey);
             qs.set('sort', sort);
             for (const [k, v] of Object.entries(stats)) {
                 if (v > 0) qs.set(k, String(v));
@@ -523,7 +524,7 @@ export default function AuctionPage() {
                             {groups.map((g: any, i: number) => {
                                 const item = g.item;
                                 return (
-                                    <div key={i} onClick={() => { setGroupFilter(`${item.name || ''}|${item.slot || ''}|${item.rarity_id ?? ''}`); setViewMode('list'); setPage(1); load(1); }}
+                                    <div key={i} onClick={() => { const key = `${item.name || ''}|${item.slot || ''}|${item.rarity_id ?? ''}`; setGroupFilter(key); setViewMode('list'); setPage(1); load(1, key); }}
                                         className="rounded-lg p-2 border border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer hover:border-[var(--color-accent-info)] transition-colors">
                                         <div className="flex items-center gap-2 mb-1">
                                             <img src={getItemImage(item) || '/items/default.webp'} alt={item.name}
