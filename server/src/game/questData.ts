@@ -7,9 +7,9 @@ export const QUEST_INFO: Record<QuestType, { name: string; icon: string; desc: (
     hunt: { name: 'Крысиный мор', icon: '🗡️', desc: (r, d) => `Убить ${r} мобов` },
     arena: { name: 'Первая кровь', icon: '⚔️', desc: (r, d) => `Одержать ${r} PvP-побед` },
     job: { name: 'Медяки в карман', icon: '🌍', desc: (r, d) => {
-        if (d === 'easy') return 'Провести 10 минут на работах';
-        if (d === 'medium') return 'Провести 1 час на работах';
-        return 'Провести 4 часа на работах';
+        if (d === 'easy') return 'Провести 15 минут на работах';
+        if (d === 'medium') return 'Провести 1.5 часа на работах';
+        return 'Провести 5 часов на работах';
     }},
     craft: { name: 'Проба пера', icon: '⚒️', desc: (r, d) => `Создать или улучшить ${r} предметов` },
     auction: { name: 'Ставка сделана', icon: '💰', desc: (r, d) => `Совершить ${r} сделок на аукционе` },

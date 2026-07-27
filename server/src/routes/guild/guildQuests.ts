@@ -12,7 +12,14 @@ const GUILD_QUEST_INFO: Record<GuildQuestType, { name: string; desc: (req: numbe
     pvp: { name: 'Кровь врагов', desc: (r) => `Одержать ${r} PvP-побед (общий счёт гильдии)`, snapshotFields: 'wins' },
     craft: { name: 'Кузня', desc: (r) => `Создать/улучшить ${r} предметов (общий счёт гильдии)`, snapshotFields: 'craftCount' },
     donate: { name: 'Казна', desc: (r) => `Пожертвовать ${r} серебра в казну`, snapshotFields: 'treasury' },
-    jobs: { name: 'Труд', desc: (r) => `Накопить ${r} секунд работы (общий счёт гильдии)`, snapshotFields: 'totalJobSeconds' },
+    jobs: { name: 'Труд', desc: (r) => {
+        if (r >= 3600) {
+            const h = r / 3600;
+            return `Накопить ${h % 1 === 0 ? h : h.toFixed(1)} ${h === 1 ? 'час' : h < 2 ? 'часа' : 'часов'} работы`;
+        }
+        const m = Math.floor(r / 60);
+        return `Накопить ${m} ${m === 1 ? 'минуту' : m < 5 ? 'минуты' : 'минут'} работы`;
+    }, snapshotFields: 'totalJobSeconds' },
 };
 
 const GUILD_QUEST_DIFFICULTIES = {
