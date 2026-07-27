@@ -57,6 +57,37 @@ router.get('/auction/price-floor', async (req, res) => {
     res.json(priceFloor);
 });
 
+// Статистика похожих лотов (для подсказки при выставлении)
+router.get('/auction/similar', async (req, res) => {
+    const name = req.query.name as string;
+    const slot = req.query.slot as string;
+    const rarity = parseInt(req.query.rarity as string) || 0;
+    if (!name) return res.json({ count: 0 });
+
+    const now = Math.floor(Date.now() / 1000);
+    const lots = await db.query(
+        `SELECT l.startPrice, l.buyoutPrice, l.currentBid, l.itemData
+         FROM auction_lots l WHERE l.endsAt > ?`, [now]
+    ) as any[];
+
+    const similar = lots.filter(l => {
+        try {
+            const d = JSON.parse(l.itemData);
+            return d.name === name && (d.slot || '') === (slot || '') && (d.rarity_id ?? 0) === rarity;
+        } catch { return false; }
+    });
+
+    if (similar.length === 0) return res.json({ count: 0 });
+
+    const bids = similar.map(l => l.currentBid || l.startPrice);
+    const buyouts = similar.filter(l => l.buyoutPrice).map(l => l.buyoutPrice);
+    const avgBid = Math.round(bids.reduce((a, b) => a + b, 0) / bids.length);
+    const avgBuyout = buyouts.length > 0 ? Math.round(buyouts.reduce((a, b) => a + b, 0) / buyouts.length) : null;
+    const minBid = Math.min(...bids);
+
+    res.json({ count: similar.length, avgBid, avgBuyout, minBid });
+});
+
 // Все лоты
 router.get('/auction', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);

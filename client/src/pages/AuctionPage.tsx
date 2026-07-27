@@ -170,6 +170,7 @@ export default function AuctionPage() {
 
     // Sell form
     const [sellItemId, setSellItemId] = useState('');
+    const [similarStats, setSimilarStats] = useState<{ count: number; avgBid?: number; avgBuyout?: number | null; minBid?: number } | null>(null);
     const [sellCount, setSellCount] = useState(1);
     const [startPrice, setStartPrice] = useState('');
     const [buyoutPrice, setBuyoutPrice] = useState('');
@@ -274,6 +275,10 @@ export default function AuctionPage() {
             const floor = item.itemType === 'upgrade' ? 2000 : (PRICE_FLOOR[rarity] || 5);
             setStartPrice(String(floor));
             setBuyoutPrice('');
+            // Запросить статистику похожих лотов
+            const qs = `name=${encodeURIComponent(item.name || '')}&slot=${encodeURIComponent(item.slot || '')}&rarity=${item.rarity_id ?? 0}`;
+            fetch(`/api/auction/similar?${qs}`, { headers: getHeaders() })
+                .then(r => r.json()).then(setSimilarStats).catch(() => setSimilarStats(null));
         }
     };
     const handleCountChange = (count: number) => { setSellCount(count); };
@@ -444,6 +449,14 @@ export default function AuctionPage() {
                             <img src={getItemImage(selectedItem) || '/items/default.webp'} alt={selectedItem.name} className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
                             <span className="text-xs text-[var(--color-text-primary)]">{selectedItem.name}</span>
                             <span className="text-xs text-[var(--color-text-muted)]">{selectedItem.rarity_display}</span>
+                        </div>
+                    )}
+                    {similarStats && similarStats.count > 0 && (
+                        <div className="text-[0.65rem] text-[var(--color-text-muted)] bg-[var(--color-bg-input)] rounded p-2 mb-2 space-y-0.5">
+                            <div>Похожих лотов: {similarStats.count}</div>
+                            <div>Мин. ставка: {formatMoney(similarStats.minBid || 0)}</div>
+                            <div>Средняя ставка: {formatMoney(similarStats.avgBid || 0)}</div>
+                            {similarStats.avgBuyout && <div>Средний выкуп: {formatMoney(similarStats.avgBuyout)}</div>}
                         </div>
                     )}
                     {isMaterial && maxItemCount > 1 && (
