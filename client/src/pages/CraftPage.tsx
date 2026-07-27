@@ -286,14 +286,14 @@ export default function CraftPage() {
         {
           item: 'craft_rare', title: 'Сундук «Редкий»', vkPrice: 14, rubPrice: 99,
           material: 'Сердцевина бездны ×5', materialImg: '/fragment/fragment_purple.webp',
-          stones: 'Камень улучшения ×6', stoneImg: '/stone/stoneUpgrade_gray.webp',
+          stones: 'Рунный булыжник ×6', stoneImg: '/stone/stoneUpgrade_gray.webp',
           silver: 10000,
           desc: 'Крафт случайного редкого предмета (шанс 75%)',
         },
         {
           item: 'craft_epic', title: 'Сундук «Эпический»', vkPrice: 28, rubPrice: 199,
           material: 'Искра погибели ×5', materialImg: '/fragment/fragment_yellow.webp',
-          stones: 'Камень улучшения ×10', stoneImg: '/stone/stoneUpgrade_gray.webp',
+          stones: 'Рунный булыжник ×10', stoneImg: '/stone/stoneUpgrade_gray.webp',
           silver: 30000,
           desc: 'Крафт случайного эпического предмета (шанс 70%)',
         },

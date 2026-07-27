@@ -32,13 +32,13 @@ INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Эсс
 INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Сердцевина бездны', 4, 'craft', NULL);
 INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Искра погибели', 5, 'craft', NULL);
 INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Слеза вечности', 6, 'craft', NULL);
-INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Хлам)', 0, 'upgrade', NULL);
-INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Обычный)', 1, 'upgrade', NULL);
-INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Необычный)', 2, 'upgrade', NULL);
-INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Редкий)', 3, 'upgrade', NULL);
-INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Эпический)', 4, 'upgrade', NULL);
-INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Легендарный)', 5, 'upgrade', NULL);
-INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Камень улучшения (Мифический)', 6, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Рунный булыжник', 0, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Рунный белокамень', 1, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Руна Изумруда', 2, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Руна Сапфира', 3, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Руна Аметиста', 4, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Руна Топаза', 5, 'upgrade', NULL);
+INSERT OR IGNORE INTO craft_items (name, rarity_id, type, image) VALUES ('Руна Рубина', 6, 'upgrade', NULL);
 
 -- Предметы экипировки (items)
 INSERT OR IGNORE INTO items (name, slot, rarity_id, bonuses, extra, image, cost) VALUES ('Скорбный капюшон', 'helmet', 0, '{"s":1,"a":0,"d":0,"m":0}', '{"crit":0,"dodge":0,"counter":0,"fullBlock":0}', 'helmet/helmet_gray.webp', 10);

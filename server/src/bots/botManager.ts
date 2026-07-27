@@ -135,7 +135,7 @@ async function doManageEq(token: string, botId: number, state: BotState) {
         const count = isMaterial ? Math.floor((item.count || 1) / 2) : 1;
         const price = Math.max(5, itemScore(item) * 10);
         // Цена выкупа: предметы ×3, камни улучшения ×100, материалы ×3
-        const isUpgradeStone = item.name?.includes('Камень улучшения') || item.itemType === 'upgrade';
+        const isUpgradeStone = item.itemType === 'upgrade';
         const buyoutMult = isUpgradeStone ? 100 : 3;
         const buyoutPrice = price * buyoutMult;
         await apiCall(token, 'POST', '/auction/sell', {

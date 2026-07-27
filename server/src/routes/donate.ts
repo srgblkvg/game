@@ -126,8 +126,8 @@ export async function deliverCraftPack(userId: number, packType: 'rare' | 'epic'
     if (!user) return { success: false, error: 'Пользователь не найден' };
 
     const packs: Record<string, { material: string; matCount: number; stone: string; stoneCount: number; silver: number }> = {
-      rare: { material: 'Сердцевина бездны', matCount: 5, stone: 'Камень улучшения (Хлам)', stoneCount: 6, silver: 10000 },
-      epic: { material: 'Искра погибели', matCount: 5, stone: 'Камень улучшения (Хлам)', stoneCount: 10, silver: 30000 },
+      rare: { material: 'Сердцевина бездны', matCount: 5, stone: 'Рунный булыжник', stoneCount: 6, silver: 10000 },
+      epic: { material: 'Искра погибели', matCount: 5, stone: 'Рунный булыжник', stoneCount: 10, silver: 30000 },
     };
 
     const pack = packs[packType];

@@ -307,7 +307,7 @@ export async function runSeed() {
     const materialNames = ['Пыль забвения', 'Осколок скорби', 'Фрагмент ужаса', 'Эссенция мрака', 'Сердцевина бездны', 'Искра погибели', 'Слеза вечности'];
     for (let i = 0; i < materialNames.length; i++) await db.run(INSERT_CRAFT, [materialNames[i], i, 'craft', null]);
     // Камни улучшения (type='upgrade')
-    const stoneNames = ['Камень улучшения (Хлам)', 'Камень улучшения (Обычный)', 'Камень улучшения (Необычный)', 'Камень улучшения (Редкий)', 'Камень улучшения (Эпический)', 'Камень улучшения (Легендарный)', 'Камень улучшения (Мифический)'];
+    const stoneNames = ['Рунный булыжник', 'Рунный белокамень', 'Руна Изумруда', 'Руна Сапфира', 'Руна Аметиста', 'Руна Топаза', 'Руна Рубина'];
     for (let i = 0; i < stoneNames.length; i++) await db.run(INSERT_CRAFT, [stoneNames[i], i, 'upgrade', null]);
   }
 

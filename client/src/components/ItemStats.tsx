@@ -108,6 +108,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
           {[
             ['Тип', getItemTypeName(item)],
             ...(item.count != null ? [['Количество', String(item.count)]] : []),
+            ...(item.itemType === 'upgrade' ? [['Бонус к улучшению', `+${[0,5,10,15,20,30,50][item.rarity_id] || 0}%`]] : []),
           ].map(([name, val], i) => (
             <div
               key={i}

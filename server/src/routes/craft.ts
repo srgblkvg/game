@@ -383,7 +383,7 @@ router.post('/craft/disassemble', async (req, res) => {
     const stoneIndex = inventory.findIndex((i: any) =>
         isCraftItem(i) && String(i.id) === String(itemId) && i.itemType === 'upgrade'
     );
-    if (stoneIndex === -1) return res.status(400).json({ error: 'Камень улучшения не найден' });
+    if (stoneIndex === -1) return res.status(400).json({ error: 'Руна улучшения не найдена' });
 
     const stone = inventory[stoneIndex];
     const rarityId = stone.rarity_id || 0;

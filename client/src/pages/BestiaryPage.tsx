@@ -355,7 +355,7 @@ export default function BestiaryPage() {
       if (result.materialDropped) drops.push(result.materialDropped);
       if (result.itemsDropped?.length) drops.push(...result.itemsDropped);
       // Камни улучшения, выпавшие после материала (только в steps)
-      const stoneSteps = result.steps?.filter((s: any) => s.message?.startsWith('Добыто: Камень улучшения'));
+      const stoneSteps = result.steps?.filter((s: any) => s.message?.startsWith('Добыто: Рун'));
       if (stoneSteps?.length) {
         const hasStoneInMaterial = result.materialDropped?.itemType === 'upgrade';
         for (const s of stoneSteps) {
