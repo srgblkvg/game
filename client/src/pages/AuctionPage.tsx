@@ -523,7 +523,7 @@ export default function AuctionPage() {
                             {groups.map((g: any, i: number) => {
                                 const item = g.item;
                                 return (
-                                    <div key={i} onClick={() => { setGroupFilter(`${item.name || ''}|${item.slot || ''}|${item.rarity_id ?? ''}`); setViewMode('list'); setPage(1); }}
+                                    <div key={i} onClick={() => { setGroupFilter(`${item.name || ''}|${item.slot || ''}|${item.rarity_id ?? ''}`); setViewMode('list'); setPage(1); load(1); }}
                                         className="rounded-lg p-2 border border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer hover:border-[var(--color-accent-info)] transition-colors">
                                         <div className="flex items-center gap-2 mb-1">
                                             <img src={getItemImage(item) || '/items/default.webp'} alt={item.name}
