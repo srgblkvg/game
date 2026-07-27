@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db, pool } from '../db/index';
 import { runBattle } from '../game/battle';
-import { getBaseStats, enrichEquipment, addMoney } from '../db/helpers';
+import { getBaseStats, enrichEquipment, addMoney, getCollectionBonus } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { broadcast } from '../events';
 import { getDrinkBonuses } from '../game/drinks';
@@ -138,7 +138,7 @@ async function loadPlayerForBattle(userId: number) {
 
     const { enriched } = await enrichEquipment(equipment);
     const base = getBaseStats(u);
-    const collCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt || 0;
+    const collCnt = await getCollectionBonus(userId);
     const drinkBonuses = getDrinkBonuses(u);
     const stats = currentStats(base, enriched, drinkBonuses, collCnt);
 

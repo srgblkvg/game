@@ -209,7 +209,7 @@ export default function AuctionPage() {
         const handler = () => load(page);
         window.addEventListener('auctionChanged', handler);
         return () => window.removeEventListener('auctionChanged', handler);
-    }, [page, auctionSearch, category, sort]);
+    }, [page, auctionSearch, category, sort, groupFilter]);
 
     const load = async (pg?: number) => {
         setLoading(true);
@@ -223,6 +223,7 @@ export default function AuctionPage() {
             if (highlightLotId && p === 1) qs.set('highlightLot', highlightLotId);
             const activeCategory = parsedCategory !== 'all' ? parsedCategory : category;
             if (activeCategory !== 'all') qs.set('category', activeCategory);
+            if (groupFilter) qs.set('group', groupFilter);
             qs.set('sort', sort);
             for (const [k, v] of Object.entries(stats)) {
                 if (v > 0) qs.set(k, String(v));
@@ -498,25 +499,23 @@ export default function AuctionPage() {
                         ))}
                     </div>
 
-                    {/* View toggle: Группы / Список */}
-                    {!groupFilter && groups.length > 0 && (
-                        <div className="flex gap-2 mb-3">
-                            <button onClick={() => { setViewMode('groups'); setGroupFilter(null); }}
-                                className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'groups' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
-                                📦 Группы
+                    {/* View toggle */}
+                    <div className="flex gap-2 mb-3">
+                        <button onClick={() => { setViewMode('groups'); setGroupFilter(null); setPage(1); }}
+                            className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'groups' && !groupFilter ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
+                            📦 Группы
+                        </button>
+                        <button onClick={() => { setViewMode('list'); setGroupFilter(null); }}
+                            className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'list' && !groupFilter ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
+                            📋 Списком
+                        </button>
+                        {groupFilter && (
+                            <button onClick={() => { setGroupFilter(null); setViewMode('groups'); setPage(1); }}
+                                className="px-2 py-1 rounded text-xs cursor-pointer bg-[var(--color-bg-input)] text-[var(--color-text-muted)]">
+                                ← Назад
                             </button>
-                            <button onClick={() => setViewMode('list')}
-                                className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'list' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
-                                📋 Списком
-                            </button>
-                            {groupFilter && (
-                                <button onClick={() => { setGroupFilter(null); setViewMode('groups'); }}
-                                    className="px-2 py-1 rounded text-xs cursor-pointer bg-[var(--color-bg-input)] text-[var(--color-text-muted)]">
-                                    ← Назад к группам
-                                </button>
-                            )}
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     {/* Group view */}
                     {viewMode === 'groups' && !groupFilter && groups.length > 0 && (
@@ -531,7 +530,7 @@ export default function AuctionPage() {
                                                 className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
                                             <div className="min-w-0 flex-1">
                                                 <div className="text-xs font-bold truncate">{item.name}</div>
-                                                <div className="text-[0.6rem] text-[var(--color-text-muted)]">{item.rarity_display} · ×{g.count}</div>
+                                                <div className="text-[0.6rem] text-[var(--color-text-muted)]">{item.rarity_display} · {g.count === 1 ? '1 лот' : `×${g.count}`}</div>
                                             </div>
                                         </div>
                                         <div className="text-[0.65rem] text-[var(--color-text-muted)] space-y-0.5">
@@ -553,9 +552,7 @@ export default function AuctionPage() {
                         <p className="text-sm text-[var(--color-text-muted)]">{totalCount === 0 ? 'Нет активных лотов' : 'Нет лотов по фильтру'}</p>
                     ) : (
                         (() => {
-                            const displayLots = groupFilter
-                                ? lots.filter((l: any) => `${l.itemData?.name || ''}|${l.itemData?.slot || ''}|${l.itemData?.rarity_id ?? ''}` === groupFilter)
-                                : lots;
+                            const displayLots = lots;
                             if (groupFilter && displayLots.length === 0) return <p className="text-sm text-[var(--color-text-muted)]">Нет лотов в этой группе</p>;
                             if (!groupFilter && viewMode === 'groups') return null;
                             return displayLots.map((lot: any) => {

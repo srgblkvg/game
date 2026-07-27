@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { currentStats, isSlotCompatible } from '../game/stats';
-import { getUserById, getBaseStats, recalcHpOnEquip } from '../db/helpers';
+import { getUserById, getBaseStats, recalcHpOnEquip, getCollectionBonus } from '../db/helpers';
 import { getDrinkBonuses } from '../game/drinks';
 import { getGuildBonus } from '../game/guildBuildings';
 
@@ -21,7 +21,7 @@ router.post('/character/equip', async (req, res) => {
     const currentEquipped = equipment[slotId];
 
     const drinkBonuses = getDrinkBonuses(user);
-    const collectionCount = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt;
+    const collectionCount = await getCollectionBonus(userId);
     const guildBonus = await getGuildBonus(userId, 'arena');
 
     if (itemId === undefined || itemId === null) {

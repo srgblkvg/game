@@ -3,7 +3,7 @@ import { db } from "../../db/index";
 import { broadcast, sendToGuild } from "../../events";
 import { getDrinkBonuses } from "../../game/drinks";
 import { runBattle } from "../../game/battle";
-import { getBaseStats, enrichEquipment } from "../../db/helpers";
+import { getBaseStats, enrichEquipment, getCollectionBonus } from "../../db/helpers";
 import { getGuildBonus } from "../../game/guildBuildings";
 
 const router = Router();
@@ -338,8 +338,8 @@ router.post('/guild/war/attack', async (req, res) => {
     const attacker = await db.one('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money, u.activeDrink, u.drinkUntil FROM users u WHERE u.id = ?', [userId]) as any;
     const defender = await db.one('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money, u.activeDrink, u.drinkUntil FROM users u WHERE u.id = ?', [targetId]) as any;
 
-    const aCollCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt || 0;
-    const dCollCnt = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [targetId]) as any).cnt || 0;
+    const aCollCnt = await getCollectionBonus(userId);
+    const dCollCnt = await getCollectionBonus(targetId);
 
     const aEquip = JSON.parse(attacker.equipment || '{}');
     const dEquip = JSON.parse(defender.equipment || '{}');

@@ -180,6 +180,24 @@ export async function buildPlayerStats(userRow: any, context: BattleContext): Pr
   return currentStats(base, equip, drinks, totalCollBonus, gb);
 }
 
+/** Быстрый расчёт полного бонуса коллекции (предметы + сеты) для одного userId */
+export async function getCollectionBonus(userId: number): Promise<number> {
+  const r = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any;
+  const collCnt = r?.cnt || 0;
+  const completedSetBonus = await db.one(`
+    SELECT COALESCE(SUM(cs.bonus_percent), 0) as total
+    FROM collection_sets cs
+    WHERE cs.id IN (
+      SELECT si.set_id
+      FROM collection_set_items si
+      LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = si.rarity_id
+      GROUP BY si.set_id
+      HAVING COUNT(*) = COUNT(c.id)
+    )
+  `, [userId]) as any;
+  return collCnt + (completedSetBonus?.total || 0);
+}
+
 // --- Уровни (чистые функции) ---
 
 export function expForLevel(level: number): number {

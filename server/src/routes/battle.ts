@@ -3,7 +3,7 @@ import { db } from '../db/index';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty } from '../events';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
-import { getBaseStats, buildPlayerStats, USER_BATTLE_FIELDS_GUILD, applyExp, collectGuildTax } from '../db/helpers';
+import { getBaseStats, buildPlayerStats, USER_BATTLE_FIELDS_GUILD, applyExp, collectGuildTax, getCollectionBonus } from '../db/helpers';
 import { runBattle } from '../game/battle';
 import { calcElo } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
@@ -71,7 +71,7 @@ router.post('/battle', async (req, res) => {
         money: attacker.money,
         currentHp: attacker.currentHp ?? undefined,
         drinkBonuses: getDrinkBonuses(attacker),
-        collectionBonus: (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [attacker.id]) as any).cnt || 0,
+        collectionBonus: await getCollectionBonus(attacker.id),
         guildBonus: await getGuildBonus(attacker.id, 'arena'),
     };
     const defenderData = {

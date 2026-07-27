@@ -119,6 +119,7 @@ router.get('/auction', async (req, res) => {
     const search = (req.query.search as string) || '';
     const category = (req.query.category as string) || 'all';
     const sort = (req.query.sort as string) || 'end';
+    const groupFilter = (req.query.group as string) || '';
 
     let filtered = allLots;
     if (search) {
@@ -137,7 +138,7 @@ router.get('/auction', async (req, res) => {
       });
     }
 
-    // Stat filters (client sends minStr/minAgi/minDef/minMag)
+    // Stat filters
     const statMap: Record<string, string> = { minStr: 's', minAgi: 'a', minDef: 'd', minMag: 'm' };
     for (const [clientKey, statKey] of Object.entries(statMap)) {
       const minVal = parseInt(req.query[clientKey] as string) || 0;
@@ -149,29 +150,8 @@ router.get('/auction', async (req, res) => {
     // Sort
     if (sort === 'price_asc') filtered.sort((a: any, b: any) => (a.currentBid || a.startPrice) - (b.currentBid || b.startPrice));
     else if (sort === 'price_desc') filtered.sort((a: any, b: any) => (b.currentBid || b.startPrice) - (a.currentBid || a.startPrice));
-    // default 'end' — already sorted by endsAt ASC from query
 
-    const limit = 6;
-    const totalCount = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
-    const actualPage = page;
-
-    const myLotCount = (await db.one('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ? AND endsat > ?', [req.userId, Math.floor(Date.now() / 1000)]) as any).cnt;
-
-    const highlightLot = parseInt(req.query.highlightLot as string) || 0;
-    if (highlightLot && page === 1) {
-        const idx = filtered.findIndex((l: any) => l.id === highlightLot);
-        if (idx !== -1) {
-            const targetPage = Math.floor(idx / limit) + 1;
-            if (targetPage !== 1) {
-                const paged = filtered.slice((targetPage - 1) * limit, targetPage * limit);
-                return res.json({ lots: paged, totalCount, totalPages, page: targetPage, myLotCount, highlightLot });
-            }
-        }
-    }
-    const paged = filtered.slice((actualPage - 1) * limit, actualPage * limit);
-
-    // Группировка лотов (одинаковые предметы = name+slot+rarity)
+    // Группировка ДО group-фильтра
     const groupsMap = new Map<string, { item: any; count: number; minBid: number; minBuyout: number | null }>();
     for (const lot of filtered) {
         const key = `${lot.itemData?.name || ''}|${lot.itemData?.slot || ''}|${lot.itemData?.rarity_id ?? ''}`;
@@ -192,6 +172,34 @@ router.get('/auction', async (req, res) => {
         }
     }
     const groups = [...groupsMap.values()];
+
+    // Group-фильтр ПОСЛЕ группировки
+    if (groupFilter) {
+      filtered = filtered.filter((l: any) => {
+        const key = `${l.itemData?.name || ''}|${l.itemData?.slot || ''}|${l.itemData?.rarity_id ?? ''}`;
+        return key === groupFilter;
+      });
+    }
+
+    const limit = 6;
+    const totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+    const actualPage = page;
+
+    const myLotCount = (await db.one('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ? AND endsat > ?', [req.userId, Math.floor(Date.now() / 1000)]) as any).cnt;
+
+    const highlightLot = parseInt(req.query.highlightLot as string) || 0;
+    if (highlightLot && page === 1) {
+        const idx = filtered.findIndex((l: any) => l.id === highlightLot);
+        if (idx !== -1) {
+            const targetPage = Math.floor(idx / limit) + 1;
+            if (targetPage !== 1) {
+                const paged = filtered.slice((targetPage - 1) * limit, targetPage * limit);
+                return res.json({ lots: paged, groups, totalCount, totalPages, page: targetPage, myLotCount, highlightLot });
+            }
+        }
+    }
+    const paged = filtered.slice((actualPage - 1) * limit, actualPage * limit);
 
     res.json({ lots: paged, groups, totalCount, totalPages, page, myLotCount });
 });

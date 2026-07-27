@@ -3,7 +3,7 @@ import { db } from '../db/index';
 import { runBattle } from '../game/battle';
 import { currentStats } from '../game/stats';
 import { authMiddleware } from '../middleware/auth';
-import { buildPlayerStats } from '../db/helpers';
+import { buildPlayerStats, getCollectionBonus } from '../db/helpers';
 
 const router = Router();
 
@@ -35,9 +35,7 @@ router.get('/players/:id/loadout', authMiddleware, async (req, res) => {
         ) as any;
         if (!user) return res.status(404).json({ error: 'Игрок не найден' });
 
-        const collCnt = await db.one(
-            'SELECT COUNT(*) as cnt FROM collections WHERE userid = ?', [id]
-        ) as any;
+        const collectionBonus = await getCollectionBonus(id);
 
         let drinkBonuses = null;
         if (user.activedrink) {
@@ -49,7 +47,6 @@ router.get('/players/:id/loadout', authMiddleware, async (req, res) => {
 
         const base = { s: +user.bases, a: +user.basea, d: +user.based, m: +user.basem };
         const equipment = JSON.parse(user.equipment || '{}');
-        const collectionBonus = parseInt(collCnt?.cnt || '0');
         const stats = currentStats(base, equipment, drinkBonuses, collectionBonus);
 
         res.json({
