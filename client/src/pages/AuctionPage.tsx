@@ -208,7 +208,7 @@ export default function AuctionPage() {
         if (searchTimer.current) clearTimeout(searchTimer.current);
         searchTimer.current = setTimeout(() => load(1), 300);
         return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-    }, [auctionSearch, category, sort]);
+    }, [auctionSearch, category, sort, groupPage]);
 
     useEffect(() => {
         const handler = () => load(page);
@@ -579,8 +579,8 @@ export default function AuctionPage() {
                         </>
                     )}
 
-                    {/* List view (or group-filtered) */}                    {/* Top pagination */}
-                    {totalPages > 1 && renderPagination()}
+                    {/* List view (or group-filtered) — Top pagination (только не в режиме групп) */}
+                    {(viewMode !== 'groups' || groupFilter) && totalPages > 1 && renderPagination()}
 
                     {loading ? (
                         <p className="text-sm text-[var(--color-text-muted)] text-center py-8">Загрузка...</p>
@@ -667,8 +667,8 @@ export default function AuctionPage() {
                         })
                         })() )}
 
-                    {/* Bottom pagination */}
-                    {renderPagination()}
+                    {/* Bottom pagination (только не в режиме групп) */}
+                    {(viewMode !== 'groups' || groupFilter) && renderPagination()}
                 </>
             )}
 
