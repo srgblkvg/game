@@ -108,7 +108,7 @@ export default function GuildViewPage() {
                                 )}
                                 <div className="flex gap-4 mt-2 text-xs text-[var(--color-text-muted)] flex-wrap">
                                     <span>👑 {guild.leaderName}</span>
-                                    <span>👥 {guild.memberCount} уч.</span>
+                                    <span>👥 {guild.memberCount}/20 уч.</span>
                                     <span>
                                         {guild.joinType === 'open' ? '🔓 Открытая' : guild.joinType === 'request' ? '📝 По заявке' : '🔒 По приглашению'}
                                     </span>
@@ -169,7 +169,7 @@ export default function GuildViewPage() {
                     )}
 
                     <Card>
-                        <h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3>
+                        <h3 className="font-bold text-sm mb-2">Участники ({members.length}/20)</h3>
                         <div className="space-y-1">
                             {[...members].sort((a: any, b: any) => {
                                 const rankOrder = (r: string) => r === 'leader' ? 0 : r === 'officer' ? 1 : 2;

@@ -70,7 +70,7 @@ export default function RatingBlock() {
                                     {i + 1}. {g.name}
                                 </span>
                                 <span className="text-xs text-[var(--color-text-muted)]">
-                                    Ур.{g.level} · {g.memberCount} уч.
+                                    Ур.{g.level} · {g.memberCount}/20 уч.
                                 </span>
                             </li>
                         ))}

@@ -176,7 +176,7 @@ export default function GuildPage() {
             </Card>}
             <h3 className="font-bold text-sm mb-2">Гильдии</h3>
             {guildList.map((g:any)=>(<Card key={g.id} className="mb-2"><div className="flex justify-between items-center">
-                <div><h4 className="font-bold text-sm">{g.name}</h4><p className="text-xs text-[var(--color-text-muted)]">Ур.{g.level} • {g.memberCount} уч.</p></div>
+                <div><h4 className="font-bold text-sm">{g.name}</h4><p className="text-xs text-[var(--color-text-muted)]">Ур.{g.level} • {g.memberCount}/20 уч.</p></div>
                 <Button size="md" onClick={()=>handleJoin(g.id,g.joinType)}>{g.joinType==='open'?'Вступить':'Заявка'}</Button></div></Card>))}
         </div>);
     }
@@ -193,7 +193,7 @@ export default function GuildPage() {
         <Card className="mb-4"><div className="flex justify-between items-start"><div className="flex gap-3">
             {guild.image ? <img src={guild.image} alt="Герб" className="w-14 h-14 object-cover rounded border-2 border-[var(--color-accent-gold)]"/> :
                 <div className="w-14 h-14 rounded border-2 border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[0.5rem] text-[var(--color-text-muted)]">герб</div>}
-            <div><h2 className="font-bold text-lg">🏚️ {guild.name}</h2><p className="text-xs text-[var(--color-text-muted)]">Ур.{guild.level} • {members.length} уч.{taxRate > 0 ? ` • Налог ${taxRate}%` : ''} • 💰 {treasuryBalance.toLocaleString()}</p>
+            <div><h2 className="font-bold text-lg">🏚️ {guild.name}</h2><p className="text-xs text-[var(--color-text-muted)]">Ур.{guild.level} • {members.length}/20 уч.{taxRate > 0 ? ` • Налог ${taxRate}%` : ''} • 💰 {treasuryBalance.toLocaleString()}</p>
                 <ExpBar exp={guild.exp||0} level={guild.level||1}/></div></div>
             <div className="flex gap-1"><Button variant="secondary" size="md" onClick={()=>navigate('/guild/rating')}>Рейтинг</Button>
                 <Button variant="secondary" size="md" onClick={handleLeave}>Покинуть</Button></div></div>
@@ -284,7 +284,7 @@ export default function GuildPage() {
                 {requests.length>0&&<div className="mt-3"><h4 className="text-xs font-bold mb-1">Заявки ({requests.length})</h4>{requests.map((r:any)=>(<div key={r.id} className="flex justify-between py-1 text-xs"><span>{r.username}</span>
                     <div className="flex gap-1"><Button size="md" onClick={()=>handleRequest(r.id,true)}>✓</Button><Button size="md" variant="secondary" onClick={()=>handleRequest(r.id,false)}>✗</Button></div></div>))}</div>}
                 {myRank==='leader'&&<div className="mt-2"><Button size="md" variant="secondary" onClick={handleCancelInvites}>Отменить приглашения</Button></div>}</Card>)}
-            <Card><h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3><div className="space-y-1">
+            <Card><h3 className="font-bold text-sm mb-2">Участники ({members.length}/20)</h3><div className="space-y-1">
                 {[...members].sort((a:any,b:any)=>{
                     const rankOrder = (r:string)=>r==='leader'?0:r==='officer'?1:2;
                     const ro = rankOrder(a.rank)-rankOrder(b.rank);
