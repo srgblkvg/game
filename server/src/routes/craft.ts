@@ -236,9 +236,11 @@ router.post('/craft/upgrade', async (req, res) => {
         return res.status(400).json({ error: 'Нужно ровно два слота: предмет и камень усиления' });
     }
 
-    const [itemSlot, stoneSlot] = slots;
+    // Определяем предмет и камень независимо от порядка
+    const itemSlot = slots.find((s: any) => s && !isCraftItem(s));
+    const stoneSlot = slots.find((s: any) => s && isCraftItem(s) && s.itemType === 'upgrade');
 
-    if (!itemSlot || isCraftItem(itemSlot) || !stoneSlot || !isCraftItem(stoneSlot) || stoneSlot.itemType !== 'upgrade') {
+    if (!itemSlot || !stoneSlot) {
         return res.status(400).json({ error: 'Положите предмет и камень усиления' });
     }
 
