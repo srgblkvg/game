@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "../../db/index";
 import { broadcast } from "../../events";
+import { isGuildAtWar } from "./guildWar";
 
 const router = Router();
 
@@ -78,6 +79,7 @@ router.post('/guild/join/:id', async (req, res) => {
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
     if (guild.joinType !== 'open') return res.status(400).json({ error: 'Гильдия доступна только по заявке или приглашению' });
     if (await checkGuildFull(guildId)) return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
+    if (await isGuildAtWar(guildId)) return res.status(400).json({ error: 'Нельзя вступить в гильдию во время войны' });
 
     await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'member']);
     await db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
@@ -96,6 +98,7 @@ router.post('/guild/request/:id', async (req, res) => {
     const guild = await db.one('SELECT * FROM guilds WHERE id = ?', [guildId]) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
     if (guild.joinType !== 'request') return res.status(400).json({ error: 'Эта гильдия не принимает заявки' });
+    if (await isGuildAtWar(guildId)) return res.status(400).json({ error: 'Нельзя подать заявку в гильдию во время войны' });
 
     const existing = await db.one(
         "SELECT id FROM guild_invites WHERE guildId = ? AND userId = ? AND status = 'pending'",
@@ -116,6 +119,7 @@ router.post('/guild/invite', async (req, res) => {
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!member) return res.status(400).json({ error: 'Вы не состоите в гильдии' });
     if (member.rank !== 'leader' && member.rank !== 'officer') return res.status(400).json({ error: 'Только лидер и офицеры могут приглашать' });
+    if (await isGuildAtWar(member.guildId)) return res.status(400).json({ error: 'Нельзя приглашать игроков во время войны' });
 
     const target = await db.one('SELECT id, username, guildId FROM users WHERE id = ?', [targetId]) as any;
     if (!target) return res.status(404).json({ error: 'Игрок не найден' });
@@ -171,6 +175,7 @@ router.post('/guild/accept-invite', async (req, res) => {
         const alreadyInGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]) as any;
         if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
         if (await checkGuildFull(guildId)) return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
+        if (await isGuildAtWar(guildId)) return res.status(400).json({ error: 'Нельзя вступить в гильдию во время войны' });
 
         await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'member']);
         await db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
@@ -194,6 +199,8 @@ router.post('/guild/invite/:id', async (req, res) => {
     if (accept) {
         const alreadyInGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]) as any;
         if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
+        if (await checkGuildFull(invite.guildId)) return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
+        if (await isGuildAtWar(invite.guildId)) return res.status(400).json({ error: 'Нельзя вступить в гильдию во время войны' });
 
         await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [invite.guildId, userId, 'member']);
         await db.run('UPDATE users SET guildId = ? WHERE id = ?', [invite.guildId, userId]);
@@ -225,6 +232,7 @@ router.post('/guild/handle-request', async (req, res) => {
         const targetGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [invite.userId]) as any;
         if (targetGuild?.guildId) return res.status(400).json({ error: 'Игрок уже в гильдии' });
         if (await checkGuildFull(member.guildId)) return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
+        if (await isGuildAtWar(member.guildId)) return res.status(400).json({ error: 'Нельзя принять игрока во время войны' });
 
         await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [member.guildId, invite.userId, 'member']);
         await db.run('UPDATE users SET guildId = ? WHERE id = ?', [member.guildId, invite.userId]);
@@ -249,6 +257,7 @@ router.post('/guild/kick', async (req, res) => {
     if (!target) return res.status(400).json({ error: 'Игрок не в гильдии' });
     if (target.rank === 'leader') return res.status(400).json({ error: 'Нельзя исключить лидера' });
     if (actor.rank === 'officer' && target.rank === 'officer') return res.status(400).json({ error: 'Офицер не может исключить другого офицера' });
+    if (await isGuildAtWar(actor.guildId)) return res.status(400).json({ error: 'Нельзя исключать участников во время войны' });
 
     await db.run('DELETE FROM guild_members WHERE guildId = ? AND userId = ?', [actor.guildId, targetId]);
     await db.run('UPDATE users SET guildId = NULL WHERE id = ?', [targetId]);
