@@ -44,7 +44,7 @@ export default function HealthBar({ currentHp, maxHp, compact, showRegenHint, re
       </div>
       {showRegenHint && currentHp < maxHp && (
         <div className={`${hintFontSize} text-[var(--color-text-muted)] mt-[2px]`}>
-          +{regenRate} HP / 10 сек &mdash; полное через {formatRegenTime()}
+          +{(regenRate / 10).toFixed(1).replace(/\.0$/, '')} HP/сек &mdash; полное через {formatRegenTime()}
         </div>
       )}
     </div>
