@@ -4,6 +4,13 @@ import { broadcast } from "../../events";
 
 const router = Router();
 
+const MAX_MEMBERS = 20;
+
+async function checkGuildFull(guildId: number): Promise<boolean> {
+    const cnt = await db.one('SELECT COUNT(*) as cnt FROM guild_members WHERE guildId = ?', [guildId]) as any;
+    return (cnt?.cnt || 0) >= MAX_MEMBERS;
+}
+
 router.get('/guild/requests', async (req, res) => {
     const userId = req.userId;
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
@@ -70,6 +77,7 @@ router.post('/guild/join/:id', async (req, res) => {
     const guild = await db.one('SELECT * FROM guilds WHERE id = ?', [guildId]) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
     if (guild.joinType !== 'open') return res.status(400).json({ error: 'Гильдия доступна только по заявке или приглашению' });
+    if (await checkGuildFull(guildId)) return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
 
     await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'member']);
     await db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
@@ -162,6 +170,7 @@ router.post('/guild/accept-invite', async (req, res) => {
     if (accept) {
         const alreadyInGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]) as any;
         if (alreadyInGuild?.guildId) return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
+        if (await checkGuildFull(guildId)) return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
 
         await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'member']);
         await db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
@@ -215,6 +224,7 @@ router.post('/guild/handle-request', async (req, res) => {
     if (accept) {
         const targetGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [invite.userId]) as any;
         if (targetGuild?.guildId) return res.status(400).json({ error: 'Игрок уже в гильдии' });
+        if (await checkGuildFull(member.guildId)) return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
 
         await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [member.guildId, invite.userId, 'member']);
         await db.run('UPDATE users SET guildId = ? WHERE id = ?', [member.guildId, invite.userId]);
