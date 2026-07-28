@@ -297,20 +297,24 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     const finishBattle = () => {
         if (!battleResult) return;
         const statsGained = (battleResult.levelsGained || 0) * 5;
-        setCharacter({
-            ...character,
+        setCharacter((prev: any) => ({
+            ...prev!,
             currentHp: Math.max(0, battleResult.hpAfter),
             level: battleResult.newLevel,
             exp: battleResult.newExp,
-            statPoints: (character.statPoints || 0) + statsGained,
-            money: battleResult.moneyAfter ?? character.money,
-            totalBattles: character.totalBattles + 1,
-            wins: battleResult.winnerId === userId ? character.wins + 1 : character.wins,
-        });
-        // Полное обновление с сервера (ELO, рейтинги, etc.)
-        import('../api/character').then(m => m.fetchCharacter().then(setCharacter).catch(() => {}));
+            statPoints: (prev!.statPoints || 0) + statsGained,
+            money: battleResult.moneyAfter ?? prev!.money,
+            totalBattles: prev!.totalBattles + 1,
+            wins: battleResult.winnerId === userId ? prev!.wins + 1 : prev!.wins,
+        }));
+        // Полное обновление с сервера (ELO, рейтинги, etc.) — после него снимаем флаг
+        import('../api/character').then(m => m.fetchCharacter().then(c => {
+            setCharacter(c);
+            (window as any).__battling = false;
+        }).catch(() => {
+            (window as any).__battling = false;
+        }));
         window.dispatchEvent(new CustomEvent('battleEnd'));
-        (window as any).__battling = false;
     };
 
     return {
