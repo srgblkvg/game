@@ -2,6 +2,12 @@
 import { db } from '../db/index';
 import { pickBotName, releaseBotName } from './botNames';
 
+const DIV_LABEL: Record<string, string> = {
+    copper: 'Медный', bronze: 'Бронзовый', iron: 'Железный', steel: 'Стальной',
+    silver: 'Серебряный', gold: 'Золотой', platinum: 'Платиновый',
+    mithril: 'Мифриловый', adamant: 'Адамантиновый', orichalcum: 'Орихалковый',
+};
+
 const API_BASE = `http://localhost:${process.env.PORT || 3001}/api`;
 
 interface BotAccount { id: number; username: string; token: string; active: boolean; }
@@ -480,7 +486,7 @@ async function doTournament(token: string, botId: number, state: BotState) {
       }
       await apiCall(token, 'POST', '/tournament/register', body);
       const label = t.type === 'official'
-        ? (t.division || 'официальный')
+        ? (DIV_LABEL[t.division] || t.division || 'официальный')
         : (t.name || 'кастомный');
       joined.push(`${label}${entryFee > 0 ? ` (взнос ${entryFee} серебра)` : ''}`);
     } catch (e: any) {

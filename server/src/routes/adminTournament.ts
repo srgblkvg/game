@@ -1,6 +1,13 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 
+const DIVISION_LABELS: Record<string, string> = {
+    copper: 'Медный', bronze: 'Бронзовый', iron: 'Железный', steel: 'Стальной',
+    silver: 'Серебряный', gold: 'Золотой', platinum: 'Платиновый',
+    mithril: 'Мифриловый', adamant: 'Адамантиновый', orichalcum: 'Орихалковый',
+};
+function divisionLabel(key: string) { return DIVISION_LABELS[key] || key; }
+
 const router = Router();
 
 const DIVISIONS = [
@@ -82,7 +89,7 @@ router.post('/tournaments/:id/finish', async (req, res) => {
     const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [id]) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });
     await db.run('UPDATE tournaments SET status = ?, completedAt = ? WHERE id = ?', ['completed', new Date().toISOString(), id]);
-    res.json({ success: true, message: `Турнир «${t.division}» завершён` });
+    res.json({ success: true, message: `Турнир «${divisionLabel(t.division)}» завершён` });
 });
 
 // Запустить турнир (in_progress)
@@ -91,7 +98,7 @@ router.post('/tournaments/:id/start', async (req, res) => {
     const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [id]) as any;
     if (!t) return res.status(404).json({ error: 'Турнир не найден' });
     await db.run('UPDATE tournaments SET status = ? WHERE id = ?', ['in_progress', id]);
-    res.json({ success: true, message: `Турнир «${t.division}» запущен` });
+    res.json({ success: true, message: `Турнир «${divisionLabel(t.division)}» запущен` });
 });
 
 export default router;
