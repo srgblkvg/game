@@ -25,6 +25,9 @@ export default function RegisterPage() {
     const handleRegister = async () => {
         try {
             setError('');
+            if (password.length < 8) { setError('Пароль: минимум 8 символов'); return; }
+            if (!/[0-9]/.test(password)) { setError('Пароль должен содержать хотя бы одну цифру'); return; }
+            if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password)) { setError('Пароль должен содержать хотя бы один спецсимвол'); return; }
             setLoading(true);
             await register(username, email, password);
             setStep('code');

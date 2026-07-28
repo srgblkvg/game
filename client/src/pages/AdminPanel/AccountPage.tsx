@@ -51,6 +51,14 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
             setGuestMsg('Пароль: минимум 8 символов');
             return;
         }
+        if (!/[0-9]/.test(guestPassword)) {
+            setGuestMsg('Пароль должен содержать хотя бы одну цифру');
+            return;
+        }
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(guestPassword)) {
+            setGuestMsg('Пароль должен содержать хотя бы один спецсимвол');
+            return;
+        }
         try {
             setGuestLoading(true);
             // Отправляем код на почту (обновляет emailCode у существующего гостя)
@@ -94,6 +102,9 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
 
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault(); setPasswordMsg('');
+        if (newPassword.length < 8) { setPasswordMsg('Пароль: минимум 8 символов'); return; }
+        if (!/[0-9]/.test(newPassword)) { setPasswordMsg('Пароль должен содержать хотя бы одну цифру'); return; }
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(newPassword)) { setPasswordMsg('Пароль должен содержать хотя бы один спецсимвол'); return; }
         try {
             await changePassword(oldPassword, newPassword);
             setOldPassword(''); setNewPassword(''); setPasswordMsg('Пароль успешно изменён');
