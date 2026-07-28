@@ -200,8 +200,7 @@ export default function GuildViewPage() {
                         <p className="text-sm mb-2">Противник: <span className="font-bold text-[var(--color-accent-danger)]">{guild.name}</span></p>
                         <div className="text-xs text-[var(--color-text-muted)] space-y-1.5 mb-4">
                             <p className="font-bold text-[var(--color-text-primary)]">Как проходит война:</p>
-                            <p>• ⏳ <b>24 часа</b> на ответ противника</p>
-                            <p>• ⚔️ После принятия — <b>24 часа</b> боёв</p>
+                            <p>• ⚔️ Война начинается <b>сразу</b> и длится <b>72 часа</b></p>
                             <p>• 🛡️ Каждый участник может быть атакован до <b>5 раз</b></p>
                             <p>• ⚔️ Каждый участник может атаковать до <b>3 раз</b></p>
                             <p>• 🏆 Побеждает гильдия с наибольшим счётом побед</p>
