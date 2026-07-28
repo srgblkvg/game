@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { checkAchievement } from './achievements';
 
 const router = Router();
 
@@ -116,6 +117,7 @@ router.post('/collections/add', async (req, res) => {
         'INSERT INTO collections (userId, itemName, slot, rarity_id) VALUES (?, ?, ?, ?)',
         [userId, itemName, slot, removed.rarity_id || 0]
     );
+    checkAchievement(userId, 'collection').catch(() => {});
 
     res.json({ success: true, removed });
 });

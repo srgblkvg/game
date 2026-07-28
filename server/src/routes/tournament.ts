@@ -5,6 +5,7 @@ import { getBaseStats, enrichEquipment, addMoney, getCollectionBonus } from '../
 import { currentStats } from '../game/stats';
 import { broadcast } from '../events';
 import { getDrinkBonuses } from '../game/drinks';
+import { checkAchievement } from './achievements';
 
 const router = Router();
 
@@ -362,6 +363,7 @@ async function finishTournament(tournamentId: number) {
     await db.run('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?',
         [JSON.stringify({ place: 1, prize: firstPrize }), tournamentId, winnerId]);
     await db.run('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?', [winnerId]);
+    checkAchievement(winnerId, 'tournament').catch(() => {});
     if (secondPlaceId) {
         await db.run('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?',
             [JSON.stringify({ place: 2, prize: secondPrize }), tournamentId, secondPlaceId]);
@@ -473,6 +475,7 @@ async function finishTournamentTx(client: any, tournamentId: number) {
     await client.query('UPDATE tournament_participants SET snapshotstats = $1 WHERE tournamentid = $2 AND userid = $3',
         [JSON.stringify({ place: 1, prize: firstPrize }), tournamentId, winnerId]);
     await client.query('UPDATE users SET tournamentwins = tournamentwins + 1 WHERE id = $1', [winnerId]);
+    checkAchievement(winnerId, 'tournament').catch(() => {});
     if (secondPlaceId) {
         await client.query('UPDATE tournament_participants SET snapshotstats = $1 WHERE tournamentid = $2 AND userid = $3',
             [JSON.stringify({ place: 2, prize: secondPrize }), tournamentId, secondPlaceId]);

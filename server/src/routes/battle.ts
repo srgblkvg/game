@@ -113,6 +113,12 @@ router.post('/battle', async (req, res) => {
         sendLeaderboardLevel(attacker.id, attExp.newLevel, String(attacker.oauthId)).catch(() => {});
     }
 
+    // Достижения — победитель (атакующий или защитник)
+    if (attackerWins) {
+        checkAchievement(attacker.id, 'pvp_wins').catch(() => {});
+        if (moneyStolen > 0) trackIncome(attacker.id, moneyStolen).catch(() => {});
+    }
+
     // --- Обновление защитника ---
     const defExp = await applyExp(defender.id, result.winnerId === defender.id ? result.expGained : 0, defender.exp, defender.level, defender.statPoints || 0);
 

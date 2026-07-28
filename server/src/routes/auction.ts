@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { checkAchievement } from './achievements';
 import { markDirty, pushNotification, broadcast, sendToUser } from '../events';
 import { addToOverflow, isInventoryFull } from './overflow';
 import { addToTreasury } from '../game/treasury';
@@ -111,6 +112,7 @@ router.get('/auction', async (req, res) => {
         const payout = lot.currentBid - commission;
         // Заплатить продавцу
         await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+        checkAchievement(lot.sellerId, 'auction').catch(() => {});
         // Отдать предмет покупателю (или overflow)
         const buyItemData = JSON.parse(lot.itemData);
         await returnItemToInventory(lot.currentBidderId, buyItemData);
@@ -456,6 +458,7 @@ router.post('/auction/buyout', async (req, res) => {
 
     await db.run('UPDATE users SET money = money - ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [lot.buyoutPrice, userId]);
     await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+    checkAchievement(lot.sellerId, 'auction').catch(() => {});
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
     await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
     broadcast('auction_message_removed', { lotId });
@@ -565,6 +568,7 @@ router.post('/auction/buy-partial', async (req, res) => {
     // Списываем деньги покупателю и начисляем продавцу
     await db.run('UPDATE users SET money = money - ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [cost, userId]);
     await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+    checkAchievement(lot.sellerId, 'auction').catch(() => {});
 
     // Daily quests — track auction trades
     markDirty(userId, 'quests');

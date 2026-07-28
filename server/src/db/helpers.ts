@@ -218,5 +218,9 @@ export function applyExp(userId: number, expGain: number, currentExp: number, cu
     gained++;
   }
   const sp = currentStatPoints + gained * STAT_POINTS_PER_LEVEL;
+  // Достижение за уровень
+  if (gained > 0) {
+    import('../routes/achievements').then(m => m.checkAchievement(userId, 'level', gained)).catch(() => {});
+  }
   return { newExp: exp, newLevel: level, levelsGained: gained, newStatPoints: sp };
 }
