@@ -50,27 +50,29 @@ export default function ConflictsPage() {
 
                         return (
                             <Card key={war.id} className="p-4">
-                                <div className="flex items-center justify-between gap-3 mb-2">
+                                {/* Гильдии и VS */}
+                                <div className="flex items-center justify-center gap-4 mb-3">
                                     <span
-                                        className="text-sm font-bold cursor-pointer hover:text-[var(--color-accent-info)] truncate"
+                                        className="text-sm font-bold cursor-pointer hover:text-[var(--color-accent-info)] text-right flex-1 truncate"
                                         onClick={() => navigate(`/guild/${war.attackerGuild.id}`)}
                                     >{war.attackerGuild.name}</span>
-                                    <span className="text-lg font-bold text-[var(--color-accent-danger)]">VS</span>
+                                    <span className="text-lg font-bold text-[var(--color-accent-danger)] flex-shrink-0">VS</span>
                                     <span
-                                        className="text-sm font-bold cursor-pointer hover:text-[var(--color-accent-info)] truncate"
+                                        className="text-sm font-bold cursor-pointer hover:text-[var(--color-accent-info)] text-left flex-1 truncate"
                                         onClick={() => navigate(`/guild/${war.defenderGuild.id}`)}
                                     >{war.defenderGuild.name}</span>
                                 </div>
-                                <div className="flex items-center justify-between gap-2 mb-2">
+                                {/* Счёт по центру */}
+                                <div className="flex items-center justify-center gap-3 mb-2">
                                     <span className={`text-xl font-bold ${war.attackerScore > war.defenderScore ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
                                         {war.attackerScore}
                                     </span>
-                                    <span className="text-xs text-[var(--color-text-muted)]">Счёт</span>
+                                    <span className="text-sm text-[var(--color-text-muted)]">—</span>
                                     <span className={`text-xl font-bold ${war.defenderScore > war.attackerScore ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
                                         {war.defenderScore}
                                     </span>
                                 </div>
-                                <div className="text-[0.65rem] text-[var(--color-text-muted)] text-right">
+                                <div className="text-[0.65rem] text-[var(--color-text-muted)] text-center">
                                     {expiresIn > 0
                                         ? `До конца: ${hoursLeft}ч ${minsLeft}м`
                                         : 'Завершается...'}
