@@ -268,7 +268,8 @@ export default function BestiaryPage() {
       pendingDropsRef.current = [];
     }
     window.dispatchEvent(new CustomEvent('battleEnd'));
-    (window as any).__battling = false;
+    // Снимаем флаг после обработки setCharacter (через microtask)
+    setTimeout(() => { (window as any).__battling = false; }, 0);
   }, [setCharacter, showAcquire]);
 
   const nextStep = useCallback(async () => {
