@@ -32,11 +32,12 @@ function verifyLaunchParams(launchParams: string, sign: string): boolean {
 
 // POST /api/auth/vk-bridge — вход через параметры запуска VK
 router.post('/vk-bridge', async (req: Request, res: Response) => {
-  const { vkUserId, sign, launchParams, vkUserInfo } = req.body as {
+  const { vkUserId, sign, launchParams, vkUserInfo, linkToken } = req.body as {
     vkUserId?: string;
     sign?: string;
     launchParams?: string;
     vkUserInfo?: { first_name?: string; last_name?: string; photo_200?: string; sex?: number };
+    linkToken?: string;
   };
 
   if (!vkUserId || !sign) {
@@ -51,6 +52,51 @@ router.post('/vk-bridge', async (req: Request, res: Response) => {
 
   try {
     const now = Math.floor(Date.now() / 1000);
+
+    // Если передан linkToken — привязываем VK к существующему аккаунту
+    if (linkToken) {
+      try {
+        const linkDecoded: any = jwt.verify(linkToken, JWT_SECRET);
+        if (linkDecoded.userId) {
+          const linkUser: any = await db.one('SELECT id, username, level FROM users WHERE id = ?', [linkDecoded.userId]);
+          if (linkUser) {
+            // Проверяем, не привязан ли уже этот VK ID к другому пользователю
+            const oauthTaken = await db.one(
+              "SELECT id FROM users WHERE oauthProvider = 'vk' AND oauthId = ? AND id != ?",
+              [vkUserId, linkDecoded.userId],
+            );
+            if (oauthTaken) {
+              // VK уже привязан к другому — логинимся в него
+              logger.warn({ vkUserId, linkUserId: linkDecoded.userId, takenBy: oauthTaken.id }, '[VK Bridge] VK already linked to another user');
+              await db.run('UPDATE users SET lastLoginAt = ? WHERE id = ?', [now, oauthTaken.id]);
+              const takenUser: any = await db.one('SELECT username FROM users WHERE id = ?', [oauthTaken.id]);
+              const token = jwt.sign(
+                { userId: oauthTaken.id, role: 'player', username: takenUser.username, jti: crypto.randomUUID() },
+                JWT_SECRET, { expiresIn: '7d' },
+              );
+              auditLoginSuccess(takenUser.username, oauthTaken.id);
+              return res.json({ token, user: { id: oauthTaken.id, username: takenUser.username, role: 'player' } });
+            }
+
+            // Привязываем VK к существующему аккаунту
+            await db.run(
+              "UPDATE users SET oauthProvider = 'vk', oauthId = ?, lastLoginAt = ?, isGuest = 0 WHERE id = ?",
+              [vkUserId, now, linkDecoded.userId],
+            );
+            logger.info({ vkUserId, linkUserId: linkDecoded.userId, username: linkUser.username }, '[VK Bridge] VK linked to existing account');
+
+            const token = jwt.sign(
+              { userId: linkUser.id, role: 'player', username: linkUser.username, jti: crypto.randomUUID() },
+              JWT_SECRET, { expiresIn: '7d' },
+            );
+            auditLoginSuccess(linkUser.username, linkUser.id);
+            return res.json({ token, user: { id: linkUser.id, username: linkUser.username, role: 'player' } });
+          }
+        }
+      } catch (err: any) {
+        logger.warn({ linkTokenErr: err.message }, '[VK Bridge] Invalid linkToken, falling back to normal flow');
+      }
+    }
 
     // Ищем существующего пользователя
     const existing: any = await db.one(
