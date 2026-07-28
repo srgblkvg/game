@@ -65,6 +65,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               if (data.quests) {
                 window.dispatchEvent(new CustomEvent('questsUpdate', { detail: data.quests }));
               }
+              // HP-реген
+              if (data.type === 'hpUpdate') {
+                window.dispatchEvent(new CustomEvent('hpTick', { detail: { currentHp: data.currentHp, lastHpUpdate: data.lastHpUpdate } }));
+              }
               // Рейтинг
               if (data.rating) {
                 window.dispatchEvent(new CustomEvent('ratingUpdate', { detail: data.rating }));

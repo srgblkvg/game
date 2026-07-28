@@ -38,7 +38,8 @@ export async function applyHpRegen(user: {
 
     const elapsed = now - (user.lastHpUpdate || now);
     if (elapsed > 0 && hp < maxHp) {
-        const regenAmount = Math.floor(elapsed / HP_REGEN_SECONDS) * regenRate;
+        // Непрерывный реген: дробные тики, HP целое
+        const regenAmount = Math.floor(elapsed * regenRate / HP_REGEN_SECONDS);
         if (regenAmount > 0) {
             hp = Math.min(maxHp, hp + regenAmount);
         }
@@ -47,8 +48,14 @@ export async function applyHpRegen(user: {
     if (hp > maxHp) hp = maxHp;
 
     if (hp !== user.currentHp) {
+        // Сохраняем остаток времени для точности
+        const usedTicks = Math.floor(elapsed * regenRate / HP_REGEN_SECONDS);
+        const usedSeconds = Math.ceil(usedTicks * HP_REGEN_SECONDS / regenRate);
         await db.run('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?',
-            [hp, now - (elapsed % HP_REGEN_SECONDS), user.id]);
+            [hp, (user.lastHpUpdate || now) + usedSeconds, user.id]);
+        // WS-уведомление клиенту
+        const newLastHp = (user.lastHpUpdate || now) + usedSeconds;
+        import('../events').then(m => m.sendToUser(user.id, { type: 'hpUpdate', currentHp: hp, maxHp, lastHpUpdate: newLastHp })).catch(() => {});
     }
 
     return hp;
