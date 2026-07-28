@@ -49,6 +49,38 @@ export async function checkAchievement(userId: number, trackKey: string, increme
     return null;
 }
 
+// Set achievement progress to an absolute value (not increment) — for tracks like level
+export async function setAchievementProgress(userId: number, trackKey: string, value: number): Promise<void> {
+    const track = TRACK_MAP.get(trackKey);
+    if (!track) return;
+
+    // Upsert with SET progress = value
+    await db.run(
+        `INSERT INTO user_achievements (user_id, track, progress, highest_tier, achieved_at)
+         VALUES ($1, $2, $3, 0, '{}'::jsonb)
+         ON CONFLICT (user_id, track) DO UPDATE SET progress = $3`,
+        [userId, trackKey, value]
+    );
+
+    const row = await db.one(
+        'SELECT progress, highest_tier, achieved_at FROM user_achievements WHERE user_id = $1 AND track = $2',
+        [userId, trackKey]
+    ) as any;
+
+    const progress = row.progress || 0;
+    const highestTier = row.highest_tier || 0;
+
+    const currentTier = getTrackTier(track, progress);
+    if (currentTier && currentTier.tier > highestTier) {
+        const achievedAt = row.achieved_at || {};
+        achievedAt[String(currentTier.tier)] = new Date().toISOString();
+        await db.run(
+            'UPDATE user_achievements SET highest_tier = $1, achieved_at = $2 WHERE user_id = $3 AND track = $4',
+            [currentTier.tier, JSON.stringify(achievedAt), userId, trackKey]
+        );
+    }
+}
+
 // Get all achievements for a user
 router.get('/achievements', async (req, res) => {
     const userId = req.userId;
