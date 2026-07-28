@@ -28,79 +28,21 @@ const GUILD_QUEST_DIFFICULTIES = {
     hard:   { label: '⭐⭐⭐ Сложный', xpMin: 7, xpMax: 10, reqMult: 8 },
 } as const;
 
-/** Обновить прогресс активного квеста гильдии и разослать по WS */
-export async function updateGuildQuestProgress(guildId: number) {
+/** Обновить прогресс активного квеста гильдии и разослать по WS.
+ *  increment — на сколько увеличить прогресс (опционально, по умолчанию 1).
+ *  Без снапшотов — просто инкремент, не зависит от состава гильдии. */
+export async function updateGuildQuestProgress(guildId: number, increment: number = 1) {
     const activeQuest = await db.one(
         "SELECT * FROM guild_quests WHERE guildId = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
         [guildId]
     ) as any;
     if (!activeQuest) return;
 
-    // Снапшот: { memberId: значение_на_старте } или { _treasury: ... } для donate
-    const snap = JSON.parse(activeQuest.snapshot || '{}');
-    const members = await db.query('SELECT userId FROM guild_members WHERE guildId = ?', [guildId]) as any[];
-    const currentMemberIds = new Set(members.map((m: any) => m.userId));
-
-    // Собираем ID всех, кто был в снапшоте (текущие + ушедшие)
-    const allMemberIds = new Set<number>();
-    for (const key of Object.keys(snap)) {
-        if (key !== '_treasury') allMemberIds.add(Number(key));
-    }
-
-    if (activeQuest.questType === 'donate') {
-        // Донат: прогресс = казна_сейчас - казна_на_старте, не зависит от игроков
-        const g = await db.one('SELECT treasury FROM guilds WHERE id = ?', [guildId]) as any;
-        const currentValue = Math.max(0, (g?.treasury || 0) - (snap._treasury || 0));
-        const newProgress = Math.min(currentValue, activeQuest.requirement);
+    if (increment > 0) {
+        const newProgress = Math.min(activeQuest.progress + increment, activeQuest.requirement);
         if (newProgress !== activeQuest.progress) {
             await db.run('UPDATE guild_quests SET progress = ? WHERE id = ?', [newProgress, activeQuest.id]);
             activeQuest.progress = newProgress;
-        }
-    } else {
-        const field = GUILD_QUEST_INFO[activeQuest.questType as GuildQuestType]?.snapshotFields;
-        if (!field || allMemberIds.size === 0) return;
-
-        // Загружаем текущие значения для ВСЕХ кто был в снапшоте (включая ушедших)
-        const idList = [...allMemberIds];
-        const placeholders = idList.map(() => '?').join(',');
-        const rows = await db.query(
-            `SELECT id, "${field}" FROM users WHERE id IN (${placeholders})`,
-            idList
-        ) as any[];
-
-        const currentMap = new Map<number, number>();
-        for (const r of rows) currentMap.set(r.id, r[field] || 0);
-
-        // Прогресс = сумма дельт по всем участникам (текущим и ушедшим)
-        // Для ушедших: их дельта заморожена (снапшот содержит их значение на момент ухода)
-        let progress = 0;
-        for (const memberId of allMemberIds) {
-            const startValue = snap[String(memberId)] || 0;
-            const currentValue = currentMap.get(memberId) || snap[String(memberId)] || 0;
-            progress += currentValue - startValue;
-        }
-        progress = Math.max(0, progress);
-        const newProgress = Math.min(progress, activeQuest.requirement);
-
-        if (newProgress !== activeQuest.progress) {
-            await db.run('UPDATE guild_quests SET progress = ? WHERE id = ?', [newProgress, activeQuest.id]);
-            activeQuest.progress = newProgress;
-        }
-
-        // Обновляем снапшот: для ушедших замораживаем текущее значение
-        let snapshotChanged = false;
-        const newSnap = { ...snap };
-        for (const memberId of allMemberIds) {
-            if (!currentMemberIds.has(memberId) && currentMap.has(memberId)) {
-                const frozen = currentMap.get(memberId)!;
-                if (newSnap[String(memberId)] !== frozen) {
-                    newSnap[String(memberId)] = frozen;
-                    snapshotChanged = true;
-                }
-            }
-        }
-        if (snapshotChanged) {
-            await db.run('UPDATE guild_quests SET snapshot = ? WHERE id = ?', [JSON.stringify(newSnap), activeQuest.id]);
         }
     }
 
@@ -180,31 +122,10 @@ router.post('/guild/quest/take', async (req, res) => {
     // Отменяем текущее активное
     await db.run("UPDATE guild_quests SET status = 'cancelled' WHERE guildId = ? AND status = 'active'", [member.guildId]);
 
-    // Снапшот: { memberId: значение_на_старте } для каждого игрока
-    const members = await db.query('SELECT userId FROM guild_members WHERE guildId = ?', [member.guildId]) as any[];
-    const userIds = members.map((m: any) => m.userId);
-    const snapshot: any = {};
-
-    if (questType === 'donate') {
-        const g = await db.one('SELECT treasury FROM guilds WHERE id = ?', [member.guildId]) as any;
-        snapshot._treasury = g?.treasury || 0;
-    } else if (userIds.length > 0) {
-        const field = GUILD_QUEST_INFO[questType as GuildQuestType]?.snapshotFields;
-        if (field) {
-            const placeholders = userIds.map(() => '?').join(',');
-            const rows = await db.query(
-                `SELECT id, "${field}" FROM users WHERE id IN (${placeholders})`,
-                userIds
-            ) as any[];
-            for (const r of rows) {
-                snapshot[String(r.id)] = r[field] || 0;
-            }
-        }
-    }
-
+    // Снапшот не нужен — прогресс инкрементируется при каждом действии
     await db.run(
         'INSERT INTO guild_quests (guildId, questType, difficulty, requirement, rewardXp, snapshot) VALUES (?, ?, ?, ?, ?, ?)',
-        [member.guildId, questType, difficulty, requirement, rewardXp, JSON.stringify(snapshot)]
+        [member.guildId, questType, difficulty, requirement, rewardXp, '{}']
     );
 
     // Очищаем сохранённые варианты
