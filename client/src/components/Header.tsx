@@ -338,8 +338,8 @@ export default function Header() {
                                         <div className="border-t border-[var(--color-border-light)] mt-1 pt-1 px-3 py-1.5">
                                             <p className="text-[0.6rem] text-[var(--color-accent-gold)] mb-1">Привяжите аккаунт — 1 день премиума!</p>
                                             <div className="flex gap-1">
-                                                <a href="/api/oauth/yandex" className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#FC3F1D] text-white no-underline">Яндекс</a>
-                                                <a href="/api/oauth/vk" className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#0077FF] text-white no-underline">VK</a>
+                                                <a href={`/api/oauth/yandex?link_token=${encodeURIComponent(localStorage.getItem('token') || '')}`} className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#FC3F1D] text-white no-underline">Яндекс</a>
+                                                <a href={`/api/oauth/vk?link_token=${encodeURIComponent(localStorage.getItem('token') || '')}`} className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#0077FF] text-white no-underline">VK</a>
                                             </div>
                                         </div>
                                     )}

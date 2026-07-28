@@ -148,7 +148,8 @@ router.post('/account/register-guest', async (req, res) => {
     const parsed = registerGuestSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные', details: parsed.error.flatten() });
 
-    const { password, email, code } = parsed.data;
+    const { password, email: rawEmail, code } = parsed.data;
+    const email = rawEmail.toLowerCase().trim();
 
     const emailTaken = await db.one('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
     if (emailTaken) return res.status(400).json({ error: 'Этот email уже используется' });
@@ -159,7 +160,8 @@ router.post('/account/register-guest', async (req, res) => {
     if (!guestUser?.emailCode || guestUser.emailCodeExpires < now) {
         return res.status(400).json({ error: 'Код подтверждения недействителен или истёк. Запросите новый.' });
     }
-    if (guestUser.emailCode !== code) {
+    if (String(guestUser.emailCode) !== String(code)) {
+        logger.warn({ userId, email, expectedCode: String(guestUser.emailCode), receivedCode: String(code) }, 'Guest registration: wrong code');
         return res.status(400).json({ error: 'Неверный код подтверждения' });
     }
 
