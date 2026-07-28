@@ -62,6 +62,7 @@ router.get('/auction/similar', async (req, res) => {
     const name = req.query.name as string;
     const slot = req.query.slot as string;
     const rarity = parseInt(req.query.rarity as string) || 0;
+    const sellCount = parseInt(req.query.sellCount as string) || 1;
     if (!name) return res.json({ count: 0 });
 
     const now = Math.floor(Date.now() / 1000);
@@ -79,13 +80,25 @@ router.get('/auction/similar', async (req, res) => {
 
     if (similar.length === 0) return res.json({ count: 0 });
 
-    const bids = similar.map(l => l.currentBid || l.startPrice);
-    const buyouts = similar.filter(l => l.buyoutPrice).map(l => l.buyoutPrice);
+    // Делим на количество в лоте, чтобы получить цену за 1 шт
+    const getPerUnit = (total: number, itemDataJson: string) => {
+        try {
+            const d = JSON.parse(itemDataJson);
+            const cnt = d.count || 1;
+            return cnt > 1 ? Math.ceil(total / cnt) : total;
+        } catch { return total; }
+    };
+
+    const bids = similar.map(l => getPerUnit(l.currentBid || l.startPrice, l.itemData));
+    const buyouts = similar.filter(l => l.buyoutPrice).map(l => getPerUnit(l.buyoutPrice, l.itemData));
     const avgBid = Math.round(bids.reduce((a, b) => a + b, 0) / bids.length);
     const avgBuyout = buyouts.length > 0 ? Math.round(buyouts.reduce((a, b) => a + b, 0) / buyouts.length) : null;
     const minBid = Math.min(...bids);
 
-    res.json({ count: similar.length, avgBid, avgBuyout, minBid });
+    // Если продавец выставляет >1 шт — показываем цены за 1 шт
+    const perUnit = sellCount > 1;
+
+    res.json({ count: similar.length, avgBid, avgBuyout, minBid, perUnit });
 });
 
 // Все лоты
@@ -204,6 +217,14 @@ router.get('/auction', async (req, res) => {
     }
     const groups = [...groupsMap.values()];
 
+    // Пагинация групп
+    const GROUP_LIMIT = 12;
+    const groupPage = parseInt(req.query.groupPage as string) || 1;
+    const groupTotalCount = groups.length;
+    const groupTotalPages = Math.max(1, Math.ceil(groupTotalCount / GROUP_LIMIT));
+    const groupActualPage = Math.min(groupPage, groupTotalPages);
+    const pagedGroups = groups.slice((groupActualPage - 1) * GROUP_LIMIT, groupActualPage * GROUP_LIMIT);
+
     // Group-фильтр ПОСЛЕ группировки
     if (groupFilter) {
       filtered = filtered.filter((l: any) => {
@@ -226,13 +247,13 @@ router.get('/auction', async (req, res) => {
             const targetPage = Math.floor(idx / limit) + 1;
             if (targetPage !== 1) {
                 const paged = filtered.slice((targetPage - 1) * limit, targetPage * limit);
-                return res.json({ lots: paged, groups, totalCount, totalPages, page: targetPage, myLotCount, highlightLot });
+                return res.json({ lots: paged, groups: pagedGroups, totalCount, totalPages, page: targetPage, myLotCount, highlightLot, groupTotalCount, groupTotalPages, groupPage: groupActualPage });
             }
         }
     }
     const paged = filtered.slice((actualPage - 1) * limit, actualPage * limit);
 
-    res.json({ lots: paged, groups, totalCount, totalPages, page, myLotCount });
+    res.json({ lots: paged, groups: pagedGroups, totalCount, totalPages, page, myLotCount, groupTotalCount, groupTotalPages, groupPage: groupActualPage });
 });
 
 // Создать лот

@@ -167,10 +167,14 @@ export default function AuctionPage() {
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const limit = 10;
+    const [groupPage, setGroupPage] = useState(1);
+    const [groupTotalCount, setGroupTotalCount] = useState(0);
+    const [groupTotalPages, setGroupTotalPages] = useState(1);
+    const GROUP_LIMIT = 12;
 
     // Sell form
     const [sellItemId, setSellItemId] = useState('');
-    const [similarStats, setSimilarStats] = useState<{ count: number; avgBid?: number; avgBuyout?: number | null; minBid?: number } | null>(null);
+    const [similarStats, setSimilarStats] = useState<{ count: number; avgBid?: number; avgBuyout?: number | null; minBid?: number; perUnit?: boolean } | null>(null);
     const [sellCount, setSellCount] = useState(1);
     const [startPrice, setStartPrice] = useState('');
     const [buyoutPrice, setBuyoutPrice] = useState('');
@@ -210,7 +214,7 @@ export default function AuctionPage() {
         const handler = () => load(page);
         window.addEventListener('auctionChanged', handler);
         return () => window.removeEventListener('auctionChanged', handler);
-    }, [page, auctionSearch, category, sort, groupFilter]);
+    }, [page, auctionSearch, category, sort, groupFilter, groupPage]);
 
     const load = async (pg?: number, groupKey?: string) => {
         setLoading(true);
@@ -221,6 +225,8 @@ export default function AuctionPage() {
             const qs = new URLSearchParams();
             qs.set('page', String(p));
             qs.set('limit', String(limit));
+            qs.set('groupPage', String(groupPage));
+            qs.set('groupLimit', String(GROUP_LIMIT));
             if (text) qs.set('search', text);
             if (highlightLotId && p === 1) qs.set('highlightLot', highlightLotId);
             const activeCategory = parsedCategory !== 'all' ? parsedCategory : category;
@@ -237,6 +243,9 @@ export default function AuctionPage() {
             setTotalCount(data.totalCount || 0);
             setTotalPages(data.totalPages || 1);
             setPage(data.page || 1);
+            setGroupTotalCount(data.groupTotalCount || 0);
+            setGroupTotalPages(data.groupTotalPages || 1);
+            setGroupPage(data.groupPage || 1);
             setUserLotCount(data.myLotCount || 0);
         } catch (e: any) { setError(e.message); }
         finally { setLoading(false); }
@@ -276,7 +285,7 @@ export default function AuctionPage() {
             setStartPrice(String(floor));
             setBuyoutPrice('');
             // Запросить статистику похожих лотов
-            const qs = `name=${encodeURIComponent(item.name || '')}&slot=${encodeURIComponent(item.slot || '')}&rarity=${item.rarity_id ?? 0}`;
+            const qs = `name=${encodeURIComponent(item.name || '')}&slot=${encodeURIComponent(item.slot || '')}&rarity=${item.rarity_id ?? 0}&sellCount=${isMaterial ? (item.count || 1) : 1}`;
             fetch(`/api/auction/similar?${qs}`, { headers: getHeaders() })
                 .then(r => r.json()).then(setSimilarStats).catch(() => setSimilarStats(null));
         }
@@ -454,9 +463,9 @@ export default function AuctionPage() {
                     {similarStats && similarStats.count > 0 && (
                         <div className="text-[0.65rem] text-[var(--color-text-muted)] bg-[var(--color-bg-input)] rounded p-2 mb-2 space-y-0.5">
                             <div>Похожих лотов: {similarStats.count}</div>
-                            <div>Мин. ставка: {formatMoney(similarStats.minBid || 0)}</div>
-                            <div>Средняя ставка: {formatMoney(similarStats.avgBid || 0)}</div>
-                            {similarStats.avgBuyout && <div>Средний выкуп: {formatMoney(similarStats.avgBuyout)}</div>}
+                            <div>Мин. ставка: {formatMoney(similarStats.minBid || 0)}{similarStats.perUnit ? ' / шт' : ''}</div>
+                            <div>Средняя ставка: {formatMoney(similarStats.avgBid || 0)}{similarStats.perUnit ? ' / шт' : ''}</div>
+                            {similarStats.avgBuyout && <div>Средний выкуп: {formatMoney(similarStats.avgBuyout)}{similarStats.perUnit ? ' / шт' : ''}</div>}
                         </div>
                     )}
                     {isMaterial && maxItemCount > 1 && (
@@ -495,7 +504,7 @@ export default function AuctionPage() {
                     {/* Search + sort */}
                     <div className="flex gap-2 mb-3">
                         <input type="text" placeholder="Поиск..." value={auctionSearch}
-                            onChange={e => { setAuctionSearch(e.target.value); setPage(1); }}
+                            onChange={e => { setAuctionSearch(e.target.value); setPage(1); setGroupPage(1); }}
                             className="flex-1 px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm" />
                         <select value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}
                             className="px-2 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm w-32 cursor-pointer">
@@ -506,7 +515,7 @@ export default function AuctionPage() {
                     {/* Categories */}
                     <div className="flex gap-1.5 mb-4 overflow-x-auto hide-scrollbar flex-wrap">
                         {CATEGORIES.map(c => (
-                            <button key={c.key} onClick={() => { setCategory(c.key); setPage(1); }}
+                            <button key={c.key} onClick={() => { setCategory(c.key); setPage(1); setGroupPage(1); }}
                                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer ${category === c.key ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]'}`}>
                                 <Icon icon={c.icon} width="12" height="12" />{c.label}
                             </button>
@@ -515,7 +524,7 @@ export default function AuctionPage() {
 
                     {/* View toggle */}
                     <div className="flex gap-2 mb-3">
-                        <button onClick={() => { setViewMode('groups'); setGroupFilter(null); setPage(1); }}
+                        <button onClick={() => { setViewMode('groups'); setGroupFilter(null); setPage(1); setGroupPage(1); }}
                             className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'groups' && !groupFilter ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
                             📦 Группы
                         </button>
@@ -533,6 +542,7 @@ export default function AuctionPage() {
 
                     {/* Group view */}
                     {viewMode === 'groups' && !groupFilter && groups.length > 0 && (
+                        <>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
                             {groups.map((g: any, i: number) => {
                                 const item = g.item;
@@ -555,6 +565,18 @@ export default function AuctionPage() {
                                 );
                             })}
                         </div>
+                        {groupTotalPages > 1 && (
+                            <div className="flex items-center justify-center gap-1 mb-3">
+                                <button onClick={() => { setGroupPage(Math.max(1, groupPage - 1)); }}
+                                    disabled={groupPage <= 1}
+                                    className="px-2 py-0.5 text-xs rounded bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 cursor-pointer">←</button>
+                                <span className="text-xs text-[var(--color-text-muted)]">{groupPage}/{groupTotalPages} ({groupTotalCount} групп)</span>
+                                <button onClick={() => { setGroupPage(Math.min(groupTotalPages, groupPage + 1)); }}
+                                    disabled={groupPage >= groupTotalPages}
+                                    className="px-2 py-0.5 text-xs rounded bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 cursor-pointer">→</button>
+                            </div>
+                        )}
+                        </>
                     )}
 
                     {/* List view (or group-filtered) */}                    {/* Top pagination */}
