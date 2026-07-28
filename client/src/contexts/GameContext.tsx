@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 
 interface GameItem {
   id?: string | number;
@@ -163,8 +163,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Пересчёт regenHp при изменении character или serverTime
+  const frozenHp = useRef<number | null>(null);
   useEffect(() => {
     if (!character) return;
+    // Во время боя замораживаем HP — чтобы не спойлерить исход
+    if ((window as any).__battling) {
+      if (frozenHp.current === null) frozenHp.current = character.currentHp;
+      setRegenHp(frozenHp.current);
+      return;
+    }
+    frozenHp.current = null;
     const maxHp = character.stats?.hp ?? 100;
     const hp = calcRegenHp(
       character.currentHp,
