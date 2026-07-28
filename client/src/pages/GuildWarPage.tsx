@@ -28,6 +28,7 @@ export default function GuildWarPage() {
     const [battleLog, setBattleLog] = useState<any[]>([]);
     const [battleResult, setBattleResult] = useState<any>(null);
     const serverTime = useServerTime();
+    const [attackTarget, setAttackTarget] = useState<{id: number; name: string} | null>(null);
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
 
@@ -46,7 +47,13 @@ export default function GuildWarPage() {
     };
 
     const handleAttack = async (targetId: number, targetName: string) => {
-        if (!confirm(`Атаковать ${targetName}?`)) return;
+        setAttackTarget({ id: targetId, name: targetName });
+    };
+
+    const confirmAttack = async () => {
+        if (!attackTarget) return;
+        const targetId = attackTarget.id;
+        setAttackTarget(null);
         try {
             const d = await api('/guild/war/attack', { targetId });
             setBattleLog(d.log || d.steps || []);
@@ -249,6 +256,19 @@ export default function GuildWarPage() {
                         })}
                     </div>
                 </Card>
+            )}
+            {/* Модалка подтверждения атаки */}
+            {attackTarget && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setAttackTarget(null)}>
+                    <Card className="max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-lg mb-3 text-center">⚔️ Атака</h3>
+                        <p className="text-sm mb-4 text-center">Атаковать <span className="font-bold text-[var(--color-accent-danger)]">{attackTarget.name}</span>?</p>
+                        <div className="flex gap-2 justify-center">
+                            <Button variant="secondary" size="md" onClick={() => setAttackTarget(null)}>Отмена</Button>
+                            <Button variant="danger" size="md" onClick={confirmAttack}>⚔️ Атаковать</Button>
+                        </div>
+                    </Card>
+                </div>
             )}
         </div>
     );
