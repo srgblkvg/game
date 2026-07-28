@@ -149,6 +149,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // hpTick — обновление currentHp/lastHpUpdate из serverTick
   useEffect(() => {
     const handler = (e: Event) => {
+      // Во время боя не обновляем HP — чтобы не спойлерить исход
+      if ((window as any).__battling) return;
       const { currentHp: hp, lastHpUpdate: lhu } = (e as CustomEvent).detail;
       setCharacter(prev => {
         if (!prev) return prev;
