@@ -62,16 +62,22 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         return () => window.removeEventListener('massacreTick', handler);
     }, []);
 
-    // Таймер кулдауна Лудуса
+    // Таймер кулдауна Лудуса — получаем через WS, не поллим
     useEffect(() => {
-        const fetchCD = () => fetch('/api/training', { headers: getHeaders() })
+        const handler = (e: any) => {
+            if (e.detail?.type === 'trainingCooldown') {
+                const sec = Math.max(0, e.detail.cooldownUntil - Math.floor(Date.now() / 1000));
+                setTrainingCD(sec);
+            }
+        };
+        window.addEventListener('wsMessage', handler);
+        // Загружаем начальное состояние один раз
+        fetch('/api/training', { headers: getHeaders() })
             .then(r => r.json())
-            .then(d => { if (d.onCooldown) setTrainingCD(Math.max(0, d.cooldownUntil - Math.floor(Date.now()/1000))); else setTrainingCD(0); })
+            .then(d => { if (d.onCooldown) setTrainingCD(Math.max(0, d.cooldownUntil - Math.floor(Date.now()/1000))); })
             .catch(() => {});
-        fetchCD();
-        const t = setInterval(() => setTrainingCD(p => p <= 1 ? (fetchCD(), 0) : p - 1), 1000);
-        const p = setInterval(fetchCD, 30000);
-        return () => { clearInterval(t); clearInterval(p); };
+        const tick = setInterval(() => setTrainingCD(p => Math.max(0, p - 1)), 1000);
+        return () => { clearInterval(tick); window.removeEventListener('wsMessage', handler); };
     }, []);
 
     // Бейдж аукциона через localStorage + событие

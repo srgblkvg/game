@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { checkAchievement } from './achievements';
+import { sendToUser } from '../events';
 
 const router = Router();
 
-const COOLDOWN_MS = 60 * 60 * 1000; // 1 час
+const COOLDOWN_SEC = 60 * 60; // 1 час в секундах
 
 const STAT_MULTIPLIERS: Record<string, number> = {
     d: 1.0,   // Защита
@@ -44,7 +45,7 @@ router.get('/training', async (req, res) => {
 
     const now = Date.now();
     const trainingAt = user.training_at ? new Date(user.training_at).getTime() : 0;
-    const cooldownUntil = trainingAt + COOLDOWN_MS;
+    const cooldownUntil = trainingAt + COOLDOWN_SEC * 1000;
     const onCooldown = cooldownUntil > now;
 
     // Стоимость от счётчика тренировок (не от базовых статов)
@@ -84,8 +85,8 @@ router.post('/training', async (req, res) => {
 
     // Проверить кулдаун
     const trainingAt = user.training_at ? new Date(user.training_at).getTime() : 0;
-    if (Date.now() - trainingAt < COOLDOWN_MS) {
-        const remaining = Math.ceil((trainingAt + COOLDOWN_MS - Date.now()) / 60000);
+    if (Date.now() - trainingAt < COOLDOWN_SEC * 1000) {
+        const remaining = Math.ceil((trainingAt + COOLDOWN_SEC * 1000 - Date.now()) / 60000);
         return res.status(400).json({
             error: `Тренировки выматывают, нужно отдохнуть (ещё ${remaining} мин.)`,
         });
@@ -110,6 +111,9 @@ router.post('/training', async (req, res) => {
     );
 
     checkAchievement(userId, 'training').catch(() => {});
+
+    const cooldownUntil = Math.floor(Date.now() / 1000) + COOLDOWN_SEC;
+    sendToUser(userId, { type: 'trainingCooldown', cooldownUntil });
 
     const updated = await db.one(
         `SELECT ${baseColumn} as new_val FROM users WHERE id = ?`,
