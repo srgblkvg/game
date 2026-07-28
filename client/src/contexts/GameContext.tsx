@@ -126,7 +126,7 @@ function calcRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, ser
   }
   if (premiumUntil && premiumUntil > serverTime) regenRate *= 3;
 
-  const regenAmount = Math.floor(elapsed / 10) * regenRate;
+  const regenAmount = Math.floor(elapsed * regenRate / 10);
   return Math.min(maxHp, currentHp + regenAmount);
 }
 
