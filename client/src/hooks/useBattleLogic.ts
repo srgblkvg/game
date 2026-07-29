@@ -107,7 +107,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
                 setHpLeft(character.currentHp);
                 setHpRight(0);
                 setBattleSteps(result.steps || []);
-                setCurrentStep(result.steps?.length || 0);
+                setCurrentStep(0); // показываем mercy-сообщение
                 return;
             }
 

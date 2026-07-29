@@ -135,7 +135,7 @@ router.post('/battle', async (req, res) => {
         return res.json({
             mercy: true,
             log: [`${defender.username} оценил силы и предпочёл не рисковать`],
-            steps: [{ type: 'mercy', message: `${attacker.username} получает ${moneyStolen} сер. без боя` }],
+            steps: [{ type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} сер.` }],
             winnerId: attacker.id,
             hpAfter: attackerFullStats.hp,
             hpDefenderAfter: 0,
