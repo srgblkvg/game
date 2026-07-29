@@ -351,7 +351,7 @@ export default function CraftPage() {
             if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
             setCraftSlots(Array(9).fill(null));
             setMaterialUsage({});
-            const itemName = activeRecipe.result?.name || 'Предмет';
+            const itemName = data.item?.name || activeRecipe.result?.name || 'Предмет';
             if (data.success) {
                 setCraftAnim({ success: true, label: itemName, acquire: { item: data.item || activeRecipe.result, count: 1, msg: 'Создано' }, pendingData: data });
             } else {
