@@ -31,10 +31,24 @@ router.post('/take/:id', async (req: any, res) => {
   const maxSlots = user.inventorySlots || 10;
   const item = typeof row.item === 'string' ? JSON.parse(row.item) : row.item;
   const isGear = !!item.slot;
+  const isCraft = item.type === 'craft_item' || item.type === 'material' || item.type === 'upgrade';
   const equipCount = inventory.filter((i: any) => !!i.slot).length;
 
   if (isGear && equipCount >= maxSlots) {
     return res.status(400).json({ error: 'Инвентарь заполнен' });
+  }
+
+  // Стакаем ресурсы в инвентаре
+  if (isCraft) {
+    const existingIdx = inventory.findIndex((i: any) =>
+      (i.type === 'craft_item' || i.type === 'material' || i.type === 'upgrade') && String(i.id) === String(item.id)
+    );
+    if (existingIdx !== -1) {
+      inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (item.count || 1);
+      await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+      await db.run('DELETE FROM overflow_storage WHERE id = ?', [id]);
+      return res.json({ success: true, inventory, remainingSlots: maxSlots - inventory.length, stacked: true });
+    }
   }
 
   inventory.push(item);
@@ -46,6 +60,21 @@ router.post('/take/:id', async (req: any, res) => {
 
 // Добавить предмет на склад (вызывается из аукциона)
 export async function addToOverflow(userId: number, item: any, auctionLotId?: number) {
+  // Стакаем ресурсы: если такой же уже на складе — увеличиваем count
+  const isCraft = item.type === 'craft_item' || item.type === 'material' || item.type === 'upgrade';
+  if (isCraft) {
+    const rows = await db.query(
+      "SELECT id, item FROM overflow_storage WHERE userId = ? AND item->>'id' = ? AND item->>'type' = ? LIMIT 1",
+      [userId, String(item.id), item.type]
+    ) as any[];
+    if (rows.length > 0) {
+      const existing = rows[0];
+      const existingItem = typeof existing.item === 'string' ? JSON.parse(existing.item) : existing.item;
+      existingItem.count = (existingItem.count || 0) + (item.count || 1);
+      await db.run('UPDATE overflow_storage SET item = ? WHERE id = ?', [JSON.stringify(existingItem), existing.id]);
+      return;
+    }
+  }
   await db.run(
     'INSERT INTO overflow_storage (userId, item, auctionLotId) VALUES (?, ?, ?)',
     [userId, JSON.stringify(item), auctionLotId || null]
