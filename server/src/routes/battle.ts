@@ -5,6 +5,7 @@ import { markDirty } from '../events';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getBaseStats, buildPlayerStats, USER_BATTLE_FIELDS_GUILD, applyExp, collectGuildTax, getCollectionBonus } from '../db/helpers';
 import { runBattle } from '../game/battle';
+import { currentStats } from '../game/stats';
 import { calcElo } from '../game/rating';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
@@ -86,6 +87,55 @@ router.post('/battle', async (req, res) => {
         collectionBonus: defenderStats.collection || 0,
         guildBonus: dGuildBonus,
     };
+
+    // --- Проверка: безвыходный бой для защитника? ---
+    const attackerFullStats = currentStats(attackerData.base, attackerData.equipment, attackerData.drinkBonuses, attackerData.collectionBonus, attackerData.guildBonus);
+    const defenderTotal = defenderStats.s + defenderStats.a + defenderStats.d + defenderStats.m;
+    const attackerTotal = attackerFullStats.s + attackerFullStats.a + attackerFullStats.d + attackerFullStats.m;
+    const mercyThreshold = attackerTotal > defenderTotal * 2.5 && attackerFullStats.hp > defenderStats.hp * 1.5;
+
+    if (mercyThreshold) {
+        // Защитник без шансов — авто-капитуляция, бой не проводится
+        const stolen = Math.min(Math.floor(defender.money * 0.15), 2000);
+        const moneyStolen = Math.max(1, stolen);
+        const attExp = await applyExp(attacker.id, 2, attacker.exp, attacker.level, attacker.statPoints || 0);
+
+        // Атакующий
+        const attackerMoneyAfterTax = await collectGuildTax(attacker.id, moneyStolen, 'tax_pvp');
+        await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+1, lastAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, elo=elo+2, seasonWins=seasonWins+1, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, arenaOpponentId=NULL WHERE id=?`,
+            [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, now, moneyStolen, attacker.id]);
+
+        // Защитник
+        await db.run(`UPDATE users SET money=money-?, totalBattles=totalBattles+1, protectionUntil=?, seasonLosses=seasonLosses+1, lastPvpTime=?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
+            [moneyStolen, now + 3600, now, moneyStolen, defender.id]);
+
+        // Запись в историю
+        await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [attacker.id, defender.id, attacker.id, JSON.stringify([`${attacker.username} подавляет ${defender.username} без боя`]),
+             JSON.stringify([{ type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} сер.` }]),
+             attackerFullStats.hp, 0, 2, moneyStolen, moneyStolen]);
+
+        const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
+
+        return res.json({
+            mercy: true,
+            log: [`${defender.username} оценил силы и предпочёл не рисковать`],
+            steps: [{ type: 'mercy', message: `${attacker.username} получает ${moneyStolen} сер. без боя` }],
+            winnerId: attacker.id,
+            hpAfter: attackerFullStats.hp,
+            hpDefenderAfter: 0,
+            expGained: 2,
+            moneyGained: moneyStolen,
+            newLevel: attExp.newLevel,
+            newExp: attExp.newExp,
+            levelsGained: attExp.levelsGained,
+            opponent: { name: defenderData.name, level: defenderData.level, equipment: defenderData.equipment, stats: defenderStats },
+            moneyAfter: updatedAttacker.money,
+            moneyStolen,
+            eloChange: 2,
+        });
+    }
 
     const result = runBattle(attackerData, defenderData);
     const moneyStolen = result.steps.find((s: any) => s.type === 'money')?.amount || 0;
