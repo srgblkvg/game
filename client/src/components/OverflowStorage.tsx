@@ -147,7 +147,7 @@ export default function OverflowStorage({ onTake }: { onTake?: () => void }) {
                 onChange={e => setWithdrawAmount(e.target.value)}
               />
               <button
-                className="px-2 py-1 text-xs rounded bg-[var(--color-accent-gold)] text-black font-bold hover:opacity-90"
+                className="px-2 py-1 text-xs rounded bg-[var(--color-accent-gold)] text-black font-bold hover:opacity-90 cursor-pointer"
                 onClick={withdrawMoney}
               >Вывести</button>
               {msg && <span className="text-xs text-[var(--color-accent-success)]">{msg}</span>}
