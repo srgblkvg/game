@@ -96,25 +96,39 @@ router.post('/battle', async (req, res) => {
 
     if (mercyThreshold) {
         // Защитник без шансов — авто-капитуляция, бой не проводится
-        const stolen = Math.min(Math.floor(defender.money * 0.15), 2000);
-        const moneyStolen = Math.max(1, stolen);
-        const attExp = await applyExp(attacker.id, 2, attacker.exp, attacker.level, attacker.statPoints || 0);
+        // Деньги: 10-50% наличных (как в обычном бою)
+        const percent = 0.1 + Math.random() * 0.4;
+        const moneyStolen = Math.max(1, Math.floor(defender.money * percent));
+
+        // Опыт: как в обычном бою — 2 если цель выше уровнем, 1 если равна, 0 если ниже
+        let expGained = 0;
+        if (defender.level > attacker.level) expGained = 2;
+        else if (defender.level === attacker.level) expGained = 1;
+
+        // ELO: по формуле, как в обычном бою
+        const newAttackerElo = calcElo(attacker.elo || 1000, defender.elo || 1000, true, attacker.level);
+        const newDefenderElo = calcElo(defender.elo || 1000, attacker.elo || 1000, false, defender.level);
+        const eloChange = newAttackerElo - (attacker.elo || 1000);
+
+        const attExp = await applyExp(attacker.id, expGained, attacker.exp, attacker.level, attacker.statPoints || 0);
 
         // Атакующий
-        const attackerMoneyAfterTax = await collectGuildTax(attacker.id, moneyStolen, 'tax_pvp');
-        await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+1, lastAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, elo=elo+2, seasonWins=seasonWins+1, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, arenaOpponentId=NULL WHERE id=?`,
-            [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, now, moneyStolen, attacker.id]);
+        const attackerMoneyAfterTax = moneyStolen > 0
+            ? await collectGuildTax(attacker.id, moneyStolen, 'tax_pvp')
+            : 0;
+        await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+1, lastAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, elo=?, seasonWins=seasonWins+1, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, arenaOpponentId=NULL WHERE id=?`,
+            [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), now, moneyStolen, attacker.id]);
 
         // Защитник
-        await db.run(`UPDATE users SET money=money-?, totalBattles=totalBattles+1, protectionUntil=?, seasonLosses=seasonLosses+1, lastPvpTime=?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
-            [moneyStolen, now + 3600, now, moneyStolen, defender.id]);
+        await db.run(`UPDATE users SET money=money-?, totalBattles=totalBattles+1, protectionUntil=?, elo=?, seasonLosses=seasonLosses+1, lastPvpTime=?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
+            [moneyStolen, now + 3600, Math.max(100, newDefenderElo), now, moneyStolen, defender.id]);
 
         // Запись в историю
         await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [attacker.id, defender.id, attacker.id, JSON.stringify([`${attacker.username} подавляет ${defender.username} без боя`]),
              JSON.stringify([{ type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} сер.` }]),
-             attackerFullStats.hp, 0, 2, moneyStolen, moneyStolen]);
+             attackerFullStats.hp, 0, expGained, moneyStolen, moneyStolen]);
 
         const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
 
@@ -125,7 +139,7 @@ router.post('/battle', async (req, res) => {
             winnerId: attacker.id,
             hpAfter: attackerFullStats.hp,
             hpDefenderAfter: 0,
-            expGained: 2,
+            expGained,
             moneyGained: moneyStolen,
             newLevel: attExp.newLevel,
             newExp: attExp.newExp,
@@ -133,7 +147,7 @@ router.post('/battle', async (req, res) => {
             opponent: { name: defenderData.name, level: defenderData.level, equipment: defenderData.equipment, stats: defenderStats },
             moneyAfter: updatedAttacker.money,
             moneyStolen,
-            eloChange: 2,
+            eloChange,
         });
     }
 
