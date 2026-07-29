@@ -194,7 +194,15 @@ router.post('/account/avatar', async (req, res) => {
     const buffer = Buffer.from(data!, 'base64');
     if (buffer.length > 512 * 1024) return res.status(400).json({ error: 'Изображение слишком большое (макс. 512 КБ)' });
 
-    const filename = `${userId}.${ext}`;
+    const filename = `${userId}_${Date.now()}.${ext}`;
+    // Удаляем старый аватар
+    try {
+        const oldUser = await db.one('SELECT avatar FROM users WHERE id = ?', [userId]) as any;
+        if (oldUser?.avatar) {
+            const oldFile = path.join(UPLOADS_DIR, path.basename(oldUser.avatar));
+            if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+        }
+    } catch {}
     fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
 
     const avatarPath = `/uploads/avatars/${filename}`;
