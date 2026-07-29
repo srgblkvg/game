@@ -141,7 +141,9 @@ async function loadPlayerForBattle(userId: number) {
     const base = getBaseStats(u);
     const collCnt = await getCollectionBonus(userId);
     const drinkBonuses = getDrinkBonuses(u);
-    const stats = currentStats(base, enriched, drinkBonuses, collCnt);
+    const { getGuildBonus } = await import('../game/guildBuildings');
+    const guildBonus = await getGuildBonus(userId, 'tournament');
+    const stats = currentStats(base, enriched, drinkBonuses, collCnt, guildBonus);
 
     return {
         id: u.id,
@@ -153,6 +155,7 @@ async function loadPlayerForBattle(userId: number) {
         currentHp: stats.hp, // всегда полное HP для турнирных боёв
         drinkBonuses,
         collectionBonus: collCnt,
+        guildBonus,
     };
 }
 
@@ -172,7 +175,9 @@ async function loadPlayerForBattleTx(client: any, userId: number) {
     const base = getBaseStats({ baseS: u.bases, baseA: u.basea, baseD: u.based, baseM: u.basem });
     const collCnt = await getCollectionBonus(userId);
     const drinkBonuses = getDrinkBonuses({ activeDrink: u.activedrink, drinkUntil: u.drinkuntil });
-    const stats = currentStats(base, enriched, drinkBonuses, collCnt);
+    const { getGuildBonus } = await import('../game/guildBuildings');
+    const guildBonus = await getGuildBonus(userId, 'tournament');
+    const stats = currentStats(base, enriched, drinkBonuses, collCnt, guildBonus);
 
     return {
         id: u.id,
@@ -184,6 +189,7 @@ async function loadPlayerForBattleTx(client: any, userId: number) {
         currentHp: stats.hp,
         drinkBonuses,
         collectionBonus: collCnt,
+        guildBonus,
     };
 }
 

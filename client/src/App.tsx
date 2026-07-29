@@ -55,6 +55,7 @@ const DicePage = lazy(() => import('./pages/DicePage'));
 const ConflictsPage = lazy(() => import('./pages/ConflictsPage'));
 const TrainingPage = lazy(() => import('./pages/TrainingPage'));
 const StarterPackPage = lazy(() => import('./pages/StarterPackPage'));
+const DebugStatsPage = lazy(() => import('./pages/DebugStatsPage'));
 
 function Loading() {
   return (
@@ -122,6 +123,7 @@ function App() {
             <Route path="/conflicts" element={user?.role === 'player' ? <ConflictsPage /> : <Navigate to="/login" />} />
             <Route path="/training" element={user?.role === 'player' ? <TrainingPage /> : <Navigate to="/login" />} />
             <Route path="/starter-pack" element={user?.role === 'player' ? <StarterPackPage /> : <Navigate to="/login" />} />
+            <Route path="/debug-stats" element={user?.role === 'player' || user?.role === 'admin' ? <DebugStatsPage /> : <Navigate to="/login" />} />
             <Route path="/feedback" element={user?.role === 'player' ? <FeedbackPage /> : <Navigate to="/login" />} />
             <Route path="/collections" element={user?.role === 'player' ? <CollectionsPage /> : <Navigate to="/login" />} />
             <Route path="/guild/:id" element={user?.role === 'player' ? <GuildViewPage /> : <Navigate to="/login" />} />

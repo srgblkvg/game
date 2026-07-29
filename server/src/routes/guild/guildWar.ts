@@ -341,6 +341,12 @@ router.post('/guild/war/attack', async (req, res) => {
     const aCollCnt = await getCollectionBonus(userId);
     const dCollCnt = await getCollectionBonus(targetId);
 
+    // Контекст бонусов: атакующий получает бонус своей стороны
+    const attackerCtx = myGuildId === war.attackerGuildId ? 'war_attack' : 'war_defense';
+    const defenderCtx = attackerCtx === 'war_attack' ? 'war_defense' : 'war_attack';
+    const aGuildBonus = await getGuildBonus(userId, attackerCtx);
+    const dGuildBonus = await getGuildBonus(targetId, defenderCtx);
+
     const aEquip = JSON.parse(attacker.equipment || '{}');
     const dEquip = JSON.parse(defender.equipment || '{}');
     const { enriched: aEnriched } = await enrichEquipment(aEquip);
@@ -355,6 +361,7 @@ router.post('/guild/war/attack', async (req, res) => {
         money: attacker.money || 0,
         drinkBonuses: getDrinkBonuses(attacker),
         collectionBonus: aCollCnt,
+        guildBonus: aGuildBonus,
     };
     const defenderData = {
         id: defender.id,
@@ -365,6 +372,7 @@ router.post('/guild/war/attack', async (req, res) => {
         money: defender.money || 0,
         drinkBonuses: getDrinkBonuses(defender),
         collectionBonus: dCollCnt,
+        guildBonus: dGuildBonus,
     };
 
     const result = runBattle(attackerData, defenderData);
