@@ -332,10 +332,13 @@ export default function AuctionPage() {
             setMessage(''); load(page); const fresh = await fetchCharacter(); setCharacter(fresh);
         } catch (e: any) { setError(e.message); }
     };
+    const [confirmPopup, setConfirmPopup] = useState<any>(null);
     const handleCancel = async (lotId: number) => {
-        if (!confirm('Снять лот с аукциона? Предмет вернётся в инвентарь.')) return;
-        try { await api('/auction/cancel', { lotId }); setMessage('Лот снят с аукциона'); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
-        catch (e: any) { setError(e.message); }
+        setConfirmPopup({ message: 'Снять лот с аукциона? Предмет вернётся в инвентарь.', onConfirm: async () => {
+            setConfirmPopup(null);
+            try { await api('/auction/cancel', { lotId }); setMessage('Лот снят с аукциона'); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
+            catch (e: any) { setError(e.message); }
+        }});
     };
     const clearMessages = () => { setMessage(''); setError(''); };
     const selectedItem = getSelectedItem();
@@ -676,6 +679,17 @@ export default function AuctionPage() {
             {tooltip && (
                 <div ref={tooltipRef} className="fixed z-50 pointer-events-none">
                     <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />
+                </div>
+            )}
+            {confirmPopup && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setConfirmPopup(null)}>
+                    <Card className="max-w-xs w-full" onClick={e => e.stopPropagation()}>
+                        <p className="text-sm mb-3">{confirmPopup.message}</p>
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="secondary" size="md" onClick={() => setConfirmPopup(null)}>Отмена</Button>
+                            <Button size="md" onClick={confirmPopup.onConfirm}>OK</Button>
+                        </div>
+                    </Card>
                 </div>
             )}
         </div>
