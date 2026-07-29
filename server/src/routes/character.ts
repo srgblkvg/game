@@ -117,7 +117,7 @@ router.get('/character/me', async (req, res) => {
                 sendLeaderboardLevel(userId, newLevel, String(user.oauthId)).catch(() => {});
             }
             // Guild quest progress — track job seconds
-            if (user.guildId) { updateGuildQuestProgress(user.guildId, jobData.duration).catch(e => console.error('guildQuest jobs:', e.message)); }
+            if (user.guildId) { updateGuildQuestProgress(user.guildId, 'jobs', jobData.duration).catch(e => console.error('guildQuest jobs:', e.message)); }
             // Daily quests — track job seconds
             markDirty(userId, 'quests');
             user.money = newMoney;

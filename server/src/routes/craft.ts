@@ -209,7 +209,7 @@ router.post('/craft/execute', async (req, res) => {
         checkAchievement(userId, 'craft').catch(() => {});
         addToTreasury(Math.floor(recipe.money_cost * 0.22), 'craft_recipe').catch(() => {});
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
-        if (u?.guildId) { updateGuildQuestProgress(u.guildId).catch(e => console.error('guildQuest craft:', e.message)); }
+        if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
         markDirty(userId, 'quests');
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: 'Предмет создан!' });
     } else {
@@ -313,7 +313,7 @@ router.post('/craft/upgrade', async (req, res) => {
             checkAchievement(userId, 'craft').catch(() => {});
             addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade').catch(() => {});
             const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
-            if (u?.guildId) { updateGuildQuestProgress(u.guildId).catch(e => console.error('guildQuest craft:', e.message)); }
+            if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
             markDirty(userId, 'quests');
             return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, eloAdded: ratingBonus, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` });
         }
@@ -322,7 +322,7 @@ router.post('/craft/upgrade', async (req, res) => {
         checkAchievement(userId, 'craft').catch(() => {});
         addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade').catch(() => {});
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
-        if (u?.guildId) { updateGuildQuestProgress(u.guildId).catch(e => console.error('guildQuest craft:', e.message)); }
+        if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
         markDirty(userId, 'quests');
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });
     } else {

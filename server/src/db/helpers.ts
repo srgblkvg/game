@@ -144,7 +144,7 @@ export async function collectGuildTax(userId: number, income: number, source: st
   await db.run('UPDATE guilds SET treasury = treasury + ? WHERE id = ?', [tax, member.guildId]);
   await db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type, createdat) VALUES (?, ?, ?, ?, ?)', [member.guildId, userId, tax, source, new Date().toISOString()]);
   // Guild quest progress — налог тоже считается взносом в казну
-  import('../routes/guild/guildQuests').then(m => m.updateGuildQuestProgress(member.guildId, tax)).catch(() => {});
+  import('../routes/guild/guildQuests').then(m => m.updateGuildQuestProgress(member.guildId, 'donate', tax)).catch(() => {});
   return income - tax;
 }
 

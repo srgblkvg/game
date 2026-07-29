@@ -35,7 +35,7 @@ router.post('/guild/treasury/deposit', async (req, res) => {
         const updatedUser = await db.one('SELECT money, bank FROM users WHERE id = ?', [userId]) as any;
         if (updatedUser) sendToUser(userId, { type: 'balance', money: updatedUser.money, bank: updatedUser.bank || 0 });
         // Guild quest progress — track donations
-        updateGuildQuestProgress(member.guildId, amount).catch(e => console.error('guildQuest donate:', e.message));
+        updateGuildQuestProgress(member.guildId, 'donate', amount).catch(e => console.error('guildQuest donate:', e.message));
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }

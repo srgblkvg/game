@@ -473,7 +473,7 @@ router.post('/mob/attack', async (req, res) => {
     if (playerWon) {
         const userGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
         if (userGuild?.guildId) {
-            updateGuildQuestProgress(userGuild.guildId).catch(e => console.error('guildQuest PvE:', e.message));
+            updateGuildQuestProgress(userGuild.guildId, 'pve').catch(e => console.error('guildQuest PvE:', e.message));
         }
     }
 

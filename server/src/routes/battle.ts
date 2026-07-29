@@ -141,7 +141,7 @@ router.post('/battle', async (req, res) => {
     // Guild quest progress — track PvP wins
     const w = await db.one('SELECT guildId FROM users WHERE id = ?', [result.winnerId]);
     if (w?.guildId) {
-        updateGuildQuestProgress(w.guildId).catch(e => console.error('guildQuest PvP:', e.message));
+        updateGuildQuestProgress(w.guildId, 'pvp').catch(e => console.error('guildQuest PvP:', e.message));
     }
 
     markDirty(result.winnerId, 'quests');

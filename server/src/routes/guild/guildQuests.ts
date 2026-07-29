@@ -29,14 +29,17 @@ const GUILD_QUEST_DIFFICULTIES = {
 } as const;
 
 /** Обновить прогресс активного квеста гильдии и разослать по WS.
- *  increment — на сколько увеличить прогресс (опционально, по умолчанию 1).
- *  Без снапшотов — просто инкремент, не зависит от состава гильдии. */
-export async function updateGuildQuestProgress(guildId: number, increment: number = 1) {
+ *  questType — тип квеста (pve/pvp/craft/donate/jobs). Инкремент только если совпадает.
+ *  increment — на сколько увеличить прогресс (по умолчанию 1). */
+export async function updateGuildQuestProgress(guildId: number, questType: GuildQuestType, increment: number = 1) {
     const activeQuest = await db.one(
         "SELECT * FROM guild_quests WHERE guildId = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
         [guildId]
     ) as any;
     if (!activeQuest) return;
+
+    // Инкремент только если тип квеста совпадает
+    if (activeQuest.questType !== questType) return;
 
     if (increment > 0) {
         const newProgress = Math.min(activeQuest.progress + increment, activeQuest.requirement);
@@ -65,7 +68,7 @@ router.get('/guild/quest', async (req, res) => {
     if (!member) return res.json({ activeQuest: null, options: null });
 
     // Активное задание — только получить, без инкремента (GET — read-only)
-    const questData = await updateGuildQuestProgress(member.guildId, 0);
+    const questData = await updateGuildQuestProgress(member.guildId, 'pve', 0);
     if (questData) {
         return res.json({ activeQuest: questData, options: null });
     }
