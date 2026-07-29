@@ -29,6 +29,7 @@ import { startTournamentScheduler } from './schedulers/tournaments';
 import { startCleanupScheduler } from './schedulers/cleanup';
 import { startMassacreScheduler } from './schedulers/massacre';
 import { startInactiveLeaderCheck } from './schedulers/inactiveLeader';
+import { startJobCompletionScheduler } from './schedulers/jobs';
 import { initTreasury, initTreasuryLog } from './game/treasury';
 
 // Init tables
@@ -40,3 +41,4 @@ startTournamentScheduler();
 startCleanupScheduler();
 startMassacreScheduler();
 startInactiveLeaderCheck();
+startJobCompletionScheduler();
