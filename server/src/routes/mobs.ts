@@ -2,13 +2,13 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { collectGuildTax, applyExp, buildPlayerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
-import { dodgeChance, critChance, critMult, runBattle } from '../game/battle';
-import { addPveRating } from '../game/rating';
-import { updateGuildQuestProgress } from './guild';
-import { markDirty } from '../events';
-import { sendLeaderboardLevel } from '../vkLeaderboard';
-import { getGuildBonus } from '../game/guildBuildings';
+import { runTurn, dodgeChance, critChance, critMult, blockChance, blockReduction, TurnContext, BattleStep } from '../game/battle';
+import { markDirty, pushNotification } from '../events';
 import { checkAchievement, trackIncome } from './achievements';
+import { sendLeaderboardLevel } from '../vkLeaderboard';
+import { updateGuildQuestProgress } from './guild';
+
+const router = Router();
 
 // Шансы дропа камней улучшения (независимые роллы на каждого моба)
 const STONE_DROP_CHANCES: Record<string, number> = {
@@ -34,8 +34,6 @@ const MYTHIC_RESOURCE_DROPS: Record<number, string> = {
     54: 'Кристалл душ',       // Падший серафим (140)
 };
 
-const router = Router();
-
 // Шансы дропа предметов по редкостям в зависимости от уровня моба
 function getItemDropTable(level: number): { rarity: number; chance: number }[] {
     const table: { rarity: number; chance: number }[] = [];
@@ -50,32 +48,34 @@ function getItemDropTable(level: number): { rarity: number; chance: number }[] {
     } else if (level <= 45) {
         table.push({ rarity: 0, chance: 0.07 });
         table.push({ rarity: 1, chance: 0.07 });
-        table.push({ rarity: 2, chance: 0.05 }); // Необычный 5%
-        table.push({ rarity: 3, chance: 0.02 }); // Редкий 2%
+        table.push({ rarity: 2, chance: 0.05 });
+        table.push({ rarity: 3, chance: 0.03 }); // Редкий 3%
     } else if (level <= 65) {
+        table.push({ rarity: 0, chance: 0.07 });
         table.push({ rarity: 1, chance: 0.07 });
         table.push({ rarity: 2, chance: 0.07 });
-        table.push({ rarity: 3, chance: 0.05 }); // Редкий 5%
-        table.push({ rarity: 4, chance: 0.02 }); // Эпик 2%
+        table.push({ rarity: 3, chance: 0.05 });
+        table.push({ rarity: 4, chance: 0.03 }); // Эпический 3%
     } else if (level <= 85) {
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.07 });
         table.push({ rarity: 2, chance: 0.07 });
         table.push({ rarity: 3, chance: 0.07 });
-        table.push({ rarity: 4, chance: 0.05 }); // Эпик 5%
-        table.push({ rarity: 5, chance: 0.02 }); // Легендарный 2%
-    } else if (level <= 100) {
-        table.push({ rarity: 3, chance: 0.07 });
-        table.push({ rarity: 4, chance: 0.07 });
-        table.push({ rarity: 5, chance: 0.07 }); // Легендарный 7%
-        table.push({ rarity: 6, chance: 0.02 }); // Мифический 2%
+        table.push({ rarity: 4, chance: 0.05 });
+        table.push({ rarity: 5, chance: 0.03 }); // Легендарный 3%
     } else {
-        table.push({ rarity: 4, chance: 0.07 });
-        table.push({ rarity: 5, chance: 0.07 });
-        table.push({ rarity: 6, chance: 0.05 }); // Мифический 5%
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.07 });
+        table.push({ rarity: 2, chance: 0.07 });
+        table.push({ rarity: 3, chance: 0.07 });
+        table.push({ rarity: 4, chance: 0.05 });
+        table.push({ rarity: 5, chance: 0.05 });
+        table.push({ rarity: 6, chance: 0.03 }); // Мифический 3%
     }
     return table;
 }
 
-// Список всех мобов
+// Получить список мобов
 router.get('/mobs', async (req, res) => {
     const mobs = await db.query('SELECT * FROM mobs ORDER BY level, id', []) as any[];
 
@@ -138,95 +138,79 @@ router.post('/mob/attack', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const hasPremium = (user.premiumUntil || 0) > now;
-    const pveCooldown = hasPremium ? 150 : 300;
+    const pveCooldown = hasPremium ? 150 : 300; // премиум: 2.5 мин, базовый: 5 мин
 
     if (user.lastPveAttackTime > 0 && (now - user.lastPveAttackTime) < pveCooldown) {
         const remaining = pveCooldown - (now - user.lastPveAttackTime);
-        return res.status(400).json({ error: `До следующей атаки моба осталось ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
+        return res.status(400).json({ error: `До следующей атаки осталось ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
     }
 
     const mob = await db.one('SELECT * FROM mobs WHERE id = ?', [mobId]) as any;
     if (!mob) return res.status(404).json({ error: 'Моб не найден' });
 
-    // Статы игрока
-    const guildBonus = await getGuildBonus(userId, 'pve');
+    // Бой
     const userStats = await buildPlayerStats(user, 'pve');
-
-    // Статы моба (s=atk, a=agi, d=def, m=mst)
-    const mobBase = { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst };
+    const mobBase = { s: mob.atk || 10, a: mob.agi || 5, d: mob.def || 5, m: mob.mst || 5 };
     const mobStats = currentStats(mobBase, {});
-    mobStats.hp = mob.hp; // мобы имеют ручной HP в БД, не S+A+M
+    const mobHp = mob.hp || 50;
+    let userHp = userStats.hp;
+    let mobCurrentHp = mobHp;
 
-    // Упрощённый бой (подобно PvP, но моб — всегда defender)
-    let hpUser = user.currentHp ?? userStats.hp;
-    let hpMob = mob.hp;
-    const maxHpUser = userStats.hp;
-    const maxHpMob = mob.hp;
-    const log: string[] = [];
     const steps: any[] = [];
+    const addStep = (s: any) => steps.push(s);
 
-    const addStep = (step: any) => {
-        steps.push(step);
-        log.push(step.message);
-    };
-
-    // Хелпер для начальных шагов — добавляет hp/maxHp из замыкания
-    const addInitialStep = (step: any) => {
-        if (step.hp1 === undefined) step.hp1 = hpUser;
-        if (step.hp2 === undefined) step.hp2 = hpMob;
-        if (step.maxHp1 === undefined) step.maxHp1 = maxHpUser;
-        if (step.maxHp2 === undefined) step.maxHp2 = maxHpMob;
-        steps.push(step);
-        log.push(step.message);
-    };
-
-    addInitialStep({ type: 'info', message: `⚔ ${user.username} vs ${mob.name} (ур. ${mob.level})`,
-        stats1: { name: user.username, level: user.level, S: userStats.s, A: userStats.a, D: userStats.d, M: userStats.m, HP: maxHpUser },
-        stats2: { name: mob.name, level: mob.level, S: mob.atk, A: mob.agi, D: mob.def, M: mob.mst, HP: maxHpMob }
+    addStep({
+        type: 'attack', actor: 'attacker', message: `⚔ ${user.username} vs ${mob.name}`,
+        hp1: userHp, hp2: mobCurrentHp, maxHp1: userHp, maxHp2: mobHp,
+        stats1: { name: user.username, level: user.level, S: userStats.s, A: userStats.a, D: userStats.d, M: userStats.m, HP: userHp },
+        stats2: { name: mob.name, level: mob.level, S: mobBase.s, A: mobBase.a, D: mobBase.d, M: mobBase.m, HP: mobHp },
     });
 
-    let turn: 'player' | 'mob' = userStats.a >= mob.agi ? 'player' : 'mob';
-    addInitialStep({ type: 'info', message: turn === 'player' ? 'Вы ходите первым' : `${mob.name} атакует первым` });
+    let playerWon = false;
 
-    // Используем общий движок боя для всех механик (яд, вампиризм, ярость и др.)
-    const battleResult = runBattle(
-        {
-            id: userId, name: user.username,
-            base: { s: user.bases, a: user.basea, d: user.based, m: user.basem },
-            equipment: JSON.parse(user.equipment || '{}'),
-            level: user.level, money: user.money || 0,
-            currentHp: hpUser,
-            drinkBonuses: userStats.drinks, collectionBonus: userStats.collection,
-            guildBonus, stats: userStats,
-        },
-        {
-            id: -(mob.id), name: mob.name,
-            base: { s: mob.atk, a: mob.agi, d: mob.def, m: mob.mst },
-            equipment: {}, level: mob.level, money: 0,
-            currentHp: hpMob, stats: mobStats,
-        }
-    );
+    // Симуляция боя (как в PvP, но без воровства денег)
+    for (let turn = 0; turn < 50 && userHp > 0 && mobCurrentHp > 0; turn++) {
+        // Ход игрока
+        const ctx1: TurnContext = {
+            actorName: user.username, targetName: mob.name,
+            actorStats: userStats, targetStats: mobStats,
+            actorLevel: user.level,
+            hpActor: userHp, hpTarget: mobCurrentHp,
+            maxHpActor: userStats.hp, maxHpTarget: mobHp,
+            actor: 'attacker', target: 'defender',
+        };
+        const result1 = runTurn(ctx1, addStep);
+        userHp = result1.hpActor;
+        mobCurrentHp = result1.hpTarget;
+        if (mobCurrentHp <= 0) { playerWon = true; break; }
 
-    // Копируем шаги от runBattle (hp1/hp2 уже внутри где нужно)
-    for (const bs of battleResult.steps) {
-        addStep({ ...bs });
+        // Ход моба
+        const ctx2: TurnContext = {
+            actorName: mob.name, targetName: user.username,
+            actorStats: mobStats, targetStats: userStats,
+            actorLevel: mob.level,
+            hpActor: mobCurrentHp, hpTarget: userHp,
+            maxHpActor: mobHp, maxHpTarget: userStats.hp,
+            actor: 'defender', target: 'attacker',
+        };
+        const result2 = runTurn(ctx2, addStep);
+        mobCurrentHp = result2.hpActor;
+        userHp = result2.hpTarget;
+        if (userHp <= 0) break;
     }
 
-    const playerWon = battleResult.winnerId === userId;
-    hpUser = battleResult.attackerHpAfter;
-    hpMob = battleResult.defenderHpAfter;
+    if (playerWon) {
+        addStep({ type: 'end', message: `${user.username} победил!` });
+    } else {
+        addStep({ type: 'end', message: `${mob.name} победил!` });
+    }
 
-    // XP: зависит от моба и разницы уровней
+    // Опыт
     let expGained = 0;
     if (playerWon) {
-        const xp = mob.xp || 1;
-        if (mob.level > user.level) {
-            expGained = xp;                              // моб сильнее — полный XP
-        } else if (mob.level === user.level) {
-            expGained = Math.max(1, Math.floor(xp / 2)); // равный — половина
-        } else if (mob.level >= user.level - 2) {
-            expGained = 1;                               // моб чуть слабее — 1
-        }
+        const levelDiff = mob.level - user.level;
+        if (levelDiff >= -2) expGained = mob.xp || 1;
+        else if (levelDiff >= -5) expGained = 1;
     }
 
     // Золото
@@ -241,7 +225,7 @@ router.post('/mob/attack', async (req, res) => {
     }
 
     // Шанс дропа материала (~35%)
-    let materialDropped: any = null;
+    const materialsDropped: any[] = [];
     let itemsDropped: any[] = [];
     if (playerWon) {
         const dropRoll: number = Math.random();
@@ -271,7 +255,7 @@ router.post('/mob/attack', async (req, res) => {
             ) as any;
 
             if (craftItem) {
-                materialDropped = {
+                const matDrop = {
                     type: 'craft_item',
                     id: craftItem.id,
                     name: craftItem.name,
@@ -282,6 +266,7 @@ router.post('/mob/attack', async (req, res) => {
                     itemType: craftItem.type || 'craft',
                     image: craftItem.image || null,
                 };
+                materialsDropped.push(matDrop);
 
                 // Добавляем в инвентарь
                 const inventory = JSON.parse(user.inventory || '[]');
@@ -289,7 +274,7 @@ router.post('/mob/attack', async (req, res) => {
                 if (existing) {
                     existing.count = (existing.count || 0) + 1;
                 } else {
-                    inventory.push(materialDropped);
+                    inventory.push(matDrop);
                 }
                 await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
                 user.inventory = JSON.stringify(inventory);
@@ -321,12 +306,13 @@ router.post('/mob/attack', async (req, res) => {
                     id: stone.id,
                     name: stone.name,
                     rarity_id: stone.rarity_id,
-                    rarity_display: 'Хлам',
-                    rarity_color: '#888888',
+                    rarity_display: null,
+                    rarity_color: null,
                     count: 1,
                     itemType: stone.type || 'upgrade',
                     image: stone.image || null,
                 };
+                materialsDropped.push(stoneDrop);
                 const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === stone.id);
                 if (existing) {
                     existing.count = (existing.count || 0) + 1;
@@ -334,7 +320,6 @@ router.post('/mob/attack', async (req, res) => {
                     inventory.push(stoneDrop);
                 }
                 await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-                materialDropped = materialDropped || stoneDrop;
                 user.inventory = JSON.stringify(inventory);
                 addStep({ type: 'money', message: `Добыто: ${stone.name}` });
             }
@@ -360,6 +345,7 @@ router.post('/mob/attack', async (req, res) => {
                     itemType: mythicItem.type || 'craft',
                     image: mythicItem.image || null,
                 };
+                materialsDropped.push(mythicDrop);
                 const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === mythicItem.id);
                 if (existing) {
                     existing.count = (existing.count || 0) + 1;
@@ -367,7 +353,6 @@ router.post('/mob/attack', async (req, res) => {
                     inventory.push(mythicDrop);
                 }
                 await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-                materialDropped = materialDropped || mythicDrop;
                 user.inventory = JSON.stringify(inventory);
                 addStep({ type: 'money', message: `Добыто: ${mythicItem.name}` });
             }
@@ -412,51 +397,19 @@ router.post('/mob/attack', async (req, res) => {
 
     // Потеря золота при поражении: 10% от имеющегося
     let goldLost = 0;
-    let ratingGained = 0;
     if (!playerWon) {
-        goldLost = Math.floor(user.money * 0.1);
-        if (goldLost > 0) {
-            await db.run('UPDATE users SET money = money - ? WHERE id = ?', [goldLost, userId]);
-            addStep({ type: 'money', message: `${mob.name} забирает ${goldLost} монет!` });
-        }
-    } else {
-        // PvE-рейтинг
-        const today = new Date().toISOString().slice(0, 10);
-        const isBoss = mob.level >= 100;
-        const ratingAmount = isBoss ? 10 : mob.level > user.level ? 2 : 1;
-
-        const result = await addPveRating(userId, ratingAmount, user.pveRating || 0, user.elo || 1000, (u: any) => {
-            if (isBoss) return u.lastBossKillDate !== today;
-            const now2 = Math.floor(Date.now() / 1000);
-            return !u.lastPveRatingTime || (now2 - u.lastPveRatingTime) >= 3600;
-        });
-
-        if (result) {
-            ratingGained = result.eloAdded;
-            const updateFields = ['pveRating = pveRating + ?', 'elo = elo + ?'];
-            const updateValues: (number | string)[] = [result.eloAdded, result.eloAdded];
-            if (isBoss) {
-                updateFields.push('lastBossKillDate = ?');
-                updateValues.push(today);
-            } else {
-                updateFields.push('lastPveRatingTime = ?');
-                updateValues.push(now);
-            }
-            if (ratingGained > 0) {
-                addStep({ type: 'rating', message: `Рейтинг +${ratingGained}` });
-            }
-            await db.run(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
-                [...updateValues, userId]);
-        }
+        goldLost = Math.max(1, Math.floor(user.money * 0.05));
     }
 
-    const newHpAfter = Math.max(0, hpUser);
+    const finalMoney = user.money + goldGained - goldLost;
+    const finalHp = Math.max(1, userHp);
 
-    // Налог гильдии (PvE)
-    const goldAfterTax = await collectGuildTax(userId, goldGained, 'tax_pve');
+    // Налог гильдии
+    const goldAfterTax = playerWon ? await collectGuildTax(userId, goldGained, 'tax_pve') : goldGained;
+    const finalMoneyAfterTax = user.money + goldAfterTax - goldLost;
 
-    await db.run(`UPDATE users SET level=?, exp=?, money=money+?, total_income=total_income+?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?`,
-        [newLevel, newExp, goldAfterTax, goldAfterTax, newHpAfter, now, now, newStatPoints, playerWon ? 1 : 0, playerWon ? goldGained : 0, playerWon ? 0 : goldLost, userId]);
+    await db.run('UPDATE users SET level=?, exp=?, money=?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?',
+        [newLevel, newExp, finalMoneyAfterTax, finalHp, now, now, levelsGained * 5, playerWon ? 1 : 0, goldGained, goldLost, userId]);
 
     // Достижения
     if (playerWon) {
@@ -485,24 +438,26 @@ router.post('/mob/attack', async (req, res) => {
     // Сохраняем в историю PvE
     await db.run(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, itemsDropped, premiumBonus)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialDropped ? JSON.stringify(materialDropped) : null, itemsDropped.length > 0 ? JSON.stringify(itemsDropped) : null, premiumBonus]);
+        [userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialsDropped.length > 0 ? JSON.stringify(materialsDropped) : null, itemsDropped.length > 0 ? JSON.stringify(itemsDropped) : null, premiumBonus]);
+
+    const updatedUser = await db.one('SELECT level, exp, money, statPoints, pveWins, pveTotalBattles FROM users WHERE id = ?', [userId]) as any;
 
     res.json({
-        log,
+        log: steps.map((s: any) => s.message),
         steps,
-        playerWon,
         expGained: playerWon ? expGained : 0,
         goldGained,
-        premiumBonus,
         goldLost,
         newLevel,
         newExp,
         levelsGained,
-        materialDropped,
+        playerWon,
+        mob: { name: mob.name, level: mob.level, hp: mobHp },
+        currentHp: finalHp,
+        stats: await buildPlayerStats(updatedUser, 'pve'),
+        materialDropped: materialsDropped,
         itemsDropped,
-        hpAfter: newHpAfter,
-        mobHpAfter: hpMob,
-        mob: { id: mob.id, name: mob.name, level: mob.level, hp: mob.hp },
+        premiumBonus,
     });
 });
 

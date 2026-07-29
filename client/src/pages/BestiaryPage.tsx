@@ -353,21 +353,8 @@ export default function BestiaryPage() {
       setBattleResult(result);
       // Дропы с задержкой
       const drops: any[] = [];
-      if (result.materialDropped) drops.push(result.materialDropped);
+      if (result.materialDropped?.length) drops.push(...result.materialDropped);
       if (result.itemsDropped?.length) drops.push(...result.itemsDropped);
-      // Камни улучшения, выпавшие после материала (только в steps)
-      const stoneSteps = result.steps?.filter((s: any) => s.message?.startsWith('Добыто: Рун'));
-      if (stoneSteps?.length) {
-        const hasStoneInMaterial = result.materialDropped?.itemType === 'upgrade';
-        for (const s of stoneSteps) {
-          const stoneName = s.message.replace('Добыто: ', '');
-          // Не дублируем если уже в materialDropped
-          if (!hasStoneInMaterial || result.materialDropped?.name !== stoneName) {
-            drops.push({ name: stoneName, rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888', count: 1, type: 'craft_item', itemType: 'upgrade' });
-          }
-        }
-      }
-      // Дропы будут показаны после завершения анимации
       pendingDropsRef.current = drops;
       const fresh = await fetchCharacter();
       // Не обновляем character сразу — откладываем до конца анимации
@@ -553,9 +540,9 @@ export default function BestiaryPage() {
                   {battleResult.xpGained > 0 && <p>Опыт: +{battleResult.xpGained}</p>}
                   {battleResult.goldGained > 0 && <p>Награда: +{formatMoney(battleResult.goldGained)}{battleResult.premiumBonus > 0 ? <span className="text-[var(--color-text-accent)]"> (+{battleResult.premiumBonus} премиум)</span> : null}</p>}
                   {battleResult.levelsGained > 0 && <p className="text-[var(--color-accent-purple)]">Уровень +{battleResult.levelsGained}</p>}
-                  {battleResult.materialDropped && (
-                    <p className={rarityTextColors[battleResult.materialDropped.rarity_id] || 'text-[#aaa]'}>Добыто: {battleResult.materialDropped.name}</p>
-                  )}
+                  {battleResult.materialDropped?.map((m: any, i: number) => (
+                    <p key={i} className={rarityTextColors[m.rarity_id] || 'text-[#aaa]'}>Добыто: {m.name}</p>
+                  ))}
                 </div>
               )}
               {!battleResult.playerWon && battleResult.goldLost > 0 && (
