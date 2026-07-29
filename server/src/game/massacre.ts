@@ -40,8 +40,12 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
         return;
     }
 
-    // Сортировка по ловкости (A) DESC
-    participants.sort((a, b) => b.base_a - a.base_a);
+    // Случайный порядок ходов — без привязки к ловкости
+    // shuffle participants array
+    for (let i = participants.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [participants[i], participants[j]] = [participants[j], participants[i]];
+    }
     const turnOrder = participants.map(p => p.user_id);
     await db.run(`UPDATE massacre_events SET turn_order = ? WHERE id = ?`, [JSON.stringify(turnOrder), eventId]);
 
@@ -57,124 +61,122 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
     }
 
     let turnNum = 0;
-    let battleLog: string[] = [];
+    let lastAttackerId: number | null = null;
 
-    // Цикл пока >1 живых
-    while (state.size > 0 && Array.from(state.values()).filter(s => s.alive).length > 1) {
-        for (const [userId, s] of state) {
-            if (!s.alive) continue;
+    // Цикл пока >1 живых — каждый ход случайный атакующий (не тот же дважды подряд)
+    while (true) {
+        const aliveEntries = Array.from(state.entries()).filter(([_, s]) => s.alive);
+        if (aliveEntries.length <= 1) break;
 
-            // Проверяем: остался ли ещё кто-то живой кроме этого
-            const aliveCount = Array.from(state.values()).filter(x => x.alive).length;
-            if (aliveCount <= 1) break;
+        // Выбрать случайного атакующего, но не того же что на прошлом ходу (если >1 живых)
+        const candidates = aliveEntries.filter(([id]) => id !== lastAttackerId);
+        const pickFrom = candidates.length > 0 ? candidates : aliveEntries;
+        const [userId, s] = pickFrom[Math.floor(Math.random() * pickFrom.length)]!;
+        lastAttackerId = userId;
 
-            turnNum++;
+        turnNum++;
 
-            // Оглушение — пропуск хода
-            if (s.stunned) {
-                await db.run(
-                    `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, action_type, message)
-                     VALUES (?, ?, ?, ?, 'stunned_skip', ?)`,
-                    [eventId, turnNum, userId, s.name, `${s.name} оглушён и пропускает ход`]
-                );
-                s.stunned = false;
-                continue;
+        // Оглушение — пропуск хода
+        if (s.stunned) {
+            await db.run(
+                `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, action_type, message)
+                 VALUES (?, ?, ?, ?, 'stunned_skip', ?)`,
+                [eventId, turnNum, userId, s.name, `${s.name} оглушён и пропускает ход`]
+            );
+            s.stunned = false;
+            continue;
+        }
+
+        // Выбрать случайную живую цель (не себя)
+        const aliveTargets = Array.from(state.entries())
+            .filter(([id, t]) => t.alive && id !== userId);
+        if (aliveTargets.length === 0) break;
+        const entry = aliveTargets[Math.floor(Math.random() * aliveTargets.length)]!;
+        const targetId = entry[0];
+        const target = entry[1];
+
+        // Статы атакующего и цели — из сохранённого снимка (с экипировкой, напитками, гильдией)
+        const atkStats = s.stats;
+        const defStats = target.stats;
+
+        // Один ход
+        const ctx: TurnContext = {
+            actorName: s.name, targetName: target.name,
+            actorStats: atkStats, targetStats: defStats,
+            actorLevel: s.level,
+            hpActor: s.hp, hpTarget: target.hp,
+            maxHpActor: s.maxHp, maxHpTarget: target.maxHp,
+            actor: 'attacker', target: 'defender',
+        };
+        const steps: BattleStep[] = [];
+        const result = runTurn(ctx, (step) => steps.push(step));
+
+        // Применить урон
+        s.hp = result.hpActor;
+        target.hp = result.hpTarget;
+
+        // Записать шаги в БД (HP только для шагов с уроном)
+        for (const step of steps) {
+            const stepActorId = step.actor === 'defender' ? targetId : userId;
+            const stepActorName = step.actor === 'defender' ? target.name : s.name;
+            const stepTargetId = step.target === 'attacker' ? userId : (step.target === 'defender' ? targetId : null);
+            const stepTargetName = step.target === 'attacker' ? s.name : (step.target === 'defender' ? target.name : null);
+
+            // HP показываем только на шагах с уроном
+            let hpInfo = '';
+            if (step.type === 'damage') {
+                const hp1 = step.hp1 != null ? step.hp1 : s.hp;
+                const hp2 = step.hp2 != null ? step.hp2 : target.hp;
+                const max1 = step.maxHp1 ?? s.maxHp;
+                const max2 = step.maxHp2 ?? target.maxHp;
+                hpInfo = ` [${s.name} ${hp1}/${max1} | ${target.name} ${hp2}/${max2}]`;
             }
+            await db.run(
+                `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, target_id, target_name, action_type, damage, message)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [eventId, turnNum, stepActorId, stepActorName, stepTargetId, stepTargetName, step.type, step.damage || 0, step.message + hpInfo]
+            );
+        }
 
-            // Выбрать случайную живую цель (не себя)
-            const aliveTargets = Array.from(state.entries())
-                .filter(([id, t]) => t.alive && id !== userId);
-            if (aliveTargets.length === 0) break;
-            const entry = aliveTargets[Math.floor(Math.random() * aliveTargets.length)]!;
-            const targetId = entry[0];
-            const target = entry[1];
+        // Проверить смерть атакующего (мог умереть от контратаки/вампиризма)
+        if (s.hp <= 0) {
+            s.alive = false;
+            s.hp = 0;
+            await db.run(
+                `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, action_type, damage, message)
+                 VALUES (?, ?, ?, ?, 'death', 0, ?)`,
+                [eventId, turnNum, userId, s.name, `${s.name} пал от ответного удара ${target.name}! [${s.name} 0/${s.maxHp}]`]
+            );
+            continue; // пропускаем остальную обработку для этого умершего
+        }
 
-            // Статы атакующего и цели — из сохранённого снимка (с экипировкой, напитками, гильдией)
-            const atkStats = s.stats;
-            const defStats = target.stats;
+        // Проверить смерть цели
+        if (target.hp <= 0) {
+            target.alive = false;
+            target.hp = 0;
+            await db.run(
+                `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, target_id, target_name, action_type, damage, message)
+                 VALUES (?, ?, ?, ?, ?, ?, 'death', 0, ?)`,
+                [eventId, turnNum, userId, s.name, targetId, target.name, `${target.name} пал от руки ${s.name}! [${target.name} 0/${target.maxHp}]`]
+            );
 
-            // Один ход
-            const ctx: TurnContext = {
-                actorName: s.name, targetName: target.name,
-                actorStats: atkStats, targetStats: defStats,
-                actorLevel: s.level,
-                hpActor: s.hp, hpTarget: target.hp,
-                maxHpActor: s.maxHp, maxHpTarget: target.maxHp,
-                actor: 'attacker', target: 'defender',
-            };
-            const steps: BattleStep[] = [];
-            const result = runTurn(ctx, (step) => steps.push(step));
-
-            // Применить урон
-            s.hp = result.hpActor;
-            target.hp = result.hpTarget;
-
-            // Записать шаги в БД (HP только для шагов с уроном)
-            for (const step of steps) {
-                const stepActorId = step.actor === 'defender' ? targetId : userId;
-                const stepActorName = step.actor === 'defender' ? target.name : s.name;
-                const stepTargetId = step.target === 'attacker' ? userId : (step.target === 'defender' ? targetId : null);
-                const stepTargetName = step.target === 'attacker' ? s.name : (step.target === 'defender' ? target.name : null);
-
-                // HP показываем только на шагах с уроном
-                let hpInfo = '';
-                if (step.type === 'damage') {
-                    const hp1 = step.hp1 != null ? step.hp1 : s.hp;
-                    const hp2 = step.hp2 != null ? step.hp2 : target.hp;
-                    const max1 = step.maxHp1 ?? s.maxHp;
-                    const max2 = step.maxHp2 ?? target.maxHp;
-                    hpInfo = ` [${s.name} ${hp1}/${max1} | ${target.name} ${hp2}/${max2}]`;
-                }
-                await db.run(
-                    `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, target_id, target_name, action_type, damage, message)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [eventId, turnNum, stepActorId, stepActorName, stepTargetId, stepTargetName, step.type, step.damage || 0, step.message + hpInfo]
-                );
+            // Засчитать PvP-победу убийце (для квестов)
+            await db.run(
+                `INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [userId, targetId, userId, '[]', '[]', s.hp, 0]
+            );
+            await db.run('UPDATE users SET wins = wins + 1 WHERE id = ?', [userId]);
+            const killerGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]).catch(() => null) as any;
+            if (killerGuild?.guildId) {
+                updateGuildQuestProgress(killerGuild.guildId).catch(e => console.error('[massacre] guildQuest kill:', e.message));
             }
+            markDirty(userId, 'quests');
+        }
 
-            // Проверить смерть атакующего (мог умереть от контратаки/вампиризма)
-            if (s.hp <= 0) {
-                s.alive = false;
-                s.hp = 0;
-                await db.run(
-                    `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, action_type, damage, message)
-                     VALUES (?, ?, ?, ?, 'death', 0, ?)`,
-                    [eventId, turnNum, userId, s.name, `${s.name} пал от ответного удара ${target.name}! [${s.name} 0/${s.maxHp}]`]
-                );
-                continue; // пропускаем остальную обработку для этого умершего
-            }
-
-            // Проверить смерть цели
-            if (target.hp <= 0) {
-                target.alive = false;
-                target.hp = 0;
-                await db.run(
-                    `INSERT INTO massacre_turns (event_id, turn_number, actor_id, actor_name, target_id, target_name, action_type, damage, message)
-                     VALUES (?, ?, ?, ?, ?, ?, 'death', 0, ?)`,
-                    [eventId, turnNum, userId, s.name, targetId, target.name, `${target.name} пал от руки ${s.name}! [${target.name} 0/${target.maxHp}]`]
-                );
-
-                // Засчитать PvP-победу убийце (для квестов)
-                await db.run(
-                    `INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [userId, targetId, userId, '[]', '[]', s.hp, 0]
-                );
-                await db.run('UPDATE users SET wins = wins + 1 WHERE id = ?', [userId]);
-                const killerGuild = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]).catch(() => null) as any;
-                if (killerGuild?.guildId) {
-                    updateGuildQuestProgress(killerGuild.guildId).catch(e => console.error('[massacre] guildQuest kill:', e.message));
-                }
-                markDirty(userId, 'quests');
-            }
-
-            // Проверить оглушение
-            if (result.stunnedTarget) {
-                target.stunned = true;
-            }
-
-            // Если остался 1 — стоп
-            if (Array.from(state.values()).filter(x => x.alive).length <= 1) break;
+        // Проверить оглушение
+        if (result.stunnedTarget) {
+            target.stunned = true;
         }
     }
 
