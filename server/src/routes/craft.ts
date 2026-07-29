@@ -211,7 +211,8 @@ router.post('/craft/execute', async (req, res) => {
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
         if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
         markDirty(userId, 'quests');
-        return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: 'Предмет создан!' });
+        const craftedItem = newInventory[newInventory.length - 1]; // последний добавленный
+        return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, item: craftedItem, message: 'Предмет создан!' });
     } else {
         await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
         addToTreasury(Math.floor(recipe.money_cost * 0.22), 'craft_recipe_fail').catch(() => {});

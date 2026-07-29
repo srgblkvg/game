@@ -353,7 +353,7 @@ export default function CraftPage() {
             setMaterialUsage({});
             const itemName = activeRecipe.result?.name || 'Предмет';
             if (data.success) {
-                setCraftAnim({ success: true, label: itemName, acquire: { item: activeRecipe.result, count: 1, msg: 'Создано' }, pendingData: data });
+                setCraftAnim({ success: true, label: itemName, acquire: { item: data.item || activeRecipe.result, count: 1, msg: 'Создано' }, pendingData: data });
             } else {
                 setCraftAnim({ success: false, label: itemName, pendingData: data });
             }
