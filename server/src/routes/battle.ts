@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { updateGuildQuestProgress } from './guild';
-import { markDirty } from '../events';
+import { markDirty, sendToUser } from '../events';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getBaseStats, buildPlayerStats, USER_BATTLE_FIELDS_GUILD, applyExp, collectGuildTax, getCollectionBonus } from '../db/helpers';
 import { runBattle } from '../game/battle';
@@ -120,8 +120,10 @@ router.post('/battle', async (req, res) => {
             [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), now, moneyStolen, attacker.id]);
 
         // Защитник
+        const protUntil = now + 3600;
         await db.run(`UPDATE users SET money=money-?, totalBattles=totalBattles+1, protectionUntil=?, elo=?, seasonLosses=seasonLosses+1, lastPvpTime=?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
-            [moneyStolen, now + 3600, Math.max(100, newDefenderElo), now, moneyStolen, defender.id]);
+            [moneyStolen, protUntil, Math.max(100, newDefenderElo), now, moneyStolen, defender.id]);
+        sendToUser(defender.id, { type: 'protection', protectionUntil: protUntil });
 
         // Запись в историю
         await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
@@ -196,6 +198,7 @@ router.post('/battle', async (req, res) => {
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
         [defExp.newLevel, defExp.newExp, defenderMoneyDelta, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
             !attackerWins ? moneyStolen : 0, !attackerWins ? 0 : moneyStolen, defender.id]);
+    sendToUser(defender.id, { type: 'protection', protectionUntil: now + 3600 });
 
     // Достижения — защитник
     if (!attackerWins) {

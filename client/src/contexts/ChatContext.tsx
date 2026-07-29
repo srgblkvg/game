@@ -169,6 +169,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               window.dispatchEvent(new CustomEvent('tournamentUpdated'));
               break;
             }
+            case 'protection': {
+              window.dispatchEvent(new CustomEvent('protectionChanged', { detail: data.protectionUntil }));
+              break;
+            }
             case 'error': {
               setChatError(data.message || 'Ошибка');
               break;

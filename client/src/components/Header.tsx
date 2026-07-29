@@ -164,6 +164,16 @@ export default function Header() {
         return () => clearInterval(timer);
     }, [character, user]);
 
+    // Динамическое обновление щита через WS
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const protUntil = (e as CustomEvent).detail;
+            setCharacter((prev: any) => prev ? { ...prev, protectionUntil: protUntil } : prev);
+        };
+        window.addEventListener('protectionChanged', handler);
+        return () => window.removeEventListener('protectionChanged', handler);
+    }, [setCharacter]);
+
     // Отслеживание новых личных сообщений
     const userId = user?.id;
     useEffect(() => {
