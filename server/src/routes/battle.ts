@@ -127,7 +127,10 @@ router.post('/battle', async (req, res) => {
         await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [attacker.id, defender.id, attacker.id, JSON.stringify([`${attacker.username} подавляет ${defender.username} без боя`]),
-             JSON.stringify([{ type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen}` }]),
+             JSON.stringify([
+                { type: 'info', message: `⚔ ${attacker.username} vs ${defender.username}` },
+                { type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} серебра` }
+             ]),
              attackerFullStats.hp, 0, expGained, moneyStolen, moneyStolen]);
 
         const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
@@ -137,7 +140,7 @@ router.post('/battle', async (req, res) => {
             log: [`${attacker.username} vs ${defender.username}`, `${defender.username} оценил силы и предпочёл не рисковать`],
             steps: [
                 { type: 'info', message: `⚔ ${attacker.username} vs ${defender.username}` },
-                { type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen}` },
+                { type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} серебра` },
             ],
             winnerId: attacker.id,
             hpAfter: attackerFullStats.hp,
