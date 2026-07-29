@@ -14,6 +14,7 @@ const STAT_ORDER = ['s', 'a', 'd', 'm'];
 export default function DebugStatsPage() {
     const [username, setUsername] = useState('');
     const [context, setContext] = useState('arena');
+    const [drink, setDrink] = useState('');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<any>(null);
     const [error, setError] = useState('');
@@ -27,7 +28,7 @@ export default function DebugStatsPage() {
             const res = await fetch('/api/debug/stats', {
                 method: 'POST',
                 headers: getHeaders(),
-                body: JSON.stringify({ username: username.trim(), context }),
+                body: JSON.stringify({ username: username.trim(), context, drink: drink || undefined }),
             });
             const d = await res.json();
             if (!res.ok) { setError(d.error || 'Ошибка'); return; }
@@ -53,9 +54,9 @@ export default function DebugStatsPage() {
                 и полные статы с бонусами (напитки, коллекция, гильдия) для выбранного режима.
             </p>
 
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-4">
                 <input
-                    className="flex-1 px-3 py-2 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-default)] text-sm"
+                    className="flex-1 min-w-[120px] px-3 py-2 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-default)] text-sm"
                     placeholder="Ник персонажа"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
@@ -70,6 +71,18 @@ export default function DebugStatsPage() {
                         <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                 </select>
+                {data?.availableDrinks && (
+                    <select
+                        className="px-2 py-2 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-default)] text-sm max-w-[200px]"
+                        value={drink}
+                        onChange={e => { setDrink(e.target.value); }}
+                    >
+                        <option value="">Напиток: актуальный</option>
+                        {data.availableDrinks.map((d: any) => (
+                            <option key={d.key} value={d.key}>{d.name}</option>
+                        ))}
+                    </select>
+                )}
                 <button
                     className="px-4 py-2 rounded bg-[var(--color-accent-info)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
                     onClick={check}
@@ -129,7 +142,7 @@ export default function DebugStatsPage() {
                         <h3 className="text-sm font-bold mb-2">Бонусы для режима «{data.contextLabel}»</h3>
                         <div className="flex gap-3 text-sm">
                             <div className="flex-1 bg-[var(--color-bg-input)] rounded p-2 text-center">
-                                <div className="text-[var(--color-text-muted)] text-xs">Напитки</div>
+                                <div className="text-[var(--color-text-muted)] text-xs">Напитки {data.selectedDrink && data.selectedDrink !== data.activeDrink ? '(выбрано)' : data.activeDrink ? '(акт.)' : ''}</div>
                                 <div className="font-bold">{STAT_ORDER.map(k => {
                                     const v = data.bonuses.drinks[k];
                                     return v ? `${data.statNames[k]}: +${v}` : null;
