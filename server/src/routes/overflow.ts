@@ -52,6 +52,23 @@ export async function addToOverflow(userId: number, item: any, auctionLotId?: nu
   );
 }
 
+// Получить + вывести серебро со склада
+router.get('/money', async (req: any, res) => {
+  const userId = req.userId;
+  const u = await db.one('SELECT overflowmoney FROM users WHERE id = ?', [userId]) as any;
+  res.json({ overflowmoney: u?.overflowmoney || 0 });
+});
+
+router.post('/money/withdraw', async (req: any, res) => {
+  const userId = req.userId;
+  const amount = parseInt(req.body.amount) || 0;
+  if (amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
+  const u = await db.one('SELECT overflowmoney FROM users WHERE id = ?', [userId]) as any;
+  if (!u || (u.overflowmoney || 0) < amount) return res.status(400).json({ error: 'Недостаточно на складе' });
+  await db.run('UPDATE users SET money = money + ?, overflowmoney = overflowmoney - ? WHERE id = ?', [amount, amount, userId]);
+  res.json({ success: true, withdrawn: amount, remaining: (u.overflowmoney || 0) - amount });
+});
+
 // Проверить заполненность инвентаря
 export async function isInventoryFull(userId: number): Promise<boolean> {
   const u = await db.one('SELECT inventory, inventorySlots FROM users WHERE id = ?', [userId]) as any;

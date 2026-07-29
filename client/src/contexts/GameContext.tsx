@@ -91,6 +91,7 @@ export interface Character {
   tutorialCompleted?: number;
   tutorialStep?: number;
   totalIncome?: number;
+  overflowmoney?: number;
   achievements?: AchievementSummary[];
 }
 

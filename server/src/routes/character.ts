@@ -185,6 +185,7 @@ router.get('/character/me', async (req, res) => {
         tutorialCompleted: user.tutorialCompleted || 0,
         tutorialStep: user.tutorialStep || 0,
         totalIncome: user.totalIncome || 0,
+        overflowmoney: user.overflowmoney || 0,
     });
 });
 

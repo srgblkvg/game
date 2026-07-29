@@ -49,6 +49,7 @@ db.run(`CREATE TABLE IF NOT EXISTS auction_history (
 
 // Колонка непрочитанных продаж на аукционе
 db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auction_sales INTEGER DEFAULT 0`).catch(() => {});
+db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS overflowmoney INTEGER DEFAULT 0`).catch(() => {});
 
 // Мин. цены по редкости
 const priceFloor: Record<number, number> = { 0: 5, 1: 20, 2: 100, 3: 400, 4: 1500, 5: 6000, 6: 20000 };
@@ -110,12 +111,12 @@ router.get('/auction', async (req, res) => {
     for (const lot of expired) {
         const commission = Math.floor(lot.currentBid * 0.1);
         const payout = lot.currentBid - commission;
-        // Заплатить продавцу
-        await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+        // Заплатить продавцу — на склад (нельзя ограбить)
+        await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
         checkAchievement(lot.sellerId, 'auction').catch(() => {});
-        // Отдать предмет покупателю (или overflow)
+        // Отдать предмет покупателю — всегда на склад
         const buyItemData = JSON.parse(lot.itemData);
-        await returnItemToInventory(lot.currentBidderId, buyItemData);
+        await addToOverflow(lot.currentBidderId, buyItemData);
         // Запись в историю
         await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -453,11 +454,12 @@ router.post('/auction/buyout', async (req, res) => {
 
     const itemData = JSON.parse(lot.itemData);
 
-    // Добавляем предмет покупателю (или overflow)
-    await returnItemToInventory(userId, itemData);
+    // Добавляем предмет покупателю — всегда на склад
+    await addToOverflow(userId, itemData);
 
     await db.run('UPDATE users SET money = money - ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [lot.buyoutPrice, userId]);
-    await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+    // Продавец получает на склад (нельзя ограбить)
+    await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
     checkAchievement(lot.sellerId, 'auction').catch(() => {});
     await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
     await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
@@ -540,8 +542,8 @@ router.post('/auction/buy-partial', async (req, res) => {
 
     const inventory = JSON.parse(user.inventory || '[]');
 
-    // Добавляем покупателю
-    await returnItemToInventory(userId, { ...itemData, count: quantity });
+    // Добавляем покупателю — всегда на склад
+    await addToOverflow(userId, { ...itemData, count: quantity });
 
     // Обновляем лот: уменьшаем count
     const remainingCount = stackCount - quantity;
@@ -565,9 +567,9 @@ router.post('/auction/buy-partial', async (req, res) => {
         }
     }
 
-    // Списываем деньги покупателю и начисляем продавцу
+    // Списываем деньги покупателю и начисляем продавцу на склад
     await db.run('UPDATE users SET money = money - ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [cost, userId]);
-    await db.run('UPDATE users SET money = money + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
+    await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
     checkAchievement(lot.sellerId, 'auction').catch(() => {});
 
     // Daily quests — track auction trades
