@@ -454,6 +454,8 @@ router.post('/mob/attack', async (req, res) => {
         playerWon,
         mob: { name: mob.name, level: mob.level, hp: mobHp },
         currentHp: finalHp,
+        hpAfter: finalHp,
+        mobHpAfter: mobCurrentHp,
         stats: await buildPlayerStats(updatedUser, 'pve'),
         materialDropped: materialsDropped,
         itemsDropped,
