@@ -138,7 +138,7 @@ export default function OverflowStorage({ onTake }: { onTake?: () => void }) {
           {/* Вывод серебра */}
           {overflowMoney > 0 && (
             <div className="mb-3 p-2 bg-[var(--color-bg-input)] rounded flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-[var(--color-accent-gold)] font-bold">{formatMoney(overflowMoney)} сер.</span>
+              <span className="text-xs text-[var(--color-accent-gold)] font-bold">{formatMoney(overflowMoney)}</span>
               <input
                 className="w-24 px-2 py-1 text-xs rounded bg-[var(--color-bg-primary)] border border-[var(--color-border-default)]"
                 type="number" min="1" max={overflowMoney}
