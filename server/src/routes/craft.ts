@@ -135,6 +135,7 @@ router.post('/craft/execute', async (req, res) => {
     const success = Math.random() * 100 < chance;
 
     if (success) {
+        let craftedItem: any = null;
         if (recipe.result_type === 'item') {
             const resultItem = await db.one(`
         SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
@@ -143,7 +144,7 @@ router.post('/craft/execute', async (req, res) => {
         WHERE i.id = ?
       `, [recipe.result_id]) as any;
             if (!resultItem) return res.status(500).json({ error: 'Результирующий предмет не найден' });
-            newInventory.push({
+            craftedItem = {
                 id: Date.now() + Math.random(),
                 name: resultItem.name,
                 slot: resultItem.slot,
@@ -154,7 +155,8 @@ router.post('/craft/execute', async (req, res) => {
                 extra: JSON.parse(resultItem.extra || '{}'),
                 image: resultItem.image || null,
                 upgradeLevel: 0,
-            });
+            };
+            newInventory.push(craftedItem);
         } else if (recipe.result_type === 'random_item') {
             // Случайный предмет указанной редкости (result_id = rarity_id)
             const rarityId = recipe.result_id;
@@ -167,7 +169,7 @@ router.post('/craft/execute', async (req, res) => {
                 ORDER BY RANDOM() LIMIT 1
             `, [rarityId]) as any;
             if (!randomItem) return res.status(500).json({ error: 'Нет предметов такой редкости' });
-            newInventory.push({
+            craftedItem = {
                 id: Date.now() + Math.random(),
                 name: randomItem.name,
                 slot: randomItem.slot,
@@ -178,7 +180,8 @@ router.post('/craft/execute', async (req, res) => {
                 extra: JSON.parse(randomItem.extra || '{}'),
                 image: randomItem.image || null,
                 upgradeLevel: 0,
-            });
+            };
+            newInventory.push(craftedItem);
         } else if (recipe.result_type === 'craft_item') {
             const resultCraftItem = await db.one(`
         SELECT c.*, r.display_name as rarity_display, r.color as rarity_color
@@ -190,8 +193,9 @@ router.post('/craft/execute', async (req, res) => {
             const existing = newInventory.find((i: any) => isCraftItem(i) && String(i.id) === String(recipe.result_id));
             if (existing) {
                 existing.count += 1;
+                craftedItem = { ...existing, count: 1 }; // для уведомления: одна штука
             } else {
-                newInventory.push({
+                craftedItem = {
                     type: 'craft_item',
                     id: resultCraftItem.id,
                     name: resultCraftItem.name,
@@ -201,7 +205,8 @@ router.post('/craft/execute', async (req, res) => {
                     count: 1,
                     itemType: resultCraftItem.type || 'craft',
                     image: resultCraftItem.image || null,
-                });
+                };
+                newInventory.push(craftedItem);
             }
         }
 
@@ -211,7 +216,6 @@ router.post('/craft/execute', async (req, res) => {
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
         if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
         markDirty(userId, 'quests');
-        const craftedItem = newInventory[newInventory.length - 1]; // последний добавленный
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, item: craftedItem, message: 'Предмет создан!' });
     } else {
         await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
