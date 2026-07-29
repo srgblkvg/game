@@ -121,7 +121,7 @@ export default function Inventory({
             });
             const d = await r.json();
             if (!r.ok) { showToast(d.error || 'Ошибка'); return; }
-            setCharacter((prev: any) => prev ? { ...prev, equipment: d.equipment, inventory: d.inventory, currentHp: d.currentHp } : prev);
+            setCharacter((prev: any) => prev ? { ...prev, equipment: d.equipment, inventory: d.inventory, currentHp: d.currentHp, stats: d.stats } : prev);
             showToast('Надето', 'success');
         } catch { showToast('Ошибка соединения', 'error'); }
     };
