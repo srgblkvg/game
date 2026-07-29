@@ -64,8 +64,8 @@ router.get('/guild/quest', async (req, res) => {
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!member) return res.json({ activeQuest: null, options: null });
 
-    // Активное задание — обновить прогресс и вернуть
-    const questData = await updateGuildQuestProgress(member.guildId);
+    // Активное задание — только получить, без инкремента (GET — read-only)
+    const questData = await updateGuildQuestProgress(member.guildId, 0);
     if (questData) {
         return res.json({ activeQuest: questData, options: null });
     }

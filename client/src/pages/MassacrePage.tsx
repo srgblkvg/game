@@ -422,7 +422,7 @@ export default function MassacrePage() {
                                     key={i}
                                     className={`px-2 py-1 rounded border ${
                                         isDeath
-                                            ? 'bg-red-900/40 border-red-700/50 text-red-300'
+                                            ? 'bg-red-700 border-red-600 text-white font-bold'
                                             : isMy
                                                 ? 'bg-[#3d2e00] border-[#5a4200]'
                                                 : evenTurn
