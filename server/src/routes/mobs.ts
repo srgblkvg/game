@@ -197,6 +197,7 @@ router.post('/mob/attack', async (req, res) => {
         mobCurrentHp = result2.hpActor;
         userHp = result2.hpTarget;
         if (userHp <= 0) break;
+        if (mobCurrentHp <= 0) { playerWon = true; break; }
     }
 
     if (playerWon) {
@@ -250,7 +251,7 @@ router.post('/mob/attack', async (req, res) => {
 
             if (selectedRarity >= 0) {
             const craftItem = await db.one(
-                'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ?',
+                'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? ORDER BY RANDOM() LIMIT 1',
                 [selectedRarity]
             ) as any;
 
