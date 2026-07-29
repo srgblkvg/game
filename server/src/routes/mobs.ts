@@ -63,14 +63,20 @@ function getItemDropTable(level: number): { rarity: number; chance: number }[] {
         table.push({ rarity: 3, chance: 0.07 });
         table.push({ rarity: 4, chance: 0.05 });
         table.push({ rarity: 5, chance: 0.03 }); // Легендарный 3%
-    } else {
+    } else if (level <= 100) {
         table.push({ rarity: 0, chance: 0.07 });
         table.push({ rarity: 1, chance: 0.07 });
         table.push({ rarity: 2, chance: 0.07 });
         table.push({ rarity: 3, chance: 0.07 });
         table.push({ rarity: 4, chance: 0.05 });
         table.push({ rarity: 5, chance: 0.05 });
-        table.push({ rarity: 6, chance: 0.03 }); // Мифический 3%
+        table.push({ rarity: 6, chance: 0.03 }); // Мифический (не-сет) 3%
+    } else {
+        // Уровни 100+ (Ад II/III): мусор не падает, высокий шанс сетов/мификов
+        table.push({ rarity: 3, chance: 0.05 }); // Редкий 5%
+        table.push({ rarity: 4, chance: 0.08 }); // Эпический 8%
+        table.push({ rarity: 5, chance: 0.15 }); // Легендарный 15%
+        table.push({ rarity: 6, chance: 0.08 }); // Мифический 8%
     }
     return table;
 }
@@ -361,11 +367,11 @@ router.post('/mob/attack', async (req, res) => {
 
         // Случайный предмет — каждый уровень редкости проверяется отдельно
         const itemTable = getItemDropTable(mob.level);
-        const isHellFloor = ['Врата Бездны', 'Огненные чертоги', 'Тронный зал', 'Ледяная бездна', 'Престол падших'].includes(mob.location);
+        const canDropSets = mob.level >= 100;
         for (const entry of itemTable) {
             if (Math.random() < entry.chance) {
                 let itemQuery = 'SELECT i.*, r.display_name, r.color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.rarity_id = ?';
-                if (!isHellFloor) {
+                if (!canDropSets) {
                     itemQuery += " AND (i.extra IS NULL OR i.extra::text NOT LIKE '%\"set\"%')";
                 }
                 itemQuery += ' ORDER BY RANDOM() LIMIT 1';
