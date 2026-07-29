@@ -562,8 +562,8 @@ export default function AuctionPage() {
                                             </div>
                                         </div>
                                         <div className="text-[0.65rem] text-[var(--color-text-muted)] space-y-0.5">
-                                            <div>Мин. ставка: {formatMoney(g.minBid)}</div>
-                                            {g.minBuyout && <div>Мин. выкуп: {formatMoney(g.minBuyout)}</div>}
+                                            <div>Мин. ставка: {formatMoney(g.minBid)}{g.isStack ? ' / шт' : ''}</div>
+                                            {g.minBuyout && <div>Мин. выкуп: {formatMoney(g.minBuyout)}{g.isStack ? ' / шт' : ''}</div>}
                                         </div>
                                     </div>
                                 );

@@ -199,11 +199,14 @@ router.get('/auction', async (req, res) => {
     else if (sort === 'price_desc') filtered.sort((a: any, b: any) => (b.currentBid || b.startPrice) - (a.currentBid || a.startPrice));
 
     // Группировка ДО group-фильтра
-    const groupsMap = new Map<string, { item: any; count: number; minBid: number; minBuyout: number | null }>();
+    const groupsMap = new Map<string, { item: any; count: number; minBid: number; minBuyout: number | null; isStack: boolean }>();
     for (const lot of filtered) {
         const key = `${lot.itemData?.name || ''}|${lot.itemData?.slot || ''}|${lot.itemData?.rarity_id ?? ''}`;
-        const bid = lot.currentBid || lot.startPrice;
-        const buyout = lot.buyoutPrice || null;
+        const itemData = lot.itemData || {};
+        const isStack = (itemData.type === 'craft_item' || itemData.type === 'material' || itemData.type === 'upgrade') && (itemData.count || 1) > 1;
+        const stackSize = isStack ? (itemData.count || 1) : 1;
+        const bid = Math.ceil((lot.currentBid || lot.startPrice) / stackSize);
+        const buyout = lot.buyoutPrice ? Math.ceil(lot.buyoutPrice / stackSize) : null;
         const existing = groupsMap.get(key);
         if (existing) {
             existing.count++;
@@ -215,6 +218,7 @@ router.get('/auction', async (req, res) => {
                 count: 1,
                 minBid: bid,
                 minBuyout: buyout,
+                isStack,
             });
         }
     }
