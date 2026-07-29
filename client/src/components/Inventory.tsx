@@ -42,6 +42,8 @@ const sortItems = (items: any[], order: SortOrder): any[] => {
 
 const typeLocalization: Record<string, string> = {
     'craft': 'Материалы',
+    'material': 'Материалы',
+    'craft_item': 'Материалы',
     'upgrade': 'Камни усиления',
 };
 
@@ -167,7 +169,8 @@ export default function Inventory({
     const uniqueTypes = useMemo(() => {
         const typeSet = new Set<string>();
         craftItems.forEach(item => {
-            typeSet.add(item.itemType || item.type || 'craft');
+            const raw = item.itemType || item.type || 'craft';
+            typeSet.add(getLocalizedType(raw));
         });
         return Array.from(typeSet).sort();
     }, [craftItems]);
@@ -210,7 +213,7 @@ export default function Inventory({
     const filteredCraft = useMemo(() => {
         let items = craftItems;
         if (activeType !== 'all') {
-            items = items.filter(item => (item.itemType || item.type || 'craft') === activeType);
+            items = items.filter(item => getLocalizedType(item.itemType || item.type || 'craft') === activeType);
         }
         return sortItems(items, sortCraft);
     }, [craftItems, activeType, sortCraft]);
