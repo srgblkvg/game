@@ -185,9 +185,12 @@ export default function ArenaPage() {
       {battleSteps.length > 0 && (
         <div>
           <div ref={logContainerRef} className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed">
-            {renderBattleLog(visibleSteps, false, true)}
+            {(battleResult as any)?.mercy
+              ? <div className="text-center text-[var(--color-accent-warning)] py-4">{battleSteps[1]?.message || 'Противник капитулировал'}</div>
+              : renderBattleLog(visibleSteps, false, true)
+            }
           </div>
-          {currentStep >= battleSteps.length - 1 && battleResult && (
+          {((currentStep >= battleSteps.length - 1 && battleSteps.length > 0) || (battleResult as any)?.mercy) && battleResult && (
             <div className="text-center mt-4">
               <p className="font-bold text-lg">
                 {battleResult.winnerId === user.id
