@@ -167,7 +167,7 @@ export default function Inventory({
     const uniqueTypes = useMemo(() => {
         const typeSet = new Set<string>();
         craftItems.forEach(item => {
-            typeSet.add(item.itemType || 'craft');
+            typeSet.add(item.itemType || item.type || 'craft');
         });
         return Array.from(typeSet).sort();
     }, [craftItems]);
@@ -210,7 +210,7 @@ export default function Inventory({
     const filteredCraft = useMemo(() => {
         let items = craftItems;
         if (activeType !== 'all') {
-            items = items.filter(item => (item.itemType || 'craft') === activeType);
+            items = items.filter(item => (item.itemType || item.type || 'craft') === activeType);
         }
         return sortItems(items, sortCraft);
     }, [craftItems, activeType, sortCraft]);

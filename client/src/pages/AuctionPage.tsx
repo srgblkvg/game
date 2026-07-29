@@ -623,7 +623,7 @@ export default function AuctionPage() {
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <h3 className="font-bold text-sm truncate">{item.name}{item.upgradeLevel > 0 && <span className="text-[var(--color-text-accent)] ml-1">+{item.upgradeLevel}</span>}{isStack && <span className="text-xs text-[var(--color-accent-info)] ml-1">x{stackCount}</span>}</h3>
-                                                <p className="text-xs text-[var(--color-text-muted)]">{item.rarity_display} • {lot.sellerName}</p>
+                                                <p className="text-xs text-[var(--color-text-muted)]">{item.rarity_display}{(item.type === 'craft_item' || item.type === 'material' || item.type === 'upgrade') ? ' • Ресурс' : ''} • {lot.sellerName}</p>
                                                 <p className="text-xs">Старт: {formatMoney(lot.startPrice)}{isStack && <span className="text-[var(--color-accent-info)]"> ({formatMoney(pricePerItem)} / шт)</span>}{lot.currentBid && <> • Ставка: {formatMoney(lot.currentBid)}{(lot.currentBidderName || lot.currentbiddername) && <> ({(lot.currentBidderName || lot.currentbiddername)})</>}</>}</p>
                                                 {lot.buyoutPrice && <p className="text-xs">Выкуп: {formatMoney(lot.buyoutPrice)}{isStack && <span className="text-[var(--color-accent-info)]"> ({formatMoney(Math.ceil(lot.buyoutPrice / stackCount))} / шт)</span>}</p>}
                                             </div>
