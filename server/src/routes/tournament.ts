@@ -563,32 +563,9 @@ export async function autoAdvance(tournamentId: number) {
                 return;
             }
 
-            // Если турнир завершён или отменён — создаём новый для этого дивизиона
+            // Турнир завершён или отменён — новый создаст getOrCreateTournament в следующем тике
             if ((t.status === 'completed' || t.status === 'cancelled') && t.type === 'official') {
-                const existingResult = await client.query(
-                    "SELECT id FROM tournaments WHERE division = $1 AND status IN ('registration', 'in_progress')",
-                    [t.division]
-                );
-                if (existingResult.rows.length === 0) {
-                    const lastResult = await client.query(
-                        "SELECT completedat FROM tournaments WHERE division = $1 AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1",
-                        [t.division]
-                    );
-                    const lastCompleted = lastResult.rows[0];
-                    if (lastCompleted?.completedat) {
-                        const ts = typeof lastCompleted.completedat === 'number' ? lastCompleted.completedat * 1000
-                          : Number(lastCompleted.completedat) || new Date(lastCompleted.completedat).getTime();
-                        const oneHourLater = ts + 3600 * 1000;
-                        if (Date.now() < oneHourLater) return;
-                    }
-                    const divConfig = divisions.find(d => d.name === t.division)!;
-                    const now2 = Math.floor(Date.now() / 1000);
-                    const pool = await calcDivisionPool(divConfig.tier);
-                    await client.query(
-                        'INSERT INTO tournaments (division, status, registrationstart, registrationend, prizepool, createdat, type, maxplayers) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-                        [t.division, 'registration', now2, now2 + REGISTRATION_WINDOW, pool, new Date().toISOString(), 'official', MAX_PLAYERS]
-                    );
-                }
+                return;
             }
         });
     } catch (err) {
@@ -800,14 +777,19 @@ export async function getOrCreateTournament(type?: string) {
 
             const pool = await calcDivisionPool(div.tier);
 
-            // Транзакция: проверка + вставка атомарно
+            // Транзакция: проверка + вставка атомарно, с advisory lock на дивизион
             try {
                 await db.tx(async (client) => {
+                    // Блокировка на уровне дивизиона — предотвращает гонку
+                    const lockKey = div.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+                    const lockResult = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [lockKey]);
+                    if (!lockResult.rows[0]?.locked) return; // другой вызов уже обрабатывает
+
                     const recheck = (await client.query(
-                        `SELECT id FROM tournaments WHERE division = $1 AND status IN ('registration', 'in_progress') AND type = 'official' FOR UPDATE`,
+                        `SELECT id FROM tournaments WHERE division = $1 AND status IN ('registration', 'in_progress') AND type = 'official' LIMIT 1`,
                         [div.name]
                     )).rows[0];
-                    if (recheck) return; // уже создан в другой горутине
+                    if (recheck) return; // уже создан
 
                     await client.query(
                         'INSERT INTO tournaments (division, status, registrationstart, registrationend, prizepool, createdat, type, maxplayers) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
