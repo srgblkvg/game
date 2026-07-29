@@ -80,6 +80,21 @@ export default function GuildPage() {
     };
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
 
+    // WS-обновление опыта и уровня гильдии
+    useEffect(() => {
+        const onExp = (e: Event) => {
+            const d = (e as CustomEvent).detail;
+            setGuild((prev: any) => prev ? { ...prev, exp: d.exp, level: d.level ?? prev.level } : prev);
+        };
+        const onLevelUp = (e: Event) => {
+            const d = (e as CustomEvent).detail;
+            setGuild((prev: any) => prev ? { ...prev, exp: d.exp, level: d.level } : prev);
+        };
+        window.addEventListener('guildExp', onExp);
+        window.addEventListener('guildLevelUp', onLevelUp);
+        return () => { window.removeEventListener('guildExp', onExp); window.removeEventListener('guildLevelUp', onLevelUp); };
+    }, []);
+
     // Таймер войны
     useEffect(() => {
         if (!war?.expiresAt) { setWarTimeLeft(''); return; }

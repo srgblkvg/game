@@ -157,6 +157,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               }
               break;
             }
+            case 'guildExp': {
+              window.dispatchEvent(new CustomEvent('guildExp', { detail: { exp: data.exp, level: data.level } }));
+              break;
+            }
+            case 'guildLevelUp': {
+              window.dispatchEvent(new CustomEvent('guildLevelUp', { detail: { level: data.level, exp: data.exp } }));
+              break;
+            }
             case 'tournamentCreated': {
               window.dispatchEvent(new CustomEvent('tournamentUpdated'));
               break;
