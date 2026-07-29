@@ -33,7 +33,7 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
         if (participants.length === 1) {
             pushNotification(participants[0].user_id, {
                 type: 'battle_result',
-                message: 'Резня отменена: недостаточно участников. Взнос возвращён.',
+                message: 'Кровавая лотерея отменена: недостаточно участников. Взнос возвращён.',
                 data: { eventId, cancelled: true },
             });
         }
@@ -231,7 +231,7 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
     for (const [userId] of state) {
         pushNotification(userId, {
             type: 'battle_result',
-            message: `Резня завершена! Победитель: ${winnerState.name}. Участников: ${participants.length}. Приз: ${prizePool} сер. +10 XP.`,
+            message: `Кровавая лотерея завершена! Победитель: ${winnerState.name}. Участников: ${participants.length}. Приз: ${prizePool} сер. +10 XP.`,
             data: JSON.stringify({ eventId, participantCount: participants.length, winnerName: winnerState.name, winnerId, prizePool, path: `/massacre?eventId=${eventId}` }),
         });
     }
