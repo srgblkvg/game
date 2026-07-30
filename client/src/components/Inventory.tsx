@@ -378,17 +378,17 @@ export default function Inventory({
                             highlighted={isSelected}
                         />
                         {item?.locked && (
-                            <span className="absolute top-0.5 right-0.5 text-[0.5rem] z-10">🔒</span>
+                            <span className="absolute bottom-0.5 right-0.5 text-[0.5rem] z-10">🔒</span>
                         )}
                         {item && equipTarget?.id === item?.id && (
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex gap-1 z-50 equip-btn-visible">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 z-30 equip-btn-visible bg-[var(--color-bg-secondary)]/80 rounded">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); equipItem(item); setEquipTarget(null); }}
-                                    className="bg-[var(--color-accent-info)] text-white text-xs font-bold px-2 py-1 rounded shadow-lg cursor-pointer whitespace-nowrap"
+                                    className="bg-[var(--color-accent-info)] text-white text-xs font-bold px-2 py-1 rounded shadow-lg cursor-pointer"
                                 >Надеть</button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); toggleLock(item); }}
-                                    className={`text-white text-xs font-bold px-2 py-1 rounded shadow-lg cursor-pointer whitespace-nowrap ${item.locked ? 'bg-[var(--color-accent-warning)]' : 'bg-[var(--color-bg-input)]'}`}
+                                    className={`text-white text-xs font-bold px-2 py-1 rounded shadow-lg cursor-pointer ${item.locked ? 'bg-[var(--color-accent-warning)]' : 'bg-[var(--color-bg-input)]'}`}
                                 >{item.locked ? '🔒' : '🔓'}</button>
                             </div>
                         )}
