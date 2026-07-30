@@ -137,6 +137,16 @@ router.post('/battle', async (req, res) => {
 
         const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
 
+        // Guild quest progress — track PvP win (mercy)
+        if (attacker.guildId) {
+            updateGuildQuestProgress(attacker.guildId, 'pvp').catch(e => console.error('guildQuest PvP mercy:', e.message));
+        }
+
+        // Достижения и квесты
+        checkAchievement(attacker.id, 'pvp_wins').catch(() => {});
+        if (moneyStolen > 0) trackIncome(attacker.id, moneyStolen).catch(() => {});
+        markDirty(attacker.id, 'quests');
+
         return res.json({
             mercy: true,
             log: [`${attacker.username} vs ${defender.username}`, `${defender.username} оценил силы и предпочёл не рисковать`],
