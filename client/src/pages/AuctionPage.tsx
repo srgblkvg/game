@@ -109,12 +109,13 @@ function parseSearch(query: string): { text: string; stats: Record<string, numbe
 
 
 export default function AuctionPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { if (user?.isGuest) navigate('/'); }, [user, navigate]);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/auction'); if (c) setActionCard(c); }).catch(() => {}); }, []);
-    const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const isVk = document.documentElement.classList.contains('vk-iframe');
-    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { showAcquire } = useAcquire();
 

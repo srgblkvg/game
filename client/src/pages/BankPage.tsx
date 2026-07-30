@@ -17,6 +17,7 @@ export default function BankPage() {
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/bank'); if (c) setActionCard(c); }).catch(() => {}); }, []);
     const { user } = useAuth();
     const navigate = useNavigate();
+    useEffect(() => { if (user?.isGuest) navigate('/'); }, [user, navigate]);
 
     const [searchParams] = useSearchParams();
     const [tab, setTab] = useState<'info' | 'deposit' | 'transfer' | 'exchange'>(
