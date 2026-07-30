@@ -146,9 +146,16 @@ export default function HistoryPage() {
         const { data, type } = entry;
         if (type === 'battle') {
             const win = data.winnerId === user.id;
+            let eloInfo = '';
+            try {
+                const steps = typeof data.steps === 'string' ? JSON.parse(data.steps) : (data.steps || []);
+                const lastStep = steps[steps.length - 1];
+                if (lastStep?.message?.startsWith('Рейтинг:')) eloInfo = lastStep.message.replace('Рейтинг:', '').trim();
+            } catch {}
             return <EntryRow time={fmt(data.createdAt)} onClick={()=>setSelectedBattle(data)}>
                 <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{data.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{data.attackerId===user.id?data.defenderName:data.attackerName}</strong> <GuildTag guildName={data.attackerId===user.id?data.defenderGuild:data.attackerGuild} guildId={data.attackerId===user.id?data.defenderGuildId:data.attackerGuildId} /></span>
                 <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}`}>{win?'Победа':'Поражение'}</span>
+                {eloInfo && <span className="text-[var(--color-accent-info)] ml-1 text-xs">{eloInfo}</span>}
                 {win && data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{data.expGained} XP</span>}
                 {!win && data.expLost>0&&<span className="text-[var(--color-accent-danger)] ml-1"> -{data.expLost} XP</span>}
                 {data.moneyStolen>0&&<span className="text-[var(--color-text-accent)] ml-1"> {win?'+':'-'}{formatMoney(data.moneyStolen)}</span>}

@@ -153,6 +153,7 @@ router.post('/battle', async (req, res) => {
             steps: [
                 { type: 'info', message: `⚔ ${attacker.username} vs ${defender.username}` },
                 { type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} серебра` },
+                { type: 'info', message: `Рейтинг: ${attacker.username} +${eloChange}, ${defender.username} ${-eloChange >= 0 ? '+' : ''}${-eloChange}` },
             ],
             winnerId: attacker.id,
             hpAfter: attackerFullStats.hp,
@@ -235,6 +236,16 @@ router.post('/battle', async (req, res) => {
             result.attackerHpAfter, result.defenderHpAfter, result.expGained, result.moneyGained, moneyStolen]);
 
     const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
+
+    // Добавляем шаг с ELO в лог
+    const attackerEloChange = newAttackerElo - (attacker.elo || 1000);
+    const defenderEloChange = newDefenderElo - (defender.elo || 1000);
+    const eloChangeWinner = attackerWon ? attackerEloChange : defenderEloChange;
+    const eloChangeLoser = attackerWon ? defenderEloChange : attackerEloChange;
+    result.steps.push({
+        type: 'info',
+        message: `Рейтинг: ${attackerWon ? attacker.name : defender.name} +${eloChangeWinner}, ${attackerWon ? defender.name : attacker.name} ${eloChangeLoser >= 0 ? '+' : ''}${eloChangeLoser}`
+    });
 
     res.json({
         log: result.log,
