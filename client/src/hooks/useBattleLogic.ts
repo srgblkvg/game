@@ -221,6 +221,19 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             showEffectText(side, 'ОГЛУШЁН!', '#f1c40f');
         }
 
+        // Вампиризм / отхил
+        if (step.type === 'info' && step.message?.includes('Вампиризм')) {
+            const match = step.message.match(/\+(\d+) HP/);
+            if (match) {
+                const heal = parseInt(match[1]);
+                if (step.actor === 'attacker' || battleSteps[stepIndex - 1]?.actor === 'attacker') {
+                    setHpLeft(prev => Math.min(maxHpLeft, prev + heal));
+                } else {
+                    setHpRight(prev => Math.min(maxHpRight, prev + heal));
+                }
+            }
+        }
+
         if (logContainerRef.current) {
             logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
         }

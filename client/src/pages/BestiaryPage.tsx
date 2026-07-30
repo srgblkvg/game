@@ -307,6 +307,14 @@ export default function BestiaryPage() {
       }
     }
 
+    // Вампиризм / отхил (всегда игроку в PvE)
+    if (step.type === 'info' && step.message?.includes('Вампиризм')) {
+      const match = step.message.match(/\+(\d+) HP/);
+      if (match) {
+        setPlayerHp(prev => Math.min(playerMaxHp, prev + parseInt(match[1])));
+      }
+    }
+
     scrollLog();
     const isDamage = step?.type === 'damage';
     await new Promise(r => setTimeout(r, (isDamage ? 1000 : 700) / speedRef.current));
