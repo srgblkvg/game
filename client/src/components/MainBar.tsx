@@ -3,6 +3,7 @@ import OverflowStorage from './OverflowStorage';
 import Actions from './Actions';
 import { getHeaders } from '../api/helpers';
 import { useGame } from '../contexts/GameContext';
+import { useAuth } from '../contexts/AuthContext';
 import { fetchCharacter } from '../api';
 
 interface MainBarProps {
@@ -18,6 +19,7 @@ interface MainBarProps {
 
 export default function MainBar({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, selectedInventoryItemId, onInventoryItemClick, hasActiveJob }: MainBarProps) {
     const { setCharacter } = useGame();
+    const { user } = useAuth();
 
     const handleInventoryDrop = async (e: React.DragEvent) => {
       const data = e.dataTransfer.getData('text/plain');
@@ -40,7 +42,7 @@ export default function MainBar({ canAttack, attackCooldownSec, pveCooldownSec, 
         >
             <Inventory selectedItemId={selectedInventoryItemId} onItemClick={onInventoryItemClick} />
             <OverflowStorage />
-            <Actions canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} hasActiveJob={hasActiveJob} />
+            <Actions canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} hasActiveJob={hasActiveJob} isGuest={user?.isGuest} />
         </div>
     );
 }
