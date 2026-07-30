@@ -253,7 +253,7 @@ router.post('/battle', async (req, res) => {
     const eloChangeLoser = attackerWon ? defenderEloChange : attackerEloChange;
     result.steps.push({
         type: 'info',
-        message: `Рейтинг: ${attackerWon ? attacker.name : defender.name} +${eloChangeWinner}, ${attackerWon ? defender.name : attacker.name} ${eloChangeLoser >= 0 ? '+' : ''}${eloChangeLoser}`
+        message: `Рейтинг: ${attackerWon ? attacker.username : defender.username} +${eloChangeWinner}, ${attackerWon ? defender.username : attacker.username} ${eloChangeLoser >= 0 ? '+' : ''}${eloChangeLoser}`
     });
 
     res.json({
