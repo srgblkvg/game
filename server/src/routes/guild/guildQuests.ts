@@ -67,10 +67,16 @@ router.get('/guild/quest', async (req, res) => {
     const member = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!member) return res.json({ activeQuest: null, options: null });
 
-    // Активное задание — только получить, без инкремента (GET — read-only)
-    const questData = await updateGuildQuestProgress(member.guildId, 'pve', 0);
-    if (questData) {
-        return res.json({ activeQuest: questData, options: null });
+    // Активное задание — получить без инкремента (GET — read-only)
+    const activeQuest = await db.one(
+        "SELECT * FROM guild_quests WHERE guildId = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
+        [member.guildId]
+    ) as any;
+    if (activeQuest) {
+        const questData = await updateGuildQuestProgress(member.guildId, activeQuest.questType as GuildQuestType, 0);
+        if (questData) {
+            return res.json({ activeQuest: questData, options: null });
+        }
     }
 
     // Проверяем сохранённые варианты
