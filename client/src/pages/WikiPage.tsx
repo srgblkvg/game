@@ -75,7 +75,7 @@ export default function WikiPage() {
             <h3 className="text-sm font-bold text-[var(--color-accent-success)] mt-3 mb-1">🍺 Трактир подробнее</h3>
             <Card className="p-3 mb-3">
                 <p className="text-xs text-[var(--color-text-muted)]"><strong>Лечение:</strong> мгновенное восстановление HP за серебро (2💰 за 1 HP).</p>
-                <p className="text-xs text-[var(--color-text-muted)]"><strong>Комнаты</strong> (1ч / 8ч) — ускоренная регенерация HP (базовая: 1 HP/10с):</p>
+                <p className="text-xs text-[var(--color-text-muted)]"><strong>Комнаты</strong> (1ч / 8ч) — ускоренная регенерация HP (базовая: 1 HP/5с):</p>
                 <p className="text-xs text-[var(--color-text-muted)] ml-2">Чулан — ×3 (100/600💰)</p>
                 <p className="text-xs text-[var(--color-text-muted)] ml-2">Койка — ×10 (500/3000💰)</p>
                 <p className="text-xs text-[var(--color-text-muted)] ml-2">Аппартаменты — ×50 (2000/12000💰)</p>
