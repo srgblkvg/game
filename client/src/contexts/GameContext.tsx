@@ -114,7 +114,7 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | null>(null);
 
-/** Вычислить HP с учётом регенерации (1 HP / 10 сек, ×rate от комнаты) */
+/** Вычислить HP с учётом регенерации (1 HP / 5 сек, ×rate от комнаты) */
 function calcRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, serverTime: number, roomType?: string | null, roomUntil?: number, premiumUntil?: number): number {
   const elapsed = serverTime - lastHpUpdate;
   if (elapsed <= 0) return Math.min(currentHp, maxHp);
@@ -127,7 +127,7 @@ function calcRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, ser
   }
   if (premiumUntil && premiumUntil > serverTime) regenRate *= 3;
 
-  const regenAmount = Math.floor(elapsed * regenRate / 10);
+  const regenAmount = Math.floor(elapsed * regenRate / 5);
   return Math.min(maxHp, currentHp + regenAmount);
 }
 
