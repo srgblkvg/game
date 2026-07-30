@@ -70,10 +70,11 @@ export default function Inventory({
     const [dragIndex, setDragIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-    // Инициализируем порядок из инвентаря
+    // Инициализируем порядок из снаряжения (не трогаем ресурсы)
     useEffect(() => {
         if (!character?.inventory) return;
-        setInventoryOrder(character.inventory.map((item: any) => String(item.id)));
+        const equipment = character.inventory.filter((item: any) => !isCraftItem(item));
+        setInventoryOrder(equipment.map((item: any) => String(item.id)));
     }, [character?.inventory]);
     const equipTargetRef = useRef<any>(null);
     useEffect(() => { equipTargetRef.current = equipTarget; }, [equipTarget]);
@@ -185,7 +186,19 @@ export default function Inventory({
     }, [craftItems]);
 
     const sortedEquipment = sortItems(equipmentItems, sortEquipment);
-    const inventory = sortedEquipment.slice(0, maxSlots);
+    // Если есть пользовательский порядок — используем его, иначе сортировка по редкости
+    const orderedEquipment = inventoryOrder.length > 0
+        ? (() => {
+            const idToItem = new Map(equipmentItems.map((item: any) => [String(item.id), item]));
+            const ordered = inventoryOrder.map(id => idToItem.get(id)).filter(Boolean) as any[];
+            // Добавляем новые предметы, которых нет в inventoryOrder
+            for (const item of equipmentItems) {
+                if (!inventoryOrder.includes(String(item.id))) ordered.push(item);
+            }
+            return ordered;
+        })()
+        : sortedEquipment;
+    const inventory = orderedEquipment.slice(0, maxSlots);
     const hasMore = equipmentItems.length > maxSlots;
 
     const handleExpand = async () => {
@@ -258,17 +271,19 @@ export default function Inventory({
         newOrder.splice(toIdx, 0, moved);
         setInventoryOrder(newOrder);
         
-        // Обновляем character.inventory в том же порядке
+        // Обновляем character.inventory: снаряжение в новом порядке, ресурсы в конце
         const idToItem = new Map(character!.inventory.map((item: any) => [String(item.id), item]));
-        const reordered = newOrder.map(id => idToItem.get(id)).filter(Boolean);
-        setCharacter((prev: any) => ({ ...prev, inventory: reordered }));
+        const reorderedEquip = newOrder.map(id => idToItem.get(id)).filter(Boolean);
+        const resources = character!.inventory.filter((item: any) => isCraftItem(item));
+        const newInventory = [...reorderedEquip, ...resources];
+        setCharacter((prev: any) => ({ ...prev, inventory: newInventory }));
         
         // Сохраняем на сервер
         try {
             await fetch('/api/character/reorder-inventory', {
                 method: 'POST',
                 headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ order: newOrder }),
+                body: JSON.stringify({ order: newInventory.map((i: any) => String(i.id)) }),
             });
         } catch {}
     };
