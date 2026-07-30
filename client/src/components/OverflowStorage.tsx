@@ -46,7 +46,6 @@ export default function OverflowStorage({ onTake }: { onTake?: () => void }) {
   const { setCharacter } = useGame();
   const [items, setItems] = useState<OverflowItem[]>([]);
   const [overflowMoney, setOverflowMoney] = useState(0);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -94,14 +93,13 @@ export default function OverflowStorage({ onTake }: { onTake?: () => void }) {
     }
   };
 
-  const withdrawMoney = async () => {
-    const amount = parseInt(withdrawAmount);
-    if (!amount || amount <= 0) return;
+  const withdrawAllMoney = async () => {
+    if (overflowMoney <= 0) return;
     setError(''); setMsg('');
     try {
       const r = await fetch('/api/overflow/money/withdraw', {
         method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount: overflowMoney }),
       });
       const d = await r.json();
       if (!r.ok) { setError(d.error); return; }
@@ -139,17 +137,10 @@ export default function OverflowStorage({ onTake }: { onTake?: () => void }) {
           {overflowMoney > 0 && (
             <div className="mb-3 p-2 bg-[var(--color-bg-input)] rounded flex items-center gap-2 flex-wrap">
               <span className="text-xs text-[var(--color-accent-gold)] font-bold">{formatMoney(overflowMoney)}</span>
-              <input
-                className="w-24 px-2 py-1 text-xs rounded bg-[var(--color-bg-primary)] border border-[var(--color-border-default)]"
-                type="number" min="1" max={overflowMoney}
-                placeholder="Сумма"
-                value={withdrawAmount}
-                onChange={e => setWithdrawAmount(e.target.value)}
-              />
               <button
                 className="px-2 py-1 text-xs rounded bg-[var(--color-accent-gold)] text-black font-bold hover:opacity-90 cursor-pointer"
-                onClick={withdrawMoney}
-              >Вывести</button>
+                onClick={withdrawAllMoney}
+              >Забрать всё</button>
               {msg && <span className="text-xs text-[var(--color-accent-success)]">{msg}</span>}
             </div>
           )}
