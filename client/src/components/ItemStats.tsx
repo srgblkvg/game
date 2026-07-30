@@ -20,7 +20,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
   if (!item) return null;
   const color = getRarityColor(item);
   const img = getItemImage(item);
-  const upgradeLevel = item.upgradeLevel ?? 0;
+  const upgradeLevel = item.upgradeLevel ?? item.upgradelevel ?? 0;
   const resource = isCraftItem(item);
 
   // Проверка коллекции
