@@ -315,9 +315,9 @@ export default function Inventory({
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)] overflow-hidden" data-tutorial="inventory">
+        <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
             {/* Индикатор заполнения */}
-            <div className={`h-1 ${fillColor} transition-all duration-300`} style={{ width: `${fillPct}%` }} />
+            <div className="h-1 rounded-t-xl overflow-hidden"><div className={`h-full ${fillColor} transition-all duration-300`} style={{ width: `${fillPct}%` }} /></div>
 
             <div className="p-4">
             <div className="flex items-center justify-between mb-2">
@@ -339,7 +339,7 @@ export default function Inventory({
 
             {(!collapsible || !collapsed) && (<>
 
-            <div className="grid grid-cols-[repeat(auto-fill,48px)] gap-2.5 mb-2 overflow-hidden">
+            <div className="grid grid-cols-[repeat(auto-fill,48px)] gap-2.5 mb-2">
                 {Array.from({ length: maxSlots }).map((_, idx) => {
                     const item = inventory[idx] || null;
                     const isSelected = selectedItemId && item && item.id === selectedItemId;
