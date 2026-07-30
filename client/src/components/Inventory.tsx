@@ -81,14 +81,15 @@ export default function Inventory({
         const inventory = [...(character.inventory || [])];
         const idx = inventory.findIndex((i: any) => String(i.id) === String(item.id));
         if (idx === -1) return;
-        inventory[idx] = { ...inventory[idx], locked: !inventory[idx].locked };
+        const newLocked = !inventory[idx].locked;
+        inventory[idx] = { ...inventory[idx], locked: newLocked };
         setCharacter({ ...character, inventory });
         setEquipTarget(null);
         try {
-            await fetch('/api/character/reorder-inventory', {
+            await fetch('/api/character/toggle-lock', {
                 method: 'POST',
                 headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ order: inventory.map((i: any) => String(i.id)) }),
+                body: JSON.stringify({ itemId: item.id }),
             });
         } catch {}
     };

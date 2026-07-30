@@ -84,6 +84,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
                 }
                 const hasAddable = inv.some((invItem: any) => {
                     if (!invItem.name || !invItem.slot) return false;
+                    if (invItem.locked) return false; // заблокированные не считаем
                     const key = `${invItem.name}|${invItem.slot}`;
                     return validSet.has(key) && !collSet.has(key) && !equippedIds.has(invItem.id);
                 });

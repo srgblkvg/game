@@ -191,4 +191,22 @@ router.post('/character/reorder-inventory', async (req, res) => {
     res.json({ success: true });
 });
 
+// Заблокировать/разблокировать предмет в инвентаре
+router.post('/character/toggle-lock', async (req, res) => {
+    const userId = req.userId;
+    const { itemId } = req.body;
+    if (!itemId) return res.status(400).json({ error: 'itemId обязателен' });
+
+    const user = await db.one('SELECT id, inventory FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const inventory = typeof user.inventory === 'string' ? JSON.parse(user.inventory) : (user.inventory || []);
+    const idx = inventory.findIndex((i: any) => String(i.id) === String(itemId));
+    if (idx === -1) return res.status(400).json({ error: 'Предмет не найден' });
+
+    inventory[idx] = { ...inventory[idx], locked: !inventory[idx].locked };
+    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+    res.json({ success: true, locked: inventory[idx].locked });
+});
+
 export default router;
