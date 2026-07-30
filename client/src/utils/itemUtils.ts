@@ -56,6 +56,7 @@ export function isCraftItem(item: any): item is {
     rarity_display?: string;
     rarity_color?: string;
     image?: string;
+    locked?: boolean;
 } {
     return item?.type === 'material' || item?.type === 'craft_item' || item?.type === 'upgrade';
 }

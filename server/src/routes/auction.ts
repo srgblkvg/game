@@ -297,6 +297,7 @@ router.post('/auction/sell', async (req, res) => {
     const idx = inventory.findIndex((i: any) => String(i.id) === String(itemData.id));
     if (idx === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
     const invItem = inventory[idx];
+    if (invItem.locked) return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
 
     if (isMaterial) {
         const availableCount = invItem.count || 0;

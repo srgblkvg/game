@@ -15,4 +15,5 @@ export interface GameItem {
   bonuses?: Record<string, number>;
   extra?: Record<string, number>;
   upgradeLevel?: number;
+  locked?: boolean;
 }

@@ -108,6 +108,10 @@ router.post('/collections/add', async (req, res) => {
         return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
     }
 
+    if (inventory[itemIndex].locked) {
+        return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
+    }
+
     const removed = inventory.splice(itemIndex, 1)[0];
 
     await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);

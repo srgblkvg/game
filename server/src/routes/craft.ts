@@ -261,6 +261,7 @@ router.post('/craft/upgrade', async (req, res) => {
     if (itemIndex === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
 
     const itemToUpgrade = inventory[itemIndex];
+    if (itemToUpgrade.locked) return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
     const currentLevel = itemToUpgrade.upgradeLevel || 0;
     const targetLevel = currentLevel + 1;
 

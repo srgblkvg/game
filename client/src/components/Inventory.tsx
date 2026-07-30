@@ -76,6 +76,22 @@ export default function Inventory({
         const equipment = character.inventory.filter((item: any) => !isCraftItem(item));
         setInventoryOrder(equipment.map((item: any) => String(item.id)));
     }, [character?.inventory]);
+    const toggleLock = async (item: any) => {
+        if (!character) return;
+        const inventory = [...(character.inventory || [])];
+        const idx = inventory.findIndex((i: any) => String(i.id) === String(item.id));
+        if (idx === -1) return;
+        inventory[idx] = { ...inventory[idx], locked: !inventory[idx].locked };
+        setCharacter({ ...character, inventory });
+        setEquipTarget(null);
+        try {
+            await fetch('/api/character/reorder-inventory', {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order: inventory.map((i: any) => String(i.id)) }),
+            });
+        } catch {}
+    };
     const equipTargetRef = useRef<any>(null);
     useEffect(() => { equipTargetRef.current = equipTarget; }, [equipTarget]);
 
@@ -360,12 +376,19 @@ export default function Inventory({
                             onLongPress={handleLongPress}
                             highlighted={isSelected}
                         />
+                        {item?.locked && (
+                            <span className="absolute top-0.5 right-0.5 text-[0.5rem] z-10">🔒</span>
+                        )}
                         {item && equipTarget?.id === item?.id && (
-                            <div className="absolute inset-0 flex items-center justify-center z-10 equip-btn-visible">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 z-10 equip-btn-visible">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); equipItem(item); setEquipTarget(null); }}
                                     className="bg-[var(--color-accent-info)] text-white text-xs font-bold px-2 py-1 rounded shadow-lg"
                                 >Надеть</button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); toggleLock(item); }}
+                                    className={`text-white text-xs font-bold px-2 py-1 rounded shadow-lg ${item.locked ? 'bg-[var(--color-accent-warning)]' : 'bg-[var(--color-bg-input)]'}`}
+                                >{item.locked ? '🔒' : '🔓'}</button>
                             </div>
                         )}
                         </div>

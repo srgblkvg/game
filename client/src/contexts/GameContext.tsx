@@ -12,6 +12,7 @@ interface GameItem {
   bonuses?: { s: number; a: number; d: number; m: number };
   extra?: { crit: number; dodge: number; counter: number; fullBlock: number };
   upgradeLevel?: number;
+  locked?: boolean;
 }
 
 export interface Character {
@@ -32,6 +33,7 @@ export interface Character {
     id: string;
     itemType?: string;
     image?: string;
+    locked?: boolean;
   })[];
   equipment: Record<string, GameItem>;
   baseStats: { s: number; a: number; d: number; m: number };
