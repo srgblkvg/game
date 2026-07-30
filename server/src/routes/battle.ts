@@ -121,8 +121,9 @@ router.post('/battle', async (req, res) => {
 
         // Защитник
         const protUntil = now + 3600;
+        const actualStolen = Math.min(moneyStolen, defender.money);
         await db.run(`UPDATE users SET money=money-?, totalBattles=totalBattles+1, protectionUntil=?, elo=?, seasonLosses=seasonLosses+1, lastPvpTime=?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
-            [moneyStolen, protUntil, Math.max(100, newDefenderElo), now, moneyStolen, defender.id]);
+            [actualStolen, protUntil, Math.max(100, newDefenderElo), now, actualStolen, defender.id]);
         sendToUser(defender.id, { type: 'protection', protectionUntil: protUntil });
 
         // Запись в историю
@@ -183,13 +184,17 @@ router.post('/battle', async (req, res) => {
     const attExp = await applyExp(attacker.id, result.winnerId === attacker.id ? result.expGained : 0, attacker.exp, attacker.level, attacker.statPoints || 0);
 
     const attackerMoneyDelta = attackerWins ? moneyStolen : -moneyStolen;
+    // Не даём уйти в минус проигравшему
+    const attackerActualDelta = attackerMoneyDelta < 0
+        ? -Math.min(moneyStolen, attacker.money)
+        : attackerMoneyDelta;
     // Налог гильдии с PvP-дохода победителя
     const attackerMoneyAfterTax = attackerWins && moneyStolen > 0
         ? await collectGuildTax(attacker.id, moneyStolen, 'tax_pvp')
-        : attackerMoneyDelta;
+        : attackerActualDelta;
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`,
         [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
-            attackerWins ? moneyStolen : 0, attackerWins ? 0 : moneyStolen, attacker.id]);
+            attackerWins ? moneyStolen : 0, attackerWins ? 0 : -attackerActualDelta, attacker.id]);
 
     // VK Leaderboard — атакующий
     if (attExp.levelsGained > 0 && attacker.oauthProvider === 'vk' && attacker.oauthId) {
@@ -206,9 +211,13 @@ router.post('/battle', async (req, res) => {
     const defExp = await applyExp(defender.id, result.winnerId === defender.id ? result.expGained : 0, defender.exp, defender.level, defender.statPoints || 0);
 
     const defenderMoneyDelta = !attackerWins ? moneyStolen : -moneyStolen;
+    // Не даём уйти в минус проигравшему
+    const defenderActualDelta = defenderMoneyDelta < 0
+        ? -Math.min(moneyStolen, defender.money)
+        : defenderMoneyDelta;
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
-        [defExp.newLevel, defExp.newExp, defenderMoneyDelta, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
-            !attackerWins ? moneyStolen : 0, !attackerWins ? 0 : moneyStolen, defender.id]);
+        [defExp.newLevel, defExp.newExp, defenderActualDelta, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
+            !attackerWins ? moneyStolen : 0, !attackerWins ? 0 : -defenderActualDelta, defender.id]);
     sendToUser(defender.id, { type: 'protection', protectionUntil: now + 3600 });
 
     // Достижения — защитник
