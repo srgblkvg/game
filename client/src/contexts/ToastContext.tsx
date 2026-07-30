@@ -36,6 +36,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             window.dispatchEvent(new CustomEvent('noMoney', { detail: { message, amount: undefined } }));
             return;
         }
+        // Перехват сообщений о заполненном инвентаре → модальное окно
+        if (lower.includes('инвентарь заполнен')) {
+            window.dispatchEvent(new CustomEvent('inventoryFull', { detail: { message } }));
+            return;
+        }
         const id = nextId++;
         setToasts(prev => {
             const next = [...prev, { id, message, type, fading: false }];
