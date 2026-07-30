@@ -47,6 +47,7 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
     const itemIndex = inventory.findIndex((i: any) => i.id == itemId);
     if (itemIndex === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
     const item = inventory[itemIndex];
+    if (item.locked) return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
     if (!item || item.type === 'material' || item.type === 'craft_item') return res.status(400).json({ error: 'Нельзя надеть материал или ресурс' });
 
     if (!isSlotCompatible(slotId, item)) return res.status(400).json({ error: 'Предмет не подходит к слоту' });

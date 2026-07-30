@@ -232,6 +232,7 @@ export default function CraftPage() {
             setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
             setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = { ...item, count: 1 }; return n; });
         } else {
+            if (item.locked) { setErrorPopup('Предмет заблокирован. Разблокируйте в инвентаре.'); return; }
             setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = item; return n; });
         }
     }, [craftSlots, materialUsage, character.inventory]);

@@ -388,7 +388,7 @@ export default function Inventory({
                                 >Надеть</button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); toggleLock(item); }}
-                                    className={`text-white text-xs font-bold px-2 py-1 rounded shadow-lg ${item.locked ? 'bg-[var(--color-accent-warning)]' : 'bg-[var(--color-bg-input)]'}`}
+                                    className={`text-white text-xs font-bold px-2 py-1 rounded shadow-lg cursor-pointer ${item.locked ? 'bg-[var(--color-accent-warning)]' : 'bg-[var(--color-bg-input)]'}`}
                                 >{item.locked ? '🔒' : '🔓'}</button>
                             </div>
                         )}
