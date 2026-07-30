@@ -55,6 +55,7 @@ export default function BestiaryPage() {
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const playerMaxHpRef = useRef(0);
   const stepLock = useRef(false);
   const stepsRef = useRef<any[]>([]);
   const currentStepRef = useRef(-1);
@@ -311,7 +312,7 @@ export default function BestiaryPage() {
     if (step.type === 'info' && step.message?.includes('Вампиризм')) {
       const match = step.message.match(/\+(\d+) HP/);
       if (match) {
-        setPlayerHp(prev => Math.min(playerMaxHp, prev + parseInt(match[1])));
+        setPlayerHp(prev => Math.min(playerMaxHpRef.current, prev + parseInt(match[1])));
       }
     }
 
@@ -351,6 +352,7 @@ export default function BestiaryPage() {
     const pStats = character.stats || { hp: regenHp || 100 };
     initialHpRef.current = { player: startHp, mob: mob.hp };
     setPlayerMaxHp(pStats.hp);
+    playerMaxHpRef.current = pStats.hp;
     setPlayerHp(startHp);
     setLoading(true);
     window.dispatchEvent(new CustomEvent('battleStart')); // ДО запроса — блокируем WS balance
