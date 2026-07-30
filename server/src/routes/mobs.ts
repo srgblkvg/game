@@ -173,35 +173,49 @@ router.post('/mob/attack', async (req, res) => {
     });
 
     let playerWon = false;
+    let stunnedUser = false;
+    let stunnedMob = false;
 
     // Симуляция боя (как в PvP, но без воровства денег)
     for (let turn = 0; turn < 50 && userHp > 0 && mobCurrentHp > 0; turn++) {
         // Ход игрока
-        const ctx1: TurnContext = {
-            actorName: user.username, targetName: mob.name,
-            actorStats: userStats, targetStats: mobStats,
-            actorLevel: user.level,
-            hpActor: userHp, hpTarget: mobCurrentHp,
-            maxHpActor: userStats.hp, maxHpTarget: mobHp,
-            actor: 'attacker', target: 'defender',
-        };
-        const result1 = runTurn(ctx1, addStep);
-        userHp = result1.hpActor;
-        mobCurrentHp = result1.hpTarget;
+        if (stunnedUser) {
+            addStep({ type: 'stun', actor: 'attacker', message: `${user.username} оглушён и пропускает ход` });
+            stunnedUser = false;
+        } else {
+            const ctx1: TurnContext = {
+                actorName: user.username, targetName: mob.name,
+                actorStats: userStats, targetStats: mobStats,
+                actorLevel: user.level,
+                hpActor: userHp, hpTarget: mobCurrentHp,
+                maxHpActor: userStats.hp, maxHpTarget: mobHp,
+                actor: 'attacker', target: 'defender',
+            };
+            const result1 = runTurn(ctx1, addStep);
+            userHp = result1.hpActor;
+            mobCurrentHp = result1.hpTarget;
+            stunnedMob = result1.stunnedTarget;
+        }
         if (mobCurrentHp <= 0) { playerWon = true; break; }
 
         // Ход моба
-        const ctx2: TurnContext = {
-            actorName: mob.name, targetName: user.username,
-            actorStats: mobStats, targetStats: userStats,
-            actorLevel: mob.level,
-            hpActor: mobCurrentHp, hpTarget: userHp,
-            maxHpActor: mobHp, maxHpTarget: userStats.hp,
-            actor: 'defender', target: 'attacker',
-        };
-        const result2 = runTurn(ctx2, addStep);
-        mobCurrentHp = result2.hpActor;
-        userHp = result2.hpTarget;
+        if (stunnedMob) {
+            addStep({ type: 'stun', actor: 'defender', message: `${mob.name} оглушён и пропускает ход` });
+            stunnedMob = false;
+        } else {
+            const ctx2: TurnContext = {
+                actorName: mob.name, targetName: user.username,
+                actorStats: mobStats, targetStats: userStats,
+                actorLevel: mob.level,
+                hpActor: mobCurrentHp, hpTarget: userHp,
+                maxHpActor: mobHp, maxHpTarget: userStats.hp,
+                actor: 'defender', target: 'attacker',
+            };
+            const result2 = runTurn(ctx2, addStep);
+            mobCurrentHp = result2.hpActor;
+            userHp = result2.hpTarget;
+            stunnedUser = result2.stunnedTarget;
+        }
         if (userHp <= 0) break;
         if (mobCurrentHp <= 0) { playerWon = true; break; }
     }
