@@ -18,7 +18,7 @@ export async function applyHpRegen(user: {
     hermitRegen?: boolean;
 }): Promise<number> {
     const now = Math.floor(Date.now() / 1000);
-    const HP_REGEN_SECONDS = 10;
+    const HP_REGEN_SECONDS = 5;
     let hp = user.currentHp;
     const maxHp = user.maxHp;
 

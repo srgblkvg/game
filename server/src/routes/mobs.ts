@@ -158,7 +158,7 @@ router.post('/mob/attack', async (req, res) => {
     const userStats = await buildPlayerStats(user, 'pve');
     const mobBase = { s: mob.atk || 10, a: mob.agi || 5, d: mob.def || 5, m: mob.mst || 5 };
     const mobStats = currentStats(mobBase, {});
-    const mobHp = mob.hp || 50;
+    const mobHp = (mob.hp || 50) * 2;
     let userHp = userStats.hp;
     let mobCurrentHp = mobHp;
 

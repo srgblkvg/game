@@ -215,7 +215,7 @@ export function currentStats(
 
     return {
         ...st,
-        hp: sumStats(st),
+        hp: sumStats(st) * 2,
         bonuses: sums,
         extra,
         drinks: drinkBonuses || { s: 0, a: 0, d: 0, m: 0 },
