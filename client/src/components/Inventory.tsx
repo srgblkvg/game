@@ -381,7 +381,7 @@ export default function Inventory({
                             <span className="absolute bottom-0.5 right-0.5 text-[0.5rem] z-10">🔒</span>
                         )}
                         {item && equipTarget?.id === item?.id && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 z-30 equip-btn-visible bg-[var(--color-bg-secondary)]/80 rounded">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 z-50 equip-btn-visible bg-[var(--color-bg-secondary)]/80 rounded">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); equipItem(item); setEquipTarget(null); }}
                                     className="bg-[var(--color-accent-info)] text-white text-xs font-bold px-2 py-1 rounded shadow-lg cursor-pointer"
