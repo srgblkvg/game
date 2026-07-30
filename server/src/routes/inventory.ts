@@ -166,4 +166,29 @@ router.post('/character/expand-inventory', async (req, res) => {
     res.json({ inventorySlots: currentSlots + 1, moneyAfter: user.money - price });
 });
 
+// Сохранить новый порядок предметов в инвентаре (drag & drop)
+router.post('/character/reorder-inventory', async (req, res) => {
+    const userId = req.userId;
+    const { order } = req.body; // массив id предметов в новом порядке
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'Неверный формат' });
+
+    const user = await db.one('SELECT id, inventory FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const inventory = typeof user.inventory === 'string' ? JSON.parse(user.inventory) : (user.inventory || []);
+    
+    // Пересортировываем инвентарь согласно новому порядку id
+    const idMap = new Map(inventory.map((item: any) => [String(item.id), item]));
+    const reordered = order.map(id => idMap.get(String(id))).filter(Boolean);
+    // Добавляем предметы, которых нет в order (на всякий случай)
+    for (const item of inventory) {
+        if (!order.some(id => String(id) === String(item.id))) {
+            reordered.push(item);
+        }
+    }
+
+    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(reordered), userId]);
+    res.json({ success: true });
+});
+
 export default router;

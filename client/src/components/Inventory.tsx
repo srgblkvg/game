@@ -66,6 +66,15 @@ export default function Inventory({
     const { sendItemLink } = useGlobalChat();
     const { showToast } = useToast();
     const [equipTarget, setEquipTarget] = useState<any>(null);
+    const [inventoryOrder, setInventoryOrder] = useState<string[]>([]);
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+    // Инициализируем порядок из инвентаря
+    useEffect(() => {
+        if (!character?.inventory) return;
+        setInventoryOrder(character.inventory.map((item: any) => String(item.id)));
+    }, [character?.inventory]);
     const equipTargetRef = useRef<any>(null);
     useEffect(() => { equipTargetRef.current = equipTarget; }, [equipTarget]);
 
@@ -232,6 +241,47 @@ export default function Inventory({
         : fillRatio >= 0.8 ? 'text-[var(--color-accent-warning)]'
         : '';
 
+    // Drag & drop handlers
+    const handleDragOverSlot = (e: React.DragEvent, idx: number) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverIndex(idx);
+    };
+    const handleDropSlot = async (e: React.DragEvent, toIdx: number) => {
+        e.preventDefault();
+        setDragOverIndex(null);
+        setDragIndex(null);
+        if (dragIndex === null || dragIndex === toIdx) return;
+        
+        const newOrder = [...inventoryOrder];
+        const [moved] = newOrder.splice(dragIndex, 1);
+        newOrder.splice(toIdx, 0, moved);
+        setInventoryOrder(newOrder);
+        
+        // Обновляем character.inventory в том же порядке
+        const idToItem = new Map(character!.inventory.map((item: any) => [String(item.id), item]));
+        const reordered = newOrder.map(id => idToItem.get(id)).filter(Boolean);
+        setCharacter((prev: any) => ({ ...prev, inventory: reordered }));
+        
+        // Сохраняем на сервер
+        try {
+            await fetch('/api/character/reorder-inventory', {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order: newOrder }),
+            });
+        } catch {}
+    };
+    const handleDragEndSlot = () => {
+        setDragIndex(null);
+        setDragOverIndex(null);
+    };
+    const handleDragStartSlot = (e: React.DragEvent, idx: number, item: any) => {
+        setDragIndex(idx);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(item.id));
+    };
+
     return (
         <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)] overflow-hidden" data-tutorial="inventory">
             {/* Индикатор заполнения */}
@@ -261,13 +311,20 @@ export default function Inventory({
                 {Array.from({ length: maxSlots }).map((_, idx) => {
                     const item = inventory[idx] || null;
                     const isSelected = selectedItemId && item && item.id === selectedItemId;
+                    const isDragOver = dragOverIndex === idx;
 
                     return (
-                        <div key={item?.id ?? `empty-${idx}`} className="relative equip-slot">
+                        <div key={item?.id ?? `empty-${idx}`} className="relative equip-slot"
+                            onDragOver={(e) => handleDragOverSlot(e, idx)}
+                            onDrop={(e) => handleDropSlot(e, idx)}
+                            onDragLeave={() => setDragOverIndex(null)}
+                            onDragEnd={handleDragEndSlot}
+                        >
+                        <div className={`rounded ${isDragOver ? 'ring-2 ring-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10' : ''}`}>
                         <LongPressItemSlot
                             item={item}
                             draggable={!!item && !isCraftItem(item)}
-                            onDragStart={item && !isCraftItem(item) ? (e) => handleDragStart(e, item.id) : undefined}
+                            onDragStart={item && !isCraftItem(item) ? (e) => handleDragStartSlot(e, idx, item) : undefined}
                             onClick={(e) => {
                                 if (item && !isCraftItem(item)) {
                                     if (e.shiftKey) {
@@ -296,6 +353,7 @@ export default function Inventory({
                                 >Надеть</button>
                             </div>
                         )}
+                        </div>
                         </div>
                     );
                 })}
