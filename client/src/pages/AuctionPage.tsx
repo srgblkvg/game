@@ -437,7 +437,7 @@ export default function AuctionPage() {
                             <p className="text-xs text-[var(--color-text-muted)]">Нет предметов для продажи</p>
                         ) : (
                             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                                {character.inventory.map((item: any) => {
+                                {character.inventory.filter((item: any) => !item.locked).map((item: any) => {
                                     const isSelected = String(item.id) === sellItemId;
                                     const cnt = (item.type === 'craft_item' || item.type === 'material') ? (item.count || 1) : 1;
                                     return (
