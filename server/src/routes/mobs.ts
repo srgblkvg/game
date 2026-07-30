@@ -125,7 +125,7 @@ router.get('/mobs', async (req, res) => {
             }
         }
         const itemTable = getItemDropTable(m.level);
-        return { ...m, lootImages, itemDropTable: itemTable };
+        return { ...m, hp: (m.hp || 50) * 2, lootImages, itemDropTable: itemTable };
     });
 
     res.json(enriched);
