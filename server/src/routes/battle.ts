@@ -239,14 +239,7 @@ router.post('/battle', async (req, res) => {
 
     markDirty(result.winnerId, 'quests');
 
-    await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [attacker.id, defender.id, result.winnerId, JSON.stringify(result.log), JSON.stringify(result.steps),
-            result.attackerHpAfter, result.defenderHpAfter, result.expGained, result.moneyGained, moneyStolen]);
-
-    const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
-
-    // Добавляем шаг с ELO в лог
+    // Добавляем шаг с ELO в лог (до сохранения в БД!)
     const attackerEloChange = newAttackerElo - (attacker.elo || 1000);
     const defenderEloChange = newDefenderElo - (defender.elo || 1000);
     const eloChangeWinner = attackerWon ? attackerEloChange : defenderEloChange;
@@ -255,6 +248,13 @@ router.post('/battle', async (req, res) => {
         type: 'info',
         message: `Рейтинг: ${attackerWon ? attacker.username : defender.username} +${eloChangeWinner}, ${attackerWon ? defender.username : attacker.username} ${eloChangeLoser >= 0 ? '+' : ''}${eloChangeLoser}`
     });
+
+    await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [attacker.id, defender.id, result.winnerId, JSON.stringify(result.log), JSON.stringify(result.steps),
+            result.attackerHpAfter, result.defenderHpAfter, result.expGained, result.moneyGained, moneyStolen]);
+
+    const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
 
     res.json({
         log: result.log,
