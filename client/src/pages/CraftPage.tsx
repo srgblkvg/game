@@ -539,6 +539,20 @@ export default function CraftPage() {
                             <h4 className="font-bold text-[var(--color-text-primary)]">💍 Бижутерия</h4>
                             <p className="mt-1">В бижутерии (амулет, кольца, пояс) <b>1 ед. характеристики не даёт +1% к второстепенным характеристикам</b> (крит, уклонение, блок).</p>
                         </div>
+
+                        <div>
+                            <h4 className="font-bold text-[var(--color-accent-purple)]">☠ Проклятие (Кристалл душ)</h4>
+                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                                <li>Кристалл душ добывается с боссов Ада I-III</li>
+                                <li>Поместите <b>предмет</b> и <b>Кристалл душ</b> в верстак, нажмите <b>«Проклясть»</b></li>
+                                <li>Стоимость: <b>100 000 серебра</b> + Кристалл душ</li>
+                                <li>Добавляет случайный основной стат (Сила/Ловкость/Защита/Мастерство)</li>
+                                <li>5 рангов: <span style={{color:'#22c55e'}}>I (10-20)</span> → <span style={{color:'#3b82f6'}}>II (20-30)</span> → <span style={{color:'#a855f7'}}>III (30-40)</span> → <span style={{color:'#f97316'}}>IV (40-50)</span> → <span style={{color:'#ef4444'}}>V (50-60)</span></li>
+                                <li>Ранг I — часто, ранг V — очень редко</li>
+                                <li>Не скалируется от уровня улучшения предмета</li>
+                                <li>При повторном проклятии можно выбрать: заменить или оставить старое</li>
+                            </ul>
+                        </div>
                     </div>
                 )}
             </Card>
