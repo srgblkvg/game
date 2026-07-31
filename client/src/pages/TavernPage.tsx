@@ -1,5 +1,5 @@
 import PageHeader from '../components/ui/PageHeader';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import BackButton from '../components/BackButton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
@@ -41,6 +41,7 @@ export default function TavernPage() {
     });
     const [quests, setQuests] = useState<any>(null);
     const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+    const claimingRef = useRef(false);
 
     useEffect(() => { if (!user) navigate('/login'); else { load(); loadQuests(); } }, [user]);
 
@@ -68,7 +69,9 @@ export default function TavernPage() {
         try { await api('/tavern/quests/take',{questId}); setMessage('Квест взят!'); setError(''); loadQuests(); } catch(e:any){setError(e.message)}
     };
     const handleClaimQuest = async (questId: number) => {
-        try { const d = await api('/tavern/quests/claim',{questId}); setMessage(`Награда: +${d.rewardXp} XP, +${formatMoney(d.rewardMoney)}`); setError(''); showAcquire({name:'Квест выполнен!',rarity_id:3},1,`+${d.rewardXp} XP, ${formatMoney(d.rewardMoney)}`); loadQuests(); load(); } catch(e:any){setError(e.message)}
+        if (claimingRef.current) return;
+        claimingRef.current = true;
+        try { const d = await api('/tavern/quests/claim',{questId}); setMessage(`Награда: +${d.rewardXp} XP, +${formatMoney(d.rewardMoney)}`); setError(''); showAcquire({name:'Квест выполнен!',rarity_id:3},1,`+${d.rewardXp} XP, ${formatMoney(d.rewardMoney)}`); loadQuests(); load(); } catch(e:any){setError(e.message)} finally { claimingRef.current = false; }
     };
 
     const [adLoading, setAdLoading] = useState(false);

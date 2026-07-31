@@ -158,7 +158,15 @@ router.post('/guild/quest/claim', async (req, res) => {
     if (!quest) return res.status(400).json({ error: 'Нет активного задания' });
     if (quest.progress < quest.requirement) return res.status(400).json({ error: `Задание не выполнено: ${quest.progress}/${quest.requirement}` });
 
-    await db.run("UPDATE guild_quests SET status = 'claimed' WHERE id = ?", [quest.id]);
+    // Атомарно помечаем как claimed — защита от повторной выдачи награды
+    const claimResult = await db.run(
+        "UPDATE guild_quests SET status = 'claimed' WHERE id = ? AND status = 'active'",
+        [quest.id]
+    );
+    if ((claimResult as any).changes === 0) {
+        return res.status(400).json({ error: 'Задание уже сдано' });
+    }
+
     await db.run('UPDATE guilds SET exp = exp + ? WHERE id = ?', [quest.rewardXp, member.guildId]);
 
     const g = await db.one('SELECT exp, level FROM guilds WHERE id = ?', [member.guildId]) as any;

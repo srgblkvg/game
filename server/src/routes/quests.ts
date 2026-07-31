@@ -138,6 +138,15 @@ router.post('/tavern/quests/claim', async (req, res) => {
         return res.status(400).json({ error: `Прогресс: ${prog}/${quest.requirement}` });
     }
 
+    // Атомарно помечаем квест как claimed — защита от повторной выдачи награды
+    const claimResult = await db.run(
+        "UPDATE daily_quests SET status = 'claimed', progress = ? WHERE id = ? AND status = 'active'",
+        [quest.requirement, questId]
+    );
+    if ((claimResult as any).changes === 0) {
+        return res.status(400).json({ error: 'Квест уже сдан' });
+    }
+
     // Налог гильдии
     const rewardAfterTax = await collectGuildTax(userId, quest.rewardMoney, 'tax_quest');
     await db.run('UPDATE users SET money = money + ? WHERE id = ?',
@@ -148,9 +157,6 @@ router.post('/tavern/quests/claim', async (req, res) => {
     const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(userId, quest.rewardXp, user.exp, user.level, user.statPoints || 0);
     await db.run('UPDATE users SET exp = ?, level = ?, statPoints = ? WHERE id = ?',
         [newExp, newLevel, newStatPoints, userId]);
-
-    await db.run('UPDATE daily_quests SET status = ?, progress = ? WHERE id = ?',
-        ['claimed', quest.requirement, questId]);
 
     await db.run('INSERT INTO quest_history (userId, questType, difficulty, typeName, rewardXp, rewardMoney) VALUES (?, ?, ?, ?, ?, ?)',
         [userId, quest.questType, quest.difficulty, QUEST_INFO[quest.questType as QuestType]?.name || quest.questType, quest.rewardXp, quest.rewardMoney]);
