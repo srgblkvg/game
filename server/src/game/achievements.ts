@@ -95,9 +95,9 @@ export const ACHIEVEMENT_TRACKS: AchievementTrack[] = [
     },
     {
         key: 'massacre',
-        name: 'Резня',
-        icon: '💀',
-        description: 'Убивайте противников в Резне',
+        name: 'ЛК',
+        icon: '🩸',
+        description: 'Выживайте в Кровавой лотерее',
         tiers: [
             { tier: 1, name: 'Бронза', icon: '🥉', threshold: 10 },
             { tier: 2, name: 'Серебро', icon: '🥈', threshold: 250 },
