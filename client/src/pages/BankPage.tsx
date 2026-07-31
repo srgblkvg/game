@@ -83,7 +83,7 @@ export default function BankPage() {
       const [exchangeBuying, setExchangeBuying] = useState(false);
       const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
       const nowSec = Math.floor(Date.now() / 1000);
-      const [adCd, setAdCd] = useState(Math.max(0, 1800 - (nowSec - ((window as any).__adSilverAt || 0))));
+      const [adCd, setAdCd] = useState(Math.max(0, 300 - (nowSec - ((window as any).__adSilverAt || 0))));
       const [adLoading, setAdLoading] = useState(false);
 
       useEffect(() => {
@@ -105,7 +105,7 @@ export default function BankPage() {
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           (window as any).__adSilverAt = Math.floor(Date.now() / 1000);
-          setAdCd(1800);
+          setAdCd(300);
           setExchangeMsg('✅ +1000 серебра за рекламу!');
           loadBank();
         } catch (e: any) {
@@ -199,7 +199,7 @@ export default function BankPage() {
               <Button variant="secondary" size="md" fullWidth onClick={handleAdSilver} disabled={adCd > 0 || adLoading}>
                 {adLoading ? '⏳' : adCd > 0 ? `⏳ ${Math.ceil(adCd / 60)} мин` : '▶️ +1000 серебра за рекламу'}
               </Button>
-              <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-1 text-center">Раз в 30 минут</p>
+              <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-1 text-center">Раз в 5 минут</p>
             </div>
           )}
           {exchangeMsg && (

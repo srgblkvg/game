@@ -263,7 +263,7 @@ router.post('/shop/ad-silver', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const cooldownSec = 1800; // 30 минут
+    const cooldownSec = 300; // 5 минут
     if (now - (user.adsilverat || 0) < cooldownSec) {
         const remaining = cooldownSec - (now - user.adsilverat);
         return res.status(400).json({ error: `Реклама будет доступна через ${Math.ceil(remaining / 60)} мин.` });

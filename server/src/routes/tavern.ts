@@ -43,7 +43,7 @@ router.get('/tavern', async (req, res) => {
     const stats = await buildPlayerStats(user, 'arena');
     const maxHp = stats.hp;
 
-    const adHealCooldownSec = 1800;
+    const adHealCooldownSec = 300;
     const adHealRemaining = Math.max(0, adHealCooldownSec - (now - (user.adhealat || 0)));
 
     res.json({
@@ -92,7 +92,7 @@ router.post('/tavern/heal-ad', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
-    const cooldownSec = 1800; // 30 минут
+    const cooldownSec = 300; // 5 минут
     const lastAdHeal = user.adhealat || 0;
     if (now - lastAdHeal < cooldownSec) {
         const remaining = cooldownSec - (now - lastAdHeal);
