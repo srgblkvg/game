@@ -65,7 +65,7 @@ const typeNameRu: Record<string, string> = {
   craft: 'Материал',
   material: 'Материал',
   craft_item: 'Материал',
-  soul_crystal: 'Материал',
+  soul_crystal: 'Улучшение',
   upgrade: 'Улучшение',
   stone: 'Улучшение',
 };
