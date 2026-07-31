@@ -686,7 +686,7 @@ export default function CraftPage() {
                             {crafting ? 'Улучшение...' : 'Улучшить'}
                         </Button>
                         <Button variant="secondary" size="md" fullWidth disabled={!curseInfo || crafting || (character?.money || 0) < 100000} onClick={handleCurse}
-                            className={curseInfo && (character?.money || 0) >= 100000 ? 'bg-[var(--color-accent-purple)] text-white' : ''}>
+                            className={curseInfo && (character?.money || 0) >= 100000 ? '!bg-[#7c3aed] !text-white' : ''}>
                             {crafting ? 'Проклятие...' : (character?.money || 0) < 100000 ? '☠ Нужно 100 000' : '☠ Проклясть'}
                         </Button>
                         {curseResult && (
