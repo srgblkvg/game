@@ -161,7 +161,7 @@ export default function GuildPage() {
     const handleDeposit = async () => {
         const a = parseInt(treasuryAmount); if (!a||a<1) { setError('Укажите сумму'); return; }
         setLoading(true);
-        try { const d = await api('/guild/treasury/deposit',{amount:a}); setTreasuryBalance(d.treasury); setTreasuryAmount(''); msg(`Внесено ${a}`); loadTreasury(treasuryPeriod); }
+        try { const d = await api('/guild/treasury/deposit',{amount:a}); setTreasuryBalance(d.treasury); setTreasuryAmount(''); msg(`Внесено ${a}`); loadTreasury(treasuryPeriod); load(); }
         catch (e: any) { setError(e.message); } finally { setLoading(false); }
     };
     const handleTaxRate = async () => {
