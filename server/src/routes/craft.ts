@@ -492,10 +492,40 @@ function rollCurse() {
     return { rank: rank.rank, name: rank.name, color: rank.color, stat, value };
 }
 
+// Превью проклятия (без расхода ресурсов)
 router.post('/craft/curse', async (req, res) => {
     const userId = req.userId;
-    const { itemId, crystalId } = req.body;
-    if (!itemId || !crystalId) return res.status(400).json({ error: 'Укажите itemId и crystalId' });
+    const { itemId } = req.body;
+    if (!itemId) return res.status(400).json({ error: 'Укажите itemId' });
+
+    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const inventory: any[] = JSON.parse(user.inventory || '[]');
+    const item = inventory.find((i: any) => i.id === itemId && !isCraftItem(i));
+    if (!item) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
+
+    const oldCurse = item.curseStat ? {
+        stat: item.curseStat, value: item.curseValue, rank: item.curseRank,
+        name: item.curseName, color: item.curseColor,
+        statName: (CURSE_STATS as Record<string, string>)[item.curseStat] || item.curseStat,
+    } : null;
+
+    const curse = rollCurse();
+    const statName = (CURSE_STATS as Record<string, string>)[curse.stat] || curse.stat;
+
+    res.json({
+        oldCurse,
+        newCurse: { stat: curse.stat, statName, value: curse.value, rank: curse.rank, name: curse.name, color: curse.color },
+        needsConfirm: !!oldCurse,
+    });
+});
+
+// Применить проклятие (расход ресурсов)
+router.post('/craft/curse/apply', async (req, res) => {
+    const userId = req.userId;
+    const { itemId, crystalId, curse: curseData } = req.body;
+    if (!itemId || !crystalId || !curseData) return res.status(400).json({ error: 'Укажите itemId, crystalId и curse' });
 
     const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -509,9 +539,6 @@ router.post('/craft/curse', async (req, res) => {
     const crystalIdx = inventory.findIndex((i: any) => isCraftItem(i) && i.id === crystalId && i.itemType === 'soul_crystal');
     if (crystalIdx === -1) return res.status(400).json({ error: 'Кристалл душ не найден в инвентаре' });
 
-    const item = { ...inventory[itemIdx] };
-    const oldCurse = item.curseStat ? { stat: item.curseStat, value: item.curseValue, rank: item.curseRank, name: item.curseName, color: item.curseColor } : null;
-
     // Расходуем кристалл
     const crystal = inventory[crystalIdx];
     if (crystal.count > 1) {
@@ -520,15 +547,20 @@ router.post('/craft/curse', async (req, res) => {
         inventory.splice(crystalIdx, 1);
     }
 
-    // Проклинаем
-    const curse = rollCurse();
-    item.curseStat = curse.stat;
-    item.curseValue = curse.value;
-    item.curseRank = curse.rank;
-    item.curseName = curse.name;
-    item.curseColor = curse.color;
+    // Применяем проклятие
+    const item = { ...inventory[itemIdx] };
+    const oldCurse = item.curseStat ? {
+        stat: item.curseStat, value: item.curseValue, rank: item.curseRank,
+        name: item.curseName, color: item.curseColor,
+        statName: (CURSE_STATS as Record<string, string>)[item.curseStat] || item.curseStat,
+    } : null;
 
-    // Обновляем предмет в инвентаре
+    item.curseStat = curseData.stat;
+    item.curseValue = curseData.value;
+    item.curseRank = curseData.rank;
+    item.curseName = curseData.name;
+    item.curseColor = curseData.color;
+
     const newItemIdx = inventory.findIndex((i: any) => i.id === itemId && !isCraftItem(i));
     inventory[newItemIdx] = item;
 
@@ -538,14 +570,14 @@ router.post('/craft/curse', async (req, res) => {
     checkAchievement(userId, 'craft').catch(() => {});
     markDirty(userId, 'quests');
 
-    const statName = (CURSE_STATS as Record<string, string>)[curse.stat] || curse.stat;
+    const statName = (CURSE_STATS as Record<string, string>)[curseData.stat] || curseData.stat;
     res.json({
         success: true,
         inventory,
         moneyAfter: newMoney,
-        curse: { stat: curse.stat, statName, value: curse.value, rank: curse.rank, name: curse.name, color: curse.color },
-        oldCurse: oldCurse ? { ...oldCurse, statName: (CURSE_STATS as Record<string, string>)[oldCurse.stat] || oldCurse.stat } : null,
-        message: `Предмет проклят! +${curse.value} к ${statName} (ранг ${curse.name})`,
+        curse: curseData,
+        oldCurse,
+        message: `Предмет проклят! +${curseData.value} к ${statName} (ранг ${curseData.name})`,
     });
 });
 

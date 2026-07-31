@@ -226,29 +226,50 @@ export default function CraftPage() {
     }, [craftSlots]);
 
     const [curseResult, setCurseResult] = useState<string | null>(null);
+    const [curseConfirm, setCurseConfirm] = useState<{ oldCurse: any; newCurse: any } | null>(null);
 
     const handleCurse = async () => {
         if (!curseInfo) return;
         setCrafting(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('/api/craft/curse', {
+            // Шаг 1: превью
+            const previewRes = await fetch('/api/craft/curse', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ itemId: curseInfo.item.id, crystalId: curseInfo.crystal.id }),
+                body: JSON.stringify({ itemId: curseInfo.item.id }),
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-            setCurseResult(data.message);
-            setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
-            setCraftSlots(Array(9).fill(null));
-            setMaterialUsage({});
-            setTimeout(() => setCurseResult(null), 4000);
+            const preview = await previewRes.json();
+            if (!previewRes.ok) throw new Error(preview.error);
+
+            if (preview.needsConfirm) {
+                setCurseConfirm({ oldCurse: preview.oldCurse, newCurse: preview.newCurse });
+            } else {
+                // Нет старого проклятия — сразу применяем
+                await applyCurse(preview.newCurse);
+            }
         } catch (e: any) {
             setErrorPopup(e.message);
         } finally {
             setCrafting(false);
         }
+    };
+
+    const applyCurse = async (curseData: any) => {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/craft/curse/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ itemId: curseInfo!.item.id, crystalId: curseInfo!.crystal.id, curse: curseData }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setCurseResult(data.message);
+        setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
+        setCraftSlots(Array(9).fill(null));
+        setMaterialUsage({});
+        setCurseConfirm(null);
+        setTimeout(() => setCurseResult(null), 4000);
     };
 
     const handleLongPress = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
@@ -650,9 +671,9 @@ export default function CraftPage() {
                             className={upgradeInfo ? 'bg-[#f39c12]' : ''}>
                             {crafting ? 'Улучшение...' : 'Улучшить'}
                         </Button>
-                        <Button variant="secondary" size="md" fullWidth disabled={!curseInfo || crafting} onClick={handleCurse}
-                            className={curseInfo ? 'bg-[var(--color-accent-purple)] text-white' : ''}>
-                            {crafting ? 'Проклятие...' : '☠ Проклясть'}
+                        <Button variant="secondary" size="md" fullWidth disabled={!curseInfo || crafting || (character?.money || 0) < 100000} onClick={handleCurse}
+                            className={curseInfo && (character?.money || 0) >= 100000 ? 'bg-[var(--color-accent-purple)] text-white' : ''}>
+                            {crafting ? 'Проклятие...' : (character?.money || 0) < 100000 ? '☠ Нужно 100 000' : '☠ Проклясть'}
                         </Button>
                         {curseResult && (
                             <div className="text-xs text-[var(--color-accent-success)] text-center font-bold">{curseResult}</div>
@@ -722,6 +743,30 @@ export default function CraftPage() {
                     if (craftAnim.acquire) showAcquire(craftAnim.acquire.item, craftAnim.acquire.count, craftAnim.acquire.msg);
                     setCraftAnim(null);
                 }} />
+            )}
+
+            {/* Диалог замены проклятия */}
+            {curseConfirm && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setCurseConfirm(null)} />
+                    <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-accent-purple)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center">
+                        <p className="text-sm font-bold text-[var(--color-accent-purple)] mb-3">☠ Замена проклятия</p>
+                        <div className="text-xs space-y-2 mb-4">
+                            <div>
+                                <span className="text-[var(--color-text-muted)]">Текущее: </span>
+                                <span style={{color: curseConfirm.oldCurse.color}}>+{curseConfirm.oldCurse.value} к {curseConfirm.oldCurse.statName} (ранг {curseConfirm.oldCurse.name})</span>
+                            </div>
+                            <div>
+                                <span className="text-[var(--color-text-muted)]">Новое: </span>
+                                <span style={{color: curseConfirm.newCurse.color}}>+{curseConfirm.newCurse.value} к {curseConfirm.newCurse.statName} (ранг {curseConfirm.newCurse.name})</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 justify-center">
+                            <Button variant="secondary" size="md" onClick={() => setCurseConfirm(null)}>Оставить</Button>
+                            <Button variant="danger" size="md" onClick={() => applyCurse(curseConfirm.newCurse)}>Заменить</Button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Попап ошибки */}
