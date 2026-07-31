@@ -141,7 +141,7 @@ export default function CollectionsPage() {
     }, []);
 
     const handleAddToCollection = (shopItem: ShopItem) => {
-        const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot && inv.rarity_id === shopItem.rarity_id);
+        const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot && inv.rarity_id === shopItem.rarity_id && !(inv as any).locked);
         if (matching.length === 0) {
             setMessage('Нет подходящих предметов в инвентаре');
             return;
@@ -307,7 +307,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
     // Есть ли предметы в инвентаре, которые можно добавить в этот сет
     const hasAddableItems = blockItems.some(item => {
         if (collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`)) return false;
-        return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id);
+        return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id && !(inv as any).locked);
     });
 
     return (
@@ -331,7 +331,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
                     {blockItems.map((item: ShopItem) => {
                         const owned = ownedKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
                         const collected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
-                        const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id);
+                        const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id && !(inv as any).locked);
 
                         return (
                             <CollectionSlot
