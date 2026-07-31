@@ -132,12 +132,12 @@ router.get('/auction', async (req, res) => {
         await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lot.id}%`]);
         broadcast('auction_message_removed', { lotId: lot.id });
     }
-    // Возвращаем непроданные лоты продавцам
+    // Возвращаем непроданные лоты продавцам — на склад
     const unsold = await db.query('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL', [now]) as any[];
     for (const lot of unsold) {
         const itemData = JSON.parse(lot.itemData);
-        await returnItemToInventory(lot.sellerId, itemData);
-        pushNotification(lot.sellerId, { type: 'system', message: `Лот «${JSON.parse(lot.itemData).name || 'Предмет'}» не был продан и возвращён` });
+        await addToOverflow(lot.sellerId, itemData);
+        pushNotification(lot.sellerId, { type: 'system', message: `Лот «${JSON.parse(lot.itemData).name || 'Предмет'}» не был продан и возвращён на склад` });
         await db.run('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
         await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lot.id}%`]);
         broadcast('auction_message_removed', { lotId: lot.id });
@@ -381,9 +381,9 @@ router.post('/auction/bid', async (req, res) => {
             const user = (await client.query('SELECT money FROM users WHERE id = $1', [userId])).rows[0] as any;
             if (!user || user.money < amount) throw new Error('Недостаточно монет');
 
-            // Возврат денег предыдущему лидеру
+            // Возврат денег предыдущему лидеру — на склад
             if (lot.currentbidderid) {
-                await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [currentBid, lot.currentbidderid]);
+                await client.query('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + $1 WHERE id = $2', [currentBid, lot.currentbidderid]);
             }
 
             await client.query('UPDATE users SET money = money - $1 WHERE id = $2', [amount, userId]);
@@ -604,12 +604,12 @@ router.post('/auction/cancel', async (req, res) => {
 
     const itemData = JSON.parse(lot.itemData);
 
-    // Возвращаем предмет в инвентарь (или overflow если заполнен)
-    await returnItemToInventory(userId, itemData);
+    // Возвращаем предмет на склад
+    await addToOverflow(userId, itemData);
 
-    // Возвращаем деньги текущему лидеру ставок
+    // Возвращаем деньги текущему лидеру ставок — на склад
     if (lot.currentBidderId && lot.currentBid) {
-        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
+        await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
     }
 
     // Удаляем лот
