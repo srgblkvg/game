@@ -129,6 +129,13 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
         </div>
       )}
 
+      {/* Проклятие (curse) */}
+      {!resource && item.curseStat && item.curseValue > 0 && (
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center font-bold" style={{ color: item.curseColor || '#a855f7' }}>
+          ☠ Проклятие {item.curseName || ''}: +{item.curseValue} к {statNameRu[item.curseStat] || item.curseStat}
+        </div>
+      )}
+
       {/* Set bonuses */}
       {!resource && item.extra?.set && (() => {
         let equippedCount = 0;

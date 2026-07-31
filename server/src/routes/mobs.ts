@@ -346,6 +346,38 @@ router.post('/mob/attack', async (req, res) => {
             }
         }
 
+        // Кристалл душ — 1% шанс
+        if (Math.random() < 0.01) {
+            const soulCrystal = await db.one(
+                "SELECT id, name, rarity_id, type, image FROM craft_items WHERE type = 'soul_crystal' LIMIT 1",
+                []
+            ) as any;
+            if (soulCrystal) {
+                const inventory = JSON.parse(user.inventory || '[]');
+                const drop = {
+                    type: 'craft_item',
+                    id: soulCrystal.id,
+                    name: soulCrystal.name,
+                    rarity_id: soulCrystal.rarity_id,
+                    rarity_display: null,
+                    rarity_color: null,
+                    count: 1,
+                    itemType: 'soul_crystal',
+                    image: soulCrystal.image || null,
+                };
+                materialsDropped.push(drop);
+                const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === soulCrystal.id);
+                if (existing) {
+                    existing.count = (existing.count || 0) + 1;
+                } else {
+                    inventory.push(drop);
+                }
+                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+                user.inventory = JSON.stringify(inventory);
+                addStep({ type: 'money', message: `Добыто: ${soulCrystal.name}` });
+            }
+        }
+
         // Мифический ресурс — 1% с конкретных монстров
         const mythicName = MYTHIC_RESOURCE_DROPS[mob.id];
         if (mythicName && Math.random() < 0.01) {

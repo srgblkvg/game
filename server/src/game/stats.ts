@@ -87,6 +87,11 @@ export interface GameItem {
     bonuses: StatRecord;
     extra: ExtraRecord;
     upgradeLevel?: number;
+    curseStat?: string;
+    curseValue?: number;
+    curseRank?: number;
+    curseName?: string;
+    curseColor?: string;
 }
 
 export interface CharStats extends StatRecord {
@@ -135,6 +140,10 @@ export function currentStats(
             for (const k of EXTRA_STATS) {
                 extra[k] = (extra[k] || 0) + Math.round((item.extra[k] || 0) * multiplier);
             }
+        }
+        // Проклятие (curse) — не скалируется от улучшения
+        if (item.curseStat && item.curseValue && (PRIMARY_STATS as readonly string[]).includes(item.curseStat)) {
+            sums[item.curseStat as keyof StatRecord] = (sums[item.curseStat as keyof StatRecord] || 0) + (item.curseValue || 0);
         }
     }
 
