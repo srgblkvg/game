@@ -214,6 +214,43 @@ export default function CraftPage() {
             .catch(() => setUpgradeInfo(null));
     }, [craftSlots]);
 
+    // Curse info
+    const [curseInfo, setCurseInfo] = useState<{ item: any; crystal: any } | null>(null);
+    useEffect(() => {
+        const nonEmptySlots = craftSlots.filter(s => s !== null);
+        if (nonEmptySlots.length !== 2) { setCurseInfo(null); return; }
+        const items = nonEmptySlots.filter(s => !isCraftItem(s));
+        const crystals = nonEmptySlots.filter(s => isCraftItem(s) && s.itemType === 'soul_crystal');
+        if (items.length !== 1 || crystals.length !== 1) { setCurseInfo(null); return; }
+        setCurseInfo({ item: items[0], crystal: crystals[0] });
+    }, [craftSlots]);
+
+    const [curseResult, setCurseResult] = useState<string | null>(null);
+
+    const handleCurse = async () => {
+        if (!curseInfo) return;
+        setCrafting(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/craft/curse', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ itemId: curseInfo.item.id, crystalId: curseInfo.crystal.id }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            setCurseResult(data.message);
+            setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
+            setCraftSlots(Array(9).fill(null));
+            setMaterialUsage({});
+            setTimeout(() => setCurseResult(null), 4000);
+        } catch (e: any) {
+            setErrorPopup(e.message);
+        } finally {
+            setCrafting(false);
+        }
+    };
+
     const handleLongPress = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
         if (item) {
             const touch = (e as React.TouchEvent).touches?.[0] ?? e;
@@ -222,7 +259,7 @@ export default function CraftPage() {
     }, []);
 
     const handleItemClick = useCallback((item: any) => {
-        if (isCraftItem(item) && item.itemType !== 'upgrade') return;
+        if (isCraftItem(item) && item.itemType !== 'upgrade' && item.itemType !== 'soul_crystal') return;
         setTooltipData(null);
         const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
         if (freeSlotIndex === -1) { setErrorPopup('Все слоты заняты'); return; }
@@ -582,6 +619,28 @@ export default function CraftPage() {
                         );
                     })()}
 
+                    {/* Инфо о проклятии */}
+                    {curseInfo && (() => {
+                        const item = curseInfo.item;
+                        const hasCurse = !!(item.curseStat && item.curseValue);
+                        return (
+                        <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
+                            <div className="font-bold text-[var(--color-accent-purple)]">☠ Проклятие предмета</div>
+                            <div>Предмет: <strong className="text-white">{item.name}{item.upgradeLevel > 0 ? ` +${item.upgradeLevel}` : ''}</strong></div>
+                            {hasCurse && (() => {
+                                const statLabels: Record<string, string> = { s: 'Силе', a: 'Ловкости', d: 'Защите', m: 'Мастерству' };
+                                return (
+                                <div className="text-[var(--color-accent-warning)]">
+                                    Текущее: +{item.curseValue} к {statLabels[item.curseStat] || item.curseStat} (ранг {item.curseName})
+                                </div>
+                                );
+                            })()}
+                            <div className="text-[var(--color-text-muted)] mt-1">Ранги: <span style={{color:'#22c55e'}}>I</span> 10-20 • <span style={{color:'#3b82f6'}}>II</span> 20-30 • <span style={{color:'#a855f7'}}>III</span> 30-40 • <span style={{color:'#f97316'}}>IV</span> 40-50 • <span style={{color:'#ef4444'}}>V</span> 50-60</div>
+                            <div>Стоимость: {formatMoney(100000)} + Кристалл душ</div>
+                        </div>
+                        );
+                    })()}
+
                     {/* Кнопки */}
                     <div className="flex flex-col gap-2 items-center mt-2">
                         <Button variant={activeRecipe ? 'success' : 'secondary'} size="md" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate}>
@@ -591,6 +650,13 @@ export default function CraftPage() {
                             className={upgradeInfo ? 'bg-[#f39c12]' : ''}>
                             {crafting ? 'Улучшение...' : 'Улучшить'}
                         </Button>
+                        <Button variant="secondary" size="md" fullWidth disabled={!curseInfo || crafting} onClick={handleCurse}
+                            className={curseInfo ? 'bg-[var(--color-accent-purple)] text-white' : ''}>
+                            {crafting ? 'Проклятие...' : '☠ Проклясть'}
+                        </Button>
+                        {curseResult && (
+                            <div className="text-xs text-[var(--color-accent-success)] text-center font-bold">{curseResult}</div>
+                        )}
                         <Button variant="danger" size="md" fullWidth disabled={!hasItemsInSlots} onClick={async () => {
                             const itemsToSalvage = craftSlots.filter(s => s && !isCraftItem(s));
                             const stonesToDisassemble = craftSlots.filter(s => s && isCraftItem(s) && s.itemType === 'upgrade');
