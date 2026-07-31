@@ -82,6 +82,36 @@ export default function BankPage() {
       const [exchangeMsg, setExchangeMsg] = useState('');
       const [exchangeBuying, setExchangeBuying] = useState(false);
       const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+      const nowSec = Math.floor(Date.now() / 1000);
+      const [adCd, setAdCd] = useState(Math.max(0, 1800 - (nowSec - ((window as any).__adSilverAt || 0))));
+      const [adLoading, setAdLoading] = useState(false);
+
+      useEffect(() => {
+        if (adCd <= 0) return;
+        const id = setInterval(() => setAdCd(c => Math.max(0, c - 1)), 1000);
+        return () => clearInterval(id);
+      }, [adCd > 0]);
+
+      const handleAdSilver = async () => {
+        setAdLoading(true);
+        try {
+          const bridge = (window as any).vkBridge;
+          if (!bridge) throw new Error('no vk');
+          const check = await bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' });
+          if (!check?.result) throw new Error('no ad');
+          const ad = await bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' });
+          if (!ad?.result) throw new Error('cancelled');
+          const res = await fetch('/api/shop/ad-silver', { method: 'POST', headers: getHeaders() });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          (window as any).__adSilverAt = Math.floor(Date.now() / 1000);
+          setAdCd(1800);
+          setExchangeMsg('✅ +1000 серебра за рекламу!');
+          loadBank();
+        } catch (e: any) {
+          if (e.message !== 'cancelled' && e.message !== 'no ad' && e.message !== 'no vk') setExchangeMsg('❌ ' + e.message);
+        } finally { setAdLoading(false); }
+      };
 
       const tiers = [
         { item: 'silver_10000', amount: 10000, vkPrice: 7, rubPrice: 49, label: '10000 серебра' },
@@ -164,6 +194,14 @@ export default function BankPage() {
               </div>
             ))}
           </div>
+          {isVK && (
+            <div className="mt-3 pt-3 border-t border-[var(--color-border-light)]">
+              <Button variant="secondary" size="md" fullWidth onClick={handleAdSilver} disabled={adCd > 0 || adLoading}>
+                {adLoading ? '⏳' : adCd > 0 ? `⏳ ${Math.ceil(adCd / 60)} мин` : '▶️ +1000 серебра за рекламу'}
+              </Button>
+              <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-1 text-center">Раз в 30 минут</p>
+            </div>
+          )}
           {exchangeMsg && (
             <p className={`mt-2 text-sm font-bold text-center ${exchangeMsg.startsWith('✅') ? 'text-[var(--color-accent-success)]' : exchangeMsg.startsWith('❌') ? 'text-[var(--color-accent-danger)]' : 'text-[var(--color-accent-info)]'}`}>
               {exchangeMsg}

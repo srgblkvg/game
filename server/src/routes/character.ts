@@ -186,6 +186,8 @@ router.get('/character/me', async (req, res) => {
         tutorialStep: user.tutorialStep || 0,
         totalIncome: user.totalIncome || 0,
         overflowmoney: user.overflowmoney || 0,
+        adPremiumAt: user.adpremiumat || 0,
+        adSilverAt: user.adsilverat || 0,
     });
 });
 
@@ -232,6 +234,45 @@ router.get('/users/search', async (req, res) => {
         [`%${q}%`]
     );
     res.json(users);
+});
+
+// Премиум за рекламу (VK) — 1 час, раз в час
+router.post('/premium/ad', async (req, res) => {
+    const userId = req.userId;
+    const user = await db.one('SELECT premiumUntil, adpremiumat FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const cooldownSec = 3600; // 1 час
+    if (now - (user.adpremiumat || 0) < cooldownSec) {
+        const remaining = cooldownSec - (now - user.adpremiumat);
+        return res.status(400).json({ error: `Реклама будет доступна через ${Math.ceil(remaining / 60)} мин.` });
+    }
+
+    const currentUntil = Math.max(user.premiumUntil || 0, now);
+    const newUntil = currentUntil + 3600; // +1 час
+    await db.run('UPDATE users SET premiumUntil = ?, adpremiumat = ? WHERE id = ?', [newUntil, now, userId]);
+
+    res.json({ success: true, premiumUntil: newUntil, message: 'Премиум активирован на 1 час!' });
+});
+
+// Серебро за рекламу (VK) — 1000, раз в 30 минут
+router.post('/shop/ad-silver', async (req, res) => {
+    const userId = req.userId;
+    const user = await db.one('SELECT money, adsilverat FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const cooldownSec = 1800; // 30 минут
+    if (now - (user.adsilverat || 0) < cooldownSec) {
+        const remaining = cooldownSec - (now - user.adsilverat);
+        return res.status(400).json({ error: `Реклама будет доступна через ${Math.ceil(remaining / 60)} мин.` });
+    }
+
+    const reward = 1000;
+    await db.run('UPDATE users SET money = money + ?, adsilverat = ? WHERE id = ?', [reward, now, userId]);
+
+    res.json({ success: true, reward, message: `Получено ${reward} серебра за рекламу!` });
 });
 
 export default router;
