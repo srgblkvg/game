@@ -469,11 +469,11 @@ router.post('/craft/disassemble', async (req, res) => {
 
 // Проклятие предмета (Soul Crystal)
 const CURSE_RANKS = [
-    { rank: 1, name: 'I', color: '#22c55e', min: 10, max: 20, weight: 50 },
-    { rank: 2, name: 'II', color: '#3b82f6', min: 20, max: 30, weight: 25 },
-    { rank: 3, name: 'III', color: '#a855f7', min: 30, max: 40, weight: 15 },
-    { rank: 4, name: 'IV', color: '#f97316', min: 40, max: 50, weight: 8 },
-    { rank: 5, name: 'V', color: '#ef4444', min: 50, max: 60, weight: 2 },
+    { rank: 1, name: 'I', color: '#22c55e', min: 10, max: 20, weight: 70 },
+    { rank: 2, name: 'II', color: '#3b82f6', min: 20, max: 30, weight: 15 },
+    { rank: 3, name: 'III', color: '#a855f7', min: 30, max: 40, weight: 11 },
+    { rank: 4, name: 'IV', color: '#f97316', min: 40, max: 50, weight: 3 },
+    { rank: 5, name: 'V', color: '#ef4444', min: 50, max: 60, weight: 1 },
 ];
 const CURSE_STATS: Record<string, string> = { s: 'Сила', a: 'Ловкость', d: 'Защита', m: 'Мастерство' };
 const CURSE_COST = 100000;
