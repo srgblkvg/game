@@ -37,6 +37,7 @@ router.get('/arena/opponent', async (req, res) => {
                 return res.json({
                     id: saved.id, name: saved.username, level: saved.level,
                     equipment: savedEnriched, stats: savedStats,
+                    currentHp: saved.currenthp ?? savedStats.hp,
                     playerMoney: user.money,
                     gender: saved.gender || 'male',
                     avatar: saved.avatar || null,
@@ -105,6 +106,7 @@ router.get('/arena/opponent', async (req, res) => {
         level: opponent.level,
         equipment: enrichedEquipment,
         stats,
+        currentHp: opponent.currenthp ?? stats.hp,
         playerMoney: user.money,
         gender: opponent.gender || 'male',
         avatar: opponent.avatar || null,

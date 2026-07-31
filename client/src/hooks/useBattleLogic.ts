@@ -74,7 +74,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             }
             setHpLeft(character.currentHp);
             setMaxHpRight(data.stats.hp);
-            setHpRight(data.stats.hp);
+            setHpRight(data.currentHp ?? data.stats.hp);
             speedRef.current = speed;
             if (change && data.playerMoney !== undefined) {
                 setCharacter({ ...character, money: data.playerMoney });
@@ -112,7 +112,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             }
 
             setHpLeft(character.currentHp);
-            setHpRight(opponent.stats.hp);
+            setHpRight(opponent.currentHp ?? opponent.stats.hp);
             setBattleSteps(result.steps || result.log);
             setCurrentStep(-1);
         } catch (e: any) {
