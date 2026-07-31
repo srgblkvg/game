@@ -65,7 +65,9 @@ const typeNameRu: Record<string, string> = {
   craft: 'Материал',
   material: 'Материал',
   craft_item: 'Материал',
-  upgrade: 'Камень',
+  soul_crystal: 'Материал',
+  upgrade: 'Улучшение',
+  stone: 'Улучшение',
 };
 
 export function getItemTypeName(item: any): string {
