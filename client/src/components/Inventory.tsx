@@ -44,8 +44,9 @@ const typeLocalization: Record<string, string> = {
     'craft': 'Материалы',
     'material': 'Материалы',
     'craft_item': 'Материалы',
-    'upgrade': 'Камни усиления',
     'soul_crystal': 'Материалы',
+    'upgrade': 'Улучшение',
+    'stone': 'Улучшение',
 };
 
 const getLocalizedType = (type: string): string => {
