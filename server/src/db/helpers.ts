@@ -23,6 +23,7 @@ export const USER_BATTLE_FIELDS_GUILD = `
 export const USER_ARENA_FIELDS_GUILD = `
   u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses,
   u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money,
+  u.currentHp, u.lastHpUpdate, u.roomType, u.roomUntil, u.premiumUntil,
   u.inventorySlots, u.lastAttackTime, u.arenaOpponentId,
   u.activeDrink, u.drinkUntil, u.guildId,
   u.gender, u.avatar, g.name as guildName

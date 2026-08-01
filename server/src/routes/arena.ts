@@ -100,13 +100,25 @@ router.get('/arena/opponent', async (req, res) => {
     const { enriched: enrichedEquipment } = await enrichEquipment(JSON.parse(opponent.equipment || '{}'));
     const stats = await buildPlayerStats(opponent, 'arena');
 
+    // Актуальное HP с офлайн-регеном
+    const { applyHpRegen } = await import('../game/hpRegen');
+    const actualHp = await applyHpRegen({
+        id: opponent.id,
+        currentHp: opponent.currentHp ?? stats.hp,
+        maxHp: stats.hp,
+        lastHpUpdate: opponent.lastHpUpdate || 0,
+        roomType: opponent.roomType,
+        roomUntil: opponent.roomUntil,
+        premiumUntil: opponent.premiumUntil,
+    });
+
     res.json({
         id: opponent.id,
         name: opponent.username,
         level: opponent.level,
         equipment: enrichedEquipment,
         stats,
-        currentHp: opponent.currenthp ?? stats.hp,
+        currentHp: actualHp,
         playerMoney: user.money,
         gender: opponent.gender || 'male',
         avatar: opponent.avatar || null,
