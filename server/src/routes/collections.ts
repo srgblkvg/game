@@ -7,12 +7,14 @@ const router = Router();
 // Получить коллекцию пользователя (предметы + сеты)
 router.get('/collections', async (req, res) => {
     const userId = req.userId;
+    const upgradeLevel = parseInt(req.query.upgradelevel as string) || 0;
+
     const items = await db.query(
-        'SELECT itemName, slot, rarity_id FROM collections WHERE userId = ?',
-        [userId]
+        'SELECT itemName, slot, rarity_id, upgradelevel FROM collections WHERE userId = ? AND upgradelevel = ?',
+        [userId, upgradeLevel]
     ) as any[];
 
-    // Сеты и их статус — с предметами
+    // Сеты и их статус — фильтруем по upgradeLevel
     const sets = await db.query(`
         SELECT s.*, si.item_name, si.slot, si.rarity_id,
                i.image, i.bonuses, i.extra,
@@ -22,9 +24,9 @@ router.get('/collections', async (req, res) => {
         LEFT JOIN collection_set_items si ON si.set_id = s.id
         LEFT JOIN items i ON i.name = si.item_name AND i.slot = si.slot AND i.rarity_id = si.rarity_id
         LEFT JOIN rarities r ON si.rarity_id = r.id
-        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = si.rarity_id
+        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = si.rarity_id AND c.upgradelevel = ?
         ORDER BY s.sort_order, s.id, si.slot, si.item_name
-    `, [userId]) as any[];
+    `, [userId, upgradeLevel]) as any[];
 
     // Группируем по сетам
     const setsMap = new Map<number, { set: any; totalItems: number; collectedCount: number; items: any[] }>();
@@ -78,16 +80,17 @@ router.get('/collections/set-items', async (req, res) => {
 // Добавить предмет в коллекцию (удаляет из инвентаря)
 router.post('/collections/add', async (req, res) => {
     const userId = req.userId;
-    const { itemName, slot, itemId, rarityId } = req.body;
+    const { itemName, slot, itemId, rarityId, upgradeLevel } = req.body;
+    const targetLevel = upgradeLevel ?? 0;
 
     if (!itemName || !slot) {
         return res.status(400).json({ error: 'itemName и slot обязательны' });
     }
 
-    // Проверяем что предмет ещё не в коллекции (имя+слот+редкость)
+    // Проверяем что предмет ещё не в коллекции (имя+слот+редкость+уровень)
     const existing = await db.one(
-        'SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ? AND rarity_id = ?',
-        [userId, itemName, slot, rarityId || 0]
+        'SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ? AND rarity_id = ? AND upgradelevel = ?',
+        [userId, itemName, slot, rarityId || 0, targetLevel]
     );
 
     if (existing) {
@@ -130,8 +133,8 @@ router.post('/collections/add', async (req, res) => {
 
     // Добавляем в коллекцию
     await db.run(
-        'INSERT INTO collections (userId, itemName, slot, rarity_id) VALUES (?, ?, ?, ?)',
-        [userId, itemName, slot, removed.rarity_id || 0]
+        'INSERT INTO collections (userId, itemName, slot, rarity_id, upgradelevel) VALUES (?, ?, ?, ?, ?)',
+        [userId, itemName, slot, removed.rarity_id || 0, targetLevel]
     );
     checkAchievement(userId, 'collection').catch(() => {});
 

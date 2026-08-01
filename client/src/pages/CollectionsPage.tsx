@@ -99,6 +99,7 @@ export default function CollectionsPage() {
     const [collectionSetBonus, setCollectionSetBonus] = useState(0);
     const [totalCollectionItems, setTotalCollectionItems] = useState(225);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<number>(0);
 
     const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null);
     const [selectedInvItem, setSelectedInvItem] = useState<InventoryItem | null>(null);
@@ -110,7 +111,7 @@ export default function CollectionsPage() {
         Promise.all([
             fetch('/api/items', { headers: getHeaders() }).then(r => r.json()),
             fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
-            fetch('/api/collections', { headers: getHeaders() }).then(r => r.json()),
+            fetch(`/api/collections?upgradelevel=${activeTab}`, { headers: getHeaders() }).then(r => r.json()),
         ])
             .then(([shopItems, character, collectionData]) => {
                 setItems(shopItems);
@@ -120,7 +121,11 @@ export default function CollectionsPage() {
                 setTotalCollectionItems(character.totalCollectionItems || 189);
 
                 const inv = character.inventory || [];
-                setInventoryItems(inv);
+                // Фильтруем по upgradeLevel для таба
+                const filteredInv = activeTab === 0
+                    ? inv.filter((i: any) => !i.upgradeLevel || i.upgradeLevel < 7)
+                    : inv.filter((i: any) => i.upgradeLevel >= 7);
+                setInventoryItems(filteredInv);
 
                 const owned = new Set<string>();
                 for (const invItem of inv) {
@@ -138,7 +143,7 @@ export default function CollectionsPage() {
                 setLoading(false);
             })
             .catch(() => setLoading(false));
-    }, []);
+    }, [activeTab]);
 
     const handleAddToCollection = (shopItem: ShopItem) => {
         const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot && inv.rarity_id === shopItem.rarity_id && !(inv as any).locked);
@@ -158,14 +163,14 @@ export default function CollectionsPage() {
             const res = await fetch('/api/collections/add', {
                 method: 'POST',
                 headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itemName: selectedShopItem.name, slot: selectedShopItem.slot, itemId: selectedInvItem.id, rarityId: selectedShopItem.rarity_id }),
+                body: JSON.stringify({ itemName: selectedShopItem.name, slot: selectedShopItem.slot, itemId: selectedInvItem.id, rarityId: selectedShopItem.rarity_id, upgradeLevel: activeTab }),
             });
             const data = await res.json();
             if (!res.ok) { setMessage(data.error || 'Ошибка'); return; }
 
             const [charRes, collRes] = await Promise.all([
                 fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
-                fetch('/api/collections', { headers: getHeaders() }).then(r => r.json()),
+                fetch(`/api/collections?upgradelevel=${activeTab}`, { headers: getHeaders() }).then(r => r.json()),
             ]);
 
             setInventoryItems(charRes.inventory || []);
@@ -203,6 +208,16 @@ export default function CollectionsPage() {
     return (
         <div className="p-4 max-w-4xl mx-auto">
             <h1 className="text-xl font-bold mb-2">Коллекция — {totalPercent}%</h1>
+
+            {/* Табы */}
+            <div className="flex gap-2 mb-3">
+                <button onClick={() => setActiveTab(0)}
+                    className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${activeTab === 0 ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >Базовая</button>
+                <button onClick={() => setActiveTab(7)}
+                    className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${activeTab === 7 ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >+7</button>
+            </div>
 
             {/* Бонус */}
             <div className="mb-3 p-3 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-secondary)]">
