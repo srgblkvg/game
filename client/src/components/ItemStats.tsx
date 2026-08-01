@@ -28,8 +28,9 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
   try {
     const { character } = useGame();
     if (character?.collectedItems && item.name && item.slot) {
+      const itemUpg = item.upgradeLevel ?? item.upgradelevel ?? 0;
       inCollection = character.collectedItems.some(
-        (c: any) => c.itemName === item.name && c.slot === item.slot && (c.rarity_id ?? c.rarity_Id) === item.rarity_id
+        (c: any) => c.itemName === item.name && c.slot === item.slot && (c.rarity_id ?? c.rarity_Id) === item.rarity_id && (c.upgradelevel ?? 0) === itemUpg
       );
     }
   } catch {}

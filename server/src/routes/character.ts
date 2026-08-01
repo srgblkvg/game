@@ -92,7 +92,7 @@ router.get('/character/me', async (req, res) => {
       )
     `, [userId]) as any;
     const totalCollectionBonus = (collectionCount || 0) + (completedSetBonus?.total || 0);
-    const collectedItems = await db.query('SELECT itemName, slot, rarity_id FROM collections WHERE userId = ?', [userId]) as any[];
+    const collectedItems = await db.query('SELECT itemName, slot, rarity_id, upgradelevel FROM collections WHERE userId = ?', [userId]) as any[];
     const guildBonus = await getGuildBonus(userId, 'arena');
     const buildings = await getGuildBuildings(userId);
     const stats = await buildPlayerStats(user, 'arena');
