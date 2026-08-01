@@ -826,7 +826,7 @@ export default function CraftPage() {
                             </div>
                         </div>
                         <div className="flex gap-2 justify-center">
-                            <Button variant="secondary" size="md" onClick={() => applyCurse(curseConfirm.newCurse, true)}>Оставить ({formatMoney(100000)})</Button>
+                            <Button variant="secondary" size="md" onClick={() => applyCurse(curseConfirm.newCurse, true)}>Оставить</Button>
                             <Button variant="danger" size="md" onClick={() => applyCurse(curseConfirm.newCurse)}>Заменить ({formatMoney(100000)})</Button>
                         </div>
                     </div>
