@@ -129,14 +129,20 @@ export default function CollectionsPage() {
 
                 const owned = new Set<string>();
                 for (const invItem of inv) {
-                    if (invItem.name && invItem.slot && invItem.rarity_id != null) owned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
+                    if (invItem.name && invItem.slot && invItem.rarity_id != null) {
+                        const itemUpg = invItem.upgradeLevel || 0;
+                        // В базовой вкладке — предметы < 7, в +7 — ≥ 7
+                        if (activeTab === 0 ? itemUpg < 7 : itemUpg >= 7) {
+                            owned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
+                        }
+                    }
                 }
                 setOwnedKeys(owned);
 
                 const collItems = collectionData.items || [];
                 const coll = new Set<string>();
                 for (const c of collItems) {
-                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}`);
+                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${c.upgradelevel ?? 0}`);
                 }
                 setCollectionKeys(coll);
 
@@ -181,13 +187,18 @@ export default function CollectionsPage() {
 
             const newOwned = new Set<string>();
             for (const invItem of (charRes.inventory || [])) {
-                if (invItem.name && invItem.slot && invItem.rarity_id != null) newOwned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
+                if (invItem.name && invItem.slot && invItem.rarity_id != null) {
+                    const itemUpg = invItem.upgradeLevel || 0;
+                    if (activeTab === 0 ? itemUpg < 7 : itemUpg >= 7) {
+                        newOwned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
+                    }
+                }
             }
             setOwnedKeys(newOwned);
 
             const newColl = new Set<string>();
             for (const c of (collRes.items || [])) {
-                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}`);
+                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${c.upgradelevel ?? 0}`);
             }
             setCollectionKeys(newColl);
 
@@ -255,6 +266,7 @@ export default function CollectionsPage() {
                         collectionKeys={collectionKeys}
                         inventoryItems={inventoryItems}
                         onAddToCollection={handleAddToCollection}
+                        upgradeLevel={activeTab}
                     />
                 ))}
             </div>
@@ -286,12 +298,13 @@ export default function CollectionsPage() {
     );
 }
 
-function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToCollection }: {
+function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToCollection, upgradeLevel }: {
     set: CollectionSet;
     ownedKeys: Set<string>;
     collectionKeys: Set<string>;
     inventoryItems: InventoryItem[];
     onAddToCollection: (item: ShopItem) => void;
+    upgradeLevel: number;
 }) {
     const [collapsed, setCollapsed] = useState(true);
     const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
@@ -321,7 +334,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
 
     // Есть ли предметы в инвентаре, которые можно добавить в этот сет
     const hasAddableItems = blockItems.some(item => {
-        if (collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`)) return false;
+        if (collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}|${upgradeLevel}`)) return false;
         return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id && !(inv as any).locked);
     });
 
@@ -345,7 +358,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
                 <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-10 gap-1.5">
                     {blockItems.map((item: ShopItem) => {
                         const owned = ownedKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
-                        const collected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
+                        const collected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}|${upgradeLevel}`);
                         const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id && !(inv as any).locked);
 
                         return (
