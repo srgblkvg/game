@@ -471,7 +471,7 @@ export default function Inventory({
                 )}
             </div>
 
-            {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
+            {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} onDismiss={() => setTooltipData(null)} />}
             </>)}
             </div>
         </div>

@@ -679,7 +679,7 @@ export default function AuctionPage() {
 
             {tooltip && (
                 <div ref={tooltipRef} className="fixed z-50 pointer-events-none">
-                    <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />
+                    <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} onDismiss={() => setTooltip(null)} />
                 </div>
             )}
             {confirmPopup && (

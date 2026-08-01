@@ -253,7 +253,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
             </div>
             {/* Tooltip rendered OUTSIDE scrollable container to avoid clipping */}
             {tooltipData && (
-                <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />
+                <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} onDismiss={() => setTooltipData(null)} />
             )}
         </>
     );

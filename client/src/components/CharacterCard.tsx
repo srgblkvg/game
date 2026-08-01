@@ -235,7 +235,7 @@ export default function CharacterCard({
 
       {/* Тултип */}
       {hoveredSlot && char.equipment[hoveredSlot] && tooltipPos && (
-        <ItemTooltip item={char.equipment[hoveredSlot]} position={tooltipPos} equipment={char.equipment} />
+        <ItemTooltip item={char.equipment[hoveredSlot]} position={tooltipPos} equipment={char.equipment} onDismiss={() => { setHoveredSlot(null); setTooltipPos(null); }} />
       )}
 
       {/* Выбор предмета для слота */}
