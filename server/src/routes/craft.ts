@@ -353,8 +353,8 @@ router.post('/craft/upgrade', async (req, res) => {
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });
     } else {
         // Неудача
-        // Предмет ломается только если он уже +7 или выше
-        if (currentLevel >= 7) {
+        // Предмет ломается при попытке улучшить до +7 или выше
+        if (targetLevel >= 7) {
             const itemIdx = newInventory.findIndex((i: any) => i.id === itemSlot.id && !isCraftItem(i));
             if (itemIdx !== -1) {
                 const destroyedItem = newInventory[itemIdx];
