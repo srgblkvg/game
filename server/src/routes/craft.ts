@@ -324,11 +324,12 @@ router.post('/craft/upgrade', async (req, res) => {
             // Чат-сообщение об улучшении >= +7
             if (targetLevel >= 7) {
                 const itemName = itemToUpgrade.name || 'Предмет';
-                const chatMsg = { id: Date.now() + Math.random(), senderId: 0, senderName: 'Глашатай', targetId: null,
+                const msgId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+                const chatMsg = { id: msgId, senderId: 0, senderName: 'Глашатай', targetId: null,
                     content: `⚒️ ${user.username} улучшил ${itemName} до +${targetLevel}!`,
                     createdAt: new Date().toISOString() };
-                db.run('INSERT INTO chat_messages (senderId, targetId, content) VALUES (0, NULL, ?)',
-                    [chatMsg.content]).catch(() => {});
+                db.run('INSERT INTO chat_messages (id, senderId, targetId, content) VALUES (?, 0, NULL, ?)',
+                    [msgId, chatMsg.content]).catch(() => {});
                 broadcast('message', { message: chatMsg });
             }
             return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, eloAdded: ratingBonus, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` });
@@ -343,11 +344,12 @@ router.post('/craft/upgrade', async (req, res) => {
         // Чат-сообщение об улучшении >= +7
         if (targetLevel >= 7) {
             const itemName = itemToUpgrade.name || 'Предмет';
-            const chatMsg = { id: Date.now() + Math.random(), senderId: 0, senderName: 'Глашатай', targetId: null,
+            const msgId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+            const chatMsg = { id: msgId, senderId: 0, senderName: 'Глашатай', targetId: null,
                 content: `⚒️ ${user.username} улучшил ${itemName} до +${targetLevel}!`,
                 createdAt: new Date().toISOString() };
-            db.run('INSERT INTO chat_messages (senderId, targetId, content) VALUES (0, NULL, ?)',
-                [chatMsg.content]).catch(() => {});
+            db.run('INSERT INTO chat_messages (id, senderId, targetId, content) VALUES (?, 0, NULL, ?)',
+                [msgId, chatMsg.content]).catch(() => {});
             broadcast('message', { message: chatMsg });
         }
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });
@@ -393,11 +395,12 @@ router.post('/craft/upgrade', async (req, res) => {
             addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade_fail').catch(() => {});
             // Чат-сообщение о поломке >= +7
             const destroyedItemName = itemToUpgrade.name || 'Предмет';
-            const brokenChatMsg = { id: Date.now() + Math.random(), senderId: 0, senderName: 'Глашатай', targetId: null,
+            const brokenMsgId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+            const brokenChatMsg = { id: brokenMsgId, senderId: 0, senderName: 'Глашатай', targetId: null,
                 content: `💥 ${user.username} сломал ${destroyedItemName} (+${currentLevel}) при улучшении!`,
                 createdAt: new Date().toISOString() };
-                db.run('INSERT INTO chat_messages (senderId, targetId, content) VALUES (0, NULL, ?)',
-                    [brokenChatMsg.content]).catch(() => {});
+                db.run('INSERT INTO chat_messages (id, senderId, targetId, content) VALUES (?, 0, NULL, ?)',
+                    [brokenMsgId, brokenChatMsg.content]).catch(() => {});
                 broadcast('message', { message: brokenChatMsg });
                 return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача! Предмет разрушен.' });
         } else {
