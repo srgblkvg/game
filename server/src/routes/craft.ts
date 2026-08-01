@@ -539,6 +539,9 @@ router.post('/craft/curse/apply', async (req, res) => {
     const crystalIdx = inventory.findIndex((i: any) => isCraftItem(i) && i.id === crystalId && i.itemType === 'soul_crystal');
     if (crystalIdx === -1) return res.status(400).json({ error: 'Кристалл душ не найден в инвентаре' });
 
+    // Сохраняем предмет ДО splice — иначе itemIdx может протухнуть
+    const item = { ...inventory[itemIdx] };
+
     // Расходуем кристалл
     const crystal = inventory[crystalIdx];
     if (crystal.count > 1) {
@@ -546,9 +549,6 @@ router.post('/craft/curse/apply', async (req, res) => {
     } else {
         inventory.splice(crystalIdx, 1);
     }
-
-    // Применяем проклятие
-    const item = { ...inventory[itemIdx] };
     const oldCurse = item.curseStat ? {
         stat: item.curseStat, value: item.curseValue, rank: item.curseRank,
         name: item.curseName, color: item.curseColor,
