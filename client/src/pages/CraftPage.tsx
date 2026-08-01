@@ -95,13 +95,14 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
   }, []);
 
   return (
-    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="mb-4">
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-none">
       {PACKS.map(p => {
         const borderColor = p.curse ? '#e74c3c' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
         return (
-        <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col"
+        <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col flex-shrink-0 w-[220px] snap-start"
           style={{ borderColor }}>
-          <h3 className="font-bold text-sm mb-1">{p.title}</h3>
+          <h3 className="font-bold text-sm mb-1 truncate">{p.title}</h3>
           <div className="text-xs text-[var(--color-text-muted)] space-y-1 mb-2 flex-1">
             {'curse' in p ? (
               <div className="flex items-center gap-1.5">
@@ -141,8 +142,9 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
         </div>
       );
       })}
+      </div>
       {packMsg && (
-        <div className="sm:col-span-2 text-center text-sm font-bold"
+        <div className="w-full text-center text-sm font-bold mt-2"
           style={{ color: packMsg.startsWith('✅') ? 'var(--color-accent-success)' : packMsg.startsWith('❌') ? 'var(--color-accent-danger)' : 'var(--color-accent-info)' }}>
           {packMsg}
         </div>
