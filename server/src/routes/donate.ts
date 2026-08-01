@@ -249,3 +249,62 @@ router.get('/starter-pack/preview', authMiddleware, async (_req: Request, res: R
 });
 
 export default router;
+
+// Выдать сундук с кристаллами душ (curse_pack)
+export async function deliverCursePack(userId: number, packType: 'small' | 'large'): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await db.one('SELECT id, inventory, money FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return { success: false, error: 'Пользователь не найден' };
+
+    const packs: Record<string, { silver: number; crystals: number }> = {
+      small: { silver: 500000, crystals: 5 },
+      large: { silver: 1000000, crystals: 10 },
+    };
+
+    const pack = packs[packType];
+    if (!pack) return { success: false, error: 'Неизвестный набор' };
+
+    // Получаем Кристалл душ из БД
+    const crystalItem = await db.one(
+      "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Кристалл душ'"
+    ) as any;
+
+    const inventory = JSON.parse(user.inventory || '[]');
+
+    if (crystalItem) {
+      const existing = inventory.find((i: any) =>
+        (i.type === 'craft_item' || i.type === 'material') && i.id === crystalItem.id
+      );
+      if (existing) {
+        existing.count = (existing.count || 0) + pack.crystals;
+      } else {
+        inventory.push({
+          type: 'craft_item',
+          id: crystalItem.id,
+          name: crystalItem.name,
+          rarity_id: crystalItem.rarity_id,
+          rarity_display: crystalItem.rarity_display,
+          rarity_color: crystalItem.rarity_color,
+          count: pack.crystals,
+          itemType: crystalItem.type || 'soul_crystal',
+          image: crystalItem.image || null,
+        });
+      }
+    }
+
+    const newMoney = (user.money || 0) + pack.silver;
+
+    await db.run(
+      'UPDATE users SET inventory = ?, money = ? WHERE id = ?',
+      [JSON.stringify(inventory), newMoney, userId]
+    );
+
+    sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
+
+    logger.info(`[Donate] Curse pack ${packType} delivered to user ${userId}: ${pack.crystals} crystals + ${pack.silver} silver`);
+    return { success: true };
+  } catch (err: any) {
+    logger.error(`[Donate] deliverCursePack error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}

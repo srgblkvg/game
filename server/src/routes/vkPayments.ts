@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverSilver, deliverCraftPack } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 
@@ -27,7 +27,7 @@ const APP_SECRET = process.env.VK_APP_SECRET || '';
 interface VkItem {
   title: string;
   price: number;
-  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack';
+  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack' | 'curse_pack';
   days?: number;
   amount?: number;
 }
@@ -43,6 +43,8 @@ const ITEMS: Record<string, VkItem> = {
   silver_1000000:{ title: '1 000 000 серебра',            price: 200, type: 'silver',        amount: 1000000 },
   craft_rare:    { title: 'Сундук «Редкий»',              price: 14,  type: 'craft_pack' },
   craft_epic:    { title: 'Сундук «Эпический»',           price: 28,  type: 'craft_pack' },
+  curse_small:   { title: 'Сундук «Проклятый» (500k + 5 кристаллов)', price: 144, type: 'curse_pack' },
+  curse_large:   { title: 'Сундук «Проклятый II» (1M + 10 кристаллов)', price: 258, type: 'curse_pack' },
 };
 
 // Проверка подписи запроса от VK
@@ -156,6 +158,13 @@ router.post('/', async (req: Request, res: Response) => {
         } else if (item.type === 'craft_pack') {
           const packType = itemName === 'craft_rare' ? 'rare' : 'epic';
           const result = await deliverCraftPack(character.id, packType);
+          if (!result.success) {
+            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          }
+          processed = true;
+        } else if (item.type === 'curse_pack') {
+          const packType = itemName === 'curse_small' ? 'small' : 'large';
+          const result = await deliverCursePack(character.id, packType);
           if (!result.success) {
             return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
           }

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { YooKassa, CurrencyEnum } from 'yookassa-sdk';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
-import { deliverStarterPack, deliverSilver, deliverCraftPack } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack } from './donate';
 import logger from '../logger';
 import { sendPaymentReceipt } from '../email';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
@@ -30,7 +30,7 @@ db.run(`ALTER TABLE yukassa_payments ADD COLUMN IF NOT EXISTS item TEXT DEFAULT 
 interface ShopItem {
   title: string;
   price: number;
-  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack';
+  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack' | 'curse_pack';
   days?: number;
   silverAmount?: number;
 }
@@ -46,6 +46,8 @@ const ITEMS: Record<string, ShopItem> = {
   silver_1000000:{ title: '1 000 000 серебра',            price: 1399,type: 'silver',        silverAmount: 1000000 },
   craft_rare:    { title: 'Сундук «Редкий»',              price: 99,  type: 'craft_pack' },
   craft_epic:    { title: 'Сундук «Эпический»',           price: 199, type: 'craft_pack' },
+  curse_small:   { title: 'Сундук «Проклятый» (500k + 5 кристаллов)', price: 999,  type: 'curse_pack' },
+  curse_large:   { title: 'Сундук «Проклятый II» (1M + 10 кристаллов)', price: 1799, type: 'curse_pack' },
 };
 
 // Старые тарифы (по дням) для обратной совместимости
@@ -168,6 +170,10 @@ async function processDelivery(userId: number, itemType: string, days: number, s
   } else if (itemType === 'craft_pack') {
     const packType = itemKey === 'craft_rare' ? 'rare' : 'epic';
     const result = await deliverCraftPack(userId, packType);
+    if (!result.success) throw new Error(result.error || 'Delivery failed');
+  } else if (itemType === 'curse_pack') {
+    const packType = itemKey === 'curse_small' ? 'small' : 'large';
+    const result = await deliverCursePack(userId, packType);
     if (!result.success) throw new Error(result.error || 'Delivery failed');
   }
 }
