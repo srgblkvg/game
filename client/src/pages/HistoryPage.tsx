@@ -179,7 +179,7 @@ export default function HistoryPage() {
             const ss = data.snapshotStats?JSON.parse(data.snapshotStats):null;
             const canc = data.status==='cancelled';
             const top3 = data.top3 || [];
-            const divisionLabel: Record<string,string> = {iron:'Железный',copper:'Медный',bronze:'Бронзовый',silver:'Серебряный',gold:'Золотой',platinum:'Платиновый',diamond:'Алмазный'};
+            const divisionLabel: Record<string,string> = {copper:'Медный',bronze:'Бронзовый',iron:'Железный',steel:'Стальной',silver:'Серебряный',gold:'Золотой',platinum:'Платиновый',mithril:'Мифриловый',adamant:'Адамантиновый',orichalcum:'Орихалковый'};
             const divName = data.division==='custom'?data.name||'Турнир':(divisionLabel[data.division]||data.division);
             return <EntryRow time={fmt(toMs(data.completedAt || data.createdAt))} onClick={()=>navigate('/tournament?tab=completed')}>
                 <div>
