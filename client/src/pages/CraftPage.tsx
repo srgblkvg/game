@@ -255,12 +255,12 @@ export default function CraftPage() {
         }
     };
 
-    const applyCurse = async (curseData: any) => {
+    const applyCurse = async (curseData: any, keepOld = false) => {
         const token = localStorage.getItem('token');
         const res = await fetch('/api/craft/curse/apply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ itemId: curseInfo!.item.id, crystalId: curseInfo!.crystal.id, curse: curseData }),
+            body: JSON.stringify({ itemId: curseInfo!.item.id, crystalId: curseInfo!.crystal.id, curse: curseData, keepOld }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
@@ -776,8 +776,8 @@ export default function CraftPage() {
                             </div>
                         </div>
                         <div className="flex gap-2 justify-center">
-                            <Button variant="secondary" size="md" onClick={() => setCurseConfirm(null)}>Оставить</Button>
-                            <Button variant="danger" size="md" onClick={() => applyCurse(curseConfirm.newCurse)}>Заменить</Button>
+                            <Button variant="secondary" size="md" onClick={() => applyCurse(curseConfirm.newCurse, true)}>Оставить ({formatMoney(100000)})</Button>
+                            <Button variant="danger" size="md" onClick={() => applyCurse(curseConfirm.newCurse)}>Заменить ({formatMoney(100000)})</Button>
                         </div>
                     </div>
                 </div>

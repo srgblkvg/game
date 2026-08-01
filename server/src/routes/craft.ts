@@ -521,11 +521,11 @@ router.post('/craft/curse', async (req, res) => {
     });
 });
 
-// Применить проклятие (расход ресурсов)
+// Применить проклятие (расход ресурсов ВСЕГДА — и при замене, и при отказе)
 router.post('/craft/curse/apply', async (req, res) => {
     const userId = req.userId;
-    const { itemId, crystalId, curse: curseData } = req.body;
-    if (!itemId || !crystalId || !curseData) return res.status(400).json({ error: 'Укажите itemId, crystalId и curse' });
+    const { itemId, crystalId, curse: curseData, keepOld } = req.body;
+    if (!itemId || !crystalId) return res.status(400).json({ error: 'Укажите itemId и crystalId' });
 
     const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -541,6 +541,11 @@ router.post('/craft/curse/apply', async (req, res) => {
 
     // Сохраняем предмет ДО splice — иначе itemIdx может протухнуть
     const item = { ...inventory[itemIdx] };
+    const oldCurse = item.curseStat ? {
+        stat: item.curseStat, value: item.curseValue, rank: item.curseRank,
+        name: item.curseName, color: item.curseColor,
+        statName: (CURSE_STATS as Record<string, string>)[item.curseStat] || item.curseStat,
+    } : null;
 
     // Расходуем кристалл
     const crystal = inventory[crystalIdx];
@@ -549,17 +554,15 @@ router.post('/craft/curse/apply', async (req, res) => {
     } else {
         inventory.splice(crystalIdx, 1);
     }
-    const oldCurse = item.curseStat ? {
-        stat: item.curseStat, value: item.curseValue, rank: item.curseRank,
-        name: item.curseName, color: item.curseColor,
-        statName: (CURSE_STATS as Record<string, string>)[item.curseStat] || item.curseStat,
-    } : null;
 
-    item.curseStat = curseData.stat;
-    item.curseValue = curseData.value;
-    item.curseRank = curseData.rank;
-    item.curseName = curseData.name;
-    item.curseColor = curseData.color;
+    // Применяем проклятие только если не keepOld
+    if (!keepOld && curseData) {
+        item.curseStat = curseData.stat;
+        item.curseValue = curseData.value;
+        item.curseRank = curseData.rank;
+        item.curseName = curseData.name;
+        item.curseColor = curseData.color;
+    }
 
     const newItemIdx = inventory.findIndex((i: any) => i.id === itemId && !isCraftItem(i));
     inventory[newItemIdx] = item;
@@ -570,14 +573,17 @@ router.post('/craft/curse/apply', async (req, res) => {
     checkAchievement(userId, 'craft').catch(() => {});
     markDirty(userId, 'quests');
 
-    const statName = (CURSE_STATS as Record<string, string>)[curseData.stat] || curseData.stat;
+    const message = keepOld
+        ? `Проклятие оставлено без изменений. Потрачено ${CURSE_COST.toLocaleString()} серебра.`
+        : `Предмет проклят! +${curseData.value} к ${(CURSE_STATS as Record<string, string>)[curseData.stat] || curseData.stat} (ранг ${curseData.name})`;
+
     res.json({
         success: true,
         inventory,
         moneyAfter: newMoney,
-        curse: curseData,
+        curse: keepOld ? (oldCurse ? { stat: oldCurse.stat, value: oldCurse.value, rank: oldCurse.rank, name: oldCurse.name, color: oldCurse.color } : null) : curseData,
         oldCurse,
-        message: `Предмет проклят! +${curseData.value} к ${statName} (ранг ${curseData.name})`,
+        message,
     });
 });
 
