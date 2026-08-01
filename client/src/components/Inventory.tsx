@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -72,11 +72,17 @@ export default function Inventory({
     const [dragIndex, setDragIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-    // Инициализируем порядок из снаряжения (не трогаем ресурсы)
+    // Инициализируем порядок из снаряжения (не трогаем ресурсы) — только при изменении состава
+    const inventoryRef = useRef<string>('');
     useEffect(() => {
         if (!character?.inventory) return;
-        const equipment = character.inventory.filter((item: any) => !isCraftItem(item));
-        setInventoryOrder(equipment.map((item: any) => String(item.id)));
+        const equipIds = character.inventory
+            .filter((item: any) => !isCraftItem(item))
+            .map((item: any) => String(item.id))
+            .join(',');
+        if (equipIds === inventoryRef.current) return; // состав не изменился
+        inventoryRef.current = equipIds;
+        setInventoryOrder(equipIds ? equipIds.split(',') : []);
     }, [character?.inventory]);
     const toggleLock = async (item: any) => {
         if (!character) return;
@@ -204,19 +210,19 @@ export default function Inventory({
         return Array.from(typeSet).sort();
     }, [craftItems]);
 
-    const sortedEquipment = sortItems(equipmentItems, sortEquipment);
+    const sortedEquipment = useMemo(() => sortItems(equipmentItems, sortEquipment), [equipmentItems, sortEquipment]);
     // Если есть пользовательский порядок — используем его, иначе сортировка по редкости
-    const orderedEquipment = inventoryOrder.length > 0
-        ? (() => {
-            const idToItem = new Map(equipmentItems.map((item: any) => [String(item.id), item]));
-            const ordered = inventoryOrder.map(id => idToItem.get(id)).filter(Boolean) as any[];
-            // Добавляем новые предметы, которых нет в inventoryOrder
-            for (const item of equipmentItems) {
-                if (!inventoryOrder.includes(String(item.id))) ordered.push(item);
-            }
-            return ordered;
-        })()
-        : sortedEquipment;
+    const orderedEquipment = useMemo(() => {
+        if (inventoryOrder.length === 0) return sortedEquipment;
+        const idToItem = new Map(equipmentItems.map((item: any) => [String(item.id), item]));
+        const ordered = inventoryOrder.map(id => idToItem.get(id)).filter(Boolean) as any[];
+        // Добавляем новые предметы, которых нет в inventoryOrder
+        const orderSet = new Set(inventoryOrder);
+        for (const item of equipmentItems) {
+            if (!orderSet.has(String(item.id))) ordered.push(item);
+        }
+        return ordered;
+    }, [equipmentItems, inventoryOrder, sortedEquipment]);
     const inventory = orderedEquipment.slice(0, maxSlots);
     const hasMore = equipmentItems.length > maxSlots;
 
@@ -235,13 +241,13 @@ export default function Inventory({
         onDragStartItem?.();
     };
 
-    const handleMouseEnter = (e: React.MouseEvent, item: any) => {
+    const handleMouseEnter = useCallback((e: React.MouseEvent, item: any) => {
         setTooltipData({ item, x: e.clientX, y: e.clientY });
-    };
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (tooltipData) setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
-    };
-    const handleMouseLeave = () => setTooltipData(null);
+    }, []);
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+    }, []);
+    const handleMouseLeave = useCallback(() => setTooltipData(null), []);
 
     const priceForNextSlot = 100 * Math.pow(2, maxSlots - 10);
 
@@ -259,10 +265,10 @@ export default function Inventory({
         return sortItems(items, sortCraft);
     }, [craftItems, activeType, sortCraft]);
 
-    const handleLongPress = (item: any, e: React.TouchEvent | React.MouseEvent) => {
+    const handleLongPress = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
         const touch = (e as React.TouchEvent).touches?.[0] ?? e;
         setTooltipData({ item, x: touch.clientX, y: touch.clientY });
-    };
+    }, []);
 
     const fillRatio = inventory.length / Math.max(1, maxSlots);
     const fillPct = Math.round(fillRatio * 100);

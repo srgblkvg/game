@@ -16,7 +16,7 @@ interface LongPressResourceSlotProps {
     style?: React.CSSProperties;
 }
 
-export default function LongPressResourceSlot({
+const LongPressResourceSlot = React.memo(function LongPressResourceSlot({
     item,
     onClick,
     onDragStart,
@@ -51,4 +51,6 @@ export default function LongPressResourceSlot({
             style={style}
         />
     );
-}
+});
+
+export default LongPressResourceSlot;
