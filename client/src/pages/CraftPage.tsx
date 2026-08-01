@@ -1,6 +1,6 @@
 import PageHeader from '../components/ui/PageHeader';
 // client/src/pages/CraftPage.tsx
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { useGame } from '../contexts/GameContext';
@@ -136,6 +136,7 @@ export default function CraftPage() {
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const [recipes, setRecipes] = useState<any[]>([]);
     const [crafting, setCrafting] = useState(false);
+    const craftingRef = useRef(false);
     const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string; acquire?: { item: any; count: number; msg: string }; pendingData?: any } | null>(null);
     const [errorPopup, setErrorPopup] = useState<string | null>(null);
     const { showAcquire } = useAcquire();
@@ -229,7 +230,8 @@ export default function CraftPage() {
     const [curseConfirm, setCurseConfirm] = useState<{ oldCurse: any; newCurse: any } | null>(null);
 
     const handleCurse = async () => {
-        if (!curseInfo) return;
+        if (!curseInfo || craftingRef.current) return;
+        craftingRef.current = true;
         setCrafting(true);
         try {
             const token = localStorage.getItem('token');
@@ -251,6 +253,7 @@ export default function CraftPage() {
         } catch (e: any) {
             setErrorPopup(e.message);
         } finally {
+            craftingRef.current = false;
             setCrafting(false);
         }
     };
@@ -399,7 +402,8 @@ export default function CraftPage() {
     }, [craftSlots, recipes]);
 
     const handleCreate = async () => {
-        if (!activeRecipe) return;
+        if (!activeRecipe || craftingRef.current) return;
+        craftingRef.current = true;
         setCrafting(true);
         try {
             const res = await fetch('/api/craft/execute', {
@@ -419,11 +423,15 @@ export default function CraftPage() {
             }
         } catch (err: any) {
             setErrorPopup(err.message);
-        } finally { setCrafting(false); }
+        } finally {
+            craftingRef.current = false;
+            setCrafting(false);
+        }
     };
 
     const handleUpgrade = async () => {
-        if (!upgradeInfo) return;
+        if (!upgradeInfo || craftingRef.current) return;
+        craftingRef.current = true;
         setCrafting(true);
         try {
             const slots = craftSlots.filter(Boolean);
@@ -438,7 +446,10 @@ export default function CraftPage() {
             }
         } catch (err: any) {
             setErrorPopup(err.message);
-        } finally { setCrafting(false); }
+        } finally {
+            craftingRef.current = false;
+            setCrafting(false);
+        }
     };
 
     const hasItemsInSlots = craftSlots.some(s => s !== null);
