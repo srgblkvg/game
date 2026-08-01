@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { getHeaders } from '../api/helpers';
 import { getItemImage } from '../utils/itemUtils';
 import ItemTooltip from '../components/ItemTooltip';
@@ -109,7 +109,6 @@ export default function CollectionsPage() {
 
     useEffect(() => {
         setLoading(true);
-        window.scrollTo(0, 0);
         Promise.all([
             fetch('/api/items', { headers: getHeaders() }).then(r => r.json()),
             fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
@@ -152,6 +151,8 @@ export default function CollectionsPage() {
             })
             .catch(() => setLoading(false));
     }, [activeTab]);
+
+    useLayoutEffect(() => { window.scrollTo(0, 0); }, [activeTab]);
 
     const handleAddToCollection = (shopItem: ShopItem) => {
         const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot && inv.rarity_id === shopItem.rarity_id && !(inv as any).locked);
