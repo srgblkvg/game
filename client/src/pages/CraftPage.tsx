@@ -103,9 +103,9 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
 
   return (
     <div className="mb-4">
-      <div className="flex items-center gap-1">
-        <button onClick={() => scroll('left')} className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-bg-input)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer">◀</button>
-        <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 px-1 snap-x snap-mandatory scrollbar-none flex-1">
+      <div className="relative">
+        <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">◀</button>
+        <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 px-4 snap-x snap-mandatory scrollbar-none">
       {PACKS.map(p => {
         const borderColor = p.curse ? '#e74c3c' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
         return (
@@ -152,7 +152,7 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
       );
       })}
       </div>
-        <button onClick={() => scroll('right')} className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-bg-input)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer">▶</button>
+        <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">▶</button>
       </div>
       {packMsg && (
         <div className="w-full text-center text-sm font-bold mt-2"
