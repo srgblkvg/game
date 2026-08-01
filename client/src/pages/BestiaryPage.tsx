@@ -393,8 +393,7 @@ export default function BestiaryPage() {
       setPlayerHp(Math.max(0, battleResult.hpAfter ?? 0));
       setMobHp(Math.max(0, battleResult.mobHpAfter ?? 0));
     }
-    // Применяем отложенное обновление персонажа и дропы
-    applyPending();
+    // applyPending вызывается через useEffect на currentStep
   };
 
   const backToFloors = () => {
