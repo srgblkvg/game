@@ -49,9 +49,9 @@ const ITEMS: Record<string, ShopItem> = {
   craft_epic:    { title: 'Сундук «Эпический»',           price: 199, type: 'craft_pack' },
   curse_small:   { title: 'Сундук «Проклятый» (500k + 5 кристаллов)', price: 999,  type: 'curse_pack' },
   curse_large:   { title: 'Сундук «Проклятый II» (1M + 10 кристаллов)', price: 1799, type: 'curse_pack' },
-  ruby_rune_1:   { title: 'Руна Рубина ×1 (+50% к улучшению)', price: 399,  type: 'rune_pack', runeCount: 1 },
-  ruby_rune_3:   { title: 'Руна Рубина ×3 (+50% к улучшению)', price: 999,  type: 'rune_pack', runeCount: 3 },
-  ruby_rune_5:   { title: 'Руна Рубина ×5 (+50% к улучшению)', price: 1499, type: 'rune_pack', runeCount: 5 },
+  ruby_rune_1:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×1', price: 399,  type: 'rune_pack', runeCount: 1 },
+  ruby_rune_3:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×3', price: 999,  type: 'rune_pack', runeCount: 3 },
+  ruby_rune_5:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×5', price: 1499, type: 'rune_pack', runeCount: 5 },
 };
 
 // Старые тарифы (по дням) для обратной совместимости

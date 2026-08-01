@@ -38,25 +38,37 @@ const PACKS = [
     desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%)',
   },
   {
-    item: 'ruby_rune_1', title: 'Руна Рубина', vkPrice: 57, rubPrice: 399,
-    rune: true, count: 1, runeImg: '/stone/stoneUpgrade_red.webp',
-    desc: '+50% к шансу улучшения предмета',
+    item: 'ruby_rune_1', title: 'Набор рун', vkPrice: 57, rubPrice: 399,
+    rune: true, count: 1, runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
+    ],
+    desc: 'Руны для улучшения предметов',
   },
   {
-    item: 'ruby_rune_3', title: 'Руна Рубина ×3', vkPrice: 143, rubPrice: 999,
-    rune: true, count: 3, runeImg: '/stone/stoneUpgrade_red.webp',
-    desc: '+50% к шансу улучшения (экономия 198₽)',
+    item: 'ruby_rune_3', title: 'Набор рун ×3', vkPrice: 144, rubPrice: 999,
+    rune: true, count: 3, runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
+    ],
+    desc: 'Руны для улучшения предметов',
+  },
+  {
+    item: 'ruby_rune_5', title: 'Набор рун ×5', vkPrice: 214, rubPrice: 1499,
+    rune: true, count: 5, runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
+    ],
+    desc: 'Руны для улучшения предметов',
   },
   {
     item: 'curse_small', title: 'Сундук «Проклятый»', vkPrice: 144, rubPrice: 999,
     curse: true, crystals: 5, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
     silver: 500000,
     desc: '5 Кристаллов душ для проклятия предметов',
-  },
-  {
-    item: 'ruby_rune_5', title: 'Руна Рубина ×5', vkPrice: 214, rubPrice: 1499,
-    rune: true, count: 5, runeImg: '/stone/stoneUpgrade_red.webp',
-    desc: '+50% к шансу улучшения (экономия 496₽)',
   },
   {
     item: 'curse_large', title: 'Сундук «Проклятый II»', vkPrice: 258, rubPrice: 1799,
@@ -136,11 +148,15 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
                 Кристалл душ ×{p.crystals}
               </div>
             ) : 'rune' in p ? (
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                  <img src={`https://mmoarena.ru${p.runeImg}`} alt="" className="w-4 h-4 object-contain" />
-                </div>
-                Руна Рубина ×{p.count}
+              <div className="space-y-1">
+                {p.runeImgs?.map((r: { img: string; label: string }, i: number) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                      <img src={`https://mmoarena.ru${r.img}`} alt="" className="w-4 h-4 object-contain" />
+                    </div>
+                    <span>{r.label} ×{p.count}</span>
+                  </div>
+                ))}
               </div>
             ) : (
               <>
