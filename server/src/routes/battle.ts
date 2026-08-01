@@ -49,6 +49,20 @@ router.post('/battle', async (req, res) => {
         return res.status(400).json({ error: `Игрок ${defender.username} защищён ещё ${Math.floor(remaining / 60)} мин` });
     }
 
+    // Актуализируем HP атакующего (офлайн-реген)
+    const aGuildBonus = await getGuildBonus(attacker.id, 'arena');
+    const attackerStats = await buildPlayerStats(attacker, 'arena');
+    const attackerMaxHp = attackerStats.hp;
+    const attackerCurrentHp = await applyHpRegen({
+        id: attacker.id,
+        currentHp: attacker.currentHp,
+        maxHp: attackerMaxHp,
+        lastHpUpdate: attacker.lastHpUpdate || 0,
+        roomType: attacker.roomType,
+        roomUntil: attacker.roomUntil,
+        premiumUntil: attacker.premiumUntil,
+    });
+
     // Актуализируем HP защитника (офлайн-реген)
     const dGuildBonus = await getGuildBonus(defender.id, 'arena');
     const defenderStats = await buildPlayerStats(defender, 'arena');
@@ -70,10 +84,10 @@ router.post('/battle', async (req, res) => {
         equipment: JSON.parse(attacker.equipment || '{}'),
         level: attacker.level,
         money: attacker.money,
-        currentHp: attacker.currentHp ?? undefined,
+        currentHp: attackerCurrentHp,
         drinkBonuses: getDrinkBonuses(attacker),
         collectionBonus: await getCollectionBonus(attacker.id),
-        guildBonus: await getGuildBonus(attacker.id, 'arena'),
+        guildBonus: aGuildBonus,
     };
     const defenderData = {
         id: defender.id,
