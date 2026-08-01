@@ -394,7 +394,7 @@ router.post('/craft/upgrade', async (req, res) => {
             // Чат-сообщение о поломке >= +7
             const destroyedItemName = itemToUpgrade.name || 'Предмет';
             const brokenChatMsg = { id: 0, senderId: 0, senderName: 'Глашатай', targetId: null,
-                content: `💔 ${user.username} сломал ${destroyedItemName} (+${currentLevel}) при улучшении!`,
+                content: `💥 ${user.username} сломал ${destroyedItemName} (+${currentLevel}) при улучшении!`,
                 createdAt: new Date().toISOString() };
             db.run('INSERT INTO chat_messages (senderId, targetId, content) VALUES (0, NULL, ?)',
                 [brokenChatMsg.content]).catch(() => {});
