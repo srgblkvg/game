@@ -565,6 +565,7 @@ router.post('/craft/curse/apply', async (req, res) => {
     }
 
     const newItemIdx = inventory.findIndex((i: any) => i.id === itemId && !isCraftItem(i));
+    if (newItemIdx === -1) return res.status(500).json({ error: 'Предмет исчез из инвентаря после списания кристалла' });
     inventory[newItemIdx] = item;
 
     const newMoney = user.money - CURSE_COST;
