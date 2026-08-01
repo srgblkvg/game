@@ -274,11 +274,11 @@ export default function CraftPage() {
         setCrafting(true);
         try {
             const token = localStorage.getItem('token');
-            // Шаг 1: превью
+            // Шаг 1: списание + превью
             const previewRes = await fetch('/api/craft/curse', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ itemId: curseInfo.item.id }),
+                body: JSON.stringify({ itemId: curseInfo.item.id, crystalId: curseInfo.crystal.id }),
             });
             const preview = await previewRes.json();
             if (!previewRes.ok) throw new Error(preview.error);
@@ -302,12 +302,12 @@ export default function CraftPage() {
         const res = await fetch('/api/craft/curse/apply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ itemId: curseInfo!.item.id, crystalId: curseInfo!.crystal.id, curse: curseData, keepOld }),
+            body: JSON.stringify({ itemId: curseInfo!.item.id, curse: curseData, keepOld }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         setCurseResult(data.message);
-        setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter });
+        setCharacter({ ...character, inventory: data.inventory });
         setCraftSlots(Array(9).fill(null));
         setMaterialUsage({});
         setCurseConfirm(null);
@@ -827,7 +827,7 @@ export default function CraftPage() {
                         </div>
                         <div className="flex gap-2 justify-center">
                             <Button variant="secondary" size="md" onClick={() => applyCurse(curseConfirm.newCurse, true)}>Оставить</Button>
-                            <Button variant="danger" size="md" onClick={() => applyCurse(curseConfirm.newCurse)}>Заменить ({formatMoney(100000)})</Button>
+                            <Button variant="danger" size="md" onClick={() => applyCurse(curseConfirm.newCurse)}>Заменить</Button>
                         </div>
                     </div>
                 </div>
