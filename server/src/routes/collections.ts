@@ -70,6 +70,7 @@ router.get('/collections', async (req, res) => {
                 bonuses,
                 extra: typeof row.extra === 'string' ? JSON.parse(row.extra || '{}') : (row.extra || {}),
                 collected: !!row.collected,
+                upgradeLevel: upgradeLevel,
             });
         }
     }
