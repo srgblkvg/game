@@ -32,7 +32,6 @@ export default function Slot({ slotId, item, blocked, highlighted, onClick, onDr
             onMouseLeave={onMouseLeave}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
-            title={slotNames[slotId]}
             style={{
                 opacity: blocked ? 0.5 : 1,
                 cursor: blocked ? 'not-allowed' : 'pointer',
