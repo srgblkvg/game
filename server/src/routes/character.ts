@@ -97,7 +97,7 @@ router.get('/character/me', async (req, res) => {
     const buildings = await getGuildBuildings(userId);
     const stats = await buildPlayerStats(user, 'arena');
 
-    const totalCollectionItems = (await db.one('SELECT COUNT(*) as cnt FROM collection_set_items') as any).cnt;
+    const totalCollectionItems = ((await db.one('SELECT COUNT(*) as cnt FROM collection_set_items') as any).cnt || 225) * 2;
 
     let jobData = null;
     if (user.activeJob) {
