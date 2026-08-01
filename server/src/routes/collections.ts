@@ -94,15 +94,27 @@ router.post('/collections/add', async (req, res) => {
         return res.status(400).json({ error: 'Предмет уже в коллекции' });
     }
 
-    // Удаляем из инвентаря
+    // Удаляем из инвентаря — prefer unlocked, prefer exact itemId
     const user = await db.one('SELECT inventory FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     const inventory = JSON.parse(user.inventory || '[]');
-    const itemIndex = inventory.findIndex((item: any) => {
-        if (itemId !== undefined && item.id === itemId) return true;
-        return item.name === itemName && item.slot === slot;
-    });
+    let itemIndex = -1;
+
+    // Ищем по точному itemId (если передан)
+    if (itemId !== undefined) {
+        itemIndex = inventory.findIndex((item: any) => String(item.id) === String(itemId));
+    }
+    // Fallback: по имени + слоту, prefer unlocked
+    if (itemIndex === -1) {
+        const candidates = inventory
+            .map((item: any, idx: number) => ({ item, idx }))
+            .filter(({ item }: { item: any; idx: number }) => item.name === itemName && item.slot === slot);
+        // Сначала unlocked, потом любой
+        const unlocked = candidates.find(({ item }: { item: any; idx: number }) => !item.locked);
+        const match = unlocked || candidates[0];
+        if (match) itemIndex = match.idx;
+    }
 
     if (itemIndex === -1) {
         return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
