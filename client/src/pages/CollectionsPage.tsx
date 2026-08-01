@@ -152,7 +152,11 @@ export default function CollectionsPage() {
             .catch(() => setLoading(false));
     }, [activeTab]);
 
-    useLayoutEffect(() => { window.scrollTo(0, 0); }, [activeTab]);
+    useLayoutEffect(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    }, [activeTab]);
 
     const handleAddToCollection = (shopItem: ShopItem) => {
         const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot && inv.rarity_id === shopItem.rarity_id && !(inv as any).locked);
