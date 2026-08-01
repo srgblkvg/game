@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 
@@ -27,9 +27,10 @@ const APP_SECRET = process.env.VK_APP_SECRET || '';
 interface VkItem {
   title: string;
   price: number;
-  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack' | 'curse_pack';
+  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack' | 'curse_pack' | 'rune_pack';
   days?: number;
   amount?: number;
+  count?: number;
 }
 
 const ITEMS: Record<string, VkItem> = {
@@ -45,6 +46,9 @@ const ITEMS: Record<string, VkItem> = {
   craft_epic:    { title: 'Сундук «Эпический»',           price: 28,  type: 'craft_pack' },
   curse_small:   { title: 'Сундук «Проклятый» (500k + 5 кристаллов)', price: 144, type: 'curse_pack' },
   curse_large:   { title: 'Сундук «Проклятый II» (1M + 10 кристаллов)', price: 258, type: 'curse_pack' },
+  ruby_rune_1:   { title: 'Руна Рубина ×1 (+50% к улучшению)', price: 57,  type: 'rune_pack', count: 1 },
+  ruby_rune_3:   { title: 'Руна Рубина ×3 (+50% к улучшению)', price: 143, type: 'rune_pack', count: 3 },
+  ruby_rune_5:   { title: 'Руна Рубина ×5 (+50% к улучшению)', price: 214, type: 'rune_pack', count: 5 },
 };
 
 // Проверка подписи запроса от VK
@@ -165,6 +169,12 @@ router.post('/', async (req: Request, res: Response) => {
         } else if (item.type === 'curse_pack') {
           const packType = itemName === 'curse_small' ? 'small' : 'large';
           const result = await deliverCursePack(character.id, packType);
+          if (!result.success) {
+            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          }
+          processed = true;
+        } else if (item.type === 'rune_pack') {
+          const result = await deliverRubyRune(character.id, item.count || 1);
           if (!result.success) {
             return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
           }

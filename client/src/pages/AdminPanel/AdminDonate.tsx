@@ -32,6 +32,11 @@ const ITEM_LABELS: Record<string, string> = {
   silver_1000000: '1M💰',
   craft_rare: 'Сундук Редкий',
   craft_epic: 'Сундук Эпический',
+  curse_small: 'Проклятый',
+  curse_large: 'Проклятый II',
+  ruby_rune_1: 'Руна Рубина ×1',
+  ruby_rune_3: 'Руна Рубина ×3',
+  ruby_rune_5: 'Руна Рубина ×5',
 };
 
 export default function AdminDonate() {

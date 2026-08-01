@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { YooKassa, CurrencyEnum } from 'yookassa-sdk';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
-import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune } from './donate';
 import logger from '../logger';
 import { sendPaymentReceipt } from '../email';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
@@ -30,9 +30,10 @@ db.run(`ALTER TABLE yukassa_payments ADD COLUMN IF NOT EXISTS item TEXT DEFAULT 
 interface ShopItem {
   title: string;
   price: number;
-  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack' | 'curse_pack';
+  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack' | 'curse_pack' | 'rune_pack';
   days?: number;
   silverAmount?: number;
+  runeCount?: number;
 }
 
 const ITEMS: Record<string, ShopItem> = {
@@ -48,6 +49,9 @@ const ITEMS: Record<string, ShopItem> = {
   craft_epic:    { title: 'Сундук «Эпический»',           price: 199, type: 'craft_pack' },
   curse_small:   { title: 'Сундук «Проклятый» (500k + 5 кристаллов)', price: 999,  type: 'curse_pack' },
   curse_large:   { title: 'Сундук «Проклятый II» (1M + 10 кристаллов)', price: 1799, type: 'curse_pack' },
+  ruby_rune_1:   { title: 'Руна Рубина ×1 (+50% к улучшению)', price: 399,  type: 'rune_pack', runeCount: 1 },
+  ruby_rune_3:   { title: 'Руна Рубина ×3 (+50% к улучшению)', price: 999,  type: 'rune_pack', runeCount: 3 },
+  ruby_rune_5:   { title: 'Руна Рубина ×5 (+50% к улучшению)', price: 1499, type: 'rune_pack', runeCount: 5 },
 };
 
 // Старые тарифы (по дням) для обратной совместимости
@@ -110,6 +114,7 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
         type: item.type,
         days: item.days || 0,
         silverAmount: item.silverAmount || 0,
+        runeCount: item.runeCount || 0,
         amount: price,
         itemTitle: item.title,
       },
@@ -150,7 +155,7 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
   }
 });
 
-async function processDelivery(userId: number, itemType: string, days: number, silverAmount: number, itemKey?: string): Promise<void> {
+async function processDelivery(userId: number, itemType: string, days: number, silverAmount: number, itemKey?: string, runeCount?: number): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
 
   if (itemType === 'premium' || (!itemType && days > 0)) {
@@ -174,6 +179,9 @@ async function processDelivery(userId: number, itemType: string, days: number, s
   } else if (itemType === 'curse_pack') {
     const packType = itemKey === 'curse_small' ? 'small' : 'large';
     const result = await deliverCursePack(userId, packType);
+    if (!result.success) throw new Error(result.error || 'Delivery failed');
+  } else if (itemType === 'rune_pack') {
+    const result = await deliverRubyRune(userId, runeCount || 1);
     if (!result.success) throw new Error(result.error || 'Delivery failed');
   }
 }
@@ -228,6 +236,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
       const itemType = metadata.type || 'premium';
       const days = parseInt(metadata.days || String(existing.days) || '0', 10);
       const silverAmount = parseInt(metadata.silverAmount || '0', 10);
+      const runeCount = parseInt(metadata.runeCount || '0', 10);
 
       if (!userId) {
         logger.error(`[YooKassa] Missing userId for payment ${paymentId}`);
@@ -237,7 +246,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
       const now = Math.floor(Date.now() / 1000);
 
       try {
-        await processDelivery(userId, itemType, days, silverAmount, metadata.item || '');
+        await processDelivery(userId, itemType, days, silverAmount, metadata.item || '', runeCount);
       } catch (err: any) {
         logger.error(`[YooKassa] Delivery error for payment ${paymentId}: ${err.message}`);
         return res.status(500).json({ error: err.message });

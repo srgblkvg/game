@@ -38,10 +38,25 @@ const PACKS = [
     desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%)',
   },
   {
+    item: 'ruby_rune_1', title: 'Руна Рубина', vkPrice: 57, rubPrice: 399,
+    rune: true, count: 1, runeImg: '/stone/stoneUpgrade_red.webp',
+    desc: '+50% к шансу улучшения предмета',
+  },
+  {
+    item: 'ruby_rune_3', title: 'Руна Рубина ×3', vkPrice: 143, rubPrice: 999,
+    rune: true, count: 3, runeImg: '/stone/stoneUpgrade_red.webp',
+    desc: '+50% к шансу улучшения (экономия 198₽)',
+  },
+  {
     item: 'curse_small', title: 'Сундук «Проклятый»', vkPrice: 144, rubPrice: 999,
     curse: true, crystals: 5, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
     silver: 500000,
     desc: '5 Кристаллов душ для проклятия предметов',
+  },
+  {
+    item: 'ruby_rune_5', title: 'Руна Рубина ×5', vkPrice: 214, rubPrice: 1499,
+    rune: true, count: 5, runeImg: '/stone/stoneUpgrade_red.webp',
+    desc: '+50% к шансу улучшения (экономия 496₽)',
   },
   {
     item: 'curse_large', title: 'Сундук «Проклятый II»', vkPrice: 258, rubPrice: 1799,
@@ -107,7 +122,7 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
         <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">◀</button>
         <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 px-4 snap-x snap-mandatory scrollbar-none">
       {PACKS.map(p => {
-        const borderColor = p.curse ? '#e74c3c' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
+        const borderColor = p.curse ? '#e74c3c' : p.rune ? '#c0392b' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
         return (
         <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col flex-shrink-0 w-[220px] snap-start"
           style={{ borderColor }}>
@@ -119,6 +134,13 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
                   <img src={`https://mmoarena.ru${p.crystalImg}`} alt="" className="w-4 h-4 object-contain" />
                 </div>
                 Кристалл душ ×{p.crystals}
+              </div>
+            ) : 'rune' in p ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                  <img src={`https://mmoarena.ru${p.runeImg}`} alt="" className="w-4 h-4 object-contain" />
+                </div>
+                Руна Рубина ×{p.count}
               </div>
             ) : (
               <>
@@ -136,7 +158,7 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
                 </div>
               </>
             )}
-            <p>💰 {formatMoney(p.silver)}</p>
+            {'silver' in p && <p>💰 {formatMoney(p.silver)}</p>}
             <p className="text-[0.6rem] italic">{p.desc}</p>
           </div>
           <div className="flex items-center justify-between">

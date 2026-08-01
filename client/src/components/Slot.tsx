@@ -1,6 +1,5 @@
 import React from 'react';
 import ItemSlot from './ItemSlot';
-import { slotNames } from '../utils/itemUtils';
 
 interface SlotProps {
     slotId: string;
@@ -18,7 +17,7 @@ interface SlotProps {
     style?: React.CSSProperties;
 }
 
-export default function Slot({ slotId, item, blocked, highlighted, onClick, onDragOver, onDrop, onMouseEnter, onMouseMove, onMouseLeave, onTouchStart, onTouchEnd, style }: SlotProps) {
+export default function Slot({ slotId: _slotId, item, blocked, highlighted, onClick, onDragOver, onDrop, onMouseEnter, onMouseMove, onMouseLeave, onTouchStart, onTouchEnd, style }: SlotProps) {
     return (
         <ItemSlot
             item={item}

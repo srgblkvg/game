@@ -308,3 +308,53 @@ export async function deliverCursePack(userId: number, packType: 'small' | 'larg
     return { success: false, error: err.message };
   }
 }
+
+// Выдать Руны Рубина (+50% к улучшению)
+export async function deliverRubyRune(userId: number, count: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await db.one('SELECT id, inventory FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return { success: false, error: 'Пользователь не найден' };
+
+    // Получаем Руну Рубина из БД
+    const runeItem = await db.one(
+      "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = 'Руна Рубина'"
+    ) as any;
+
+    if (!runeItem) return { success: false, error: 'Руна Рубина не найдена в БД' };
+
+    const inventory = JSON.parse(user.inventory || '[]');
+
+    // Стакаем с существующими рубиновыми рунами
+    const existing = inventory.find((i: any) =>
+      (i.type === 'craft_item' || i.type === 'material') && i.id === runeItem.id
+    );
+    if (existing) {
+      existing.count = (existing.count || 0) + count;
+    } else {
+      inventory.push({
+        type: 'craft_item',
+        id: runeItem.id,
+        name: runeItem.name,
+        rarity_id: runeItem.rarity_id,
+        rarity_display: runeItem.rarity_display,
+        rarity_color: runeItem.rarity_color,
+        count,
+        itemType: runeItem.type || 'upgrade',
+        image: runeItem.image || null,
+      });
+    }
+
+    await db.run(
+      'UPDATE users SET inventory = ? WHERE id = ?',
+      [JSON.stringify(inventory), userId]
+    );
+
+    sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
+
+    logger.info(`[Donate] Ruby rune ×${count} delivered to user ${userId}`);
+    return { success: true };
+  } catch (err: any) {
+    logger.error(`[Donate] deliverRubyRune error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
