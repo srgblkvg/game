@@ -37,6 +37,18 @@ const PACKS = [
     silver: 30000,
     desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%)',
   },
+  {
+    item: 'curse_small', title: 'Сундук «Проклятый»', vkPrice: 144, rubPrice: 999,
+    curse: true, crystals: 5, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
+    silver: 500000,
+    desc: '5 Кристаллов душ для проклятия предметов',
+  },
+  {
+    item: 'curse_large', title: 'Сундук «Проклятый II»', vkPrice: 258, rubPrice: 1799,
+    curse: true, crystals: 10, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
+    silver: 1000000,
+    desc: '10 Кристаллов душ для проклятия предметов',
+  },
 ];
 
 function CraftPacks({ isVK }: { isVK: boolean }) {
@@ -84,23 +96,36 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
 
   return (
     <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {PACKS.map(p => (
+      {PACKS.map(p => {
+        const borderColor = p.curse ? '#e74c3c' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
+        return (
         <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col"
-          style={{ borderColor: p.item === 'craft_rare' ? '#3498db' : '#9b59b6' }}>
+          style={{ borderColor }}>
           <h3 className="font-bold text-sm mb-1">{p.title}</h3>
           <div className="text-xs text-[var(--color-text-muted)] space-y-1 mb-2 flex-1">
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-4 h-4 object-contain" />
+            {'curse' in p ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                  <img src={`https://mmoarena.ru${p.crystalImg}`} alt="" className="w-4 h-4 object-contain" />
+                </div>
+                Кристалл душ ×{p.crystals}
               </div>
-              {p.material}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-4 h-4 object-contain" />
-              </div>
-              {p.stones}
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                    <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-4 h-4 object-contain" />
+                  </div>
+                  {p.material}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                    <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-4 h-4 object-contain" />
+                  </div>
+                  {p.stones}
+                </div>
+              </>
+            )}
             <p>💰 {formatMoney(p.silver)}</p>
             <p className="text-[0.6rem] italic">{p.desc}</p>
           </div>
@@ -114,7 +139,8 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
             </Button>
           </div>
         </div>
-      ))}
+      );
+      })}
       {packMsg && (
         <div className="sm:col-span-2 text-center text-sm font-bold"
           style={{ color: packMsg.startsWith('✅') ? 'var(--color-accent-success)' : packMsg.startsWith('❌') ? 'var(--color-accent-danger)' : 'var(--color-accent-info)' }}>
