@@ -54,6 +54,13 @@ const PACKS = [
 function CraftPacks({ isVK }: { isVK: boolean }) {
   const [packMsg, setPackMsg] = useState('');
   const [packBuying, setPackBuying] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === 'left' ? -240 : 240, behavior: 'smooth' });
+  };
 
   const buyPack = (pack: typeof PACKS[number]) => {
     if (isVK) {
@@ -96,7 +103,9 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
 
   return (
     <div className="mb-4">
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-none">
+      <div className="flex items-center gap-1">
+        <button onClick={() => scroll('left')} className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-bg-input)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer">◀</button>
+        <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 px-1 snap-x snap-mandatory scrollbar-none flex-1">
       {PACKS.map(p => {
         const borderColor = p.curse ? '#e74c3c' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
         return (
@@ -142,6 +151,8 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
         </div>
       );
       })}
+      </div>
+        <button onClick={() => scroll('right')} className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-bg-input)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer">▶</button>
       </div>
       {packMsg && (
         <div className="w-full text-center text-sm font-bold mt-2"
