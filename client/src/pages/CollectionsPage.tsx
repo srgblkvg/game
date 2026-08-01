@@ -348,7 +348,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
                     })}
                 </div>
             )}
-            {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} onDismiss={() => setTooltip(null)} />}
+            {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />}
         </div>
     );
 }

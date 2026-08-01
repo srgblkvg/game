@@ -170,11 +170,21 @@ export default function Inventory({
     const [sortCraft, setSortCraft] = useState<SortOrder>('none');
     const [activeType, setActiveType] = useState<string>('all');
 
-    // Закрытие тултипа при любом клике в документе
+    // Закрытие тултипа при клике (десктоп) или touchstart (мобила, не на слоте)
     useEffect(() => {
-        const handleGlobalClick = () => setTooltipData(null);
-        document.addEventListener('click', handleGlobalClick);
-        return () => document.removeEventListener('click', handleGlobalClick);
+        const handleClick = () => setTooltipData(null);
+        const handleTouch = (e: TouchEvent) => {
+            const target = e.target as HTMLElement;
+            // Не закрываем если тап по слоту — long press сам покажет/обновит тултип
+            if (target.closest('[data-slot]')) return;
+            setTooltipData(null);
+        };
+        document.addEventListener('click', handleClick);
+        document.addEventListener('touchstart', handleTouch, { passive: true });
+        return () => {
+            document.removeEventListener('click', handleClick);
+            document.removeEventListener('touchstart', handleTouch);
+        };
     }, []);
 
     // Сохраняем состояние в localStorage
@@ -477,7 +487,7 @@ export default function Inventory({
                 )}
             </div>
 
-            {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} onDismiss={() => setTooltipData(null)} />}
+            {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
             </>)}
             </div>
         </div>

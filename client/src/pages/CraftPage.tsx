@@ -746,7 +746,7 @@ export default function CraftPage() {
                 </div>
             </div>
 
-            {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} onDismiss={() => setTooltipData(null)} />}
+            {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
 
             {/* Попап крафта с анимацией */}
             {craftAnim && (

@@ -37,7 +37,7 @@ function OverflowItemSlot({ oi, onTake, loading }: { oi: OverflowItem; onTake: (
       >
         <ItemSlot item={oi.item} />
       </div>
-      {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} onDismiss={() => setTooltip(null)} />}
+      {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />}
     </>
   );
 }

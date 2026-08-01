@@ -44,9 +44,18 @@ export default function CharacterCard({
   const { sendItemLink } = useGlobalChat();
 
   useEffect(() => {
-    const handleGlobalClick = () => { setHoveredSlot(null); setTooltipPos(null); };
-    document.addEventListener('click', handleGlobalClick);
-    return () => document.removeEventListener('click', handleGlobalClick);
+    const dismiss = () => { setHoveredSlot(null); setTooltipPos(null); };
+    const handleTouch = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-slot]')) return;
+      dismiss();
+    };
+    document.addEventListener('click', dismiss);
+    document.addEventListener('touchstart', handleTouch, { passive: true });
+    return () => {
+      document.removeEventListener('click', dismiss);
+      document.removeEventListener('touchstart', handleTouch);
+    };
   }, []);
 
   if (!char) return null;
@@ -235,7 +244,7 @@ export default function CharacterCard({
 
       {/* Тултип */}
       {hoveredSlot && char.equipment[hoveredSlot] && tooltipPos && (
-        <ItemTooltip item={char.equipment[hoveredSlot]} position={tooltipPos} equipment={char.equipment} onDismiss={() => { setHoveredSlot(null); setTooltipPos(null); }} />
+        <ItemTooltip item={char.equipment[hoveredSlot]} position={tooltipPos} equipment={char.equipment} />
       )}
 
       {/* Выбор предмета для слота */}

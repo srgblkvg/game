@@ -7,13 +7,12 @@ import ItemStats from './ItemStats';
 interface ItemTooltipProps {
   item: any;
   position: { x: number; y: number };
-  onDismiss?: () => void;
 }
 
 const TOOLTIP_MARGIN = 8;
 const SCREEN_PADDING = 8;
 
-const ItemTooltip: React.FC<ItemTooltipProps & { equipment?: Record<string, any> }> = ({ item, position, equipment, onDismiss }) => {
+const ItemTooltip: React.FC<ItemTooltipProps & { equipment?: Record<string, any> }> = ({ item, position, equipment }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [adjustedPos, setAdjustedPos] = useState({ left: 0, top: 0, opacity: 0 });
 
@@ -55,28 +54,19 @@ const ItemTooltip: React.FC<ItemTooltipProps & { equipment?: Record<string, any>
   const color = getRarityColor(item);
 
   const tooltip = (
-    <>
-      {/* Прозрачный фон — ловит касания/клики для закрытия тултипа */}
-      <div
-        className="fixed inset-0 z-[99998]"
-        onClick={onDismiss}
-        onTouchStart={onDismiss}
-        style={{ background: 'transparent' }}
-      />
-      <div
-        ref={tooltipRef}
-        className="fixed bg-[var(--color-bg-secondary)] rounded-lg p-[0.7rem] z-[99999] text-[var(--color-text-primary)] text-xs max-w-[220px] pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.8)] border border-solid"
-        style={{
-          left: adjustedPos.left,
-          top: adjustedPos.top,
-          opacity: adjustedPos.opacity,
-          borderColor: color,
-          visibility: adjustedPos.opacity ? 'visible' : 'hidden',
-        }}
-      >
-        <ItemStats item={item} imageSize={36} viewEquipment={equipment} />
-      </div>
-    </>
+    <div
+      ref={tooltipRef}
+      className="fixed bg-[var(--color-bg-secondary)] rounded-lg p-[0.7rem] z-[99999] text-[var(--color-text-primary)] text-xs max-w-[220px] pointer-events-none shadow-[0_4px_12px_rgba(0,0,0,0.8)] border border-solid"
+      style={{
+        left: adjustedPos.left,
+        top: adjustedPos.top,
+        opacity: adjustedPos.opacity,
+        borderColor: color,
+        visibility: adjustedPos.opacity ? 'visible' : 'hidden',
+      }}
+    >
+      <ItemStats item={item} imageSize={36} viewEquipment={equipment} />
+    </div>
   );
 
   // Portal to document.body — bypasses any CSS containing blocks (backdrop-filter, transform, etc.)

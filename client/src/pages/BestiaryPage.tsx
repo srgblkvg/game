@@ -574,7 +574,7 @@ export default function BestiaryPage() {
           )}
         </>
       )}
-      {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} onDismiss={() => _setTooltipData(null)} />}
+      {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
     </div>
     </>
   );
