@@ -77,12 +77,17 @@ function getItemDropTable(level: number): { rarity: number; chance: number }[] {
         table.push({ rarity: 4, chance: 0.05 });
         table.push({ rarity: 5, chance: 0.05 });
         table.push({ rarity: 6, chance: 0.03 }); // Мифический (не-сет) 3%
-    } else {
-        // Уровни 100+ (Ад II/III): мусор не падает, высокий шанс сетов/мификов
+    } else if (level <= 140) {
+        // Уровни 101-140 (Ад I/II/III): мусор не падает, высокий шанс сетов/мификов
         table.push({ rarity: 3, chance: 0.05 }); // Редкий 5%
         table.push({ rarity: 4, chance: 0.08 }); // Эпический 8%
         table.push({ rarity: 5, chance: 0.15 }); // Легендарный 15%
         table.push({ rarity: 6, chance: 0.08 }); // Мифический 8%
+    } else {
+        // Уровни 141+ (Ад IV): только сеты и мифики
+        table.push({ rarity: 4, chance: 0.05 }); // Эпический 5%
+        table.push({ rarity: 5, chance: 0.20 }); // Легендарный 20%
+        table.push({ rarity: 6, chance: 0.15 }); // Мифический 15%
     }
     return table;
 }
