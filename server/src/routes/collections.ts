@@ -46,6 +46,19 @@ router.get('/collections', async (req, res) => {
         if (row.item_name) {
             entry.totalItems++;
             if (row.collected) entry.collectedCount++;
+
+            let bonuses: any = typeof row.bonuses === 'string' ? JSON.parse(row.bonuses || '{}') : (row.bonuses || {});
+            // Для +7 вкладки — масштабируем бонусы под upgradeLevel
+            if (upgradeLevel > 0) {
+                const mult = 1 + 0.1 * upgradeLevel;
+                bonuses = {
+                    s: Math.round((bonuses.s || 0) * mult),
+                    a: Math.round((bonuses.a || 0) * mult),
+                    d: Math.round((bonuses.d || 0) * mult),
+                    m: Math.round((bonuses.m || 0) * mult),
+                };
+            }
+
             entry.items.push({
                 id: row.id,
                 name: row.item_name,
@@ -54,7 +67,7 @@ router.get('/collections', async (req, res) => {
                 rarity_display: row.rarity_display || '',
                 rarity_color: row.rarity_color || '#888888',
                 image: row.image || null,
-                bonuses: typeof row.bonuses === 'string' ? JSON.parse(row.bonuses || '{}') : (row.bonuses || {}),
+                bonuses,
                 extra: typeof row.extra === 'string' ? JSON.parse(row.extra || '{}') : (row.extra || {}),
                 collected: !!row.collected,
             });
