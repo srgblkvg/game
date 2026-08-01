@@ -89,9 +89,10 @@ export function setupRoutes(app: Express) {
         'Бездонный Овраг':3,'Врата Бездны':3,
         'Огненные чертоги':4,'Тронный зал':4,
         'Ледяная бездна':5,'Престол падших':5,
+        'Кровавый предел':6,'Трон Проклятых':6,
     };
-    const DIFF_LABELS = ['Легко','Нормально','Сложно','Ад I','Ад II','Ад III'];
-    const DIFF_ICONS = ['🟢','🟡','🟠','🔴','🔴','🔴'];
+    const DIFF_LABELS = ['Легко','Нормально','Сложно','Ад I','Ад II','Ад III','Ад IV'];
+    const DIFF_ICONS = ['🟢','🟡','🟠','🔴','🔴','🔴','🔴'];
     const floors = rows.map(r => ({...r, difficulty: DIFF_MAP[r.name] ?? 0}));
     const groups = DIFF_LABELS.map((label,i) => ({label, icon: DIFF_ICONS[i], difficulty: i}));
     res.json({ floors, groups });
