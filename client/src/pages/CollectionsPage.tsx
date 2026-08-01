@@ -108,6 +108,8 @@ export default function CollectionsPage() {
     const confirmOpenTime = useRef(0);
 
     useEffect(() => {
+        setLoading(true);
+        window.scrollTo(0, 0);
         Promise.all([
             fetch('/api/items', { headers: getHeaders() }).then(r => r.json()),
             fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
