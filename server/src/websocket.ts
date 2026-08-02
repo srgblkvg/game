@@ -365,7 +365,7 @@ export async function setupWebSocket(server: any) {
     // ---------- Игрок ----------
     const userId = decoded.userId;
     const user = await db.one(
-      'SELECT u.id, u.username, u.level, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?',
+      'SELECT u.id, u.username, u.level, u.faction, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?',
       [userId]
     );
     if (!user) {
