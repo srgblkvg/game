@@ -86,10 +86,27 @@ export default function FactionPage() {
                     <p className="text-xs text-[var(--color-text-muted)] border-t border-[var(--color-border-light)] pt-2">
                         {FACTIONS[currentFaction]?.bonus || ''}
                     </p>
-                    {currentFaction === 'guard' && character?.karma !== undefined && (
-                        <p className={`text-xs mt-1 font-bold ${character.karma >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                            Карма: {character.karma >= 0 ? '+' : ''}{character.karma}
-                        </p>
+                    {currentFaction === 'guard' && (
+                        <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs text-[var(--color-text-muted)]">Карма</span>
+                                <span className={`text-xs font-bold ${(character?.karma || 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                                    {(character?.karma || 0) >= 0 ? '+' : ''}{character?.karma || 0}
+                                </span>
+                            </div>
+                            <div className="w-full h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                <div
+                                    className="h-full rounded-full transition-all"
+                                    style={{
+                                        width: `${50 + (character?.karma || 0) / 2}%`,
+                                        background: 'linear-gradient(to right, #dc2626, #eab308, #22c55e)',
+                                    }}
+                                />
+                            </div>
+                            <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-1">
+                                +1 за победу над Бандитом, -1 за победу над мирным или Стражем. Карма влияет на жалование: от -100% до +100%.
+                            </p>
+                        </div>
                     )}
                     {currentFaction === 'crafter' && (
                         <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
