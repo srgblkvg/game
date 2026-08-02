@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 
 interface PlayerBadgeProps {
   avatar: string | null;
@@ -8,9 +9,13 @@ interface PlayerBadgeProps {
   currentHp: number;
   maxHp: number;
   hpPct: number;
+  faction?: string | null;
 }
 
-export default function PlayerBadge({ avatar, username, level, gender, currentHp, maxHp, hpPct }: PlayerBadgeProps) {
+const FACTION_ICON: Record<string, string> = { bandit: 'game-icons:hood', crafter: 'game-icons:anvil', guard: 'game-icons:shield' };
+const FACTION_COLOR: Record<string, string> = { bandit: 'text-red-300', crafter: 'text-blue-300', guard: 'text-yellow-300' };
+
+export default function PlayerBadge({ avatar, username, level, gender, currentHp, maxHp, hpPct, faction }: PlayerBadgeProps) {
   const navigate = useNavigate();
 
   return (
@@ -33,6 +38,9 @@ export default function PlayerBadge({ avatar, username, level, gender, currentHp
       />
       <div className="flex flex-col gap-0.5 min-w-0">
         <span className="text-xs text-[var(--color-text-muted)] truncate leading-none">
+          {faction && FACTION_ICON[faction] && (
+            <Icon icon={FACTION_ICON[faction]} width="12" height="12" className={`inline-block mr-0.5 ${FACTION_COLOR[faction] || ''}`} />
+          )}
           {username} [{level}]
         </span>
         <div className="flex items-center gap-1">

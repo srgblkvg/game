@@ -238,6 +238,7 @@ export default function Header() {
                         currentHp={currentHp}
                         maxHp={maxHp}
                         hpPct={hpPct}
+                        faction={character.faction}
                     />
                     <span className="absolute left-1/2 -translate-x-1/2 text-xs text-[var(--color-text-muted)] tabular-nums leading-none pointer-events-none">
                         {formatGameTime(serverNow * 1000)}
