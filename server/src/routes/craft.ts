@@ -236,7 +236,7 @@ router.get('/craft/upgrade-info/:level/:rarity', async (req, res) => {
     if (!data) return res.status(404).json({ error: 'Данные об уровне не найдены' });
     // Бонус фракции Ремесленник: +10% +1% за каждые 1000 крафтов
     const user = await db.one('SELECT faction, faction_craft_count FROM users WHERE id = ?', [userId]) as any;
-    const factionBonus = user?.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 1000) : 0;
+    const factionBonus = user?.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 100) : 0;
     res.json({ chance: data.chance, factionBonus, money_cost: Math.max(1, Math.floor(data.money_cost / 4)) });
 });
 
@@ -288,7 +288,7 @@ router.post('/craft/upgrade', async (req, res) => {
     const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
     const stoneBonus = STONE_BONUS[stone.rarity_id] || 0;
     // Бонус фракции Ремесленник: +10% +1% за каждые 1000 крафтов
-    const factionBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 1000) : 0;
+    const factionBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 100) : 0;
     const finalChance = Math.min(100, chance + stoneBonus + factionBonus);
     const actualCost = Math.max(1, Math.floor(money_cost / 4));
 
