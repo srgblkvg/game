@@ -10,9 +10,9 @@ import { formatMoney } from '../utils/money';
 import { fmtSafeDate } from '../utils/date';
 
 const FACTION_INFO: Record<string, { icon: string; color: string; bgColor: string; name: string; bonus: string }> = {
-    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'bg-[#2a1515] border-[#5a2828]', name: 'Бандит', bonus: '+10% против Ремесленников, ±4 уровня, +1% дохода/100 побед, таймер ×2' },
-    crafter: { icon: 'game-icons:anvil', color: 'text-blue-600', bgColor: 'bg-[#15152a] border-[#28285a]', name: 'Ремесленник', bonus: '+10% шанс, +1%/100 успешных, ×2 работы' },
-    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'bg-[#2a2a15] border-[#5a5a28]', name: 'Стражник', bonus: '+10% PvP/PvE, карма ±1, +1% жалования/очко' },
+    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'bg-[#2a1515] border-[#5a2828]', name: 'Бандит', bonus: '+10% характеристик против Ремесленников, атаки ±4 уровня, +1% серебра за 100 побед, кулдаун ×2' },
+    crafter: { icon: 'game-icons:anvil', color: 'text-blue-600', bgColor: 'bg-[#15152a] border-[#28285a]', name: 'Ремесленник', bonus: '+10% шанс создания/улучшения +1% за 100 успешных, +100% награда за работы' },
+    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'bg-[#2a2a15] border-[#5a5a28]', name: 'Стражник', bonus: '+10% характеристик против Бандитов и в PvE, карма ±1, +1% жалования за очко' },
 };
 
 const links = [
