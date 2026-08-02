@@ -23,9 +23,10 @@ router.get('/arena/opponent', async (req, res) => {
         const saved = await db.one(`SELECT ${USER_ARENA_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)`, [user.arenaOpponentId, now, user.guildId || 0]) as any;
         if (saved) {
             // Проверяем, соответствует ли сохранённый соперник запрошенной сложности
+            const range = user.faction === 'bandit' ? 4 : 2;
             const matchesDifficulty =
-                (difficulty === 'easy' && saved.level >= user.level - 2 && saved.level < user.level) ||
-                (difficulty === 'hard' && saved.level > user.level && saved.level <= user.level + 2) ||
+                (difficulty === 'easy' && saved.level >= user.level - range && saved.level < user.level) ||
+                (difficulty === 'hard' && saved.level > user.level && saved.level <= user.level + range) ||
                 (difficulty === 'equal' && saved.level === user.level);
 
             if (matchesDifficulty) {
@@ -60,11 +61,12 @@ router.get('/arena/opponent', async (req, res) => {
         [userId, now, user.guildId || 0]
     ) as any[];
 
-    const diffLabel = difficulty === 'easy' ? `на −2..−1 уровня` : difficulty === 'hard' ? `на +1..+2 уровня` : 'равным вашему';
+    const range = user.faction === 'bandit' ? 4 : 2;
+    const diffLabel = difficulty === 'easy' ? `на −${range}..−1 уровня` : difficulty === 'hard' ? `на +1..+${range} уровня` : 'равным вашему';
     if (difficulty === 'easy') {
-        opponents = opponents.filter((o: any) => o.level >= user.level - 2 && o.level < user.level);
+        opponents = opponents.filter((o: any) => o.level >= user.level - range && o.level < user.level);
     } else if (difficulty === 'hard') {
-        opponents = opponents.filter((o: any) => o.level > user.level && o.level <= user.level + 2);
+        opponents = opponents.filter((o: any) => o.level > user.level && o.level <= user.level + range);
     } else {
         opponents = opponents.filter((o: any) => o.level === user.level);
     }
