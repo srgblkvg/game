@@ -47,6 +47,7 @@ const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
 const BattleSimPage = lazy(() => import('./pages/BattleSimPage'));
 const CastlePage = lazy(() => import('./pages/CastlePage'));
+const FactionPage = lazy(() => import('./pages/FactionPage'));
 const ForumPage = lazy(() => import('./pages/ForumPage'));
 const ForumThreadPage = lazy(() => import('./pages/ForumThreadPage'));
 const MassacrePage = lazy(() => import('./pages/MassacrePage'));
@@ -115,6 +116,7 @@ function App() {
             <Route path="/guild/rating" element={user?.role === 'player' ? <GuildRatingPage /> : <Navigate to="/login" />} />
             <Route path="/guild/war" element={user?.role === 'player' ? <GuildWarPage /> : <Navigate to="/login" />} />
             <Route path="/castle" element={user?.role === 'player' ? <CastlePage /> : <Navigate to="/login" />} />
+            <Route path="/faction" element={user?.role === 'player' ? <FactionPage /> : <Navigate to="/login" />} />
             <Route path="/forum" element={user?.role === 'player' ? <ForumPage /> : <Navigate to="/login" />} />
             <Route path="/forum/:id" element={user?.role === 'player' ? <ForumThreadPage /> : <Navigate to="/login" />} />
             <Route path="/massacre" element={user?.role === 'player' ? <MassacrePage /> : <Navigate to="/login" />} />

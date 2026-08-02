@@ -9,6 +9,12 @@ import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
 import { fmtSafeDate } from '../utils/date';
 
+const FACTION_INFO: Record<string, { icon: string; color: string; bgColor: string; name: string; bonus: string }> = {
+    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'bg-red-900/20 border-red-700/30', name: 'Бандит', bonus: '+10% против Ремесленников, атаки ±4 уровня' },
+    crafter: { icon: 'game-icons:anvil', color: 'text-blue-300', bgColor: 'bg-blue-900/20 border-blue-700/30', name: 'Ремесленник', bonus: '+10% шанс крафта, ×2 награда работ' },
+    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'bg-yellow-900/20 border-yellow-700/30', name: 'Стражник', bonus: '+10% против Бандитов и в PvE, карма' },
+};
+
 const links = [
     { path: '/tournament', icon: 'game-icons:trophy-cup', title: 'Турниры', desc: 'Участвуйте в турнирах и выигрывайте призы' },
     { path: '/rating', icon: 'game-icons:rank-3', title: 'Рейтинг игроков', desc: 'Таблица лидеров PvP-арены' },
@@ -16,17 +22,19 @@ const links = [
 ];
 
 export default function CastlePage() {
+  const navigate = useNavigate();
   const [actionCard, setActionCard] = useState<any>(null);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/castle'); if (c) setActionCard(c); }).catch(() => {}); }, []);
-    const navigate = useNavigate();
     const [treasury, setTreasury] = useState<number | null>(null);
     const [latestThreads, setLatestThreads] = useState<any[]>([]);
     const [activeWars, setActiveWars] = useState<any[]>([]);
+    const [factionData, setFactionData] = useState<any>(null);
 
     useEffect(() => {
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
         fetch('/api/forum/latest').then(r => r.json()).then(d => setLatestThreads(Array.isArray(d) ? d : [])).catch(() => {});
         fetch('/api/guild/war/active', { headers: getHeaders() }).then(r => r.json()).then(d => setActiveWars(d.wars || [])).catch(() => {});
+        fetch('/api/faction', { headers: getHeaders() }).then(r => r.json()).then(d => setFactionData(d)).catch(() => {});
     }, []);
 
     return (
@@ -47,6 +55,45 @@ export default function CastlePage() {
                     </p>
                 </div>
             )}
+
+            {/* Фракция */}
+            <div className="mb-4">
+                <h2 className="text-sm font-bold mb-2 flex items-center gap-1">
+                    <Icon icon="game-icons:swords-emblem" width="16" height="16" />
+                    Фракция
+                </h2>
+                {factionData?.current ? (
+                    <Card
+                        className={`flex items-center gap-3 p-3 cursor-pointer border ${FACTION_INFO[factionData.current]?.bgColor || ''}`}
+                        onClick={() => navigate('/faction')}
+                    >
+                        <Icon icon={FACTION_INFO[factionData.current]?.icon || 'game-icons:swords-emblem'} width="28" height="28" className={FACTION_INFO[factionData.current]?.color || ''} />
+                        <div className="flex-1 min-w-0">
+                            <h3 className={`font-bold text-sm ${FACTION_INFO[factionData.current]?.color || ''}`}>
+                                {FACTION_INFO[factionData.current]?.name || factionData.current}
+                            </h3>
+                            <p className="text-[0.65rem] text-[var(--color-text-muted)]">
+                                {FACTION_INFO[factionData.current]?.bonus || ''}
+                            </p>
+                        </div>
+                        <Icon icon="game-icons:arrow-right" width="16" height="16" className="text-[var(--color-text-muted)] shrink-0" />
+                    </Card>
+                ) : factionData?.canChoose ? (
+                    <Card
+                        className="flex items-center gap-3 p-3 cursor-pointer border border-[var(--color-accent-gold)] bg-[var(--color-bg-card)] hover:border-[var(--color-accent-info)] transition-colors"
+                        onClick={() => navigate('/faction')}
+                    >
+                        <Icon icon="game-icons:swords-emblem" width="28" height="28" className="text-[var(--color-accent-gold)]" />
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-sm text-[var(--color-accent-gold)]">Выберите фракцию</h3>
+                            <p className="text-[0.65rem] text-[var(--color-text-muted)]">
+                                Бандиты, Ремесленники или Стражники — у каждой свои бонусы
+                            </p>
+                        </div>
+                        <Icon icon="game-icons:arrow-right" width="16" height="16" className="text-[var(--color-text-muted)] shrink-0" />
+                    </Card>
+                ) : null}
+            </div>
 
             <div className="space-y-3 mb-4">
                 {links.map(link => (
