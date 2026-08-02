@@ -696,7 +696,7 @@ export default function CraftPage() {
                     {activeRecipe && (
                         <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
                             <div>Вы можете создать: <strong className="text-white">{activeRecipe.result?.name}</strong></div>
-                            <div>Шанс создания: {character?.faction === 'crafter' ? Math.min(100, (activeRecipe.success_chance ?? 100) + 10) : (activeRecipe.success_chance ?? 100)}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+10% фракция)</span>}</div>
+                            <div>Шанс создания: {character?.faction === 'crafter' ? Math.min(100, (activeRecipe.success_chance ?? 100) + 10 + Math.floor((character.factionCraftCount || 0) / 1000)) : (activeRecipe.success_chance ?? 100)}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 1000)}% фракция)</span>}</div>
                             <div>Стоимость: {formatMoney(activeRecipe.money_cost)}</div>
                         </div>
                     )}

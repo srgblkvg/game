@@ -78,7 +78,7 @@ router.post('/faction/change', async (req, res) => {
     }
 
     await db.run(
-        'UPDATE users SET faction = ?, money = money - ?, karma = 0 WHERE id = ?',
+        'UPDATE users SET faction = ?, money = money - ?, karma = 0, faction_craft_count = 0 WHERE id = ?',
         [faction, CHANGE_COST, userId]
     );
 

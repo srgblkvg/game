@@ -92,6 +92,7 @@ export interface Character {
   pveRating?: number;
   faction?: string | null;
   karma?: number;
+  factionCraftCount?: number;
   tutorialCompleted?: number;
   tutorialStep?: number;
   totalIncome?: number;

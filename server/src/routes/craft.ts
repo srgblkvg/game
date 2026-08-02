@@ -131,7 +131,8 @@ router.post('/craft/execute', async (req, res) => {
     }).filter(Boolean);
 
     const newMoney = user.money - recipe.money_cost;
-    const chance = (recipe.success_chance ?? 100) + (user.faction === 'crafter' ? 10 : 0);
+    const craftBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 1000) : 0;
+    const chance = (recipe.success_chance ?? 100) + craftBonus;
     const success = Math.random() * 100 < chance;
 
     if (success) {
@@ -210,7 +211,7 @@ router.post('/craft/execute', async (req, res) => {
             }
         }
 
-        await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftCreated = craftCreated + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
+        await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftCreated = craftCreated + 1, faction_craft_count = faction_craft_count + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
         checkAchievement(userId, 'craft').catch(() => {});
         addToTreasury(Math.floor(recipe.money_cost * 0.22), 'craft_recipe').catch(() => {});
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
@@ -231,9 +232,9 @@ router.get('/craft/upgrade-info/:level/:rarity', async (req, res) => {
     const userId = req.userId;
     const data = await db.one('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?', [level, rarity]) as any;
     if (!data) return res.status(404).json({ error: 'Данные об уровне не найдены' });
-    // Бонус фракции Ремесленник
-    const user = await db.one('SELECT faction FROM users WHERE id = ?', [userId]) as any;
-    const factionBonus = user?.faction === 'crafter' ? 10 : 0;
+    // Бонус фракции Ремесленник: +10% +1% за каждые 1000 крафтов
+    const user = await db.one('SELECT faction, faction_craft_count FROM users WHERE id = ?', [userId]) as any;
+    const factionBonus = user?.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 1000) : 0;
     res.json({ chance: data.chance, factionBonus, money_cost: Math.max(1, Math.floor(data.money_cost / 4)) });
 });
 
@@ -284,8 +285,8 @@ router.post('/craft/upgrade', async (req, res) => {
     // Бонус к шансу от редкости камня
     const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
     const stoneBonus = STONE_BONUS[stone.rarity_id] || 0;
-    // Бонус фракции Ремесленник: +10% к шансу улучшения
-    const factionBonus = user.faction === 'crafter' ? 10 : 0;
+    // Бонус фракции Ремесленник: +10% +1% за каждые 1000 крафтов
+    const factionBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 1000) : 0;
     const finalChance = Math.min(100, chance + stoneBonus + factionBonus);
     const actualCost = Math.max(1, Math.floor(money_cost / 4));
 
@@ -320,7 +321,7 @@ router.post('/craft/upgrade', async (req, res) => {
         else if (targetLevel === 10) ratingBonus = 50;
         if (ratingBonus > 0) {
             const newElo = Math.max(100, (user.elo || 1000) + ratingBonus);
-            await db.run('UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?',
+            await db.run('UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1, faction_craft_count = faction_craft_count + 1 WHERE id = ?',
                 [newMoney, JSON.stringify(newInventory), newElo, ratingBonus, userId]);
             checkAchievement(userId, 'craft').catch(() => {});
             addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade').catch(() => {});
@@ -341,7 +342,7 @@ router.post('/craft/upgrade', async (req, res) => {
             return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, eloAdded: ratingBonus, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` });
         }
 
-        await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
+        await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1, faction_craft_count = faction_craft_count + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
         checkAchievement(userId, 'craft').catch(() => {});
         addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade').catch(() => {});
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
