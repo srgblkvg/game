@@ -44,7 +44,7 @@ interface CollectionSet {
 
 const slotOrder = ['helmet', 'chest', 'gloves', 'boots', 'weapon1', 'shield', 'amulet', 'ring', 'belt'];
 
-function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowTooltip, onHideTooltip, basicCollected, plusCollected, tabLevel }: {
+function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowTooltip, onHideTooltip }: {
     item: ShopItem;
     owned: boolean;
     collected: boolean;
@@ -52,11 +52,8 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
     onAdd: () => void;
     onShowTooltip: (e: React.TouchEvent | React.MouseEvent) => void;
     onHideTooltip: () => void;
-    basicCollected: boolean;
-    plusCollected: boolean;
-    tabLevel: number;
 }) {
-    const canAdd = !collected && hasInventory && (tabLevel === 0 ? !basicCollected : !plusCollected);
+    const canAdd = !collected && hasInventory;
     const longPress = useLongPress(onShowTooltip as any, canAdd ? onAdd : undefined);
     const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
 
@@ -86,11 +83,6 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
                 )}
                 <span className="text-[0.5rem] text-[var(--color-text-muted)] mt-0.5 leading-none text-center truncate w-full px-0.5">{item.name}</span>
                 {collected && <span className="absolute top-0.5 left-0.5 text-[0.5rem]">✓</span>}
-                {collected && (
-                    <span className="absolute top-0.5 right-0.5 text-[0.45rem] leading-none text-[var(--color-accent-gold)]">
-                        {basicCollected && plusCollected ? 'Б7' : basicCollected ? 'Б' : '7'}
-                    </span>
-                )}
             </div>
         </div>
     );
@@ -120,21 +112,16 @@ export default function CollectionsPage() {
         Promise.all([
             fetch('/api/items', { headers: getHeaders() }).then(r => r.json()),
             fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
-            fetch('/api/collections?upgradelevel=0', { headers: getHeaders() }).then(r => r.json()),
-            fetch('/api/collections?upgradelevel=7', { headers: getHeaders() }).then(r => r.json()),
+            fetch(`/api/collections?upgradelevel=${activeTab}`, { headers: getHeaders() }).then(r => r.json()),
         ])
-            .then(([shopItems, character, basicColl, plusColl]) => {
+            .then(([shopItems, character, collectionData]) => {
                 setItems(shopItems);
-
-                // Сеты берём из текущего таба
-                const activeColl = activeTab === 0 ? basicColl : plusColl;
-                setSets(activeColl.sets || []);
+                setSets(collectionData.sets || []);
                 setCollectionCount(character.collectionCount || 0);
                 setCollectionSetBonus(character.collectionSetBonus || 0);
                 setTotalCollectionItems(character.totalCollectionItems || 189);
 
                 const inv = character.inventory || [];
-                // Фильтруем по upgradeLevel для таба
                 const filteredInv = activeTab === 0
                     ? inv.filter((i: any) => !i.upgradeLevel || i.upgradeLevel < 7)
                     : inv.filter((i: any) => i.upgradeLevel >= 7);
@@ -144,7 +131,6 @@ export default function CollectionsPage() {
                 for (const invItem of inv) {
                     if (invItem.name && invItem.slot && invItem.rarity_id != null) {
                         const itemUpg = invItem.upgradeLevel || 0;
-                        // В базовой вкладке — предметы < 7, в +7 — ≥ 7
                         if (activeTab === 0 ? itemUpg < 7 : itemUpg >= 7) {
                             owned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
                         }
@@ -152,13 +138,11 @@ export default function CollectionsPage() {
                 }
                 setOwnedKeys(owned);
 
-                // Объединяем ключи из ОБОИХ табов: предмет считается собранным если есть в любом
+                // Ключи коллекции — нормализуем к уровню текущего таба
                 const coll = new Set<string>();
-                for (const c of (basicColl.items || [])) {
-                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}|0`);
-                }
-                for (const c of (plusColl.items || [])) {
-                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}|7`);
+                const normalizedLevel = activeTab === 0 ? 0 : 7;
+                for (const c of (collectionData.items || [])) {
+                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${normalizedLevel}`);
                 }
                 setCollectionKeys(coll);
 
@@ -196,10 +180,9 @@ export default function CollectionsPage() {
             const data = await res.json();
             if (!res.ok) { setMessage(data.error || 'Ошибка'); return; }
 
-            const [charRes, basicCollRes, plusCollRes] = await Promise.all([
+            const [charRes, collRes] = await Promise.all([
                 fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
-                fetch('/api/collections?upgradelevel=0', { headers: getHeaders() }).then(r => r.json()),
-                fetch('/api/collections?upgradelevel=7', { headers: getHeaders() }).then(r => r.json()),
+                fetch(`/api/collections?upgradelevel=${activeTab}`, { headers: getHeaders() }).then(r => r.json()),
             ]);
 
             const filteredInv = activeTab === 0
@@ -209,9 +192,7 @@ export default function CollectionsPage() {
             setCharacter((prev: any) => ({ ...prev, inventory: charRes.inventory, collectionCount: charRes.collectionCount, collectionSetBonus: charRes.collectionSetBonus, collectedItems: charRes.collectedItems }));
             setCollectionCount(charRes.collectionCount || 0);
             setCollectionSetBonus(charRes.collectionSetBonus || 0);
-
-            const activeColl = activeTab === 0 ? basicCollRes : plusCollRes;
-            setSets(activeColl.sets || []);
+            setSets(collRes.sets || []);
 
             const newOwned = new Set<string>();
             for (const invItem of (charRes.inventory || [])) {
@@ -225,11 +206,9 @@ export default function CollectionsPage() {
             setOwnedKeys(newOwned);
 
             const newColl = new Set<string>();
-            for (const c of (basicCollRes.items || [])) {
-                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}|0`);
-            }
-            for (const c of (plusCollRes.items || [])) {
-                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}|7`);
+            const normalizedLevel = activeTab === 0 ? 0 : 7;
+            for (const c of (collRes.items || [])) {
+                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${normalizedLevel}`);
             }
             setCollectionKeys(newColl);
 
@@ -357,13 +336,9 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
         };
     }, [tooltip]);
 
-    // Filter items that belong to this set — from API response
     const blockItems = (set.items || []).sort((a: ShopItem, b: ShopItem) => slotOrder.indexOf(a.slot) - slotOrder.indexOf(b.slot));
-
-    // Color from first item's rarity, or fallback
     const color = blockItems[0]?.rarity_color || '#888';
 
-    // Есть ли предметы в инвентаре, которые можно добавить в этот сет
     const hasAddableItems = blockItems.some(item => {
         if (collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}|${upgradeLevel}`)) return false;
         return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id && !(inv as any).locked);
@@ -389,9 +364,7 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
                 <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-10 gap-1.5">
                     {blockItems.map((item: ShopItem) => {
                         const owned = ownedKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
-                        const basicCollected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}|0`);
-                        const plusCollected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}|7`);
-                        const collected = basicCollected || plusCollected;
+                        const collected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}|${upgradeLevel}`);
                         const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id && !(inv as any).locked);
 
                         return (
@@ -404,9 +377,6 @@ function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToColle
                                 onAdd={() => onAddToCollection(item)}
                                 onShowTooltip={(e) => showTooltip(item, e)}
                                 onHideTooltip={hideTooltip}
-                                basicCollected={basicCollected}
-                                plusCollected={plusCollected}
-                                tabLevel={upgradeLevel}
                             />
                         );
                     })}
