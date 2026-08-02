@@ -132,7 +132,7 @@ export default function FactionPage() {
                                 Ремесленный опыт: <span className="text-blue-300 font-bold">{character?.factionCraftCount || 0}</span>
                             </p>
                             <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
-                                +1% к шансу крафта и улучшения за каждые 100 успешных крафтов и улучшений
+                                +1 опыт фракции за успешный крафт/улучшение с шансом ниже 80%
                             </p>
                         </div>
                     )}

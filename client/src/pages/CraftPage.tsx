@@ -696,7 +696,11 @@ export default function CraftPage() {
                     {activeRecipe && (
                         <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
                             <div>Вы можете создать: <strong className="text-white">{activeRecipe.result?.name}</strong></div>
-                            <div>Шанс создания: {character?.faction === 'crafter' ? Math.min(100, (activeRecipe.success_chance ?? 100) + 10 + Math.floor((character.factionCraftCount || 0) / 1000)) : (activeRecipe.success_chance ?? 100)}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 1000)}% фракция)</span>}</div>
+                            <div>Шанс создания: {character?.faction === 'crafter' ? Math.min(100, (activeRecipe.success_chance ?? 100) + 10 + Math.floor((character.factionCraftCount || 0) / 1000)) : (activeRecipe.success_chance ?? 100)}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 1000)}% фракция)</span>}
+                                {character?.faction === 'crafter' && (
+                                    (() => { const craftChance = Math.min(100, (activeRecipe.success_chance ?? 100) + 10 + Math.floor((character.factionCraftCount || 0) / 1000)); return craftChance >= 80 ? <span className="text-[var(--color-text-muted)] ml-1">(без опыта)</span> : <span className="text-green-400 ml-1">+1 опыт</span>; })()
+                                )}
+                            </div>
                             <div>Стоимость: {formatMoney(activeRecipe.money_cost)}</div>
                         </div>
                     )}
@@ -717,7 +721,11 @@ export default function CraftPage() {
                         return (
                         <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
                             <div>Улучшение до уровня +{nextLvl}</div>
-                            <div>Шанс: {upgradeInfo.chance}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 1000)}% фракция)</span>}</div>
+                            <div>Шанс: {upgradeInfo.chance}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 1000)}% фракция)</span>}
+                                {character?.faction === 'crafter' && (
+                                    upgradeInfo.chance >= 80 ? <span className="text-[var(--color-text-muted)] ml-1">(без опыта)</span> : <span className="text-green-400 ml-1">+1 опыт</span>
+                                )}
+                            </div>
                             <div>Стоимость: {formatMoney(upgradeInfo.cost)}</div>
                             {allStats.length > 0 && (
                                 <div className="mt-1 text-[var(--color-text-muted)]">
