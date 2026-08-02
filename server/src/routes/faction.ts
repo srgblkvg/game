@@ -4,9 +4,9 @@ import { db } from '../db/index';
 const router = Router();
 
 const FACTIONS = {
-    bandit: { name: 'Бандиты', desc: '+10% характеристик против Ремесленников. Диапазон атак ±4 уровня.' },
-    crafter: { name: 'Ремесленники', desc: '+10% шанс крафта/улучшения. +100% награда за работы.' },
-    guard: { name: 'Стражники', desc: '+10% характеристик против Бандитов и в PvE.' },
+    bandit: { name: 'Бандиты', desc: '+10% характеристик против Ремесленников. Диапазон атак ±4 уровня. +100% дохода с PvP. Таймер атаки ×2 быстрее.' },
+    crafter: { name: 'Ремесленники', desc: '+10% шанс крафта/улучшения +1% за 1000 крафтов. +100% награда за работы.' },
+    guard: { name: 'Стражники', desc: '+10% характеристик против Бандитов и в PvE. Карма и жалование до +100%.' },
 } as const;
 
 type Faction = keyof typeof FACTIONS;
@@ -19,10 +19,18 @@ router.get('/faction', async (req, res) => {
     const user = await db.one('SELECT faction, level, money FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
+    // Количество участников по фракциям
+    const counts = await db.query('SELECT faction, COUNT(*) as cnt FROM users WHERE faction IS NOT NULL GROUP BY faction') as any[];
+    const memberCounts: Record<string, number> = { bandit: 0, crafter: 0, guard: 0 };
+    for (const row of counts) {
+        if (memberCounts.hasOwnProperty(row.faction)) memberCounts[row.faction] = Number(row.cnt);
+    }
+
     res.json({
         factions: FACTIONS,
         current: user.faction || null,
         canChoose: (user.level || 0) >= 5 && !user.faction,
+        memberCounts,
         changeCost: CHANGE_COST,
         canChange: !!user.faction && user.money >= CHANGE_COST,
     });

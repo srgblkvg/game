@@ -8,9 +8,9 @@ import Button from '../components/ui/Button';
 import { Icon } from '@iconify/react';
 
 const FACTIONS: Record<string, { icon: string; color: string; bgColor: string; name: string; desc: string; bonus: string }> = {
-    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'border-red-700/30', name: 'Бандиты', desc: 'Грабители и налётчики. Сильны в PvP против ремесленников.', bonus: '+10% характеристик против Ремесленников. Диапазон атак ±4 уровня.' },
-    crafter: { icon: 'game-icons:anvil', color: 'text-blue-300', bgColor: 'border-blue-700/30', name: 'Ремесленники', desc: 'Мастера и торговцы. Лучшие в крафте и заработке.', bonus: '+10% шанс создания и улучшения предметов. +100% награда за работы.' },
-    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'border-yellow-700/30', name: 'Стражники', desc: 'Защитники порядка. Эффективны против бандитов и монстров.', bonus: '+10% характеристик против Бандитов и в PvE. Жалование увеличено до 100%.' },
+    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'border-red-700/30', name: 'Бандиты', desc: 'Грабители и налётчики. Сильны в PvP против ремесленников.', bonus: '+10% против Ремесленников. Атаки ±4 уровня. +100% дохода с PvP. Таймер ×2 быстрее.' },
+    crafter: { icon: 'game-icons:anvil', color: 'text-blue-300', bgColor: 'border-blue-700/30', name: 'Ремесленники', desc: 'Мастера и торговцы. Лучшие в крафте и заработке.', bonus: '+10% шанс крафта/улучшения +1% за 1000 крафтов. +100% награда за работы.' },
+    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'border-yellow-700/30', name: 'Стражники', desc: 'Защитники порядка. Эффективны против бандитов и монстров.', bonus: '+10% против Бандитов и в PvE. Карма и жалование до +100%.' },
 };
 
 export default function FactionPage() {
@@ -154,7 +154,10 @@ export default function FactionPage() {
                                     <h3 className={`font-bold ${info.color}`}>{info.name}</h3>
                                 </div>
                                 <p className="text-xs text-[var(--color-text-muted)] mb-2">{info.desc}</p>
-                                <p className="text-xs text-[var(--color-text-muted)] mb-3 border-t border-[var(--color-border-light)] pt-2">{info.bonus}</p>
+                                <p className="text-xs text-[var(--color-text-muted)] mb-1 border-t border-[var(--color-border-light)] pt-2">{info.bonus}</p>
+                                <p className="text-[0.6rem] text-[var(--color-text-muted)] mb-3">
+                                    Участников: {data?.memberCounts?.[key] ?? '...'}
+                                </p>
                                 <Button
                                     variant="primary"
                                     size="sm"
