@@ -76,7 +76,7 @@ export default function CastlePage() {
                                 ))}
                             </div>
                             <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)]">
-                                <span style={{ color: colors.bandit }}>Бандиты: {counts.bandit || 0}</span>
+                                <span style={{ color: '#f87171' }}>Бандиты: {counts.bandit || 0}</span>
                                 <span style={{ color: colors.crafter }}>Ремесленники: {counts.crafter || 0}</span>
                                 <span style={{ color: colors.guard }}>Стражники: {counts.guard || 0}</span>
                             </div>
