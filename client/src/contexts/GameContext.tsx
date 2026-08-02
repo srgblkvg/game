@@ -93,6 +93,7 @@ export interface Character {
   faction?: string | null;
   karma?: number;
   factionCraftCount?: number;
+  banditReputation?: number;
   tutorialCompleted?: number;
   tutorialStep?: number;
   totalIncome?: number;

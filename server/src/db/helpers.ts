@@ -11,7 +11,7 @@ export const USER_BATTLE_FIELDS = `
   u.equipment, u.money, u.currentHp, u.lastAttackTime,
   u.activeDrink, u.drinkUntil, u.premiumUntil,
   u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate,
-  u.inventorySlots, u.guildId, u.oauthProvider, u.oauthId, u.faction
+  u.inventorySlots, u.guildId, u.oauthProvider, u.oauthId, u.faction, u.bandit_reputation
 `;
 
 /** Поля с присоединением гильдии */

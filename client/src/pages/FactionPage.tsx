@@ -8,7 +8,7 @@ import Button from '../components/ui/Button';
 import { Icon } from '@iconify/react';
 
 const FACTIONS: Record<string, { icon: string; color: string; bgColor: string; name: string; desc: string; bonus: string }> = {
-    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'border-red-700/30', name: 'Бандиты', desc: 'Грабители и налётчики. Сильны в PvP против ремесленников.', bonus: '+10% против Ремесленников. Атаки ±4 уровня. +100% дохода с PvP. Таймер ×2 быстрее.' },
+    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'border-red-700/30', name: 'Бандиты', desc: 'Грабители и налётчики. Сильны в PvP против ремесленников.', bonus: '+10% против Ремесленников. Атаки ±4 уровня. +1% дохода за 100 побед. Таймер ×2.' },
     crafter: { icon: 'game-icons:anvil', color: 'text-blue-300', bgColor: 'border-blue-700/30', name: 'Ремесленники', desc: 'Мастера и торговцы. Лучшие в крафте и заработке.', bonus: '+10% шанс крафта/улучшения +1% за 1000 крафтов. +100% награда за работы.' },
     guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'border-yellow-700/30', name: 'Стражники', desc: 'Защитники порядка. Эффективны против бандитов и монстров.', bonus: '+10% против Бандитов и в PvE. Карма и жалование до +100%.' },
 };
@@ -108,6 +108,16 @@ export default function FactionPage() {
                             </p>
                         </div>
                     )}
+                    {currentFaction === 'bandit' && (
+                        <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
+                            <p className="text-xs text-[var(--color-text-muted)]">
+                                Репутация: <span className="text-red-300 font-bold">{character?.banditReputation || 0}</span>
+                            </p>
+                            <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
+                                +1 за победу в PvP. Каждые 100 очков дают +1% к награбленному серебру.
+                            </p>
+                        </div>
+                    )}
                     {currentFaction === 'crafter' && (
                         <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
                             <p className="text-xs text-[var(--color-text-muted)]">
@@ -121,7 +131,7 @@ export default function FactionPage() {
                     {data?.changeCost && (
                         <div className="mt-3 pt-2 border-t border-[var(--color-border-light)]">
                             <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">
-                                Смена фракции: {data.changeCost.toLocaleString()} серебра (карма и ремесленный опыт будут утеряны)
+                                Смена фракции: {data.changeCost.toLocaleString()} серебра (карма, ремесленный опыт и репутация будут утеряны)
                             </p>
                             {message && <p className="text-xs text-[var(--color-accent-danger)] mb-2">{message}</p>}
                             <div className="flex flex-wrap gap-2">

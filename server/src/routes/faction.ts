@@ -4,7 +4,7 @@ import { db } from '../db/index';
 const router = Router();
 
 const FACTIONS = {
-    bandit: { name: 'Бандиты', desc: '+10% характеристик против Ремесленников. Диапазон атак ±4 уровня. +100% дохода с PvP. Таймер атаки ×2 быстрее.' },
+    bandit: { name: 'Бандиты', desc: '+10% характеристик против Ремесленников. Атаки ±4 уровня. Репутация: +1% к доходу PvP за 100 побед. Таймер атаки ×2 быстрее.' },
     crafter: { name: 'Ремесленники', desc: '+10% шанс крафта/улучшения +1% за 1000 крафтов. +100% награда за работы.' },
     guard: { name: 'Стражники', desc: '+10% характеристик против Бандитов и в PvE. Карма и жалование до +100%.' },
 } as const;
@@ -86,7 +86,7 @@ router.post('/faction/change', async (req, res) => {
     }
 
     await db.run(
-        'UPDATE users SET faction = ?, money = money - ?, karma = 0, faction_craft_count = 0 WHERE id = ?',
+        'UPDATE users SET faction = ?, money = money - ?, karma = 0, faction_craft_count = 0, bandit_reputation = 0 WHERE id = ?',
         [faction, CHANGE_COST, userId]
     );
 
