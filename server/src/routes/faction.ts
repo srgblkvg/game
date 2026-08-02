@@ -11,20 +11,24 @@ const FACTIONS = {
 
 type Faction = keyof typeof FACTIONS;
 
+const CHANGE_COST = 10000;
+
 // Получить инфо о фракциях и текущую фракцию игрока
 router.get('/faction', async (req, res) => {
     const userId = req.userId;
-    const user = await db.one('SELECT faction, level FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT faction, level, money FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     res.json({
         factions: FACTIONS,
         current: user.faction || null,
         canChoose: (user.level || 0) >= 5 && !user.faction,
+        changeCost: CHANGE_COST,
+        canChange: !!user.faction && user.money >= CHANGE_COST,
     });
 });
 
-// Выбрать фракцию
+// Выбрать фракцию (первый раз — бесплатно)
 router.post('/faction/choose', async (req, res) => {
     const userId = req.userId;
     const { faction } = req.body;
@@ -41,12 +45,44 @@ router.post('/faction/choose', async (req, res) => {
     }
 
     if (user.faction) {
-        return res.status(400).json({ error: 'Фракция уже выбрана' });
+        return res.status(400).json({ error: 'Фракция уже выбрана. Используйте /api/faction/change для смены.' });
     }
 
     await db.run('UPDATE users SET faction = ? WHERE id = ?', [faction, userId]);
 
     res.json({ success: true, faction, ...FACTIONS[faction as Faction] });
+});
+
+// Сменить фракцию (платно)
+router.post('/faction/change', async (req, res) => {
+    const userId = req.userId;
+    const { faction } = req.body;
+
+    if (!faction || !FACTIONS[faction as Faction]) {
+        return res.status(400).json({ error: 'Неизвестная фракция. Доступны: bandit, crafter, guard' });
+    }
+
+    const user = await db.one('SELECT faction, level, money FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    if (!user.faction) {
+        return res.status(400).json({ error: 'У вас ещё нет фракции. Используйте /api/faction/choose.' });
+    }
+
+    if (user.faction === faction) {
+        return res.status(400).json({ error: 'Вы уже состоите в этой фракции' });
+    }
+
+    if (user.money < CHANGE_COST) {
+        return res.status(400).json({ error: `Недостаточно серебра. Нужно ${CHANGE_COST.toLocaleString()}.` });
+    }
+
+    await db.run(
+        'UPDATE users SET faction = ?, money = money - ?, karma = 0 WHERE id = ?',
+        [faction, CHANGE_COST, userId]
+    );
+
+    res.json({ success: true, faction, cost: CHANGE_COST, ...FACTIONS[faction as Faction] });
 });
 
 export { FACTIONS };

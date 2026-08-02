@@ -41,6 +41,24 @@ export default function FactionPage() {
         finally { setLoading(false); }
     };
 
+    const handleChange = async (faction: string) => {
+        setLoading(true);
+        setMessage('');
+        try {
+            const res = await fetch('/api/faction/change', {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ faction }),
+            });
+            const d = await res.json();
+            if (!res.ok) { setMessage(d.error || 'Ошибка'); return; }
+            setData({ ...data, current: faction });
+            const fresh = await fetchCharacter();
+            setCharacter(fresh);
+        } catch { setMessage('Ошибка сети'); }
+        finally { setLoading(false); }
+    };
+
     if (!data) return <div className="p-4 max-w-md mx-auto"><BackButton /><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
 
     const currentFaction = data.current;
@@ -73,11 +91,32 @@ export default function FactionPage() {
                             Карма: {character.karma >= 0 ? '+' : ''}{character.karma}
                         </p>
                     )}
+                    {data?.changeCost && (
+                        <div className="mt-3 pt-2 border-t border-[var(--color-border-light)]">
+                            <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">
+                                Смена фракции: {data.changeCost.toLocaleString()} серебра (карма сбросится)
+                            </p>
+                            {message && <p className="text-xs text-[var(--color-accent-danger)] mb-2">{message}</p>}
+                            <div className="flex flex-wrap gap-2">
+                                {Object.entries(FACTIONS).filter(([k]) => k !== currentFaction).map(([key, info]) => (
+                                    <Button
+                                        key={key}
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => handleChange(key)}
+                                        disabled={loading}
+                                    >
+                                        {loading ? '...' : `В ${info.name}`}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </Card>
             ) : canChoose ? (
                 <>
                     <p className="text-xs text-[var(--color-text-muted)] mb-4">
-                        Выберите фракцию. Выбор окончательный — сменить будет нельзя.
+                        Выберите фракцию. Первый выбор бесплатный, смена — 10 000 серебра.
                     </p>
                     {message && <p className="text-xs text-[var(--color-accent-danger)] mb-3">{message}</p>}
                     <div className="space-y-3">
