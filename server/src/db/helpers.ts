@@ -26,7 +26,7 @@ export const USER_ARENA_FIELDS_GUILD = `
   u.currentHp, u.lastHpUpdate, u.roomType, u.roomUntil, u.premiumUntil,
   u.inventorySlots, u.lastAttackTime, u.arenaOpponentId,
   u.activeDrink, u.drinkUntil, u.guildId,
-  u.gender, u.avatar, g.name as guildName
+  u.gender, u.avatar, u.faction, g.name as guildName
 `;
 
 // --- Подготовленные запросы (ленивая инициализация) ---
