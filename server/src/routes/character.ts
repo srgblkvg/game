@@ -162,6 +162,7 @@ router.get('/character/me', async (req, res) => {
         lastHpUpdate: now,  // регенерация уже применена сервером до now
         lastPveAttackTime: user.lastPveAttackTime || 0,
         pvpCdSec: ((user.premiumUntil || 0) > now ? 300 : 600) / (user.faction === 'bandit' ? 2 : 1),
+        pveCdSec: (user.premiumUntil || 0) > now ? 150 : 300,
         attackCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 300 : 600) / (user.faction === 'bandit' ? 2 : 1) - (now - (user.lastAttackTime || 0))),
         pveCooldownSec: Math.max(0, ((user.premiumUntil || 0) > now ? 150 : 300) - (now - (user.lastPveAttackTime || 0))),
         inventorySlots: user.inventorySlots || 10,
