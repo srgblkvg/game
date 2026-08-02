@@ -23,15 +23,20 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
   const upgradeLevel = item.upgradeLevel ?? item.upgradelevel ?? 0;
   const resource = isCraftItem(item);
 
-  // Проверка коллекции
-  let inCollection = false;
+  // Проверка коллекции — по диапазонам (База <7, +7 >=7)
+  let basicCollected = false;
+  let plusCollected = false;
   try {
     const { character } = useGame();
     if (character?.collectedItems && item.name && item.slot) {
-      const itemUpg = item.upgradeLevel ?? item.upgradelevel ?? 0;
-      inCollection = character.collectedItems.some(
-        (c: any) => c.itemName === item.name && c.slot === item.slot && (c.rarity_id ?? c.rarity_Id) === item.rarity_id && (c.upgradelevel ?? 0) === itemUpg
-      );
+      const itemRarity = item.rarity_id;
+      for (const c of (character.collectedItems as any[])) {
+        if (c.itemName === item.name && c.slot === item.slot && (c.rarity_id ?? c.rarity_Id) === itemRarity) {
+          const lvl = c.upgradelevel ?? 0;
+          if (lvl < 7) basicCollected = true;
+          if (lvl >= 7) plusCollected = true;
+        }
+      }
     }
   } catch {}
 
@@ -165,8 +170,13 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
 
       {/* Коллекция */}
       {!resource && item.name && item.slot && (
-        <div className={`text-xs mt-1 pt-1 border-t border-[var(--color-border-light)] text-center font-bold ${inCollection ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-warning)]'}`}>
-          {inCollection ? '✓ В коллекции' : '✗ Нет в коллекции'}
+        <div className="text-xs mt-1 pt-1 border-t border-[var(--color-border-light)] text-center">
+          <div className={basicCollected ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}>
+            База: {basicCollected ? '✓' : '✗'}
+          </div>
+          <div className={plusCollected ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}>
+            +7: {plusCollected ? '✓' : '✗'}
+          </div>
         </div>
       )}
 
