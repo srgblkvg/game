@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { collectGuildTax, applyExp, buildPlayerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
+import { applyHpRegen } from '../game/hpRegen';
 import { runTurn, dodgeChance, critChance, critMult, blockChance, blockReduction, TurnContext, BattleStep } from '../game/battle';
 import { markDirty, pushNotification } from '../events';
 import { checkAchievement, trackIncome } from './achievements';
@@ -186,7 +187,13 @@ router.post('/mob/attack', async (req, res) => {
         } catch {}
     }
     const mobHp = (mob.hp || 50) * 2;
-    let userHp = userStats.hp;
+    // Применяем регенерацию HP перед боем
+    const regeneratedHp = await applyHpRegen({
+        id: user.id, currentHp: user.currentHp, maxHp: userStats.hp,
+        lastHpUpdate: user.lastHpUpdate || now, roomType: user.roomType, roomUntil: user.roomUntil,
+        premiumUntil: user.premiumUntil,
+    });
+    let userHp = regeneratedHp;
     let mobCurrentHp = mobHp;
 
     const steps: any[] = [];
