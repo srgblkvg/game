@@ -84,7 +84,7 @@ export default defineConfig({
     transformer: 'lightningcss',
     lightningcss: {
       targets: {
-        chrome: 80 << 16,
+        chrome: 50 << 16,  // Chrome 50+ — forces rgba() fallback for rgb() with alpha
       },
       include: 1113088, // Colors (oklch→hex, lab→rgb, p3→rgb, etc.)
       exclude: 1,        // Nesting – let Tailwind output un-nested CSS
