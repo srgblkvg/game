@@ -67,7 +67,7 @@ export default function CastlePage() {
                     const counts = factionData.memberCounts;
                     const total = (counts.bandit || 0) + (counts.crafter || 0) + (counts.guard || 0);
                     if (total === 0) return null;
-                    const colors: Record<string, string> = { bandit: '#dc2626', crafter: '#3b82f6', guard: '#eab308' };
+                    const colors: Record<string, string> = { bandit: '#991b1b', crafter: '#1e40af', guard: '#a16207' };
                     return (
                         <div className="mb-3 p-2 bg-[var(--color-bg-card)] rounded-lg border border-[var(--color-border-light)]">
                             <div className="flex h-3 rounded-full overflow-hidden mb-1">
