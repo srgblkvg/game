@@ -1,6 +1,7 @@
 // client/src/components/CharacterCard.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { slotNames, slotCategories, getItemImage, getRarityColor } from '../utils/itemUtils';
 import ItemTooltip from './ItemTooltip';
@@ -164,7 +165,12 @@ export default function CharacterCard({
           className={`overflow-hidden text-ellipsis whitespace-nowrap max-w-full${profileId ? ' cursor-pointer hover:text-[var(--color-accent-info)] transition-colors' : ''}`}
           style={{ margin: '0 0 -4px 0', fontSize: fontSizeName, lineHeight: '1.1' }}
           onClick={profileId ? () => navigate(`/profile/${profileId}`) : undefined}
-        >{char.username}</h2>
+        >
+          {char.faction === 'bandit' && <Icon icon="game-icons:hood" width="14" height="14" className="inline-block mr-0.5 text-red-300" />}
+          {char.faction === 'crafter' && <Icon icon="game-icons:anvil" width="14" height="14" className="inline-block mr-0.5 text-blue-300" />}
+          {char.faction === 'guard' && <Icon icon="game-icons:shield" width="14" height="14" className="inline-block mr-0.5 text-yellow-300" />}
+          {char.username}
+        </h2>
         <div className="h-[0.75rem]">
           <GuildTag guildName={(char as any).guildName} guildId={(char as any).guildId} hideNoGuild={hideNoGuild} />
         </div>

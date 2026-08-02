@@ -116,6 +116,7 @@ export default function ArenaPage() {
               guildName: opponent.guildName,
               guildId: opponent.guildId,
               avatar: opponent.avatar || null,
+              faction: opponent.faction || null,
             }}
             side="right"
             showHealth={isBattleActive}
