@@ -155,6 +155,29 @@ export default function FactionPage() {
                     <p className="text-xs text-[var(--color-text-muted)] mb-4">
                         Выберите фракцию. Первый выбор бесплатный, смена — 10 000 серебра.
                     </p>
+                    {/* Диаграмма участников */}
+                    {data?.memberCounts && (() => {
+                        const counts = data.memberCounts;
+                        const total = (counts.bandit || 0) + (counts.crafter || 0) + (counts.guard || 0);
+                        if (total > 0) {
+                            const colors: Record<string, string> = { bandit: '#991b1b', crafter: '#60a5fa', guard: '#a16207' };
+                            return (
+                                <div className="mb-4 p-2 bg-[var(--color-bg-card)] rounded-lg border border-[var(--color-border-light)]">
+                                    <div className="flex h-3 rounded-full overflow-hidden mb-1">
+                                        {(['bandit', 'crafter', 'guard'] as const).map(f => (
+                                            <div key={f} style={{ width: `${(counts[f] || 0) / total * 100}%`, background: colors[f], minWidth: counts[f] > 0 ? '2px' : '0' }} />
+                                        ))}
+                                    </div>
+                                    <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)]">
+                                        <span style={{ color: '#f87171' }}>Бандиты: {counts.bandit || 0}</span>
+                                        <span style={{ color: colors.crafter }}>Ремесленники: {counts.crafter || 0}</span>
+                                        <span style={{ color: colors.guard }}>Стражники: {counts.guard || 0}</span>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
                     {message && <p className="text-xs text-[var(--color-accent-danger)] mb-3">{message}</p>}
                     <div className="space-y-3">
                         {Object.entries(FACTIONS).map(([key, info]) => (
