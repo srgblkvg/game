@@ -134,7 +134,9 @@ router.post('/battle', async (req, res) => {
         // Защитник без шансов — авто-капитуляция, бой не проводится
         // Деньги: 10-50% наличных (как в обычном бою)
         const percent = 0.1 + Math.random() * 0.4;
-        const moneyStolen = Math.max(1, Math.floor(defender.money * percent));
+        let moneyStolen = Math.max(1, Math.floor(defender.money * percent));
+        // Бандит: +100% с ограбленного
+        if (attackerData.faction === 'bandit') moneyStolen *= 2;
 
         // Опыт: как в обычном бою — 2 если цель выше уровнем, 1 если равна, 0 если ниже
         let expGained = 0;
@@ -214,7 +216,9 @@ router.post('/battle', async (req, res) => {
     }
 
     const result = runBattle(attackerData, defenderData);
-    const moneyStolen = result.steps.find((s: any) => s.type === 'money')?.amount || 0;
+    let moneyStolen = result.steps.find((s: any) => s.type === 'money')?.amount || 0;
+    // Бандит: +100% с ограбленного
+    if (attackerData.faction === 'bandit') moneyStolen *= 2;
     const attackerWins = result.winnerId === attacker.id;
 
     // --- Расчёт ELO ---
