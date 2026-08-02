@@ -250,13 +250,13 @@ export default function Header() {
                                     {character.faction === 'bandit' ? 'Бандит' : character.faction === 'crafter' ? 'Ремесленник' : 'Стражник'}
                                 </span>
                                 {character.faction === 'bandit' && (
-                                    <div className="text-[0.55rem] text-[#d47373]">Репутация: {character.banditReputation || 0}</div>
+                                    <div className="text-[0.55rem] text-[#d47373] mt-0.5">Репутация: {character.banditReputation || 0}</div>
                                 )}
                                 {character.faction === 'crafter' && (
-                                    <div className="text-[0.55rem] text-[#7373d4]">Опыт: {character.factionCraftCount || 0}</div>
+                                    <div className="text-[0.55rem] text-[#7373d4] mt-0.5">Опыт: {character.factionCraftCount || 0}</div>
                                 )}
                                 {character.faction === 'guard' && character.karma != null && (
-                                    <div className={`text-[0.55rem] ${character.karma >= 0 ? 'text-[#73d473]' : 'text-[#d47373]'}`}>
+                                    <div className={`text-[0.55rem] mt-0.5 ${character.karma >= 0 ? 'text-[#73d473]' : 'text-[#d47373]'}`}>
                                         Карма: {character.karma >= 0 ? '+' : ''}{character.karma}
                                     </div>
                                 )}
