@@ -167,6 +167,15 @@ router.post('/mob/attack', async (req, res) => {
 
     // Бой
     const userStats = await buildPlayerStats(user, 'pve');
+    // Бонус фракции Стражник: +10% против монстров
+    if (user.faction === 'guard') {
+        const mult = 1.10;
+        userStats.s = Math.round(userStats.s * mult);
+        userStats.a = Math.round(userStats.a * mult);
+        userStats.d = Math.round(userStats.d * mult);
+        userStats.m = Math.round(userStats.m * mult);
+        userStats.hp = Math.round(userStats.hp * mult);
+    }
     const mobBase = { s: mob.atk || 10, a: mob.agi || 5, d: mob.def || 5, m: mob.mst || 5 };
     const mobStats = currentStats(mobBase, {});
     // Применяем эффекты моба из JSON

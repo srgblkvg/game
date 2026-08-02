@@ -131,7 +131,7 @@ router.post('/craft/execute', async (req, res) => {
     }).filter(Boolean);
 
     const newMoney = user.money - recipe.money_cost;
-    const chance = recipe.success_chance ?? 100;
+    const chance = (recipe.success_chance ?? 100) + (user.faction === 'crafter' ? 10 : 0);
     const success = Math.random() * 100 < chance;
 
     if (success) {
@@ -280,7 +280,9 @@ router.post('/craft/upgrade', async (req, res) => {
     // Бонус к шансу от редкости камня
     const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
     const stoneBonus = STONE_BONUS[stone.rarity_id] || 0;
-    const finalChance = Math.min(100, chance + stoneBonus);
+    // Бонус фракции Ремесленник: +10% к шансу улучшения
+    const factionBonus = user.faction === 'crafter' ? 10 : 0;
+    const finalChance = Math.min(100, chance + stoneBonus + factionBonus);
     const actualCost = Math.max(1, Math.floor(money_cost / 4));
 
     if (user.money < actualCost) {

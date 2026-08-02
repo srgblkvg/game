@@ -49,6 +49,11 @@ async function startJobForUser(user: any, job: any, res: any) {
     const now = Math.floor(Date.now() / 1000);
     const endTime = now + job.duration;
     let reward = Math.floor(Math.random() * (job.rewardMax * (user.level || 1) - job.rewardMin + 1)) + job.rewardMin;
+
+    // Бонус фракции Ремесленник: +100% награды за работы
+    if (user.faction === 'crafter') {
+        reward = reward * 2;
+    }
     const expReward = Math.max(1, Math.floor(job.duration / 3600));
 
     // Премиум: случайный бонус от 1 до 30% от базовой награды

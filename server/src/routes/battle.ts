@@ -88,6 +88,7 @@ router.post('/battle', async (req, res) => {
         drinkBonuses: getDrinkBonuses(attacker),
         collectionBonus: await getCollectionBonus(attacker.id),
         guildBonus: aGuildBonus,
+        faction: attacker.faction || null,
     };
     const defenderData = {
         id: defender.id,
@@ -100,7 +101,17 @@ router.post('/battle', async (req, res) => {
         drinkBonuses: getDrinkBonuses(defender),
         collectionBonus: defenderStats.collection || 0,
         guildBonus: dGuildBonus,
+        faction: defender.faction || null,
     };
+
+    // Бонус фракций: Бандит +10% против Ремесленника, Стражник +10% против Бандита
+    const FACTION_BONUS = 1.10;
+    if (attackerData.faction === 'bandit' && defenderData.faction === 'crafter') {
+        attackerData.base = { s: Math.round(attackerData.base.s * FACTION_BONUS), a: Math.round(attackerData.base.a * FACTION_BONUS), d: Math.round(attackerData.base.d * FACTION_BONUS), m: Math.round(attackerData.base.m * FACTION_BONUS) };
+    }
+    if (attackerData.faction === 'guard' && defenderData.faction === 'bandit') {
+        attackerData.base = { s: Math.round(attackerData.base.s * FACTION_BONUS), a: Math.round(attackerData.base.a * FACTION_BONUS), d: Math.round(attackerData.base.d * FACTION_BONUS), m: Math.round(attackerData.base.m * FACTION_BONUS) };
+    }
 
     // --- Проверка: безвыходный бой для защитника? ---
     const attackerFullStats = currentStats(attackerData.base, attackerData.equipment, attackerData.drinkBonuses, attackerData.collectionBonus, attackerData.guildBonus);

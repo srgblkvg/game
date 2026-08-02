@@ -170,6 +170,7 @@ router.get('/character/me', async (req, res) => {
         bank: user.bank || 0,
         guildId: user.guildId || null,
         lastBankVisit: user.lastBankVisit || 0,
+        faction: user.faction || null,
         room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
         drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
         premium: user.premiumUntil > now ? { until: user.premiumUntil } : null,

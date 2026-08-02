@@ -52,6 +52,7 @@ import donateRoutes from './routes/donate';
 import tutorialRoutes from './routes/tutorial';
 import achievementsRoutes from './routes/achievements';
 import debugRoutes from './routes/debug';
+import factionRoutes from './routes/faction';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -167,6 +168,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', tutorialRoutes);
   app.use('/api', achievementsRoutes);
   app.use('/api', debugRoutes);
+  app.use('/api', factionRoutes);
   app.use('/api/donate', donateRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
