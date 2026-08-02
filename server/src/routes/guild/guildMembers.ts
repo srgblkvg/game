@@ -280,6 +280,12 @@ router.post('/guild/role', async (req, res) => {
     if (target.rank === 'leader') return res.status(400).json({ error: 'Нельзя изменить роль лидера' });
 
     await db.run('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?', [rank, actor.guildId, targetId]);
+    // Если повысили до лидера — передаём лидерство
+    if (rank === 'leader') {
+        await db.run('UPDATE guilds SET leaderId = ? WHERE id = ?', [targetId, actor.guildId]);
+        // Старого лидера понижаем до офицера
+        await db.run("UPDATE guild_members SET rank = 'officer' WHERE guildId = ? AND userId = ?", [actor.guildId, userId]);
+    }
     res.json({ success: true });
 });
 
