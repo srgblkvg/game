@@ -131,7 +131,7 @@ router.post('/craft/execute', async (req, res) => {
     }).filter(Boolean);
 
     const newMoney = user.money - recipe.money_cost;
-    const craftBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 1000) : 0;
+    const craftBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 100) : 0;
     const chance = (recipe.success_chance ?? 100) + craftBonus;
     const success = Math.random() * 100 < chance;
 
