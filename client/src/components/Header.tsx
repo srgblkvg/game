@@ -246,17 +246,17 @@ export default function Header() {
                     <div className="ml-auto text-right leading-tight">
                         {character.faction ? (
                             <div>
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${character.faction === 'bandit' ? 'bg-red-900/30 text-red-300' : character.faction === 'crafter' ? 'bg-blue-900/30 text-blue-300' : 'bg-yellow-900/30 text-yellow-300'}`}>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${character.faction === 'bandit' ? 'bg-[#3a1a1a] text-red-300' : character.faction === 'crafter' ? 'bg-[#1a1a3a] text-blue-300' : 'bg-[#3a3a1a] text-yellow-300'}`}>
                                     {character.faction === 'bandit' ? 'Бандит' : character.faction === 'crafter' ? 'Ремесленник' : 'Стражник'}
                                 </span>
                                 {character.faction === 'bandit' && (
-                                    <div className="text-[0.55rem] text-red-300/70">Репутация: {character.banditReputation || 0}</div>
+                                    <div className="text-[0.55rem] text-[#d47373]">Репутация: {character.banditReputation || 0}</div>
                                 )}
                                 {character.faction === 'crafter' && (
-                                    <div className="text-[0.55rem] text-blue-300/70">Опыт: {character.factionCraftCount || 0}</div>
+                                    <div className="text-[0.55rem] text-[#7373d4]">Опыт: {character.factionCraftCount || 0}</div>
                                 )}
                                 {character.faction === 'guard' && character.karma != null && character.karma !== 0 && (
-                                    <div className={`text-[0.55rem] ${character.karma >= 0 ? 'text-green-300/70' : 'text-red-300/70'}`}>
+                                    <div className={`text-[0.55rem] ${character.karma >= 0 ? 'text-[#73d473]' : 'text-[#d47373]'}`}>
                                         Карма: {character.karma >= 0 ? '+' : ''}{character.karma}
                                     </div>
                                 )}

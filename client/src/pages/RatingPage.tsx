@@ -232,9 +232,9 @@ export default function RatingPage() {
                                             className={`cursor-pointer hover:text-[var(--color-accent-info)] transition-colors block truncate ${isMe ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-primary)]'}`}
                                         >
                                             {i + 1 + (page - 1) * LIMIT + SKIP_TOP}. {p.username} {isMe ? '(Вы)' : ''}
-                                            {p.faction === 'bandit' && <span className="text-[0.6rem] ml-1 px-1 rounded bg-red-900/50 text-red-300">Б</span>}
-                                            {p.faction === 'crafter' && <span className="text-[0.6rem] ml-1 px-1 rounded bg-blue-900/50 text-blue-300">Р</span>}
-                                            {p.faction === 'guard' && <span className="text-[0.6rem] ml-1 px-1 rounded bg-yellow-900/50 text-yellow-300">С</span>}
+                                            {p.faction === 'bandit' && <span className="text-[0.6rem] ml-1 px-1 rounded bg-[#4a1010] text-red-300">Б</span>}
+                                            {p.faction === 'crafter' && <span className="text-[0.6rem] ml-1 px-1 rounded bg-[#10104a] text-blue-300">Р</span>}
+                                            {p.faction === 'guard' && <span className="text-[0.6rem] ml-1 px-1 rounded bg-[#4a4a10] text-yellow-300">С</span>}
                                         </span>
                                         <span className="sm:hidden"><GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                                     </td>

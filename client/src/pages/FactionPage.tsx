@@ -8,9 +8,9 @@ import Button from '../components/ui/Button';
 import { Icon } from '@iconify/react';
 
 const FACTIONS: Record<string, { icon: string; color: string; bgColor: string; name: string; desc: string; bonus: string }> = {
-    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'border-red-700/30', name: 'Бандиты', desc: 'Грабители и налётчики. Сильны в PvP против ремесленников.', bonus: '+10% против Ремесленников. Атаки ±4 уровня. +1% дохода за 100 побед. Таймер ×2.' },
-    crafter: { icon: 'game-icons:anvil', color: 'text-blue-300', bgColor: 'border-blue-700/30', name: 'Ремесленники', desc: 'Мастера и торговцы. Лучшие в крафте и заработке.', bonus: '+10% шанс крафта/улучшения +1% за 1000 крафтов. +100% награда за работы.' },
-    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'border-yellow-700/30', name: 'Стражники', desc: 'Защитники порядка. Эффективны против бандитов и монстров.', bonus: '+10% против Бандитов и в PvE. Карма: +1 за бандита/моба, -1 за мирных. Жалование до +100%.' },
+    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'border-[#5a2828]', name: 'Бандиты', desc: 'Грабители и налётчики. Сильны в PvP против ремесленников.', bonus: '+10% против Ремесленников. Атаки ±4 уровня. +1% дохода за 100 побед. Таймер ×2.' },
+    crafter: { icon: 'game-icons:anvil', color: 'text-blue-300', bgColor: 'border-[#28285a]', name: 'Ремесленники', desc: 'Мастера и торговцы. Лучшие в крафте и заработке.', bonus: '+10% шанс крафта/улучшения +1% за 1000 крафтов. +100% награда за работы.' },
+    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'border-[#5a5a28]', name: 'Стражники', desc: 'Защитники порядка. Эффективны против бандитов и монстров.', bonus: '+10% против Бандитов и в PvE. Карма: +1 за бандита/моба, -1 за мирных. Жалование до +100%.' },
 };
 
 export default function FactionPage() {
