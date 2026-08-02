@@ -135,8 +135,7 @@ router.post('/battle', async (req, res) => {
         // Деньги: 10-50% наличных (как в обычном бою)
         const percent = 0.1 + Math.random() * 0.4;
         let moneyStolen = Math.max(1, Math.floor(defender.money * percent));
-        // Бандит: +100% с ограбленного
-        if (attackerData.faction === 'bandit') moneyStolen *= 2;
+        const banditBonus = attackerData.faction === 'bandit' ? moneyStolen : 0;
 
         // Опыт: как в обычном бою — 2 если цель выше уровнем, 1 если равна, 0 если ниже
         let expGained = 0;
@@ -151,11 +150,12 @@ router.post('/battle', async (req, res) => {
         const attExp = await applyExp(attacker.id, expGained, attacker.exp, attacker.level, attacker.statPoints || 0);
 
         // Атакующий
-        const attackerMoneyAfterTax = moneyStolen > 0
-            ? await collectGuildTax(attacker.id, moneyStolen, 'tax_pvp')
+        const attackerIncome = moneyStolen + banditBonus;
+        const attackerMoneyAfterTax = attackerIncome > 0
+            ? await collectGuildTax(attacker.id, attackerIncome, 'tax_pvp')
             : 0;
         await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+1, lastAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, elo=?, seasonWins=seasonWins+1, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, arenaOpponentId=NULL WHERE id=?`,
-            [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), now, moneyStolen, attacker.id]);
+            [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), now, attackerIncome, attacker.id]);
 
         // --- Обновление защитника ---
         const protUntil = now + 3600;
@@ -178,7 +178,7 @@ router.post('/battle', async (req, res) => {
                 { type: 'info', message: `⚔ ${attacker.username} vs ${defender.username}` },
                 { type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} серебра` }
              ]),
-             attackerFullStats.hp, 0, expGained, moneyStolen, moneyStolen]);
+             attackerFullStats.hp, 0, expGained, attackerIncome, moneyStolen]);
 
         const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
 
@@ -189,7 +189,7 @@ router.post('/battle', async (req, res) => {
 
         // Достижения и квесты
         checkAchievement(attacker.id, 'pvp_wins').catch(() => {});
-        if (moneyStolen > 0) trackIncome(attacker.id, moneyStolen).catch(() => {});
+        if (moneyStolen > 0) trackIncome(attacker.id, attackerIncome).catch(() => {});
         markDirty(attacker.id, 'quests');
 
         return res.json({
@@ -204,7 +204,7 @@ router.post('/battle', async (req, res) => {
             hpAfter: attackerFullStats.hp,
             hpDefenderAfter: 0,
             expGained,
-            moneyGained: moneyStolen,
+            moneyGained: attackerIncome,
             newLevel: attExp.newLevel,
             newExp: attExp.newExp,
             levelsGained: attExp.levelsGained,
@@ -217,8 +217,7 @@ router.post('/battle', async (req, res) => {
 
     const result = runBattle(attackerData, defenderData);
     let moneyStolen = result.steps.find((s: any) => s.type === 'money')?.amount || 0;
-    // Бандит: +100% с ограбленного
-    if (attackerData.faction === 'bandit') moneyStolen *= 2;
+    const banditBonus = attackerData.faction === 'bandit' ? moneyStolen : 0;
     const attackerWins = result.winnerId === attacker.id;
 
     // --- Расчёт ELO ---
@@ -229,18 +228,19 @@ router.post('/battle', async (req, res) => {
     // --- Обновление атакующего ---
     const attExp = await applyExp(attacker.id, result.winnerId === attacker.id ? result.expGained : 0, attacker.exp, attacker.level, attacker.statPoints || 0);
 
-    const attackerMoneyDelta = attackerWins ? moneyStolen : -moneyStolen;
+    const attackerIncome = attackerWins ? moneyStolen + banditBonus : 0;
+    const attackerMoneyDelta = attackerWins ? attackerIncome : -moneyStolen;
     // Не даём уйти в минус проигравшему
     const attackerActualDelta = attackerMoneyDelta < 0
         ? -Math.min(moneyStolen, attacker.money)
         : attackerMoneyDelta;
     // Налог гильдии с PvP-дохода победителя
-    const attackerMoneyAfterTax = attackerWins && moneyStolen > 0
-        ? await collectGuildTax(attacker.id, moneyStolen, 'tax_pvp')
+    const attackerMoneyAfterTax = attackerIncome > 0
+        ? await collectGuildTax(attacker.id, attackerIncome, 'tax_pvp')
         : attackerActualDelta;
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`,
         [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
-            attackerWins ? moneyStolen : 0, attackerWins ? 0 : -attackerActualDelta, attacker.id]);
+            attackerWins ? attackerIncome : 0, attackerWins ? 0 : -attackerActualDelta, attacker.id]);
 
     // VK Leaderboard — атакующий
     if (attExp.levelsGained > 0 && attacker.oauthProvider === 'vk' && attacker.oauthId) {
@@ -249,8 +249,8 @@ router.post('/battle', async (req, res) => {
 
     // Достижения — победитель (атакующий или защитник)
     if (attackerWins) {
-        checkAchievement(attacker.id, 'pvp_wins').catch(() => {});
-        if (moneyStolen > 0) trackIncome(attacker.id, moneyStolen).catch(() => {});
+    checkAchievement(attacker.id, 'pvp_wins').catch(() => {});
+    if (attackerIncome > 0) trackIncome(attacker.id, attackerIncome).catch(() => {});
     }
 
     // --- Обновление защитника ---
