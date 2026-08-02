@@ -1,5 +1,5 @@
 // client/src/components/CharacterCard.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useGlobalChat } from '../contexts/ChatContext';
@@ -30,7 +30,7 @@ interface CharacterCardProps {
   profileId?: number;
 }
 
-export default function CharacterCard({
+const CharacterCard = memo(function CharacterCard({
   char, side = 'left', showHealth = true,
   showExp = true, showRegenHint = true, regenRate = 1, readOnly = false,
   onEquip, availableItems, selectedItemId, highlightedSlots,
@@ -287,4 +287,6 @@ export default function CharacterCard({
       )}
     </div>
   );
-}
+});
+
+export default CharacterCard;

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
+import { memo } from 'react';
 
 interface PlayerBadgeProps {
   avatar: string | null;
@@ -15,7 +16,7 @@ interface PlayerBadgeProps {
 const FACTION_ICON: Record<string, string> = { bandit: 'game-icons:hood', crafter: 'game-icons:anvil', guard: 'game-icons:shield' };
 const FACTION_COLOR: Record<string, string> = { bandit: 'text-red-300', crafter: 'text-blue-300', guard: 'text-yellow-300' };
 
-export default function PlayerBadge({ avatar, username, level, gender, currentHp, maxHp, hpPct, faction }: PlayerBadgeProps) {
+const PlayerBadge = memo(function PlayerBadge({ avatar, username, level, gender, currentHp, maxHp, hpPct, faction }: PlayerBadgeProps) {
   const navigate = useNavigate();
 
   return (
@@ -54,4 +55,6 @@ export default function PlayerBadge({ avatar, username, level, gender, currentHp
       </div>
     </div>
   );
-}
+});
+
+export default PlayerBadge;

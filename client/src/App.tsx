@@ -9,7 +9,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import RegisterPage from './pages/RegisterPage';
 import VkLoginPage from './pages/VkLoginPage';
 import LogoutPage from './pages/LogoutPage';
-import HomePage from './pages/HomePage';
+const HomePage = lazy(() => import('./pages/HomePage'));
 import AdminRegisterPage from './pages/AdminRegisterPage';
 import ChatPanel from './components/chat/ChatPanel';
 import Header from './components/Header';
@@ -136,7 +136,7 @@ function App() {
           </Routes>
         </Suspense>
       </div>
-      <ChatPanel key={user?.id} />
+      {user?.role === 'player' && <ChatPanel key={user?.id} />}
       {/* TODO: удалить после ответа поддержки VK ↓ */}
       <VkKeyboard />
       {/* TODO: удалить после ответа поддержки VK ↑ */}
