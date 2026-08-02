@@ -24,6 +24,8 @@ router.get('/rating', async (req, res) => {
     const search = (req.query.search as string) || '';
     const minElo = parseInt(req.query.minElo as string) || 0;
     const maxElo = parseInt(req.query.maxElo as string) || 0;
+    const minLevel = parseInt(req.query.minLevel as string) || 0;
+    const maxLevel = parseInt(req.query.maxLevel as string) || 0;
     const skip = parseInt(req.query.skip as string) || 0;
     const offset = (page - 1) * limit + skip;
 
@@ -40,6 +42,14 @@ router.get('/rating', async (req, res) => {
     if (maxElo > 0) {
         whereClause += ' AND u.elo <= ?';
         params.push(maxElo);
+    }
+    if (minLevel > 0) {
+        whereClause += ' AND u.level >= ?';
+        params.push(minLevel);
+    }
+    if (maxLevel > 0) {
+        whereClause += ' AND u.level <= ?';
+        params.push(maxLevel);
     }
 
     const total = (await db.one(`SELECT COUNT(*) as cnt FROM users u ${whereClause}`, params) as any).cnt;

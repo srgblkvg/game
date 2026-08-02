@@ -39,14 +39,25 @@ router.post('/battle', async (req, res) => {
         defender = await db.one(`SELECT ${USER_BATTLE_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?`, [opponentId]);
         if (!defender || defender.id == userId) return res.status(400).json({ error: 'Invalid opponent' });
     } else {
-        const others = await db.query(`SELECT ${USER_BATTLE_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)`, [userId, now]) as any[];
-        if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены' });
+        const range = attacker.faction === 'bandit' ? 4 : 2;
+        const others = await db.query(
+            `SELECT ${USER_BATTLE_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND u.level >= ? AND u.level <= ?`,
+            [userId, now, attacker.level - range, attacker.level + range]
+        ) as any[];
+        if (others.length === 0) return res.status(400).json({ error: 'Все игроки защищены или вне диапазона уровней' });
         defender = others[Math.floor(Math.random() * others.length)];
     }
 
     if (defender.protectionUntil > 0 && now < defender.protectionUntil) {
         const remaining = defender.protectionUntil - now;
         return res.status(400).json({ error: `Игрок ${defender.username} защищён ещё ${Math.floor(remaining / 60)} мин` });
+    }
+
+    // Проверка диапазона уровней: Бандиты ±4, остальные ±2
+    const levelRange = attacker.faction === 'bandit' ? 4 : 2;
+    const levelDiff = Math.abs(attacker.level - defender.level);
+    if (levelDiff > levelRange) {
+        return res.status(400).json({ error: `Разница уровней слишком велика (${levelDiff} > ${levelRange}). Ваш диапазон: ±${levelRange} уровней.` });
     }
 
     // Актуализируем HP атакующего (офлайн-реген)
