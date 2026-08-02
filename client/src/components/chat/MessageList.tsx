@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import ItemTooltip from '../ItemTooltip';
 import { getRarityColor } from '../../utils/itemUtils';
 import { formatGameTime } from '../../utils/time';
@@ -11,6 +12,7 @@ interface MessageListProps {
     onNickClick: (e: React.MouseEvent, nick: string, isSelf: boolean) => void;
     renderContent?: (msg: ChatMessage) => React.ReactNode;
     scrollKey?: number;
+    getFaction?: (senderId: number) => string | null;
 }
 
 function formatTime(dateStr: string): string {
@@ -44,7 +46,7 @@ function groupMessages(messages: ChatMessage[]): ChatMessage[][] {
     return groups;
 }
 
-export default function MessageList({ messages, currentUserId, onNickClick, renderContent, scrollKey }: MessageListProps) {
+export default function MessageList({ messages, currentUserId, onNickClick, renderContent, scrollKey, getFaction }: MessageListProps) {
     const navigate = useNavigate();
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -102,6 +104,12 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                             <div
                                 className={`flex items-center gap-1 mb-0.5 ${isOwn ? 'pr-3' : 'pl-3'}`}
                             >
+                                {getFaction && (() => { const f = getFaction(firstMsg.senderId); return (
+                                    f === 'bandit' ? <Icon icon="game-icons:hood" width="10" height="10" className="text-red-300" /> :
+                                    f === 'crafter' ? <Icon icon="game-icons:anvil" width="10" height="10" className="text-blue-300" /> :
+                                    f === 'guard' ? <Icon icon="game-icons:shield" width="10" height="10" className="text-yellow-300" /> :
+                                    null
+                                ); })()}
                                 <span
                                     className={`text-[0.72rem] font-semibold select-none ${
                                         isGuild ? 'text-[var(--color-accent-success)]' : isPrivate ? 'text-[var(--color-accent-purple)]' : 'text-[var(--color-text-muted)]'

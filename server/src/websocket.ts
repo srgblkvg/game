@@ -21,6 +21,7 @@ interface OnlineUser {
   level: number;
   guildName?: string | null;
   guildId?: number | null;
+  faction?: string | null;
 }
 
 export interface Notification {
@@ -379,7 +380,7 @@ export async function setupWebSocket(server: any) {
     }
 
     clients.set(userId, ws);
-    const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, guildName: user.guildname || user.guildName || null, guildId: user.guildid || user.guildId || null };
+    const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, faction: user.faction || null, guildName: user.guildname || user.guildName || null, guildId: user.guildid || user.guildId || null };
     onlineUsers.set(userId, onlineUser);
     auditWsConnect(user.username, user.id);
 

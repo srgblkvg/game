@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import { useAuth } from './AuthContext';
 
 interface ChatMessage { id: number; senderId: number; senderName: string; targetId: number | null; content: string; createdAt: string; item?: any; itemRarity?: number; }
-interface OnlineUser { id: number; username: string; level: number; }
+interface OnlineUser { id: number; username: string; level: number; faction?: string | null; }
 interface ChatContextType {
   messages: ChatMessage[]; onlineUsers: OnlineUser[];
   addMessages: (msgs: ChatMessage[]) => void;

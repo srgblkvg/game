@@ -3,6 +3,7 @@ export interface OnlineUser {
     username: string;
     level: number;
     guildName?: string | null;
+    faction?: string | null;
 }
 
 export interface ChatMessage {
