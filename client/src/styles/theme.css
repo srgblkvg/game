@@ -312,6 +312,25 @@ html[data-theme="light"] {
   animation: glowMythic 1.8s ease-in-out infinite;
 }
 
+/* Мобильные — статичное свечение вместо анимации (экономит GPU) */
+@media (hover: none) and (pointer: coarse) {
+  .rarity-epic {
+    animation: none;
+    box-shadow: 0 0 8px rgba(155, 89, 182, 0.4), inset 0 0 8px rgba(155, 89, 182, 0.1);
+  }
+  .rarity-legendary {
+    animation: none;
+    box-shadow: 0 0 10px rgba(241, 196, 15, 0.4), inset 0 0 10px rgba(241, 196, 15, 0.1);
+  }
+  .rarity-mythic {
+    animation: none;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5), inset 0 0 10px rgba(231, 76, 60, 0.15);
+  }
+  .blink, .animate-pulse {
+    animation: none !important;
+  }
+}
+
 h1, h2, h3 {
   font-family: 'Kurale', 'Times New Roman', serif;
   font-weight: 600;
