@@ -228,9 +228,13 @@ router.post('/craft/execute', async (req, res) => {
 router.get('/craft/upgrade-info/:level/:rarity', async (req, res) => {
     const level = Number(req.params.level);
     const rarity = Number(req.params.rarity);
+    const userId = req.userId;
     const data = await db.one('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?', [level, rarity]) as any;
     if (!data) return res.status(404).json({ error: 'Данные об уровне не найдены' });
-    res.json({ chance: data.chance, money_cost: Math.max(1, Math.floor(data.money_cost / 4)) });
+    // Бонус фракции Ремесленник
+    const user = await db.one('SELECT faction FROM users WHERE id = ?', [userId]) as any;
+    const factionBonus = user?.faction === 'crafter' ? 10 : 0;
+    res.json({ chance: data.chance, factionBonus, money_cost: Math.max(1, Math.floor(data.money_cost / 4)) });
 });
 
 // Улучшение предмета
