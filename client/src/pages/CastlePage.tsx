@@ -12,7 +12,7 @@ import { fmtSafeDate } from '../utils/date';
 const FACTION_INFO: Record<string, { icon: string; color: string; bgColor: string; name: string; bonus: string }> = {
     bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'bg-red-900/20 border-red-700/30', name: 'Бандит', bonus: '+10% против Ремесленников, ±4 уровня, +1% дохода/100 побед, таймер ×2' },
     crafter: { icon: 'game-icons:anvil', color: 'text-blue-300', bgColor: 'bg-blue-900/20 border-blue-700/30', name: 'Ремесленник', bonus: '+10% шанс крафта +1%/1000, ×2 награда работ' },
-    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'bg-yellow-900/20 border-yellow-700/30', name: 'Стражник', bonus: '+10% против Бандитов и в PvE, карма и жалование' },
+    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'bg-yellow-900/20 border-yellow-700/30', name: 'Стражник', bonus: '+10% против Бандитов и в PvE, карма +1/бандит или моб' },
 };
 
 const links = [

@@ -464,6 +464,10 @@ router.post('/mob/attack', async (req, res) => {
         checkAchievement(userId, 'pve_wins').catch(() => {});
         if (goldAfterTax > 0) trackIncome(userId, goldAfterTax).catch(() => {});
     }
+    // Карма Стражника: +1 за победу над мобом
+    if (playerWon && user.faction === 'guard') {
+        await db.run('UPDATE users SET karma = GREATEST(-100, LEAST(100, karma + 1)) WHERE id = ?', [userId]);
+    }
 
     // VK Leaderboard
     if (levelsGained > 0 && user.oauthProvider === 'vk' && user.oauthId) {
