@@ -42,6 +42,7 @@ router.get('/arena/opponent', async (req, res) => {
                     playerMoney: user.money,
                     gender: saved.gender || 'male',
                     avatar: saved.avatar || null,
+                    faction: saved.faction || null,
                     guildName: saved.guildName || null, guildId: saved.guildId || null,
                 });
             }
@@ -124,6 +125,7 @@ router.get('/arena/opponent', async (req, res) => {
         playerMoney: user.money,
         gender: opponent.gender || 'male',
         avatar: opponent.avatar || null,
+        faction: opponent.faction || null,
         guildName: opponent.guildName || null,
         guildId: opponent.guildId || null,
     });
