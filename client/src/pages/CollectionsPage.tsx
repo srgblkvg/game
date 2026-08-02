@@ -143,7 +143,9 @@ export default function CollectionsPage() {
                 const collItems = collectionData.items || [];
                 const coll = new Set<string>();
                 for (const c of collItems) {
-                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${c.upgradelevel ?? 0}`);
+                    // Нормализуем к уровню таба (0 или 7) для проверки collected
+                    const normalizedLevel = activeTab === 0 ? 0 : 7;
+                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${normalizedLevel}`);
                 }
                 setCollectionKeys(coll);
 
@@ -186,7 +188,10 @@ export default function CollectionsPage() {
                 fetch(`/api/collections?upgradelevel=${activeTab}`, { headers: getHeaders() }).then(r => r.json()),
             ]);
 
-            setInventoryItems(charRes.inventory || []);
+            const filteredInv = activeTab === 0
+                ? (charRes.inventory || []).filter((i: any) => !i.upgradeLevel || i.upgradeLevel < 7)
+                : (charRes.inventory || []).filter((i: any) => i.upgradeLevel >= 7);
+            setInventoryItems(filteredInv);
             setCharacter((prev: any) => ({ ...prev, inventory: charRes.inventory, collectionCount: charRes.collectionCount, collectionSetBonus: charRes.collectionSetBonus, collectedItems: charRes.collectedItems }));
             setCollectionCount(charRes.collectionCount || 0);
             setCollectionSetBonus(charRes.collectionSetBonus || 0);
@@ -205,7 +210,8 @@ export default function CollectionsPage() {
 
             const newColl = new Set<string>();
             for (const c of (collRes.items || [])) {
-                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${c.upgradelevel ?? 0}`);
+                const normalizedLevel = activeTab === 0 ? 0 : 7;
+                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${normalizedLevel}`);
             }
             setCollectionKeys(newColl);
 

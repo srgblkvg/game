@@ -8,10 +8,13 @@ const router = Router();
 router.get('/collections', async (req, res) => {
     const userId = req.userId;
     const upgradeLevel = parseInt(req.query.upgradelevel as string) || 0;
+    const isPlusTab = upgradeLevel >= 7;
 
     const items = await db.query(
-        'SELECT itemName, slot, rarity_id, upgradelevel FROM collections WHERE userId = ? AND upgradelevel = ?',
-        [userId, upgradeLevel]
+        isPlusTab
+            ? 'SELECT itemName, slot, rarity_id, upgradelevel FROM collections WHERE userId = ? AND upgradelevel >= 7'
+            : 'SELECT itemName, slot, rarity_id, upgradelevel FROM collections WHERE userId = ? AND upgradelevel < 7',
+        [userId]
     ) as any[];
 
     // Сеты и их статус — фильтруем по upgradeLevel
@@ -24,9 +27,9 @@ router.get('/collections', async (req, res) => {
         LEFT JOIN collection_set_items si ON si.set_id = s.id
         LEFT JOIN items i ON i.name = si.item_name AND i.slot = si.slot AND i.rarity_id = si.rarity_id
         LEFT JOIN rarities r ON si.rarity_id = r.id
-        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = si.rarity_id AND c.upgradelevel = ?
+        LEFT JOIN collections c ON c.userId = ? AND c.itemName = si.item_name AND c.slot = si.slot AND c.rarity_id = si.rarity_id AND ${isPlusTab ? 'c.upgradelevel >= 7' : 'c.upgradelevel < 7'}
         ORDER BY s.sort_order, s.id, si.slot, si.item_name
-    `, [userId, upgradeLevel]) as any[];
+    `, [userId]) as any[];
 
     // Группируем по сетам
     const setsMap = new Map<number, { set: any; totalItems: number; collectedCount: number; items: any[] }>();
@@ -101,10 +104,10 @@ router.post('/collections/add', async (req, res) => {
         return res.status(400).json({ error: 'itemName и slot обязательны' });
     }
 
-    // Проверяем что предмет ещё не в коллекции (имя+слот+редкость+уровень)
+    // Проверяем что предмет ещё не в коллекции (имя+слот+редкость+таб)
     const existing = await db.one(
-        'SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ? AND rarity_id = ? AND upgradelevel = ?',
-        [userId, itemName, slot, rarityId || 0, targetLevel]
+        `SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ? AND rarity_id = ? AND upgradelevel ${targetLevel >= 7 ? '>=' : '<'} 7`,
+        [userId, itemName, slot, rarityId || 0]
     );
 
     if (existing) {
@@ -143,12 +146,21 @@ router.post('/collections/add', async (req, res) => {
 
     const removed = inventory.splice(itemIndex, 1)[0];
 
+    // Валидация: предмет должен подходить под выбранный таб
+    const actualUpgrade = removed.upgradeLevel || 0;
+    if (targetLevel === 0 && actualUpgrade >= 7) {
+        return res.status(400).json({ error: 'Предметы +7 и выше нельзя добавить в базовую коллекцию. Переключитесь на вкладку +7.' });
+    }
+    if (targetLevel === 7 && actualUpgrade < 7) {
+        return res.status(400).json({ error: 'Предметы ниже +7 нельзя добавить в коллекцию +7. Переключитесь на базовую вкладку.' });
+    }
+
     await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
 
-    // Добавляем в коллекцию
+    // Добавляем в коллекцию — используем реальный upgradeLevel предмета
     await db.run(
         'INSERT INTO collections (userId, itemName, slot, rarity_id, upgradelevel) VALUES (?, ?, ?, ?, ?)',
-        [userId, itemName, slot, removed.rarity_id || 0, targetLevel]
+        [userId, itemName, slot, removed.rarity_id || 0, actualUpgrade]
     );
     checkAchievement(userId, 'collection').catch(() => {});
 
