@@ -94,6 +94,7 @@ export default function CollectionsPage() {
     const [ownedKeys, setOwnedKeys] = useState<Set<string>>(new Set());
     const [collectionKeys, setCollectionKeys] = useState<Set<string>>(new Set());
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+    const [fullInventory, setFullInventory] = useState<InventoryItem[]>([]);
     const [sets, setSets] = useState<CollectionSet[]>([]);
     const [collectionCount, setCollectionCount] = useState(0);
     const [collectionSetBonus, setCollectionSetBonus] = useState(0);
@@ -122,6 +123,7 @@ export default function CollectionsPage() {
                 setTotalCollectionItems(character.totalCollectionItems || 189);
 
                 const inv = character.inventory || [];
+                setFullInventory(inv);
                 const filteredInv = activeTab === 0
                     ? inv.filter((i: any) => !i.upgradeLevel || i.upgradeLevel < 7)
                     : inv.filter((i: any) => i.upgradeLevel >= 7);
@@ -193,6 +195,7 @@ export default function CollectionsPage() {
             setCollectionCount(charRes.collectionCount || 0);
             setCollectionSetBonus(charRes.collectionSetBonus || 0);
             setSets(collRes.sets || []);
+            setFullInventory(charRes.inventory || []);
 
             const newOwned = new Set<string>();
             for (const invItem of (charRes.inventory || [])) {
@@ -233,11 +236,18 @@ export default function CollectionsPage() {
             {/* Табы */}
             <div className="flex gap-2 mb-3">
                 <button onClick={() => setActiveTab(0)}
-                    className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${activeTab === 0 ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                    className={`px-3 py-1 rounded text-sm font-medium cursor-pointer relative ${activeTab === 0 ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >Базовая</button>
                 <button onClick={() => setActiveTab(7)}
-                    className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${activeTab === 7 ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
-                >+7</button>
+                    className={`px-3 py-1 rounded text-sm font-medium cursor-pointer relative ${activeTab === 7 ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >
+                    +7
+                    {(() => {
+                        const hasPlusItems = (items.length > 0) && fullInventory.some((inv: any) => (inv.upgradeLevel ?? inv.upgradelevel ?? 0) >= 7 && !inv.locked);
+                        if (!hasPlusItems) return null;
+                        return <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#2ecc71] border border-[var(--color-bg-primary)]" />;
+                    })()}
+                </button>
             </div>
 
             {/* Бонус */}
