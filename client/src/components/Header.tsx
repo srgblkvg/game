@@ -246,9 +246,21 @@ export default function Header() {
             )}
             <div className="flex items-center justify-between gap-2 px-3 py-1 flex-wrap">
                 {user.role === 'player' && character && (
-                    <span className="text-[var(--color-text-primary)] text-sm font-bold">
-                        Серебро: {character.money.toLocaleString()}
-                    </span>
+                    <>
+                        <span className="text-[var(--color-text-primary)] text-sm font-bold">
+                            Серебро: {character.money.toLocaleString()}
+                        </span>
+                        {character.faction && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${character.faction === 'bandit' ? 'bg-red-900/30 text-red-300' : character.faction === 'crafter' ? 'bg-blue-900/30 text-blue-300' : 'bg-yellow-900/30 text-yellow-300'}`}>
+                                {character.faction === 'bandit' ? 'Бандит' : character.faction === 'crafter' ? 'Ремесленник' : 'Стражник'}
+                                {character.faction === 'guard' && character.karma !== undefined && (
+                                    <span className={`ml-1 ${character.karma >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                                        ({character.karma >= 0 ? '+' : ''}{character.karma})
+                                    </span>
+                                )}
+                            </span>
+                        )}
+                    </>
                 )}
                 {user.role === 'player' && (
                     protectionSec > 0 ? (

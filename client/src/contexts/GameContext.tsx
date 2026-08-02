@@ -90,6 +90,8 @@ export interface Character {
   avatar?: string | null;
   elo?: number;
   pveRating?: number;
+  faction?: string | null;
+  karma?: number;
   tutorialCompleted?: number;
   tutorialStep?: number;
   totalIncome?: number;

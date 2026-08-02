@@ -144,12 +144,18 @@ router.post('/battle', async (req, res) => {
         await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+1, lastAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, elo=?, seasonWins=seasonWins+1, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, arenaOpponentId=NULL WHERE id=?`,
             [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), now, moneyStolen, attacker.id]);
 
-        // Защитник
+        // --- Обновление защитника ---
         const protUntil = now + 3600;
         const actualStolen = Math.min(moneyStolen, defender.money);
         await db.run(`UPDATE users SET money=money-?, totalBattles=totalBattles+1, protectionUntil=?, elo=?, seasonLosses=seasonLosses+1, lastPvpTime=?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
             [actualStolen, protUntil, Math.max(100, newDefenderElo), now, actualStolen, defender.id]);
         sendToUser(defender.id, { type: 'protection', protectionUntil: protUntil });
+
+        // Карма Стражника: +1 за бандита, -1 за остальных
+        if (attackerData.faction === 'guard') {
+            const karmaChange = defenderData.faction === 'bandit' ? 1 : -1;
+            await db.run('UPDATE users SET karma = GREATEST(-100, LEAST(100, karma + ?)) WHERE id = ?', [karmaChange, attacker.id]);
+        }
 
         // Запись в историю
         await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
@@ -260,6 +266,14 @@ router.post('/battle', async (req, res) => {
     const w = await db.one('SELECT guildId FROM users WHERE id = ?', [result.winnerId]);
     if (w?.guildId) {
         updateGuildQuestProgress(w.guildId, 'pvp').catch(e => console.error('guildQuest PvP:', e.message));
+    }
+
+    // Карма Стражника: +1 за победу над бандитом, -1 за остальных
+    const winnerFaction = attackerWins ? attackerData.faction : defenderData.faction;
+    const loserFaction = attackerWins ? defenderData.faction : attackerData.faction;
+    if (winnerFaction === 'guard') {
+        const karmaChange = loserFaction === 'bandit' ? 1 : -1;
+        await db.run('UPDATE users SET karma = GREATEST(-100, LEAST(100, karma + ?)) WHERE id = ?', [karmaChange, result.winnerId]);
     }
 
     markDirty(result.winnerId, 'quests');
