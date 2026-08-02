@@ -244,7 +244,7 @@ export default function Header() {
                         {formatGameTime(serverNow * 1000)}
                     </span>
                     {/* Фракция справа */}
-                    <div className="ml-auto text-right leading-tight">
+                    <div className="ml-auto text-center leading-tight">
                         {character.faction ? (
                             <div>
                                 <span className={`text-xs px-1.5 py-0.5 rounded ${character.faction === 'bandit' ? 'bg-[#3a1a1a] text-red-300' : character.faction === 'crafter' ? 'bg-[#1a1a3a] text-blue-300' : 'bg-[#3a3a1a] text-yellow-300'}`}>

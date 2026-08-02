@@ -171,8 +171,9 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       {/* Коллекция */}
       {!resource && item.name && item.slot && (
         <div className="text-xs mt-1 pt-1 border-t border-[var(--color-border-light)] text-center">
+          <div className="font-bold text-[var(--color-accent-gold)] mb-0.5">Коллекция</div>
           <div className={basicCollected ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}>
-            База: {basicCollected ? '✓' : '✗'}
+            Базовый: {basicCollected ? '✓' : '✗'}
           </div>
           <div className={plusCollected ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}>
             +7: {plusCollected ? '✓' : '✗'}
