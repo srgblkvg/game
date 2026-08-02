@@ -62,6 +62,27 @@ export default function CastlePage() {
                     <Icon icon="game-icons:swords-emblem" width="16" height="16" />
                     Фракция
                 </h2>
+                {/* Диаграмма участников */}
+                {factionData?.memberCounts && (() => {
+                    const counts = factionData.memberCounts;
+                    const total = (counts.bandit || 0) + (counts.crafter || 0) + (counts.guard || 0);
+                    if (total === 0) return null;
+                    const colors: Record<string, string> = { bandit: '#dc2626', crafter: '#3b82f6', guard: '#eab308' };
+                    return (
+                        <div className="mb-3 p-2 bg-[var(--color-bg-card)] rounded-lg border border-[var(--color-border-light)]">
+                            <div className="flex h-3 rounded-full overflow-hidden mb-1">
+                                {(['bandit', 'crafter', 'guard'] as const).map(f => (
+                                    <div key={f} style={{ width: `${(counts[f] || 0) / total * 100}%`, background: colors[f], minWidth: counts[f] > 0 ? '2px' : '0' }} />
+                                ))}
+                            </div>
+                            <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)]">
+                                <span style={{ color: colors.bandit }}>Бандиты: {counts.bandit || 0}</span>
+                                <span style={{ color: colors.crafter }}>Ремесленники: {counts.crafter || 0}</span>
+                                <span style={{ color: colors.guard }}>Стражники: {counts.guard || 0}</span>
+                            </div>
+                        </div>
+                    );
+                })()}
                 {factionData?.current ? (
                     <Card
                         className={`flex items-center gap-3 p-3 cursor-pointer border ${FACTION_INFO[factionData.current]?.bgColor || ''}`}
