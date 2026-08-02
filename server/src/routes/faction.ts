@@ -36,6 +36,20 @@ router.get('/faction', async (req, res) => {
     });
 });
 
+// Топ-5 игроков фракции
+router.get('/faction/top/:faction', async (req, res) => {
+    const { faction } = req.params;
+    if (!['bandit', 'crafter', 'guard'].includes(faction)) {
+        return res.status(400).json({ error: 'Неверная фракция' });
+    }
+    const sortField = faction === 'bandit' ? 'bandit_reputation' : faction === 'crafter' ? 'faction_craft_count' : 'karma';
+    const users = await db.query(
+        `SELECT id, username, level, ${sortField} as value FROM users WHERE faction = ? ORDER BY ${sortField} DESC LIMIT 5`,
+        [faction]
+    ) as any[];
+    res.json({ users: users.map((u: any) => ({ id: u.id, username: u.username, level: u.level, value: u.value || 0 })) });
+});
+
 // Выбрать фракцию (первый раз — бесплатно)
 router.post('/faction/choose', async (req, res) => {
     const userId = req.userId;

@@ -18,10 +18,18 @@ export default function FactionPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [topUsers, setTopUsers] = useState<any[]>([]);
 
     useEffect(() => {
         fetch('/api/faction', { headers: getHeaders() }).then(r => r.json()).then(setData).catch(() => {});
     }, []);
+
+    useEffect(() => {
+        if (data?.current) {
+            fetch(`/api/faction/top/${data.current}`, { headers: getHeaders() })
+                .then(r => r.json()).then(d => setTopUsers(d.users || [])).catch(() => {});
+        }
+    }, [data?.current]);
 
     const handleChoose = async (faction: string) => {
         setLoading(true);
@@ -126,6 +134,20 @@ export default function FactionPage() {
                             <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
                                 +1% к шансу крафта и улучшения за каждые 100 успешных крафтов и улучшений
                             </p>
+                        </div>
+                    )}
+                    {/* Топ-5 фракции */}
+                    {topUsers.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
+                            <p className="text-xs text-[var(--color-text-muted)] font-bold mb-1">
+                                {currentFaction === 'bandit' ? '🏆 Репутация' : currentFaction === 'crafter' ? '🏆 Ремесленный опыт' : '🏆 Карма'}
+                            </p>
+                            {topUsers.map((u: any, i: number) => (
+                                <div key={u.id} className="flex items-center justify-between text-[0.6rem] text-[var(--color-text-muted)] py-0.5">
+                                    <span className="truncate">{i + 1}. {u.username} [{u.level}]</span>
+                                    <span className="font-bold flex-shrink-0 ml-2">{u.value?.toLocaleString() || 0}</span>
+                                </div>
+                            ))}
                         </div>
                     )}
                     {data?.changeCost && (
