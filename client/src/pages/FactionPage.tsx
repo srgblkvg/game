@@ -91,10 +91,20 @@ export default function FactionPage() {
                             Карма: {character.karma >= 0 ? '+' : ''}{character.karma}
                         </p>
                     )}
+                    {currentFaction === 'crafter' && (
+                        <div className="mt-2 pt-2 border-t border-[var(--color-border-light)]">
+                            <p className="text-xs text-[var(--color-text-muted)]">
+                                Ремесленный опыт: <span className="text-blue-300 font-bold">{character?.factionCraftCount || 0}</span>
+                            </p>
+                            <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-0.5">
+                                +1% к шансу крафта и улучшения за каждые 1000 созданных или улучшенных предметов
+                            </p>
+                        </div>
+                    )}
                     {data?.changeCost && (
                         <div className="mt-3 pt-2 border-t border-[var(--color-border-light)]">
                             <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">
-                                Смена фракции: {data.changeCost.toLocaleString()} серебра (карма сбросится)
+                                Смена фракции: {data.changeCost.toLocaleString()} серебра (карма и ремесленный опыт будут утеряны)
                             </p>
                             {message && <p className="text-xs text-[var(--color-accent-danger)] mb-2">{message}</p>}
                             <div className="flex flex-wrap gap-2">
