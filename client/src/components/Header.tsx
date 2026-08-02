@@ -227,7 +227,7 @@ export default function Header() {
                     <div style={{ width: `${xpPct}%` }} className="h-full bg-[var(--color-accent-purple)] transition-[width] duration-500" />
                 </div>
             )}
-            {/* Аватар/ник/HP слева, время по центру */}
+            {/* Аватар/ник/HP слева, время по центру, фракция справа */}
             {user.role === 'player' && character && (
                 <div className="flex items-center px-3 pt-6 pb-1 relative">
                     <PlayerBadge
@@ -242,20 +242,35 @@ export default function Header() {
                     <span className="absolute left-1/2 -translate-x-1/2 text-xs text-[var(--color-text-muted)] tabular-nums leading-none pointer-events-none">
                         {formatGameTime(serverNow * 1000)}
                     </span>
+                    {/* Фракция справа */}
+                    <div className="ml-auto text-right leading-tight">
+                        {character.faction ? (
+                            <div>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${character.faction === 'bandit' ? 'bg-red-900/30 text-red-300' : character.faction === 'crafter' ? 'bg-blue-900/30 text-blue-300' : 'bg-yellow-900/30 text-yellow-300'}`}>
+                                    {character.faction === 'bandit' ? 'Бандит' : character.faction === 'crafter' ? 'Ремесленник' : 'Стражник'}
+                                </span>
+                                {character.faction === 'crafter' && (
+                                    <div className="text-[0.55rem] text-blue-300/70">Опыт: {character.factionCraftCount || 0}</div>
+                                )}
+                                {character.faction === 'guard' && character.karma != null && character.karma !== 0 && (
+                                    <div className={`text-[0.55rem] ${character.karma >= 0 ? 'text-green-300/70' : 'text-red-300/70'}`}>
+                                        Карма: {character.karma >= 0 ? '+' : ''}{character.karma}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <span onClick={() => navigate('/faction')} className="text-[0.6rem] text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] cursor-pointer">
+                                Фракция: Отсутствует
+                            </span>
+                        )}
+                    </div>
                 </div>
             )}
             <div className="flex items-center justify-between gap-2 px-3 py-1 flex-wrap">
                 {user.role === 'player' && character && (
-                    <>
-                        <span className="text-[var(--color-text-primary)] text-sm font-bold">
-                            Серебро: {character.money.toLocaleString()}
-                        </span>
-                        {character.faction && (
-                            <span className={`text-xs px-1.5 py-0.5 rounded ${character.faction === 'bandit' ? 'bg-red-900/30 text-red-300' : character.faction === 'crafter' ? 'bg-blue-900/30 text-blue-300' : 'bg-yellow-900/30 text-yellow-300'}`}>
-                                {character.faction === 'bandit' ? 'Бандит' : character.faction === 'crafter' ? 'Ремесленник' : 'Стражник'}
-                            </span>
-                        )}
-                    </>
+                    <span className="text-[var(--color-text-primary)] text-sm font-bold">
+                        Серебро: {character.money.toLocaleString()}
+                    </span>
                 )}
                 {user.role === 'player' && (
                     protectionSec > 0 ? (
