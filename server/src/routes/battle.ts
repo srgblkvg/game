@@ -27,7 +27,8 @@ router.post('/battle', async (req, res) => {
     if (!attacker) return res.status(404).json({ error: 'Attacker not found' });
 
     const hasPremium = (attacker.premiumUntil || 0) > now;
-    const attackCooldown = hasPremium ? 300 : 600; // премиум: 5 мин, базовый: 10 мин
+    let attackCooldown = hasPremium ? 300 : 600; // премиум: 5 мин, базовый: 10 мин
+    if (attacker.faction === 'bandit') attackCooldown = Math.floor(attackCooldown / 2);
 
     if (attacker.lastAttackTime > 0 && (now - attacker.lastAttackTime) < attackCooldown) {
         const remaining = attackCooldown - (now - attacker.lastAttackTime);
