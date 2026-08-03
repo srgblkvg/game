@@ -5,6 +5,7 @@ import { fetchCharacter } from '../api';
 import BackButton from '../components/BackButton';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 import { Icon } from '@iconify/react';
 
 const FACTIONS: Record<string, { icon: string; color: string; bgColor: string; name: string; desc: string; bonus: string }> = {
@@ -19,6 +20,7 @@ export default function FactionPage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [topUsers, setTopUsers] = useState<any[]>([]);
+    const [changeTarget, setChangeTarget] = useState<string | null>(null);
 
     useEffect(() => {
         fetch('/api/faction', { headers: getHeaders() }).then(r => r.json()).then(setData).catch(() => {});
@@ -63,8 +65,13 @@ export default function FactionPage() {
             setData({ ...data, current: faction });
             const fresh = await fetchCharacter();
             setCharacter(fresh);
+            setChangeTarget(null);
         } catch { setMessage('Ошибка сети'); }
         finally { setLoading(false); }
+    };
+
+    const confirmChange = () => {
+        if (changeTarget) handleChange(changeTarget);
     };
 
     if (!data) return <div className="p-4 max-w-md mx-auto"><BackButton /><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
@@ -162,7 +169,7 @@ export default function FactionPage() {
                                         key={key}
                                         variant="secondary"
                                         size="sm"
-                                        onClick={() => handleChange(key)}
+                                        onClick={() => setChangeTarget(key)}
                                         disabled={loading}
                                     >
                                         {loading ? '...' : `В ${info.name}`}
@@ -230,6 +237,37 @@ export default function FactionPage() {
                     Фракции доступны с 5 уровня. Продолжайте играть!
                 </p>
             )}
+
+            {/* Модалка подтверждения смены фракции */}
+            <Modal
+                open={changeTarget !== null}
+                onClose={() => setChangeTarget(null)}
+                title="Смена фракции"
+                borderColor="var(--color-accent-warning)"
+            >
+                <div className="text-sm text-[var(--color-text-muted)] space-y-3">
+                    <p>
+                        Вы собираетесь вступить во фракцию{' '}
+                        <span className={`font-bold ${changeTarget ? FACTIONS[changeTarget]?.color : ''}`}>
+                            {changeTarget ? FACTIONS[changeTarget]?.name : ''}
+                        </span>.
+                    </p>
+                    <div className="bg-[var(--color-bg-input)] rounded p-3 text-xs space-y-1">
+                        <p className="font-bold text-[var(--color-accent-warning)]">⚠️ Внимание:</p>
+                        <p>• Стоимость смены: <span className="font-bold">{data?.changeCost?.toLocaleString() || '10 000'} серебра</span></p>
+                        <p>• Карма, ремесленный опыт и репутация будут <span className="text-[var(--color-accent-danger)]">безвозвратно утеряны</span></p>
+                        <p>• Все счётчики фракции обнулятся</p>
+                    </div>
+                    <div className="flex gap-2 justify-end pt-2">
+                        <Button variant="secondary" size="md" onClick={() => setChangeTarget(null)} disabled={loading}>
+                            Отмена
+                        </Button>
+                        <Button variant="danger" size="md" onClick={confirmChange} disabled={loading}>
+                            {loading ? '...' : 'Сменить фракцию'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }
