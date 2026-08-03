@@ -132,7 +132,7 @@ export default function ArenaPage() {
           onSwitchSet={isBattleActive ? undefined : handleSwitchSet}
         />
         {opponent && (
-          <div className={isBattleActive ? '' : 'pt-7'}>
+          <div className={isBattleActive ? '' : 'pt-6'}>
           <CharacterCard
             char={{
               username: opponent.name,
