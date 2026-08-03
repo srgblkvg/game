@@ -28,6 +28,9 @@ interface CharacterCardProps {
   isMob?: boolean;
   showHealButton?: boolean;
   profileId?: number;
+  equipSets?: Record<number, Record<string, any>>;
+  activeEquipSlot?: number;
+  onSwitchSet?: (slot: number) => void;
 }
 
 const CharacterCard = memo(function CharacterCard({
@@ -37,6 +40,7 @@ const CharacterCard = memo(function CharacterCard({
   compact = false, isMob = false, hideNoGuild = false,
   showHealButton = true,
   profileId,
+  equipSets, activeEquipSlot = 1, onSwitchSet,
 }: CharacterCardProps) {
   const navigate = useNavigate();
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -188,6 +192,28 @@ const CharacterCard = memo(function CharacterCard({
       </div>
 
       {/* Фрейм с фоном и слотами */}
+      {!readOnly && equipSets && onSwitchSet && (
+        <div className="flex gap-1 mb-1 justify-center">
+          {[1, 2, 3].map(slot => {
+            const hasItems = equipSets[slot] && Object.keys(equipSets[slot]).length > 0;
+            return (
+              <button
+                key={slot}
+                onClick={() => onSwitchSet(slot)}
+                className={`px-2 py-0.5 text-xs rounded font-bold transition-colors cursor-pointer ${
+                  activeEquipSlot === slot
+                    ? 'bg-[var(--color-accent-info)] text-white'
+                    : hasItems
+                      ? 'bg-[var(--color-bg-input)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+                      : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'
+                }`}
+              >
+                {hasItems ? `⚔${slot === 1 ? 'I' : slot === 2 ? 'II' : 'III'}` : `${slot === 1 ? 'I' : slot === 2 ? 'II' : 'III'}`}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div id={cardId} className="border-2 border-[var(--color-border-light)] rounded-xl p-[0.8rem] w-full bg-[var(--color-bg-card)] relative"
         style={{ height: frameHeight }}>
         <div className="absolute inset-0 overflow-hidden rounded-[10px]">

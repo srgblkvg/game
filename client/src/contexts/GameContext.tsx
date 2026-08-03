@@ -94,6 +94,10 @@ export interface Character {
   karma?: number;
   factionCraftCount?: number;
   banditReputation?: number;
+  equipment1?: Record<string, any>;
+  equipment2?: Record<string, any>;
+  equipment3?: Record<string, any>;
+  activeEquipSlot?: number;
   tutorialCompleted?: number;
   tutorialStep?: number;
   totalIncome?: number;

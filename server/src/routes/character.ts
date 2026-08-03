@@ -29,7 +29,12 @@ router.get('/character/me', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     let inventory = JSON.parse(user.inventory || '[]');
-    const equipment = JSON.parse(user.equipment || '{}');
+    const activeSlot = user.active_equip_slot || 1;
+    const equipKey = `equipment_${activeSlot}`;
+    const equipment = JSON.parse((user as any)[equipKey] || user.equipment || '{}');
+    const equipment1 = JSON.parse(user.equipment_1 || '{}');
+    const equipment2 = JSON.parse(user.equipment_2 || '{}');
+    const equipment3 = JSON.parse(user.equipment_3 || '{}');
     let changed = false;
 
     inventory = await Promise.all(inventory.map(async (item: any) => {
@@ -192,6 +197,8 @@ router.get('/character/me', async (req, res) => {
         overflowmoney: user.overflowmoney || 0,
         adPremiumAt: user.adpremiumat || 0,
         adSilverAt: user.adsilverat || 0,
+        equipment1, equipment2, equipment3,
+        activeEquipSlot: activeSlot,
     });
 });
 
@@ -277,6 +284,50 @@ router.post('/shop/ad-silver', async (req, res) => {
     await db.run('UPDATE users SET money = money + ?, adsilverat = ? WHERE id = ?', [reward, now, userId]);
 
     res.json({ success: true, reward, message: `Получено ${reward} серебра за рекламу!` });
+});
+
+// Переключение активного слота экипировки (I/II/III)
+// Сохраняет текущий equipment в старый слот, загружает новый
+router.post('/character/switch-equip', async (req, res) => {
+    const userId = req.userId;
+    const { slot } = req.body; // 1, 2 или 3
+    if (![1, 2, 3].includes(slot)) return res.status(400).json({ error: 'Неверный слот' });
+
+    const user = await db.one('SELECT equipment, equipment_1, equipment_2, equipment_3, active_equip_slot FROM users WHERE id = ?', [userId]) as any;
+    const oldSlot = user.active_equip_slot || 1;
+    if (oldSlot === slot) return res.json({ success: true, activeEquipSlot: slot });
+
+    const currentEquip = user.equipment || '{}';
+    const targetEquip = (user as any)[`equipment_${slot}`] || '{}';
+
+    // Сохраняем текущий equipment в старый слот, загружаем новый в equipment
+    await db.run(
+        `UPDATE users SET equipment_${oldSlot} = ?, equipment = ?, active_equip_slot = ? WHERE id = ?`,
+        [currentEquip, targetEquip, slot, userId]
+    );
+
+    const equipment = JSON.parse(targetEquip);
+    res.json({ success: true, activeEquipSlot: slot, equipment });
+});
+
+// Сохранить экипировку в конкретный слот (без переключения)
+router.post('/character/save-equip-set', async (req, res) => {
+    const userId = req.userId;
+    const { slot, equipment } = req.body;
+    if (![1, 2, 3].includes(slot)) return res.status(400).json({ error: 'Неверный слот' });
+
+    await db.run(
+        `UPDATE users SET equipment_${slot} = ? WHERE id = ?`,
+        [JSON.stringify(equipment), userId]
+    );
+
+    // Если это активный слот — синхронизируем equipment
+    const user = await db.one('SELECT active_equip_slot FROM users WHERE id = ?', [userId]) as any;
+    if ((user.active_equip_slot || 1) === slot) {
+        await db.run('UPDATE users SET equipment = ? WHERE id = ?', [JSON.stringify(equipment), userId]);
+    }
+
+    res.json({ success: true });
 });
 
 export default router;
