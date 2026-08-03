@@ -97,7 +97,6 @@ export default function ArenaPage() {
         const { fetchCharacter } = await import('../../api/character');
         const fresh = await fetchCharacter();
         setCharacter(fresh);
-        loadOpponent(true, difficulty);
       }
     } catch {}
   };
