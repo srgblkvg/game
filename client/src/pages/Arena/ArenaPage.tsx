@@ -77,6 +77,46 @@ export default function ArenaPage() {
 
   if (!user || !character) return null;
 
+  const equipSets = (character as any).equipment1 !== undefined ? {
+    1: (character as any).equipment1 || {},
+    2: (character as any).equipment2 || {},
+    3: (character as any).equipment3 || {},
+  } : undefined;
+  const activeSlot = (character as any).activeEquipSlot || 1;
+
+  const handleSwitchSet = async (slot: number) => {
+    if (slot === activeSlot) return;
+    try {
+      const res = await fetch('/api/character/switch-equip', {
+        method: 'POST',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slot }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCharacter((prev: any) => {
+          if (!prev) return prev;
+          const newEquipSets: any = {
+            1: prev.equipment1 || {},
+            2: prev.equipment2 || {},
+            3: prev.equipment3 || {},
+          };
+          newEquipSets[activeSlot] = prev.equipment;
+          return {
+            ...prev,
+            equipment: data.equipment,
+            equipment1: newEquipSets[1],
+            equipment2: newEquipSets[2],
+            equipment3: newEquipSets[3],
+            activeEquipSlot: slot,
+          };
+        });
+        // Перезагрузить соперника с новой экипировкой
+        loadOpponent(true, difficulty);
+      }
+    } catch {}
+  };
+
   const isBattleActive = battleSteps.length > 0;
 
   const visibleSteps = battleSteps.slice(
@@ -103,6 +143,9 @@ export default function ArenaPage() {
           showHealButton={false}
           readOnly
           compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
+          equipSets={equipSets}
+          activeEquipSlot={activeSlot}
+          onSwitchSet={handleSwitchSet}
         />
         {opponent && (
           <CharacterCard

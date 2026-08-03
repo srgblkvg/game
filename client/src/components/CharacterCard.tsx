@@ -192,7 +192,7 @@ const CharacterCard = memo(function CharacterCard({
       </div>
 
       {/* Фрейм с фоном и слотами */}
-      {!readOnly && equipSets && onSwitchSet && (
+      {equipSets && onSwitchSet && (
         <div className="flex gap-1 mb-1 justify-center">
           {[1, 2, 3].map(slot => {
             const hasItems = equipSets[slot] && Object.keys(equipSets[slot]).length > 0;
@@ -208,7 +208,7 @@ const CharacterCard = memo(function CharacterCard({
                       : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'
                 }`}
               >
-                {hasItems ? `⚔${slot === 1 ? 'I' : slot === 2 ? 'II' : 'III'}` : `${slot === 1 ? 'I' : slot === 2 ? 'II' : 'III'}`}
+                {slot === 1 ? 'I' : slot === 2 ? 'II' : 'III'}
               </button>
             );
           })}
