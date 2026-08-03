@@ -171,6 +171,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('hpTick', handler as EventListener);
   }, []);
 
+  // factionStats — динамическое обновление очков фракции из serverTick
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { faction, karma, factionCraftCount, banditReputation } = (e as CustomEvent).detail;
+      setCharacter(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          faction: faction ?? prev.faction,
+          karma: karma ?? prev.karma,
+          factionCraftCount: factionCraftCount ?? prev.factionCraftCount,
+          banditReputation: banditReputation ?? prev.banditReputation,
+        };
+      });
+    };
+    window.addEventListener('factionStats', handler as EventListener);
+    return () => window.removeEventListener('factionStats', handler as EventListener);
+  }, []);
+
   // Пересчёт regenHp при изменении character или serverTime
   const frozenHp = useRef<number | null>(null);
   useEffect(() => {

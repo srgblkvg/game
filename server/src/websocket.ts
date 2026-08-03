@@ -221,7 +221,8 @@ export async function setupWebSocket(server: any) {
         `SELECT u.id, u.money, u.bank, u.guildId,
                 u.currentHp, u.lastHpUpdate,
                 COALESCE(u.auction_sales, 0) as auctionSales,
-                COALESCE(u.bank_transfers, 0) as bankTransfers
+                COALESCE(u.bank_transfers, 0) as bankTransfers,
+                u.faction, u.karma, u.faction_craft_count, u.bandit_reputation
          FROM users u WHERE u.id IN (${placeholders})`,
         userIds
       ) as any[];
@@ -280,6 +281,10 @@ export async function setupWebSocket(server: any) {
           payload.lastHpUpdate = stats.lasthpupdate ?? stats.lastHpUpdate ?? 0;
           payload.auctionSales = stats.auctionsales ?? stats.auctionSales ?? 0;
           payload.bankTransfers = stats.banktransfers ?? stats.bankTransfers ?? 0;
+          payload.faction = stats.faction || null;
+          payload.karma = stats.karma || 0;
+          payload.factionCraftCount = stats.faction_craft_count || 0;
+          payload.banditReputation = stats.bandit_reputation || 0;
           if (stats.guildid && tickCount % 3 === 0) {
             const gb = guildBadges.get(stats.guildid) || 0;
             if (gb > 0) payload.guildBadge = gb;

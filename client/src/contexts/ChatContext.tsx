@@ -99,6 +99,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem('bankBadge', String(data.bankTransfers));
                 window.dispatchEvent(new CustomEvent('bankBadge'));
               }
+              // Фракция: очки обновляются динамически
+              if (data.faction !== undefined || data.karma !== undefined) {
+                window.dispatchEvent(new CustomEvent('factionStats', {
+                  detail: {
+                    faction: data.faction ?? null,
+                    karma: data.karma ?? 0,
+                    factionCraftCount: data.factionCraftCount ?? 0,
+                    banditReputation: data.banditReputation ?? 0,
+                  }
+                }));
+              }
               break;
             }
             case 'message': {
