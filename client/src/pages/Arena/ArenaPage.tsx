@@ -117,7 +117,7 @@ export default function ArenaPage() {
             {actionCard && <PageHeader title="Арена" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
       {/* Карточки бойцов */}
-      <div data-battle-arena className="flex justify-between sm:justify-center gap-2 sm:gap-8 my-4 px-1 sm:px-0">
+      <div data-battle-arena className="flex justify-between sm:justify-center items-start gap-2 sm:gap-8 my-4 px-1 sm:px-0">
         <CharacterCard
           char={toCharCardData(character, { currentHp: hpLeft, maxHp: maxHpLeft })}
           side="left"
