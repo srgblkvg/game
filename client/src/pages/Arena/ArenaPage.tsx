@@ -93,25 +93,10 @@ export default function ArenaPage() {
         body: JSON.stringify({ slot }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setCharacter((prev: any) => {
-          if (!prev) return prev;
-          const newEquipSets: any = {
-            1: prev.equipment1 || {},
-            2: prev.equipment2 || {},
-            3: prev.equipment3 || {},
-          };
-          newEquipSets[activeSlot] = prev.equipment;
-          return {
-            ...prev,
-            equipment: data.equipment,
-            equipment1: newEquipSets[1],
-            equipment2: newEquipSets[2],
-            equipment3: newEquipSets[3],
-            activeEquipSlot: slot,
-          };
-        });
-        // Перезагрузить соперника с новой экипировкой
+        // Перезагружаем персонажа полностью для свежих статов
+        const { fetchCharacter } = await import('../../api/character');
+        const fresh = await fetchCharacter();
+        setCharacter(fresh);
         loadOpponent(true, difficulty);
       }
     } catch {}

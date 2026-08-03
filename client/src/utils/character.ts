@@ -10,7 +10,7 @@ export function toCharCardData(
     username: character.username,
     level: character.level,
     exp: character.exp,
-    equipment: character.equipment,
+    equipment: character.equipment || {},
     stats: character.stats,
     gender: character.gender || 'male',
     guildName: character.guildName ?? undefined,

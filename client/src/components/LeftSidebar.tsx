@@ -35,27 +35,9 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         body: JSON.stringify({ slot }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setCharacter((prev: Character | null) => {
-          if (!prev) return prev;
-          // Сохраняем текущий equipment в старый слот, загружаем новый
-          const newEquipSets: any = { ...(prev as any).equipment1 ? {
-            1: (prev as any).equipment1 || {},
-            2: (prev as any).equipment2 || {},
-            3: (prev as any).equipment3 || {},
-          } : undefined };
-          if (newEquipSets[activeSlot] !== undefined) {
-            newEquipSets[activeSlot] = prev.equipment;
-          }
-          return {
-            ...prev,
-            equipment: data.equipment,
-            equipment1: newEquipSets[1],
-            equipment2: newEquipSets[2],
-            equipment3: newEquipSets[3],
-            activeEquipSlot: slot,
-          } as Character;
-        });
+        const { fetchCharacter } = await import('../api/character');
+        const fresh = await fetchCharacter();
+        setCharacter(fresh);
       }
     } catch {}
   };
