@@ -127,9 +127,9 @@ export default function ArenaPage() {
           showHealButton={false}
           readOnly
           compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
-          equipSets={equipSets}
-          activeEquipSlot={activeSlot}
-          onSwitchSet={handleSwitchSet}
+          equipSets={isBattleActive ? undefined : equipSets}
+          activeEquipSlot={isBattleActive ? undefined : activeSlot}
+          onSwitchSet={isBattleActive ? undefined : handleSwitchSet}
         />
         {opponent && (
           <CharacterCard
