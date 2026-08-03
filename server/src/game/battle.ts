@@ -37,7 +37,7 @@ export function dodgeChance(defStats: CharStats, atkStats: CharStats): number {
   const luckBonus = (defStats.luckBoost || 0) / 100;
   return Math.max(0,
     (defW / (defW + 500)) *
-    (1 - atkW / (atkW + 500)) / 1.5 +
+    (1 - atkW / (atkW + 250)) / 1.5 +
     Math.min(0.5, extraDodge / (extraDodge + 300))
   ) + luckBonus;
 }
