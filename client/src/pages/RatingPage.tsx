@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { fetchRating } from '../api/character';
 import { useAuth } from '../contexts/AuthContext';
-import { useGame } from '../contexts/GameContext';
 import Card from '../components/ui/Card';
 import GuildTag from '../components/GuildTag';
 import Button from '../components/ui/Button';
@@ -15,10 +14,6 @@ const SKIP_TOP = 3;
 
 export default function RatingPage() {
     const { user } = useAuth();
-    const { character } = useGame();
-    const levelRange = character?.faction === 'bandit' ? 4 : 2;
-    const minLevel = (character?.level || 0) > 0 ? Math.max(1, (character?.level || 0) - levelRange) : 0;
-    const maxLevel = (character?.level || 0) > 0 ? (character?.level || 0) + levelRange : 0;
     const [players, setPlayers] = useState<any[]>([]);
     const [top3, setTop3] = useState<any[]>([]);
     const [page, setPage] = useState(1);
@@ -72,7 +67,7 @@ export default function RatingPage() {
         let cancelled = false;
         (async () => {
             try {
-                const data = await fetchRating(1, LIMIT, search, minElo, 0, SKIP_TOP, minLevel, maxLevel);
+                const data = await fetchRating(1, LIMIT, search, minElo, 0, SKIP_TOP);
                 if (cancelled) return;
                 setPlayers(data.users);
                 setTotalPages(Math.max(1, Math.ceil((data.total - SKIP_TOP) / LIMIT)));
@@ -90,11 +85,11 @@ export default function RatingPage() {
     // Subsequent loads: pagination, search, filter
     useEffect(() => {
         if (!initialLoadDone.current) return;
-        fetchRating(page, LIMIT, search, minElo, 0, SKIP_TOP, minLevel, maxLevel).then(data => {
+        fetchRating(page, LIMIT, search, minElo, 0, SKIP_TOP).then(data => {
             setPlayers(data.users);
             setTotalPages(Math.max(1, Math.ceil((data.total - SKIP_TOP) / LIMIT)));
         }).catch(console.error);
-    }, [page, search, minElo, minLevel, maxLevel]);
+    }, [page, search, minElo]);
 
     return (
         <div className="max-w-xl mx-auto px-4 py-4">
