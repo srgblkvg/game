@@ -31,10 +31,11 @@ router.get('/character/me', async (req, res) => {
     let inventory = JSON.parse(user.inventory || '[]');
     const activeSlot = user.active_equip_slot || 1;
     const equipKey = `equipment_${activeSlot}`;
-    const equipment = JSON.parse((user as any)[equipKey] || user.equipment || '{}');
-    const equipment1 = JSON.parse(user.equipment_1 || '{}');
-    const equipment2 = JSON.parse(user.equipment_2 || '{}');
-    const equipment3 = JSON.parse(user.equipment_3 || '{}');
+    const parseEq = (v: any) => typeof v === 'string' ? JSON.parse(v || '{}') : (v && typeof v === 'object' ? v : {});
+    const equipment = parseEq((user as any)[equipKey]) || parseEq(user.equipment);
+    const equipment1 = parseEq(user.equipment_1);
+    const equipment2 = parseEq(user.equipment_2);
+    const equipment3 = parseEq(user.equipment_3);
     let changed = false;
 
     inventory = await Promise.all(inventory.map(async (item: any) => {
@@ -297,17 +298,18 @@ router.post('/character/switch-equip', async (req, res) => {
     const oldSlot = user.active_equip_slot || 1;
     if (oldSlot === slot) return res.json({ success: true, activeEquipSlot: slot });
 
-    const currentEquip = user.equipment || '{}';
-    const targetEquip = (user as any)[`equipment_${slot}`] || '{}';
+    const parseEq = (v: any) => typeof v === 'string' ? v : JSON.stringify(v);
+    const parseEqObj = (v: any): Record<string, any> => typeof v === 'string' ? JSON.parse(v || '{}') : (v && typeof v === 'object' ? v : {});
+    const currentEquip = parseEq(user.equipment);
+    const targetEquip = parseEq((user as any)[`equipment_${slot}`]);
 
     // Сохраняем текущий equipment в старый слот, загружаем новый в equipment
     await db.run(
-        `UPDATE users SET equipment_${oldSlot} = ?, equipment = ?, active_equip_slot = ? WHERE id = ?`,
+        `UPDATE users SET equipment_${oldSlot} = ?::jsonb, equipment = ?, active_equip_slot = ? WHERE id = ?`,
         [currentEquip, targetEquip, slot, userId]
     );
 
-    const equipment = JSON.parse(targetEquip);
-    res.json({ success: true, activeEquipSlot: slot, equipment });
+    res.json({ success: true, activeEquipSlot: slot, equipment: parseEqObj(targetEquip) });
 });
 
 // Сохранить экипировку в конкретный слот (без переключения)
@@ -317,7 +319,7 @@ router.post('/character/save-equip-set', async (req, res) => {
     if (![1, 2, 3].includes(slot)) return res.status(400).json({ error: 'Неверный слот' });
 
     await db.run(
-        `UPDATE users SET equipment_${slot} = ? WHERE id = ?`,
+        `UPDATE users SET equipment_${slot} = ?::jsonb WHERE id = ?`,
         [JSON.stringify(equipment), userId]
     );
 
