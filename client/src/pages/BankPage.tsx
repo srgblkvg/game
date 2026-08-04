@@ -114,11 +114,11 @@ export default function BankPage() {
       };
 
       const tiers = [
-        { item: 'silver_10000', amount: 10000, vkPrice: 7, rubPrice: 49, label: '10000 серебра' },
-        { item: 'silver_50000', amount: 50000, vkPrice: 14, rubPrice: 99, label: '50000 серебра' },
-        { item: 'silver_100000', amount: 100000, vkPrice: 28, rubPrice: 199, label: '100000 серебра' },
-        { item: 'silver_500000', amount: 500000, vkPrice: 114, rubPrice: 799, label: '500000 серебра' },
-        { item: 'silver_1000000', amount: 1000000, vkPrice: 200, rubPrice: 1399, label: '1 000 000 серебра' },
+        { item: 'silver_10000', amount: 10000, vkPrice: 7, rubPrice: 49, label: '10 000 в банк' },
+        { item: 'silver_50000', amount: 50000, vkPrice: 14, rubPrice: 99, label: '50 000 в банк' },
+        { item: 'silver_100000', amount: 100000, vkPrice: 28, rubPrice: 199, label: '100 000 в банк' },
+        { item: 'silver_500000', amount: 500000, vkPrice: 114, rubPrice: 799, label: '500 000 в банк' },
+        { item: 'silver_1000000', amount: 1000000, vkPrice: 200, rubPrice: 1399, label: '1 000 000 в банк' },
       ];
 
       const buySilver = (tier: typeof tiers[number]) => {
@@ -131,7 +131,7 @@ export default function BankPage() {
           })
           .then((data: any) => {
             if (data?.status === 'cancelled') { setExchangeMsg(''); setExchangeBuying(false); return; }
-            setExchangeMsg('Оплата открыта. Серебро зачислится автоматически.');
+            setExchangeMsg('Оплата открыта. Серебро зачислится в банк.');
           })
           .catch(() => { setExchangeMsg(''); setExchangeBuying(false); });
         } else {
@@ -147,7 +147,7 @@ export default function BankPage() {
           .then(data => {
             if (data.confirmation_url) {
               window.open(data.confirmation_url, '_blank');
-              setExchangeMsg('Оплата открыта. Серебро зачислится автоматически.');
+              setExchangeMsg('Оплата открыта. Серебро зачислится в банк.');
             } else {
               setExchangeMsg('❌ ' + (data.error || 'Не удалось создать платёж'));
             }
@@ -160,7 +160,7 @@ export default function BankPage() {
       // WS уведомление об успешной оплате
       useEffect(() => {
         const handler = () => {
-          setExchangeMsg('✅ Серебро зачислено в кошелёк!');
+          setExchangeMsg('✅ Серебро зачислено в банк!');
           setExchangeBuying(false);
           loadBank();
         };

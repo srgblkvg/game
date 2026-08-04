@@ -123,7 +123,7 @@ export default function StarterPackPage() {
   useEffect(() => {
     const handler = () => {
       setPurchased(true);
-      setMessage('✅ Стартовый набор получен! Проверьте инвентарь.');
+      setMessage('✅ Стартовый набор получен! Проверьте инвентарь и банк.');
       setBuying(false);
     };
     window.addEventListener('paymentStatus', handler);
@@ -145,7 +145,7 @@ export default function StarterPackPage() {
 
       <h1 className="text-xl font-bold text-center mb-1">🎁 Стартовый набор</h1>
       <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
-        Одноразовый набор для быстрого старта. Включает полный комплект необычной экипировки, редкие материалы для крафта, серебро и премиум.
+        Одноразовый набор для быстрого старта. Включает полный комплект необычной экипировки, редкие материалы для крафта, 10 000 серебра в банк и 7 дней премиума.
       </p>
 
       {purchased ? (
@@ -201,7 +201,7 @@ export default function StarterPackPage() {
 
             {/* Серебро */}
             <div className="mb-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
-              <p className="text-xs text-[var(--color-accent-warning)] mb-1">💰 {formatMoney(10000)}</p>
+              <p className="text-xs text-[var(--color-accent-warning)] mb-1">💰 {formatMoney(10000)} в банк</p>
               <p className="text-[0.6rem] text-[var(--color-text-muted)]">Хватит на первые покупки в магазине или взнос в гильдию.</p>
             </div>
 

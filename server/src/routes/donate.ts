@@ -16,7 +16,7 @@ const ALL_SLOTS = ['weapon1', 'shield', 'helmet', 'chest', 'gloves', 'boots', 'a
 export async function deliverStarterPack(userId: number): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await db.one(
-      'SELECT id, starter_pack_purchased, premiumUntil, inventory, money FROM users WHERE id = ?',
+      'SELECT id, starter_pack_purchased, premiumUntil, inventory, bank FROM users WHERE id = ?',
       [userId]
     ) as any;
 
@@ -76,21 +76,21 @@ export async function deliverStarterPack(userId: number): Promise<{ success: boo
       }
     }
 
-    // 4. Считаем премиум и серебро
+    // 4. Считаем премиум и серебро (в банк)
     const currentPremium = Math.max(user.premiumUntil || 0, now);
     const newPremiumUntil = currentPremium + 7 * 86400; // 7 дней
-    const newMoney = (user.money || 0) + 10000;
+    const newBank = (user.bank || 0) + 10000;
 
     // 5. Атомарное обновление
     await db.run(
-      'UPDATE users SET inventory = ?, money = ?, premiumUntil = ?, starter_pack_purchased = true WHERE id = ?',
-      [JSON.stringify(inventory), newMoney, newPremiumUntil, userId]
+      'UPDATE users SET inventory = ?, bank = ?, premiumUntil = ?, starter_pack_purchased = true WHERE id = ?',
+      [JSON.stringify(inventory), newBank, newPremiumUntil, userId]
     );
 
     // Уведомление
     sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate', until: newPremiumUntil });
 
-    logger.info(`[Donate] Starter pack delivered to user ${userId}: ${packItems.length} items + 4 essences + 10000 silver + 7d premium`);
+    logger.info(`[Donate] Starter pack delivered to user ${userId}: ${packItems.length} items + 4 essences + 10000 silver to bank + 7d premium`);
 
     return { success: true };
   } catch (err: any) {
@@ -99,18 +99,18 @@ export async function deliverStarterPack(userId: number): Promise<{ success: boo
   }
 }
 
-// Выдать серебро игроку (вызывается из payment-колбэков)
+// Выдать серебро игроку в банк (вызывается из payment-колбэков)
 export async function deliverSilver(userId: number, amount: number): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await db.one('SELECT id, money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT id FROM users WHERE id = ?', [userId]) as any;
     if (!user) return { success: false, error: 'Пользователь не найден' };
 
-    await db.run('UPDATE users SET money = money + ? WHERE id = ?', [amount, userId]);
+    await db.run('UPDATE users SET bank = bank + ? WHERE id = ?', [amount, userId]);
 
     // Уведомление
     sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
 
-    logger.info(`[Donate] ${amount} silver delivered to user ${userId}`);
+    logger.info(`[Donate] ${amount} silver delivered to bank of user ${userId}`);
 
     return { success: true };
   } catch (err: any) {
@@ -122,7 +122,7 @@ export async function deliverSilver(userId: number, amount: number): Promise<{ s
 // Выдать сундук с материалами (craft_pack)
 export async function deliverCraftPack(userId: number, packType: 'rare' | 'epic'): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await db.one('SELECT id, inventory, money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT id, inventory, bank FROM users WHERE id = ?', [userId]) as any;
     if (!user) return { success: false, error: 'Пользователь не найден' };
 
     const packs: Record<string, { material: string; matCount: number; stone: string; stoneCount: number; silver: number }> = {
@@ -170,11 +170,11 @@ export async function deliverCraftPack(userId: number, packType: 'rare' | 'epic'
     if (matItem) addStack(matItem, pack.matCount);
     if (stoneItem) addStack(stoneItem, pack.stoneCount);
 
-    const newMoney = (user.money || 0) + pack.silver;
+    const newBank = (user.bank || 0) + pack.silver;
 
     await db.run(
-      'UPDATE users SET inventory = ?, money = ? WHERE id = ?',
-      [JSON.stringify(inventory), newMoney, userId]
+      'UPDATE users SET inventory = ?, bank = ? WHERE id = ?',
+      [JSON.stringify(inventory), newBank, userId]
     );
 
     sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
@@ -253,7 +253,7 @@ export default router;
 // Выдать сундук с кристаллами душ (curse_pack)
 export async function deliverCursePack(userId: number, packType: 'small' | 'large'): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await db.one('SELECT id, inventory, money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT id, inventory, bank FROM users WHERE id = ?', [userId]) as any;
     if (!user) return { success: false, error: 'Пользователь не найден' };
 
     const packs: Record<string, { silver: number; crystals: number }> = {
@@ -292,16 +292,16 @@ export async function deliverCursePack(userId: number, packType: 'small' | 'larg
       }
     }
 
-    const newMoney = (user.money || 0) + pack.silver;
+    const newBank = (user.bank || 0) + pack.silver;
 
     await db.run(
-      'UPDATE users SET inventory = ?, money = ? WHERE id = ?',
-      [JSON.stringify(inventory), newMoney, userId]
+      'UPDATE users SET inventory = ?, bank = ? WHERE id = ?',
+      [JSON.stringify(inventory), newBank, userId]
     );
 
     sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
 
-    logger.info(`[Donate] Curse pack ${packType} delivered to user ${userId}: ${pack.crystals} crystals + ${pack.silver} silver`);
+    logger.info(`[Donate] Curse pack ${packType} delivered to user ${userId}: ${pack.crystals} crystals + ${pack.silver} silver to bank`);
     return { success: true };
   } catch (err: any) {
     logger.error(`[Donate] deliverCursePack error: ${err.message}`);
@@ -365,10 +365,10 @@ export async function deliverRubyRune(userId: number, count: number): Promise<{ 
   }
 }
 
-// Выдать Мега набор ремесленника (7 рун ×200 + 7 материалов ×200 + 20M серебра)
+// Выдать Мега набор ремесленника (7 рун ×200 + 7 материалов ×200 + 20M серебра в банк)
 export async function deliverMegaCraftSet(userId: number): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await db.one('SELECT id, inventory, money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT id, inventory, bank FROM users WHERE id = ?', [userId]) as any;
     if (!user) return { success: false, error: 'Пользователь не найден' };
 
     const runeNames = ['Руна Рубина', 'Руна Топаза', 'Руна Аметиста', 'Руна Сапфира', 'Руна Изумруда', 'Рунный булыжник', 'Рунный белокамень'];
@@ -406,16 +406,16 @@ export async function deliverMegaCraftSet(userId: number): Promise<{ success: bo
       deliveredCount++;
     }
 
-    const newMoney = (user.money || 0) + 20_000_000;
+    const newBank = (user.bank || 0) + 20_000_000;
 
     await db.run(
-      'UPDATE users SET inventory = ?, money = ? WHERE id = ?',
-      [JSON.stringify(inventory), newMoney, userId]
+      'UPDATE users SET inventory = ?, bank = ? WHERE id = ?',
+      [JSON.stringify(inventory), newBank, userId]
     );
 
     sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
 
-    logger.info(`[Donate] Mega craft set delivered to user ${userId}: ${deliveredCount} item types ×200 + 20M silver`);
+    logger.info(`[Donate] Mega craft set delivered to user ${userId}: ${deliveredCount} item types ×200 + 20M silver to bank`);
     return { success: true };
   } catch (err: any) {
     logger.error(`[Donate] deliverMegaCraftSet error: ${err.message}`);

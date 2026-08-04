@@ -28,14 +28,14 @@ const PACKS = [
     material: 'Сердцевина бездны ×5', materialImg: '/fragment/fragment_purple.webp',
     stones: 'Рунный булыжник ×6', stoneImg: '/stone/stoneUpgrade_gray.webp',
     silver: 10000,
-    desc: 'Материалы для крафта случайного эпического предмета (шанс 70%)',
+    desc: 'Материалы для крафта случайного эпического предмета (шанс 70%). +10 000 в банк',
   },
   {
     item: 'craft_epic', title: 'Большой рунный набор', vkPrice: 28, rubPrice: 199,
     material: 'Искра погибели ×5', materialImg: '/fragment/fragment_yellow.webp',
     stones: 'Рунный булыжник ×10', stoneImg: '/stone/stoneUpgrade_gray.webp',
     silver: 30000,
-    desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%)',
+    desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%). +30 000 в банк',
   },
   {
     item: 'ruby_rune_1', title: 'Набор рун', vkPrice: 57, rubPrice: 399,
@@ -68,13 +68,13 @@ const PACKS = [
     item: 'curse_small', title: 'Сундук «Проклятый»', vkPrice: 144, rubPrice: 999,
     curse: true, crystals: 5, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
     silver: 500000,
-    desc: '5 Кристаллов душ для проклятия предметов',
+    desc: '5 Кристаллов душ для проклятия предметов. +500 000 в банк',
   },
   {
     item: 'curse_large', title: 'Сундук «Проклятый II»', vkPrice: 258, rubPrice: 1799,
     curse: true, crystals: 10, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
     silver: 1000000,
-    desc: '10 Кристаллов душ для проклятия предметов',
+    desc: '10 Кристаллов душ для проклятия предметов. +1 000 000 в банк',
   },
   {
     item: 'mega_craft', title: 'Мега набор ремесленника', vkPrice: 11000, rubPrice: 79999,
@@ -91,7 +91,7 @@ const PACKS = [
       { img: '/fragment/fragment_red.webp', label: 'Слеза' },
     ],
     extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
-    desc: '7 рун ×200 + 7 материалов ×200 + 20M серебра',
+    desc: '7 рун ×200 + 7 материалов ×200 + 20M в банк',
   },
 ];
 
@@ -112,7 +112,7 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
       (window as any).vkBridge?.send('VKWebAppShowOrderBox', { type: 'item', item: pack.item })
       .then((data: any) => {
         if (data?.status === 'cancelled') { setPackBuying(false); return; }
-        setPackMsg('Оплата открыта. Материалы поступят в инвентарь.');
+        setPackMsg('Оплата открыта. Материалы поступят в инвентарь, серебро — в банк.');
       })
       .catch(() => setPackBuying(false));
     } else {
@@ -126,7 +126,7 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
       .then(data => {
         if (data.confirmation_url) {
           window.open(data.confirmation_url, '_blank');
-          setPackMsg('Оплата открыта. Материалы поступят в инвентарь.');
+          setPackMsg('Оплата открыта. Материалы поступят в инвентарь, серебро — в банк.');
         } else {
           setPackMsg('❌ ' + (data.error || 'Ошибка'));
         }
