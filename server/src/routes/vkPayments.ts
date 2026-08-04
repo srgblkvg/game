@@ -49,7 +49,7 @@ const ITEMS: Record<string, VkItem> = {
   ruby_rune_1:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×1', price: 57,  type: 'rune_pack', count: 1 },
   ruby_rune_3:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×3', price: 144, type: 'rune_pack', count: 3 },
   ruby_rune_5:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×5', price: 214, type: 'rune_pack', count: 5 },
-  mega_craft:    { title: 'Мега набор ремесленника (7 рун + 7 материалов ×200 + 20M)', price: 11000, type: 'mega_craft' },
+  mega_craft:    { title: 'Мега набор ремесленника (7 рун + 7 материалов x200 + 20M)', price: 11000, type: 'mega_craft' },
 };
 
 // Проверка подписи запроса от VK
