@@ -160,8 +160,13 @@ export default function FactionPage() {
                     {data?.changeCost && (
                         <div className="mt-3 pt-2 border-t border-[var(--color-border-light)]">
                             <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">
-                                Смена фракции: {data.changeCost.toLocaleString()} серебра (карма, ремесленный опыт и репутация будут утеряны)
+                                Смена фракции: {data.changeCost.toLocaleString()} серебра (очки фракции сохранятся). КД смены — 7 дней.
                             </p>
+                            {data.changeCooldownSec > 0 && (
+                                <p className="text-[0.65rem] text-[var(--color-accent-warning)] mb-2">
+                                    ⏳ Смена будет доступна через {Math.ceil(data.changeCooldownSec / 86400)} дн.
+                                </p>
+                            )}
                             {message && <p className="text-xs text-[var(--color-accent-danger)] mb-2">{message}</p>}
                             <div className="flex flex-wrap gap-2">
                                 {Object.entries(FACTIONS).filter(([k]) => k !== currentFaction).map(([key, info]) => (
@@ -170,7 +175,7 @@ export default function FactionPage() {
                                         variant="secondary"
                                         size="sm"
                                         onClick={() => setChangeTarget(key)}
-                                        disabled={loading}
+                                        disabled={loading || !data.canChange}
                                     >
                                         {loading ? '...' : `В ${info.name}`}
                                     </Button>
@@ -253,10 +258,10 @@ export default function FactionPage() {
                         </span>.
                     </p>
                     <div className="bg-[var(--color-bg-input)] rounded p-3 text-xs space-y-1">
-                        <p className="font-bold text-[var(--color-accent-warning)]">⚠️ Внимание:</p>
+                        <p className="font-bold text-[var(--color-accent-info)]">ℹ️ Информация:</p>
                         <p>• Стоимость смены: <span className="font-bold">{data?.changeCost?.toLocaleString() || '10 000'} серебра</span></p>
-                        <p>• Карма, ремесленный опыт и репутация будут <span className="text-[var(--color-accent-danger)]">безвозвратно утеряны</span></p>
-                        <p>• Все счётчики фракции обнулятся</p>
+                        <p>• Очки фракции (карьера, опыт, репутация) <span className="text-[var(--color-accent-success)]">сохраняются</span></p>
+                        <p>• Повторная смена будет доступна через <span className="font-bold">7 дней</span></p>
                     </div>
                     <div className="flex gap-2 justify-end pt-2">
                         <Button variant="secondary" size="md" onClick={() => setChangeTarget(null)} disabled={loading}>

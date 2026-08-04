@@ -12,11 +12,12 @@ const FACTIONS = {
 type Faction = keyof typeof FACTIONS;
 
 const CHANGE_COST = 10000;
+const CHANGE_COOLDOWN = 7 * 86400; // 7 дней в секундах
 
 // Получить инфо о фракциях и текущую фракцию игрока
 router.get('/faction', async (req, res) => {
     const userId = req.userId;
-    const user = await db.one('SELECT faction, level, money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT faction, level, money, faction_changed_at FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     // Количество участников по фракциям
@@ -26,13 +27,20 @@ router.get('/faction', async (req, res) => {
         if (memberCounts.hasOwnProperty(row.faction)) memberCounts[row.faction] = Number(row.cnt);
     }
 
+    const now = Math.floor(Date.now() / 1000);
+    const lastChange = user.faction_changed_at || 0;
+    const cooldownRemaining = Math.max(0, CHANGE_COOLDOWN - (now - lastChange));
+    const canChange = !!user.faction && user.money >= CHANGE_COST && cooldownRemaining === 0;
+
     res.json({
         factions: FACTIONS,
         current: user.faction || null,
         canChoose: (user.level || 0) >= 5 && !user.faction,
         memberCounts,
         changeCost: CHANGE_COST,
-        canChange: !!user.faction && user.money >= CHANGE_COST,
+        canChange,
+        factionChangedAt: lastChange || null,
+        changeCooldownSec: cooldownRemaining,
     });
 });
 
@@ -70,12 +78,13 @@ router.post('/faction/choose', async (req, res) => {
         return res.status(400).json({ error: 'Фракция уже выбрана. Используйте /api/faction/change для смены.' });
     }
 
-    await db.run('UPDATE users SET faction = ? WHERE id = ?', [faction, userId]);
+    const now = Math.floor(Date.now() / 1000);
+    await db.run('UPDATE users SET faction = ?, faction_changed_at = ? WHERE id = ?', [faction, now, userId]);
 
     res.json({ success: true, faction, ...FACTIONS[faction as Faction] });
 });
 
-// Сменить фракцию (платно)
+// Сменить фракцию (платно, без сброса очков, КД 7 дней)
 router.post('/faction/change', async (req, res) => {
     const userId = req.userId;
     const { faction } = req.body;
@@ -84,7 +93,7 @@ router.post('/faction/change', async (req, res) => {
         return res.status(400).json({ error: 'Неизвестная фракция. Доступны: bandit, crafter, guard' });
     }
 
-    const user = await db.one('SELECT faction, level, money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT faction, level, money, faction_changed_at FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     if (!user.faction) {
@@ -99,9 +108,19 @@ router.post('/faction/change', async (req, res) => {
         return res.status(400).json({ error: `Недостаточно серебра. Нужно ${CHANGE_COST.toLocaleString()}.` });
     }
 
+    const now = Math.floor(Date.now() / 1000);
+    const lastChange = user.faction_changed_at || 0;
+    const cooldownRemaining = CHANGE_COOLDOWN - (now - lastChange);
+
+    if (cooldownRemaining > 0) {
+        const days = Math.ceil(cooldownRemaining / 86400);
+        return res.status(400).json({ error: `Смена фракции будет доступна через ${days} дн.` });
+    }
+
+    // Смена без сброса очков фракции
     await db.run(
-        'UPDATE users SET faction = ?, money = money - ?, karma = 0, faction_craft_count = 0, bandit_reputation = 0 WHERE id = ?',
-        [faction, CHANGE_COST, userId]
+        'UPDATE users SET faction = ?, money = money - ?, faction_changed_at = ? WHERE id = ?',
+        [faction, CHANGE_COST, now, userId]
     );
 
     res.json({ success: true, faction, cost: CHANGE_COST, ...FACTIONS[faction as Faction] });
