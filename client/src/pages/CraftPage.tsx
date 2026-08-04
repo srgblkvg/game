@@ -76,6 +76,23 @@ const PACKS = [
     silver: 1000000,
     desc: '10 Кристаллов душ для проклятия предметов',
   },
+  {
+    item: 'mega_craft', title: 'Мега набор ремесленника', vkPrice: 11000, rubPrice: 79999,
+    mega: true, silver: 20000000,
+    runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста' },
+    ],
+    extraItems: 'Сапфира, Изумруда, Рунный булыжник, Рунный белокамень',
+    materials: [
+      { img: '/fragment/fragment_purple.webp', label: 'Сердцевина' },
+      { img: '/fragment/fragment_yellow.webp', label: 'Искра' },
+      { img: '/fragment/fragment_red.webp', label: 'Слеза' },
+    ],
+    extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
+    desc: '7 рун ×200 + 7 материалов ×200 + 20M серебра',
+  },
 ];
 
 function CraftPacks({ isVK }: { isVK: boolean }) {
@@ -134,7 +151,7 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
         <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">◀</button>
         <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 px-4 snap-x snap-mandatory scrollbar-none">
       {PACKS.map(p => {
-        const borderColor = p.curse ? '#e74c3c' : p.rune ? '#c0392b' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
+        const borderColor = p.curse ? '#e74c3c' : p.mega ? '#f39c12' : p.rune ? '#c0392b' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
         return (
         <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col flex-shrink-0 w-[220px] snap-start"
           style={{ borderColor }}>
@@ -146,6 +163,27 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
                   <img src={`https://mmoarena.ru${p.crystalImg}`} alt="" className="w-4 h-4 object-contain" />
                 </div>
                 Кристалл душ ×{p.crystals}
+              </div>
+            ) : 'mega' in p ? (
+              <div className="space-y-1">
+                <p className="font-semibold text-[0.65rem]">Руны ×200:</p>
+                <div className="flex flex-wrap gap-1">
+                  {p.runeImgs?.map((r: { img: string; label: string }, i: number) => (
+                    <div key={i} className="w-5 h-5 bg-[var(--color-bg-input)] rounded flex items-center justify-center" title={r.label}>
+                      <img src={`https://mmoarena.ru${r.img}`} alt="" className="w-3.5 h-3.5 object-contain" />
+                    </div>
+                  ))}
+                  <span className="text-[0.6rem] text-[var(--color-text-muted)]">+4</span>
+                </div>
+                <p className="font-semibold text-[0.65rem]">Материалы ×200:</p>
+                <div className="flex flex-wrap gap-1">
+                  {p.materials?.map((m: { img: string; label: string }, i: number) => (
+                    <div key={i} className="w-5 h-5 bg-[var(--color-bg-input)] rounded flex items-center justify-center" title={m.label}>
+                      <img src={`https://mmoarena.ru${m.img}`} alt="" className="w-3.5 h-3.5 object-contain" />
+                    </div>
+                  ))}
+                  <span className="text-[0.6rem] text-[var(--color-text-muted)]">+4</span>
+                </div>
               </div>
             ) : 'rune' in p ? (
               <div className="space-y-1">
