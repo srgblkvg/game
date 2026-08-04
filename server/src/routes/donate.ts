@@ -422,3 +422,61 @@ export async function deliverMegaCraftSet(userId: number): Promise<{ success: bo
     return { success: false, error: err.message };
   }
 }
+
+// Выдать Большой набор ремесленника (7 рун ×100 + 7 материалов ×100 + 10M серебра в банк)
+export async function deliverLargeCraftSet(userId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await db.one('SELECT id, inventory, bank FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return { success: false, error: 'Пользователь не найден' };
+
+    const runeNames = ['Руна Рубина', 'Руна Топаза', 'Руна Аметиста', 'Руна Сапфира', 'Руна Изумруда', 'Рунный булыжник', 'Рунный белокамень'];
+    const materialNames = ['Пыль забвения', 'Осколок скорби', 'Фрагмент ужаса', 'Эссенция мрака', 'Сердцевина бездны', 'Искра погибели', 'Слеза вечности'];
+    const allNames = [...runeNames, ...materialNames];
+
+    const inventory = JSON.parse(user.inventory || '[]');
+    let deliveredCount = 0;
+
+    for (const name of allNames) {
+      const item = await db.one(
+        "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?",
+        [name]
+      ) as any;
+      if (!item) { logger.warn(`[Donate] large_craft: item not found: ${name}`); continue; }
+
+      const existing = inventory.find((i: any) =>
+        (i.type === 'craft_item' || i.type === 'material') && i.id === item.id
+      );
+      if (existing) {
+        existing.count = (existing.count || 0) + 100;
+      } else {
+        inventory.push({
+          type: 'craft_item',
+          id: item.id,
+          name: item.name,
+          rarity_id: item.rarity_id,
+          rarity_display: item.rarity_display,
+          rarity_color: item.rarity_color,
+          count: 100,
+          itemType: item.type || 'upgrade',
+          image: item.image || null,
+        });
+      }
+      deliveredCount++;
+    }
+
+    const newBank = (user.bank || 0) + 10_000_000;
+
+    await db.run(
+      'UPDATE users SET inventory = ?, bank = ? WHERE id = ?',
+      [JSON.stringify(inventory), newBank, userId]
+    );
+
+    sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
+
+    logger.info(`[Donate] Large craft set delivered to user ${userId}: ${deliveredCount} item types ×100 + 10M silver to bank`);
+    return { success: true };
+  } catch (err: any) {
+    logger.error(`[Donate] deliverLargeCraftSet error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}

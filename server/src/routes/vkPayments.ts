@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 
@@ -50,6 +50,7 @@ const ITEMS: Record<string, VkItem> = {
   ruby_rune_3:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×3', price: 144, type: 'rune_pack', count: 3 },
   ruby_rune_5:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×5', price: 214, type: 'rune_pack', count: 5 },
   mega_craft:    { title: 'Мега набор ремесленника (7 рун + 7 материалов x200 + 20M)', price: 11000, type: 'mega_craft' },
+  large_craft:   { title: 'Большой набор ремесленника (7 рун + 7 материалов x100 + 10M)', price: 7500, type: 'mega_craft' },
 };
 
 // Проверка подписи запроса от VK
@@ -181,7 +182,9 @@ router.post('/', async (req: Request, res: Response) => {
           }
           processed = true;
         } else if (item.type === 'mega_craft') {
-          const result = await deliverMegaCraftSet(character.id);
+          const result = itemName === 'large_craft'
+            ? await deliverLargeCraftSet(character.id)
+            : await deliverMegaCraftSet(character.id);
           if (!result.success) {
             return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
           }

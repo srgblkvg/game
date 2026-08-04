@@ -93,6 +93,23 @@ const PACKS = [
     extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
     desc: '7 рун ×200 + 7 материалов ×200 + 20M в банк',
   },
+  {
+    item: 'large_craft', title: 'Большой набор ремесленника', vkPrice: 7500, rubPrice: 52999,
+    mega: true, silver: 10000000,
+    runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста' },
+    ],
+    extraItems: 'Сапфира, Изумруда, Рунный булыжник, Рунный белокамень',
+    materials: [
+      { img: '/fragment/fragment_purple.webp', label: 'Сердцевина' },
+      { img: '/fragment/fragment_yellow.webp', label: 'Искра' },
+      { img: '/fragment/fragment_red.webp', label: 'Слеза' },
+    ],
+    extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
+    desc: '7 рун ×100 + 7 материалов ×100 + 10M в банк',
+  },
 ];
 
 function CraftPacks({ isVK }: { isVK: boolean }) {
