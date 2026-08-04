@@ -39,8 +39,12 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
         const newHp = recalcHpOnEquip(user.currentHp, oldMaxHp, newMaxHp);
 
         const now = Math.floor(Date.now() / 1000);
+        const activeSlot = user.active_equip_slot || 1;
         await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
             [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
+        // Синхронизируем с активным equipment_N
+        await db.run(`UPDATE users SET equipment_${activeSlot} = ?::jsonb WHERE id = ?`,
+            [JSON.stringify(equipment), userId]);
         return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
     }
 
@@ -84,8 +88,12 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
     const newHp = recalcHpOnEquip(user.currentHp, oldStats.hp, newMaxHp);
 
     const now = Math.floor(Date.now() / 1000);
+    const activeSlot = user.active_equip_slot || 1;
     await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
         [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
+    // Синхронизируем с активным equipment_N
+    await db.run(`UPDATE users SET equipment_${activeSlot} = ?::jsonb WHERE id = ?`,
+        [JSON.stringify(equipment), userId]);
 
     res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
 });
