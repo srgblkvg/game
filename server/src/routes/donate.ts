@@ -527,3 +527,51 @@ export async function deliverRuneStonePack(userId: number): Promise<{ success: b
     return { success: false, error: err.message };
   }
 }
+
+// Выдать Рунный набор ×200 (1000 сердцевин + 1200 булыжников + 2M серебра в банк)
+export async function deliverCraftRare200(userId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await db.one('SELECT id, inventory, bank FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return { success: false, error: 'Пользователь не найден' };
+
+    const names = ['Сердцевина бездны', 'Рунный булыжник'];
+    const counts = [1000, 1200];
+    const inventory = JSON.parse(user.inventory || '[]');
+
+    for (let i = 0; i < names.length; i++) {
+      const item = await db.one(
+        "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?",
+        [names[i]]
+      ) as any;
+      if (!item) { logger.warn(`[Donate] craft_rare_200: item not found: ${names[i]}`); continue; }
+
+      const existing = inventory.find((i: any) =>
+        (i.type === 'craft_item' || i.type === 'material') && i.id === item.id
+      );
+      if (existing) {
+        existing.count = (existing.count || 0) + counts[i];
+      } else {
+        inventory.push({
+          type: 'craft_item', id: item.id, name: item.name,
+          rarity_id: item.rarity_id, rarity_display: item.rarity_display, rarity_color: item.rarity_color,
+          count: counts[i], itemType: item.type || 'craft', image: item.image || null,
+        });
+      }
+    }
+
+    const newBank = (user.bank || 0) + 2_000_000;
+
+    await db.run(
+      'UPDATE users SET inventory = ?, bank = ? WHERE id = ?',
+      [JSON.stringify(inventory), newBank, userId]
+    );
+
+    sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
+
+    logger.info(`[Donate] Craft rare ×200 delivered to user ${userId}: 1000 cores + 1200 stones + 2M silver to bank`);
+    return { success: true };
+  } catch (err: any) {
+    logger.error(`[Donate] deliverCraftRare200 error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}

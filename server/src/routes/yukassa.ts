@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { YooKassa, CurrencyEnum } from 'yookassa-sdk';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
-import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet, deliverRuneStonePack } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet, deliverRuneStonePack, deliverCraftRare200 } from './donate';
 import logger from '../logger';
 import { sendPaymentReceipt } from '../email';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
@@ -55,6 +55,7 @@ const ITEMS: Record<string, ShopItem> = {
   mega_craft:    { title: 'Мега набор ремесленника (7 рун + 7 материалов x200 + 20M)', price: 79999, type: 'mega_craft' },
   large_craft:   { title: 'Большой набор ремесленника (7 рун + 7 материалов x100 + 10M)', price: 52999, type: 'mega_craft' },
   rune_stone:    { title: 'Мега набор рунного булыжника (200 булыжников + 200 сердцевин + 20M)', price: 37999, type: 'mega_craft' },
+  craft_rare_200:{ title: 'Рунный набор ×200 (1000 сердцевин + 1200 булыжников + 2M)', price: 19999, type: 'mega_craft' },
 };
 
 // Старые тарифы (по дням) для обратной совместимости
@@ -191,6 +192,8 @@ async function processDelivery(userId: number, itemType: string, days: number, s
       ? await deliverLargeCraftSet(userId)
       : itemKey === 'rune_stone'
       ? await deliverRuneStonePack(userId)
+      : itemKey === 'craft_rare_200'
+      ? await deliverCraftRare200(userId)
       : await deliverMegaCraftSet(userId);
     if (!result.success) throw new Error(result.error || 'Delivery failed');
   }

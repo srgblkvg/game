@@ -38,11 +38,11 @@ const PACKS = [
     desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%). +30 000 в банк',
   },
   {
-    item: 'rune_stone', title: 'Мега набор рунного булыжника', vkPrice: 5500, rubPrice: 37999,
-    craft: true, silver: 20000000,
-    material: 'Сердцевина бездны ×200', materialImg: '/fragment/fragment_purple.webp',
-    stones: 'Рунный булыжник ×200', stoneImg: '/stone/stoneUpgrade_gray.webp',
-    desc: '200 булыжников + 200 сердцевин + 20M в банк',
+    item: 'craft_rare_200', title: 'Рунный набор ×200', vkPrice: 2800, rubPrice: 19999,
+    craft: true, silver: 2000000,
+    material: 'Сердцевина бездны ×1000', materialImg: '/fragment/fragment_purple.webp',
+    stones: 'Рунный булыжник ×1200', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    desc: '1000 сердцевин + 1200 булыжников + 2M в банк',
   },
   {
     item: 'ruby_rune_1', title: 'Набор рун', vkPrice: 57, rubPrice: 399,
@@ -82,6 +82,13 @@ const PACKS = [
     curse: true, crystals: 10, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
     silver: 1000000,
     desc: '10 Кристаллов душ для проклятия предметов. +1 000 000 в банк',
+  },
+  {
+    item: 'rune_stone', title: 'Мега набор рунного булыжника', vkPrice: 5500, rubPrice: 37999,
+    craft: true, silver: 20000000,
+    material: 'Сердцевина бездны ×200', materialImg: '/fragment/fragment_purple.webp',
+    stones: 'Рунный булыжник ×200', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    desc: '200 булыжников + 200 сердцевин + 20M в банк',
   },
   {
     item: 'large_craft', title: 'Большой набор ремесленника', vkPrice: 7500, rubPrice: 52999,
