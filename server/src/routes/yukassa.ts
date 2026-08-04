@@ -54,7 +54,7 @@ const ITEMS: Record<string, ShopItem> = {
   ruby_rune_5:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×5', price: 1499, type: 'rune_pack', runeCount: 5 },
   mega_craft:    { title: 'Мега набор ремесленника (7 рун + 7 материалов x200 + 20M)', price: 79999, type: 'mega_craft' },
   large_craft:   { title: 'Большой набор ремесленника (7 рун + 7 материалов x100 + 10M)', price: 52999, type: 'mega_craft' },
-  rune_stone:    { title: 'Набор рунного булыжника (200 булыжников + 200 сердцевин + 20M)', price: 37999, type: 'mega_craft' },
+  rune_stone:    { title: 'Мега набор рунного булыжника (200 булыжников + 200 сердцевин + 20M)', price: 37999, type: 'mega_craft' },
 };
 
 // Старые тарифы (по дням) для обратной совместимости

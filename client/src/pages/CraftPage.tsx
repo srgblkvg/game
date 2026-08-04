@@ -38,6 +38,13 @@ const PACKS = [
     desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%). +30 000 в банк',
   },
   {
+    item: 'rune_stone', title: 'Мега набор рунного булыжника', vkPrice: 5500, rubPrice: 37999,
+    craft: true, silver: 20000000,
+    material: 'Сердцевина бездны ×200', materialImg: '/fragment/fragment_purple.webp',
+    stones: 'Рунный булыжник ×200', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    desc: '200 булыжников + 200 сердцевин + 20M в банк',
+  },
+  {
     item: 'ruby_rune_1', title: 'Набор рун', vkPrice: 57, rubPrice: 399,
     rune: true, count: 1, runeImgs: [
       { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
@@ -63,13 +70,6 @@ const PACKS = [
       { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
     ],
     desc: 'Руны для улучшения предметов',
-  },
-  {
-    item: 'rune_stone', title: 'Набор рунного булыжника', vkPrice: 5500, rubPrice: 37999,
-    craft: true, silver: 20000000,
-    material: 'Сердцевина бездны ×200', materialImg: '/fragment/fragment_purple.webp',
-    stones: 'Рунный булыжник ×200', stoneImg: '/stone/stoneUpgrade_gray.webp',
-    desc: '200 булыжников + 200 сердцевин + 20M в банк',
   },
   {
     item: 'curse_small', title: 'Сундук «Проклятый»', vkPrice: 144, rubPrice: 999,
