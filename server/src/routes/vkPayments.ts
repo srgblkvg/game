@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune } from './donate';
+import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 
@@ -27,7 +27,7 @@ const APP_SECRET = process.env.VK_APP_SECRET || '';
 interface VkItem {
   title: string;
   price: number;
-  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack' | 'curse_pack' | 'rune_pack';
+  type: 'premium' | 'starter_pack' | 'silver' | 'craft_pack' | 'curse_pack' | 'rune_pack' | 'mega_craft';
   days?: number;
   amount?: number;
   count?: number;
@@ -49,6 +49,7 @@ const ITEMS: Record<string, VkItem> = {
   ruby_rune_1:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×1', price: 57,  type: 'rune_pack', count: 1 },
   ruby_rune_3:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×3', price: 144, type: 'rune_pack', count: 3 },
   ruby_rune_5:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×5', price: 214, type: 'rune_pack', count: 5 },
+  mega_craft:    { title: 'Мега набор ремесленника (7 рун + 7 материалов ×200 + 20M)', price: 11000, type: 'mega_craft' },
 };
 
 // Проверка подписи запроса от VK
@@ -175,6 +176,12 @@ router.post('/', async (req: Request, res: Response) => {
           processed = true;
         } else if (item.type === 'rune_pack') {
           const result = await deliverRubyRune(character.id, item.count || 1);
+          if (!result.success) {
+            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          }
+          processed = true;
+        } else if (item.type === 'mega_craft') {
+          const result = await deliverMegaCraftSet(character.id);
           if (!result.success) {
             return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
           }
