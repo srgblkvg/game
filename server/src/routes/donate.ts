@@ -480,3 +480,50 @@ export async function deliverLargeCraftSet(userId: number): Promise<{ success: b
     return { success: false, error: err.message };
   }
 }
+
+// Выдать Набор рунного булыжника (200 булыжников + 200 сердцевин + 20M серебра в банк)
+export async function deliverRuneStonePack(userId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await db.one('SELECT id, inventory, bank FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return { success: false, error: 'Пользователь не найден' };
+
+    const names = ['Рунный булыжник', 'Сердцевина бездны'];
+    const inventory = JSON.parse(user.inventory || '[]');
+
+    for (const name of names) {
+      const item = await db.one(
+        "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?",
+        [name]
+      ) as any;
+      if (!item) { logger.warn(`[Donate] rune_stone: item not found: ${name}`); continue; }
+
+      const existing = inventory.find((i: any) =>
+        (i.type === 'craft_item' || i.type === 'material') && i.id === item.id
+      );
+      if (existing) {
+        existing.count = (existing.count || 0) + 200;
+      } else {
+        inventory.push({
+          type: 'craft_item', id: item.id, name: item.name,
+          rarity_id: item.rarity_id, rarity_display: item.rarity_display, rarity_color: item.rarity_color,
+          count: 200, itemType: item.type || 'upgrade', image: item.image || null,
+        });
+      }
+    }
+
+    const newBank = (user.bank || 0) + 20_000_000;
+
+    await db.run(
+      'UPDATE users SET inventory = ?, bank = ? WHERE id = ?',
+      [JSON.stringify(inventory), newBank, userId]
+    );
+
+    sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'donate' });
+
+    logger.info(`[Donate] Rune stone pack delivered to user ${userId}: 200 rune stones + 200 cores + 20M silver to bank`);
+    return { success: true };
+  } catch (err: any) {
+    logger.error(`[Donate] deliverRuneStonePack error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}

@@ -65,6 +65,13 @@ const PACKS = [
     desc: 'Руны для улучшения предметов',
   },
   {
+    item: 'rune_stone', title: 'Набор рунного булыжника', vkPrice: 5500, rubPrice: 37999,
+    craft: true, silver: 20000000,
+    material: 'Сердцевина бездны ×200', materialImg: '/fragment/fragment_purple.webp',
+    stones: 'Рунный булыжник ×200', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    desc: '200 булыжников + 200 сердцевин + 20M в банк',
+  },
+  {
     item: 'curse_small', title: 'Сундук «Проклятый»', vkPrice: 144, rubPrice: 999,
     curse: true, crystals: 5, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
     silver: 500000,
