@@ -77,25 +77,8 @@ const PACKS = [
     desc: '10 Кристаллов душ для проклятия предметов. +1 000 000 в банк',
   },
   {
-    item: 'mega_craft', title: 'Мега набор ремесленника', vkPrice: 11000, rubPrice: 79999,
-    mega: true, silver: 20000000,
-    runeImgs: [
-      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
-      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
-      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста' },
-    ],
-    extraItems: 'Сапфира, Изумруда, Рунный булыжник, Рунный белокамень',
-    materials: [
-      { img: '/fragment/fragment_purple.webp', label: 'Сердцевина' },
-      { img: '/fragment/fragment_yellow.webp', label: 'Искра' },
-      { img: '/fragment/fragment_red.webp', label: 'Слеза' },
-    ],
-    extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
-    desc: '7 рун ×200 + 7 материалов ×200 + 20M в банк',
-  },
-  {
     item: 'large_craft', title: 'Большой набор ремесленника', vkPrice: 7500, rubPrice: 52999,
-    mega: true, silver: 10000000,
+    mega: true, silver: 10000000, count: 100,
     runeImgs: [
       { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
       { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
@@ -109,6 +92,23 @@ const PACKS = [
     ],
     extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
     desc: '7 рун ×100 + 7 материалов ×100 + 10M в банк',
+  },
+  {
+    item: 'mega_craft', title: 'Мега набор ремесленника', vkPrice: 11000, rubPrice: 79999,
+    mega: true, silver: 20000000, count: 200,
+    runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста' },
+    ],
+    extraItems: 'Сапфира, Изумруда, Рунный булыжник, Рунный белокамень',
+    materials: [
+      { img: '/fragment/fragment_purple.webp', label: 'Сердцевина' },
+      { img: '/fragment/fragment_yellow.webp', label: 'Искра' },
+      { img: '/fragment/fragment_red.webp', label: 'Слеза' },
+    ],
+    extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
+    desc: '7 рун ×200 + 7 материалов ×200 + 20M в банк',
   },
 ];
 
@@ -183,7 +183,7 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
               </div>
             ) : 'mega' in p ? (
               <div className="space-y-1">
-                <p className="font-semibold text-[0.65rem]">Руны ×200:</p>
+                <p className="font-semibold text-[0.65rem]">Руны ×{p.count}:</p>
                 <div className="flex flex-wrap gap-1">
                   {p.runeImgs?.map((r: { img: string; label: string }, i: number) => (
                     <div key={i} className="w-5 h-5 bg-[var(--color-bg-input)] rounded flex items-center justify-center" title={r.label}>
@@ -192,7 +192,7 @@ function CraftPacks({ isVK }: { isVK: boolean }) {
                   ))}
                   <span className="text-[0.6rem] text-[var(--color-text-muted)]">+4</span>
                 </div>
-                <p className="font-semibold text-[0.65rem]">Материалы ×200:</p>
+                <p className="font-semibold text-[0.65rem]">Материалы ×{p.count}:</p>
                 <div className="flex flex-wrap gap-1">
                   {p.materials?.map((m: { img: string; label: string }, i: number) => (
                     <div key={i} className="w-5 h-5 bg-[var(--color-bg-input)] rounded flex items-center justify-center" title={m.label}>
