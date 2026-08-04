@@ -452,9 +452,9 @@ router.post('/auction/buyout', async (req, res) => {
     const commission = Math.floor(lot.buyoutPrice * 0.1);
     const payout = lot.buyoutPrice - commission;
 
-    // Возврат предыдущему лидеру
+    // Возврат предыдущему лидеру — на склад
     if (lot.currentBidderId) {
-        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
+        await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
     }
 
     const itemData = JSON.parse(lot.itemData);
