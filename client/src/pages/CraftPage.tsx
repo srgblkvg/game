@@ -84,13 +84,6 @@ const PACKS = [
     desc: '10 Кристаллов душ для проклятия предметов. +1 000 000 в банк',
   },
   {
-    item: 'rune_stone', title: 'Мега набор рунного булыжника', vkPrice: 5500, rubPrice: 37999,
-    craft: true, silver: 20000000,
-    material: 'Сердцевина бездны ×200', materialImg: '/fragment/fragment_purple.webp',
-    stones: 'Рунный булыжник ×200', stoneImg: '/stone/stoneUpgrade_gray.webp',
-    desc: '200 булыжников + 200 сердцевин + 20M в банк',
-  },
-  {
     item: 'large_craft', title: 'Большой набор ремесленника', vkPrice: 7500, rubPrice: 52999,
     mega: true, silver: 10000000, count: 100,
     runeImgs: [
