@@ -222,8 +222,8 @@ router.post('/guild/boss/attack', async (req, res) => {
   sendToGuild(user.guildid, {
     type: 'guild_boss_update',
     message: killed
-      ? `${user.username} добил Багрового исполина! Новый появится через 5 минут.`
-      : `${user.username} нанёс ${damageDealt.toLocaleString()} урона Багровому исполину`,
+      ? `${user.username} добил Кровавого исполина! Новый появится через 5 минут.`
+      : `${user.username} нанёс ${damageDealt.toLocaleString()} урона Кровавому исполину`,
     data: {
       attackerId: userId,
       attackerName: user.username,
@@ -234,6 +234,7 @@ router.post('/guild/boss/attack', async (req, res) => {
       respawnAt: respawnAt || updatedBoss.respawnAt,
       newKillCount: killed ? newKillCount : boss.killCount,
       guildTalentPoints: updatedGuild?.talentpoints || 0,
+      ratingsChanged: true,
       newBoss: null,
     },
   });

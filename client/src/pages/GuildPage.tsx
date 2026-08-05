@@ -131,6 +131,7 @@ export default function GuildPage() {
             const msg = (e as CustomEvent).detail;
             const d = msg.data || msg;
             if (d.guildTalentPoints !== undefined) setGuildPoints(d.guildTalentPoints);
+            if (d.ratingsChanged) loadBoss();
             if (d.bossKilled) {
                 setBoss((p: any) => p ? { ...p, currentHp: 0, respawnAt: d.respawnAt } : p);
             } else {
@@ -440,7 +441,7 @@ export default function GuildPage() {
         {tab===4 && <div className="space-y-4">
             {/* Boss card */}
             {boss && <Card>
-                <h3 className="font-bold text-sm mb-2">👾 Багровый исполин — уровень {boss.level}</h3>
+                <h3 className="font-bold text-sm mb-2">👾 Кровавый исполин — уровень {boss.level}</h3>
                 <p className="text-xs text-[var(--color-text-muted)] mb-2">
                     Побеждён {boss.killCount} раз · Атака доступна раз в час · +1 очко личных талантов за каждую атаку · +1 очко гильдийских талантов за убийство
                 </p>
@@ -508,7 +509,7 @@ export default function GuildPage() {
             {ratings && (
             <Card>
                 <h3 className="font-bold text-sm mb-2">🏆 Рейтинги</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     {/* Топ гильдии */}
                     <div>
                         <h4 className="font-medium mb-1 text-[var(--color-accent-gold)]">⭐ Гильдия (топ-5)</h4>
@@ -597,7 +598,7 @@ export default function GuildPage() {
                                 </div>
                             </div>
                             <Button size="sm" disabled={playerPoints < 1} onClick={() => handleTalentUpgrade(t.type, 'personal')}>
-                                Вложить 1
+                                Вложить
                             </Button>
                         </div>
                     ))}
@@ -627,7 +628,7 @@ export default function GuildPage() {
                             </div>
                             {myRank === 'leader' && (
                                 <Button size="sm" variant="secondary" disabled={guildPoints < 1} onClick={() => handleTalentUpgrade(t.type, 'guild')}>
-                                    Вложить 1
+                                    Вложить
                                 </Button>
                             )}
                         </div>

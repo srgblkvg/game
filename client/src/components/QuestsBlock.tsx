@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
+import { getHeaders } from '../api/helpers';
 
 const questIcons: Record<string, string> = { hunt: '🗡️', arena: '⚔️', job: '🌍', craft: '⚒️', auction: '💰' };
 const guildQuestIcons: Record<string, string> = { pve: '🗡️', pvp: '⚔️', craft: '⚒️', donate: '🏦', jobs: '🌍' };
@@ -11,6 +12,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
     const navigate = useNavigate();
     const [dailyQuests, setDailyQuests] = useState<any[]>([]);
     const [guildQuest, setGuildQuest] = useState<any>(null);
+    const [guildBoss, setGuildBoss] = useState<any>(null);
 
     // Первичная загрузка через HTTP (один раз при логине)
     useEffect(() => {
@@ -19,6 +21,8 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                 .then(r => r.json()).then(d => setDailyQuests(d.quests || [])).catch(() => {});
             fetch('/api/guild/quest', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
                 .then(r => r.json()).then(d => { if (d.activeQuest) setGuildQuest(d.activeQuest); }).catch(() => {});
+            fetch('/api/guild/boss', { headers: getHeaders() })
+                .then(r => r.json()).then(d => { if (d.boss?.currentHp > 0) setGuildBoss(d.boss); }).catch(() => {});
         }
     }, [user]);
 
@@ -30,6 +34,20 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
         };
         window.addEventListener('guildQuestProgress', handler);
         return () => window.removeEventListener('guildQuestProgress', handler);
+    }, []);
+
+    // WS live updates — guild boss
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const msg = (e as CustomEvent).detail;
+            const d = msg.data || msg;
+            if (d.bossHp !== undefined) {
+                setGuildBoss((p: any) => p ? { ...p, currentHp: d.bossHp, maxHp: d.bossMaxHp || p.maxHp } : p);
+            }
+            if (d.bossKilled) setGuildBoss(null);
+        };
+        window.addEventListener('guildBossUpdate', handler);
+        return () => window.removeEventListener('guildBossUpdate', handler);
     }, []);
 
     // WS live updates — daily quests
@@ -74,6 +92,23 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                     <div>
                         <div className="text-[0.6rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Гильдия:</div>
                         <GuildQuestItem quest={guildQuest} onNavigate={() => navigate('/guild')} />
+                    </div>
+                )}
+
+                {/* Босс гильдии */}
+                {guildBoss && (
+                    <div className={hasGuild ? 'mt-3 pt-3 border-t border-[var(--color-border-default)]' : ''}>
+                        <div className="text-[0.6rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Босс:</div>
+                        <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/guild?tab=4')}>
+                            <div className="flex items-center gap-1 text-xs">
+                                <span>👾</span>
+                                <span className="font-medium">Кровавый исполин</span>
+                                <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-auto">{guildBoss.currentHp?.toLocaleString()}/{guildBoss.maxHp?.toLocaleString()}</span>
+                            </div>
+                            <div className="h-1.5 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
+                                <div className="h-full bg-red-600 rounded-full transition-all" style={{ width: `${Math.max(1, (guildBoss.currentHp / guildBoss.maxHp) * 100)}%` }} />
+                            </div>
+                        </div>
                     </div>
                 )}
 
