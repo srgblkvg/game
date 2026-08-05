@@ -12,7 +12,7 @@ import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
 import { getLastSeen } from '../utils/time';
 
-const TABS = ['🏚️ Обзор', '🏘️ Постройки', '💰 Казна', '👥 Участники', '👾 Босс'];
+const TABS = ['🏚️ Обзор', '🏘️ Постройки', '💰 Казна', '👥 Участники', '👾 Босс', '🌟 Таланты'];
 const PERIODS = ['today','week','month','all'] as const;
 const PLABELS: Record<string,string> = {today:'Сегодня',week:'Неделя',month:'Месяц',all:'Всё'};
 
@@ -70,7 +70,8 @@ export default function GuildPage() {
     const [bossResult, setBossResult] = useState<any>(null);
     const [bossFighting, setBossFighting] = useState(false);
     const [battleHistory, setBattleHistory] = useState<any[]>([]);
-    const [viewingLog, setViewingLog] = useState<any>(null); // { username, steps }
+    const [viewingLog, setViewingLog] = useState<any>(null);
+    const [respawnTimer, setRespawnTimer] = useState(0);
     const bossTimerRef = useRef<any>(null);
 
     const api = async (url: string, body?: any) => {
@@ -125,16 +126,10 @@ export default function GuildPage() {
     useEffect(() => {
         const onUpdate = (e: Event) => {
             const msg = (e as CustomEvent).detail;
-            const d = msg.data || msg; // данные могут быть на верхнем уровне или в msg.data
-            if (d.bossKilled && d.newBoss) {
-                setBoss({
-                    currentHp: d.newBoss.maxHp,
-                    maxHp: d.newBoss.maxHp,
-                    atk: 80, agi: 50, def: 60, mst: 50,
-                    level: d.newBoss.level,
-                    killCount: d.newKillCount,
-                    effects: d.newBoss.effects || [],
-                });
+            const d = msg.data || msg;
+            if (d.guildTalentPoints !== undefined) setGuildPoints(d.guildTalentPoints);
+            if (d.bossKilled) {
+                setBoss((p: any) => p ? { ...p, currentHp: 0, respawnAt: d.respawnAt } : p);
             } else {
                 setBoss((p: any) => p ? { ...p, currentHp: d.bossHp } : p);
             }
@@ -442,8 +437,10 @@ export default function GuildPage() {
         {tab===4 && <div className="space-y-4">
             {/* Boss card */}
             {boss && <Card>
-                <h3 className="font-bold text-sm mb-2">👾 Багровый исполин — ур.{boss.level}</h3>
-                <p className="text-xs text-[var(--color-text-muted)] mb-2">Убийств: {boss.killCount} · Атака раз в час · +1 личное очко талантов за атаку · +1 гильдийское за убийство</p>
+                <h3 className="font-bold text-sm mb-2">👾 Багровый исполин — уровень {boss.level}</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">
+                    Побеждён {boss.killCount} раз · Атака доступна раз в час · +1 очко личных талантов за каждую атаку · +1 очко гильдийских талантов за убийство
+                </p>
                 <div className="mb-1">
                     <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
                         <span>HP: {boss.currentHp?.toLocaleString()} / {boss.maxHp?.toLocaleString()}</span>
@@ -453,9 +450,12 @@ export default function GuildPage() {
                         <div className="h-full bg-red-600 rounded-full transition-all" style={{width:`${boss.currentHp > 0 ? Math.max(0.5, (boss.currentHp/boss.maxHp)*100) : 0}%`}}/>
                     </div>
                 </div>
-                <div className="text-xs text-[var(--color-text-muted)] mb-2">
-                    <span>⚔{boss.atk} 🏃{boss.agi} 🛡{boss.def} ✦{boss.mst}</span>
-                    {boss.effects && boss.effects.length > 0 && <span className="ml-2">| Эффекты: {boss.effects.map((e: any) => e.name).join(', ')}</span>}
+                <div className="text-xs text-[var(--color-text-muted)] mb-2 flex items-center gap-3">
+                    <span className="flex items-center gap-0.5"><Icon icon="game-icons:biceps" width="12" height="12"/>{boss.atk}</span>
+                    <span className="flex items-center gap-0.5"><Icon icon="game-icons:sprint" width="12" height="12"/>{boss.agi}</span>
+                    <span className="flex items-center gap-0.5"><Icon icon="game-icons:shield" width="12" height="12"/>{boss.def}</span>
+                    <span className="flex items-center gap-0.5"><Icon icon="game-icons:crossed-swords" width="12" height="12"/>{boss.mst}</span>
+                    {boss.effects && boss.effects.length > 0 && <span className="text-[var(--color-accent-warning)]">| {boss.effects.map((e: any) => e.name).join(', ')}</span>}
                 </div>
                 {bossSteps.length > 0 && (
                     <BossBattleLog steps={bossSteps} />
@@ -463,7 +463,12 @@ export default function GuildPage() {
                 {bossResult && (
                     <div className={`text-xs font-bold mb-2 ${bossResult.playerWon ? 'text-green-400' : 'text-red-400'}`}>
                         {bossResult.playerWon ? '🏆 Победа!' : '💀 Поражение!'} Урон: {bossResult.damageDealt?.toLocaleString()}
-                        {bossResult.bossKilled && <span className="text-yellow-400"> · Босс повержен! Новый пробудился.</span>}
+                        {bossResult.bossKilled && <span className="text-yellow-400"> · Босс повержен! Новый появится через 5 минут.</span>}
+                    </div>
+                )}
+                {boss.currentHp <= 0 && boss.respawnAt > 0 && (
+                    <div className="text-xs text-[var(--color-accent-warning)] mb-2">
+                        Босс повержен. Новый появится через {fmtCd(Math.max(0, boss.respawnAt - Math.floor(Date.now()/1000)))}
                     </div>
                 )}
                 <Button size="md" variant="danger" disabled={bossCd > 0 || bossFighting} onClick={handleBossAttack}>
@@ -495,10 +500,11 @@ export default function GuildPage() {
                     </div>
                 )}
             </Card>
+        </div>}
 
-            {/* Talents — две колонки на десктопе */}
+        {/* Tab 5: Таланты */}
+        {tab===5 && <div className="space-y-4">
             <div className="sm:grid sm:grid-cols-2 sm:gap-4 space-y-4 sm:space-y-0">
-            {/* Personal Talents */}
             <Card>
                 <h3 className="font-bold text-sm mb-2">🌟 Личные таланты</h3>
                 <p className="text-xs text-[var(--color-text-muted)] mb-2">
@@ -527,8 +533,6 @@ export default function GuildPage() {
                     ))}
                 </div>
             </Card>
-
-            {/* Guild Talents */}
             <Card>
                 <h3 className="font-bold text-sm mb-2">🏛️ Гильдийские таланты</h3>
                 <p className="text-xs text-[var(--color-text-muted)] mb-2">

@@ -195,7 +195,7 @@ router.post('/guild/boss/attack', async (req, res) => {
   const damageDealt = boss.currentHp - Math.max(0, bossCurrentHp);
 
   // Сохраняем урон боссу
-  const { killed, newKillCount } = await damageBoss(user.guildid, damageDealt);
+  const { killed, newKillCount, respawnAt } = await damageBoss(user.guildid, damageDealt);
 
   // Обновляем кулдаун игрока
   await db.run('UPDATE guild_members SET lastBossAttackAt = ? WHERE userId = ? AND guildId = ?', [now, userId, user.guildid]);
@@ -217,10 +217,13 @@ router.post('/guild/boss/attack', async (req, res) => {
   // ── WS: обновление HP босса для всех членов гильдии ──
   const { sendToGuild } = await import('../events');
   const updatedBoss = await getOrCreateBoss(user.guildid);
+  const updatedGuild = await db.one('SELECT talentPoints FROM guilds WHERE id = ?', [user.guildid]) as any;
   console.log(`[guildBoss] Sending WS update to guild ${user.guildid}: HP=${updatedBoss.currentHp}/${updatedBoss.maxHp}`);
   sendToGuild(user.guildid, {
     type: 'guild_boss_update',
-    message: `${user.username} нанёс ${damageDealt.toLocaleString()} урона Багровому исполину`,
+    message: killed
+      ? `${user.username} добил Багрового исполина! Новый появится через 5 минут.`
+      : `${user.username} нанёс ${damageDealt.toLocaleString()} урона Багровому исполину`,
     data: {
       attackerId: userId,
       attackerName: user.username,
@@ -228,13 +231,10 @@ router.post('/guild/boss/attack', async (req, res) => {
       bossHp: updatedBoss.currentHp,
       bossMaxHp: updatedBoss.maxHp,
       bossKilled: killed,
+      respawnAt: respawnAt || updatedBoss.respawnAt,
       newKillCount: killed ? newKillCount : boss.killCount,
-      newBoss: killed ? {
-        maxHp: updatedBoss.maxHp,
-        level: updatedBoss.level,
-        killCount: updatedBoss.killCount,
-        effects: updatedBoss.effects,
-      } : null,
+      guildTalentPoints: updatedGuild?.talentpoints || 0,
+      newBoss: null,
     },
   });
 
@@ -254,7 +254,7 @@ router.post('/guild/boss/attack', async (req, res) => {
   }
 
   // Новый босс (если убит)
-  const newBoss = killed ? await getOrCreateBoss(user.guildid) : null;
+  const newBossData = killed ? await getOrCreateBoss(user.guildid) : null;
 
   // Сохраняем лог боя в историю
   await db.run(
@@ -269,16 +269,11 @@ router.post('/guild/boss/attack', async (req, res) => {
     damageDealt,
     bossKilled: killed,
     guildTalentAwarded,
+    respawnAt: respawnAt || 0,
     newKillCount: killed ? newKillCount : boss.killCount,
     currentHp: finalHp,
     hpAfter: finalHp,
     bossHpAfter: Math.max(0, bossCurrentHp),
-    newBoss: newBoss ? {
-      maxHp: newBoss.maxHp,
-      level: newBoss.level,
-      killCount: newBoss.killCount,
-      effects: newBoss.effects,
-    } : null,
     personalPointsGained: 1,
     guildPointsGained: killed ? 1 : 0,
   });

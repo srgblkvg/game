@@ -8,6 +8,7 @@ export const BOSS_HP_PER_KILL = 50_000;
 export const BOSS_STAT_SCALE = 0.10; // +10% статов за убийство
 export const BOSS_LEVEL_PER_KILL = 5;
 export const BOSS_COOLDOWN = 3600; // 1 час
+export const BOSS_RESPAWN_DELAY = 300; // 5 минут
 
 // ── Случайные эффекты босса после перерождения ──
 
@@ -138,17 +139,31 @@ export function getBossStats(killCount: number): BossStats {
   };
 }
 
-export async function getOrCreateBoss(guildId: number): Promise<{ currentHp: number; maxHp: number; atk: number; agi: number; def: number; mst: number; level: number; killCount: number; effects: { name: string; effect: Record<string, any> }[] }> {
+export async function getOrCreateBoss(guildId: number): Promise<{ currentHp: number; maxHp: number; atk: number; agi: number; def: number; mst: number; level: number; killCount: number; effects: { name: string; effect: Record<string, any> }[]; respawnAt: number }> {
+  const now = Math.floor(Date.now() / 1000);
   let boss = await db.one('SELECT * FROM guild_bosses WHERE guildId = ?', [guildId]).catch(() => null) as any;
   if (!boss) {
     const stats = getBossStats(0);
     const effects = pickBossEffects(0);
     await db.run(
-      'INSERT INTO guild_bosses (guildId, killCount, currentHp, maxHp, atk, agi, def, mst, level, effects) VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO guild_bosses (guildId, killCount, currentHp, maxHp, atk, agi, def, mst, level, effects, respawnAt) VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
       [guildId, stats.hp, stats.hp, stats.s, stats.a, stats.d, stats.m, stats.level, JSON.stringify(effects)]
     );
-    boss = { guildId, killcount: 0, currenthp: stats.hp, maxhp: stats.hp, atk: stats.s, agi: stats.a, def: stats.d, mst: stats.m, level: stats.level, effects: JSON.stringify(effects) };
+    boss = { guildId, killcount: 0, currenthp: stats.hp, maxhp: stats.hp, atk: stats.s, agi: stats.a, def: stats.d, mst: stats.m, level: stats.level, effects: JSON.stringify(effects), respawnat: 0 };
   }
+
+  // Авто-респаун если прошло 5 минут
+  if (boss.respawnat > 0 && now >= boss.respawnat) {
+    const newKillCount = boss.killcount + 1;
+    const stats = getBossStats(newKillCount);
+    const newEffects = pickBossEffects(newKillCount);
+    await db.run(
+      'UPDATE guild_bosses SET killCount = ?, currentHp = ?, maxHp = ?, atk = ?, agi = ?, def = ?, mst = ?, level = ?, effects = ?, respawnAt = 0 WHERE guildId = ?',
+      [newKillCount, stats.hp, stats.hp, stats.s, stats.a, stats.d, stats.m, stats.level, JSON.stringify(newEffects), guildId]
+    );
+    boss = { guildId, killcount: newKillCount, currenthp: stats.hp, maxhp: stats.hp, atk: stats.s, agi: stats.a, def: stats.d, mst: stats.m, level: stats.level, effects: JSON.stringify(newEffects), respawnat: 0 };
+  }
+
   let parsedEffects: { name: string; effect: Record<string, any> }[] = [];
   try { parsedEffects = typeof boss.effects === 'string' ? JSON.parse(boss.effects) : (boss.effects || []); } catch {}
   return {
@@ -161,23 +176,24 @@ export async function getOrCreateBoss(guildId: number): Promise<{ currentHp: num
     level: boss.level,
     killCount: boss.killcount,
     effects: parsedEffects,
+    respawnAt: boss.respawnat || 0,
   };
 }
 
-export async function damageBoss(guildId: number, damage: number): Promise<{ killed: boolean; newKillCount: number; newEffects?: { name: string; effect: Record<string, any> }[] }> {
+export async function damageBoss(guildId: number, damage: number): Promise<{ killed: boolean; newKillCount: number; respawnAt?: number }> {
   const boss = await db.one('SELECT * FROM guild_bosses WHERE guildId = ?', [guildId]) as any;
   const newHp = Math.max(0, boss.currenthp - damage);
   const killed = newHp <= 0;
 
   if (killed) {
     const newKillCount = boss.killcount + 1;
-    const stats = getBossStats(newKillCount);
-    const newEffects = pickBossEffects(newKillCount);
+    const respawnAt = Math.floor(Date.now() / 1000) + BOSS_RESPAWN_DELAY;
+    // Ставим таймер респауна, HP=0, killCount уже обновлён
     await db.run(
-      'UPDATE guild_bosses SET killCount = ?, currentHp = ?, maxHp = ?, atk = ?, agi = ?, def = ?, mst = ?, level = ?, effects = ? WHERE guildId = ?',
-      [newKillCount, stats.hp, stats.hp, stats.s, stats.a, stats.d, stats.m, stats.level, JSON.stringify(newEffects), guildId]
+      'UPDATE guild_bosses SET killCount = ?, currentHp = 0, respawnAt = ? WHERE guildId = ?',
+      [newKillCount, respawnAt, guildId]
     );
-    return { killed: true, newKillCount, newEffects };
+    return { killed: true, newKillCount, respawnAt };
   } else {
     await db.run('UPDATE guild_bosses SET currentHp = ? WHERE guildId = ?', [newHp, guildId]);
     return { killed: false, newKillCount: boss.killcount };
