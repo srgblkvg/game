@@ -113,7 +113,7 @@ export default function GuildPage() {
             setBattleHistory(h.battles || []);
         } catch {}
     };
-    useEffect(() => { if (guild && tab === 4) loadBoss(); }, [guild, tab]);
+    useEffect(() => { if (guild && (tab === 4 || tab === 5)) loadBoss(); }, [guild, tab]);
 
     // Boss cooldown timer
     useEffect(() => {
