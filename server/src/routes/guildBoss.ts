@@ -332,7 +332,7 @@ router.get('/guild/boss/ratings', async (req, res) => {
 
   // 2. Топ-5 игроков по общему урону + место игрока
   const personalTop = await db.query(
-    'SELECT userId, username, SUM(damageDealt) as total FROM guild_boss_battles GROUP BY userId, username ORDER BY total DESC LIMIT 5'
+    'SELECT b.userId, b.username, u.level, g.name as guildName, SUM(b.damageDealt) as total FROM guild_boss_battles b JOIN users u ON b.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id GROUP BY b.userId, b.username, u.level, g.name ORDER BY total DESC LIMIT 5'
   ) as any[];
   const personalRank = await db.one(
     `SELECT rank, total FROM (
@@ -382,7 +382,7 @@ router.get('/guild/boss/ratings', async (req, res) => {
   res.json({
     guildTop: guildTop.map(r => ({ userId: r.userid, username: r.username, level: r.level, guildName: r.guildname, total: r.total })),
     personalRank: personalRank ? { rank: personalRank.rank, total: personalRank.total } : null,
-    personalTop: personalTop.map(r => ({ userId: r.userid, username: r.username, total: r.total })),
+    personalTop: personalTop.map(r => ({ userId: r.userid, username: r.username, level: r.level, guildName: r.guildname, total: r.total })),
     guildRank: guildRank ? { rank: guildRank.rank, total: guildRank.total } : null,
     guildTopList: guildTopList.map(r => ({ id: r.id, name: r.name, total: r.total })),
     topHits: topHits.map(r => ({ userId: r.userId, username: r.username, level: r.level, guildName: r.guildName, maxDmg: r.maxHit })),
