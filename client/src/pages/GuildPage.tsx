@@ -594,14 +594,18 @@ function BossBattleLog({ steps }: { steps: any[] }) {
             default: return '';
         }
     };
-    const isPlayer = (s: any) => s.actor === 'attacker' || (s.type === 'attack' && s.message?.includes(' vs '));
-    const isBoss = (s: any) => s.actor === 'defender';
 
+    // Чередуем фон по ходам: attack от игрока → фон игрока, attack от босса → фон босса
+    let isPlayerTurn = true; // первый ход всегда игрока
     return (
         <div className="mb-3 max-h-64 overflow-y-auto text-[0.65rem] border border-[var(--color-border-light)] rounded">
             {steps.map((s: any, i: number) => {
+                // Переключаем сторону при начале нового хода (type === 'attack')
+                if (s.type === 'attack') {
+                    isPlayerTurn = s.actor === 'attacker';
+                }
                 const icon = effectIcon(s);
-                const bg = isPlayer(s) ? 'bg-[var(--color-bg-secondary)]' : isBoss(s) ? 'bg-[var(--color-bg-input)]' : '';
+                const bg = isPlayerTurn ? 'bg-[var(--color-bg-secondary)]' : 'bg-[var(--color-bg-input)]';
                 return (
                     <div key={i} className={`flex items-start gap-1 py-0.5 px-2 ${bg} ${effectStyle(s)} border-b border-[var(--color-border-light)] last:border-0`}>
                         {icon && <span className="flex-shrink-0 w-4 text-center">{icon}</span>}
