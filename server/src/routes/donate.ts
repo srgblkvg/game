@@ -251,7 +251,7 @@ router.get('/starter-pack/preview', authMiddleware, async (_req: Request, res: R
 export default router;
 
 // Выдать сундук с кристаллами душ (curse_pack)
-export async function deliverCursePack(userId: number, packType: 'small' | 'large'): Promise<{ success: boolean; error?: string }> {
+export async function deliverCursePack(userId: number, packType: 'small' | 'large' | 'x50' | 'x100'): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await db.one('SELECT id, inventory, bank FROM users WHERE id = ?', [userId]) as any;
     if (!user) return { success: false, error: 'Пользователь не найден' };
@@ -259,6 +259,8 @@ export async function deliverCursePack(userId: number, packType: 'small' | 'larg
     const packs: Record<string, { silver: number; crystals: number }> = {
       small: { silver: 500000, crystals: 5 },
       large: { silver: 1000000, crystals: 10 },
+      x50:   { silver: 5000000, crystals: 50 },
+      x100:  { silver: 10000000, crystals: 100 },
     };
 
     const pack = packs[packType];

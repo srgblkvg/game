@@ -46,6 +46,8 @@ const ITEMS: Record<string, VkItem> = {
   craft_epic:    { title: 'Сундук «Эпический»',           price: 28,  type: 'craft_pack' },
   curse_small:   { title: 'Сундук «Проклятый» (500k + 5 кристаллов)', price: 144, type: 'curse_pack' },
   curse_large:   { title: 'Сундук «Проклятый II» (1M + 10 кристаллов)', price: 258, type: 'curse_pack' },
+  curse_x50:     { title: 'Сундук «Проклятый» ×50 (5M + 50 кристаллов)', price: 999, type: 'curse_pack' },
+  curse_x100:    { title: 'Сундук «Проклятый» ×100 (10M + 100 кристаллов)', price: 1899, type: 'curse_pack' },
   ruby_rune_1:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×1', price: 57,  type: 'rune_pack', count: 1 },
   ruby_rune_3:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×3', price: 144, type: 'rune_pack', count: 3 },
   ruby_rune_5:   { title: 'Набор рун (Рубина+Топаз+Аметист) ×5', price: 214, type: 'rune_pack', count: 5 },
@@ -170,7 +172,7 @@ router.post('/', async (req: Request, res: Response) => {
           }
           processed = true;
         } else if (item.type === 'curse_pack') {
-          const packType = itemName === 'curse_small' ? 'small' : 'large';
+          const packType = itemName === 'curse_small' ? 'small' : itemName === 'curse_large' ? 'large' : itemName === 'curse_x50' ? 'x50' : 'x100';
           const result = await deliverCursePack(character.id, packType);
           if (!result.success) {
             return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
