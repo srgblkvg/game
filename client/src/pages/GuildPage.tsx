@@ -69,6 +69,8 @@ export default function GuildPage() {
     const [bossSteps, setBossSteps] = useState<any[]>([]);
     const [bossResult, setBossResult] = useState<any>(null);
     const [bossFighting, setBossFighting] = useState(false);
+    const [battleHistory, setBattleHistory] = useState<any[]>([]);
+    const [viewingLog, setViewingLog] = useState<any>(null); // { username, steps }
     const bossTimerRef = useRef<any>(null);
 
     const api = async (url: string, body?: any) => {
@@ -447,11 +449,7 @@ export default function GuildPage() {
                     {boss.effects && boss.effects.length > 0 && <span className="ml-2">| Эффекты: {boss.effects.map((e: any) => e.name).join(', ')}</span>}
                 </div>
                 {bossSteps.length > 0 && (
-                    <div className="mb-3 max-h-48 overflow-y-auto text-xs border border-[var(--color-border-light)] rounded p-2 bg-[var(--color-bg-secondary)]">
-                        {bossSteps.map((s: any, i: number) => (
-                            <div key={i} className={`py-0.5 ${s.type === 'crit' ? 'text-yellow-400 font-bold' : s.type === 'dodge' ? 'text-blue-400' : s.type === 'stun' ? 'text-purple-400' : s.type === 'end' ? 'text-green-400 font-bold' : s.type === 'block' ? 'text-gray-400' : s.type === 'counter' ? 'text-orange-400' : ''}`}>{s.message}</div>
-                        ))}
-                    </div>
+                    <BossBattleLog steps={bossSteps} />
                 )}
                 {bossResult && (
                     <div className={`text-xs font-bold mb-2 ${bossResult.playerWon ? 'text-green-400' : 'text-red-400'}`}>
@@ -463,6 +461,34 @@ export default function GuildPage() {
                     {bossFighting ? 'Бой...' : bossCd > 0 ? `Атака через ${fmtCd(bossCd)}` : '⚔️ Атаковать'}
                 </Button>
             </Card>}
+
+            {/* Battle History */}
+            <Card>
+                <h3 className="font-bold text-sm mb-2">📜 История атак</h3>
+                <Button size="sm" variant="secondary" className="mb-2" onClick={async () => {
+                    try { const d = await api('/guild/boss/battles'); setBattleHistory(d.battles || []); } catch {}
+                }}>Загрузить</Button>
+                {viewingLog && (
+                    <div className="mb-3">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold">Бой: {viewingLog.username}</span>
+                            <Button size="sm" variant="secondary" onClick={() => setViewingLog(null)}>Закрыть</Button>
+                        </div>
+                        <BossBattleLog steps={viewingLog.steps} />
+                    </div>
+                )}
+                {battleHistory.length > 0 && (
+                    <div className="text-xs space-y-1 max-h-60 overflow-y-auto">
+                        {battleHistory.map((b: any) => (
+                            <div key={b.id} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1"
+                                onClick={() => setViewingLog({ username: b.username, steps: b.steps })}>
+                                <span>{b.username} <span className={b.playerWon ? 'text-green-400' : 'text-red-400'}>{b.playerWon ? '🏆' : '💀'}</span></span>
+                                <span className="text-[var(--color-text-muted)]">−{b.damageDealt?.toLocaleString()} HP {b.bossKilled ? '💥' : ''}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Card>
 
             {/* Talents */}
             <Card>
@@ -541,4 +567,48 @@ function GuildQuestCard({guildId:_guildId,myRank,myPerms,api}:{guildId:number;my
             <p className="text-xs text-[var(--color-text-muted)] mb-1">{o.description}</p><div className="flex justify-between"><span className="text-[0.6rem] text-yellow-400">+{o.rewardXp} XP</span>
             {canQuests&&<Button variant="primary" size="md" onClick={()=>take(o)} disabled={l}>Взять</Button>}</div></div>))}</div>
             {!canQuests&&<p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">Ожидайте выбора лидера</p>}</>:null}</Card>;
+}
+
+function BossBattleLog({ steps }: { steps: any[] }) {
+    const effectStyle = (s: any): string => {
+        switch (s.type) {
+            case 'crit': return 'text-yellow-300 font-bold';
+            case 'dodge': return 'text-blue-400 italic';
+            case 'block': return 'text-gray-300';
+            case 'fullBlock': return 'text-amber-400 font-bold';
+            case 'counter': return 'text-orange-400';
+            case 'stun': return 'text-purple-400';
+            case 'end': return 'text-green-400 font-bold';
+            default: return '';
+        }
+    };
+    const effectIcon = (s: any): string => {
+        switch (s.type) {
+            case 'crit': return '💥';
+            case 'dodge': return '🌀';
+            case 'block': return '🛡';
+            case 'fullBlock': return '🛡️';
+            case 'counter': return '↩️';
+            case 'stun': return '💫';
+            default: return '';
+        }
+    };
+    const isPlayer = (s: any) => s.actor === 'attacker' || (s.type === 'attack' && s.message?.includes(' vs '));
+    const isBoss = (s: any) => s.actor === 'defender';
+
+    return (
+        <div className="mb-3 max-h-64 overflow-y-auto text-[0.65rem] border border-[var(--color-border-light)] rounded">
+            {steps.map((s: any, i: number) => {
+                const icon = effectIcon(s);
+                const bg = isPlayer(s) ? 'bg-[var(--color-bg-secondary)]' : isBoss(s) ? 'bg-[var(--color-bg-input)]' : '';
+                return (
+                    <div key={i} className={`flex items-start gap-1 py-0.5 px-2 ${bg} ${effectStyle(s)} border-b border-[var(--color-border-light)] last:border-0`}>
+                        {icon && <span className="flex-shrink-0 w-4 text-center">{icon}</span>}
+                        {!icon && <span className="flex-shrink-0 w-4" />}
+                        <span>{s.message}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }

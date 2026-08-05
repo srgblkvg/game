@@ -254,6 +254,13 @@ router.post('/guild/boss/attack', async (req, res) => {
   // Новый босс (если убит)
   const newBoss = killed ? await getOrCreateBoss(user.guildid) : null;
 
+  // Сохраняем лог боя в историю
+  await db.run(
+    `INSERT INTO guild_boss_battles (guildId, userId, username, damageDealt, bossHpBefore, bossHpAfter, playerWon, bossKilled, steps, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [user.guildid, userId, user.username, damageDealt, boss.currentHp, Math.max(0, bossCurrentHp), playerWon, killed, JSON.stringify(steps), now]
+  ).catch(e => console.error('guildBoss save log:', e.message));
+
   res.json({
     steps,
     playerWon,
@@ -272,6 +279,43 @@ router.post('/guild/boss/attack', async (req, res) => {
     } : null,
     personalPointsGained: 1,
     guildPointsGained: killed ? 1 : 0,
+  });
+});
+
+// ── GET /guild/boss/battles — история боёв с боссом ──
+router.get('/guild/boss/battles', async (req, res) => {
+  const userId = req.userId;
+  const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]).catch(() => null) as any;
+  if (!user?.guildid) return res.status(400).json({ error: 'Не в гильдии' });
+
+  const userIdFilter = req.query.userId ? parseInt(req.query.userId as string) : 0;
+
+  let rows: any[];
+  if (userIdFilter > 0) {
+    rows = await db.query(
+      'SELECT id, userId, username, damageDealt, bossHpBefore, bossHpAfter, playerWon, bossKilled, steps, createdAt FROM guild_boss_battles WHERE guildId = ? AND userId = ? ORDER BY createdAt DESC LIMIT 20',
+      [user.guildid, userIdFilter]
+    ) as any[];
+  } else {
+    rows = await db.query(
+      'SELECT id, userId, username, damageDealt, bossHpBefore, bossHpAfter, playerWon, bossKilled, steps, createdAt FROM guild_boss_battles WHERE guildId = ? ORDER BY createdAt DESC LIMIT 50',
+      [user.guildid]
+    ) as any[];
+  }
+
+  res.json({
+    battles: rows.map(r => ({
+      id: r.id,
+      userId: r.userid,
+      username: r.username,
+      damageDealt: r.damagedealt,
+      bossHpBefore: r.bosshpbefore,
+      bossHpAfter: r.bosshpafter,
+      playerWon: r.playerwon,
+      bossKilled: r.bosskilled,
+      steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps,
+      createdAt: r.createdat,
+    })),
   });
 });
 
