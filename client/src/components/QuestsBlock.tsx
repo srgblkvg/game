@@ -47,7 +47,10 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
             const msg = (e as CustomEvent).detail;
             const d = msg.data || msg;
             if (d.bossHp !== undefined) {
-                setGuildBoss((p: any) => p ? { ...p, currentHp: d.bossHp, maxHp: d.bossMaxHp || p.maxHp } : p);
+                setGuildBoss((p: any) => {
+                    if (!p) return { currentHp: d.bossHp, maxHp: d.bossMaxHp || 100000 };
+                    return { ...p, currentHp: d.bossHp, maxHp: d.bossMaxHp || p.maxHp };
+                });
             }
             if (d.bossKilled) {
                 setGuildBoss(null);
