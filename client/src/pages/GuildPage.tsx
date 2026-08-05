@@ -118,7 +118,8 @@ export default function GuildPage() {
     // WS: обновление HP босса от других игроков
     useEffect(() => {
         const onUpdate = (e: Event) => {
-            const d = (e as CustomEvent).detail;
+            const msg = (e as CustomEvent).detail;
+            const d = msg.data || msg; // данные могут быть на верхнем уровне или в msg.data
             if (d.bossKilled && d.newBoss) {
                 setBoss({
                     currentHp: d.newBoss.maxHp,

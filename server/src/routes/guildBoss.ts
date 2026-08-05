@@ -215,6 +215,7 @@ router.post('/guild/boss/attack', async (req, res) => {
   // ── WS: обновление HP босса для всех членов гильдии ──
   const { sendToGuild } = await import('../events');
   const updatedBoss = await getOrCreateBoss(user.guildid);
+  console.log(`[guildBoss] Sending WS update to guild ${user.guildid}: HP=${updatedBoss.currentHp}/${updatedBoss.maxHp}`);
   sendToGuild(user.guildid, {
     type: 'guild_boss_update',
     message: `${user.username} нанёс ${damageDealt.toLocaleString()} урона Багровому исполину`,
