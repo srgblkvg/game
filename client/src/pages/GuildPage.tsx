@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
+import { formatNum } from '../utils/money';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
@@ -451,7 +452,7 @@ export default function GuildPage() {
                 </p>
                 <div className="mb-1">
                     <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
-                        <span>HP: {boss.currentHp?.toLocaleString()} / {boss.maxHp?.toLocaleString()}</span>
+                        <span>HP: {formatNum(boss.currentHp)} / {formatNum(boss.maxHp)}</span>
                         <span>{boss.currentHp > 0 ? Math.round(boss.currentHp / boss.maxHp * 100) : 0}%</span>
                     </div>
                     <div className="w-full h-3 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
@@ -470,7 +471,7 @@ export default function GuildPage() {
                 )}
                 {bossResult && (
                     <div className={`text-xs font-bold mb-2 ${bossResult.playerWon ? 'text-green-400' : 'text-red-400'}`}>
-                        {bossResult.playerWon ? '🏆 Победа!' : '💀 Поражение!'} Урон: {bossResult.damageDealt?.toLocaleString()}
+                        {bossResult.playerWon ? '🏆 Победа!' : '💀 Поражение!'} Урон: {formatNum(bossResult.damageDealt)}
                         {bossResult.bossKilled && <span className="text-yellow-400"> · Босс повержен! Новый появится через 5 минут.</span>}
                     </div>
                 )}
@@ -502,7 +503,7 @@ export default function GuildPage() {
                             <div key={b.id} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1"
                                 onClick={() => setViewingLog({ username: b.username, steps: b.steps })}>
                                 <span>{b.username} <span className={b.playerWon ? 'text-green-400' : 'text-red-400'}>{b.playerWon ? '🏆' : '💀'}</span></span>
-                                <span className="text-[var(--color-text-muted)]">−{b.damageDealt?.toLocaleString()} HP {b.bossKilled ? '💥' : ''}</span>
+                                <span className="text-[var(--color-text-muted)]">−{formatNum(b.damageDealt)} HP {b.bossKilled ? '💥' : ''}</span>
                             </div>
                         ))}
                     </div>
@@ -520,7 +521,7 @@ export default function GuildPage() {
                         {ratings.guildTop?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
                                 <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
-                                <span className="text-[var(--color-text-muted)]">{r.total?.toLocaleString()}</span>
+                                <span className="text-[var(--color-text-muted)]">{formatNum(r.total)}</span>
                             </div>
                         ))}
                         {(!ratings.guildTop || ratings.guildTop.length === 0) && <span className="text-[var(--color-text-muted)]">Нет данных</span>}
@@ -531,11 +532,11 @@ export default function GuildPage() {
                         {ratings.personalTop?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
                                 <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
-                                <span className="text-[var(--color-text-muted)]">{r.total?.toLocaleString()}</span>
+                                <span className="text-[var(--color-text-muted)]">{formatNum(r.total)}</span>
                             </div>
                         ))}
                         {ratings.personalRank && (
-                            <div className="text-[var(--color-text-muted)] mt-1">Ваше место: #{ratings.personalRank.rank} · {ratings.personalRank.total?.toLocaleString()} урона</div>
+                            <div className="text-[var(--color-text-muted)] mt-1">Ваше место: #{ratings.personalRank.rank} · {formatNum(ratings.personalRank.total)} урона</div>
                         )}
                     </div>
                     {/* Место гильдии */}
@@ -544,11 +545,11 @@ export default function GuildPage() {
                         {ratings.guildTopList?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
                                 <span>{i+1}. <span className="text-green-400 cursor-pointer hover:underline" onClick={() => navigate(`/guild/${r.name}`)}>{r.name}</span></span>
-                                <span className="text-[var(--color-text-muted)]">{r.total?.toLocaleString()}</span>
+                                <span className="text-[var(--color-text-muted)]">{formatNum(r.total)}</span>
                             </div>
                         ))}
                         {ratings.guildRank && (
-                            <div className="text-[var(--color-text-muted)] mt-1">Ваша гильдия: #{ratings.guildRank.rank} · {ratings.guildRank.total?.toLocaleString()} урона</div>
+                            <div className="text-[var(--color-text-muted)] mt-1">Ваша гильдия: #{ratings.guildRank.rank} · {formatNum(ratings.guildRank.total)} урона</div>
                         )}
                     </div>
                     {/* Сильнейшие удары */}
@@ -557,7 +558,7 @@ export default function GuildPage() {
                         {ratings.topHits?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
                                 <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
-                                <span className="text-[var(--color-text-muted)]">{r.maxDmg?.toLocaleString()}</span>
+                                <span className="text-[var(--color-text-muted)]">{formatNum(r.maxDmg)}</span>
                             </div>
                         ))}
                     </div>

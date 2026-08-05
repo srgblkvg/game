@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
 import { getHeaders } from '../api/helpers';
+import { formatNum } from '../utils/money';
 
 const questIcons: Record<string, string> = { hunt: '🗡️', arena: '⚔️', job: '🌍', craft: '⚒️', auction: '💰' };
 const guildQuestIcons: Record<string, string> = { pve: '🗡️', pvp: '⚔️', craft: '⚒️', donate: '🏦', jobs: '🌍' };
@@ -114,7 +115,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                             <div className="flex items-center gap-1 text-xs">
                                 <span>👾</span>
                                 <span className="font-medium">Кровавый исполин</span>
-                                <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-auto">{guildBoss.currentHp?.toLocaleString()}/{guildBoss.maxHp?.toLocaleString()}</span>
+                                <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-auto">{formatNum(guildBoss.currentHp)}/{formatNum(guildBoss.maxHp)}</span>
                             </div>
                             <div className="h-1 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
                                 <div className="h-full bg-red-600 rounded-full transition-all" style={{ width: `${Math.max(1, (guildBoss.currentHp / guildBoss.maxHp) * 100)}%` }} />
