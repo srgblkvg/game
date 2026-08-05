@@ -47,7 +47,6 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
             const d = msg.data || msg;
             if (d.bossHp !== undefined) {
                 setGuildBoss((p: any) => p ? { ...p, currentHp: d.bossHp, maxHp: d.bossMaxHp || p.maxHp } : p);
-                setBossCd(3600); // кулдаун после своей атаки
             }
             if (d.bossKilled) setGuildBoss(null);
         };
@@ -120,11 +119,12 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                             <div className="h-1 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
                                 <div className="h-full bg-red-600 rounded-full transition-all" style={{ width: `${Math.max(1, (guildBoss.currentHp / guildBoss.maxHp) * 100)}%` }} />
                             </div>
-                            {bossCd > 0 && (
-                                <div className="absolute inset-0 bg-[var(--color-bg-primary)]/60 rounded flex items-center justify-center">
-                                    <span className="text-[0.65rem] font-bold text-[var(--color-text-muted)]">{Math.floor(bossCd/60)}:{(bossCd%60).toString().padStart(2,'0')}</span>
-                                </div>
-                            )}
+                            <div className="text-[0.6rem] text-right mt-0.5">
+                                {bossCd > 0
+                                    ? <span className="text-[var(--color-text-muted)]">Атака через {Math.floor(bossCd/60)}:{(bossCd%60).toString().padStart(2,'0')}</span>
+                                    : <span className="text-[var(--color-accent-info)]">Атаковать</span>
+                                }
+                            </div>
                         </div>
                     </div>
                 )}
