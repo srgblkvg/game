@@ -13,6 +13,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
     const [dailyQuests, setDailyQuests] = useState<any[]>([]);
     const [guildQuest, setGuildQuest] = useState<any>(null);
     const [guildBoss, setGuildBoss] = useState<any>(null);
+    const [bossCd, setBossCd] = useState(0);
 
     // Первичная загрузка через HTTP (один раз при логине)
     useEffect(() => {
@@ -22,7 +23,10 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
             fetch('/api/guild/quest', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
                 .then(r => r.json()).then(d => { if (d.activeQuest) setGuildQuest(d.activeQuest); }).catch(() => {});
             fetch('/api/guild/boss', { headers: getHeaders() })
-                .then(r => r.json()).then(d => { if (d.boss?.currentHp > 0) setGuildBoss(d.boss); }).catch(() => {});
+                .then(r => r.json()).then(d => {
+                    if (d.boss?.currentHp > 0) setGuildBoss(d.boss);
+                    setBossCd(d.cooldownRemaining || 0);
+                }).catch(() => {});
         }
     }, [user]);
 
@@ -43,12 +47,20 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
             const d = msg.data || msg;
             if (d.bossHp !== undefined) {
                 setGuildBoss((p: any) => p ? { ...p, currentHp: d.bossHp, maxHp: d.bossMaxHp || p.maxHp } : p);
+                setBossCd(3600); // кулдаун после своей атаки
             }
             if (d.bossKilled) setGuildBoss(null);
         };
         window.addEventListener('guildBossUpdate', handler);
         return () => window.removeEventListener('guildBossUpdate', handler);
     }, []);
+
+    // Таймер кулдауна босса
+    useEffect(() => {
+        if (bossCd <= 0) return;
+        const id = setInterval(() => setBossCd(p => Math.max(0, p - 1)), 1000);
+        return () => clearInterval(id);
+    }, [bossCd > 0]);
 
     // WS live updates — daily quests
     useEffect(() => {
@@ -99,7 +111,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                 {guildBoss && (
                     <div className={hasGuild ? 'mt-3 pt-3 border-t border-[var(--color-border-default)]' : ''}>
                         <div className="text-[0.6rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Босс:</div>
-                        <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/guild?tab=4')}>
+                        <div className="relative cursor-pointer hover:opacity-80 transition-opacity" onClick={() => bossCd <= 0 && navigate('/guild?tab=4')}>
                             <div className="flex items-center gap-1 text-xs">
                                 <span>👾</span>
                                 <span className="font-medium">Кровавый исполин</span>
@@ -108,6 +120,11 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                             <div className="h-1 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
                                 <div className="h-full bg-red-600 rounded-full transition-all" style={{ width: `${Math.max(1, (guildBoss.currentHp / guildBoss.maxHp) * 100)}%` }} />
                             </div>
+                            {bossCd > 0 && (
+                                <div className="absolute inset-0 bg-[var(--color-bg-primary)]/60 rounded flex items-center justify-center">
+                                    <span className="text-[0.65rem] font-bold text-[var(--color-text-muted)]">{Math.floor(bossCd/60)}:{(bossCd%60).toString().padStart(2,'0')}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
