@@ -11,6 +11,7 @@ const rooms: Record<string, { name: string; rate: number; cost1h: number; cost8h
     closet: { name: 'Чулан', rate: 3, cost1h: 100, cost8h: 600 },
     bed: { name: 'Койка', rate: 10, cost1h: 500, cost8h: 3000 },
     chamber: { name: 'Аппартаменты', rate: 50, cost1h: 2000, cost8h: 12000 },
+    lux: { name: 'Люкс', rate: 250, cost1h: 10000, cost8h: 60000 },
 };
 
 // Напитки
