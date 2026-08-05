@@ -55,6 +55,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
             if (effectiveRoom.type === 'closet') rate = 3;
             else if (effectiveRoom.type === 'bed') rate = 10;
             else if (effectiveRoom.type === 'chamber') rate = 50;
+            else if (effectiveRoom.type === 'lux') rate = 250;
           }
           if ((character.premium?.until || 0) > serverTime) rate *= 3;
           return rate;
