@@ -496,19 +496,22 @@ export default function GuildPage() {
                 )}
             </Card>
 
+            {/* Talents — две колонки на десктопе */}
+            <div className="sm:grid sm:grid-cols-2 sm:gap-4 space-y-4 sm:space-y-0">
             {/* Personal Talents */}
             <Card>
                 <h3 className="font-bold text-sm mb-2">🌟 Личные таланты</h3>
                 <p className="text-xs text-[var(--color-text-muted)] mb-2">
                     Очков: <span className="text-yellow-400 font-bold">{playerPoints}</span>
                 </p>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
                     {talentInfo.map((t: any) => (
                         <div key={t.type} className="border border-[var(--color-border-light)] rounded-lg p-2">
                             <div className="flex justify-between items-center mb-1">
                                 <span className="text-xs font-medium">{t.label} ур.{t.playerLevel}</span>
-                                <span className="text-[0.6rem] text-[var(--color-text-muted)]">−{t.playerLevel + t.guildLevel}% врагу</span>
+                                <span className="text-[0.6rem] text-yellow-400">{t.playerLevel + t.guildLevel}%</span>
                             </div>
+                            <p className="text-[0.55rem] text-[var(--color-text-muted)] mb-1">{t.desc}</p>
                             <div className="mb-1">
                                 <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
                                     <span>{t.playerProgress}/{t.playerUpgradeCost}</span>
@@ -518,7 +521,7 @@ export default function GuildPage() {
                                 </div>
                             </div>
                             <Button size="sm" disabled={playerPoints < 1} onClick={() => handleTalentUpgrade(t.type, 'personal')}>
-                                Вложить 1 очко
+                                Вложить 1
                             </Button>
                         </div>
                     ))}
@@ -532,13 +535,14 @@ export default function GuildPage() {
                     Очков гильдии: <span className="text-yellow-400 font-bold">{guildPoints}</span>
                     {myRank !== 'leader' && <span className="text-[var(--color-text-muted)]"> · Вкладывает лидер</span>}
                 </p>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
                     {talentInfo.map((t: any) => (
                         <div key={t.type} className="border border-[var(--color-border-light)] rounded-lg p-2">
                             <div className="flex justify-between items-center mb-1">
                                 <span className="text-xs font-medium">{t.label} ур.{t.guildLevel}</span>
-                                <span className="text-[0.6rem] text-[var(--color-text-muted)]">−{t.playerLevel + t.guildLevel}% врагу</span>
+                                <span className="text-[0.6rem] text-yellow-400">{t.playerLevel + t.guildLevel}%</span>
                             </div>
+                            <p className="text-[0.55rem] text-[var(--color-text-muted)] mb-1">{t.desc}</p>
                             <div className="mb-1">
                                 <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
                                     <span>{t.guildProgress}/{t.guildUpgradeCost}</span>
@@ -549,13 +553,14 @@ export default function GuildPage() {
                             </div>
                             {myRank === 'leader' && (
                                 <Button size="sm" variant="secondary" disabled={guildPoints < 1} onClick={() => handleTalentUpgrade(t.type, 'guild')}>
-                                    Вложить 1 очко
+                                    Вложить 1
                                 </Button>
                             )}
                         </div>
                     ))}
                 </div>
             </Card>
+            </div>
         </div>}
 
         {/* Permissions popup */}
