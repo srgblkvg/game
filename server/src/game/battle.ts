@@ -107,6 +107,14 @@ export interface TurnContext {
   maxHpTarget: number;
   actor: 'attacker' | 'defender';
   target: 'attacker' | 'defender';
+  // Контр-экстра статы от гильдийских талантов (снижают вражеские extra-шансы)
+  antiDodge?: number;
+  antiCrit?: number;
+  antiBlock?: number;
+  antiCounter?: number;
+  antiVampiric?: number;
+  // Антивампиризм цели (снижает вампиризм атакующего)
+  targetAntiVampiric?: number;
 }
 
 export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor: number; hpTarget: number; stunnedTarget: boolean; poisonApplied: { damage: number; turns: number } | undefined } {
@@ -117,12 +125,12 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
 
   addStep({ type: 'attack', actor: ctx.actor, message: `${ctx.actorName} атакует!` });
 
-  if (Math.random() < dodgeChance(ctx.targetStats, ctx.actorStats)) {
+  if (Math.random() < Math.max(0, dodgeChance(ctx.targetStats, ctx.actorStats) - (ctx.antiDodge || 0) / 100)) {
     addStep({ type: 'dodge', actor: ctx.target, message: `${ctx.targetName} уклоняется!` });
-    if (Math.random() < counterChance(ctx.targetStats, ctx.actorStats, ctx.targetStats.extra.counter || 0)) {
+    if (Math.random() < Math.max(0, counterChance(ctx.targetStats, ctx.actorStats, ctx.targetStats.extra.counter || 0) - (ctx.antiCounter || 0) / 100)) {
       addStep({ type: 'counter', actor: ctx.target, message: `${ctx.targetName} контратакует!` });
       let cdmg = ctx.targetStats.s;
-      if (Math.random() < critChance(ctx.targetStats)) {
+      if (Math.random() < Math.max(0, critChance(ctx.targetStats) - (ctx.antiCrit || 0) / 100)) {
         cdmg *= critMult(ctx.targetStats);
         addStep({ type: 'crit', actor: ctx.target, message: `Крит!` });
       }
@@ -169,8 +177,9 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
     hp1: ctx.actor === 'attacker' ? hpActor : hpTarget, hp2: ctx.actor === 'attacker' ? hpTarget : hpActor,
     maxHp1: ctx.actor === 'attacker' ? ctx.maxHpActor : ctx.maxHpTarget, maxHp2: ctx.actor === 'attacker' ? ctx.maxHpTarget : ctx.maxHpActor });
 
-  // Vampirism: restore % of damage as HP
-  const vamp = ctx.actorStats.vampirism || 0;
+  // Vampirism: restore % of damage as HP (снижается антивампиризмом цели)
+  let vamp = ctx.actorStats.vampirism || 0;
+  vamp = Math.max(0, vamp - (ctx.targetAntiVampiric || 0));
   if (vamp > 0 && dmg > 0) {
     const heal = Math.round(dmg * vamp / 100);
     if (heal > 0) {

@@ -37,6 +37,7 @@ import collectionsRoutes from './routes/collections';
 import adminCollectionsRoutes from './routes/adminCollections';
 import adminBotsRoutes from './routes/adminBots';
 import guildBuildingsRoutes from './routes/guildBuildings';
+import guildBossRoutes from './routes/guildBoss';
 import battleSimRoutes from './routes/battleSim';
 import overflowRoutes from './routes/overflow';
 import vkPaymentsRoutes from './routes/vkPayments';
@@ -156,6 +157,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', questsRoutes);
   app.use('/api', guildRoutes);
   app.use('/api', guildBuildingsRoutes);
+  app.use('/api', guildBossRoutes);
   app.use('/api', feedbackRoutes);
   app.use('/api', tournamentRoutes);
   app.use('/api', collectionsRoutes);

@@ -1,5 +1,5 @@
 import PageHeader from '../components/ui/PageHeader';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
@@ -12,9 +12,13 @@ import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
 import { getLastSeen } from '../utils/time';
 
-const TABS = ['🏚️ Обзор', '🏘️ Постройки', '💰 Казна', '👥 Участники'];
+const TABS = ['🏚️ Обзор', '🏘️ Постройки', '💰 Казна', '👥 Участники', '👾 Босс'];
 const PERIODS = ['today','week','month','all'] as const;
 const PLABELS: Record<string,string> = {today:'Сегодня',week:'Неделя',month:'Месяц',all:'Всё'};
+
+const TALENT_LABELS: Record<string,string> = {
+  accuracy:'Меткость', fortitude:'Стойкость', penetration:'Пробивание', control:'Контроль', vampiric:'Антивампиризм',
+};
 
 export default function GuildPage() {
   const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
@@ -52,9 +56,20 @@ export default function GuildPage() {
     const [war, setWar] = useState<any>(null);
     const [warTimeLeft, setWarTimeLeft] = useState('');
     const [showWarRules, setShowWarRules] = useState(false);
-    const [permPopup, setPermPopup] = useState<any>(null); // { officerId, username, quests, buildings, war }
+    const [permPopup, setPermPopup] = useState<any>(null);
     const [confirmPopup, setConfirmPopup] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+
+    // Boss state
+    const [boss, setBoss] = useState<any>(null);
+    const [bossCd, setBossCd] = useState(0);
+    const [talentInfo, setTalentInfo] = useState<any[]>([]);
+    const [playerPoints, setPlayerPoints] = useState(0);
+    const [guildPoints, setGuildPoints] = useState(0);
+    const [bossSteps, setBossSteps] = useState<any[]>([]);
+    const [bossResult, setBossResult] = useState<any>(null);
+    const [bossFighting, setBossFighting] = useState(false);
+    const bossTimerRef = useRef<any>(null);
 
     const api = async (url: string, body?: any) => {
         const r = await fetch(`${BASE_URL}${url}`, { method: body ? 'POST' : 'GET', headers: { ...getHeaders(), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
@@ -79,6 +94,56 @@ export default function GuildPage() {
         } catch (e: any) { setError(e.message); }
     };
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user]);
+
+    // Boss data
+    const loadBoss = async () => {
+        try {
+            const d = await api('/guild/boss');
+            setBoss(d.boss);
+            setBossCd(d.cooldownRemaining);
+            setTalentInfo(d.talentInfo);
+            setPlayerPoints(d.playerPoints);
+            setGuildPoints(d.guildPoints);
+        } catch {}
+    };
+    useEffect(() => { if (guild && tab === 4) loadBoss(); }, [guild, tab]);
+
+    // Boss cooldown timer
+    useEffect(() => {
+        if (bossCd <= 0) return;
+        bossTimerRef.current = setInterval(() => setBossCd(p => Math.max(0, p - 1)), 1000);
+        return () => { if (bossTimerRef.current) clearInterval(bossTimerRef.current); };
+    }, [bossCd > 0]);
+
+    const handleBossAttack = async () => {
+        setBossFighting(true);
+        setBossResult(null);
+        setBossSteps([]);
+        try {
+            const d = await api('/guild/boss/attack', {});
+            setBossSteps(d.steps || []);
+            setBossResult(d);
+            setPlayerPoints(p => p + 1);
+            if (d.guildPointsGained) setGuildPoints(p => p + d.guildPointsGained);
+            if (d.bossKilled && d.newBoss) {
+                setBoss({ ...d.newBoss, currentHp: d.newBoss.maxHp, maxHp: d.newBoss.maxHp, atk: 80, agi: 50, def: 60, mst: 50 });
+            } else {
+                setBoss((p: any) => p ? { ...p, currentHp: d.bossHpAfter } : p);
+            }
+            setBossCd(3600);
+        } catch (e: any) { setError(e.message); }
+        setBossFighting(false);
+    };
+
+    const handleTalentUpgrade = async (talentType: string, scope: 'personal'|'guild') => {
+        try {
+            const d = await api('/guild/talents/upgrade', { talentType, scope });
+            if (scope === 'personal') setPlayerPoints(d.remainingPoints);
+            else setGuildPoints(d.remainingPoints);
+            loadBoss();
+            msg(`${TALENT_LABELS[talentType] || talentType} → ур.${d.newLevel}`);
+        } catch (e: any) { setError(e.message); }
+    };
 
     // WS-обновление опыта и уровня гильдии
     useEffect(() => {
@@ -169,6 +234,12 @@ export default function GuildPage() {
         try { await api('/guild/tax-rate',{taxRate:r}); setTaxRate(r); setTaxRateInput(''); msg(`Налог: ${r}%`); } catch (e: any) { setError(e.message); }
     };
 
+    const fmtCd = (sec: number) => {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
     // ── No guild ──
     if (!guild) {
         return (<div className="max-w-3xl mx-auto px-4 py-4"><BackButton />
@@ -199,6 +270,7 @@ export default function GuildPage() {
     const myRank = guild.myRank;
     const canBuild = myRank==='leader'||myPerms.buildings;
     const canWar = myRank==='leader'||myPerms.war;
+    const canTalents = myRank==='leader'||myPerms.buildings;
 
     return (<div className="max-w-3xl mx-auto px-4 py-4"><BackButton />
           {actionCard && <PageHeader title="Гильдия" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
@@ -228,8 +300,8 @@ export default function GuildPage() {
         </Card>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-4 bg-[var(--color-bg-card)] rounded-lg p-1">{TABS.map((l,i)=>(
-            <button key={i} onClick={()=>setTab(i)} className={`flex-1 py-1.5 text-xs font-medium rounded-md cursor-pointer transition-colors ${tab===i?'bg-[var(--color-accent-info)] text-white':'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}>{l}</button>))}
+        <div className="flex gap-1 mb-4 bg-[var(--color-bg-card)] rounded-lg p-1 flex-wrap">{TABS.map((l,i)=>(
+            <button key={i} onClick={()=>setTab(i)} className={`py-1.5 px-2 text-xs font-medium rounded-md cursor-pointer transition-colors ${tab===i?'bg-[var(--color-accent-info)] text-white':'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}>{l}</button>))}
         </div>
 
         {/* Tab 0: Обзор */}
@@ -331,6 +403,73 @@ export default function GuildPage() {
                         <Button size="md" variant="secondary" onClick={()=>handleKick(m.userId,m.username)}>Исключить</Button>
                     </div>}
                 </div>))}</div></Card>
+        </div>}
+
+        {/* Tab 4: Босс */}
+        {tab===4 && <div className="space-y-4">
+            {/* Boss card */}
+            {boss && <Card>
+                <h3 className="font-bold text-sm mb-2">👾 Багровый исполин — ур.{boss.level}</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">Убийств: {boss.killCount} · Атака раз в час · +1 личное очко талантов за атаку · +1 гильдийское за убийство</p>
+                <div className="mb-1">
+                    <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
+                        <span>HP: {boss.currentHp?.toLocaleString()} / {boss.maxHp?.toLocaleString()}</span>
+                        <span>{boss.currentHp > 0 ? Math.round(boss.currentHp / boss.maxHp * 100) : 0}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                        <div className="h-full bg-red-600 rounded-full transition-all" style={{width:`${boss.currentHp > 0 ? Math.max(0.5, (boss.currentHp/boss.maxHp)*100) : 0}%`}}/>
+                    </div>
+                </div>
+                <div className="text-xs text-[var(--color-text-muted)] mb-2">
+                    <span>⚔{boss.atk} 🏃{boss.agi} 🛡{boss.def} ✦{boss.mst}</span>
+                    {boss.effects && boss.effects.length > 0 && <span className="ml-2">| Эффекты: {boss.effects.map((e: any) => e.name).join(', ')}</span>}
+                </div>
+                {bossSteps.length > 0 && (
+                    <div className="mb-3 max-h-48 overflow-y-auto text-xs border border-[var(--color-border-light)] rounded p-2 bg-[var(--color-bg-secondary)]">
+                        {bossSteps.map((s: any, i: number) => (
+                            <div key={i} className={`py-0.5 ${s.type === 'crit' ? 'text-yellow-400 font-bold' : s.type === 'dodge' ? 'text-blue-400' : s.type === 'stun' ? 'text-purple-400' : s.type === 'end' ? 'text-green-400 font-bold' : s.type === 'block' ? 'text-gray-400' : s.type === 'counter' ? 'text-orange-400' : ''}`}>{s.message}</div>
+                        ))}
+                    </div>
+                )}
+                {bossResult && (
+                    <div className={`text-xs font-bold mb-2 ${bossResult.playerWon ? 'text-green-400' : 'text-red-400'}`}>
+                        {bossResult.playerWon ? '🏆 Победа!' : '💀 Поражение!'} Урон: {bossResult.damageDealt?.toLocaleString()}
+                        {bossResult.bossKilled && <span className="text-yellow-400"> · Босс повержен! Новый пробудился.</span>}
+                    </div>
+                )}
+                <Button size="md" variant="danger" disabled={bossCd > 0 || bossFighting} onClick={handleBossAttack}>
+                    {bossFighting ? 'Бой...' : bossCd > 0 ? `Атака через ${fmtCd(bossCd)}` : '⚔️ Атаковать'}
+                </Button>
+            </Card>}
+
+            {/* Talents */}
+            <Card>
+                <h3 className="font-bold text-sm mb-2">🌟 Таланты</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">
+                    Личных очков: <span className="text-yellow-400 font-bold">{playerPoints}</span> · Гильдийских: <span className="text-yellow-400 font-bold">{guildPoints}</span>
+                </p>
+                <div className="space-y-2">
+                    {talentInfo.map((t: any) => (
+                        <div key={t.type} className="border border-[var(--color-border-light)] rounded-lg p-2">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-xs font-medium">{t.label}</span>
+                                <span className="text-[0.6rem] text-[var(--color-text-muted)]">−{t.playerLevel + t.guildLevel}% врагу</span>
+                            </div>
+                            <p className="text-[0.6rem] text-[var(--color-text-muted)] mb-1.5">{t.desc}</p>
+                            <div className="flex gap-1">
+                                <Button size="sm" disabled={playerPoints < t.playerUpgradeCost} onClick={() => handleTalentUpgrade(t.type, 'personal')}>
+                                    Личн. ур.{t.playerLevel} → {t.playerUpgradeCost}оч.
+                                </Button>
+                                {canTalents && (
+                                    <Button size="sm" variant="secondary" disabled={guildPoints < t.guildUpgradeCost} onClick={() => handleTalentUpgrade(t.type, 'guild')}>
+                                        Гил. ур.{t.guildLevel} → {t.guildUpgradeCost}оч.
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </Card>
         </div>}
 
         {/* Permissions popup */}
