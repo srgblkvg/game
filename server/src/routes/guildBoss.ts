@@ -14,6 +14,10 @@ import {
 import type { TalentType } from '../game/guildBoss';
 
 const router = Router();
+console.log('[guildBoss] Router loaded, routes registered');
+
+// ── Отладка: жив ли роут ──
+router.get('/guild/boss/ping', (_req, res) => { console.log('[guildBoss] PING!'); res.json({ ok: true, time: Date.now() }); });
 
 // ── GET /guild/boss — информация о боссе, кулдаун игрока, таланты ──
 router.get('/guild/boss', async (req, res) => {
@@ -208,8 +212,30 @@ router.post('/guild/boss/attack', async (req, res) => {
   const finalHp = Math.max(1, userHp);
   await db.run('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?', [finalHp, now, userId]);
 
-  // Уведомление в чат гильдии о результате
+  // ── WS: обновление HP босса для всех членов гильдии ──
   const { sendToGuild } = await import('../events');
+  const updatedBoss = await getOrCreateBoss(user.guildid);
+  sendToGuild(user.guildid, {
+    type: 'guild_boss_update',
+    message: `${user.username} нанёс ${damageDealt.toLocaleString()} урона Багровому исполину`,
+    data: {
+      attackerId: userId,
+      attackerName: user.username,
+      damageDealt,
+      bossHp: updatedBoss.currentHp,
+      bossMaxHp: updatedBoss.maxHp,
+      bossKilled: killed,
+      newKillCount: killed ? newKillCount : boss.killCount,
+      newBoss: killed ? {
+        maxHp: updatedBoss.maxHp,
+        level: updatedBoss.level,
+        killCount: updatedBoss.killCount,
+        effects: updatedBoss.effects,
+      } : null,
+    },
+  });
+
+  // Уведомление в чат гильдии о результате
   if (killed) {
     sendToGuild(user.guildid, {
       type: 'guild_boss_kill',

@@ -155,6 +155,8 @@ export function setupRoutes(app: Express) {
   app.use('/api', tavernRoutes);
   app.use('/api', auctionRoutes);
   app.use('/api', questsRoutes);
+  // Гильд-босс напрямую (до guildRoutes с /guild/:id)
+  app.get('/api/guild/boss/ping', (_req, res) => { res.json({ ok: true }); });
   app.use('/api', guildBossRoutes);
   app.use('/api', guildRoutes);
   app.use('/api', guildBuildingsRoutes);

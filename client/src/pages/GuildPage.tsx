@@ -115,6 +115,27 @@ export default function GuildPage() {
         return () => { if (bossTimerRef.current) clearInterval(bossTimerRef.current); };
     }, [bossCd > 0]);
 
+    // WS: обновление HP босса от других игроков
+    useEffect(() => {
+        const onUpdate = (e: Event) => {
+            const d = (e as CustomEvent).detail;
+            if (d.bossKilled && d.newBoss) {
+                setBoss({
+                    currentHp: d.newBoss.maxHp,
+                    maxHp: d.newBoss.maxHp,
+                    atk: 80, agi: 50, def: 60, mst: 50,
+                    level: d.newBoss.level,
+                    killCount: d.newKillCount,
+                    effects: d.newBoss.effects || [],
+                });
+            } else {
+                setBoss((p: any) => p ? { ...p, currentHp: d.bossHp } : p);
+            }
+        };
+        window.addEventListener('guildBossUpdate', onUpdate);
+        return () => window.removeEventListener('guildBossUpdate', onUpdate);
+    }, []);
+
     const handleBossAttack = async () => {
         setBossFighting(true);
         setBossResult(null);
