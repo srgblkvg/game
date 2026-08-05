@@ -168,8 +168,13 @@ export default function GuildPage() {
             const d = await api('/guild/talents/upgrade', { talentType, scope });
             if (scope === 'personal') setPlayerPoints(d.remainingPoints);
             else setGuildPoints(d.remainingPoints);
-            loadBoss();
-            msg(`${TALENT_LABELS[talentType] || talentType} → ур.${d.newLevel}`);
+            // Обновляем прогресс локально без перезагрузки
+            setTalentInfo((prev: any[]) => prev.map((t: any) => {
+                if (t.type !== talentType) return t;
+                if (scope === 'personal') return { ...t, playerLevel: d.newLevel, playerProgress: d.newProgress };
+                return { ...t, guildLevel: d.newLevel, guildProgress: d.newProgress };
+            }));
+            if (d.leveledUp) msg(`${TALENT_LABELS[talentType] || talentType} → ур.${d.newLevel}!`);
         } catch (e: any) { setError(e.message); }
     };
 
@@ -491,30 +496,62 @@ export default function GuildPage() {
                 )}
             </Card>
 
-            {/* Talents */}
+            {/* Personal Talents */}
             <Card>
-                <h3 className="font-bold text-sm mb-2">🌟 Таланты</h3>
+                <h3 className="font-bold text-sm mb-2">🌟 Личные таланты</h3>
                 <p className="text-xs text-[var(--color-text-muted)] mb-2">
-                    Личных очков: <span className="text-yellow-400 font-bold">{playerPoints}</span> · Гильдийских: <span className="text-yellow-400 font-bold">{guildPoints}</span>
+                    Очков: <span className="text-yellow-400 font-bold">{playerPoints}</span>
                 </p>
                 <div className="space-y-2">
                     {talentInfo.map((t: any) => (
                         <div key={t.type} className="border border-[var(--color-border-light)] rounded-lg p-2">
                             <div className="flex justify-between items-center mb-1">
-                                <span className="text-xs font-medium">{t.label}</span>
+                                <span className="text-xs font-medium">{t.label} ур.{t.playerLevel}</span>
                                 <span className="text-[0.6rem] text-[var(--color-text-muted)]">−{t.playerLevel + t.guildLevel}% врагу</span>
                             </div>
-                            <p className="text-[0.6rem] text-[var(--color-text-muted)] mb-1.5">{t.desc}</p>
-                            <div className="flex gap-1">
-                                <Button size="sm" disabled={playerPoints < t.playerUpgradeCost} onClick={() => handleTalentUpgrade(t.type, 'personal')}>
-                                    Личн. ур.{t.playerLevel} → {t.playerUpgradeCost}оч.
-                                </Button>
-                                {canTalents && (
-                                    <Button size="sm" variant="secondary" disabled={guildPoints < t.guildUpgradeCost} onClick={() => handleTalentUpgrade(t.type, 'guild')}>
-                                        Гил. ур.{t.guildLevel} → {t.guildUpgradeCost}оч.
-                                    </Button>
-                                )}
+                            <div className="mb-1">
+                                <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
+                                    <span>{t.playerProgress}/{t.playerUpgradeCost}</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                    <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all" style={{width:`${Math.min(100, (t.playerProgress / t.playerUpgradeCost) * 100)}%`}}/>
+                                </div>
                             </div>
+                            <Button size="sm" disabled={playerPoints < 1} onClick={() => handleTalentUpgrade(t.type, 'personal')}>
+                                Вложить 1 очко
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            </Card>
+
+            {/* Guild Talents */}
+            <Card>
+                <h3 className="font-bold text-sm mb-2">🏛️ Гильдийские таланты</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">
+                    Очков гильдии: <span className="text-yellow-400 font-bold">{guildPoints}</span>
+                    {myRank !== 'leader' && <span className="text-[var(--color-text-muted)]"> · Вкладывает лидер</span>}
+                </p>
+                <div className="space-y-2">
+                    {talentInfo.map((t: any) => (
+                        <div key={t.type} className="border border-[var(--color-border-light)] rounded-lg p-2">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-xs font-medium">{t.label} ур.{t.guildLevel}</span>
+                                <span className="text-[0.6rem] text-[var(--color-text-muted)]">−{t.playerLevel + t.guildLevel}% врагу</span>
+                            </div>
+                            <div className="mb-1">
+                                <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
+                                    <span>{t.guildProgress}/{t.guildUpgradeCost}</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                    <div className="h-full bg-[var(--color-accent-gold)] rounded-full transition-all" style={{width:`${Math.min(100, (t.guildProgress / t.guildUpgradeCost) * 100)}%`}}/>
+                                </div>
+                            </div>
+                            {myRank === 'leader' && (
+                                <Button size="sm" variant="secondary" disabled={guildPoints < 1} onClick={() => handleTalentUpgrade(t.type, 'guild')}>
+                                    Вложить 1 очко
+                                </Button>
+                            )}
                         </div>
                     ))}
                 </div>

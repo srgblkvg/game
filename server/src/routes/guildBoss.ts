@@ -53,10 +53,12 @@ router.get('/guild/boss', async (req, res) => {
       type: t,
       label: TALENT_LABELS[t],
       desc: TALENT_DESCS[t],
-      playerLevel: playerTalents[t],
-      guildLevel: guildTalents[t],
-      playerUpgradeCost: getTalentUpgradeCost(playerTalents[t] || 0),
-      guildUpgradeCost: getTalentUpgradeCost(guildTalents[t] || 0),
+      playerLevel: playerTalents[t]?.level || 0,
+      playerProgress: playerTalents[t]?.progress || 0,
+      guildLevel: guildTalents[t]?.level || 0,
+      guildProgress: guildTalents[t]?.progress || 0,
+      playerUpgradeCost: getTalentUpgradeCost(playerTalents[t]?.level || 0),
+      guildUpgradeCost: getTalentUpgradeCost(guildTalents[t]?.level || 0),
     })),
   });
 });
@@ -338,10 +340,12 @@ router.get('/guild/talents', async (req, res) => {
       type: t,
       label: TALENT_LABELS[t],
       desc: TALENT_DESCS[t],
-      playerLevel: playerTalents[t],
-      guildLevel: guildTalents[t],
-      playerUpgradeCost: getTalentUpgradeCost(playerTalents[t] || 0),
-      guildUpgradeCost: getTalentUpgradeCost(guildTalents[t] || 0),
+      playerLevel: playerTalents[t]?.level || 0,
+      playerProgress: playerTalents[t]?.progress || 0,
+      guildLevel: guildTalents[t]?.level || 0,
+      guildProgress: guildTalents[t]?.progress || 0,
+      playerUpgradeCost: getTalentUpgradeCost(playerTalents[t]?.level || 0),
+      guildUpgradeCost: getTalentUpgradeCost(guildTalents[t]?.level || 0),
     })),
   });
 });
@@ -363,23 +367,39 @@ router.post('/guild/talents/upgrade', async (req, res) => {
 
   if (scope === 'personal') {
     const member = await db.one('SELECT talentPoints FROM guild_members WHERE userId = ? AND guildId = ?', [userId, user.guildid]) as any;
+    if (!member || (member.talentpoints || 0) < 1) {
+      return res.status(400).json({ error: 'Нет очков талантов' });
+    }
+
     const row = await db.one(
-      'SELECT level FROM player_guild_talents WHERE userId = ? AND guildId = ? AND talentType = ?',
+      'SELECT level, progress FROM player_guild_talents WHERE userId = ? AND guildId = ? AND talentType = ?',
       [userId, user.guildid, talentType]
     ).catch(() => null) as any;
     const currentLevel = row?.level || 0;
+    const currentProgress = row?.progress || 0;
     const cost = getTalentUpgradeCost(currentLevel);
 
-    if (!member || (member.talentpoints || 0) < cost) {
-      return res.status(400).json({ error: `Недостаточно очков. Нужно ${cost}, есть ${member?.talentpoints || 0}` });
-    }
+    // Вкладываем 1 очко
+    const newProgress = currentProgress + 1;
+    let newLevel = currentLevel;
+    let leveledUp = false;
 
-    if (row) {
-      await db.run('UPDATE player_guild_talents SET level = level + 1 WHERE userId = ? AND guildId = ? AND talentType = ?', [userId, user.guildid, talentType]);
+    if (newProgress >= cost) {
+      newLevel = currentLevel + 1;
+      leveledUp = true;
+      if (row) {
+        await db.run('UPDATE player_guild_talents SET level = ?, progress = 0 WHERE userId = ? AND guildId = ? AND talentType = ?', [newLevel, userId, user.guildid, talentType]);
+      } else {
+        await db.run('INSERT INTO player_guild_talents (userId, guildId, talentType, level, progress) VALUES (?, ?, ?, 1, 0)', [userId, user.guildid, talentType]);
+      }
     } else {
-      await db.run('INSERT INTO player_guild_talents (userId, guildId, talentType, level) VALUES (?, ?, ?, 1)', [userId, user.guildid, talentType]);
+      if (row) {
+        await db.run('UPDATE player_guild_talents SET progress = ? WHERE userId = ? AND guildId = ? AND talentType = ?', [newProgress, userId, user.guildid, talentType]);
+      } else {
+        await db.run('INSERT INTO player_guild_talents (userId, guildId, talentType, level, progress) VALUES (?, ?, ?, 0, ?)', [userId, user.guildid, talentType, newProgress]);
+      }
     }
-    await db.run('UPDATE guild_members SET talentPoints = talentPoints - ? WHERE userId = ? AND guildId = ?', [cost, userId, user.guildid]);
+    await db.run('UPDATE guild_members SET talentPoints = talentPoints - 1 WHERE userId = ? AND guildId = ?', [userId, user.guildid]);
 
     const talents = await getPlayerTalents(userId, user.guildid);
     const updated = await db.one('SELECT talentPoints FROM guild_members WHERE userId = ? AND guildId = ?', [userId, user.guildid]) as any;
@@ -388,37 +408,54 @@ router.post('/guild/talents/upgrade', async (req, res) => {
       success: true,
       scope: 'personal',
       talentType,
-      newLevel: talents[talentType],
+      newLevel,
+      newProgress: leveledUp ? 0 : newProgress,
+      cost,
+      leveledUp,
       remainingPoints: updated.talentpoints,
-      talents: TALENT_TYPES.map(t => ({ type: t, label: TALENT_LABELS[t], playerLevel: talents[t] })),
     });
   }
 
-  // Гильдийский талант — права лидера/офицера
+  // Гильдийский талант — только лидер
   if (scope === 'guild') {
-    const member = await db.one('SELECT rank, can_buildings FROM guild_members WHERE userId = ? AND guildId = ?', [userId, user.guildid]) as any;
-    if (!member || (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_buildings))) {
-      return res.status(403).json({ error: 'Только лидер или офицер с правом построек может улучшать гильдийские таланты' });
+    const member = await db.one('SELECT rank FROM guild_members WHERE userId = ? AND guildId = ?', [userId, user.guildid]) as any;
+    if (!member || member.rank !== 'leader') {
+      return res.status(403).json({ error: 'Только лидер гильдии может вкладывать гильдийские очки' });
     }
 
     const guild = await db.one('SELECT talentPoints FROM guilds WHERE id = ?', [user.guildid]) as any;
+    if (!guild || (guild.talentpoints || 0) < 1) {
+      return res.status(400).json({ error: 'Нет гильдийских очков' });
+    }
+
     const row = await db.one(
-      'SELECT level FROM guild_talents WHERE guildId = ? AND talentType = ?',
+      'SELECT level, progress FROM guild_talents WHERE guildId = ? AND talentType = ?',
       [user.guildid, talentType]
     ).catch(() => null) as any;
     const currentLevel = row?.level || 0;
+    const currentProgress = row?.progress || 0;
     const cost = getTalentUpgradeCost(currentLevel);
 
-    if (!guild || (guild.talentpoints || 0) < cost) {
-      return res.status(400).json({ error: `Недостаточно гильдийских очков. Нужно ${cost}, есть ${guild?.talentpoints || 0}` });
-    }
+    const newProgress = currentProgress + 1;
+    let newLevel = currentLevel;
+    let leveledUp = false;
 
-    if (row) {
-      await db.run('UPDATE guild_talents SET level = level + 1 WHERE guildId = ? AND talentType = ?', [user.guildid, talentType]);
+    if (newProgress >= cost) {
+      newLevel = currentLevel + 1;
+      leveledUp = true;
+      if (row) {
+        await db.run('UPDATE guild_talents SET level = ?, progress = 0 WHERE guildId = ? AND talentType = ?', [newLevel, user.guildid, talentType]);
+      } else {
+        await db.run('INSERT INTO guild_talents (guildId, talentType, level, progress) VALUES (?, ?, 1, 0)', [user.guildid, talentType]);
+      }
     } else {
-      await db.run('INSERT INTO guild_talents (guildId, talentType, level) VALUES (?, ?, 1)', [user.guildid, talentType]);
+      if (row) {
+        await db.run('UPDATE guild_talents SET progress = ? WHERE guildId = ? AND talentType = ?', [newProgress, user.guildid, talentType]);
+      } else {
+        await db.run('INSERT INTO guild_talents (guildId, talentType, level, progress) VALUES (?, ?, 0, ?)', [user.guildid, talentType, newProgress]);
+      }
     }
-    await db.run('UPDATE guilds SET talentPoints = talentPoints - ? WHERE id = ?', [cost, user.guildid]);
+    await db.run('UPDATE guilds SET talentPoints = talentPoints - 1 WHERE id = ?', [user.guildid]);
 
     const talents = await getGuildTalents(user.guildid);
     const updated = await db.one('SELECT talentPoints FROM guilds WHERE id = ?', [user.guildid]) as any;
@@ -427,9 +464,11 @@ router.post('/guild/talents/upgrade', async (req, res) => {
       success: true,
       scope: 'guild',
       talentType,
-      newLevel: talents[talentType],
+      newLevel,
+      newProgress: leveledUp ? 0 : newProgress,
+      cost,
+      leveledUp,
       remainingPoints: updated.talentpoints,
-      talents: TALENT_TYPES.map(t => ({ type: t, label: TALENT_LABELS[t], guildLevel: talents[t] })),
     });
   }
 });

@@ -186,35 +186,35 @@ export async function damageBoss(guildId: number, damage: number): Promise<{ kil
 
 // ── Таланты ──
 
-export async function getGuildTalents(guildId: number) {
-  const rows = await db.query('SELECT talentType, level FROM guild_talents WHERE guildId = ?', [guildId]) as any[];
-  const talents: Record<string, number> = {};
-  for (const t of TALENT_TYPES) talents[t] = 0;
-  for (const r of rows) talents[r.talenttype] = r.level;
+export async function getGuildTalents(guildId: number): Promise<Record<string, { level: number; progress: number }>> {
+  const rows = await db.query('SELECT talentType, level, progress FROM guild_talents WHERE guildId = ?', [guildId]) as any[];
+  const talents: Record<string, { level: number; progress: number }> = {};
+  for (const t of TALENT_TYPES) talents[t] = { level: 0, progress: 0 };
+  for (const r of rows) talents[r.talenttype] = { level: r.level || 0, progress: r.progress || 0 };
   return talents;
 }
 
-export async function getPlayerTalents(userId: number, guildId: number) {
-  const rows = await db.query('SELECT talentType, level FROM player_guild_talents WHERE userId = ? AND guildId = ?', [userId, guildId]) as any[];
-  const talents: Record<string, number> = {};
-  for (const t of TALENT_TYPES) talents[t] = 0;
-  for (const r of rows) talents[r.talenttype] = r.level;
+export async function getPlayerTalents(userId: number, guildId: number): Promise<Record<string, { level: number; progress: number }>> {
+  const rows = await db.query('SELECT talentType, level, progress FROM player_guild_talents WHERE userId = ? AND guildId = ?', [userId, guildId]) as any[];
+  const talents: Record<string, { level: number; progress: number }> = {};
+  for (const t of TALENT_TYPES) talents[t] = { level: 0, progress: 0 };
+  for (const r of rows) talents[r.talenttype] = { level: r.level || 0, progress: r.progress || 0 };
   return talents;
 }
 
 /** Суммарный контр-бонус от личных + гильдийских талантов */
 export function getTalentAntiBonus(
-  playerTalents: Record<string, number>,
-  guildTalents: Record<string, number>,
+  playerTalents: Record<string, { level: number; progress: number }>,
+  guildTalents: Record<string, { level: number; progress: number }>,
   talentType: TalentType
 ): number {
-  return ((playerTalents[talentType] || 0) + (guildTalents[talentType] || 0)) * TALENT_EFFECT_PER_LEVEL;
+  return ((playerTalents[talentType]?.level || 0) + (guildTalents[talentType]?.level || 0)) * TALENT_EFFECT_PER_LEVEL;
 }
 
 /** Получить все поля anti-* для передачи в TurnContext */
 export function getAntiStats(
-  playerTalents: Record<string, number>,
-  guildTalents: Record<string, number>
+  playerTalents: Record<string, { level: number; progress: number }>,
+  guildTalents: Record<string, { level: number; progress: number }>
 ): { antiDodge: number; antiCrit: number; antiBlock: number; antiCounter: number; antiVampiric: number } {
   return {
     antiDodge: getTalentAntiBonus(playerTalents, guildTalents, 'accuracy'),
