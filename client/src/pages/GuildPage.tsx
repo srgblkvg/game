@@ -489,7 +489,7 @@ export default function GuildPage() {
                         <h4 className="font-medium mb-1 text-[var(--color-accent-gold)]">⭐ Гильдия (топ-5)</h4>
                         {ratings.guildTop?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                <span>{i+1}. {r.username}</span>
+                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
                                 <span className="text-[var(--color-text-muted)]">{r.total?.toLocaleString()}</span>
                             </div>
                         ))}
@@ -497,21 +497,36 @@ export default function GuildPage() {
                     </div>
                     {/* Место игрока */}
                     <div>
-                        <h4 className="font-medium mb-1 text-[var(--color-accent-info)]">👤 Моё место</h4>
-                        {ratings.personalRank ? (
-                            <p>#{ratings.personalRank.rank} среди всех · {ratings.personalRank.total?.toLocaleString()} урона</p>
-                        ) : <span className="text-[var(--color-text-muted)]">Нет данных</span>}
-                        <h4 className="font-medium mb-1 mt-2 text-[var(--color-accent-info)]">🏚️ Гильдия</h4>
-                        {ratings.guildRank ? (
-                            <p>#{ratings.guildRank.rank} среди гильдий · {ratings.guildRank.total?.toLocaleString()} урона</p>
-                        ) : <span className="text-[var(--color-text-muted)]">Нет данных</span>}
+                        <h4 className="font-medium mb-1 text-[var(--color-accent-info)]">👤 Игроки (топ-5)</h4>
+                        {ratings.personalTop?.map((r: any, i: number) => (
+                            <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
+                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span></span>
+                                <span className="text-[var(--color-text-muted)]">{r.total?.toLocaleString()}</span>
+                            </div>
+                        ))}
+                        {ratings.personalRank && (
+                            <div className="text-[var(--color-text-muted)] mt-1">Ваше место: #{ratings.personalRank.rank} · {ratings.personalRank.total?.toLocaleString()} урона</div>
+                        )}
+                    </div>
+                    {/* Место гильдии */}
+                    <div>
+                        <h4 className="font-medium mb-1 text-[var(--color-accent-info)]">🏚️ Гильдии (топ-5)</h4>
+                        {ratings.guildTopList?.map((r: any, i: number) => (
+                            <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
+                                <span>{i+1}. <span className="text-green-400 cursor-pointer hover:underline" onClick={() => navigate(`/guild/${r.name}`)}>{r.name}</span></span>
+                                <span className="text-[var(--color-text-muted)]">{r.total?.toLocaleString()}</span>
+                            </div>
+                        ))}
+                        {ratings.guildRank && (
+                            <div className="text-[var(--color-text-muted)] mt-1">Ваша гильдия: #{ratings.guildRank.rank} · {ratings.guildRank.total?.toLocaleString()} урона</div>
+                        )}
                     </div>
                     {/* Сильнейшие удары */}
                     <div>
                         <h4 className="font-medium mb-1 text-[var(--color-accent-warning)]">💥 Рекордные удары</h4>
                         {ratings.topHits?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                <span>{i+1}. {r.username}</span>
+                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
                                 <span className="text-[var(--color-text-muted)]">{r.maxDmg?.toLocaleString()}</span>
                             </div>
                         ))}

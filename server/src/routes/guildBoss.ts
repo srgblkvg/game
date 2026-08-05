@@ -326,11 +326,14 @@ router.get('/guild/boss/ratings', async (req, res) => {
 
   // 1. Топ-5 гильдии по урону
   const guildTop = await db.query(
-    'SELECT userId, username, SUM(damageDealt) as total FROM guild_boss_battles WHERE guildId = ? GROUP BY userId, username ORDER BY total DESC LIMIT 5',
+    'SELECT b.userId, b.username, u.level, g.name as guildName, SUM(b.damageDealt) as total FROM guild_boss_battles b JOIN users u ON b.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE b.guildId = ? GROUP BY b.userId, b.username, u.level, g.name ORDER BY total DESC LIMIT 5',
     [guildId]
   ) as any[];
 
-  // 2. Место игрока среди всех игроков
+  // 2. Топ-5 игроков по общему урону + место игрока
+  const personalTop = await db.query(
+    'SELECT userId, username, SUM(damageDealt) as total FROM guild_boss_battles GROUP BY userId, username ORDER BY total DESC LIMIT 5'
+  ) as any[];
   const personalRank = await db.one(
     `SELECT rank, total FROM (
       SELECT userId, SUM(damageDealt) as total, RANK() OVER (ORDER BY SUM(damageDealt) DESC) as rank
@@ -339,7 +342,10 @@ router.get('/guild/boss/ratings', async (req, res) => {
     [userId]
   ).catch(() => null) as any;
 
-  // 3. Место гильдии среди всех гильдий
+  // 3. Топ-5 гильдий по общему урону + место гильдии
+  const guildTopList = await db.query(
+    'SELECT g.id, g.name, SUM(b.damageDealt) as total FROM guild_boss_battles b JOIN guilds g ON b.guildId = g.id GROUP BY g.id, g.name ORDER BY total DESC LIMIT 5'
+  ) as any[];
   const guildRank = await db.one(
     `SELECT rank, total FROM (
       SELECT guildId, SUM(damageDealt) as total, RANK() OVER (ORDER BY SUM(damageDealt) DESC) as rank
@@ -350,7 +356,7 @@ router.get('/guild/boss/ratings', async (req, res) => {
 
   // 4. Топ-5 сильнейших ударов
   const topHits = await db.query(
-    'SELECT userId, username, MAX(damageDealt) as maxDmg FROM guild_boss_battles GROUP BY userId, username ORDER BY maxDmg DESC LIMIT 5'
+    'SELECT b.userId, b.username, u.level, g.name as guildName, MAX(b.damageDealt) as maxDmg FROM guild_boss_battles b JOIN users u ON b.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id GROUP BY b.userId, b.username, u.level, g.name ORDER BY maxDmg DESC LIMIT 5'
   ) as any[];
 
   // 5. Топ-5 гильдий по убийствам боссов
@@ -359,10 +365,12 @@ router.get('/guild/boss/ratings', async (req, res) => {
   ) as any[];
 
   res.json({
-    guildTop: guildTop.map(r => ({ userId: r.userid, username: r.username, total: r.total })),
+    guildTop: guildTop.map(r => ({ userId: r.userid, username: r.username, level: r.level, guildName: r.guildname, total: r.total })),
     personalRank: personalRank ? { rank: personalRank.rank, total: personalRank.total } : null,
+    personalTop: personalTop.map(r => ({ userId: r.userid, username: r.username, total: r.total })),
     guildRank: guildRank ? { rank: guildRank.rank, total: guildRank.total } : null,
-    topHits: topHits.map(r => ({ userId: r.userid, username: r.username, maxDmg: r.maxdmg })),
+    guildTopList: guildTopList.map(r => ({ id: r.id, name: r.name, total: r.total })),
+    topHits: topHits.map(r => ({ userId: r.userid, username: r.username, level: r.level, guildName: r.guildname, maxDmg: r.maxdmg })),
     topGuildKills: topGuildKills.map(r => ({ id: r.id, name: r.name, kills: r.killcount })),
   });
 });
