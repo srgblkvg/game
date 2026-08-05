@@ -134,6 +134,7 @@ function calcRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, ser
     if (roomType === 'closet') regenRate = 3;
     else if (roomType === 'bed') regenRate = 10;
     else if (roomType === 'chamber') regenRate = 50;
+    else if (roomType === 'lux') regenRate = 250;
   }
   if (premiumUntil && premiumUntil > serverTime) regenRate *= 3;
 
