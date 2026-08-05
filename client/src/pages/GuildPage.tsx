@@ -72,6 +72,7 @@ export default function GuildPage() {
     const [battleHistory, setBattleHistory] = useState<any[]>([]);
     const [viewingLog, setViewingLog] = useState<any>(null);
     const [respawnTimer, setRespawnTimer] = useState(0);
+    const [ratings, setRatings] = useState<any>(null);
     const bossTimerRef = useRef<any>(null);
 
     const api = async (url: string, body?: any) => {
@@ -101,9 +102,10 @@ export default function GuildPage() {
     // Boss data
     const loadBoss = async () => {
         try {
-            const [d, h] = await Promise.all([
+            const [d, h, r] = await Promise.all([
                 api('/guild/boss'),
                 api('/guild/boss/battles'),
+                api('/guild/boss/ratings'),
             ]);
             setBoss(d.boss);
             setBossCd(d.cooldownRemaining);
@@ -111,6 +113,7 @@ export default function GuildPage() {
             setPlayerPoints(d.playerPoints);
             setGuildPoints(d.guildPoints);
             setBattleHistory(h.battles || []);
+            setRatings(r);
         } catch {}
     };
     useEffect(() => { if (guild && (tab === 4 || tab === 5)) loadBoss(); }, [guild, tab]);
@@ -475,6 +478,57 @@ export default function GuildPage() {
                     {bossFighting ? 'Бой...' : bossCd > 0 ? `Атака через ${fmtCd(bossCd)}` : '⚔️ Атаковать'}
                 </Button>
             </Card>}
+
+            {/* Ratings */}
+            {ratings && (
+            <Card>
+                <h3 className="font-bold text-sm mb-2">🏆 Рейтинги</h3>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                    {/* Топ гильдии */}
+                    <div>
+                        <h4 className="font-medium mb-1 text-[var(--color-accent-gold)]">⭐ Гильдия (топ-5)</h4>
+                        {ratings.guildTop?.map((r: any, i: number) => (
+                            <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
+                                <span>{i+1}. {r.username}</span>
+                                <span className="text-[var(--color-text-muted)]">{r.total?.toLocaleString()}</span>
+                            </div>
+                        ))}
+                        {(!ratings.guildTop || ratings.guildTop.length === 0) && <span className="text-[var(--color-text-muted)]">Нет данных</span>}
+                    </div>
+                    {/* Место игрока */}
+                    <div>
+                        <h4 className="font-medium mb-1 text-[var(--color-accent-info)]">👤 Моё место</h4>
+                        {ratings.personalRank ? (
+                            <p>#{ratings.personalRank.rank} среди всех · {ratings.personalRank.total?.toLocaleString()} урона</p>
+                        ) : <span className="text-[var(--color-text-muted)]">Нет данных</span>}
+                        <h4 className="font-medium mb-1 mt-2 text-[var(--color-accent-info)]">🏚️ Гильдия</h4>
+                        {ratings.guildRank ? (
+                            <p>#{ratings.guildRank.rank} среди гильдий · {ratings.guildRank.total?.toLocaleString()} урона</p>
+                        ) : <span className="text-[var(--color-text-muted)]">Нет данных</span>}
+                    </div>
+                    {/* Сильнейшие удары */}
+                    <div>
+                        <h4 className="font-medium mb-1 text-[var(--color-accent-warning)]">💥 Рекордные удары</h4>
+                        {ratings.topHits?.map((r: any, i: number) => (
+                            <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
+                                <span>{i+1}. {r.username}</span>
+                                <span className="text-[var(--color-text-muted)]">{r.maxDmg?.toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                    {/* Топ гильдий по убийствам */}
+                    <div>
+                        <h4 className="font-medium mb-1 text-red-400">💀 Убийств боссов</h4>
+                        {ratings.topGuildKills?.map((r: any, i: number) => (
+                            <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
+                                <span>{i+1}. {r.name}</span>
+                                <span className="text-[var(--color-text-muted)]">{r.kills}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </Card>
+            )}
 
             {/* Battle History */}
             <Card>

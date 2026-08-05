@@ -316,6 +316,57 @@ router.get('/guild/boss/battles', async (req, res) => {
   });
 });
 
+// ── GET /guild/boss/ratings — 4 рейтинга ──
+router.get('/guild/boss/ratings', async (req, res) => {
+  const userId = req.userId;
+  const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]).catch(() => null) as any;
+  if (!user?.guildid) return res.status(400).json({ error: 'Не в гильдии' });
+
+  const guildId = user.guildid;
+
+  // 1. Топ-5 гильдии по урону
+  const guildTop = await db.query(
+    'SELECT userId, username, SUM(damageDealt) as total FROM guild_boss_battles WHERE guildId = ? GROUP BY userId, username ORDER BY total DESC LIMIT 5',
+    [guildId]
+  ) as any[];
+
+  // 2. Место игрока среди всех игроков
+  const personalRank = await db.one(
+    `SELECT rank, total FROM (
+      SELECT userId, SUM(damageDealt) as total, RANK() OVER (ORDER BY SUM(damageDealt) DESC) as rank
+      FROM guild_boss_battles GROUP BY userId
+    ) sub WHERE userId = ?`,
+    [userId]
+  ).catch(() => null) as any;
+
+  // 3. Место гильдии среди всех гильдий
+  const guildRank = await db.one(
+    `SELECT rank, total FROM (
+      SELECT guildId, SUM(damageDealt) as total, RANK() OVER (ORDER BY SUM(damageDealt) DESC) as rank
+      FROM guild_boss_battles GROUP BY guildId
+    ) sub WHERE guildId = ?`,
+    [guildId]
+  ).catch(() => null) as any;
+
+  // 4. Топ-5 сильнейших ударов
+  const topHits = await db.query(
+    'SELECT userId, username, MAX(damageDealt) as maxDmg FROM guild_boss_battles GROUP BY userId, username ORDER BY maxDmg DESC LIMIT 5'
+  ) as any[];
+
+  // 5. Топ-5 гильдий по убийствам боссов
+  const topGuildKills = await db.query(
+    'SELECT g.id, g.name, gb.killCount FROM guilds g JOIN guild_bosses gb ON g.id = gb.guildId ORDER BY gb.killCount DESC LIMIT 5'
+  ) as any[];
+
+  res.json({
+    guildTop: guildTop.map(r => ({ userId: r.userid, username: r.username, total: r.total })),
+    personalRank: personalRank ? { rank: personalRank.rank, total: personalRank.total } : null,
+    guildRank: guildRank ? { rank: guildRank.rank, total: guildRank.total } : null,
+    topHits: topHits.map(r => ({ userId: r.userid, username: r.username, maxDmg: r.maxdmg })),
+    topGuildKills: topGuildKills.map(r => ({ id: r.id, name: r.name, kills: r.killcount })),
+  });
+});
+
 // ── GET /guild/talents — все таланты + очки ──
 router.get('/guild/talents', async (req, res) => {
   const userId = req.userId;
