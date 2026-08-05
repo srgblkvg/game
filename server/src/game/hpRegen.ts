@@ -28,6 +28,7 @@ export async function applyHpRegen(user: {
         if (user.roomType === 'closet') regenRate = 3;
         else if (user.roomType === 'bed') regenRate = 10;
         else if (user.roomType === 'chamber') regenRate = 50;
+        else if (user.roomType === 'lux') regenRate = 250;
     }
     // Премиум: ×3 к регену (работает и без комнаты)
     const hasPremium = (user.premiumUntil || 0) > now;
