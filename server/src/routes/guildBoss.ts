@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { buildPlayerStats } from '../db/helpers';
-import { applyHpRegen } from '../game/hpRegen';
 import { runTurn, TurnContext, BattleStep } from '../game/battle';
 import { currentStats } from '../game/stats';
 import { markDirty } from '../events';
@@ -112,13 +111,8 @@ router.post('/guild/boss/attack', async (req, res) => {
     Object.assign(bossStats, flatFx);
   }
 
-  // Регенерация HP игрока перед боем
-  const regeneratedHp = await applyHpRegen({
-    id: user.id, currentHp: user.currentHp, maxHp: userStats.hp,
-    lastHpUpdate: user.lastHpUpdate || now, roomType: user.roomType, roomUntil: user.roomUntil,
-    premiumUntil: user.premiumUntil,
-  });
-  let userHp = regeneratedHp;
+  // Босс бой всегда с максимальным HP (как на турнирах)
+  let userHp = userStats.hp;
   let bossCurrentHp = boss.currentHp;
 
   const steps: any[] = [];
@@ -210,10 +204,6 @@ router.post('/guild/boss/attack', async (req, res) => {
     guildTalentAwarded = true;
   }
 
-  // Сохраняем HP игрока
-  const finalHp = Math.max(1, userHp);
-  await db.run('UPDATE users SET currentHp = ?, lastHpUpdate = ? WHERE id = ?', [finalHp, now, userId]);
-
   // ── WS: обновление HP босса для всех членов гильдии ──
   const { sendToGuild } = await import('../events');
   const updatedBoss = await getOrCreateBoss(user.guildid);
@@ -272,8 +262,8 @@ router.post('/guild/boss/attack', async (req, res) => {
     guildTalentAwarded,
     respawnAt: respawnAt || 0,
     newKillCount: killed ? newKillCount : boss.killCount,
-    currentHp: finalHp,
-    hpAfter: finalHp,
+    currentHp: user.currentHp,
+    hpAfter: user.currentHp,
     bossHpAfter: Math.max(0, bossCurrentHp),
     personalPointsGained: 1,
     guildPointsGained: killed ? 1 : 0,
