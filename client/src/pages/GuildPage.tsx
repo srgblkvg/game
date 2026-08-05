@@ -100,12 +100,16 @@ export default function GuildPage() {
     // Boss data
     const loadBoss = async () => {
         try {
-            const d = await api('/guild/boss');
+            const [d, h] = await Promise.all([
+                api('/guild/boss'),
+                api('/guild/boss/battles'),
+            ]);
             setBoss(d.boss);
             setBossCd(d.cooldownRemaining);
             setTalentInfo(d.talentInfo);
             setPlayerPoints(d.playerPoints);
             setGuildPoints(d.guildPoints);
+            setBattleHistory(h.battles || []);
         } catch {}
     };
     useEffect(() => { if (guild && tab === 4) loadBoss(); }, [guild, tab]);
@@ -465,9 +469,6 @@ export default function GuildPage() {
             {/* Battle History */}
             <Card>
                 <h3 className="font-bold text-sm mb-2">📜 История атак</h3>
-                <Button size="sm" variant="secondary" className="mb-2" onClick={async () => {
-                    try { const d = await api('/guild/boss/battles'); setBattleHistory(d.battles || []); } catch {}
-                }}>Загрузить</Button>
                 {viewingLog && (
                     <div className="mb-3">
                         <div className="flex justify-between items-center mb-1">
