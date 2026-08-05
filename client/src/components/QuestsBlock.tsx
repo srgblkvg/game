@@ -105,7 +105,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                                 <span className="font-medium">Кровавый исполин</span>
                                 <span className="text-[0.65rem] text-[var(--color-text-muted)] ml-auto">{guildBoss.currentHp?.toLocaleString()}/{guildBoss.maxHp?.toLocaleString()}</span>
                             </div>
-                            <div className="h-1.5 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
+                            <div className="h-1 bg-[var(--color-bg-hover)] rounded-full overflow-hidden mt-0.5">
                                 <div className="h-full bg-red-600 rounded-full transition-all" style={{ width: `${Math.max(1, (guildBoss.currentHp / guildBoss.maxHp) * 100)}%` }} />
                             </div>
                         </div>

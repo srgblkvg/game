@@ -1,6 +1,6 @@
 import PageHeader from '../components/ui/PageHeader';
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
@@ -28,6 +28,7 @@ export default function GuildPage() {
     const { user } = useAuth();
     const { setCharacter } = useGame();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     const [guild, setGuild] = useState<any>(null);
     const [members, setMembers] = useState<any[]>([]);
@@ -37,7 +38,10 @@ export default function GuildPage() {
     const [myRequests, setMyRequests] = useState<any[]>([]);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const [tab, setTab] = useState(0);
+    const [tab, setTab] = useState(() => {
+        const t = searchParams.get('tab');
+        return t ? parseInt(t) : 0;
+    });
 
     const [showCreate, setShowCreate] = useState(false);
     const [createName, setCreateName] = useState('');
