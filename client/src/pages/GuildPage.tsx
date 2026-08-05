@@ -479,11 +479,36 @@ export default function GuildPage() {
                 </Button>
             </Card>}
 
+            {/* Battle History */}
+            <Card>
+                <h3 className="font-bold text-sm mb-2">📜 История атак</h3>
+                {viewingLog && (
+                    <div className="mb-3">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold">Бой: {viewingLog.username}</span>
+                            <Button size="sm" variant="secondary" onClick={() => setViewingLog(null)}>Закрыть</Button>
+                        </div>
+                        <BossBattleLog steps={viewingLog.steps} />
+                    </div>
+                )}
+                {battleHistory.length > 0 && (
+                    <div className="text-xs space-y-1 max-h-60 overflow-y-auto">
+                        {battleHistory.map((b: any) => (
+                            <div key={b.id} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1"
+                                onClick={() => setViewingLog({ username: b.username, steps: b.steps })}>
+                                <span>{b.username} <span className={b.playerWon ? 'text-green-400' : 'text-red-400'}>{b.playerWon ? '🏆' : '💀'}</span></span>
+                                <span className="text-[var(--color-text-muted)]">−{b.damageDealt?.toLocaleString()} HP {b.bossKilled ? '💥' : ''}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Card>
+
             {/* Ratings */}
             {ratings && (
             <Card>
                 <h3 className="font-bold text-sm mb-2">🏆 Рейтинги</h3>
-                <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     {/* Топ гильдии */}
                     <div>
                         <h4 className="font-medium mb-1 text-[var(--color-accent-gold)]">⭐ Гильдия (топ-5)</h4>
@@ -523,7 +548,7 @@ export default function GuildPage() {
                     </div>
                     {/* Сильнейшие удары */}
                     <div>
-                        <h4 className="font-medium mb-1 text-[var(--color-accent-warning)]">💥 Рекордные удары</h4>
+                        <h4 className="font-medium mb-1 text-[var(--color-accent-warning)]">💥 Рекордные удары (топ-5)</h4>
                         {ratings.topHits?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
                                 <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
@@ -533,7 +558,7 @@ export default function GuildPage() {
                     </div>
                     {/* Топ гильдий по убийствам */}
                     <div>
-                        <h4 className="font-medium mb-1 text-red-400">💀 Убийств боссов</h4>
+                        <h4 className="font-medium mb-1 text-red-400">💀 Убийств боссов (топ-5)</h4>
                         {ratings.topGuildKills?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
                                 <span>{i+1}. <span className="text-green-400 cursor-pointer hover:underline" onClick={() => navigate(`/guild/${r.name}`)}>{r.name}</span></span>
@@ -545,30 +570,6 @@ export default function GuildPage() {
             </Card>
             )}
 
-            {/* Battle History */}
-            <Card>
-                <h3 className="font-bold text-sm mb-2">📜 История атак</h3>
-                {viewingLog && (
-                    <div className="mb-3">
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-bold">Бой: {viewingLog.username}</span>
-                            <Button size="sm" variant="secondary" onClick={() => setViewingLog(null)}>Закрыть</Button>
-                        </div>
-                        <BossBattleLog steps={viewingLog.steps} />
-                    </div>
-                )}
-                {battleHistory.length > 0 && (
-                    <div className="text-xs space-y-1 max-h-60 overflow-y-auto">
-                        {battleHistory.map((b: any) => (
-                            <div key={b.id} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1"
-                                onClick={() => setViewingLog({ username: b.username, steps: b.steps })}>
-                                <span>{b.username} <span className={b.playerWon ? 'text-green-400' : 'text-red-400'}>{b.playerWon ? '🏆' : '💀'}</span></span>
-                                <span className="text-[var(--color-text-muted)]">−{b.damageDealt?.toLocaleString()} HP {b.bossKilled ? '💥' : ''}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </Card>
         </div>}
 
         {/* Tab 5: Таланты */}
