@@ -161,6 +161,12 @@ export async function getOrCreateBoss(guildId: number): Promise<{ currentHp: num
       [stats.hp, stats.hp, stats.s, stats.a, stats.d, stats.m, stats.level, JSON.stringify(newEffects), guildId]
     );
     boss = { guildId, killcount: boss.killcount, currenthp: stats.hp, maxhp: stats.hp, atk: stats.s, agi: stats.a, def: stats.d, mst: stats.m, level: stats.level, effects: JSON.stringify(newEffects), respawnat: 0 };
+    // WS: оповещаем всех о новом боссе
+    import('../events').then(m => m.sendToGuild(guildId, {
+      type: 'guild_boss_update',
+      message: `⚡ Кровавый исполин вернулся! Уровень ${stats.level}, HP ${stats.hp.toLocaleString()}.`,
+      data: { bossHp: stats.hp, bossMaxHp: stats.hp, bossKilled: false, respawnAt: 0, newKillCount: boss.killcount },
+    })).catch(() => {});
   }
 
   let parsedEffects: { name: string; effect: Record<string, any> }[] = [];
