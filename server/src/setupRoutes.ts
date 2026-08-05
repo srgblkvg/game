@@ -155,9 +155,9 @@ export function setupRoutes(app: Express) {
   app.use('/api', tavernRoutes);
   app.use('/api', auctionRoutes);
   app.use('/api', questsRoutes);
+  app.use('/api', guildBossRoutes);
   app.use('/api', guildRoutes);
   app.use('/api', guildBuildingsRoutes);
-  app.use('/api', guildBossRoutes);
   app.use('/api', feedbackRoutes);
   app.use('/api', tournamentRoutes);
   app.use('/api', collectionsRoutes);
