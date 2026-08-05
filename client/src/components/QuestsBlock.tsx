@@ -49,7 +49,16 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
             if (d.bossHp !== undefined) {
                 setGuildBoss((p: any) => p ? { ...p, currentHp: d.bossHp, maxHp: d.bossMaxHp || p.maxHp } : p);
             }
-            if (d.bossKilled) setGuildBoss(null);
+            if (d.bossKilled) {
+                setGuildBoss(null);
+                // Запускаем таймер на 5 минут, потом перезапрашиваем босса
+                setTimeout(() => {
+                    fetch('/api/guild/boss', { headers: getHeaders() })
+                        .then(r => r.json()).then(d => {
+                            if (d.boss?.currentHp > 0) setGuildBoss(d.boss);
+                        }).catch(() => {});
+                }, 300_000);
+            }
         };
         window.addEventListener('guildBossUpdate', handler);
         return () => window.removeEventListener('guildBossUpdate', handler);
