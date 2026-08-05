@@ -84,6 +84,18 @@ const PACKS = [
     desc: '10 Кристаллов душ для проклятия предметов. +1 000 000 в банк',
   },
   {
+    item: 'curse_x50', title: 'Сундук «Проклятый» ×50', vkPrice: 1149, rubPrice: 7999,
+    curse: true, crystals: 50, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
+    silver: 5000000,
+    desc: '50 Кристаллов душ для проклятия предметов. +5 000 000 в банк',
+  },
+  {
+    item: 'curse_x100', title: 'Сундук «Проклятый» ×100', vkPrice: 2149, rubPrice: 14999,
+    curse: true, crystals: 100, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
+    silver: 10000000,
+    desc: '100 Кристаллов душ для проклятия предметов. +10 000 000 в банк',
+  },
+  {
     item: 'large_craft', title: 'Большой набор ремесленника', vkPrice: 7500, rubPrice: 52999,
     mega: true, silver: 10000000, count: 100,
     runeImgs: [
