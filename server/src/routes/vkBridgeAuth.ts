@@ -151,15 +151,16 @@ router.post('/vk-bridge', async (req: Request, res: Response) => {
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
     const premiumUntil = now + 86400;
     const equipment1 = getStarterEquipment();
+    const eqObj = JSON.parse(equipment1);
 
-    const info = await db.run(
-      `INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId,
-        currentHp, lastHpUpdate, level, gender, avatar, lastLoginAt, premiumUntil, money, equipment_1)
-       VALUES (?, ?, ?, 1, 'vk', ?, ?, ?, 1, ?, ?, ?, ?, 1000, ?)`,
-      [finalUsername, randomHash, `vk_${vkUserId}@oauth.local`, vkUserId, startHp, now, gender, avatar, now, premiumUntil, equipment1],
+    const insertResult = await db.raw(
+      `INSERT INTO users (username, passwordhash, email, emailverified, oauthprovider, oauthid,
+        currenthp, lasthpupdate, level, gender, avatar, lastloginat, premiumuntil, money, equipment_1)
+       VALUES ($1, $2, $3, 1, 'vk', $4, $5, $6, 1, $7, $8, $9, $10, $11, $12) RETURNING id`,
+      [finalUsername, randomHash, `vk_${vkUserId}@oauth.local`, vkUserId, startHp, now, gender, avatar, now, premiumUntil, 1000, eqObj],
     );
 
-    const newUserId = Number(info.lastInsertRowid);
+    const newUserId = Number(insertResult.rows[0].id);
 
     const token = jwt.sign(
       { userId: newUserId, role: 'player', username: finalUsername, jti: crypto.randomUUID() },

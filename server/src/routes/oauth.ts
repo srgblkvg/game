@@ -91,10 +91,11 @@ async function findOrCreateUser(provider: string, oauthId: string, username: str
     const randomHash = crypto.randomBytes(32).toString('hex');
     const premiumUntil = now + 86400; // 1 день премиума за привязку
     const equipment1 = getStarterEquipment();
-    const info = await db.run(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt, premiumUntil, money, equipment_1)
-        VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male', ?, ?, 1000, ?)`,
-        [finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now, premiumUntil, equipment1]);
-    return { id: Number(info.lastInsertRowid), username: finalUsername, level: 1 };
+    const eqObj = JSON.parse(equipment1);
+    const insertResult = await db.raw(`INSERT INTO users (username, passwordhash, email, emailverified, oauthprovider, oauthid, currenthp, lasthpupdate, level, gender, lastloginat, premiumuntil, money, equipment_1)
+        VALUES ($1, $2, $3, 1, $4, $5, $6, $7, 1, 'male', $8, $9, $10, $11) RETURNING id`,
+        [finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now, premiumUntil, 1000, eqObj]);
+    return { id: Number(insertResult.rows[0].id), username: finalUsername, level: 1 };
 }
 
 // --- Яндекс ID ---

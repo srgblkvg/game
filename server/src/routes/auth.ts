@@ -40,9 +40,10 @@ router.post('/register', async (req, res) => {
     const codeExpires = now + 600; // 10 минут
 
     const equipment1 = getStarterEquipment();
-    await db.run(`INSERT INTO users (username, passwordHash, email, emailCode, emailCodeExpires, currentHp, lastHpUpdate, level, gender, money, equipment_1)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'male', 1000, ?)`,
-        [username, passwordHash, email, code, codeExpires, startHp, now, equipment1]);
+    const eqObj = JSON.parse(equipment1);
+    await db.raw(`INSERT INTO users (username, passwordhash, email, emailcode, emailcodeexpires, currenthp, lasthpupdate, level, gender, money, equipment_1)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'male', $8, $9) RETURNING id`,
+        [username, passwordHash, email, code, codeExpires, startHp, now, 1000, eqObj]);
 
     const sent = await sendVerificationCode(email, code);
     if (!sent) {
@@ -148,20 +149,21 @@ router.post('/guest', async (req, res) => {
     const guestId = nickname || `Гость_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
     const equipment1 = getStarterEquipment();
+    const eqObj = JSON.parse(equipment1);
 
-    await db.run(`INSERT INTO users (username, passwordHash, currentHp, lastHpUpdate, level, gender, isGuest, emailVerified, exp, money, equipment_1)
-        VALUES (?, '', ?, ?, 1, 'male', 1, 1, 0, 1000, ?)`,
-        [guestId, startHp, now, equipment1]);
+    const insertResult = await db.raw(`INSERT INTO users (username, passwordhash, currenthp, lasthpupdate, level, gender, isguest, emailverified, exp, money, equipment_1)
+        VALUES ($1, '', $2, $3, 1, 'male', 1, 1, 0, $4, $5) RETURNING id`,
+        [guestId, startHp, now, 1000, eqObj]);
+    const newUserId = insertResult.rows[0].id;
 
-    const user: any = await db.one('SELECT id FROM users WHERE username = ?', [guestId]);
-    const token = jwt.sign({ userId: user.id, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: newUserId, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
 
-    auditLoginSuccess(guestId, user.id, req.ip);
+    auditLoginSuccess(guestId, newUserId, req.ip);
     if (req.ip) {
-        try { await db.run('INSERT INTO login_logs (userId, ip) VALUES (?, ?)', [user.id, req.ip]); } catch {}
+        try { await db.run('INSERT INTO login_logs (userId, ip) VALUES (?, ?)', [newUserId, req.ip]); } catch {}
     }
 
-    res.json({ token, user: { id: user.id, username: guestId, level: 1, role: 'player', isGuest: true, gender: 'male' } });
+    res.json({ token, user: { id: newUserId, username: guestId, level: 1, role: 'player', isGuest: true, gender: 'male' } });
 });
 
 router.post('/login', async (req, res) => {
