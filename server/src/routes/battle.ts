@@ -308,6 +308,11 @@ router.post('/battle', async (req, res) => {
 
     markDirty(result.winnerId, 'quests');
 
+    // Туториал: первый PvP-бой → завершаем обучение
+    if ((attacker.tutorialStep || 0) === 3) {
+        await db.run('UPDATE users SET tutorial_step = 4, tutorial_completed = 1 WHERE id = ?', [attacker.id]);
+    }
+
     // Добавляем шаг с ELO в лог (до сохранения в БД!)
     const attackerEloChange = newAttackerElo - (attacker.elo || 1000);
     const defenderEloChange = newDefenderElo - (defender.elo || 1000);

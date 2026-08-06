@@ -8,10 +8,11 @@ import { StatRecord, sumStats } from '../game/stats';
 export const USER_BATTLE_FIELDS = `
   u.id, u.username, u.level, u.exp, u.elo, u.seasonWins, u.seasonLosses,
   u.baseS, u.baseA, u.baseD, u.baseM,
-  u.equipment, u.money, u.currentHp, u.lastAttackTime,
+  u.equipment, u.equipment_1, u.equipment_2, u.equipment_3, u.active_equip_slot,
+  u.money, u.currentHp, u.lastAttackTime,
   u.activeDrink, u.drinkUntil, u.premiumUntil,
   u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate,
-  u.inventorySlots, u.guildId, u.oauthProvider, u.oauthId, u.faction, u.bandit_reputation
+  u.inventorySlots, u.guildId, u.oauthProvider, u.oauthId, u.faction, u.bandit_reputation, u.tutorial_step
 `;
 
 /** Поля с присоединением гильдии */
@@ -22,7 +23,8 @@ export const USER_BATTLE_FIELDS_GUILD = `
 /** Поля для арены (добавляет arenaOpponentId, убирает exp и лишнее) */
 export const USER_ARENA_FIELDS_GUILD = `
   u.id, u.username, u.level, u.elo, u.seasonWins, u.seasonLosses,
-  u.equipment, u.baseS, u.baseA, u.baseD, u.baseM, u.money,
+  u.equipment, u.equipment_1, u.equipment_2, u.equipment_3, u.active_equip_slot,
+  u.baseS, u.baseA, u.baseD, u.baseM, u.money,
   u.currentHp, u.lastHpUpdate, u.roomType, u.roomUntil, u.premiumUntil,
   u.inventorySlots, u.lastAttackTime, u.arenaOpponentId,
   u.activeDrink, u.drinkUntil, u.guildId,
@@ -162,7 +164,9 @@ export async function buildPlayerStats(userRow: any, context: BattleContext): Pr
   const base = getBaseStats(userRow);
   // Читаем экипировку из активного слота (equipment_1/2/3), фолбэк на старый equipment
   const parseEq = (v: any) => typeof v === 'string' ? JSON.parse(v || '{}') : (v && typeof v === 'object' ? v : {});
-  const equip = parseEq(userRow.equipment_1) || parseEq(userRow.equipment);
+  const activeSlot = userRow.active_equip_slot || 1;
+  const equipKey = `equipment_${activeSlot}`;
+  const equip = parseEq(userRow[equipKey]) || parseEq(userRow.equipment_1) || parseEq(userRow.equipment);
   const drinks = getDrinkBonuses(userRow);
   const r = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userRow.id]);
   const collCnt = r?.cnt || 0;
