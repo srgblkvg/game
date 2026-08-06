@@ -438,10 +438,10 @@ export default function BestiaryPage() {
           )}
           {error && <p className="text-[var(--color-accent-danger)] mb-4">{error}</p>}
           <div className="space-y-4">
-            {(diffGroups || []).map(diff => {
+            {(diffGroups || []).map((diff, idx) => {
               const groupFloors = floors.filter(f => floorsData.some(fd => fd.name === f && (fd.difficulty||0) === diff.difficulty));
               if (groupFloors.length === 0 && user?.username !== 'TODD') return null;
-              return <FloorGroup key={diff.label} diff={diff} floors={groupFloors} getFloorInfo={getFloorInfo} floorBgMap={floorBgMap} cooldownRemaining={cooldownRemaining} selectFloor={selectFloor} />;
+              return <FloorGroup key={diff.label} diff={diff} floors={groupFloors} getFloorInfo={getFloorInfo} floorBgMap={floorBgMap} cooldownRemaining={cooldownRemaining} selectFloor={selectFloor} defaultOpen={idx === 0 && (character as any)?.tutorialStep < 2} />;
             })}
           </div>
         </>
@@ -579,11 +579,11 @@ export default function BestiaryPage() {
   );
 }
 
-function FloorGroup({ diff, floors, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor }: any) {
+function FloorGroup({ diff, floors, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor, defaultOpen }: any) {
   const key = `floor_${diff.label}`;
   const [open, setOpen] = useState(() => {
     const saved = localStorage.getItem(key);
-    return saved !== null ? saved === '1' : false;
+    return saved !== null ? saved === '1' : (defaultOpen || false);
   });
   const toggle = () => { const v = !open; setOpen(v); localStorage.setItem(key, v ? '1' : '0'); };
   return (

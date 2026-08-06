@@ -35,7 +35,7 @@ export default function HomePage() {
   // Показываем туториал тем, кто ещё не прошёл (флаг в БД)
   useEffect(() => {
     if (!character) return;
-    if (!character.tutorialCompleted) {
+    if (!character.tutorialCompleted && (character.tutorialStep ?? 0) < tutorialSteps.length) {
       const t = setTimeout(() => setShowTutorial(true), 500);
       return () => clearTimeout(t);
     }
@@ -121,6 +121,7 @@ export default function HomePage() {
       {showTutorial && (
         <TutorialOverlay
           steps={tutorialSteps}
+          stepIndex={character?.tutorialStep ?? 0}
           onComplete={async () => {
             setShowTutorial(false);
             // Обновляем персонажа локально, чтобы не переоткрылся при следующем poll

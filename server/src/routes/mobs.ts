@@ -470,6 +470,10 @@ router.post('/mob/attack', async (req, res) => {
     if (playerWon) {
         checkAchievement(userId, 'pve_wins').catch(() => {});
         if (goldAfterTax > 0) trackIncome(userId, goldAfterTax).catch(() => {});
+        // Туториал: первый PvE-бой → шаг 1 (Магазин)
+        if ((user.tutorial_step || 0) === 0) {
+            await db.run('UPDATE users SET tutorial_step = 1 WHERE id = ?', [userId]);
+        }
     }
     // Карма Стражника: +1 за победу над мобом
     if (playerWon && user.faction === 'guard') {

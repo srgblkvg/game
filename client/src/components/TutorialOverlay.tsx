@@ -4,6 +4,8 @@ import type { TutorialStep } from '../data/tutorialSteps';
 
 interface TutorialOverlayProps {
   steps: TutorialStep[];
+  /** Индекс текущего шага (0-based). Если не задан — используется внутреннее состояние. */
+  stepIndex?: number;
   /** Вызывается при завершении туториала (пропуск или последний шаг) */
   onComplete: () => void;
 }
@@ -139,8 +141,13 @@ function clamp(val: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, val));
 }
 
-export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayProps) {
-  const [current, setCurrent] = useState(0);
+export default function TutorialOverlay({ steps, stepIndex, onComplete }: TutorialOverlayProps) {
+  const [current, setCurrent] = useState(stepIndex ?? 0);
+  
+  // Синхронизируем с внешним stepIndex
+  useEffect(() => {
+    if (stepIndex !== undefined) setCurrent(stepIndex);
+  }, [stepIndex]);
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
   const [arrowDir, setArrowDir] = useState<'up' | 'down' | 'none'>('none');
@@ -148,7 +155,6 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const step = steps[current];
-  const isLast = current === steps.length - 1;
 
   // Диспатчим кастомные события при смене шага (поддерживает несколько через запятую)
   useEffect(() => {
@@ -287,14 +293,6 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  const handleNext = () => {
-    if (isLast) {
-      onComplete();
-    } else {
-      setCurrent(prev => prev + 1);
-    }
-  };
-
   const handleSkip = () => {
     onComplete();
   };
@@ -303,11 +301,10 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleSkip();
-      if (e.key === 'Enter' || e.key === ' ') handleNext();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [current, isLast]);
+  }, []);
 
   if (!targetRect) {
     return null;
@@ -410,39 +407,6 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
           }} />
         )}
 
-        {/* Индикатор шагов */}
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          marginBottom: isMobile ? '8px' : '16px',
-        }}>
-          {steps.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                flex: 1,
-                height: '4px',
-                borderRadius: '2px',
-                background: i === current
-                  ? 'var(--color-accent-warning, #f1c40f)'
-                  : i < current
-                    ? 'var(--color-accent-success, #2ecc71)'
-                    : 'var(--color-border-light, #555)',
-                transition: 'background 0.3s',
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Счётчик */}
-        <div style={{
-          fontSize: isMobile ? '0.65rem' : '0.75rem',
-          color: 'var(--color-text-muted, #888)',
-          marginBottom: '4px',
-        }}>
-          Шаг {current + 1} из {steps.length}
-        </div>
-
         {/* Заголовок */}
         <h3 style={{
           fontSize: isMobile ? '0.9rem' : '1.1rem',
@@ -463,12 +427,10 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
           {step.description}
         </p>
 
-        {/* Кнопки */}
+        {/* Кнопка Пропустить */}
         <div style={{
           display: 'flex',
-          gap: '10px',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          justifyContent: 'flex-end',
         }}>
           <button
             onClick={handleSkip}
@@ -476,10 +438,10 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
               background: 'none',
               border: 'none',
               color: 'var(--color-text-muted, #888)',
-              fontSize: isMobile ? '0.75rem' : '0.8rem',
+              fontSize: isMobile ? '0.7rem' : '0.75rem',
               cursor: 'pointer',
-              padding: '8px 12px',
-              borderRadius: '6px',
+              padding: '4px 8px',
+              borderRadius: '4px',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = 'var(--color-text-secondary, #ccc)';
@@ -490,26 +452,7 @@ export default function TutorialOverlay({ steps, onComplete }: TutorialOverlayPr
               e.currentTarget.style.background = 'none';
             }}
           >
-            Пропустить
-          </button>
-
-          <button
-            onClick={handleNext}
-            style={{
-              background: 'var(--color-accent-warning, #f1c40f)',
-              color: 'var(--color-warning-text, #0d0d1a)',
-              border: 'none',
-              fontSize: isMobile ? '0.8rem' : '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: isMobile ? '8px 20px' : '10px 24px',
-              borderRadius: '8px',
-              transition: 'opacity 0.2s',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-          >
-            {isLast ? 'Понятно!' : 'Далее'}
+            Пропустить обучение
           </button>
         </div>
       </div>

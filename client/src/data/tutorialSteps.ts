@@ -10,7 +10,7 @@ const tutorialSteps: TutorialStep[] = [
   {
     targetSelector: '#action-card-Охота',
     title: 'Первый бой',
-    description: 'Нажми на «Охоту» и убей Костяную крысу в Склепе. С неё выпадет добыча — ресурсы и предметы.',
+    description: 'Нажми на «Охоту» и убей монстра в Склепе — с него возможно выпадет добыча.',
     tooltipPosition: 'bottom',
   },
   {
