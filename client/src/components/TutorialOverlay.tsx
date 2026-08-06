@@ -8,6 +8,8 @@ interface TutorialOverlayProps {
   stepIndex?: number;
   /** Вызывается при завершении туториала (пропуск или последний шаг) */
   onComplete: () => void;
+  /** Вызывается при пропуске одного шага */
+  onSkipStep?: () => void;
 }
 
 interface TargetRect {
@@ -141,7 +143,7 @@ function clamp(val: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, val));
 }
 
-export default function TutorialOverlay({ steps, stepIndex, onComplete }: TutorialOverlayProps) {
+export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipStep }: TutorialOverlayProps) {
   const [current, setCurrent] = useState(stepIndex ?? 0);
   
   // Синхронизируем с внешним stepIndex
@@ -424,10 +426,11 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete }: Tutori
           {step.description}
         </p>
 
-        {/* Кнопка Пропустить */}
+        {/* Кнопки */}
         <div style={{
           display: 'flex',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
+          alignItems: 'center',
         }}>
           <button
             onClick={handleSkip}
@@ -435,22 +438,36 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete }: Tutori
               background: 'none',
               border: 'none',
               color: 'var(--color-text-muted, #888)',
-              fontSize: isMobile ? '0.7rem' : '0.75rem',
+              fontSize: isMobile ? '0.65rem' : '0.7rem',
               cursor: 'pointer',
               padding: '4px 8px',
               borderRadius: '4px',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = 'var(--color-text-secondary, #ccc)';
-              e.currentTarget.style.background = 'var(--color-bg-hover, rgba(255,255,255,0.08))';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = 'var(--color-text-muted, #888)';
-              e.currentTarget.style.background = 'none';
             }}
           >
             Пропустить обучение
           </button>
+          {onSkipStep && (
+            <button
+              onClick={onSkipStep}
+              style={{
+                background: 'none',
+                border: '1px solid var(--color-border-light, #555)',
+                color: 'var(--color-text-secondary, #ccc)',
+                fontSize: isMobile ? '0.7rem' : '0.75rem',
+                cursor: 'pointer',
+                padding: '4px 12px',
+                borderRadius: '6px',
+              }}
+            >
+              Пропустить шаг
+            </button>
+          )}
         </div>
       </div>
     </div>,

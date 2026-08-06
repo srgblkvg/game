@@ -130,6 +130,13 @@ export default function HomePage() {
               await fetch('/api/character/tutorial-done', { method: 'POST', headers: getHeaders() });
             } catch {}
           }}
+          onSkipStep={async () => {
+            try {
+              await fetch('/api/character/tutorial-step', { method: 'POST', headers: getHeaders() });
+              // Обновляем персонажа локально
+              setCharacter(prev => prev ? { ...prev, tutorialStep: (prev.tutorialStep || 0) + 1 } : prev);
+            } catch {}
+          }}
         />
       )}
     </div>
