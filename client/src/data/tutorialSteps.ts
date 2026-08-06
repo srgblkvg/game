@@ -4,6 +4,8 @@ export interface TutorialStep {
   description: string;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right' | 'center';
   action?: string;
+  /** Если true — кнопка «Далее» не показывается, шаг засчитывается сервером */
+  autoAdvance?: boolean;
 }
 
 const tutorialSteps: TutorialStep[] = [
@@ -12,6 +14,7 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Первый бой',
     description: 'Нажми на «Охоту» и убей монстра в Склепе — с него возможно выпадет добыча.',
     tooltipPosition: 'bottom',
+    autoAdvance: true,
   },
   {
     targetSelector: '#action-card-Магазин',
@@ -30,6 +33,7 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Ограбление',
     description: 'На Арене сразись с другим игроком. Победитель забирает процент серебра проигравшего. Храни сбережения в Банке!',
     tooltipPosition: 'bottom',
+    autoAdvance: true,
   },
 ];
 
