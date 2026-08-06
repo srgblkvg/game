@@ -170,11 +170,8 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete }: Tutori
 
     const el = document.querySelector(step.targetSelector);
     if (!el) {
-      if (current < steps.length - 1) {
-        setCurrent(prev => prev + 1);
-      } else {
-        onComplete();
-      }
+      // Элемент не найден — возможно переключается вкладка, пробуем ещё раз
+      setTimeout(() => calcPosition(), 200);
       return;
     }
 

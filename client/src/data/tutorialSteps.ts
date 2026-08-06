@@ -4,8 +4,6 @@ export interface TutorialStep {
   description: string;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right' | 'center';
   action?: string;
-  /** Если true — кнопка «Далее» не показывается, шаг засчитывается сервером */
-  autoAdvance?: boolean;
 }
 
 const tutorialSteps: TutorialStep[] = [
@@ -14,26 +12,26 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Первый бой',
     description: 'Нажми на «Охоту» и убей монстра в Склепе — с него возможно выпадет добыча.',
     tooltipPosition: 'bottom',
-    autoAdvance: true,
   },
   {
     targetSelector: '#action-card-Магазин',
     title: 'Покупка',
-    description: 'Зайди в Магазин и купи зелье или предмет за добытое серебро. Трать с умом — серебро можно потерять на Арене.',
+    description: 'Купи предмет в Магазине за добытое серебро. Переключись на вкладку Площадь → Магазин.',
     tooltipPosition: 'top',
+    action: 'tutorial-tab-castle',
   },
   {
     targetSelector: '#action-card-Ремесло',
     title: 'Крафт',
-    description: 'В Ремесле создавай и улучшай предметы из добытых ресурсов. Собранные коллекции дают постоянные бонусы к статам.',
+    description: 'Создай предмет в Ремесле из добытых ресурсов (Площадь → Ремесло).',
     tooltipPosition: 'top',
   },
   {
     targetSelector: '#action-card-Арена',
     title: 'Ограбление',
-    description: 'На Арене сразись с другим игроком. Победитель забирает процент серебра проигравшего. Храни сбережения в Банке!',
+    description: 'Сразись с другим игроком на Арене (вкладка Мир). Победитель забирает процент серебра проигравшего.',
     tooltipPosition: 'bottom',
-    autoAdvance: true,
+    action: 'tutorial-tab-world',
   },
 ];
 
