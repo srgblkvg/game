@@ -160,7 +160,9 @@ type BattleContext = 'arena' | 'tournament' | 'pve' | 'war_attack' | 'war_defens
 /** Собрать полные статы игрока со ВСЕМИ бонусами — ЕДИНСТВЕННОЕ место */
 export async function buildPlayerStats(userRow: any, context: BattleContext): Promise<CharStats> {
   const base = getBaseStats(userRow);
-  const equip = JSON.parse(userRow.equipment || '{}');
+  // Читаем экипировку из активного слота (equipment_1/2/3), фолбэк на старый equipment
+  const parseEq = (v: any) => typeof v === 'string' ? JSON.parse(v || '{}') : (v && typeof v === 'object' ? v : {});
+  const equip = parseEq(userRow.equipment_1) || parseEq(userRow.equipment);
   const drinks = getDrinkBonuses(userRow);
   const r = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userRow.id]);
   const collCnt = r?.cnt || 0;
