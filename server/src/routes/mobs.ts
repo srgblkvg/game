@@ -306,7 +306,8 @@ router.post('/mob/attack', async (req, res) => {
             }
 
             if (selectedRarity >= 0) {
-            const matQuery = mob.level >= 100
+            // Туториал: даём любой материал (без фильтра type != 'material')
+            const matQuery = (mob.level >= 100 || isTutorial)
                 ? 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? ORDER BY RANDOM() LIMIT 1'
                 : "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? AND c.type != 'material' ORDER BY RANDOM() LIMIT 1";
             const craftItem = await db.one(matQuery, [selectedRarity]) as any;

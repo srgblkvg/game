@@ -25,6 +25,7 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Крафт',
     description: 'Создай предмет в Ремесле из добытых ресурсов (Площадь → Ремесло).',
     tooltipPosition: 'top',
+    action: 'tutorial-tab-castle',
   },
   {
     targetSelector: '#action-card-Арена',
