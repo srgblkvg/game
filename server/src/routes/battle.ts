@@ -308,8 +308,8 @@ router.post('/battle', async (req, res) => {
 
     markDirty(result.winnerId, 'quests');
 
-    // Туториал: первый PvP-бой → завершаем обучение
-    if ((attacker.tutorialStep || 0) === 3) {
+    // Туториал: если обучение ещё не пройдено — PvP-бой завершает его
+    if (!attacker.tutorialCompleted) {
         await db.run('UPDATE users SET tutorial_step = 4, tutorial_completed = 1 WHERE id = ?', [attacker.id]);
     }
 

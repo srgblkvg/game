@@ -12,7 +12,7 @@ export const USER_BATTLE_FIELDS = `
   u.money, u.currentHp, u.lastAttackTime,
   u.activeDrink, u.drinkUntil, u.premiumUntil,
   u.protectionUntil, u.roomType, u.roomUntil, u.lastHpUpdate,
-  u.inventorySlots, u.guildId, u.oauthProvider, u.oauthId, u.faction, u.bandit_reputation, u.tutorial_step
+  u.inventorySlots, u.guildId, u.oauthProvider, u.oauthId, u.faction, u.bandit_reputation, u.tutorial_step, u.tutorial_completed
 `;
 
 /** Поля с присоединением гильдии */
