@@ -283,8 +283,10 @@ router.post('/mob/attack', async (req, res) => {
     const materialsDropped: any[] = [];
     let itemsDropped: any[] = [];
     if (playerWon) {
+        const isTutorial = (user.tutorial_step || 0) === 0;
         const dropRoll: number = Math.random();
-        if (dropRoll < 0.35) {
+        // Туториал: гарантированный дроп материала для крафта
+        if (isTutorial || dropRoll < 0.35) {
             // Определяем редкость по таблице дропа
             const lootTable: Array<{ rarity: number; chance: number }> = [
                 { rarity: 0, chance: mob.loot_junk },
