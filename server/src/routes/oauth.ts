@@ -6,6 +6,7 @@ import { JWT_SECRET } from '../env';
 import logger from '../logger';
 import { auditLoginSuccess } from '../audit';
 import { currentStats } from '../game/stats';
+import { getStarterEquipment } from '../db/helpers';
 
 const router = Router();
 
@@ -89,9 +90,10 @@ async function findOrCreateUser(provider: string, oauthId: string, username: str
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
     const randomHash = crypto.randomBytes(32).toString('hex');
     const premiumUntil = now + 86400; // 1 день премиума за привязку
-    const info = await db.run(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt, premiumUntil)
-        VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male', ?, ?)`,
-        [finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now, premiumUntil]);
+    const equipment1 = getStarterEquipment();
+    const info = await db.run(`INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId, currentHp, lastHpUpdate, level, gender, lastLoginAt, premiumUntil, money, equipment_1)
+        VALUES (?, ?, ?, 1, ?, ?, ?, ?, 1, 'male', ?, ?, 1000, ?)`,
+        [finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now, premiumUntil, equipment1]);
     return { id: Number(info.lastInsertRowid), username: finalUsername, level: 1 };
 }
 

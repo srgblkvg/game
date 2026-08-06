@@ -76,7 +76,6 @@ export default function GuildPage() {
     const [bossFighting, setBossFighting] = useState(false);
     const [battleHistory, setBattleHistory] = useState<any[]>([]);
     const [viewingLog, setViewingLog] = useState<any>(null);
-    const [respawnTimer, setRespawnTimer] = useState(0);
     const [ratings, setRatings] = useState<any>(null);
     const bossTimerRef = useRef<any>(null);
 
@@ -307,7 +306,6 @@ export default function GuildPage() {
     const myRank = guild.myRank;
     const canBuild = myRank==='leader'||myPerms.buildings;
     const canWar = myRank==='leader'||myPerms.war;
-    const canTalents = myRank==='leader'||myPerms.buildings;
 
     return (<div className="max-w-3xl mx-auto px-4 py-4"><BackButton />
           {actionCard && <PageHeader title="Гильдия" icon={actionCard.icon} bgImage={actionCard.bg_image} />}

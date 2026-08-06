@@ -201,6 +201,103 @@ export async function getCollectionBonus(userId: number): Promise<number> {
   return collCnt + (completedSetBonus?.total || 0);
 }
 
+// --- Стартовая экипировка для новых игроков ---
+
+/**
+ * Возвращает JSON-строку для колонки equipment_1 с базовым хлам-шмотом.
+ * Все предметы rarity 0 (Хлам), upgradeLevel 0.
+ */
+export function getStarterEquipment(): string {
+  const now = Date.now();
+  const items: Record<string, any> = {
+    weapon1: {
+      id: now + 1,
+      name: 'Стон могильщика',
+      slot: 'weapon1',
+      rarity_id: 0,
+      rarity_display: 'Хлам',
+      rarity_color: '#888888',
+      bonuses: { s: 2, a: 0, d: 0, m: 0 },
+      extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 },
+      upgradeLevel: 0,
+      image: 'sword/sword_gray.webp',
+    },
+    shield: {
+      id: now + 2,
+      name: 'Гробовая преграда',
+      slot: 'shield',
+      rarity_id: 0,
+      rarity_display: 'Хлам',
+      rarity_color: '#888888',
+      bonuses: { s: 0, a: 0, d: 0, m: 0 },
+      extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 1 },
+      upgradeLevel: 0,
+      image: 'shield/shield_gray.webp',
+    },
+    helmet: {
+      id: now + 3,
+      name: 'Скорбный капюшон',
+      slot: 'helmet',
+      rarity_id: 0,
+      rarity_display: 'Хлам',
+      rarity_color: '#888888',
+      bonuses: { s: 1, a: 0, d: 0, m: 0 },
+      extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 },
+      upgradeLevel: 0,
+      image: 'helmet/helmet_gray.webp',
+    },
+    chest: {
+      id: now + 4,
+      name: 'Скорлупный доспех',
+      slot: 'chest',
+      rarity_id: 0,
+      rarity_display: 'Хлам',
+      rarity_color: '#888888',
+      bonuses: { s: 0, a: 0, d: 1, m: 0 },
+      extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 },
+      upgradeLevel: 0,
+      image: 'chest/chest_gray.webp',
+    },
+    gloves: {
+      id: now + 5,
+      name: 'Костяшковые захваты',
+      slot: 'gloves',
+      rarity_id: 0,
+      rarity_display: 'Хлам',
+      rarity_color: '#888888',
+      bonuses: { s: 0, a: 1, d: 0, m: 0 },
+      extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 },
+      upgradeLevel: 0,
+      image: 'gloves/gloves_gray.webp',
+    },
+    boots: {
+      id: now + 6,
+      name: 'Могильные башмаки',
+      slot: 'boots',
+      rarity_id: 0,
+      rarity_display: 'Хлам',
+      rarity_color: '#888888',
+      bonuses: { s: 0, a: 0, d: 1, m: 0 },
+      extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 },
+      upgradeLevel: 0,
+      image: 'boots/boots_gray.webp',
+    },
+    belt: {
+      id: now + 7,
+      name: 'Кожаная перевязь',
+      slot: 'belt',
+      rarity_id: 0,
+      rarity_display: 'Хлам',
+      rarity_color: '#888888',
+      bonuses: { s: 0, a: 0, d: 0, m: 0 },
+      extra: { crit: 0, dodge: 1, counter: 0, fullBlock: 0 },
+      upgradeLevel: 0,
+      image: 'belt/belt_gray.webp',
+    },
+  };
+  return JSON.stringify(items);
+}
+
 // --- Уровни (чистые функции) ---
 
 export function expForLevel(level: number): number {

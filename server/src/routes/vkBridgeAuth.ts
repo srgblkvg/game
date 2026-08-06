@@ -6,6 +6,7 @@ import { JWT_SECRET } from '../env';
 import logger from '../logger';
 import { auditLoginSuccess } from '../audit';
 import { currentStats } from '../game/stats';
+import { getStarterEquipment } from '../db/helpers';
 
 const router = Router();
 
@@ -149,12 +150,13 @@ router.post('/vk-bridge', async (req: Request, res: Response) => {
     const randomHash = crypto.randomBytes(32).toString('hex');
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
     const premiumUntil = now + 86400;
+    const equipment1 = getStarterEquipment();
 
     const info = await db.run(
       `INSERT INTO users (username, passwordHash, email, emailVerified, oauthProvider, oauthId,
-        currentHp, lastHpUpdate, level, gender, avatar, lastLoginAt, premiumUntil)
-       VALUES (?, ?, ?, 1, 'vk', ?, ?, ?, 1, ?, ?, ?, ?)`,
-      [finalUsername, randomHash, `vk_${vkUserId}@oauth.local`, vkUserId, startHp, now, gender, avatar, now, premiumUntil],
+        currentHp, lastHpUpdate, level, gender, avatar, lastLoginAt, premiumUntil, money, equipment_1)
+       VALUES (?, ?, ?, 1, 'vk', ?, ?, ?, 1, ?, ?, ?, ?, 1000, ?)`,
+      [finalUsername, randomHash, `vk_${vkUserId}@oauth.local`, vkUserId, startHp, now, gender, avatar, now, premiumUntil, equipment1],
     );
 
     const newUserId = Number(info.lastInsertRowid);

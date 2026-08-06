@@ -9,6 +9,7 @@ import { auditRegister, auditLoginSuccess, auditLoginFailure, auditAccountLocked
 import { sendVerificationCode } from '../email';
 import { applyDecay } from '../game/rating';
 import { currentStats } from '../game/stats';
+import { getStarterEquipment } from '../db/helpers';
 import logger from '../logger';
 
 const router = Router();
@@ -38,9 +39,10 @@ router.post('/register', async (req, res) => {
     const code = generateCode();
     const codeExpires = now + 600; // 10 минут
 
-    await db.run(`INSERT INTO users (username, passwordHash, email, emailCode, emailCodeExpires, currentHp, lastHpUpdate, level, gender)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'male')`,
-        [username, passwordHash, email, code, codeExpires, startHp, now]);
+    const equipment1 = getStarterEquipment();
+    await db.run(`INSERT INTO users (username, passwordHash, email, emailCode, emailCodeExpires, currentHp, lastHpUpdate, level, gender, money, equipment_1)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'male', 1000, ?)`,
+        [username, passwordHash, email, code, codeExpires, startHp, now, equipment1]);
 
     const sent = await sendVerificationCode(email, code);
     if (!sent) {
@@ -145,10 +147,11 @@ router.post('/guest', async (req, res) => {
     
     const guestId = nickname || `Гость_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
+    const equipment1 = getStarterEquipment();
 
-    await db.run(`INSERT INTO users (username, passwordHash, currentHp, lastHpUpdate, level, gender, isGuest, emailVerified, exp, money)
-        VALUES (?, '', ?, ?, 1, 'male', 1, 1, 0, 0)`,
-        [guestId, startHp, now]);
+    await db.run(`INSERT INTO users (username, passwordHash, currentHp, lastHpUpdate, level, gender, isGuest, emailVerified, exp, money, equipment_1)
+        VALUES (?, '', ?, ?, 1, 'male', 1, 1, 0, 1000, ?)`,
+        [guestId, startHp, now, equipment1]);
 
     const user: any = await db.one('SELECT id FROM users WHERE username = ?', [guestId]);
     const token = jwt.sign({ userId: user.id, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
