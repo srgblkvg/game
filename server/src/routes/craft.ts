@@ -219,6 +219,8 @@ router.post('/craft/execute', async (req, res) => {
         const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
         if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
         markDirty(userId, 'quests');
+        // Туториал: первый крафт → шаг 3 (Арена)
+        await db.run('UPDATE users SET tutorial_step = 3 WHERE id = ? AND tutorial_step = 2', [userId]);
         return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, item: craftedItem, message: 'Предмет создан!' });
     } else {
         await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);

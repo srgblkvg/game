@@ -240,6 +240,9 @@ router.post('/shop/buy', async (req, res) => {
     [userId, offerId, today]);
   addToTreasury(Math.floor(price * 0.22), 'shop_sale').catch(() => {});
 
+  // Туториал: первая покупка в магазине → шаг 2 (Ремесло)
+  await db.run('UPDATE users SET tutorial_step = 2 WHERE id = ? AND tutorial_step = 1', [userId]);
+
   res.json({ success: true, moneyAfter: user.money - price, itemName });
 });
 

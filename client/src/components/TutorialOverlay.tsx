@@ -297,14 +297,6 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete }: Tutori
     onComplete();
   };
 
-  const handleNext = () => {
-    if (current < steps.length - 1) {
-      setCurrent(prev => prev + 1);
-    } else {
-      onComplete();
-    }
-  };
-
   // Обработка клавиш
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -435,11 +427,10 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete }: Tutori
           {step.description}
         </p>
 
-        {/* Кнопка Пропустить / Далее */}
+        {/* Кнопка Пропустить */}
         <div style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          justifyContent: 'flex-end',
         }}>
           <button
             onClick={handleSkip}
@@ -463,23 +454,6 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete }: Tutori
           >
             Пропустить обучение
           </button>
-          {!step.autoAdvance && (
-            <button
-              onClick={handleNext}
-              style={{
-                background: 'var(--color-accent-warning, #f1c40f)',
-                color: 'var(--color-warning-text, #0d0d1a)',
-                border: 'none',
-                fontSize: isMobile ? '0.75rem' : '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                padding: '6px 16px',
-                borderRadius: '8px',
-              }}
-            >
-              Далее
-            </button>
-          )}
         </div>
       </div>
     </div>,

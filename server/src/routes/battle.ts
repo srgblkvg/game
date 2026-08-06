@@ -308,9 +308,14 @@ router.post('/battle', async (req, res) => {
 
     markDirty(result.winnerId, 'quests');
 
-    // Туториал: если обучение ещё не пройдено — PvP-бой завершает его
-    if (!attacker.tutorialCompleted) {
-        await db.run('UPDATE users SET tutorial_step = 4, tutorial_completed = 1 WHERE id = ?', [attacker.id]);
+    // Туториал: PvP-бой продвигает шаг вперёд
+    if (!attacker.tutorialCompleted && (attacker.tutorialStep || 0) < 4) {
+        const newStep = (attacker.tutorialStep || 0) + 1;
+        if (newStep >= 4) {
+            await db.run('UPDATE users SET tutorial_step = 4, tutorial_completed = 1 WHERE id = ?', [attacker.id]);
+        } else {
+            await db.run('UPDATE users SET tutorial_step = ? WHERE id = ?', [newStep, attacker.id]);
+        }
     }
 
     // Добавляем шаг с ELO в лог (до сохранения в БД!)

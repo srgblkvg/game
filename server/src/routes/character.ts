@@ -228,6 +228,18 @@ router.post('/character/tutorial-done', async (req, res) => {
     res.json({ success: true });
 });
 
+// Продвинуть туториал на один шаг вперёд (клиентская кнопка «Далее»)
+router.post('/character/tutorial-step', async (req, res) => {
+    const userId = req.userId;
+    await db.run('UPDATE users SET tutorial_step = tutorial_step + 1 WHERE id = ?', [userId]);
+    // Если дошли до шага 4 — завершаем
+    const user = await db.one('SELECT tutorial_step FROM users WHERE id = ?', [userId]) as any;
+    if ((user?.tutorial_step || 0) >= 4) {
+        await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
+    }
+    res.json({ success: true, step: user?.tutorial_step || 0 });
+});
+
 // Поиск пользователя по нику (для перехода из чата в профиль)
 router.get('/users/find', async (req, res) => {
     const username = req.query.username as string;
