@@ -589,7 +589,7 @@ export default function GuildPage() {
                         <div key={t.type} className="border border-[var(--color-border-light)] rounded-lg p-2">
                             <div className="flex justify-between items-center mb-1">
                                 <span className="text-xs font-medium">{t.label} ур.{t.playerLevel}</span>
-                                <span className="text-[0.6rem] text-yellow-400">{t.playerLevel + t.guildLevel}%</span>
+                                <span className="text-[0.6rem] text-yellow-400">{t.playerLevel}%</span>
                             </div>
                             <p className="text-[0.55rem] text-[var(--color-text-muted)] mb-1">{t.desc}</p>
                             <div className="mb-1">
@@ -618,7 +618,7 @@ export default function GuildPage() {
                         <div key={t.type} className="border border-[var(--color-border-light)] rounded-lg p-2">
                             <div className="flex justify-between items-center mb-1">
                                 <span className="text-xs font-medium">{t.label} ур.{t.guildLevel}</span>
-                                <span className="text-[0.6rem] text-yellow-400">{t.playerLevel + t.guildLevel}%</span>
+                                <span className="text-[0.6rem] text-yellow-400">{t.guildLevel}%</span>
                             </div>
                             <p className="text-[0.55rem] text-[var(--color-text-muted)] mb-1">{t.desc}</p>
                             <div className="mb-1">
