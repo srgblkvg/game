@@ -450,13 +450,13 @@ router.post('/guild/talents/upgrade', async (req, res) => {
       if (row) {
         await db.run('UPDATE player_guild_talents SET level = ?, progress = 0 WHERE userId = ? AND guildId = ? AND talentType = ?', [newLevel, userId, user.guildid, talentType]);
       } else {
-        await db.run('INSERT INTO player_guild_talents (userId, guildId, talentType, level, progress) VALUES (?, ?, ?, 1, 0)', [userId, user.guildid, talentType]);
+        await db.run('INSERT INTO player_guild_talents (userId, guildId, talentType, level, progress) VALUES (?, ?, ?, 1, 0) ON CONFLICT DO NOTHING', [userId, user.guildid, talentType]);
       }
     } else {
       if (row) {
         await db.run('UPDATE player_guild_talents SET progress = ? WHERE userId = ? AND guildId = ? AND talentType = ?', [newProgress, userId, user.guildid, talentType]);
       } else {
-        await db.run('INSERT INTO player_guild_talents (userId, guildId, talentType, level, progress) VALUES (?, ?, ?, 0, ?)', [userId, user.guildid, talentType, newProgress]);
+        await db.run('INSERT INTO player_guild_talents (userId, guildId, talentType, level, progress) VALUES (?, ?, ?, 0, ?) ON CONFLICT DO NOTHING', [userId, user.guildid, talentType, newProgress]);
       }
     }
     await db.run('UPDATE guild_members SET talentPoints = talentPoints - 1 WHERE userId = ? AND guildId = ?', [userId, user.guildid]);
@@ -506,13 +506,13 @@ router.post('/guild/talents/upgrade', async (req, res) => {
       if (row) {
         await db.run('UPDATE guild_talents SET level = ?, progress = 0 WHERE guildId = ? AND talentType = ?', [newLevel, user.guildid, talentType]);
       } else {
-        await db.run('INSERT INTO guild_talents (guildId, talentType, level, progress) VALUES (?, ?, 1, 0)', [user.guildid, talentType]);
+        await db.run('INSERT INTO guild_talents (guildId, talentType, level, progress) VALUES (?, ?, 1, 0) ON CONFLICT DO NOTHING', [user.guildid, talentType]);
       }
     } else {
       if (row) {
         await db.run('UPDATE guild_talents SET progress = ? WHERE guildId = ? AND talentType = ?', [newProgress, user.guildid, talentType]);
       } else {
-        await db.run('INSERT INTO guild_talents (guildId, talentType, level, progress) VALUES (?, ?, 0, ?)', [user.guildid, talentType, newProgress]);
+        await db.run('INSERT INTO guild_talents (guildId, talentType, level, progress) VALUES (?, ?, 0, ?) ON CONFLICT DO NOTHING', [user.guildid, talentType, newProgress]);
       }
     }
     await db.run('UPDATE guilds SET talentPoints = talentPoints - 1 WHERE id = ?', [user.guildid]);
