@@ -649,4 +649,30 @@ router.get('/auction/history', async (req, res) => {
     res.json({ history, total, page, totalPages: Math.ceil(total / limit) });
 });
 
+// История цен для графика (последние 30 дней, группировка по дням)
+router.get('/auction/price-history', async (req, res) => {
+    const name = req.query.name as string;
+    const slot = req.query.slot as string;
+    const rarity = parseInt(req.query.rarity as string) || 0;
+    if (!name) return res.json({ points: [] });
+
+    const rows = await db.query(`
+        SELECT
+            DATE(createdAt::timestamp) as day,
+            COUNT(*) as count,
+            AVG(price)::int as avg_price,
+            MIN(price) as min_price,
+            MAX(price) as max_price
+        FROM auction_history
+        WHERE itemName = ?
+          AND itemData::jsonb->>'slot' = ?
+          AND COALESCE((itemData::jsonb->>'rarity_id')::int, 0) = ?
+          AND createdAt::timestamp > NOW() - INTERVAL '30 days'
+        GROUP BY DATE(createdAt::timestamp)
+        ORDER BY day ASC
+    `, [name, slot, rarity]) as any[];
+
+    res.json({ points: rows });
+});
+
 export default router;
