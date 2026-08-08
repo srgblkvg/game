@@ -351,8 +351,6 @@ router.get('/dungeon/state', async (req, res) => {
             image: e.image || '',
             attackInterval: (e._attackInterval || 2.5).toFixed(1),
         })),
-        autoTimer: 0,
-        playerAttackProgress: 0,
         attackSpeed: attackSpeed.toFixed(1),
         rage: run.rage,
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
