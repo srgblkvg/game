@@ -204,8 +204,8 @@ router.post('/guild/boss/attack', async (req, res) => {
     guildTalentAwarded = true;
   }
 
-  // ── WS: обновление HP босса для всех членов гильдии ──
-  const { sendToGuild } = await import('../events');
+  // WS: обновление HP босса для всех членов гильдии
+  const { sendToGuild, sendToUser: sendToUserEvent } = await import('../events');
   const updatedBoss = await getOrCreateBoss(user.guildid);
   const updatedGuild = await db.one('SELECT talentPoints FROM guilds WHERE id = ?', [user.guildid]) as any;
   console.log(`[guildBoss] Sending WS update to guild ${user.guildid}: HP=${updatedBoss.currentHp}/${updatedBoss.maxHp}`);
@@ -226,6 +226,17 @@ router.post('/guild/boss/attack', async (req, res) => {
       guildTalentPoints: updatedGuild?.talentpoints || 0,
       ratingsChanged: true,
       newBoss: null,
+    },
+  });
+
+  // Персональный кулдаун атакующему — чтобы правая панель обновилась сразу
+  const remainingCd = Math.max(0, BOSS_COOLDOWN - (now - (member.lastbossattackat || 0)));
+  sendToUserEvent(userId, {
+    type: 'guild_boss_update',
+    data: {
+      cooldownRemaining: remainingCd,
+      bossHp: updatedBoss.currentHp,
+      bossMaxHp: updatedBoss.maxHp,
     },
   });
 
