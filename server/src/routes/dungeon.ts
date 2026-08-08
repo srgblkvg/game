@@ -136,10 +136,10 @@ function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } 
 }
 
 function calcEnemyDamage(enemy: EnemyData, floor: number): number {
-    const base = enemy.dmg + Math.floor(floor * 0.8);
+    const base = enemy.dmg + Math.floor(floor * 1.5);
     const debuffPct = enemy.debuffs?.['demoralize']?.value || 0;
     const debuff = 1 - debuffPct / 100;
-    return Math.floor((base + Math.random() * 4) * debuff);
+    return Math.floor((base + Math.random() * 6) * debuff);
 }
 
 // Кеш мобов — загружается один раз
@@ -154,7 +154,7 @@ function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyDa
     const scale = 1 + floor * 0.4;
     const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 3 : 1));
     const dmg = Math.floor((mob.atk || 3) * scale);
-    const interval = isBoss ? 0.7 + Math.random() * 1.3 : 0.7 + Math.random() * 4.3;
+    const interval = isBoss ? 0.5 + Math.random() * 1.0 : 0.5 + Math.random() * 2.0; // 0.5-1.5с босс, 0.5-2.5с обычный
     return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: interval, _lastAttackTime: Math.floor(Date.now() / 1000) };
 }
 
@@ -306,12 +306,14 @@ router.post('/dungeon/start', async (req, res) => {
     const enemies = await generateFloorEnemies(startFloor);
 
     // Логи для анализа баланса
-    db.run(`INSERT INTO dungeon_logs (userId, floor, playerHp, playerMaxHp, playerStr, playerAgi, playerDef, playerMag, enemies, startedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, startFloor, playerHp, playerMaxHp, stats.s, stats.a, stats.d, stats.m,
-         JSON.stringify(enemies.map(e => ({ name: e.name, hp: e.maxHp, dmg: e.dmg, interval: e._attackInterval }))),
-         Math.floor(Date.now() / 1000)]
-    ).catch(() => {/* ok */});
+    try {
+        await db.run(`INSERT INTO dungeon_logs (userId, floor, playerHp, playerMaxHp, playerStr, playerAgi, playerDef, playerMag, enemies, startedAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?)`,
+            [userId, startFloor, playerHp, playerMaxHp, stats.s, stats.a, stats.d, stats.m,
+             JSON.stringify(enemies.map(e => ({ name: e.name, hp: e.maxHp, dmg: e.dmg, interval: e._attackInterval }))),
+             Math.floor(Date.now() / 1000)]
+        );
+    } catch (e: any) { console.error('[dungeon_logs]', e.message); }
 
     const now = Date.now() / 1000;
     const run: DungeonRun = {
@@ -825,7 +827,7 @@ function tickCombat(run: DungeonRun) {
             enemy._lastAttackTime = Date.now() / 1000;
             const dmg = calcEnemyDamage(enemy, run.currentFloor);
             // Защита снижает урон (0.2% за очко scaled def)
-            const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.002)));
+            const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.0015)));
             run.playerHp -= reduced;
             run.rage = Math.min(100, run.rage + 3); // ярость от получения урона
             run.log.push(`👊 ${enemy.name} бьёт на ${reduced}`);
