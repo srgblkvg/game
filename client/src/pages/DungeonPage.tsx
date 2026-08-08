@@ -449,7 +449,8 @@ export default function DungeonPage() {
                         setDead(false);
                         setInCombat(false);
                         setCleared(false);
-                        setTimeout(() => loadStatus(), 50);
+                        setStatus(null);
+                        loadStatus();
                     }}>Понятно</Button>
                 </Card>
             )}
