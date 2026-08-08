@@ -603,7 +603,8 @@ export default function DungeonPage() {
                         <>
                             {/* Лут с этажа */}
                             <div className="bg-[var(--color-bg-input)] rounded-lg p-3 mb-1">
-                                <p className="text-xs mb-1">💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
+                                <p className="text-xs font-bold mb-1">🔍 Собрано с этажа {floor}:</p>
+                                <p className="text-xs">💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
                                 {claimResult.item && <p className="text-xs">🔮 {claimResult.item.name} ({claimResult.item.rarity})</p>}
                                 {claimResult.page && <p className="text-xs">📜 Страница: {claimResult.page.name}</p>}
                                 {claimResult.isBoss && <p className="text-xs text-[var(--color-accent-gold)]">⭐ Чекпоинт сохранён!</p>}
