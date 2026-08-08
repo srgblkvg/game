@@ -426,12 +426,23 @@ export default function DungeonPage() {
                 <div className="space-y-3">
                     {/* Игрок */}
                     <Card>
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-bold">Этаж {floor}</span>
-                            <span className="text-xs">HP {playerHp}/{playerMaxHp}</span>
-                        </div>
-                        <div className="h-3 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
-                            <div className="h-full rounded-full transition-all duration-300 ease-linear" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-full bg-[var(--color-bg-input)] border-2 border-[var(--color-accent-info)] flex items-center justify-center text-lg shrink-0 overflow-hidden">
+                                {character?.avatar ? (
+                                    <img src={character.avatar} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span>⚔️</span>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-sm font-bold">Этаж {floor}</span>
+                                    <span className="text-xs">HP {playerHp}/{playerMaxHp}</span>
+                                </div>
+                                <div className="h-3 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
+                                    <div className="h-full rounded-full transition-all duration-300 ease-linear" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
+                                </div>
+                            </div>
                         </div>
                         <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
                             <span>Автоатака ({attackSpeed} в сек.)</span>
@@ -465,21 +476,28 @@ export default function DungeonPage() {
                             return (
                                 <div key={e.id} onClick={() => handleTarget(e.id)}
                                     className={`p-2 rounded-lg border cursor-pointer transition-colors ${isTarget ? 'border-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)]'}`}>
-                                    <div className="flex justify-between text-xs mb-1">
-                                        <span className={e.isBoss ? 'text-[var(--color-accent-gold)] font-bold' : ''}>
-                                            {isTarget && '🎯 '}{e.isBoss && '👑 '}{e.name}
-                                        </span>
-                                        <span>{e.hp}/{e.maxHp}</span>
-                                    </div>
-                                    <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full transition-all duration-300 ease-linear"
-                                            style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
-                                    </div>
-                                    <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
-                                        <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)] mb-0.5">
-                                            <span>Атака через 2.5 сек.</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 ${e.isBoss ? 'bg-[var(--color-accent-gold)]/20 border-2 border-[var(--color-accent-gold)]' : 'bg-[var(--color-bg-input)] border-2 border-[var(--color-border-light)]'}`}>
+                                            {e.isBoss ? '👑' : '💀'}
                                         </div>
-                                        <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, (e.attackProgress || 0) * 100)}%` }} />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className={e.isBoss ? 'text-[var(--color-accent-gold)] font-bold' : ''}>
+                                                    {isTarget && '🎯 '}{e.name}
+                                                </span>
+                                                <span>{e.hp}/{e.maxHp}</span>
+                                            </div>
+                                            <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                                <div className="h-full rounded-full transition-all duration-300 ease-linear"
+                                                    style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
+                                            </div>
+                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
+                                                <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)] mb-0.5">
+                                                    <span>Атака через 2.5 сек.</span>
+                                                </div>
+                                                <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, (e.attackProgress || 0) * 100)}%` }} />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             );
