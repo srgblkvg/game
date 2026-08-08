@@ -271,7 +271,7 @@ export default function DungeonPage() {
 
         return (
         <div className="md:flex md:gap-4 md:items-start space-y-4 md:space-y-0">
-            <div className="md:w-[320px] md:shrink-0">
+            <div className="md:w-[220px] md:shrink-0">
                 {character && (
                     <CharacterCard
                         char={toCharCardData(character)}
