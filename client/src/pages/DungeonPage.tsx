@@ -40,6 +40,8 @@ export default function DungeonPage() {
     const [combatLog, setCombatLog] = useState<string[]>([]);
     const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
     const [attackSpeed, setAttackSpeed] = useState('0');
+    const animRef = useRef<number>(0);
+    const lastProgressRef = useRef({ progress: 0, time: 0 });
     const [selectedSkills, setSelectedSkills] = useState<number[]>([1, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
@@ -93,16 +95,38 @@ export default function DungeonPage() {
                 setCooldowns(data.skillCooldowns || {});
                 setPlayerAttackProgress(data.playerAttackProgress || 0);
                 setAttackSpeed(data.attackSpeed || '0');
+                // Синхронизация: серверное значение корректирует анимацию
+                lastProgressRef.current = { progress: data.playerAttackProgress || 0, time: Date.now() };
                 if (data.cleared) { setCleared(true); stopPolling(); }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
             } catch { /* */ }
-        }, 500);
+        }, 100);
     };
 
     const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
     useEffect(() => { return () => stopPolling(); }, []);
     useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [combatLog]);
+
+    // Плавная анимация прогресс-бара атаки
+    useEffect(() => {
+        if (!inCombat) return;
+        const tick = () => {
+            const now = Date.now();
+            const lp = lastProgressRef.current;
+            const speed = parseFloat(attackSpeed) || 0.5;
+            const interval = 1 / speed; // seconds per attack
+            const elapsed = (now - lp.time) / 1000;
+            const estimated = Math.min(1, lp.progress + elapsed / interval);
+            setPlayerAttackProgress(estimated);
+            if (estimated >= 1) {
+                lastProgressRef.current = { progress: 0, time: now };
+            }
+            animRef.current = requestAnimationFrame(tick);
+        };
+        animRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animRef.current);
+    }, [inCombat, attackSpeed]);
 
     // Получить список доступных чекпоинтов (кратные 5)
     const getCheckpoints = () => {
@@ -455,7 +479,7 @@ export default function DungeonPage() {
                             <div className="flex-1 h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
                                 <div className="h-full bg-red-500 rounded-full transition-all" style={{ width: `${rage}%` }} />
                             </div>
-                            <span className="text-xs font-bold text-red-400">{rage}</span>
+                            <span className="text-xs font-bold text-red-400">{Math.round(rage)}</span>
                         </div>
                         {buffs.length > 0 && (
                             <div className="flex gap-1 flex-wrap">
@@ -545,7 +569,7 @@ export default function DungeonPage() {
                     <div className="mb-3">
                         <div className="flex justify-between text-xs mb-1">
                             <span>HP {playerHp}/{playerMaxHp}</span>
-                            <span className="text-red-400">Ярость {rage}</span>
+                            <span className="text-red-400">Ярость {Math.round(rage)}</span>
                         </div>
                         <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-1">
                             <div className="h-full rounded-full transition-all" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
