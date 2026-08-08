@@ -115,11 +115,8 @@ export default function DungeonPage() {
 
     // Получить список доступных чекпоинтов (кратные 5)
     const getCheckpoints = () => {
-        if (!status) return [];
-        const maxFloor = status.checkpointFloor || 0;
-        const points: number[] = [];
-        if (maxFloor >= 1) points.push(1); // всегда с 1-го можно
-        // Чекпоинты: 6, 11, 16... (после боссов 5, 10, 15...)
+        const maxFloor = status?.checkpointFloor || 0;
+        const points: number[] = [1]; // этаж 1 всегда доступен
         for (let f = 6; f <= maxFloor; f += 5) points.push(f);
         return points;
     };
