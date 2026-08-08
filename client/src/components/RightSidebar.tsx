@@ -10,16 +10,20 @@ export default function RightSidebar() {
     const [headerHeight, setHeaderHeight] = useState(132);
     const location = useLocation();
 
-    // Измеряем реальную высоту хедера — кнопка крепится к его низу
+    // Измеряем реальную высоту хедера (включая хлебные крошки) — кнопка на его нижней границе
     useEffect(() => {
         const update = () => {
-            const h = document.getElementById('site-header')?.offsetHeight || 0;
+            const el = document.getElementById('site-header');
+            const h = el ? el.getBoundingClientRect().bottom : 132;
             const safeArea = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--vk-top-offset')) || 0;
-            setHeaderHeight((h > 0 ? h : 132) + safeArea);
+            setHeaderHeight(Math.max(h, 132) + safeArea);
         };
         update();
+        const ro = new ResizeObserver(update);
+        const el = document.getElementById('site-header');
+        if (el) ro.observe(el);
         window.addEventListener('resize', update);
-        return () => window.removeEventListener('resize', update);
+        return () => { ro.disconnect(); window.removeEventListener('resize', update); };
     }, []);
 
     // Сворачивать панель при переходе на другую страницу
@@ -62,7 +66,7 @@ export default function RightSidebar() {
                 data-tutorial="right-sidebar"
                 onClick={() => { setOpen(!open); if (!open) window.dispatchEvent(new CustomEvent('closeChatPanel')); }}
                 id="right-sidebar-toggle"
-                style={{ top: `${headerHeight + 16}px` }}
+                style={{ top: `${headerHeight - 12}px` }}
                 className={`fixed right-3 z-[45] flex items-center gap-1.5 rounded-full border shadow-lg cursor-pointer transition-all duration-300 ${
                     open
                         ? 'w-8 h-8 bg-[var(--color-bg-secondary)] border-[var(--color-border-default)] justify-center'
@@ -85,7 +89,7 @@ export default function RightSidebar() {
             {/* Панель */}
             <div
                 id="right-sidebar-panel"
-                style={{ top: `${headerHeight + 21}px`, height: `calc(100vh - ${headerHeight + 21}px - 40px)` }}
+                style={{ top: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px - 40px)` }}
                 className={`fixed right-0 z-20 w-[340px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] shadow-2xl transition-transform duration-200 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
             >
                 <div className="flex flex-col gap-6 overflow-y-auto h-full p-3 pt-8 pb-10">
