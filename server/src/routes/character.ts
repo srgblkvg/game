@@ -38,11 +38,30 @@ router.get('/character/me', async (req, res) => {
     const equipment3 = parseEq(user.equipment_3);
     let changed = false;
 
+    // Собираем уникальные ID крафт-предметов и загружаем данные одним запросом
+    const craftIds = [...new Set(
+      inventory.filter((i: any) => i.type === 'craft_item' || i.type === 'material').map((i: any) => Number(i.id))
+    )];
+    const craftDataMap: Record<number, any> = {};
+    if (craftIds.length > 0) {
+      const craftRows = await db.query(
+        `SELECT c.id, c.rarity_id, c.type, c.image, r.display_name as rarity_display, r.color as rarity_color
+         FROM craft_items c JOIN rarities r ON c.rarity_id = r.id
+         WHERE c.id IN (${craftIds.join(',')})`,
+        []
+      ) as any[];
+      for (const row of craftRows) craftDataMap[row.id] = row;
+    }
+
+    // Обогащаем инвентарь: крафт-предметы из кеша, шмот через БД
     inventory = await Promise.all(inventory.map(async (item: any) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
-            if (item.rarity_id === undefined || !item.image) {
-                const craftRow = await db.one(CRAFT_DATA_SQL, [Number(item.id)]) as any;
-                if (craftRow) {
+            const craftRow = craftDataMap[Number(item.id)];
+            if (craftRow) {
+                const needsUpdate = item.rarity_id === undefined || !item.image
+                    || item.rarity_display !== craftRow.rarity_display
+                    || item.rarity_color !== craftRow.rarity_color;
+                if (needsUpdate) {
                     changed = true;
                     return {
                         ...item,
