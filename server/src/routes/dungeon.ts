@@ -350,6 +350,7 @@ router.get('/dungeon/state', async (req, res) => {
             attackProgress: Math.min(1, ((e._lastAttack || 0) / (e._attackInterval || 2.5))),
             image: e.image || '',
             attackInterval: (e._attackInterval || 2.5).toFixed(1),
+            _debug: { la: e._lastAttack, int: e._attackInterval },
         })),
         playerAttackProgress,
         attackSpeed: attackSpeed.toFixed(1),
