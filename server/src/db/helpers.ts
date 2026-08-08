@@ -167,8 +167,7 @@ export async function buildPlayerStats(userRow: any, context: BattleContext): Pr
   const activeSlot = userRow.active_equip_slot || 1;
   const equipKey = `equipment_${activeSlot}`;
   let equip = parseEq(userRow[equipKey]);
-  if (!equip || Object.keys(equip).length === 0) equip = parseEq(userRow.equipment_1);
-  if (!equip || Object.keys(equip).length === 0) equip = parseEq(userRow.equipment);
+  if (Object.keys(equip).length === 0) equip = parseEq(userRow.equipment);
   const drinks = getDrinkBonuses(userRow);
   const r = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userRow.id]);
   const collCnt = r?.cnt || 0;

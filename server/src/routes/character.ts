@@ -32,7 +32,8 @@ router.get('/character/me', async (req, res) => {
     const activeSlot = user.active_equip_slot || 1;
     const equipKey = `equipment_${activeSlot}`;
     const parseEq = (v: any) => typeof v === 'string' ? JSON.parse(v || '{}') : (v && typeof v === 'object' ? v : {});
-    const equipment = parseEq((user as any)[equipKey]) || parseEq(user.equipment);
+    const rawEq = parseEq((user as any)[equipKey]);
+    const equipment = Object.keys(rawEq).length > 0 ? rawEq : parseEq(user.equipment);
     const equipment1 = parseEq(user.equipment_1);
     const equipment2 = parseEq(user.equipment_2);
     const equipment3 = parseEq(user.equipment_3);
