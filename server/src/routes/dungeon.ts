@@ -122,10 +122,10 @@ function getAttackSpeed(rarity: number, weaponStrBonus: number): number {
 }
 
 function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } {
-    // Урон: делим scaled stat на 5 для баланса
-    const rs = run.playerStr / 5;
-    const ra = run.playerAgi / 5;
-    const rm = run.playerMag / 5;
+    // Урон: делим scaled stat на 3 для баланса
+    const rs = run.playerStr / 3;
+    const ra = run.playerAgi / 3;
+    const rm = run.playerMag / 3;
     const weaponBonus = 3 + run.equippedWeaponRarity * 3;
     const baseDmg = rs + ra * 0.3 + rm * 0.2 + run.playerLevel + weaponBonus;
     const dmgBonus = (run.buffs['battle_cry'] ? (1 + (run.buffs['battle_cry'].value / 100)) : 1.0);
@@ -139,10 +139,10 @@ function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } 
 }
 
 function calcEnemyDamage(enemy: EnemyData, floor: number): number {
-    const base = enemy.dmg + Math.floor(floor * 1.5);
+    const base = enemy.dmg + Math.floor(floor * 0.8);
     const debuffPct = enemy.debuffs?.['demoralize']?.value || 0;
     const debuff = 1 - debuffPct / 100;
-    return Math.floor((base + Math.random() * 6) * debuff);
+    return Math.floor((base + Math.random() * 3) * debuff);
 }
 
 // Кеш мобов — загружается один раз
