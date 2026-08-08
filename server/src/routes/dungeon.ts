@@ -39,7 +39,7 @@ db.run(`CREATE TABLE IF NOT EXISTS skill_levels (
 // ═══════ КОНСТАНТЫ ═══════
 
 const WEAPON_SPEED: Record<number, number> = { 0: 0.5, 1: 0.7, 2: 0.85, 3: 1.05, 4: 1.3, 5: 1.55, 6: 1.8 };
-const TICK_MS = 250;
+const TICK_MS = 100;
 const DAILY_RUNS_MAX = 4;
 
 interface EnemyData {
@@ -746,7 +746,7 @@ function tickCombat(run: DungeonRun) {
         if (target && target.hp > 0) {
             const { damage: dmg } = calcPlayerDamage(run);
             target.hp -= dmg;
-            run.rage = Math.min(100, run.rage + 2 + (run.buffs['battle_cry'] ? 1 : 0));
+            run.rage = Math.min(100, run.rage + 5 + (run.buffs['battle_cry'] ? 2 : 0));
         }
     }
 
@@ -766,6 +766,7 @@ function tickCombat(run: DungeonRun) {
             // Защита снижает урон (1% за очко def)
             const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.01)));
             run.playerHp -= reduced;
+            run.rage = Math.min(100, run.rage + 3); // ярость от получения урона
         }
     }
 
