@@ -65,7 +65,7 @@ const SKILLS: Skill[] = [
     { id: 5, name: 'execute', nameRu: 'Добивание', rageCost: 30, rageGain: 0, cooldown: 8,
       desc: '<30% HP', descScale: '+25% урона' },
     { id: 6, name: 'demoralize', nameRu: 'Деморализация', rageCost: 10, rageGain: 0, cooldown: 25,
-      desc: '-10% урона врагу', descScale: '-2% урона, +2с' },
+      desc: '-10% урона от врага', descScale: '-2% урона, +2с' },
     { id: 7, name: 'charge', nameRu: 'Рывок', rageCost: 0, rageGain: 12, cooldown: 15,
       desc: 'Стан 1с', descScale: '+0.2с стана, +3 ярости' },
     { id: 8, name: 'whirlwind', nameRu: 'Вихрь', rageCost: 25, rageGain: 0, cooldown: 10,

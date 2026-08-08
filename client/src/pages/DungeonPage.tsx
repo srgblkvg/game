@@ -52,8 +52,10 @@ export default function DungeonPage() {
     const [dead, setDead] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [claimResult, setClaimResult] = useState<any>(null);
-    const [exited, setExited] = useState(false);
     const [pages, setPages] = useState<any[]>([]);
+    const [totalLoot, setTotalLoot] = useState<{ silver: number; items: string[]; pages: string[] }>({ silver: 0, items: [], pages: [] });
+    const [looting, setLooting] = useState(false);
+    const [lootProgress, setLootProgress] = useState(0);
 
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const logRef = useRef<HTMLDivElement>(null);
@@ -146,7 +148,7 @@ export default function DungeonPage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
-            setCleared(false); setClaimed(false); setClaimResult(null);
+            setCleared(false); setClaimed(false); setClaimResult(null); setLooting(false); setLootProgress(0);
             setFloor(data.floor); setPlayerHp(data.playerHp); setPlayerMaxHp(data.playerMaxHp);
             setEnemies(data.enemies); setRage(0); setSkills(data.skills || []); setBuffs([]); setCooldowns({}); setCombatLog([]);
             setInCombat(true); startPolling();
@@ -165,11 +167,24 @@ export default function DungeonPage() {
         } catch (e: any) { setMessage(e.message); }
     };
 
-    const handleTarget = async (enemyId: number) => {
-        try {
-            await fetch('/api/dungeon/target', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ enemyId }) });
-        } catch { /* */ }
-    };
+    // Авто-лут после очистки этажа
+    useEffect(() => {
+        if (!cleared || !inCombat || looting || claimed) return;
+        setLooting(true);
+        const corpseCount = enemies.length || 1;
+        let progress = 0;
+        const tick = 50; // 50ms per tick
+        const totalTicks = (corpseCount * 1000) / tick; // 1 сек на труп
+        const interval = setInterval(() => {
+            progress += 1;
+            setLootProgress(Math.min(100, (progress / totalTicks) * 100));
+            if (progress >= totalTicks) {
+                clearInterval(interval);
+                handleClaim(); // авто-клейм
+            }
+        }, tick);
+        return () => clearInterval(interval);
+    }, [cleared, inCombat]);
 
     const handleClaim = async () => {
         setLoading(true);
@@ -178,8 +193,20 @@ export default function DungeonPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setClaimed(true); setClaimResult(data); setPlayerHp(data.playerHp);
+            setTotalLoot(prev => ({
+                silver: prev.silver + (data.silver || 0),
+                items: data.item ? [...prev.items, `${data.item.name} (${data.item.rarity})`] : prev.items,
+                pages: data.page ? [...prev.pages, data.page.name] : prev.pages,
+            }));
+            if (data.isBoss) setMessage(prev => prev + ' ⭐ Чекпоинт сохранён!');
         } catch (e: any) { setMessage(e.message); }
         finally { setLoading(false); }
+    };
+
+    const handleTarget = async (enemyId: number) => {
+        try {
+            await fetch('/api/dungeon/target', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ enemyId }) });
+        } catch { /* */ }
     };
 
     const handleFlee = async () => {
@@ -549,7 +576,7 @@ export default function DungeonPage() {
                 <Card>
                     <h3 className="font-bold text-lg mb-3 text-center text-[var(--color-accent-success)]">🏆 Этаж {floor} пройден!</h3>
 
-                    {/* Игрок: HP + ярость (продолжает снижаться) */}
+                    {/* Игрок: HP + ярость */}
                     <div className="mb-3">
                         <div className="flex justify-between text-xs mb-1">
                             <span>HP {playerHp}/{playerMaxHp}</span>
@@ -563,22 +590,33 @@ export default function DungeonPage() {
                         </div>
                     </div>
 
-                    {/* Лут (показывается, забирается при выходе) */}
-                    <div className="bg-[var(--color-bg-input)] rounded-lg p-3 mb-3">
-                        <h4 className="text-xs font-bold mb-2">📦 Добыча (забирается при выходе)</h4>
-                        {claimResult ? (
-                            <div className="space-y-1 text-xs">
-                                <p>💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
-                                {claimResult.item && <p>🔮 {claimResult.item.name} ({claimResult.item.rarity})</p>}
-                                {claimResult.page && <p>📜 Страница: {claimResult.page.name}</p>}
-                                {claimResult.isBoss && <p className="text-[var(--color-accent-gold)]">⭐ Чекпоинт сохранён!</p>}
+                    {/* Обыск трупов или лут */}
+                    {!claimed && looting && (
+                        <div className="bg-[var(--color-bg-input)] rounded-lg p-3 mb-3">
+                            <p className="text-xs text-center mb-2">🔍 Обыск трупов...</p>
+                            <div className="h-2 bg-[var(--color-bg-card)] rounded-full overflow-hidden">
+                                <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all duration-100 ease-linear" style={{ width: `${lootProgress}%` }} />
                             </div>
-                        ) : (
-                            <div className="text-xs text-center text-[var(--color-text-muted)]">
-                                <Button variant="secondary" size="md" onClick={handleClaim} disabled={loading}>🎲 Открыть добычу</Button>
+                        </div>
+                    )}
+                    {claimed && claimResult && (
+                        <>
+                            {/* Лут с этажа */}
+                            <div className="bg-[var(--color-bg-input)] rounded-lg p-3 mb-1">
+                                <p className="text-xs mb-1">💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
+                                {claimResult.item && <p className="text-xs">🔮 {claimResult.item.name} ({claimResult.item.rarity})</p>}
+                                {claimResult.page && <p className="text-xs">📜 Страница: {claimResult.page.name}</p>}
+                                {claimResult.isBoss && <p className="text-xs text-[var(--color-accent-gold)]">⭐ Чекпоинт сохранён!</p>}
                             </div>
-                        )}
-                    </div>
+                            {/* Весь лут за поход */}
+                            <div className="bg-[var(--color-bg-card)] rounded-lg p-3 mb-3">
+                                <h4 className="text-xs font-bold mb-1">📦 Вся добыча за поход:</h4>
+                                <p className="text-xs">💰 {totalLoot.silver.toLocaleString()} серебра</p>
+                                {totalLoot.items.map((it, i) => <p key={i} className="text-xs">🔮 {it}</p>)}
+                                {totalLoot.pages.map((p, i) => <p key={i} className="text-xs">📜 {p}</p>)}
+                            </div>
+                        </>
+                    )}
 
                     {/* HP после отдыха */}
                     <p className="text-xs text-[var(--color-text-muted)] mb-3 text-center">
@@ -586,34 +624,17 @@ export default function DungeonPage() {
                     </p>
 
                     <div className="flex gap-2">
-                        <Button variant="danger" size="md" onClick={handleContinue} className="flex-1">
+                        <Button variant="danger" size="md" onClick={handleContinue} className="flex-1" disabled={!claimed || loading}>
                             ➡ Этаж {claimResult?.nextFloor || floor + 1}
                         </Button>
-                        <Button variant="secondary" size="md" onClick={() => { setExited(true); stopPolling(); }}>
+                        <Button variant="secondary" size="md" onClick={() => { setCleared(false); setClaimed(false); setLooting(false); setLootProgress(0); setInCombat(false); setTotalLoot({ silver: 0, items: [], pages: [] }); stopPolling(); loadStatus(); }}>
                             🚪 Выйти
                         </Button>
                     </div>
                 </Card>
             )}
 
-            {/* Выход с добычей */}
-            {exited && claimResult && (
-                <Card>
-                    <h3 className="font-bold text-lg mb-3 text-center text-[var(--color-accent-success)]">🏆 Подземелье пройдено!</h3>
-                    <div className="bg-[var(--color-bg-input)] rounded-lg p-3 mb-3">
-                        <h4 className="text-xs font-bold mb-2">📦 Добыча:</h4>
-                        <div className="space-y-1 text-sm">
-                            <p>💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
-                            {claimResult.item && <p>🔮 {claimResult.item.name} ({claimResult.item.rarity})</p>}
-                            {claimResult.page && <p>📜 Страница: {claimResult.page.name}</p>}
-                            {claimResult.isBoss && <p className="text-[var(--color-accent-gold)]">⭐ Чекпоинт сохранён!</p>}
-                        </div>
-                    </div>
-                    <Button variant="danger" size="md" fullWidth onClick={() => { setExited(false); setCleared(false); setClaimed(false); setInCombat(false); loadStatus(); }}>
-                        Продолжить
-                    </Button>
-                </Card>
-            )}
+            {/* Выход — без отдельного экрана, просто возврат */}
         </div>
     );
 }
@@ -624,7 +645,7 @@ const SKILLS_ALL = [
     { id: 3, name: 'battle_cry', nameRu: 'Боевой клич', rageCost: 20, rageGain: 0, cooldown: 20, desc: '+20% урона', descScale: '+5% урона, +1с' },
     { id: 4, name: 'rend', nameRu: 'Раздирание', rageCost: 10, rageGain: 0, cooldown: 0, desc: 'Кровотечение 9с', descScale: '+5% урона за тик' },
     { id: 5, name: 'execute', nameRu: 'Добивание', rageCost: 30, rageGain: 0, cooldown: 8, desc: '<30% HP', descScale: '+25% урона' },
-    { id: 6, name: 'demoralize', nameRu: 'Деморализация', rageCost: 10, rageGain: 0, cooldown: 25, desc: '-10% урона врагу', descScale: '-2% урона, +2с' },
+    { id: 6, name: 'demoralize', nameRu: 'Деморализация', rageCost: 10, rageGain: 0, cooldown: 25, desc: '-10% урона от врага', descScale: '-2% урона, +2с' },
     { id: 7, name: 'charge', nameRu: 'Рывок', rageCost: 0, rageGain: 12, cooldown: 15, desc: 'Стан 1с', descScale: '+0.2с стана, +3 ярости' },
     { id: 8, name: 'whirlwind', nameRu: 'Вихрь', rageCost: 25, rageGain: 0, cooldown: 10, desc: 'Все враги', descScale: '+10% урона' },
 ];
