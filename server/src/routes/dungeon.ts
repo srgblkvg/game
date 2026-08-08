@@ -792,7 +792,8 @@ function tickCombat(run: DungeonRun) {
         if (run.tickTimer) clearInterval(run.tickTimer);
         activeRuns.delete(run.userId);
         // Сохраняем смерть в БД — кулдаун 6 часов
-        db.run('UPDATE dungeon_runs SET currentFloor = ? WHERE userId = ?', [run.currentFloor, run.userId]).catch(() => {});
+        db.run('UPDATE dungeon_runs SET currentFloor = ?, startedAt = ? WHERE userId = ?',
+            [run.currentFloor, Math.floor(Date.now() / 1000), run.userId]).catch(() => {});
         return;
     }
     const now = Date.now() / 1000;
