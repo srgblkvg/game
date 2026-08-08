@@ -113,7 +113,6 @@ export default function DungeonPage() {
                 setRage(data.rage);
                 setBuffs(data.buffs || []);
                 setCooldowns(data.skillCooldowns || {});
-                setPlayerAttackProgress(data.playerAttackProgress || 0);
                 setAttackSpeed(data.attackSpeed || '0');
                 intervalRef.current = data.playerAttackInterval || 1;
                 if (data.lastPlayerAttackAt) lastAttackRef.current = data.lastPlayerAttackAt;
