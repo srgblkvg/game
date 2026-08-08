@@ -198,7 +198,7 @@ export default function DungeonPage() {
                 items: data.item ? [...prev.items, `${data.item.name} (${data.item.rarity})`] : prev.items,
                 pages: data.page ? [...prev.pages, data.page.name] : prev.pages,
             }));
-            if (data.isBoss) setMessage(prev => prev + ' ⭐ Чекпоинт сохранён!');
+            if (data.isBoss) setMessage('⭐ Чекпоинт сохранён!');
         } catch (e: any) { setMessage(e.message); }
         finally { setLoading(false); }
     };
