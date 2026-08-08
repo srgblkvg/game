@@ -829,8 +829,8 @@ function tickCombat(run: DungeonRun) {
             enemy['_lastAttack'] -= interval;
             enemy._lastAttackTime = Date.now() / 1000;
             const dmg = calcEnemyDamage(enemy, run.currentFloor);
-            // Защита снижает урон (0.2% за очко scaled def)
-            const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.0015)));
+            // Минимальная защита (0.1% за очко — почти без блокирования)
+            const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.0008)));
             run.playerHp -= reduced;
             run.rage = Math.min(100, run.rage + 3); // ярость от получения урона
             run.log.push(`👊 ${enemy.name} бьёт на ${reduced}`);
