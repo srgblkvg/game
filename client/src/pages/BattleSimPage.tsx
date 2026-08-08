@@ -201,7 +201,7 @@ export default function BattleSimPage() {
     const ctx = CONTEXTS.find(c => c.value === context)!;
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:crossed-swords" width="22" height="22" className="inline mr-2"/>Симулятор боёв</h1>
 
             <div className="grid grid-cols-2 gap-4 mb-4">

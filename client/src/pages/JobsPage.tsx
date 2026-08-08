@@ -120,7 +120,7 @@ export default function JobsPage() {
     }
 
     return (
-        <div className="px-4 py-4 max-w-md mx-auto">
+        <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
           {actionCard && <PageHeader title="Работы" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">

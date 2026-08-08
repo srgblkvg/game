@@ -223,14 +223,14 @@ export default function CollectionsPage() {
     };
 
     if (loading) {
-        return <div className="p-4 max-w-4xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
+        return <div className="p-4 max-w-3xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
     }
 
     const totalPercent = Math.round((collectionCount / totalCollectionItems) * 100);
     const totalBonus = collectionCount;
 
     return (
-        <div className="p-4 max-w-4xl mx-auto">
+        <div className="p-4 max-w-3xl mx-auto">
             <h1 className="text-xl font-bold mb-2">Коллекция — {totalPercent}%</h1>
 
             {/* Табы */}

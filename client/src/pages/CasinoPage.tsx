@@ -211,7 +211,7 @@ export default function CasinoPage() {
     const isFinished = game && game.status !== 'playing';
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             {actionCard && <PageHeader title="Игорный дом" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">

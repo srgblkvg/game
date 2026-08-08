@@ -422,7 +422,7 @@ export default function BestiaryPage() {
 
   return (
     <>
-    <div className="px-4 py-4 max-w-4xl mx-auto">
+    <div className="px-4 py-4 max-w-3xl mx-auto">
     <BackButton />
     {actionCard && <PageHeader title="Охота" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 

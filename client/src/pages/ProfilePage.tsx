@@ -77,7 +77,7 @@ export default function ProfilePage() {
     })();
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Профиль игрока</h2>

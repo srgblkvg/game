@@ -132,7 +132,7 @@ export default function PremiumPage() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto px-4 py-6">
             <button onClick={() => navigate(-1)} className="text-sm text-[var(--color-accent-info)] hover:underline mb-4 inline-block cursor-pointer">← Назад</button>
 
             <h1 className="text-xl font-bold text-center mb-1">⭐ Премиум</h1>

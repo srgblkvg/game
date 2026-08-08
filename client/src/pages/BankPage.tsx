@@ -212,7 +212,7 @@ export default function BankPage() {
     };
 
     return (
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Банк" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}

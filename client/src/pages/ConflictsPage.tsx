@@ -28,7 +28,7 @@ export default function ConflictsPage() {
     }, []);
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <PageHeader title="Конфликты" icon="game-icons:crossed-swords" />
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">

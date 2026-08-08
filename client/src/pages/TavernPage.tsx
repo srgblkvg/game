@@ -108,7 +108,7 @@ export default function TavernPage() {
     const missingHp = Math.max(0, (character?.stats?.hp || tavern.maxHp) - tavern.currentHp);
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Трактир" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             {(tavern.room || tavern.drink) && (

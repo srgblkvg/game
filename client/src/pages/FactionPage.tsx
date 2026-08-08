@@ -74,13 +74,13 @@ export default function FactionPage() {
         if (changeTarget) handleChange(changeTarget);
     };
 
-    if (!data) return <div className="p-4 max-w-md mx-auto"><BackButton /><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
+    if (!data) return <div className="p-4 max-w-3xl mx-auto"><BackButton /><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
 
     const currentFaction = data.current;
     const canChoose = data.canChoose;
 
     return (
-        <div className="p-4 max-w-md mx-auto">
+        <div className="p-4 max-w-3xl mx-auto">
             <BackButton />
             <h1 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Icon icon="game-icons:swords-emblem" width="24" height="24" />

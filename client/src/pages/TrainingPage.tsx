@@ -105,7 +105,7 @@ export default function TrainingPage() {
 
     if (!loaded) {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="max-w-3xl mx-auto px-4 py-4">
                 <BackButton />
                 <PageHeader title="Лудус" icon={icon} bgImage={bgImage} />
                 <p className="text-sm text-[var(--color-text-muted)] text-center py-4">Загрузка...</p>
@@ -114,7 +114,7 @@ export default function TrainingPage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <PageHeader title="Лудус" icon={icon} bgImage={bgImage} />
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
