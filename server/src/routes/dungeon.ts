@@ -40,7 +40,6 @@ db.run(`CREATE TABLE IF NOT EXISTS skill_levels (
 const WEAPON_SPEED: Record<number, number> = { 0: 0.5, 1: 0.7, 2: 0.85, 3: 1.05, 4: 1.3, 5: 1.55, 6: 1.8 };
 const TICK_MS = 250;
 const DAILY_RUNS_MAX = 4;
-const SKILL_PAGES_TO_LEVEL = 10;
 
 interface EnemyData {
     id: number; name: string; hp: number; maxHp: number; dmg: number;
@@ -621,28 +620,43 @@ router.get('/dungeon/pages', async (req, res) => {
             count: p.count,
             name: SKILLS.find(s => s.id === p.skillid)?.nameRu || '???',
             level: levelMap[p.skillid] || 0,
-            needForNext: SKILL_PAGES_TO_LEVEL,
+            needForNext: 10 + (levelMap[p.skillid] || 0) * 15,
         })),
     });
 });
 
-// Улучшить скилл (потратить 10 страниц)
+// Улучшить скилл (страницы + серебро, растёт с уровнем)
 router.post('/dungeon/upgrade-skill', async (req, res) => {
     const userId = req.userId;
     const { skillId } = req.body;
+
+    const curLevel = await db.one(
+        'SELECT level FROM skill_levels WHERE userId = ? AND skillId = ?',
+        [userId, skillId]
+    ).catch(() => null) as any;
+    const level = curLevel?.level || 0;
+
+    const neededPages = 10 + level * 15;
+    const neededSilver = 1000 * Math.pow(3, level);
 
     const pages = await db.one(
         'SELECT count FROM skill_pages WHERE userId = ? AND skillId = ?',
         [userId, skillId]
     ).catch(() => null) as any;
 
-    if (!pages || pages.count < SKILL_PAGES_TO_LEVEL) {
-        return res.status(400).json({ error: `Нужно ${SKILL_PAGES_TO_LEVEL} страниц` });
+    if (!pages || pages.count < neededPages) {
+        return res.status(400).json({ error: `Нужно ${neededPages} страниц (есть ${pages?.count || 0})` });
     }
 
+    const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
+    if (!user || user.money < neededSilver) {
+        return res.status(400).json({ error: `Нужно ${neededSilver.toLocaleString()} серебра` });
+    }
+
+    await db.run('UPDATE users SET money = money - ? WHERE id = ?', [neededSilver, userId]);
     await db.run(
         'UPDATE skill_pages SET count = count - ? WHERE userId = ? AND skillId = ?',
-        [SKILL_PAGES_TO_LEVEL, userId, skillId]
+        [neededPages, userId, skillId]
     );
 
     await db.run(
@@ -650,12 +664,12 @@ router.post('/dungeon/upgrade-skill', async (req, res) => {
         [userId, skillId]
     );
 
-    const level = await db.one(
+    const updated = await db.one(
         'SELECT level FROM skill_levels WHERE userId = ? AND skillId = ?',
         [userId, skillId]
     ) as any;
 
-    res.json({ success: true, skillId, newLevel: level.level });
+    res.json({ success: true, skillId, newLevel: updated.level });
 });
 
 // ═══════ ТИК БОЯ ═══════

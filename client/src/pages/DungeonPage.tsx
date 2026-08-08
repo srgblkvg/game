@@ -199,7 +199,7 @@ export default function DungeonPage() {
     const getSkillLevel = (skillId: number) => pages.find(p => p.skillId === skillId)?.level || 0;
     const getUpgradeCost = (skillId: number) => {
         const level = getSkillLevel(skillId);
-        return { pages: SKILL_PAGES_TO_LEVEL, silver: 1000 * (level + 1) };
+        return { pages: 10 + level * 15, silver: 1000 * Math.pow(3, level) };
     };
 
     const hpPct = playerMaxHp > 0 ? (playerHp / playerMaxHp) * 100 : 0;
@@ -433,8 +433,6 @@ export default function DungeonPage() {
         </div>
     );
 }
-
-const SKILL_PAGES_TO_LEVEL = 10;
 
 const SKILLS_ALL = [
     { id: 1, name: 'shield_bash', nameRu: 'Удар щитом', rage: 5, cooldown: 6, desc: 'Оглушает цель на 2с, урон 150%' },
