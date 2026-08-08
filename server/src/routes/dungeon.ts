@@ -869,7 +869,7 @@ function checkEnemyDeaths(run: DungeonRun) {
             run.enemies.sort((a, b) => a.hp - b.hp);
         } else {
             run.cleared = true;
-            if (run.tickTimer) clearInterval(run.tickTimer);
+            // НЕ останавливаем тик — нужен для регена в комнате отдыха
         }
     }
 }
