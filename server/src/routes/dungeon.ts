@@ -351,7 +351,8 @@ router.get('/dungeon/state', async (req, res) => {
             image: e.image || '',
             attackInterval: (e._attackInterval || 2.5).toFixed(1),
         })),
-        playerAttackProgress,
+        autoTimer: 0,
+        playerAttackProgress: 0,
         attackSpeed: attackSpeed.toFixed(1),
         rage: run.rage,
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
@@ -757,11 +758,12 @@ function tickCombat(run: DungeonRun) {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 0.5); // 0.5/сек в бою
     }
 
-    // Автоатака игрока
+    // Автоатака игрока — одна атака за тик
     run.autoTimer += TICK_MS / 1000;
-    while (run.autoTimer >= 1 / attackSpeed) {
-        run.autoTimer -= 1 / attackSpeed;
-        const target = run.enemies[0]; // первый = таргет
+    const attackInterval = 1 / attackSpeed;
+    if (run.autoTimer >= attackInterval) {
+        run.autoTimer -= attackInterval;
+        const target = run.enemies[0];
         if (target && target.hp > 0) {
             const { damage: dmg, isCrit } = calcPlayerDamage(run);
             target.hp -= dmg;
@@ -770,14 +772,13 @@ function tickCombat(run: DungeonRun) {
         }
     }
 
-    // Автоатака врагов
+    // Автоатака врагов — одна атака за тик, прогресс доходит до 100%
     for (const enemy of run.enemies) {
         if (enemy.hp <= 0) continue;
         if (enemy.stunTimer && enemy.stunTimer > 0) {
             enemy.stunTimer -= TICK_MS / 1000;
             continue;
         }
-        // Враг атакует со своей скоростью
         const interval = enemy._attackInterval || 2.5;
         if (!enemy['_lastAttack']) enemy['_lastAttack'] = 0;
         enemy['_lastAttack'] += TICK_MS / 1000;
