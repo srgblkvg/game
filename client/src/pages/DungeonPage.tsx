@@ -435,16 +435,12 @@ export default function DungeonPage() {
             {message && <p className="text-sm text-center mb-3 text-[var(--color-accent-warning)]">{message}</p>}
 
             {/* Смерть */}
-            {dead && (
+            {dead && playerHp <= 0 && (
                 <Card>
                     <h3 className="font-bold text-lg mb-2 text-center text-[var(--color-accent-danger)]">💀 Вы погибли</h3>
                     <p className="text-sm text-center mb-1">Награда потеряна.</p>
-                    {status?.cooldownRemaining > 0 && (
-                        <p className="text-sm text-center mb-2 text-[var(--color-text-muted)]">
-                            Кулдаун: {Math.floor(status.cooldownRemaining / 3600)}ч {Math.floor((status.cooldownRemaining % 3600) / 60)}м
-                        </p>
-                    )}
-                    <Button variant="secondary" size="md" fullWidth onClick={() => window.location.reload()}>Понятно</Button>
+                    <p className="text-sm text-center text-[var(--color-text-muted)]">Перенаправление на страницу данжа...</p>
+                    <script dangerouslySetInnerHTML={{ __html: 'setTimeout(() => location.reload(), 1500);' }} />
                 </Card>
             )}
 
