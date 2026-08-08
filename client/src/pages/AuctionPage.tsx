@@ -563,8 +563,19 @@ export default function AuctionPage() {
                                             onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                                             onTouchStart={e => handleTouchStart(e, item)} onTouchEnd={handleTouchEnd} onContextMenu={e => e.preventDefault()}
                                             className={`relative flex flex-col items-center p-2 rounded-lg border cursor-pointer transition-all ${isSelected ? 'border-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10 ring-1 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-hover)]'}`}>
-                                            <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-8 h-8 object-contain mb-1" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
-                                            <span className="text-[0.6rem] text-[var(--color-text-primary)] text-center leading-tight line-clamp-2">{item.name}</span>
+                                            <div className="relative">
+                                                <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-8 h-8 object-contain mb-1" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                                {(item.upgradeLevel ?? 0) > 0 && (
+                                                    <span style={{
+                                                        position: 'absolute', top: -6, right: -6,
+                                                        background: 'var(--color-text-accent)', color: '#000',
+                                                        borderRadius: '50%', width: '14px', height: '14px',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '7px', fontWeight: 'bold', lineHeight: 1,
+                                                    }}>+{item.upgradeLevel}</span>
+                                                )}
+                                            </div>
+                                            <span className="text-[0.6rem] text-[var(--color-text-primary)] text-center leading-tight line-clamp-2">{item.name}{(item.upgradeLevel ?? 0) > 0 && <span className="text-[var(--color-text-accent)]"> +{item.upgradeLevel}</span>}</span>
                                             {cnt > 1 && <span className="text-[0.55rem] text-[var(--color-accent-info)] absolute top-0.5 right-1">x{cnt}</span>}
                                             <span className="text-[0.55rem] text-[var(--color-text-muted)]">{item.rarity_display || ''}</span>
                                         </div>
@@ -589,7 +600,7 @@ export default function AuctionPage() {
                                     }}>+{selectedItem.upgradeLevel}</span>
                                 )}
                             </div>
-                            <span className="text-xs text-[var(--color-text-primary)]">{selectedItem.name}</span>
+                            <span className="text-xs text-[var(--color-text-primary)]">{selectedItem.name}{(selectedItem.upgradeLevel ?? 0) > 0 && <span className="text-[var(--color-text-accent)]"> +{selectedItem.upgradeLevel}</span>}</span>
                             <span className="text-xs text-[var(--color-text-muted)]">{selectedItem.rarity_display}</span>
                         </div>
                     )}
