@@ -242,8 +242,8 @@ router.get('/dungeon/status', async (req, res) => {
 
     res.json({
         active: false,
-        dailyRuns,
-        remainingRuns,
+        dailyRuns: 0,
+        remainingRuns: 99,
         cooldownRemaining: cdRemaining,
         checkpointFloor: checkpoint,
     });
