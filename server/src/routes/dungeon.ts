@@ -88,8 +88,9 @@ interface DungeonRun {
     userId: number; currentFloor: number; checkpointFloor: number;
     playerHp: number; playerMaxHp: number; playerStr: number; playerAgi: number;
     playerDef: number; playerMag: number; playerLevel: number;
-    equippedWeaponRarity: number;
-    enemies: EnemyData[];
+ equippedWeaponRarity: number;
+ equippedWeaponStr: number;
+ enemies: EnemyData[];
     rage: number; autoTimer: number;
     skills: SkillWithLevel[];
     buffs: Record<string, { endsAt: number; value: number }>;
@@ -102,9 +103,10 @@ interface DungeonRun {
 
 const activeRuns = new Map<number, DungeonRun>();
 
-function getAttackSpeed(rarity: number, str: number): number {
+function getAttackSpeed(rarity: number, weaponStrBonus: number): number {
     const base = WEAPON_SPEED[rarity] ?? 0.5;
-    return Math.max(0.3, base / (1 + str * 0.02));
+    // Замедление от силы оружия (небольшое: +20 силы ≈ -10% скорости)
+    return Math.max(0.3, base / (1 + weaponStrBonus * 0.005));
 }
 
 function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } {
@@ -287,6 +289,7 @@ router.post('/dungeon/start', async (req, res) => {
         playerDef: stats.d, playerMag: stats.m,
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
+        equippedWeaponStr: weapon?.bonuses?.s || 0,
         enemies, rage: 0, autoTimer: 0, skills,
         buffs: {}, skillCooldowns: {}, log: [],
         startedAt: Math.floor(Date.now() / 1000),
@@ -327,7 +330,7 @@ router.get('/dungeon/state', async (req, res) => {
     const run = activeRuns.get(userId);
     if (!run) return res.json({ active: false });
 
-    const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.playerStr);
+    const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.equippedWeaponStr);
     const playerAttackProgress = Math.min(1, run.autoTimer / (1 / attackSpeed));
 
     res.json({
@@ -613,6 +616,7 @@ router.post('/dungeon/continue', async (req, res) => {
         playerDef: stats.d, playerMag: stats.m,
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
+        equippedWeaponStr: equip.weapon1?.bonuses?.s || 0,
         enemies, rage: 0, autoTimer: 0, skills,
         buffs: {}, skillCooldowns: {}, log: [],
         startedAt: Math.floor(Date.now() / 1000),
@@ -729,7 +733,7 @@ router.post('/dungeon/upgrade-skill', async (req, res) => {
 function tickCombat(run: DungeonRun) {
     if (run.playerHp <= 0) return;
     const now = Date.now() / 1000;
-    const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.playerStr);
+    const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.equippedWeaponStr);
 
     // Пассивный спад ярости (вне боя ярость уходит быстрее)
     const enemiesAlive = run.enemies.some(e => e.hp > 0);
