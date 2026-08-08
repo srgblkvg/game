@@ -253,7 +253,9 @@ export default function DungeonPage() {
             });
             if (res.ok) {
                 const data = await res.json();
-                if (data.character) setCharacter(data.character);
+                if (data.character) {
+                    setCharacter(data.character);
+                }
             }
         } catch { /* */ }
     };
@@ -261,11 +263,11 @@ export default function DungeonPage() {
     // Вкладка Подготовка — умения
     const renderPrepare = () => {
         const c = character as any;
-        const equipSets = c?.equipment1 !== undefined ? {
-            1: c.equipment1 ?? {},
-            2: c.equipment2 ?? {},
-            3: c.equipment3 ?? {},
-        } : undefined;
+        const equipSets = {
+            1: c?.equipment1 ?? {},
+            2: c?.equipment2 ?? {},
+            3: c?.equipment3 ?? {},
+        };
         const activeSlot = c?.activeEquipSlot || 1;
 
         const SKILL_ICONS: Record<number, string> = {
