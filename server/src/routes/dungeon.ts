@@ -122,10 +122,10 @@ function getAttackSpeed(rarity: number, weaponStrBonus: number): number {
 }
 
 function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } {
-    // Урон: делим scaled stat на 6 для баланса
-    const rs = run.playerStr / 6;
-    const ra = run.playerAgi / 6;
-    const rm = run.playerMag / 6;
+    // Урон: делим scaled stat на 5 для баланса
+    const rs = run.playerStr / 5;
+    const ra = run.playerAgi / 5;
+    const rm = run.playerMag / 5;
     const weaponBonus = 3 + run.equippedWeaponRarity * 3;
     const baseDmg = rs + ra * 0.3 + rm * 0.2 + run.playerLevel + weaponBonus;
     const dmgBonus = (run.buffs['battle_cry'] ? (1 + (run.buffs['battle_cry'].value / 100)) : 1.0);
@@ -154,7 +154,8 @@ async function loadMobs(): Promise<any[]> {
 
 function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyData {
     const id = Date.now() + Math.floor(Math.random() * 10000);
-    const scale = 1 + floor * 1.0;
+    // Начальные этажи слабее, высокие сильнее
+    const scale = 0.3 + floor * 0.8;
     const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 5 : 1));
     const dmg = Math.floor((mob.atk || 3) * scale);
     const interval = isBoss ? 0.5 + Math.random() * 1.0 : 0.5 + Math.random() * 2.0; // 0.5-1.5с босс, 0.5-2.5с обычный
