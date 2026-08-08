@@ -45,11 +45,8 @@ export default function DungeonPage() {
     const [buffs, setBuffs] = useState<any[]>([]);
     const [cooldowns, setCooldowns] = useState<Record<number, number>>({});
     const [combatLog, setCombatLog] = useState<string[]>([]);
-    const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
     const [attackSpeed, setAttackSpeed] = useState('0');
-    const animRef = useRef<number>(0);
-    const lastAttackRef = useRef(Date.now() / 1000);
-    const intervalRef = useRef(1);
+    const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
     const [selectedSkills, setSelectedSkills] = useState<number[]>([7, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
@@ -114,31 +111,17 @@ export default function DungeonPage() {
                 setBuffs(data.buffs || []);
                 setCooldowns(data.skillCooldowns || {});
                 setAttackSpeed(data.attackSpeed || '0');
-                intervalRef.current = data.playerAttackInterval || 1;
-                if (data.lastPlayerAttackAt) lastAttackRef.current = data.lastPlayerAttackAt;
+                setPlayerAttackProgress(data.playerAttackProgress || 0);
                 if (data.cleared) { setCleared(true); /* НЕ останавливаем опрос — реген */ }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
             } catch { /* */ }
-        }, 100);
+        }, 50);
     };
 
     const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
     useEffect(() => { return () => stopPolling(); }, []);
     useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [combatLog]);
-
-    // Плавный прогресс-бар атаки на клиенте (0 → 100%)
-    useEffect(() => {
-        if (!inCombat) return;
-        const tick = () => {
-            const now = Date.now() / 1000;
-            const p = Math.min(1, (now - lastAttackRef.current) / intervalRef.current);
-            setPlayerAttackProgress(p);
-            animRef.current = requestAnimationFrame(tick);
-        };
-        animRef.current = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(animRef.current);
-    }, [inCombat]);
 
     // Получить список доступных чекпоинтов (кратные 5)
     const getCheckpoints = () => {
@@ -644,11 +627,6 @@ export default function DungeonPage() {
                             </div>
                         </>
                     )}
-
-                    {/* HP после отдыха */}
-                    <p className="text-xs text-[var(--color-text-muted)] mb-3 text-center">
-                        После отдыха: {claimResult ? claimResult.playerHp : playerHp} HP (+10% от максимума)
-                    </p>
 
                     <div className="flex gap-2">
                         <Button variant="danger" size="md" onClick={handleContinue} className="flex-1" disabled={!claimed || loading}>

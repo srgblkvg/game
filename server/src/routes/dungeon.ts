@@ -151,8 +151,8 @@ async function loadMobs(): Promise<any[]> {
 
 function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyData {
     const id = Date.now() + Math.floor(Math.random() * 10000);
-    const scale = 1 + floor * 0.2;
-    const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 2 : 1));
+    const scale = 1 + floor * 0.35;
+    const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 3 : 1));
     const dmg = Math.floor((mob.atk || 3) * scale);
     const interval = isBoss ? 0.7 + Math.random() * 1.3 : 0.7 + Math.random() * 4.3;
     return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: interval, _lastAttackTime: Math.floor(Date.now() / 1000) };
@@ -372,6 +372,7 @@ router.get('/dungeon/state', async (req, res) => {
         })),
         playerAttackInterval: (1 / attackSpeed),
         lastPlayerAttackAt: run.lastPlayerAttackAt,
+        playerAttackProgress,
         attackSpeed: attackSpeed.toFixed(1),
         rage: run.rage,
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
