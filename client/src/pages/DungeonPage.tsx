@@ -19,7 +19,7 @@ interface SkillInfo {
 
 export default function DungeonPage() {
     const { user: _user } = useAuth();
-    const { character } = useGame();
+    const { character, setCharacter } = useGame();
 
     const [tab, setTab] = useState<'status' | 'prepare'>('status');
     const [status, setStatus] = useState<any>(null);
@@ -244,11 +244,45 @@ export default function DungeonPage() {
         </Card>
     );
 
+    const handleSwitchSet = async (slot: number) => {
+        try {
+            const res = await fetch('/api/character/switch-equip', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ slot }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.character) setCharacter?.(data.character);
+                // Обновляем страницу для применения новых статов
+                window.location.reload();
+            }
+        } catch { /* */ }
+    };
+
     // Вкладка Подготовка — скиллы
-    const renderPrepare = () => (
-        <div className="space-y-4">
-            {character && <CharacterCard char={toCharCardData(character)} compact />}
-            <Card>
+    const renderPrepare = () => {
+        const equipSets = (character as any)?.equipment1 !== undefined ? {
+            1: (character as any).equipment1,
+            2: (character as any).equipment2,
+            3: (character as any).equipment3,
+        } : undefined;
+        const activeSlot = (character as any)?.activeEquipSlot || 1;
+
+        return (
+        <div className="md:flex md:gap-4 md:items-start space-y-4 md:space-y-0">
+            <div className="md:w-[320px] md:shrink-0">
+                {character && (
+                    <CharacterCard
+                        char={toCharCardData(character)}
+                        compact
+                        equipSets={equipSets}
+                        activeEquipSlot={activeSlot}
+                        onSwitchSet={handleSwitchSet}
+                    />
+                )}
+            </div>
+            <Card className="flex-1 min-w-0">
             <h3 className="text-sm font-bold mb-3">⚔️ Скиллы в бой (выбрано: {selectedSkills.length}/4)</h3>
             <div className="space-y-2 mb-4">
                 {SKILLS_ALL.map(s => {
@@ -295,6 +329,7 @@ export default function DungeonPage() {
         </Card>
         </div>
     );
+    };
 
     // renderStatus + renderPrepare in tabs when not in combat
     if (!inCombat && !claimed && !dead) {
