@@ -187,11 +187,10 @@ html.vk-iframe #header-popup {
   top: calc(2.75rem + var(--vk-top-offset)) !important;
 }
 html.vk-iframe #right-sidebar-toggle {
-  top: calc(132px + var(--vk-top-offset)) !important;
+  /* top задаётся динамически через JS (headerHeight + safe-area) */
 }
 html.vk-iframe #right-sidebar-panel {
-  top: calc(137px + var(--vk-top-offset)) !important;
-  height: calc(100vh - 137px - 40px - var(--vk-top-offset)) !important;
+  /* top/height задаются динамически через JS (headerHeight + safe-area) */
 }
 html.vk-iframe #notification-toast {
   top: calc(3.5rem + var(--vk-top-offset)) !important;
