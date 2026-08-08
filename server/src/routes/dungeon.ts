@@ -136,7 +136,7 @@ function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } 
 }
 
 function calcEnemyDamage(enemy: EnemyData, floor: number): number {
-    const base = enemy.dmg + Math.floor(floor * 0.6);
+    const base = enemy.dmg + Math.floor(floor * 0.4);
     const debuffPct = enemy.debuffs?.['demoralize']?.value || 0;
     const debuff = 1 - debuffPct / 100;
     return Math.floor((base + Math.random() * 4) * debuff);
@@ -815,8 +815,8 @@ function tickCombat(run: DungeonRun) {
             enemy['_lastAttack'] -= interval;
             enemy._lastAttackTime = Date.now() / 1000;
             const dmg = calcEnemyDamage(enemy, run.currentFloor);
-            // Защита снижает урон (0.5% за очко def)
-            const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.005)));
+            // Защита снижает урон (0.7% за очко def)
+            const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.007)));
             run.playerHp -= reduced;
             run.rage = Math.min(100, run.rage + 3); // ярость от получения урона
             run.log.push(`👊 ${enemy.name} бьёт на ${reduced}`);
