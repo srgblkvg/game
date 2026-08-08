@@ -449,7 +449,7 @@ export default function DungeonPage() {
             )}
 
             {/* Бой */}
-            {inCombat && !cleared && (
+            {inCombat && !cleared && playerHp > 0 && (
                 <div className="space-y-3">
                     {/* Игрок */}
                     <Card>
