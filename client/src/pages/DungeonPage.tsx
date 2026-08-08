@@ -39,6 +39,7 @@ export default function DungeonPage() {
     const [cooldowns, setCooldowns] = useState<Record<number, number>>({});
     const [combatLog, setCombatLog] = useState<string[]>([]);
     const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
+    const [attackSpeed, setAttackSpeed] = useState('0');
     const [selectedSkills, setSelectedSkills] = useState<number[]>([1, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
@@ -91,6 +92,7 @@ export default function DungeonPage() {
                 setBuffs(data.buffs || []);
                 setCooldowns(data.skillCooldowns || {});
                 setPlayerAttackProgress(data.playerAttackProgress || 0);
+                setAttackSpeed(data.attackSpeed || '0');
                 if (data.cleared) { setCleared(true); stopPolling(); }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
@@ -432,7 +434,7 @@ export default function DungeonPage() {
                             <div className="h-full rounded-full transition-all duration-300 ease-linear" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
                         </div>
                         <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
-                            <span>Автоатака</span>
+                            <span>Автоатака ({attackSpeed} в сек.)</span>
                         </div>
                         <div className="h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
                             <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, playerAttackProgress * 100)}%` }} />
@@ -474,6 +476,9 @@ export default function DungeonPage() {
                                             style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
                                     </div>
                                     <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
+                                        <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)] mb-0.5">
+                                            <span>Атака через 2.5 сек.</span>
+                                        </div>
                                         <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, (e.attackProgress || 0) * 100)}%` }} />
                                     </div>
                                 </div>
