@@ -251,7 +251,7 @@ router.post('/dungeon/start', async (req, res) => {
 
     // Данные игрока
     const user = await db.one(
-        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drink FROM users WHERE id = ?',
+        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink FROM users WHERE id = ?',
         [userId]
     ) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -586,7 +586,7 @@ router.post('/dungeon/continue', async (req, res) => {
     if (!saved) return res.status(400).json({ error: 'Нет сохранённого захода' });
 
     const user = await db.one(
-        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drink FROM users WHERE id = ?',
+        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink FROM users WHERE id = ?',
         [userId]
     ) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
