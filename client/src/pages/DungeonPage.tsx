@@ -444,7 +444,13 @@ export default function DungeonPage() {
                             Кулдаун: {Math.floor(status.cooldownRemaining / 3600)}ч {Math.floor((status.cooldownRemaining % 3600) / 60)}м
                         </p>
                     )}
-                    <Button variant="secondary" size="md" fullWidth onClick={() => { setDead(false); setInCombat(false); stopPolling(); loadStatus(); }}>Понятно</Button>
+                    <Button variant="secondary" size="md" fullWidth onClick={() => {
+                        stopPolling();
+                        setDead(false);
+                        setInCombat(false);
+                        setCleared(false);
+                        setTimeout(() => loadStatus(), 50);
+                    }}>Понятно</Button>
                 </Card>
             )}
 
