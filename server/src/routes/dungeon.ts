@@ -139,10 +139,10 @@ function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } 
 }
 
 function calcEnemyDamage(enemy: EnemyData, floor: number): number {
-    const base = enemy.dmg + Math.floor(floor * 0.8);
+    const base = enemy.dmg + Math.floor(floor * 0.3);
     const debuffPct = enemy.debuffs?.['demoralize']?.value || 0;
     const debuff = 1 - debuffPct / 100;
-    return Math.floor((base + Math.random() * 3) * debuff);
+    return Math.floor((base + Math.random() * 2) * debuff);
 }
 
 // Кеш мобов — загружается один раз
