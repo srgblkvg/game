@@ -278,6 +278,7 @@ export default function DungeonPage() {
             <div className="md:w-[220px] md:shrink-0 flex justify-center md:block">
                 {character && (
                     <CharacterCard
+                        key={activeSlot}
                         char={toCharCardData(character)}
                         compact
                         equipSets={equipSets}
