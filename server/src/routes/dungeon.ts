@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { buildPlayerStats, getBaseStats } from '../db/helpers';
 
 const router = Router();
 
@@ -106,16 +107,25 @@ function getAttackSpeed(rarity: number, str: number): number {
     return Math.max(0.3, base / (1 + str * 0.02));
 }
 
-function calcPlayerDamage(run: DungeonRun): number {
-    const base = 5 + run.playerLevel * 1.2 + run.playerStr * 1.5;
-    const dmgBonus = (run.buffs['battle_cry'] ? 1.3 : 1.0);
-    return Math.floor((base + Math.random() * (run.playerLevel + 5)) * dmgBonus);
+function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } {
+    // Упрощённый урон: сила × 3 + лвл × 2 + оружие
+    const weaponBonus = 3 + run.equippedWeaponRarity * 2;
+    const baseDmg = run.playerStr * 3 + run.playerLevel * 2 + weaponBonus;
+    const dmgBonus = (run.buffs['battle_cry'] ? (1 + (run.buffs['battle_cry'].value / 100)) : 1.0);
+    const dmg = Math.floor((baseDmg + Math.random() * (run.playerLevel + weaponBonus)) * dmgBonus);
+
+    // Крит: ловкость × 0.5% шанс
+    const critChance = run.playerAgi * 0.5;
+    const isCrit = Math.random() * 100 < critChance;
+
+    return { damage: isCrit ? Math.floor(dmg * 2) : dmg, isCrit };
 }
 
 function calcEnemyDamage(enemy: EnemyData, floor: number): number {
     const base = enemy.dmg + Math.floor(floor * 0.8);
-    const debuff = enemy.debuffs?.['demoralize'] ? 0.85 : 1.0;
-    return Math.floor((base + Math.random() * 3) * debuff);
+    const debuffPct = enemy.debuffs?.['demoralize']?.value || 0;
+    const debuff = 1 - debuffPct / 100;
+    return Math.floor((base + Math.random() * 4) * debuff);
 }
 
 function generateEnemy(floor: number, isBoss: boolean): EnemyData {
@@ -357,7 +367,7 @@ router.post('/dungeon/skill', async (req, res) => {
     }
 
     const lvl = skill.level;
-    const dmg = calcPlayerDamage(run);
+    const { damage: dmg } = calcPlayerDamage(run);
 
     switch (skill.name) {
         case 'shield_bash': {
@@ -713,7 +723,7 @@ function tickCombat(run: DungeonRun) {
         run.autoTimer -= 1 / attackSpeed;
         const target = run.enemies[0]; // первый = таргет
         if (target && target.hp > 0) {
-            const dmg = calcPlayerDamage(run);
+            const { damage: dmg } = calcPlayerDamage(run);
             target.hp -= dmg;
             run.rage = Math.min(100, run.rage + 2 + (run.buffs['battle_cry'] ? 1 : 0));
         }
