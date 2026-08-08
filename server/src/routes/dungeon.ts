@@ -554,10 +554,10 @@ router.post('/dungeon/claim', async (req, res) => {
         pageReward = { skillId: randomSkill.id, name: randomSkill.nameRu };
     }
 
-    // Чекпоинт на этажах-боссах
+    // Чекпоинт на этажах-боссах — сохраняем следующий этаж
     if (isBossFloor && floor > run.checkpointFloor) {
-        run.checkpointFloor = floor;
-        await db.run('UPDATE dungeon_runs SET checkpointFloor = ? WHERE userId = ?', [floor, userId]);
+        run.checkpointFloor = floor + 1;
+        await db.run('UPDATE dungeon_runs SET checkpointFloor = ? WHERE userId = ?', [floor + 1, userId]);
     }
 
     // Останавливаем тик, сохраняем для продолжения

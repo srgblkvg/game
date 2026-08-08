@@ -117,8 +117,10 @@ export default function DungeonPage() {
     const getCheckpoints = () => {
         if (!status) return [];
         const maxFloor = status.checkpointFloor || 0;
-        const points = [1]; // всегда с 1-го можно
-        for (let f = 5; f <= maxFloor; f += 5) points.push(f);
+        const points: number[] = [];
+        if (maxFloor >= 1) points.push(1); // всегда с 1-го можно
+        // Чекпоинты: 6, 11, 16... (после боссов 5, 10, 15...)
+        for (let f = 6; f <= maxFloor; f += 5) points.push(f);
         return points;
     };
 
@@ -267,7 +269,7 @@ export default function DungeonPage() {
                         : 'opacity-50'}`}>
                         <div className="flex justify-between items-center">
                             <span className="text-sm font-bold">
-                                {cp === 1 ? '🏁 Этаж 1 (начало)' : `⭐ Этаж ${cp} (босс)`}
+                                {cp === 1 ? '🏁 Этаж 1 (начало)' : `⭐ Этаж ${cp} (после босса ${cp - 1})`}
                             </span>
                             <Button variant="danger" size="md"
                                 onClick={() => handleStart(cp)}
