@@ -356,7 +356,7 @@ router.post('/mob/attack', async (req, res) => {
                 if (roll <= 0) { pickedName = name; break; }
             }
             const stone = await db.one(
-                "SELECT id, name, rarity_id, type, image FROM craft_items WHERE name = ?",
+                "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?",
                 [pickedName]
             ) as any;
             if (stone) {
@@ -366,8 +366,8 @@ router.post('/mob/attack', async (req, res) => {
                     id: stone.id,
                     name: stone.name,
                     rarity_id: stone.rarity_id,
-                    rarity_display: null,
-                    rarity_color: null,
+                    rarity_display: stone.display_name,
+                    rarity_color: stone.color,
                     count: 1,
                     itemType: stone.type || 'upgrade',
                     image: stone.image || null,
