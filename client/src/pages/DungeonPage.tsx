@@ -116,7 +116,7 @@ export default function DungeonPage() {
                 setAttackSpeed(data.attackSpeed || '0');
                 intervalRef.current = data.playerAttackInterval || 1;
                 if (data.lastPlayerAttackAt) lastAttackRef.current = data.lastPlayerAttackAt;
-                if (data.cleared) { setCleared(true); stopPolling(); }
+                if (data.cleared) { setCleared(true); /* НЕ останавливаем опрос — реген */ }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
             } catch { /* */ }
@@ -654,7 +654,7 @@ export default function DungeonPage() {
                         <Button variant="danger" size="md" onClick={handleContinue} className="flex-1" disabled={!claimed || loading}>
                             ➡ Этаж {claimResult?.nextFloor || floor + 1}
                         </Button>
-                        <Button variant="secondary" size="md" onClick={() => { setCleared(false); setClaimed(false); setLooting(false); setLootProgress(0); setInCombat(false); setTotalLoot({ silver: 0, items: [], pages: [] }); stopPolling(); loadStatus(); }}>
+                        <Button variant="secondary" size="md" onClick={() => { setCleared(false); setClaimed(false); setLooting(false); setLootProgress(0); setInCombat(false); setTotalLoot({ silver: 0, items: [], pages: [] }); stopPolling(); handleFlee(); }}>
                             🚪 Выйти
                         </Button>
                     </div>

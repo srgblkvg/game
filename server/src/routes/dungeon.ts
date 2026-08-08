@@ -564,17 +564,11 @@ router.post('/dungeon/claim', async (req, res) => {
         await db.run('UPDATE dungeon_runs SET checkpointFloor = ? WHERE userId = ?', [floor + 1, userId]);
     }
 
-    // Останавливаем тик, сохраняем для продолжения
-    if (run.tickTimer) clearInterval(run.tickTimer);
-    activeRuns.delete(userId);
-
-    // Реген 25% HP между этажами
-    const regenHp = Math.min(run.playerMaxHp, run.playerHp + Math.floor(run.playerMaxHp * 0.25));
-
-    // Сохраняем состояние
+    // НЕ останавливаем тик — игрок остаётся в комнате, регенит HP
+    // Сохраняем состояние для продолжения/выхода
     await db.run(
         `UPDATE dungeon_runs SET currentFloor = ?, playerHp = ?, playerMaxHp = ?, checkpointFloor = ? WHERE userId = ?`,
-        [floor + 1, regenHp, run.playerMaxHp, run.checkpointFloor, userId]
+        [floor + 1, run.playerHp, run.playerMaxHp, run.checkpointFloor, userId]
     );
 
     res.json({
@@ -584,7 +578,7 @@ router.post('/dungeon/claim', async (req, res) => {
         silver: silverReward,
         item: itemReward,
         page: pageReward,
-        playerHp: regenHp,
+        playerHp: run.playerHp,
         checkpoint: run.checkpointFloor,
         isBoss: isBossFloor,
     });
@@ -622,6 +616,10 @@ router.post('/dungeon/continue', async (req, res) => {
     const enemies = await generateFloorEnemies(floor);
 
     const now = Date.now() / 1000;
+    const existingRun = activeRuns.get(userId);
+    const savedRage = existingRun?.rage ?? 0;
+    if (existingRun?.tickTimer) clearInterval(existingRun.tickTimer); // остановим старый тик
+
     const run: DungeonRun = {
         userId, currentFloor: floor, checkpointFloor: saved.checkpointfloor,
         playerHp: saved.playerhp, playerMaxHp: saved.playermaxhp,
@@ -630,7 +628,7 @@ router.post('/dungeon/continue', async (req, res) => {
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         equippedWeaponStr: equip.weapon1?.bonuses?.s || 0,
-        enemies, rage: 0, autoTimer: 0, lastPlayerAttackAt: now, skills,
+        enemies, rage: savedRage, autoTimer: 0, lastPlayerAttackAt: now, skills,
         buffs: {}, skillCooldowns: {}, log: [],
         startedAt: Math.floor(Date.now() / 1000),
         dailyRuns: 0, dailyRunDate: '',
@@ -757,6 +755,9 @@ function tickCombat(run: DungeonRun) {
     const enemiesAlive = run.enemies.some(e => e.hp > 0);
     if (!enemiesAlive) {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 5); // 5/сек вне боя
+        // Пассивный реген HP: ~5% от максимума в секунду
+        const regenPerTick = (run.playerMaxHp * 0.05) * (TICK_MS / 1000);
+        run.playerHp = Math.min(run.playerMaxHp, run.playerHp + Math.floor(regenPerTick || 1));
     } else {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 0.5); // 0.5/сек в бою
     }
