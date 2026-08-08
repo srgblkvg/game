@@ -46,8 +46,10 @@ export default function DungeonPage() {
     const [cooldowns, setCooldowns] = useState<Record<number, number>>({});
     const [combatLog, setCombatLog] = useState<string[]>([]);
     const [attackSpeed, setAttackSpeed] = useState('0');
-    const [playerAttackInterval, setPlayerAttackInterval] = useState(1);
-    const [lastPlayerAttackAt, setLastPlayerAttackAt] = useState(Date.now() / 1000);
+    const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
+    const lastAttackRef = useRef(Date.now() / 1000);
+    const intervalRef = useRef(1);
+    const animRef = useRef(0);
     const [selectedSkills, setSelectedSkills] = useState<number[]>([7, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
@@ -112,18 +114,30 @@ export default function DungeonPage() {
                 setBuffs(data.buffs || []);
                 setCooldowns(data.skillCooldowns || {});
                 setAttackSpeed(data.attackSpeed || '0');
-                setPlayerAttackInterval(data.playerAttackInterval || 1);
-                if (data.lastPlayerAttackAt) setLastPlayerAttackAt(data.lastPlayerAttackAt);
+                if (data.lastPlayerAttackAt) lastAttackRef.current = data.lastPlayerAttackAt;
+                intervalRef.current = data.playerAttackInterval || 1;
                 if (data.cleared) { setCleared(true); /* НЕ останавливаем опрос — реген */ }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
             } catch { /* */ }
-        }, 50);
+        }, 500);
     };
 
     const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
     useEffect(() => { return () => stopPolling(); }, []);
     useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [combatLog]);
+
+    // Анимация прогресс-бара: refs обновляются из polling, RAF крутит плавно
+    useEffect(() => {
+        if (!inCombat) return;
+        const tick = () => {
+            const now = Date.now() / 1000;
+            setPlayerAttackProgress(Math.min(1, (now - lastAttackRef.current) / intervalRef.current));
+            animRef.current = requestAnimationFrame(tick);
+        };
+        animRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animRef.current);
+    }, [inCombat]);
 
     // Получить список доступных чекпоинтов (кратные 5)
     const getCheckpoints = () => {
@@ -494,7 +508,7 @@ export default function DungeonPage() {
                             <span>Автоатака ({attackSpeed} в сек.)</span>
                         </div>
                         <div className="h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
-                            <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all duration-100 ease-linear" style={{ width: `${Math.min(100, ((Date.now() / 1000 - lastPlayerAttackAt) / playerAttackInterval) * 100)}%` }} />
+                            <div className="h-full bg-[var(--color-accent-info)] rounded-full" style={{ width: `${Math.min(100, playerAttackProgress * 100)}%` }} />
                         </div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-[var(--color-text-muted)]">Ярость</span>
