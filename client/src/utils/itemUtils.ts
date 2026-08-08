@@ -33,7 +33,7 @@ export function getItemImage(item: any): string | null {
     if (item?.image) return ensureLeadingSlash(item.image);
     if (item?.rarity_id == null) return null;
     const color = rarityColorNames[item.rarity_id] || 'gray';
-    if (item?.type === 'upgrade') {
+    if (item?.type === 'upgrade' || item?.itemType === 'upgrade') {
         return `/stone/stoneUpgrade_${color}.webp`;
     }
     if (item?.type === 'craft_item' || item?.type === 'material') {
