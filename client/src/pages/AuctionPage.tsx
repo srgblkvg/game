@@ -382,7 +382,7 @@ export default function AuctionPage() {
     };
 
     const [userLotCount, setUserLotCount] = useState(0);
-    const maxSlots = 5;
+    const maxSlots = character?.premium ? 20 : 10;
     const getSelectedItem = () => findItemById(character?.inventory, sellItemId);
     const getAutoMinPrice = () => {
         const item = getSelectedItem();

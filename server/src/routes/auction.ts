@@ -282,13 +282,15 @@ router.post('/auction/sell', async (req, res) => {
     if (startPrice < floor) return res.status(400).json({ error: `Мин. цена за 1 шт для этой редкости: ${floor} серебра` });
     if (buyoutPrice && buyoutPrice <= startPrice) return res.status(400).json({ error: 'Цена выкупа должна быть выше стартовой' });
 
-    // Проверка лимита (5 лотов)
+    // Проверка лимита (10 лотов, 20 с премиумом)
     const userLotCount = (await db.one('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ? AND endsat > ?', [userId, Math.floor(Date.now() / 1000)]) as any).cnt;
-    if (userLotCount >= 5) return res.status(400).json({ error: 'Максимум 5 лотов' });
+    const user = await db.one('SELECT money, inventory, premiumUntil FROM users WHERE id = ?', [userId]) as any;
+    const hasPremium = (user.premiumUntil || 0) > Math.floor(Date.now() / 1000);
+    const maxLots = hasPremium ? 20 : 10;
+    if (userLotCount >= maxLots) return res.status(400).json({ error: `Максимум ${maxLots} лотов` });
 
     // Комиссия за листинг 5% (от общей стартовой цены)
     const listingFee = Math.max(1, Math.floor(totalStartPrice * 0.05));
-    const user = await db.one('SELECT money, inventory FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.money < listingFee) return res.status(400).json({ error: `Недостаточно монет для листинга (${listingFee} серебра)` });
 
