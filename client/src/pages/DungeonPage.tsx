@@ -44,6 +44,7 @@ export default function DungeonPage() {
     const [dead, setDead] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [claimResult, setClaimResult] = useState<any>(null);
+    const [exited, setExited] = useState(false);
     const [pages, setPages] = useState<any[]>([]);
 
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -428,10 +429,13 @@ export default function DungeonPage() {
                             <span className="text-xs">HP {playerHp}/{playerMaxHp}</span>
                         </div>
                         <div className="h-3 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
-                            <div className="h-full rounded-full transition-all" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
+                            <div className="h-full rounded-full transition-all duration-300 ease-linear" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
+                        </div>
+                        <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
+                            <span>Автоатака</span>
                         </div>
                         <div className="h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
-                            <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all" style={{ width: `${playerAttackProgress * 100}%` }} />
+                            <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, playerAttackProgress * 100)}%` }} />
                         </div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-[var(--color-text-muted)]">Ярость</span>
@@ -465,12 +469,12 @@ export default function DungeonPage() {
                                         </span>
                                         <span>{e.hp}/{e.maxHp}</span>
                                     </div>
-                                    <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-1">
-                                        <div className="h-full rounded-full transition-all"
+                                    <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full transition-all duration-300 ease-linear"
                                             style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
                                     </div>
-                                    <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
-                                        <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all" style={{ width: `${(e.attackProgress || 0) * 100}%` }} />
+                                    <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
+                                        <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, (e.attackProgress || 0) * 100)}%` }} />
                                     </div>
                                 </div>
                             );
@@ -554,10 +558,29 @@ export default function DungeonPage() {
                         <Button variant="danger" size="md" onClick={handleContinue} className="flex-1">
                             ➡ Этаж {claimResult?.nextFloor || floor + 1}
                         </Button>
-                        <Button variant="secondary" size="md" onClick={() => { setClaimed(false); setCleared(false); stopPolling(); loadStatus(); }}>
+                        <Button variant="secondary" size="md" onClick={() => { setExited(true); stopPolling(); }}>
                             🚪 Выйти
                         </Button>
                     </div>
+                </Card>
+            )}
+
+            {/* Выход с добычей */}
+            {exited && claimResult && (
+                <Card>
+                    <h3 className="font-bold text-lg mb-3 text-center text-[var(--color-accent-success)]">🏆 Подземелье пройдено!</h3>
+                    <div className="bg-[var(--color-bg-input)] rounded-lg p-3 mb-3">
+                        <h4 className="text-xs font-bold mb-2">📦 Добыча:</h4>
+                        <div className="space-y-1 text-sm">
+                            <p>💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
+                            {claimResult.item && <p>🔮 {claimResult.item.name} ({claimResult.item.rarity})</p>}
+                            {claimResult.page && <p>📜 Страница: {claimResult.page.name}</p>}
+                            {claimResult.isBoss && <p className="text-[var(--color-accent-gold)]">⭐ Чекпоинт сохранён!</p>}
+                        </div>
+                    </div>
+                    <Button variant="danger" size="md" fullWidth onClick={() => { setExited(false); setCleared(false); setClaimed(false); setInCombat(false); loadStatus(); }}>
+                        Продолжить
+                    </Button>
                 </Card>
             )}
         </div>
