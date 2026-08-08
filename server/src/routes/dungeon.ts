@@ -41,6 +41,7 @@ db.run(`CREATE TABLE IF NOT EXISTS skill_levels (
 const WEAPON_SPEED: Record<number, number> = { 0: 0.5, 1: 0.7, 2: 0.85, 3: 1.05, 4: 1.3, 5: 1.55, 6: 1.8 };
 const TICK_MS = 100;
 const DAILY_RUNS_MAX = 4;
+const BASE_SKILL_IDS = new Set([7, 2, 3]); // Рывок, Размах, Боевой клич
 
 interface EnemyData {
     id: number; name: string; hp: number; maxHp: number; dmg: number;
@@ -170,10 +171,10 @@ function getAvailableSkills(userId: number, equippedSkills: number[]): Promise<S
         const levelMap: Record<number, number> = {};
         for (const r of levels) levelMap[r.skillid] = r.level;
 
-        // Базовые скиллы (1-3) имеют минимум 1 уровень
+        // Базовые умения имеют минимум 1 уровень
         return SKILLS.filter(s => equippedSkills.includes(s.id)).map(s => ({
             ...s,
-            level: Math.max(s.id <= 3 ? 1 : 0, levelMap[s.id] || 0),
+            level: Math.max(BASE_SKILL_IDS.has(s.id) ? 1 : 0, levelMap[s.id] || 0),
         }));
     })();
 }
@@ -682,8 +683,8 @@ router.get('/dungeon/pages', async (req, res) => {
         skillId: s.id,
         count: countMap[s.id] || 0,
         name: s.nameRu,
-        level: Math.max(s.id <= 3 ? 1 : 0, levelMap[s.id] || 0),
-        needForNext: 10 + (Math.max(s.id <= 3 ? 1 : 0, levelMap[s.id] || 0)) * 15,
+        level: Math.max(BASE_SKILL_IDS.has(s.id) ? 1 : 0, levelMap[s.id] || 0),
+        needForNext: 10 + (Math.max(BASE_SKILL_IDS.has(s.id) ? 1 : 0, levelMap[s.id] || 0)) * 15,
     }));
 
     res.json({ pages: allPages });
