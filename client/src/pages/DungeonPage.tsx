@@ -4,6 +4,9 @@ import { getHeaders } from '../api/helpers';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import BackButton from '../components/BackButton';
+import CharacterCard from '../components/CharacterCard';
+import { useGame } from '../contexts/GameContext';
+import { toCharCardData } from '../utils/character';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
@@ -16,6 +19,7 @@ interface SkillInfo {
 
 export default function DungeonPage() {
     const { user: _user } = useAuth();
+    const { character } = useGame();
 
     const [tab, setTab] = useState<'status' | 'prepare'>('status');
     const [status, setStatus] = useState<any>(null);
@@ -242,7 +246,9 @@ export default function DungeonPage() {
 
     // Вкладка Подготовка — скиллы
     const renderPrepare = () => (
-        <Card>
+        <div className="space-y-4">
+            {character && <CharacterCard char={toCharCardData(character)} compact />}
+            <Card>
             <h3 className="text-sm font-bold mb-3">⚔️ Скиллы в бой (выбрано: {selectedSkills.length}/4)</h3>
             <div className="space-y-2 mb-4">
                 {SKILLS_ALL.map(s => {
@@ -287,6 +293,7 @@ export default function DungeonPage() {
                 })}
             </div>
         </Card>
+        </div>
     );
 
     // renderStatus + renderPrepare in tabs when not in combat

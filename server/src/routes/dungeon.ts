@@ -636,18 +636,21 @@ router.get('/dungeon/pages', async (req, res) => {
         [userId]
     ) as any[];
 
+    const countMap: Record<number, number> = {};
+    for (const p of pages) countMap[p.skillid] = p.count;
     const levelMap: Record<number, number> = {};
     for (const r of levels) levelMap[r.skillid] = r.level;
 
-    res.json({
-        pages: pages.map(p => ({
-            skillId: p.skillid,
-            count: p.count,
-            name: SKILLS.find(s => s.id === p.skillid)?.nameRu || '???',
-            level: levelMap[p.skillid] || 0,
-            needForNext: 10 + (levelMap[p.skillid] || 0) * 15,
-        })),
-    });
+    // Возвращаем ВСЕ скиллы — базовые уже имеют уровень 1
+    const allPages = SKILLS.map(s => ({
+        skillId: s.id,
+        count: countMap[s.id] || 0,
+        name: s.nameRu,
+        level: Math.max(s.id <= 3 ? 1 : 0, levelMap[s.id] || 0),
+        needForNext: 10 + (Math.max(s.id <= 3 ? 1 : 0, levelMap[s.id] || 0)) * 15,
+    }));
+
+    res.json({ pages: allPages });
 });
 
 // Улучшить скилл (страницы + серебро, растёт с уровнем)
