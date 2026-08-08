@@ -57,7 +57,6 @@ router.post('/battle', async (req, res) => {
     // Проверка диапазона уровней: Бандиты ±4, остальные ±2
     const levelRange = attacker.faction === 'bandit' ? 4 : 2;
     const levelDiff = Math.abs(attacker.level - defender.level);
-    console.log(`[BATTLE] levelCheck: attacker=${attacker.username}(${attacker.level},${attacker.faction}) defender=${defender.username}(${defender.level}) diff=${levelDiff} range=${levelRange} pass=${levelDiff <= levelRange}`);
     if (levelDiff > levelRange) {
         return res.status(400).json({ error: `Разница уровней слишком велика (${levelDiff} > ${levelRange}). Ваш диапазон: ±${levelRange} уровней.` });
     }
