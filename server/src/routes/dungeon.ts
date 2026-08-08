@@ -305,6 +305,14 @@ router.post('/dungeon/start', async (req, res) => {
 
     const enemies = await generateFloorEnemies(startFloor);
 
+    // Логи для анализа баланса
+    db.run(`INSERT INTO dungeon_logs (userId, floor, playerHp, playerMaxHp, playerStr, playerAgi, playerDef, playerMag, enemies, startedAt)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [userId, startFloor, playerHp, playerMaxHp, stats.s, stats.a, stats.d, stats.m,
+         JSON.stringify(enemies.map(e => ({ name: e.name, hp: e.maxHp, dmg: e.dmg, interval: e._attackInterval }))),
+         Math.floor(Date.now() / 1000)]
+    ).catch(() => {/* ok */});
+
     const now = Date.now() / 1000;
     const run: DungeonRun = {
         userId, currentFloor: startFloor, checkpointFloor: checkpoint,
