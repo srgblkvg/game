@@ -47,9 +47,9 @@ export default function DungeonPage() {
     const [combatLog, setCombatLog] = useState<string[]>([]);
     const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
     const [attackSpeed, setAttackSpeed] = useState('0');
-    const [playerAttackInterval, setPlayerAttackInterval] = useState(1);
-    const [lastPlayerAttackAt, setLastPlayerAttackAt] = useState(0);
     const animRef = useRef<number>(0);
+    const lastAttackRef = useRef(Date.now() / 1000);
+    const intervalRef = useRef(1);
     const [selectedSkills, setSelectedSkills] = useState<number[]>([7, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
@@ -115,8 +115,8 @@ export default function DungeonPage() {
                 setCooldowns(data.skillCooldowns || {});
                 setPlayerAttackProgress(data.playerAttackProgress || 0);
                 setAttackSpeed(data.attackSpeed || '0');
-                setPlayerAttackInterval(data.playerAttackInterval || 1);
-                setLastPlayerAttackAt(data.lastPlayerAttackAt || Date.now() / 1000);
+                intervalRef.current = data.playerAttackInterval || 1;
+                if (data.lastPlayerAttackAt) lastAttackRef.current = data.lastPlayerAttackAt;
                 if (data.cleared) { setCleared(true); stopPolling(); }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
@@ -133,13 +133,13 @@ export default function DungeonPage() {
         if (!inCombat) return;
         const tick = () => {
             const now = Date.now() / 1000;
-            const p = Math.min(1, (now - lastPlayerAttackAt) / playerAttackInterval);
+            const p = Math.min(1, (now - lastAttackRef.current) / intervalRef.current);
             setPlayerAttackProgress(p);
             animRef.current = requestAnimationFrame(tick);
         };
         animRef.current = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(animRef.current);
-    }, [inCombat, lastPlayerAttackAt, playerAttackInterval]);
+    }, [inCombat]);
 
     // Получить список доступных чекпоинтов (кратные 5)
     const getCheckpoints = () => {
