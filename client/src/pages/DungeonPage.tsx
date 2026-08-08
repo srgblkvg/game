@@ -419,8 +419,9 @@ export default function DungeonPage() {
             )}
 
             {/* Бой */}
-            {inCombat && (
+            {inCombat && !cleared && (
                 <div className="space-y-3">
+                    {/* Игрок */}
                     <Card>
                         <div className="flex justify-between items-center mb-1">
                             <span className="text-sm font-bold">Этаж {floor}</span>
@@ -476,29 +477,27 @@ export default function DungeonPage() {
                         })}
                     </div>
 
-                    {/* Умения */}
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Умения — компактные иконки */}
+                    <div className="grid grid-cols-4 gap-2">
                         {skills.map(s => {
-                            const SKILL_ICONS_CBT: Record<number, string> = {
-                                1: '🛡️', 2: '⚔️', 3: '📢', 4: '🩸', 5: '💀', 6: '😨', 7: '🏃', 8: '🌀',
-                            };
+                            const SKILL_ICONS_CBT: Record<number, string> = { 1: '🛡️', 2: '⚔️', 3: '📢', 4: '🩸', 5: '💀', 6: '😨', 7: '🏃', 8: '🌀' };
                             const onCd = cooldowns[s.id] && cooldowns[s.id] > Date.now() / 1000;
                             const cdLeft = onCd ? Math.ceil(cooldowns[s.id] - Date.now() / 1000) : 0;
-                            const canUse = !onCd && rage >= s.rageCost && !cleared;
+                            const canUse = !onCd && rage >= s.rageCost;
                             return (
                                 <button key={s.id} onClick={() => handleSkill(s.id)} disabled={!canUse}
-                                    className={`p-2 rounded-lg text-xs text-left transition-colors cursor-pointer ${canUse
-                                        ? 'bg-[var(--color-accent-info)]/20 border border-[var(--color-accent-info)] hover:bg-[var(--color-accent-info)]/30 text-[var(--color-text-primary)]'
-                                        : 'bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-[var(--color-text-muted)] opacity-60'}`}>
-                                    <div className="font-bold">{SKILL_ICONS_CBT[s.id] || ''} {s.nameRu} {s.level > 0 && `+${s.level}`}</div>
-                                    <div className="text-[0.6rem]">{onCd ? `⏳ ${cdLeft}с` : s.rageCost > 0 ? `${s.rageCost} ярости` : `+${s.rageGain} ярости`}</div>
-                                    <div className="text-[0.6rem] text-[var(--color-text-muted)]">{s.desc}</div>
+                                    className={`relative p-2 rounded-lg text-center transition-colors cursor-pointer ${canUse
+                                        ? 'bg-[var(--color-accent-info)]/20 border border-[var(--color-accent-info)] hover:bg-[var(--color-accent-info)]/30'
+                                        : 'bg-[var(--color-bg-input)] border border-[var(--color-border-light)] opacity-60'}`}>
+                                    <span className="text-xl">{SKILL_ICONS_CBT[s.id] || '❓'}</span>
+                                    {onCd && <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white bg-black/40 rounded-lg">{cdLeft}</span>}
+                                    <div className="text-[0.55rem] text-[var(--color-text-muted)] mt-0.5 truncate">{s.nameRu}</div>
                                 </button>
                             );
                         })}
                     </div>
 
-                    {/* Лог */}
+                    {/* Лог боя */}
                     <Card>
                         <div ref={logRef} className="text-xs text-[var(--color-text-muted)] max-h-32 overflow-y-auto space-y-0.5">
                             {combatLog.map((l, i) => <div key={i}>{l}</div>)}
@@ -506,16 +505,60 @@ export default function DungeonPage() {
                         </div>
                     </Card>
 
-                    {cleared && (
-                        <div className="flex gap-2">
-                            <Button variant="danger" size="md" onClick={handleClaim} disabled={loading}>🏆 Забрать награду</Button>
-                            <Button variant="secondary" size="md" onClick={handleFlee} disabled={loading}>🏃 Сбежать</Button>
-                        </div>
-                    )}
-                    {!cleared && (
-                        <Button variant="secondary" size="md" fullWidth onClick={handleFlee} disabled={loading}>🏃 Сбежать (потеря лута)</Button>
-                    )}
+                    <Button variant="secondary" size="md" fullWidth onClick={handleFlee} disabled={loading}>🏃 Сбежать (награда потеряна)</Button>
                 </div>
+            )}
+
+            {/* Комната после боя */}
+            {inCombat && cleared && (
+                <Card>
+                    <h3 className="font-bold text-lg mb-3 text-center text-[var(--color-accent-success)]">🏆 Этаж {floor} пройден!</h3>
+
+                    {/* Игрок: HP + ярость (продолжает снижаться) */}
+                    <div className="mb-3">
+                        <div className="flex justify-between text-xs mb-1">
+                            <span>HP {playerHp}/{playerMaxHp}</span>
+                            <span className="text-red-400">Ярость {rage}</span>
+                        </div>
+                        <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-1">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
+                        </div>
+                        <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                            <div className="h-full bg-red-500 rounded-full transition-all" style={{ width: `${rage}%` }} />
+                        </div>
+                    </div>
+
+                    {/* Лут (показывается, забирается при выходе) */}
+                    <div className="bg-[var(--color-bg-input)] rounded-lg p-3 mb-3">
+                        <h4 className="text-xs font-bold mb-2">📦 Добыча (забирается при выходе)</h4>
+                        {claimResult ? (
+                            <div className="space-y-1 text-xs">
+                                <p>💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
+                                {claimResult.item && <p>🔮 {claimResult.item.name} ({claimResult.item.rarity})</p>}
+                                {claimResult.page && <p>📜 Страница: {claimResult.page.name}</p>}
+                                {claimResult.isBoss && <p className="text-[var(--color-accent-gold)]">⭐ Чекпоинт сохранён!</p>}
+                            </div>
+                        ) : (
+                            <div className="text-xs text-center text-[var(--color-text-muted)]">
+                                <Button variant="secondary" size="md" onClick={handleClaim} disabled={loading}>🎲 Открыть добычу</Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* HP после отдыха */}
+                    <p className="text-xs text-[var(--color-text-muted)] mb-3 text-center">
+                        После отдыха: {claimResult ? claimResult.playerHp : playerHp} HP (+10% от максимума)
+                    </p>
+
+                    <div className="flex gap-2">
+                        <Button variant="danger" size="md" onClick={handleContinue} className="flex-1">
+                            ➡ Этаж {claimResult?.nextFloor || floor + 1}
+                        </Button>
+                        <Button variant="secondary" size="md" onClick={() => { setClaimed(false); setCleared(false); stopPolling(); loadStatus(); }}>
+                            🚪 Выйти
+                        </Button>
+                    </div>
+                </Card>
             )}
         </div>
     );
