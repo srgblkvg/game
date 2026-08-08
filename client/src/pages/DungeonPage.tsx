@@ -334,7 +334,7 @@ export default function DungeonPage() {
     // renderStatus + renderPrepare in tabs when not in combat
     if (!inCombat && !claimed && !dead) {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="mx-auto px-4 py-4">
                 <BackButton />
                 <h1 className="text-xl font-bold mb-4 text-center">🏰 Подземелье</h1>
                 {message && <p className="text-sm text-center mb-3 text-[var(--color-accent-warning)]">{message}</p>}
