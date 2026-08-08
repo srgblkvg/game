@@ -789,13 +789,11 @@ function tickCombat(run: DungeonRun) {
     const enemiesAlive = run.enemies.some(e => e.hp > 0);
     if (!enemiesAlive) {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 5); // 5/сек вне боя
-        // Пассивный реген HP по формуле игры: rate HP за 5 секунд
-        const nowSec = Math.floor(Date.now() / 1000);
-        const elapsed = nowSec - (run.lastHpUpdate || nowSec);
-        if (elapsed > 0 && run.playerHp < run.playerMaxHp) {
-            const regen = Math.floor(elapsed * run.regenRate / 5);
-            run.playerHp = Math.min(run.playerMaxHp, run.playerHp + regen);
-            run.lastHpUpdate = nowSec;
+        // Ускоренный реген HP в комнате отдыха (~5% от максимума в сек с бонусами)
+        const regenPerSec = run.playerMaxHp * 0.03 * run.regenRate;
+        const regenThisTick = Math.floor(regenPerSec * (TICK_MS / 1000));
+        if (regenThisTick > 0 && run.playerHp < run.playerMaxHp) {
+            run.playerHp = Math.min(run.playerMaxHp, run.playerHp + regenThisTick);
         }
     } else {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 0.5); // 0.5/сек в бою
