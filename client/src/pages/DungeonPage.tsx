@@ -47,8 +47,6 @@ export default function DungeonPage() {
     const [combatLog, setCombatLog] = useState<string[]>([]);
     const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
     const [attackSpeed, setAttackSpeed] = useState('0');
-    const animRef = useRef<number>(0);
-    const lastProgressRef = useRef({ progress: 0, time: 0 });
     const [selectedSkills, setSelectedSkills] = useState<number[]>([1, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
@@ -102,8 +100,6 @@ export default function DungeonPage() {
                 setCooldowns(data.skillCooldowns || {});
                 setPlayerAttackProgress(data.playerAttackProgress || 0);
                 setAttackSpeed(data.attackSpeed || '0');
-                // Синхронизация: серверное значение корректирует анимацию
-                lastProgressRef.current = { progress: data.playerAttackProgress || 0, time: Date.now() };
                 if (data.cleared) { setCleared(true); stopPolling(); }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
@@ -114,26 +110,6 @@ export default function DungeonPage() {
     const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
     useEffect(() => { return () => stopPolling(); }, []);
     useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [combatLog]);
-
-    // Плавная анимация прогресс-бара атаки
-    useEffect(() => {
-        if (!inCombat) return;
-        const tick = () => {
-            const now = Date.now();
-            const lp = lastProgressRef.current;
-            const speed = parseFloat(attackSpeed) || 0.5;
-            const interval = 1 / speed; // seconds per attack
-            const elapsed = (now - lp.time) / 1000;
-            const estimated = Math.min(1, lp.progress + elapsed / interval);
-            setPlayerAttackProgress(estimated);
-            if (estimated >= 1) {
-                lastProgressRef.current = { progress: 0, time: now };
-            }
-            animRef.current = requestAnimationFrame(tick);
-        };
-        animRef.current = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(animRef.current);
-    }, [inCombat, attackSpeed]);
 
     // Получить список доступных чекпоинтов (кратные 5)
     const getCheckpoints = () => {
