@@ -62,7 +62,7 @@ export default function RightSidebar() {
                 data-tutorial="right-sidebar"
                 onClick={() => { setOpen(!open); if (!open) window.dispatchEvent(new CustomEvent('closeChatPanel')); }}
                 id="right-sidebar-toggle"
-                style={{ top: `${headerHeight}px` }}
+                style={{ top: `${headerHeight + 8}px` }}
                 className={`fixed right-3 z-[45] flex items-center gap-1.5 rounded-full border shadow-lg cursor-pointer transition-all duration-300 ${
                     open
                         ? 'w-8 h-8 bg-[var(--color-bg-secondary)] border-[var(--color-border-default)] justify-center'
@@ -85,7 +85,7 @@ export default function RightSidebar() {
             {/* Панель */}
             <div
                 id="right-sidebar-panel"
-                style={{ top: `${headerHeight + 5}px`, height: `calc(100vh - ${headerHeight + 5}px - 40px)` }}
+                style={{ top: `${headerHeight + 13}px`, height: `calc(100vh - ${headerHeight + 13}px - 40px)` }}
                 className={`fixed right-0 z-20 w-[340px] bg-[var(--color-bg-primary)]/60 backdrop-blur-xl border-l border-[var(--color-border-default)] shadow-2xl transition-transform duration-200 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
             >
                 <div className="flex flex-col gap-6 overflow-y-auto h-full p-3 pt-8 pb-10">
