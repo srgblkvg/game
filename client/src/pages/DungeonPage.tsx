@@ -260,12 +260,13 @@ export default function DungeonPage() {
 
     // Вкладка Подготовка — умения
     const renderPrepare = () => {
-        const equipSets = (character as any)?.equipment1 !== undefined ? {
-            1: (character as any).equipment1,
-            2: (character as any).equipment2,
-            3: (character as any).equipment3,
+        const c = character as any;
+        const equipSets = c?.equipment1 !== undefined ? {
+            1: c.equipment1 ?? {},
+            2: c.equipment2 ?? {},
+            3: c.equipment3 ?? {},
         } : undefined;
-        const activeSlot = (character as any)?.activeEquipSlot || 1;
+        const activeSlot = c?.activeEquipSlot || 1;
 
         const SKILL_ICONS: Record<number, string> = {
             1: '🛡️', 2: '⚔️', 3: '📢', 4: '🩸', 5: '💀', 6: '😨', 7: '🏃', 8: '🌀',
