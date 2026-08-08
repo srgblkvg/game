@@ -10,7 +10,7 @@ import { toCharCardData } from '../utils/character';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
-    attackProgress: number; image?: string;
+    attackProgress: number; image?: string; attackInterval?: string;
 }
 
 interface SkillInfo {
@@ -501,7 +501,7 @@ export default function DungeonPage() {
                                             </div>
                                             <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
                                                 <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)] mb-0.5">
-                                                    <span>Атака через 2.5 сек.</span>
+                                                    <span>Атака через {e.attackInterval || '2.5'} сек.</span>
                                                 </div>
                                                 <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, (e.attackProgress || 0) * 100)}%` }} />
                                             </div>

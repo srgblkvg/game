@@ -45,7 +45,7 @@ const DAILY_RUNS_MAX = 4;
 interface EnemyData {
     id: number; name: string; hp: number; maxHp: number; dmg: number;
     isBoss: boolean; stunTimer?: number; debuffs?: Record<string, any>;
-    _lastAttack?: number; image?: string;
+    _lastAttack?: number; image?: string; _attackInterval?: number;
 }
 
 interface Skill {
@@ -137,7 +137,8 @@ function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyDa
     const scale = 1 + floor * 0.3;
     const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 3 : 1));
     const dmg = Math.floor((mob.atk || 3) * scale);
-    return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '' };
+    const interval = isBoss ? 0.5 + Math.random() * 0.5 : 0.5 + Math.random() * 1.5; // 0.5-1с босс, 0.5-2с обычный
+    return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: interval };
 }
 
 async function generateFloorEnemies(floor: number): Promise<EnemyData[]> {
@@ -345,8 +346,9 @@ router.get('/dungeon/state', async (req, res) => {
         playerMaxHp: run.playerMaxHp,
         enemies: run.enemies.map(e => ({
             id: e.id, name: e.name, hp: e.hp, maxHp: e.maxHp, isBoss: e.isBoss,
-            attackProgress: Math.min(1, ((e._lastAttack || 0) / 2.5)),
+            attackProgress: Math.min(1, ((e._lastAttack || 0) / (e._attackInterval || 2.5))),
             image: e.image || '',
+            attackInterval: (e._attackInterval || 2.5).toFixed(1),
         })),
         playerAttackProgress,
         attackSpeed: attackSpeed.toFixed(1),
@@ -768,11 +770,12 @@ function tickCombat(run: DungeonRun) {
             enemy.stunTimer -= TICK_MS / 1000;
             continue;
         }
-        // Каждый враг атакует раз в 2.5 сек
+        // Враг атакует со своей скоростью
+        const interval = enemy._attackInterval || 2.5;
         if (!enemy['_lastAttack']) enemy['_lastAttack'] = 0;
         enemy['_lastAttack'] += TICK_MS / 1000;
-        if (enemy['_lastAttack'] >= 2.5) {
-            enemy['_lastAttack'] -= 2.5;
+        if (enemy['_lastAttack'] >= interval) {
+            enemy['_lastAttack'] -= interval;
             const dmg = calcEnemyDamage(enemy, run.currentFloor);
             // Защита снижает урон (1% за очко def)
             const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.01)));
