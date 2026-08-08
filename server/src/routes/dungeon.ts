@@ -43,6 +43,19 @@ const TICK_MS = 100;
 const DAILY_RUNS_MAX = 4;
 const BASE_SKILL_IDS = new Set([7, 2, 3]); // Рывок, Размах, Боевой клич
 
+function getHpRegenRate(user: any): number {
+    const now = Math.floor(Date.now() / 1000);
+    let rate = 1; // базовый: 1 HP за 5 сек
+    if (user.roomtype && (user.roomuntil || 0) > now) {
+        if (user.roomtype === 'closet') rate = 3;
+        else if (user.roomtype === 'bed') rate = 10;
+        else if (user.roomtype === 'chamber') rate = 50;
+        else if (user.roomtype === 'lux') rate = 250;
+    }
+    if ((user.premiumuntil || 0) > now) rate *= 3;
+    return rate;
+}
+
 interface EnemyData {
     id: number; name: string; hp: number; maxHp: number; dmg: number;
     isBoss: boolean; stunTimer?: number; debuffs?: Record<string, any>;
@@ -95,6 +108,8 @@ interface DungeonRun {
     startedAt: number; dailyRuns: number; dailyRunDate: string;
     tickTimer: ReturnType<typeof setInterval> | null;
     log: string[];
+    lastHpUpdate: number;
+    regenRate: number;
     cleared: boolean;
 }
 
@@ -261,7 +276,7 @@ router.post('/dungeon/start', async (req, res) => {
 
     // Данные игрока
     const user = await db.one(
-        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink FROM users WHERE id = ?',
+        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink, roomtype, roomuntil, premiumuntil FROM users WHERE id = ?',
         [userId]
     ) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -304,6 +319,8 @@ router.post('/dungeon/start', async (req, res) => {
         startedAt: Math.floor(Date.now() / 1000),
         dailyRuns: dailyRuns + 1, dailyRunDate: today,
         tickTimer: null, cleared: false,
+        lastHpUpdate: Math.floor(Date.now() / 1000),
+        regenRate: getHpRegenRate(user),
     };
 
     // Запускаем тик-цикл
@@ -596,7 +613,7 @@ router.post('/dungeon/continue', async (req, res) => {
     if (!saved) return res.status(400).json({ error: 'Нет сохранённого захода' });
 
     const user = await db.one(
-        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink FROM users WHERE id = ?',
+        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink, roomtype, roomuntil, premiumuntil FROM users WHERE id = ?',
         [userId]
     ) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -633,6 +650,8 @@ router.post('/dungeon/continue', async (req, res) => {
         startedAt: Math.floor(Date.now() / 1000),
         dailyRuns: 0, dailyRunDate: '',
         tickTimer: null, cleared: false,
+        lastHpUpdate: Math.floor(Date.now() / 1000),
+        regenRate: getHpRegenRate(user),
     };
 
     run.tickTimer = setInterval(() => tickCombat(run), TICK_MS);
@@ -755,9 +774,14 @@ function tickCombat(run: DungeonRun) {
     const enemiesAlive = run.enemies.some(e => e.hp > 0);
     if (!enemiesAlive) {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 5); // 5/сек вне боя
-        // Пассивный реген HP: ~5% от максимума в секунду
-        const regenPerTick = (run.playerMaxHp * 0.05) * (TICK_MS / 1000);
-        run.playerHp = Math.min(run.playerMaxHp, run.playerHp + Math.floor(regenPerTick || 1));
+        // Пассивный реген HP по формуле игры: rate HP за 5 секунд
+        const nowSec = Math.floor(Date.now() / 1000);
+        const elapsed = nowSec - (run.lastHpUpdate || nowSec);
+        if (elapsed > 0 && run.playerHp < run.playerMaxHp) {
+            const regen = Math.floor(elapsed * run.regenRate / 5);
+            run.playerHp = Math.min(run.playerMaxHp, run.playerHp + regen);
+            run.lastHpUpdate = nowSec;
+        }
     } else {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 0.5); // 0.5/сек в бою
     }
