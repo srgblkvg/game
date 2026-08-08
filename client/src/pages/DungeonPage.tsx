@@ -361,18 +361,20 @@ export default function DungeonPage() {
     // renderStatus + renderPrepare in tabs when not in combat
     if (!inCombat && !claimed && !dead) {
         return (
-            <div className="max-w-3xl mx-auto px-4 py-4">
+            <div className="flex justify-center px-4 py-4">
+                <div className="w-full max-w-3xl">
                 <BackButton />
                 <h1 className="text-xl font-bold mb-4 text-center">🏰 Подземелье</h1>
                 {message && <p className="text-sm text-center mb-3 text-[var(--color-accent-warning)]">{message}</p>}
 
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-4 justify-center">
                     <Button variant={tab === 'status' ? 'primary' : 'secondary'} size="md" onClick={() => setTab('status')}>⚔️ Вылазка</Button>
                     <Button variant={tab === 'prepare' ? 'primary' : 'secondary'} size="md" onClick={() => setTab('prepare')}>🔧 Подготовка</Button>
                 </div>
 
                 {tab === 'status' && status && renderStatus()}
                 {tab === 'prepare' && renderPrepare()}
+                </div>
             </div>
         );
     }
