@@ -10,7 +10,7 @@ import { toCharCardData } from '../utils/character';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
-    attackProgress: number; image?: string; attackInterval?: string;
+    image?: string; lastAttackAt?: number; attackInterval?: number;
 }
 
 interface SkillInfo {
@@ -47,6 +47,9 @@ export default function DungeonPage() {
     const [combatLog, setCombatLog] = useState<string[]>([]);
     const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
     const [attackSpeed, setAttackSpeed] = useState('0');
+    const [playerAttackInterval, setPlayerAttackInterval] = useState(1);
+    const [lastPlayerAttackAt, setLastPlayerAttackAt] = useState(0);
+    const animRef = useRef<number>(0);
     const [selectedSkills, setSelectedSkills] = useState<number[]>([7, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
@@ -112,6 +115,8 @@ export default function DungeonPage() {
                 setCooldowns(data.skillCooldowns || {});
                 setPlayerAttackProgress(data.playerAttackProgress || 0);
                 setAttackSpeed(data.attackSpeed || '0');
+                setPlayerAttackInterval(data.playerAttackInterval || 1);
+                setLastPlayerAttackAt(data.lastPlayerAttackAt || Date.now() / 1000);
                 if (data.cleared) { setCleared(true); stopPolling(); }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
@@ -122,6 +127,19 @@ export default function DungeonPage() {
     const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
     useEffect(() => { return () => stopPolling(); }, []);
     useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [combatLog]);
+
+    // Плавный прогресс-бар атаки на клиенте (0 → 100%)
+    useEffect(() => {
+        if (!inCombat) return;
+        const tick = () => {
+            const now = Date.now() / 1000;
+            const p = Math.min(1, (now - lastPlayerAttackAt) / playerAttackInterval);
+            setPlayerAttackProgress(p);
+            animRef.current = requestAnimationFrame(tick);
+        };
+        animRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animRef.current);
+    }, [inCombat, lastPlayerAttackAt, playerAttackInterval]);
 
     // Получить список доступных чекпоинтов (кратные 5)
     const getCheckpoints = () => {
@@ -253,6 +271,11 @@ export default function DungeonPage() {
     const getUpgradeCost = (skillId: number) => {
         const level = getSkillLevel(skillId);
         return { pages: 10 + level * 15, silver: 1000 * Math.pow(3, level) };
+    };
+
+    const getEnemyProgress = (now: number, e: EnemyView) => {
+        if (!e.lastAttackAt || !e.attackInterval) return 0;
+        return Math.min(1, (now - e.lastAttackAt) / e.attackInterval);
     };
 
     const hpPct = playerMaxHp > 0 ? (playerHp / playerMaxHp) * 100 : 0;
@@ -533,9 +556,9 @@ export default function DungeonPage() {
                                             </div>
                                             <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
                                                 <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)] mb-0.5">
-                                                    <span>Атака через {e.attackInterval || '2.5'} сек.</span>
+                                                    <span>Атака через {(e.attackInterval || 2.5).toFixed(1)} сек.</span>
                                                 </div>
-                                                <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, (e.attackProgress || 0) * 100)}%` }} />
+                                                <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all duration-200 ease-linear" style={{ width: `${Math.min(100, getEnemyProgress(Date.now() / 1000, e) * 100)}%` }} />
                                             </div>
                                         </div>
                                     </div>
