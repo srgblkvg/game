@@ -45,7 +45,7 @@ const DAILY_RUNS_MAX = 4;
 interface EnemyData {
     id: number; name: string; hp: number; maxHp: number; dmg: number;
     isBoss: boolean; stunTimer?: number; debuffs?: Record<string, any>;
-    _lastAttack?: number;
+    _lastAttack?: number; image?: string;
 }
 
 interface Skill {
@@ -76,11 +76,6 @@ const SKILLS: Skill[] = [
 function skillBonus(level: number, perLevel: number): number {
     return (level - 1) * perLevel;
 }
-
-const ENEMY_PREFIXES = ['Гнилой', 'Яростный', 'Теневой', 'Костяной', 'Мёртвый', 'Проклятый', 'Древний', 'Тёмный'];
-const ENEMY_BASES = ['скелет', 'зомби', 'дух', 'голем', 'червь', 'воин', 'маг', 'страж', 'паук', 'крыса'];
-const BOSS_NAMES = ['Король костей', 'Владыка праха', 'Хранитель склепа', 'Теневой архимаг', 'Кровавый исполин',
-    'Лич-повелитель', 'Демон бездны', 'Железный голем', 'Повелитель чумы', 'Дракон пустот'];
 
 // ═══════ БОЕВОЙ ДВИЖОК В ПАМЯТИ ═══════
 
@@ -130,26 +125,36 @@ function calcEnemyDamage(enemy: EnemyData, floor: number): number {
     return Math.floor((base + Math.random() * 4) * debuff);
 }
 
-function generateEnemy(floor: number, isBoss: boolean): EnemyData {
-    const id = Date.now() + Math.floor(Math.random() * 10000);
-    if (isBoss) {
-        const name = BOSS_NAMES[Math.floor(Math.random() * BOSS_NAMES.length)] || 'Древний ужас';
-        const hp = 100 + floor * 60 + floor * floor * 2;
-        return { id, name, hp, maxHp: hp, dmg: 8 + floor * 2, isBoss: true };
-    }
-    const prefix = ENEMY_PREFIXES[Math.floor(Math.random() * ENEMY_PREFIXES.length)];
-    const base = ENEMY_BASES[Math.floor(Math.random() * ENEMY_BASES.length)];
-    const name = `${prefix} ${base}`;
-    const hp = 30 + floor * 20 + floor * floor;
-    return { id, name, hp, maxHp: hp, dmg: 3 + floor, isBoss: false };
+// Кеш мобов — загружается один раз
+let _mobCache: any[] | null = null;
+async function loadMobs(): Promise<any[]> {
+    if (!_mobCache) _mobCache = await db.query('SELECT name, background, level, hp, atk FROM mobs');
+    return _mobCache!;
 }
 
-function generateFloorEnemies(floor: number): EnemyData[] {
+function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyData {
+    const id = Date.now() + Math.floor(Math.random() * 10000);
+    const scale = 1 + floor * 0.3;
+    const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 3 : 1));
+    const dmg = Math.floor((mob.atk || 3) * scale);
+    return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '' };
+}
+
+async function generateFloorEnemies(floor: number): Promise<EnemyData[]> {
     const isBoss = floor % 5 === 0;
-    const count = isBoss ? 1 : 2 + Math.floor(Math.random() * 3); // 2-4 обычных
+    const mobs = await loadMobs();
     const enemies: EnemyData[] = [];
-    for (let i = 0; i < count; i++) {
-        enemies.push(generateEnemy(floor, isBoss && i === 0));
+
+    if (isBoss) {
+        // Босс — берём случайного моба с усилением
+        const mob = mobs[Math.floor(Math.random() * mobs.length)];
+        enemies.push(generateEnemyFromMob(mob, floor, true));
+    } else {
+        const count = 2 + Math.floor(Math.random() * 3); // 2-4 моба
+        const shuffled = [...mobs].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < Math.min(count, shuffled.length); i++) {
+            enemies.push(generateEnemyFromMob(shuffled[i], floor, false));
+        }
     }
     return enemies;
 }
@@ -280,7 +285,7 @@ router.post('/dungeon/start', async (req, res) => {
 
     const skills = await getAvailableSkills(userId, equippedSkillIds || []);
 
-    const enemies = generateFloorEnemies(startFloor);
+    const enemies = await generateFloorEnemies(startFloor);
 
     const run: DungeonRun = {
         userId, currentFloor: startFloor, checkpointFloor: checkpoint,
@@ -341,6 +346,7 @@ router.get('/dungeon/state', async (req, res) => {
         enemies: run.enemies.map(e => ({
             id: e.id, name: e.name, hp: e.hp, maxHp: e.maxHp, isBoss: e.isBoss,
             attackProgress: Math.min(1, ((e._lastAttack || 0) / 2.5)),
+            image: e.image || '',
         })),
         playerAttackProgress,
         attackSpeed: attackSpeed.toFixed(1),
@@ -607,7 +613,7 @@ router.post('/dungeon/continue', async (req, res) => {
 
     const skills = await getAvailableSkills(userId, equippedSkillIds || []);
     const floor = saved.currentfloor;
-    const enemies = generateFloorEnemies(floor);
+    const enemies = await generateFloorEnemies(floor);
 
     const run: DungeonRun = {
         userId, currentFloor: floor, checkpointFloor: saved.checkpointfloor,

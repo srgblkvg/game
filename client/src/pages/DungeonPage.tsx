@@ -10,7 +10,7 @@ import { toCharCardData } from '../utils/character';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
-    attackProgress: number;
+    attackProgress: number; image?: string;
 }
 
 interface SkillInfo {
@@ -508,9 +508,9 @@ export default function DungeonPage() {
                                 <div key={e.id} onClick={() => handleTarget(e.id)}
                                     className={`p-2 rounded-lg border cursor-pointer transition-colors ${isTarget ? 'border-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)]'}`}>
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 font-bold text-white ${e.isBoss ? 'bg-[var(--color-accent-gold)] border-2 border-[var(--color-accent-gold)]' : 'border-2 border-[var(--color-border-light)]'}`}
-                                            style={{ backgroundColor: e.isBoss ? undefined : stringToColor(e.name) }}>
-                                            {e.name.charAt(0)}
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 overflow-hidden font-bold text-white ${e.isBoss ? 'border-2 border-[var(--color-accent-gold)]' : 'border-2 border-[var(--color-border-light)]'}`}
+                                            style={{ backgroundColor: e.image ? undefined : stringToColor(e.name) }}>
+                                            {e.image ? <img src={e.image} alt="" className="w-full h-full object-cover" /> : e.name.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between text-xs mb-1">
