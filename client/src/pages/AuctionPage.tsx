@@ -168,7 +168,7 @@ function PriceChart({ item }: { item: any }) {
     }
 
     const data = {
-        labels: points.map((p: any) => p.day.slice(5)),
+        labels: points.map((p: any) => { const parts = p.day.split('-'); return `${parts[2]}.${parts[1]}`; }),
         datasets: [
             {
                 label: 'Средняя',
