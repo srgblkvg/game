@@ -389,6 +389,7 @@ router.get('/dungeon/state', async (req, res) => {
         playerAttackProgress,
         attackSpeed: attackSpeed.toFixed(1),
         rage: run.rage,
+        regenRate: run.regenRate,
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
         skillCooldowns: run.skillCooldowns,
         log: run.log.splice(0),

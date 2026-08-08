@@ -42,6 +42,7 @@ export default function DungeonPage() {
     const [enemies, setEnemies] = useState<EnemyView[]>([]);
     const [rage, setRage] = useState(0);
     const [skills, setSkills] = useState<SkillInfo[]>([]);
+    const [regenRate, setRegenRate] = useState(1);
     const [buffs, setBuffs] = useState<any[]>([]);
     const [cooldowns, setCooldowns] = useState<Record<number, number>>({});
     const [combatLog, setCombatLog] = useState<string[]>([]);
@@ -82,7 +83,8 @@ export default function DungeonPage() {
                 setPlayerHp(data.playerHp);
                 setPlayerMaxHp(data.playerMaxHp);
                 setEnemies(data.enemies || []);
-                setRage(data.rage || 0);
+                setRage(Math.round(data.rage || 0));
+                setRegenRate(data.regenRate || 1);
                 if (data.cleared) setCleared(true);
                 startPolling();
             }
@@ -106,7 +108,8 @@ export default function DungeonPage() {
                 if (!data.active) { stopPolling(); setInCombat(false); if (data.dead) setDead(true); loadStatus(); return; }
                 setPlayerHp(data.playerHp);
                 setEnemies(data.enemies || []);
-                setRage(data.rage);
+                setRage(Math.round(data.rage || 0));
+                setRegenRate(data.regenRate || 1);
                 setBuffs(data.buffs || []);
                 setCooldowns(data.skillCooldowns || {});
                 setAttackSpeed(data.attackSpeed || '0');
@@ -431,24 +434,6 @@ export default function DungeonPage() {
             <h1 className="text-xl font-bold mb-4 text-center">🏰 Подземелье</h1>
             {message && <p className="text-sm text-center mb-3 text-[var(--color-accent-warning)]">{message}</p>}
 
-            {/* Награда */}
-            {claimed && claimResult && (
-                <Card>
-                    <h3 className="font-bold text-lg mb-2 text-center text-[var(--color-accent-success)]">🏆 Этаж {claimResult.floor} пройден!</h3>
-                    <div className="space-y-1 mb-3">
-                        <p className="text-sm">💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
-                        {claimResult.item && <p className="text-sm">🔮 {claimResult.item.name} ({claimResult.item.rarity})</p>}
-                        {claimResult.page && <p className="text-sm">📜 Страница: {claimResult.page.name}</p>}
-                        {claimResult.isBoss && <p className="text-sm text-[var(--color-accent-gold)]">⭐ Чекпоинт сохранён!</p>}
-                    </div>
-                    <p className="text-sm mb-2">HP после отдыха: {claimResult.playerHp}/{playerMaxHp}</p>
-                    <div className="flex gap-2">
-                        <Button variant="danger" size="md" onClick={handleContinue}>➡ Этаж {claimResult.nextFloor}</Button>
-                        <Button variant="secondary" size="md" onClick={() => { setClaimed(false); loadStatus(); }}>Выйти</Button>
-                    </div>
-                </Card>
-            )}
-
             {/* Смерть */}
             {dead && (
                 <Card>
@@ -581,7 +566,9 @@ export default function DungeonPage() {
                     <div className="mb-3">
                         <div className="flex justify-between text-xs mb-1">
                             <span>HP {playerHp}/{playerMaxHp}</span>
-                            <span className="text-red-400">Ярость {Math.round(rage)}</span>
+                            <span className="text-[var(--color-text-muted)]">
+                                {playerHp < playerMaxHp ? `⏳ полное через ${Math.ceil((playerMaxHp - playerHp) / (playerMaxHp * 0.03 * regenRate))}с` : '✅ HP полное'}
+                            </span>
                         </div>
                         <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-1">
                             <div className="h-full rounded-full transition-all" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
