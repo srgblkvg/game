@@ -168,7 +168,7 @@ function PriceChart({ item }: { item: any }) {
     }
 
     const data = {
-        labels: points.map((p: any) => { const parts = p.day.split('-'); return `${parts[2]}.${parts[1]}`; }),
+        labels: points.map((p: any) => { const d = p.day.slice(0, 10).split('-'); return `${d[2]}.${d[1]}`; }),
         datasets: [
             {
                 label: 'Средняя',
@@ -213,7 +213,7 @@ function PriceChart({ item }: { item: any }) {
         },
         scales: {
             x: { ticks: { font: { size: 9 }, color: '#888' }, grid: { display: false } },
-            y: { ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => formatMoney(v) }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(1)}k` : v }, grid: { color: 'rgba(255,255,255,0.05)' } },
         },
     };
 
