@@ -581,6 +581,7 @@ export default function AuctionPage() {
                             {similarStats.avgBuyout && <div>Средний выкуп: {formatMoney(similarStats.avgBuyout)}{similarStats.perUnit ? ' / шт' : ''}</div>}
                         </div>
                     )}
+                    {selectedItem && <PriceChart item={selectedItem} />}
                     {isMaterial && maxItemCount > 1 && (
                         <div className="mb-2">
                             <label className="text-xs text-[var(--color-text-muted)] block mb-1">Количество для продажи (макс: {maxItemCount})</label>
