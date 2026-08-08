@@ -165,15 +165,19 @@ function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyDa
 async function generateFloorEnemies(floor: number): Promise<EnemyData[]> {
     const isBoss = floor % 5 === 0;
     const mobs = await loadMobs();
+    // Фильтруем мобов по этажу: ATK не должен превышать floor * 15
+    const maxAtk = floor * 15;
+    const floorMobs = mobs.filter(m => m.atk <= maxAtk);
+    if (floorMobs.length === 0) floorMobs.push(...mobs); // fallback
     const enemies: EnemyData[] = [];
 
     if (isBoss) {
-        // Босс — берём случайного моба с усилением
-        const mob = mobs[Math.floor(Math.random() * mobs.length)];
-        enemies.push(generateEnemyFromMob(mob, floor, true));
+        // Босс — берём сильнейшего из доступных
+        const candidates = [...floorMobs].sort((a, b) => b.atk - a.atk);
+        enemies.push(generateEnemyFromMob(candidates[0], floor, true));
     } else {
         const count = 2 + Math.floor(Math.random() * 3); // 2-4 моба
-        const shuffled = [...mobs].sort(() => Math.random() - 0.5);
+        const shuffled = [...floorMobs].sort(() => Math.random() - 0.5);
         for (let i = 0; i < Math.min(count, shuffled.length); i++) {
             enemies.push(generateEnemyFromMob(shuffled[i], floor, false));
         }
