@@ -429,8 +429,10 @@ export default function AuctionPage() {
             load(1);
         } catch (e: any) {
             const msg = e.message || '';
-            if (msg.includes('Недостаточно') || msg.includes('Максимум')) {
+            if (msg.includes('Недостаточно')) {
                 showNoMoney(msg);
+            } else if (msg.includes('Максимум')) {
+                setCenterModal(msg);
             } else {
                 setError(msg);
             }
@@ -469,6 +471,7 @@ export default function AuctionPage() {
         }
     };
     const [confirmPopup, setConfirmPopup] = useState<any>(null);
+    const [centerModal, setCenterModal] = useState<string | null>(null);
     const handleCancel = async (lotId: number) => {
         setConfirmPopup({ message: 'Снять лот с аукциона? Предмет вернётся в инвентарь.', onConfirm: async () => {
             setConfirmPopup(null);
@@ -859,6 +862,21 @@ export default function AuctionPage() {
                         <div className="flex gap-2 justify-end">
                             <Button variant="secondary" size="md" onClick={() => setConfirmPopup(null)}>Отмена</Button>
                             <Button size="md" onClick={confirmPopup.onConfirm}>OK</Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+            {centerModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setCenterModal(null)}>
+                    <Card className="max-w-xs w-full" onClick={e => e.stopPropagation()}>
+                        <p className="text-sm mb-3">{centerModal}</p>
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="secondary" size="md" onClick={() => setCenterModal(null)}>Закрыть</Button>
+                            {!character?.premium && (
+                                <Button size="md" onClick={() => { setCenterModal(null); navigate('/premium'); }}>
+                                    ⭐ Премиум (+10 слотов)
+                                </Button>
+                            )}
                         </div>
                     </Card>
                 </div>
