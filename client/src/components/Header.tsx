@@ -21,6 +21,7 @@ const breadcrumbMap: Record<string, string> = {
     bank: 'Банк',
     craft: 'Ремесло',
     auction: 'Аукцион',
+    dungeon: 'Подземелье',
     jobs: 'Работы',
     history: 'Сводка',
     rating: 'Рейтинг',

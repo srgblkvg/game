@@ -57,6 +57,7 @@ const ConflictsPage = lazy(() => import('./pages/ConflictsPage'));
 const TrainingPage = lazy(() => import('./pages/TrainingPage'));
 const StarterPackPage = lazy(() => import('./pages/StarterPackPage'));
 const DebugStatsPage = lazy(() => import('./pages/DebugStatsPage'));
+const DungeonPage = lazy(() => import('./pages/DungeonPage'));
 
 function Loading() {
   return (
@@ -130,6 +131,7 @@ function App() {
             <Route path="/collections" element={user?.role === 'player' ? <CollectionsPage /> : <Navigate to="/login" />} />
             <Route path="/guild/:id" element={user?.role === 'player' ? <GuildViewPage /> : <Navigate to="/login" />} />
             <Route path="/battle-sim" element={user?.role === 'player' || user?.role === 'admin' ? <BattleSimPage /> : <Navigate to="/login" />} />
+            <Route path="/dungeon" element={user?.role === 'player' ? <DungeonPage /> : <Navigate to="/login" />} />
             <Route path="/admin/register" element={<AdminRegisterPage />} />
             <Route path="/adminpanel" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} />
             <Route path="*" element={<Navigate to="/" />} />
