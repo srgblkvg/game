@@ -48,20 +48,33 @@ interface EnemyData {
 }
 
 interface Skill {
-    id: number; name: string; nameRu: string; rage: number; cooldown: number;
-    desc: string; level: number;
+    id: number; name: string; nameRu: string; rageCost: number; rageGain: number; cooldown: number;
+    desc: string; descScale: string; // descScale: что даёт каждый уровень
 }
 
 const SKILLS: Skill[] = [
-    { id: 1, name: 'shield_bash', nameRu: 'Удар щитом', rage: 5, cooldown: 6, desc: 'Оглушает цель на 2 сек., урон 150%', level: 0 },
-    { id: 2, name: 'sweep', nameRu: 'Размах', rage: 15, cooldown: 5, desc: 'Бьёт цель и 2 соседних, урон 80%', level: 0 },
-    { id: 3, name: 'battle_cry', nameRu: 'Боевой клич', rage: 20, cooldown: 20, desc: '+30% урона, +1 ярость/удар на 15 сек.', level: 0 },
-    { id: 4, name: 'rend', nameRu: 'Раздирание', rage: 10, cooldown: 0, desc: 'Кровотечение: 3 тика за 9 сек., 30% урона за тик', level: 0 },
-    { id: 5, name: 'execute', nameRu: 'Добивание', rage: 30, cooldown: 8, desc: 'Цель <30% HP: урон 300%', level: 0 },
-    { id: 6, name: 'demoralize', nameRu: 'Деморализация', rage: 10, cooldown: 25, desc: '-15% урона врагу на 20 сек.', level: 0 },
-    { id: 7, name: 'charge', nameRu: 'Рывок', rage: 0, cooldown: 15, desc: '+15 ярости, стан цели 1.5 сек.', level: 0 },
-    { id: 8, name: 'whirlwind', nameRu: 'Вихрь', rage: 25, cooldown: 10, desc: 'Бьёт всех врагов, урон 60%', level: 0 },
+    { id: 1, name: 'shield_bash', nameRu: 'Удар щитом', rageCost: 5, rageGain: 0, cooldown: 6,
+      desc: 'Оглушение', descScale: '+0.2с стана, +10% урона' },
+    { id: 2, name: 'sweep', nameRu: 'Размах', rageCost: 15, rageGain: 0, cooldown: 5,
+      desc: 'AoE 3 цели', descScale: '+10% урона' },
+    { id: 3, name: 'battle_cry', nameRu: 'Боевой клич', rageCost: 20, rageGain: 0, cooldown: 20,
+      desc: '+20% урона, +1 ярость', descScale: '+5% урона, +1с длительности' },
+    { id: 4, name: 'rend', nameRu: 'Раздирание', rageCost: 10, rageGain: 0, cooldown: 0,
+      desc: 'Кровотечение 9с', descScale: '+5% урона за тик' },
+    { id: 5, name: 'execute', nameRu: 'Добивание', rageCost: 30, rageGain: 0, cooldown: 8,
+      desc: '<30% HP', descScale: '+25% урона' },
+    { id: 6, name: 'demoralize', nameRu: 'Деморализация', rageCost: 10, rageGain: 0, cooldown: 25,
+      desc: '-10% урона врагу', descScale: '-2% урона, +2с' },
+    { id: 7, name: 'charge', nameRu: 'Рывок', rageCost: 0, rageGain: 12, cooldown: 15,
+      desc: 'Стан 1с', descScale: '+0.2с стана, +3 ярости' },
+    { id: 8, name: 'whirlwind', nameRu: 'Вихрь', rageCost: 25, rageGain: 0, cooldown: 10,
+      desc: 'Все враги', descScale: '+10% урона' },
 ];
+
+// Хелпер: получить бонус от уровня скилла (level >= 1)
+function skillBonus(level: number, perLevel: number): number {
+    return (level - 1) * perLevel;
+}
 
 const ENEMY_PREFIXES = ['Гнилой', 'Яростный', 'Теневой', 'Костяной', 'Мёртвый', 'Проклятый', 'Древний', 'Тёмный'];
 const ENEMY_BASES = ['скелет', 'зомби', 'дух', 'голем', 'червь', 'воин', 'маг', 'страж', 'паук', 'крыса'];
@@ -77,7 +90,7 @@ interface DungeonRun {
     equippedWeaponRarity: number;
     enemies: EnemyData[];
     rage: number; autoTimer: number;
-    skills: Skill[];
+    skills: SkillWithLevel[];
     buffs: Record<string, { endsAt: number; value: number }>;
     skillCooldowns: Record<number, number>;
     startedAt: number; dailyRuns: number; dailyRunDate: string;
@@ -129,15 +142,20 @@ function generateFloorEnemies(floor: number): EnemyData[] {
     return enemies;
 }
 
-function getAvailableSkills(userId: number, equippedSkills: number[]): Promise<Skill[]> {
+interface SkillWithLevel extends Skill {
+    level: number;
+}
+
+function getAvailableSkills(userId: number, equippedSkills: number[]): Promise<SkillWithLevel[]> {
     return (async () => {
         const levels = await db.query('SELECT skillId, level FROM skill_levels WHERE userId = ?', [userId]) as any[];
         const levelMap: Record<number, number> = {};
         for (const r of levels) levelMap[r.skillid] = r.level;
 
+        // Базовые скиллы (1-3) имеют минимум 1 уровень
         return SKILLS.filter(s => equippedSkills.includes(s.id)).map(s => ({
             ...s,
-            level: levelMap[s.id] || 0,
+            level: Math.max(s.id <= 3 ? 1 : 0, levelMap[s.id] || 0),
         }));
     })();
 }
@@ -329,56 +347,59 @@ router.post('/dungeon/skill', async (req, res) => {
     }
 
     // Ярость
-    if (run.rage < skill.rage) {
-        return res.status(400).json({ error: `Недостаточно ярости (${run.rage}/${skill.rage})` });
+    if (run.rage < skill.rageCost) {
+        return res.status(400).json({ error: `Недостаточно ярости (${run.rage}/${skill.rageCost})` });
     }
 
-    run.rage -= skill.rage;
+    run.rage -= skill.rageCost;
     if (skill.cooldown > 0) {
         run.skillCooldowns[skillId] = now + skill.cooldown;
     }
 
+    const lvl = skill.level;
     const dmg = calcPlayerDamage(run);
 
     switch (skill.name) {
         case 'shield_bash': {
             const target = run.enemies[0]; if (!target) break;
-            if (!target) break;
-            target.hp -= Math.floor(dmg * 1.5);
-            target.stunTimer = 2;
-            run.log.push(`⚡ Удар щитом: ${Math.floor(dmg * 1.5)} урона, цель оглушена 2с`);
+            const bashDmg = Math.floor(dmg * (0.8 + skillBonus(lvl, 0.1)));
+            const stun = 1.5 + skillBonus(lvl, 0.2);
+            target.hp -= bashDmg;
+            target.stunTimer = stun;
+            run.log.push(`⚡ Удар щитом: ${bashDmg} урона, оглушение ${stun.toFixed(1)}с`);
             break;
         }
         case 'sweep': {
-            const mainDmg = Math.floor(dmg * 0.8);
-            for (let i = 0; i < Math.min(3, run.enemies.length); i++) {
+            const swDmg = Math.floor(dmg * (0.6 + skillBonus(lvl, 0.1)));
+            const count = Math.min(3, run.enemies.length);
+            for (let i = 0; i < count; i++) {
                 const e = run.enemies[i];
-                if (e) e.hp -= mainDmg;
+                if (e) e.hp -= swDmg;
             }
-            run.log.push(`↔ Размах: ${mainDmg} урона по ${Math.min(3, run.enemies.length)} целям`);
+            run.log.push(`↔ Размах: ${swDmg} урона по ${count} целям`);
             break;
         }
         case 'battle_cry': {
-            run.buffs['battle_cry'] = { endsAt: now + 15, value: 30 };
-            run.log.push('📢 Боевой клич: +30% урона, +1 ярость/удар на 15с');
+            const bonus = 20 + skillBonus(lvl, 5);
+            const duration = 12 + skillBonus(lvl, 1);
+            run.buffs['battle_cry'] = { endsAt: now + duration, value: bonus };
+            run.log.push(`📢 Боевой клич: +${bonus}% урона, +1 ярость/удар на ${duration}с`);
             break;
         }
         case 'rend': {
             const target = run.enemies[0]; if (!target) break;
-            const dotDmg = Math.floor(dmg * 0.3);
-            // DoT на 9с — 3 тика
+            const dotDmg = Math.floor(dmg * (0.2 + skillBonus(lvl, 0.05)));
             run.log.push(`🩸 Раздирание: кровотечение ${dotDmg}×3 за 9с`);
-            // Упрощённо: наносим сразу 3 тика
             target.hp -= dotDmg * 3;
             break;
         }
         case 'execute': {
             const target = run.enemies[0]; if (!target) break;
             if (target.hp > target.maxHp * 0.3) {
-                run.rage += skill.rage; // возвращаем ярость
+                run.rage += skill.rageCost;
                 return res.status(400).json({ error: 'Цель должна быть <30% HP' });
             }
-            const execDmg = Math.floor(dmg * 3);
+            const execDmg = Math.floor(dmg * (2 + skillBonus(lvl, 0.25)));
             target.hp -= execDmg;
             run.log.push(`💀 Добивание: ${execDmg} урона`);
             break;
@@ -386,18 +407,22 @@ router.post('/dungeon/skill', async (req, res) => {
         case 'demoralize': {
             const target = run.enemies[0]; if (!target) break;
             if (!target.debuffs) target.debuffs = {};
-            target.debuffs['demoralize'] = { endsAt: now + 20 };
-            run.log.push('😨 Деморализация: -15% урона врагу на 20с');
+            const debuffPct = 10 + skillBonus(lvl, 2);
+            const debuffDur = 15 + skillBonus(lvl, 2);
+            target.debuffs['demoralize'] = { endsAt: now + debuffDur, value: debuffPct };
+            run.log.push(`😨 Деморализация: -${debuffPct}% урона врагу на ${debuffDur}с`);
             break;
         }
         case 'charge': {
-            run.rage = Math.min(100, run.rage + 15);
-            if (run.enemies[0]) run.enemies[0].stunTimer = 1.5;
-            run.log.push('🏃 Рывок: +15 ярости, цель оглушена 1.5с');
+            const rageGain = skill.rageGain + skillBonus(lvl, 3);
+            const stun = 1 + skillBonus(lvl, 0.2);
+            run.rage = Math.min(100, run.rage + rageGain);
+            if (run.enemies[0]) run.enemies[0].stunTimer = stun;
+            run.log.push(`🏃 Рывок: +${rageGain} ярости, оглушение ${stun.toFixed(1)}с`);
             break;
         }
         case 'whirlwind': {
-            const wwDmg = Math.floor(dmg * 0.6);
+            const wwDmg = Math.floor(dmg * (0.5 + skillBonus(lvl, 0.1)));
             for (const e of run.enemies) e.hp -= wwDmg;
             run.log.push(`🌀 Вихрь: ${wwDmg} урона по всем врагам`);
             break;

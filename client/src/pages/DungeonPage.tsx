@@ -10,8 +10,8 @@ interface EnemyView {
 }
 
 interface SkillInfo {
-    id: number; name: string; nameRu: string; rage: number; cooldown: number;
-    desc: string; level: number;
+    id: number; name: string; nameRu: string; rageCost: number; rageGain: number; cooldown: number;
+    desc: string; descScale: string; level: number;
 }
 
 export default function DungeonPage() {
@@ -270,9 +270,10 @@ export default function DungeonPage() {
                                     {selected ? 'Убрать' : 'Взять'}
                                 </button>
                             </div>
-                            <p className="text-xs text-[var(--color-text-muted)] mb-2">{s.desc}</p>
+                            <p className="text-xs text-[var(--color-text-muted)] mb-1">{s.desc}</p>
+                            <p className="text-[0.6rem] text-[var(--color-accent-purple)] mb-2">Уровень: {s.descScale}</p>
                             <div className="flex items-center gap-2 text-[0.6rem]">
-                                <span className="text-[var(--color-text-muted)]">⚡ {s.rage} ярости</span>
+                                <span className="text-[var(--color-text-muted)]">{s.rageCost > 0 ? `⚡ ${s.rageCost} ярости` : `✨ +${s.rageGain} ярости`}</span>
                                 {s.cooldown > 0 && <span className="text-[var(--color-text-muted)]">⏳ {s.cooldown}с</span>}
                                 <span className="text-[var(--color-text-muted)]">📜 {pagesCount}/{cost.pages} страниц</span>
                                 <button onClick={() => handleUpgradeSkill(s.id)}
@@ -397,14 +398,14 @@ export default function DungeonPage() {
                         {skills.map(s => {
                             const onCd = cooldowns[s.id] && cooldowns[s.id] > Date.now() / 1000;
                             const cdLeft = onCd ? Math.ceil(cooldowns[s.id] - Date.now() / 1000) : 0;
-                            const canUse = !onCd && rage >= s.rage && !cleared;
+                            const canUse = !onCd && rage >= s.rageCost && !cleared;
                             return (
                                 <button key={s.id} onClick={() => handleSkill(s.id)} disabled={!canUse}
                                     className={`p-2 rounded-lg text-xs text-left transition-colors cursor-pointer ${canUse
                                         ? 'bg-[var(--color-accent-info)]/20 border border-[var(--color-accent-info)] hover:bg-[var(--color-accent-info)]/30 text-[var(--color-text-primary)]'
                                         : 'bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-[var(--color-text-muted)] opacity-60'}`}>
                                     <div className="font-bold">{s.nameRu} {s.level > 0 && `+${s.level}`}</div>
-                                    <div className="text-[0.6rem]">{onCd ? `⏳ ${cdLeft}с` : `${s.rage} ярости`}</div>
+                                    <div className="text-[0.6rem]">{onCd ? `⏳ ${cdLeft}с` : s.rageCost > 0 ? `${s.rageCost} ярости` : `+${s.rageGain} ярости`}</div>
                                     <div className="text-[0.6rem] text-[var(--color-text-muted)]">{s.desc}</div>
                                 </button>
                             );
@@ -435,12 +436,12 @@ export default function DungeonPage() {
 }
 
 const SKILLS_ALL = [
-    { id: 1, name: 'shield_bash', nameRu: 'Удар щитом', rage: 5, cooldown: 6, desc: 'Оглушает цель на 2с, урон 150%' },
-    { id: 2, name: 'sweep', nameRu: 'Размах', rage: 15, cooldown: 5, desc: 'Бьёт цель и 2 соседних, урон 80%' },
-    { id: 3, name: 'battle_cry', nameRu: 'Боевой клич', rage: 20, cooldown: 20, desc: '+30% урона, +1 ярость/удар на 15с' },
-    { id: 4, name: 'rend', nameRu: 'Раздирание', rage: 10, cooldown: 0, desc: 'Кровотечение: 3 тика за 9с, 30%/тик' },
-    { id: 5, name: 'execute', nameRu: 'Добивание', rage: 30, cooldown: 8, desc: 'Цель <30% HP: урон 300%' },
-    { id: 6, name: 'demoralize', nameRu: 'Деморализация', rage: 10, cooldown: 25, desc: '-15% урона врагу на 20с' },
-    { id: 7, name: 'charge', nameRu: 'Рывок', rage: 0, cooldown: 15, desc: '+15 ярости, стан цели 1.5с' },
-    { id: 8, name: 'whirlwind', nameRu: 'Вихрь', rage: 25, cooldown: 10, desc: 'Бьёт всех врагов, урон 60%' },
+    { id: 1, name: 'shield_bash', nameRu: 'Удар щитом', rageCost: 5, rageGain: 0, cooldown: 6, desc: 'Оглушение', descScale: '+0.2с стана, +10% урона' },
+    { id: 2, name: 'sweep', nameRu: 'Размах', rageCost: 15, rageGain: 0, cooldown: 5, desc: 'AoE 3 цели', descScale: '+10% урона' },
+    { id: 3, name: 'battle_cry', nameRu: 'Боевой клич', rageCost: 20, rageGain: 0, cooldown: 20, desc: '+20% урона', descScale: '+5% урона, +1с' },
+    { id: 4, name: 'rend', nameRu: 'Раздирание', rageCost: 10, rageGain: 0, cooldown: 0, desc: 'Кровотечение 9с', descScale: '+5% урона за тик' },
+    { id: 5, name: 'execute', nameRu: 'Добивание', rageCost: 30, rageGain: 0, cooldown: 8, desc: '<30% HP', descScale: '+25% урона' },
+    { id: 6, name: 'demoralize', nameRu: 'Деморализация', rageCost: 10, rageGain: 0, cooldown: 25, desc: '-10% урона врагу', descScale: '-2% урона, +2с' },
+    { id: 7, name: 'charge', nameRu: 'Рывок', rageCost: 0, rageGain: 12, cooldown: 15, desc: 'Стан 1с', descScale: '+0.2с стана, +3 ярости' },
+    { id: 8, name: 'whirlwind', nameRu: 'Вихрь', rageCost: 25, rageGain: 0, cooldown: 10, desc: 'Все враги', descScale: '+10% урона' },
 ];
