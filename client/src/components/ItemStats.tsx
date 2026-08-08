@@ -1,4 +1,4 @@
-import { getRarityColor, getItemImage, isCraftItem, getItemTypeName } from '../utils/itemUtils';
+import { getRarityColor, getItemImage, isCraftItem, getItemTypeName, getRarityDisplay } from '../utils/itemUtils';
 import { useGame } from '../contexts/GameContext';
 import type { ReactNode } from 'react';
 
@@ -90,7 +90,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
 
       {/* Редкость */}
       <div className="text-xs mb-2 text-center text-[var(--color-text-muted)]">
-        Редкость: {item.rarity_display || 'Обычный'}
+        Редкость: {item.rarity_display || getRarityDisplay(item)}
       </div>
 
       {/* Таблица характеристик */}
