@@ -38,7 +38,7 @@ db.run(`CREATE TABLE IF NOT EXISTS skill_levels (
 
 // ═══════ КОНСТАНТЫ ═══════
 
-const WEAPON_SPEED: Record<number, number> = { 0: 0.5, 1: 0.7, 2: 0.85, 3: 1.05, 4: 1.3, 5: 1.55, 6: 1.8 };
+const WEAPON_SPEED: Record<number, number> = { 0: 0.3, 1: 0.5, 2: 0.7, 3: 0.9, 4: 1.1, 5: 1.3, 6: 1.5 };
 const TICK_MS = 100;
 const DAILY_RUNS_MAX = 4;
 const BASE_SKILL_IDS = new Set([7, 2, 3]); // Рывок, Размах, Боевой клич
@@ -138,7 +138,7 @@ function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyDa
     const scale = 1 + floor * 0.3;
     const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 3 : 1));
     const dmg = Math.floor((mob.atk || 3) * scale);
-    const interval = isBoss ? 0.5 + Math.random() * 0.5 : 0.5 + Math.random() * 1.5; // 0.5-1с босс, 0.5-2с обычный
+    const interval = isBoss ? 0.7 + Math.random() * 1.3 : 0.7 + Math.random() * 4.3; // 0.7-2с босс, 0.7-5с обычный
     return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: interval };
 }
 
@@ -350,7 +350,6 @@ router.get('/dungeon/state', async (req, res) => {
             attackProgress: Math.min(1, ((e._lastAttack || 0) / (e._attackInterval || 2.5))),
             image: e.image || '',
             attackInterval: (e._attackInterval || 2.5).toFixed(1),
-            _debug: { la: e._lastAttack, int: e._attackInterval },
         })),
         playerAttackProgress,
         attackSpeed: attackSpeed.toFixed(1),
