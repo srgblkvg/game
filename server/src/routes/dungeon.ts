@@ -122,17 +122,17 @@ function getAttackSpeed(rarity: number, weaponStrBonus: number): number {
 }
 
 function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } {
-    // Урон: делим scaled stat на ~4 для баланса против scaled статов игроков
-    const rs = run.playerStr / 4;
-    const ra = run.playerAgi / 4;
-    const rm = run.playerMag / 4;
+    // Урон: делим scaled stat на 6 для баланса
+    const rs = run.playerStr / 6;
+    const ra = run.playerAgi / 6;
+    const rm = run.playerMag / 6;
     const weaponBonus = 3 + run.equippedWeaponRarity * 3;
     const baseDmg = rs + ra * 0.3 + rm * 0.2 + run.playerLevel + weaponBonus;
     const dmgBonus = (run.buffs['battle_cry'] ? (1 + (run.buffs['battle_cry'].value / 100)) : 1.0);
     const dmg = Math.floor((baseDmg + Math.random() * (run.playerLevel + weaponBonus)) * dmgBonus);
 
-    // Крит: ловкость × 0.5% шанс
-    const critChance = run.playerAgi * 0.5;
+    // Крит: сырая ловкость × 0.5% шанс (используем /4 как для урона)
+    const critChance = ra * 0.5;
     const isCrit = Math.random() * 100 < critChance;
 
     return { damage: isCrit ? Math.floor(dmg * 2) : dmg, isCrit };
