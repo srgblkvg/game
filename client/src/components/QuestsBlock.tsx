@@ -116,7 +116,7 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
                 {guildBoss && (
                     <div className={hasGuild ? 'mt-3 pt-3 border-t border-[var(--color-border-default)]' : ''}>
                         <div className="text-[0.6rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Босс:</div>
-                        <div className="relative cursor-pointer hover:opacity-80 transition-opacity" onClick={() => bossCd <= 0 && navigate('/guild?tab=4')}>
+                        <div className="relative cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/guild?tab=4')}>
                             <div className="flex items-center gap-1 text-xs">
                                 <span>👾</span>
                                 <span className="font-medium">Кровавый исполин</span>
