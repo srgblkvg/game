@@ -582,3 +582,8 @@ h1, h2, h3 {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+
+@keyframes dungeonAttack {
+    from { width: 0%; }
+    to { width: 100%; }
+}

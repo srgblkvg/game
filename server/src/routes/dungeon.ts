@@ -307,7 +307,7 @@ router.post('/dungeon/start', async (req, res) => {
 
     // Логи для анализа баланса
     db.run(`INSERT INTO dungeon_logs (userId, floor, playerHp, playerMaxHp, playerStr, playerAgi, playerDef, playerMag, enemies, startedAt)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [userId, startFloor, playerHp, playerMaxHp, stats.s, stats.a, stats.d, stats.m,
          JSON.stringify(enemies.map(e => ({ name: e.name, hp: e.maxHp, dmg: e.dmg, interval: e._attackInterval }))),
          Math.floor(Date.now() / 1000)]
