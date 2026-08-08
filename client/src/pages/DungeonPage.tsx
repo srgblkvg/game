@@ -438,7 +438,12 @@ export default function DungeonPage() {
             {dead && (
                 <Card>
                     <h3 className="font-bold text-lg mb-2 text-center text-[var(--color-accent-danger)]">💀 Вы погибли</h3>
-                    <p className="text-sm text-center mb-3">Награда потеряна. Попробуйте снова через 6 часов.</p>
+                    <p className="text-sm text-center mb-1">Награда потеряна.</p>
+                    {status?.cooldownRemaining > 0 && (
+                        <p className="text-sm text-center mb-2 text-[var(--color-text-muted)]">
+                            Кулдаун: {Math.floor(status.cooldownRemaining / 3600)}ч {Math.floor((status.cooldownRemaining % 3600) / 60)}м
+                        </p>
+                    )}
                     <Button variant="secondary" size="md" fullWidth onClick={() => { setDead(false); setInCombat(false); stopPolling(); loadStatus(); }}>Понятно</Button>
                 </Card>
             )}

@@ -786,7 +786,15 @@ router.post('/dungeon/upgrade-skill', async (req, res) => {
 // ═══════ ТИК БОЯ ═══════
 
 function tickCombat(run: DungeonRun) {
-    if (run.playerHp <= 0) return;
+    if (run.playerHp <= 0) {
+        run.playerHp = 0;
+        run.cleared = false;
+        if (run.tickTimer) clearInterval(run.tickTimer);
+        activeRuns.delete(run.userId);
+        // Сохраняем смерть в БД — кулдаун 6 часов
+        db.run('UPDATE dungeon_runs SET currentFloor = ? WHERE userId = ?', [run.currentFloor, run.userId]).catch(() => {});
+        return;
+    }
     const now = Date.now() / 1000;
     const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.equippedWeaponStr);
 
