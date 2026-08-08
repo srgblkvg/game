@@ -665,7 +665,7 @@ router.get('/auction/price-history', async (req, res) => {
             MAX(price) as max_price
         FROM auction_history
         WHERE itemName = ?
-          AND itemData::jsonb->>'slot' = ?
+          AND COALESCE(itemData::jsonb->>'slot', '') = ?
           AND COALESCE((itemData::jsonb->>'rarity_id')::int, 0) = ?
           AND createdAt::timestamp > NOW() - INTERVAL '30 days'
         GROUP BY DATE(createdAt::timestamp)
