@@ -15,6 +15,7 @@ import { inputClass } from '../utils/formStyles';
 import { formatMoney } from '../utils/money';
 import { fmtSafeDate } from '../utils/date';
 import { getItemImage } from '../utils/itemUtils';
+import { showNoMoney } from '../components/NoMoneyModal';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -426,13 +427,23 @@ export default function AuctionPage() {
             setMessage(''); setSellItemId(''); setStartPrice(''); setBuyoutPrice(''); setSellCount(1);
             (document.activeElement as HTMLElement)?.blur();
             load(1);
-        } catch (e: any) { setError(e.message); }
+        } catch (e: any) {
+            const msg = e.message || '';
+            if (msg.includes('Недостаточно') || msg.includes('Максимум')) {
+                showNoMoney(msg);
+            } else {
+                setError(msg);
+            }
+        }
     };
     const handleBid = async (lotId: number, amount: string, minBid: number) => {
         const amt = parseInt(amount);
         if (!amt || amt < minBid) { setError(`Мин. ставка: ${formatMoney(minBid)}`); return; }
         try { await api('/auction/bid', { lotId, amount: amt }); setMessage('Ставка сделана!'); setBidAmount(prev => { const n = { ...prev }; delete n[lotId]; return n; }); (document.activeElement as HTMLElement)?.blur(); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
-        catch (e: any) { setError(e.message); }
+        catch (e: any) {
+            const msg = e.message || '';
+            if (msg.includes('Недостаточно')) showNoMoney(msg); else setError(msg);
+        }
     };
     const handleBuyout = async (lotId: number) => {
         try {
@@ -441,7 +452,10 @@ export default function AuctionPage() {
             if (lot) showAcquire(lot.itemData, lot.itemData.count || 1, 'Выкуплено');
             (document.activeElement as HTMLElement)?.blur();
             setMessage(''); load(page); const fresh = await fetchCharacter(); setCharacter(fresh);
-        } catch (e: any) { setError(e.message); }
+        } catch (e: any) {
+            const msg = e.message || '';
+            if (msg.includes('Недостаточно')) showNoMoney(msg); else setError(msg);
+        }
     };
     const handleBuyPartial = async (lotId: number, quantity: number) => {
         try {
@@ -449,7 +463,10 @@ export default function AuctionPage() {
             const lot = lots.find(l => l.id === lotId);
             if (lot) showAcquire(lot.itemData, quantity, 'Куплено');
             setMessage(''); load(page); const fresh = await fetchCharacter(); setCharacter(fresh);
-        } catch (e: any) { setError(e.message); }
+        } catch (e: any) {
+            const msg = e.message || '';
+            if (msg.includes('Недостаточно')) showNoMoney(msg); else setError(msg);
+        }
     };
     const [confirmPopup, setConfirmPopup] = useState<any>(null);
     const handleCancel = async (lotId: number) => {
