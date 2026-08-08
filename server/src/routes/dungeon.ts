@@ -757,9 +757,10 @@ function tickCombat(run: DungeonRun) {
         run.autoTimer -= 1 / attackSpeed;
         const target = run.enemies[0]; // первый = таргет
         if (target && target.hp > 0) {
-            const { damage: dmg } = calcPlayerDamage(run);
+            const { damage: dmg, isCrit } = calcPlayerDamage(run);
             target.hp -= dmg;
             run.rage = Math.min(100, run.rage + 5 + (run.buffs['battle_cry'] ? 2 : 0));
+            run.log.push(isCrit ? `💥 Крит ${dmg} по ${target.name}` : `⚔️ ${dmg} по ${target.name}`);
         }
     }
 
@@ -781,6 +782,7 @@ function tickCombat(run: DungeonRun) {
             const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.01)));
             run.playerHp -= reduced;
             run.rage = Math.min(100, run.rage + 3); // ярость от получения урона
+            run.log.push(`👊 ${enemy.name} бьёт на ${reduced}`);
         }
     }
 
