@@ -253,9 +253,7 @@ export default function DungeonPage() {
             });
             if (res.ok) {
                 const data = await res.json();
-                if (data.character) setCharacter?.(data.character);
-                // Обновляем страницу для применения новых статов
-                window.location.reload();
+                if (data.character) setCharacter(data.character);
             }
         } catch { /* */ }
     };
