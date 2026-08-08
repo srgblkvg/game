@@ -269,7 +269,7 @@ export default function DungeonPage() {
                         : 'opacity-50'}`}>
                         <div className="flex justify-between items-center">
                             <span className="text-sm font-bold">
-                                {cp === 1 ? '🏁 Этаж 1 (начало)' : `⭐ Этаж ${cp} (после босса ${cp - 1})`}
+                                {cp === 1 ? '🏁 Этаж 1' : `⭐ Этаж ${cp}`}
                             </span>
                             <Button variant="danger" size="md"
                                 onClick={() => handleStart(cp)}
