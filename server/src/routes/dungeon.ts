@@ -266,12 +266,16 @@ router.post('/dungeon/start', async (req, res) => {
     const weapon = equip.weapon1;
     const weaponRarity = weapon?.rarity_id ?? 0;
 
+    // Получаем реальные статы персонажа
+    const stats = await buildPlayerStats(user, 'pve');
+    const playerMaxHp = stats.hp;
+    const playerHp = stats.hp; // всегда с полным HP в бой
+
     // Чекпоинт
     let checkpointRow = await db.one('SELECT checkpointFloor FROM dungeon_runs WHERE userId = ?', [userId]).catch(() => null) as any;
     const checkpoint = checkpointRow?.checkpointfloor || 0;
     const startFloor = req.body.startFloor && req.body.startFloor <= checkpoint ? req.body.startFloor : Math.max(1, checkpoint);
 
-    const playerMaxHp = 50 + user.level * 12 + (user.based || 5) * 5;
     const skills = await getAvailableSkills(userId, equippedSkillIds || []);
 
     const enemies = generateFloorEnemies(startFloor);
@@ -279,8 +283,8 @@ router.post('/dungeon/start', async (req, res) => {
     const run: DungeonRun = {
         userId, currentFloor: startFloor, checkpointFloor: checkpoint,
         playerHp: playerMaxHp, playerMaxHp,
-        playerStr: user.bases || 5, playerAgi: user.basea || 5,
-        playerDef: user.based || 5, playerMag: user.basem || 5,
+        playerStr: stats.s, playerAgi: stats.a,
+        playerDef: stats.d, playerMag: stats.m,
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         enemies, rage: 0, autoTimer: 0, skills,
@@ -323,12 +327,19 @@ router.get('/dungeon/state', async (req, res) => {
     const run = activeRuns.get(userId);
     if (!run) return res.json({ active: false });
 
+    const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.playerStr);
+    const playerAttackProgress = Math.min(1, run.autoTimer / (1 / attackSpeed));
+
     res.json({
         active: true,
         currentFloor: run.currentFloor,
         playerHp: run.playerHp,
         playerMaxHp: run.playerMaxHp,
-        enemies: run.enemies.map(e => ({ id: e.id, name: e.name, hp: e.hp, maxHp: e.maxHp, isBoss: e.isBoss })),
+        enemies: run.enemies.map(e => ({
+            id: e.id, name: e.name, hp: e.hp, maxHp: e.maxHp, isBoss: e.isBoss,
+            attackProgress: Math.min(1, ((e._lastAttack || 0) / 2.5)),
+        })),
+        playerAttackProgress,
         rage: run.rage,
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
         skillCooldowns: run.skillCooldowns,
@@ -588,6 +599,8 @@ router.post('/dungeon/continue', async (req, res) => {
     if (!equip || Object.keys(equip).length === 0) equip = parseEq(user.equipment);
     const weaponRarity = equip.weapon1?.rarity_id ?? 0;
 
+    const stats = await buildPlayerStats(user, 'pve');
+
     const skills = await getAvailableSkills(userId, equippedSkillIds || []);
     const floor = saved.currentfloor;
     const enemies = generateFloorEnemies(floor);
@@ -595,8 +608,8 @@ router.post('/dungeon/continue', async (req, res) => {
     const run: DungeonRun = {
         userId, currentFloor: floor, checkpointFloor: saved.checkpointfloor,
         playerHp: saved.playerhp, playerMaxHp: saved.playermaxhp,
-        playerStr: user.bases || 5, playerAgi: user.basea || 5,
-        playerDef: user.based || 5, playerMag: user.basem || 5,
+        playerStr: stats.s, playerAgi: stats.a,
+        playerDef: stats.d, playerMag: stats.m,
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         enemies, rage: 0, autoTimer: 0, skills,
@@ -716,6 +729,14 @@ function tickCombat(run: DungeonRun) {
     if (run.playerHp <= 0) return;
     const now = Date.now() / 1000;
     const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.playerStr);
+
+    // Пассивный спад ярости (вне боя ярость уходит быстрее)
+    const enemiesAlive = run.enemies.some(e => e.hp > 0);
+    if (!enemiesAlive) {
+        run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 5); // 5/сек вне боя
+    } else {
+        run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 0.5); // 0.5/сек в бою
+    }
 
     // Автоатака игрока
     run.autoTimer += TICK_MS / 1000;

@@ -10,6 +10,7 @@ import { toCharCardData } from '../utils/character';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
+    attackProgress: number;
 }
 
 interface SkillInfo {
@@ -37,6 +38,7 @@ export default function DungeonPage() {
     const [buffs, setBuffs] = useState<any[]>([]);
     const [cooldowns, setCooldowns] = useState<Record<number, number>>({});
     const [combatLog, setCombatLog] = useState<string[]>([]);
+    const [playerAttackProgress, setPlayerAttackProgress] = useState(0);
     const [selectedSkills, setSelectedSkills] = useState<number[]>([1, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
@@ -87,6 +89,7 @@ export default function DungeonPage() {
                 setRage(data.rage);
                 setBuffs(data.buffs || []);
                 setCooldowns(data.skillCooldowns || {});
+                setPlayerAttackProgress(data.playerAttackProgress || 0);
                 if (data.cleared) { setCleared(true); stopPolling(); }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
@@ -426,6 +429,9 @@ export default function DungeonPage() {
                         <div className="h-3 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
                             <div className="h-full rounded-full transition-all" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
                         </div>
+                        <div className="h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
+                            <div className="h-full bg-[var(--color-accent-info)] rounded-full transition-all" style={{ width: `${playerAttackProgress * 100}%` }} />
+                        </div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-[var(--color-text-muted)]">Ярость</span>
                             <div className="flex-1 h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
@@ -458,9 +464,12 @@ export default function DungeonPage() {
                                         </span>
                                         <span>{e.hp}/{e.maxHp}</span>
                                     </div>
-                                    <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                    <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-1">
                                         <div className="h-full rounded-full transition-all"
                                             style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
+                                    </div>
+                                    <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                                        <div className="h-full bg-[var(--color-accent-warning)] rounded-full transition-all" style={{ width: `${(e.attackProgress || 0) * 100}%` }} />
                                     </div>
                                 </div>
                             );
