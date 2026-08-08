@@ -577,7 +577,18 @@ export default function AuctionPage() {
                         <div className="mt-2 flex items-center gap-2 p-2 rounded bg-[var(--color-bg-primary)] cursor-default"
                             onMouseEnter={e => showTooltip(e, selectedItem)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                             onTouchStart={e => handleTouchStart(e, selectedItem)} onTouchEnd={handleTouchEnd} onContextMenu={e => e.preventDefault()}>
-                            <img src={getItemImage(selectedItem) || '/items/default.webp'} alt={selectedItem.name} className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                            <div className="relative shrink-0">
+                                <img src={getItemImage(selectedItem) || '/items/default.webp'} alt={selectedItem.name} className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                {(selectedItem.upgradeLevel ?? 0) > 0 && (
+                                    <span style={{
+                                        position: 'absolute', top: -4, right: -4,
+                                        background: 'var(--color-text-accent)', color: '#000',
+                                        borderRadius: '50%', width: '16px', height: '16px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '9px', fontWeight: 'bold', lineHeight: 1,
+                                    }}>+{selectedItem.upgradeLevel}</span>
+                                )}
+                            </div>
                             <span className="text-xs text-[var(--color-text-primary)]">{selectedItem.name}</span>
                             <span className="text-xs text-[var(--color-text-muted)]">{selectedItem.rarity_display}</span>
                         </div>
@@ -674,8 +685,19 @@ export default function AuctionPage() {
                                         onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                                         className="rounded-lg p-2 border border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer hover:border-[var(--color-accent-info)] transition-colors">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <img src={getItemImage(item) || '/items/default.webp'} alt={item.name}
-                                                className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                            <div className="relative shrink-0">
+                                                <img src={getItemImage(item) || '/items/default.webp'} alt={item.name}
+                                                    className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                                {(item.upgradeLevel ?? 0) > 0 && (
+                                                    <span style={{
+                                                        position: 'absolute', top: -4, right: -4,
+                                                        background: 'var(--color-text-accent)', color: '#000',
+                                                        borderRadius: '50%', width: '16px', height: '16px',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '9px', fontWeight: 'bold', lineHeight: 1,
+                                                    }}>+{item.upgradeLevel}</span>
+                                                )}
+                                            </div>
                                             <div className="min-w-0 flex-1">
                                                 <div className="text-xs font-bold truncate">{item.name}{(item.upgradeLevel ?? 0) > 0 && <span className="text-[var(--color-text-accent)]"> +{item.upgradeLevel}</span>}</div>
                                                 <div className="text-[0.6rem] text-[var(--color-text-muted)]">{item.rarity_display} · {g.count === 1 ? '1 лот' : `×${g.count}`}</div>
