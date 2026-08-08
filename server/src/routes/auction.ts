@@ -64,6 +64,7 @@ router.get('/auction/similar', async (req, res) => {
     const name = req.query.name as string;
     const slot = req.query.slot as string;
     const rarity = parseInt(req.query.rarity as string) || 0;
+    const upgLevel = parseInt(req.query.upgradeLevel as string) || 0;
     const sellCount = parseInt(req.query.sellCount as string) || 1;
     if (!name) return res.json({ count: 0 });
 
@@ -76,7 +77,7 @@ router.get('/auction/similar', async (req, res) => {
     const similar = lots.filter(l => {
         try {
             const d = JSON.parse(l.itemData);
-            return d.name === name && (d.slot || '') === (slot || '') && (d.rarity_id ?? 0) === rarity;
+            return d.name === name && (d.slot || '') === (slot || '') && (d.rarity_id ?? 0) === rarity && (d.upgradeLevel ?? 0) === upgLevel;
         } catch { return false; }
     });
 
@@ -201,7 +202,7 @@ router.get('/auction', async (req, res) => {
     // Группировка ДО group-фильтра
     const groupsMap = new Map<string, { item: any; count: number; minBid: number; minBuyout: number | null; isStack: boolean }>();
     for (const lot of filtered) {
-        const key = `${lot.itemData?.name || ''}|${lot.itemData?.slot || ''}|${lot.itemData?.rarity_id ?? ''}`;
+        const key = `${lot.itemData?.name || ''}|${lot.itemData?.slot || ''}|${lot.itemData?.rarity_id ?? ''}|${lot.itemData?.upgradeLevel ?? 0}`;
         const itemData = lot.itemData || {};
         const isStack = (itemData.type === 'craft_item' || itemData.type === 'material' || itemData.type === 'upgrade') && (itemData.count || 1) > 1;
         const stackSize = isStack ? (itemData.count || 1) : 1;
@@ -235,7 +236,7 @@ router.get('/auction', async (req, res) => {
     // Group-фильтр ПОСЛЕ группировки
     if (groupFilter) {
       filtered = filtered.filter((l: any) => {
-        const key = `${l.itemData?.name || ''}|${l.itemData?.slot || ''}|${l.itemData?.rarity_id ?? ''}`;
+        const key = `${l.itemData?.name || ''}|${l.itemData?.slot || ''}|${l.itemData?.rarity_id ?? ''}|${l.itemData?.upgradeLevel ?? 0}`;
         return key === groupFilter;
       });
     }
@@ -656,6 +657,7 @@ router.get('/auction/price-history', async (req, res) => {
     const name = req.query.name as string;
     const slot = req.query.slot as string;
     const rarity = parseInt(req.query.rarity as string) || 0;
+    const upgLevel = parseInt(req.query.upgradeLevel as string) || 0;
     if (!name) return res.json({ points: [] });
 
     const rows = await db.query(`
@@ -669,10 +671,11 @@ router.get('/auction/price-history', async (req, res) => {
         WHERE itemName = ?
           AND COALESCE(itemData::jsonb->>'slot', '') = ?
           AND COALESCE((itemData::jsonb->>'rarity_id')::int, 0) = ?
+          AND COALESCE((itemData::jsonb->>'upgradeLevel')::int, 0) = ?
           AND createdAt::timestamp > NOW() - INTERVAL '30 days'
         GROUP BY DATE(createdAt::timestamp)
         ORDER BY day ASC
-    `, [name, slot, rarity]) as any[];
+    `, [name, slot, rarity, upgLevel]) as any[];
 
     res.json({ points: rows });
 });

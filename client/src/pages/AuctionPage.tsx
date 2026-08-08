@@ -124,7 +124,7 @@ function PriceChart({ item }: { item: any }) {
     const [points, setPoints] = useState<any[] | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const itemKey = `${item.name}|${item.slot || ''}|${item.rarity_id ?? 0}`;
+    const itemKey = `${item.name}|${item.slot || ''}|${item.rarity_id ?? 0}|${item.upgradeLevel ?? 0}`;
 
     // Сброс при смене предмета
     useEffect(() => {
@@ -142,6 +142,7 @@ function PriceChart({ item }: { item: any }) {
                 name: item.name || '',
                 slot: item.slot || '',
                 rarity: String(item.rarity_id ?? 0),
+                upgradeLevel: String(item.upgradeLevel ?? 0),
             });
             const res = await fetch(`/api/auction/price-history?${qs}`, { headers: getHeaders() });
             const data = await res.json();
@@ -403,7 +404,7 @@ export default function AuctionPage() {
             setStartPrice(String(floor));
             setBuyoutPrice('');
             // Запросить статистику похожих лотов
-            const qs = `name=${encodeURIComponent(item.name || '')}&slot=${encodeURIComponent(item.slot || '')}&rarity=${item.rarity_id ?? 0}&sellCount=${isMaterial ? (item.count || 1) : 1}`;
+            const qs = `name=${encodeURIComponent(item.name || '')}&slot=${encodeURIComponent(item.slot || '')}&rarity=${item.rarity_id ?? 0}&upgradeLevel=${item.upgradeLevel ?? 0}&sellCount=${isMaterial ? (item.count || 1) : 1}`;
             fetch(`/api/auction/similar?${qs}`, { headers: getHeaders() })
                 .then(r => r.json()).then(setSimilarStats).catch(() => setSimilarStats(null));
         }
@@ -669,14 +670,14 @@ export default function AuctionPage() {
                             {groups.map((g: any, i: number) => {
                                 const item = g.item;
                                 return (
-                                    <div key={i} onClick={() => { const key = `${item.name || ''}|${item.slot || ''}|${item.rarity_id ?? ''}`; setGroupFilter(key); setViewMode('list'); setPage(1); load(1, key); }}
+                                    <div key={i} onClick={() => { const key = `${item.name || ''}|${item.slot || ''}|${item.rarity_id ?? ''}|${item.upgradeLevel ?? 0}`; setGroupFilter(key); setViewMode('list'); setPage(1); load(1, key); }}
                                         onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                                         className="rounded-lg p-2 border border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer hover:border-[var(--color-accent-info)] transition-colors">
                                         <div className="flex items-center gap-2 mb-1">
                                             <img src={getItemImage(item) || '/items/default.webp'} alt={item.name}
                                                 className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
                                             <div className="min-w-0 flex-1">
-                                                <div className="text-xs font-bold truncate">{item.name}</div>
+                                                <div className="text-xs font-bold truncate">{item.name}{(item.upgradeLevel ?? 0) > 0 && <span className="text-[var(--color-text-accent)]"> +{item.upgradeLevel}</span>}</div>
                                                 <div className="text-[0.6rem] text-[var(--color-text-muted)]">{item.rarity_display} · {g.count === 1 ? '1 лот' : `×${g.count}`}</div>
                                             </div>
                                         </div>
