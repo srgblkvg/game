@@ -47,6 +47,7 @@ interface EnemyData {
     id: number; name: string; hp: number; maxHp: number; dmg: number;
     isBoss: boolean; stunTimer?: number; debuffs?: Record<string, any>;
     _lastAttack?: number; image?: string; _attackInterval?: number;
+    _lastAttackTime?: number;
 }
 
 interface Skill {
@@ -87,7 +88,7 @@ interface DungeonRun {
  equippedWeaponRarity: number;
  equippedWeaponStr: number;
  enemies: EnemyData[];
-    rage: number; autoTimer: number;
+    rage: number; autoTimer: number; lastPlayerAttackAt: number;
     skills: SkillWithLevel[];
     buffs: Record<string, { endsAt: number; value: number }>;
     skillCooldowns: Record<number, number>;
@@ -138,8 +139,8 @@ function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyDa
     const scale = 1 + floor * 0.3;
     const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 3 : 1));
     const dmg = Math.floor((mob.atk || 3) * scale);
-    const interval = isBoss ? 0.7 + Math.random() * 1.3 : 0.7 + Math.random() * 4.3; // 0.7-2с босс, 0.7-5с обычный
-    return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: interval };
+    const interval = isBoss ? 0.7 + Math.random() * 1.3 : 0.7 + Math.random() * 4.3;
+    return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: interval, _lastAttackTime: Math.floor(Date.now() / 1000) };
 }
 
 async function generateFloorEnemies(floor: number): Promise<EnemyData[]> {
@@ -289,6 +290,7 @@ router.post('/dungeon/start', async (req, res) => {
 
     const enemies = await generateFloorEnemies(startFloor);
 
+    const now = Date.now() / 1000;
     const run: DungeonRun = {
         userId, currentFloor: startFloor, checkpointFloor: checkpoint,
         playerHp: playerMaxHp, playerMaxHp,
@@ -297,7 +299,7 @@ router.post('/dungeon/start', async (req, res) => {
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         equippedWeaponStr: weapon?.bonuses?.s || 0,
-        enemies, rage: 0, autoTimer: 0, skills,
+        enemies, rage: 0, autoTimer: 0, lastPlayerAttackAt: now, skills,
         buffs: {}, skillCooldowns: {}, log: [],
         startedAt: Math.floor(Date.now() / 1000),
         dailyRuns: dailyRuns + 1, dailyRunDate: today,
@@ -348,11 +350,11 @@ router.get('/dungeon/state', async (req, res) => {
         enemies: run.enemies.map(e => ({
             id: e.id, name: e.name, hp: e.hp, maxHp: e.maxHp, isBoss: e.isBoss,
             image: e.image || '',
-            lastAttackAt: run.startedAt + (e._lastAttack || 0),
+            lastAttackAt: e._lastAttackTime || run.startedAt,
             attackInterval: (e._attackInterval || 2.5),
         })),
         playerAttackInterval: (1 / attackSpeed),
-        lastPlayerAttackAt: run.startedAt + run.autoTimer,
+        lastPlayerAttackAt: run.lastPlayerAttackAt,
         attackSpeed: attackSpeed.toFixed(1),
         rage: run.rage,
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
@@ -619,6 +621,7 @@ router.post('/dungeon/continue', async (req, res) => {
     const floor = saved.currentfloor;
     const enemies = await generateFloorEnemies(floor);
 
+    const now = Date.now() / 1000;
     const run: DungeonRun = {
         userId, currentFloor: floor, checkpointFloor: saved.checkpointfloor,
         playerHp: saved.playerhp, playerMaxHp: saved.playermaxhp,
@@ -627,7 +630,7 @@ router.post('/dungeon/continue', async (req, res) => {
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         equippedWeaponStr: equip.weapon1?.bonuses?.s || 0,
-        enemies, rage: 0, autoTimer: 0, skills,
+        enemies, rage: 0, autoTimer: 0, lastPlayerAttackAt: now, skills,
         buffs: {}, skillCooldowns: {}, log: [],
         startedAt: Math.floor(Date.now() / 1000),
         dailyRuns: 0, dailyRunDate: '',
@@ -763,6 +766,7 @@ function tickCombat(run: DungeonRun) {
     const attackInterval = 1 / attackSpeed;
     if (run.autoTimer >= attackInterval) {
         run.autoTimer -= attackInterval;
+        run.lastPlayerAttackAt = Date.now() / 1000;
         const target = run.enemies[0];
         if (target && target.hp > 0) {
             const { damage: dmg, isCrit } = calcPlayerDamage(run);
@@ -784,6 +788,7 @@ function tickCombat(run: DungeonRun) {
         enemy['_lastAttack'] += TICK_MS / 1000;
         if (enemy['_lastAttack'] >= interval) {
             enemy['_lastAttack'] -= interval;
+            enemy._lastAttackTime = Date.now() / 1000;
             const dmg = calcEnemyDamage(enemy, run.currentFloor);
             // Защита снижает урон (1% за очко def)
             const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.01)));
