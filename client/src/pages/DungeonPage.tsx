@@ -273,7 +273,7 @@ export default function DungeonPage() {
 
         return (
         <div className="md:flex md:gap-4 md:items-start space-y-4 md:space-y-0">
-            <div className="md:w-[220px] md:shrink-0">
+            <div className="md:w-[220px] md:shrink-0 mx-auto md:mx-0">
                 {character && (
                     <CharacterCard
                         char={toCharCardData(character)}
@@ -284,7 +284,7 @@ export default function DungeonPage() {
                     />
                 )}
             </div>
-            <Card className="max-w-lg flex-1 min-w-0">
+            <Card className="max-w-lg min-w-0 ml-auto">
             {/* Экипированные умения */}
             <h3 className="text-sm font-bold mb-3">🔧 Экипировано умений: {selectedSkills.length} из 4</h3>
             <div className="grid grid-cols-4 gap-2 mb-4">
