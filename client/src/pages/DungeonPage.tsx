@@ -15,7 +15,7 @@ interface EnemyView {
 
 interface SkillInfo {
     id: number; name: string; nameRu: string; rageCost: number; rageGain: number; cooldown: number;
-    desc: string; descScale: string; level: number;
+    desc: string; descScale: string; level?: number; icon: string;
 }
 
 function stringToColor(str: string): string {
@@ -57,10 +57,20 @@ export default function DungeonPage() {
     const [looting, setLooting] = useState(false);
     const [lootProgress, setLootProgress] = useState(0);
 
+    const [skillList, setSkillList] = useState<SkillInfo[]>([]);
+
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const logRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => { loadStatus(); loadPages(); }, []);
+    useEffect(() => { loadStatus(); loadPages(); loadSkills(); }, []);
+
+    const loadSkills = async () => {
+        try {
+            const res = await fetch('/api/dungeon/skills', { headers: getHeaders() });
+            const data = await res.json();
+            setSkillList(data.skills || []);
+        } catch { /* */ }
+    };
 
     const loadStatus = async () => {
         try {
@@ -308,10 +318,6 @@ export default function DungeonPage() {
         };
         const activeSlot = c?.activeEquipSlot || 1;
 
-        const SKILL_ICONS: Record<number, string> = {
-            1: '🛡️', 2: '⚔️', 3: '📢', 4: '🩸', 5: '💀', 6: '😨', 7: '🏃', 8: '🌀',
-        };
-
         return (
         <div className="md:flex md:gap-8 md:items-start space-y-4 md:space-y-0">
             <div className="md:w-[220px] md:shrink-0 flex justify-center md:block">
@@ -332,14 +338,14 @@ export default function DungeonPage() {
             <div className="grid grid-cols-4 gap-2 mb-4">
                 {[0, 1, 2, 3].map(i => {
                     const sid = selectedSkills[i];
-                    const skill = sid ? SKILLS_ALL.find(s => s.id === sid) : null;
+                    const skill = sid ? skillList.find(s => s.id === sid) : null;
                     return (
                         <div key={i} className={`p-2 rounded-lg border text-center min-h-[60px] flex flex-col items-center justify-center ${skill
                             ? 'border-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10'
                             : 'border-dashed border-[var(--color-border-light)] bg-[var(--color-bg-input)]'}`}>
                             {skill ? (
                                 <>
-                                    <span className="text-lg">{SKILL_ICONS[skill.id] || '❓'}</span>
+                                    <span className="text-lg">{skill.icon || '❓'}</span>
                                     <span className="text-[0.6rem] font-bold mt-1">{skill.nameRu}</span>
                                 </>
                             ) : (
@@ -353,7 +359,7 @@ export default function DungeonPage() {
             {/* Список умений */}
             <h3 className="text-sm font-bold mb-3">📜 Все умения</h3>
             <div className="space-y-2">
-                {SKILLS_ALL.map(s => {
+                {skillList.map(s => {
                     const level = getSkillLevel(s.id);
                     const pagesCount = getPageCount(s.id);
                     const cost = getUpgradeCost(s.id);
@@ -364,7 +370,7 @@ export default function DungeonPage() {
                         <div key={s.id} className={`p-3 rounded-lg border ${selected ? 'border-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)]'}`}>
                             <div className="flex justify-between items-start mb-1">
                                 <div>
-                                    <span className="text-lg mr-1">{SKILL_ICONS[s.id] || '❓'}</span>
+                                    <span className="text-lg mr-1">{s.icon || '❓'}</span>
                                     <span className="text-sm font-bold">{s.nameRu}</span>
                                     <span className="text-xs text-[var(--color-text-accent)] ml-1">уровень {level}</span>
                                     {!canSelect && <span className="text-xs text-[var(--color-text-muted)] ml-1">(нужен уровень 1)</span>}
@@ -494,7 +500,7 @@ export default function DungeonPage() {
                             <div className="flex gap-1 flex-wrap">
                                 {buffs.map(b => (
                                     <span key={b.id} className="text-[0.6rem] px-1.5 py-0.5 rounded bg-[var(--color-accent-info)]/20 text-[var(--color-accent-info)]">
-                                        {SKILLS_ALL.find(s => s.name === b.id)?.nameRu || b.id} {Math.ceil(b.endsAt - Date.now() / 1000)}с
+                                        {skillList.find(s => s.name === b.id)?.nameRu || b.id} {Math.ceil(b.endsAt - Date.now() / 1000)}с
                                     </span>
                                 ))}
                             </div>
@@ -541,7 +547,6 @@ export default function DungeonPage() {
                     {/* Умения — компактные иконки */}
                     <div className="grid grid-cols-4 gap-2">
                         {skills.map(s => {
-                            const SKILL_ICONS_CBT: Record<number, string> = { 1: '🛡️', 2: '⚔️', 3: '📢', 4: '🩸', 5: '💀', 6: '😨', 7: '🏃', 8: '🌀' };
                             const onCd = cooldowns[s.id] && cooldowns[s.id] > Date.now() / 1000;
                             const cdLeft = onCd ? Math.ceil(cooldowns[s.id] - Date.now() / 1000) : 0;
                             const canUse = !onCd && rage >= s.rageCost;
@@ -550,7 +555,7 @@ export default function DungeonPage() {
                                     className={`relative p-2 rounded-lg text-center transition-colors cursor-pointer ${canUse
                                         ? 'bg-[var(--color-accent-info)]/20 border border-[var(--color-accent-info)] hover:bg-[var(--color-accent-info)]/30'
                                         : 'bg-[var(--color-bg-input)] border border-[var(--color-border-light)] opacity-60'}`}>
-                                    <span className="text-xl">{SKILL_ICONS_CBT[s.id] || '❓'}</span>
+                                    <span className="text-xl">{s.icon || '❓'}</span>
                                     {onCd && <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white bg-black/40 rounded-lg">{cdLeft}</span>}
                                     <div className="text-[0.55rem] text-[var(--color-text-muted)] mt-0.5 truncate">{s.nameRu}</div>
                                 </button>
@@ -638,14 +643,3 @@ export default function DungeonPage() {
         </div>
     );
 }
-
-const SKILLS_ALL = [
-    { id: 1, name: 'shield_bash', nameRu: 'Удар щитом', rageCost: 5, rageGain: 0, cooldown: 6, desc: 'Оглушение', descScale: '+0.2с стана, +10% урона' },
-    { id: 2, name: 'sweep', nameRu: 'Размах', rageCost: 15, rageGain: 0, cooldown: 5, desc: 'AoE 3 цели', descScale: '+10% урона' },
-    { id: 3, name: 'battle_cry', nameRu: 'Боевой клич', rageCost: 20, rageGain: 0, cooldown: 20, desc: '+20% урона', descScale: '+5% урона, +1с' },
-    { id: 4, name: 'rend', nameRu: 'Раздирание', rageCost: 10, rageGain: 0, cooldown: 0, desc: 'Кровотечение 9с', descScale: '+5% урона за тик' },
-    { id: 5, name: 'execute', nameRu: 'Добивание', rageCost: 30, rageGain: 0, cooldown: 8, desc: '<30% HP', descScale: '+25% урона' },
-    { id: 6, name: 'demoralize', nameRu: 'Деморализация', rageCost: 10, rageGain: 0, cooldown: 25, desc: '-10% урона от врага', descScale: '-2% урона, +2с' },
-    { id: 7, name: 'charge', nameRu: 'Рывок', rageCost: 0, rageGain: 12, cooldown: 15, desc: 'Стан 1с', descScale: '+0.2с стана, +3 ярости' },
-    { id: 8, name: 'whirlwind', nameRu: 'Вихрь', rageCost: 25, rageGain: 0, cooldown: 10, desc: 'Все враги', descScale: '+10% урона' },
-];
