@@ -439,7 +439,7 @@ export default function DungeonPage() {
                 <Card>
                     <h3 className="font-bold text-lg mb-2 text-center text-[var(--color-accent-danger)]">💀 Вы погибли</h3>
                     <p className="text-sm text-center mb-3">Награда потеряна. Попробуйте снова через 6 часов.</p>
-                    <Button variant="secondary" size="md" fullWidth onClick={() => { setDead(false); loadStatus(); }}>Понятно</Button>
+                    <Button variant="secondary" size="md" fullWidth onClick={() => { setDead(false); setInCombat(false); stopPolling(); loadStatus(); }}>Понятно</Button>
                 </Card>
             )}
 
