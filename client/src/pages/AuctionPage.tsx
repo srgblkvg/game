@@ -124,6 +124,14 @@ function PriceChart({ item }: { item: any }) {
     const [points, setPoints] = useState<any[] | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const itemKey = `${item.name}|${item.slot || ''}|${item.rarity_id ?? 0}`;
+
+    // Сброс при смене предмета
+    useEffect(() => {
+        setPoints(null);
+        setLoading(false);
+        setError('');
+    }, [itemKey]);
 
     const fetchHistory = useCallback(async () => {
         if (points !== null) return;
