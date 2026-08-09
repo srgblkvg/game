@@ -23,8 +23,15 @@ export default function HomePage() {
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
 
-  useEffect(() => { if (!user) navigate('/login'); }, [user, navigate]);
+  useEffect(() => { if (user && !user.role) navigate('/login'); }, [user, navigate]);
   useEffect(() => { if (character?.activeJob) navigate('/jobs'); }, [character, navigate]);
+
+  // Туториал: навигация в крафт
+  useEffect(() => {
+    const handler = () => navigate('/craft');
+    window.addEventListener('navigate-craft', handler);
+    return () => window.removeEventListener('navigate-craft', handler);
+  }, [navigate]);
 
   useEffect(() => {
     if (!user) return;

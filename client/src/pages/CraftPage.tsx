@@ -849,7 +849,7 @@ export default function CraftPage() {
 
                     {/* Кнопки */}
                     <div className="flex flex-col gap-2 items-center mt-2">
-                        <Button variant={activeRecipe ? 'success' : 'secondary'} size="md" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate}>
+                        <Button variant={activeRecipe ? 'success' : 'secondary'} size="md" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate} data-tutorial="craft-create">
                             {crafting ? 'Создание...' : 'Создать'}
                         </Button>
                         <Button variant={upgradeInfo ? 'primary' : 'secondary'} size="md" fullWidth disabled={!upgradeInfo || crafting} onClick={handleUpgrade}

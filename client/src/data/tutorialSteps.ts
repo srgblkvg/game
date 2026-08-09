@@ -23,9 +23,22 @@ const tutorialSteps: TutorialStep[] = [
   {
     targetSelector: '#action-card-Ремесло',
     title: 'Крафт',
-    description: 'Создай предмет в Ремесле из добытых ресурсов (Площадь → Ремесло).',
+    description: 'Создай предмет в Ремесле. Сейчас откроется страница крафта — выбери рецепт.',
     tooltipPosition: 'top',
-    action: 'tutorial-tab-castle',
+    action: 'tutorial-tab-castle,navigate-craft',
+  },
+  {
+    targetSelector: '[data-tutorial="craft-recipe"]',
+    title: 'Выбери рецепт',
+    description: 'Нажми на любой рецепт предмета.',
+    tooltipPosition: 'right',
+    action: 'tutorial-expand-craft-recipe',
+  },
+  {
+    targetSelector: '[data-tutorial="craft-create"]',
+    title: 'Создать',
+    description: 'Нажми «Создать» чтобы скрафтить предмет.',
+    tooltipPosition: 'top',
   },
   {
     targetSelector: '#action-card-Арена',

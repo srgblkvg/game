@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ItemIcon from '../../components/ui/ItemIcon';
 import ItemTooltip from '../../components/ItemTooltip';
 
@@ -12,6 +12,17 @@ interface Props {
 
 export default function RecipeList({ groupedRecipes, openCategories, activeRecipe, onToggleCategory, onRecipeClick }: Props) {
   const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
+
+  // Туториал: раскрыть случайный Хлам-рецепт
+  useEffect(() => {
+    const handler = () => {
+      const cats = Object.keys(groupedRecipes);
+      const junkCat = cats.find(c => c.toLowerCase().includes('хлам')) || cats[0];
+      if (junkCat && !openCategories[junkCat]) onToggleCategory(junkCat);
+    };
+    window.addEventListener('tutorial-expand-craft-recipe', handler);
+    return () => window.removeEventListener('tutorial-expand-craft-recipe', handler);
+  }, [groupedRecipes, openCategories, onToggleCategory]);
 
   if (Object.keys(groupedRecipes).length === 0) return null;
 
@@ -43,6 +54,7 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
               {groupedRecipes[cat].map((recipe: any) => (
                 <div
                   key={recipe.id}
+                  data-tutorial="craft-recipe"
                   onClick={() => onRecipeClick(recipe)}
                   onMouseEnter={(e) => handleMouseEnter(e, recipe)}
                   onMouseMove={handleMouseMove}
