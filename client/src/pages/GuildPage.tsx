@@ -542,7 +542,7 @@ export default function GuildPage() {
                         <h4 className="font-medium mb-1 text-[var(--color-accent-info)]">🏚️ Гильдии (топ-5)</h4>
                         {ratings.guildTopList?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                <span>{i+1}. <span className="text-green-400 cursor-pointer hover:underline" onClick={() => navigate(`/guild/${r.name}`)}>{r.name}</span></span>
+                                <span>{i+1}. <span className="text-green-400 cursor-pointer hover:underline" onClick={() => navigate(`/guild/${r.id}`)}>{r.name}</span></span>
                                 <span className="text-[var(--color-text-muted)]">{formatNum(r.total)}</span>
                             </div>
                         ))}
@@ -565,7 +565,7 @@ export default function GuildPage() {
                         <h4 className="font-medium mb-1 text-red-400">💀 Убийств боссов (топ-5)</h4>
                         {ratings.topGuildKills?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                <span>{i+1}. <span className="text-green-400 cursor-pointer hover:underline" onClick={() => navigate(`/guild/${r.name}`)}>{r.name}</span></span>
+                                <span>{i+1}. <span className="text-green-400 cursor-pointer hover:underline" onClick={() => navigate(`/guild/${r.id}`)}>{r.name}</span></span>
                                 <span className="text-[var(--color-text-muted)]">{r.kills}</span>
                             </div>
                         ))}
