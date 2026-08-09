@@ -615,9 +615,6 @@ export default function DungeonPage() {
                                                 <span className="text-[0.55rem] text-[var(--color-accent-warning)]">Оглушение</span>
                                             </div>
                                             )}
-                                            {!isDead && e.stunned && (
-                                                <div className="text-[0.55rem] text-[var(--color-accent-warning)] mt-0.5">⚡ Оглушение</div>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
