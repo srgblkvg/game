@@ -106,6 +106,7 @@ interface DungeonRun {
     userId: number; currentFloor: number; checkpointFloor: number;
     playerHp: number; playerMaxHp: number; playerStr: number; playerAgi: number;
     playerDef: number; playerMag: number; playerLevel: number;
+    playerExtra: any; playerVamp: number;
  equippedWeaponRarity: number;
  equippedWeaponStr: number;
  enemies: EnemyData[];
@@ -135,10 +136,10 @@ function getAttackSpeed(rarity: number, weaponStrBonus: number): number {
     return Math.max(0.3, base / (1 + weaponStrBonus * 0.005));
 }
 
-function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean; dodged: boolean; blocked: boolean; counterDmg: number } {
-    const stats = { s: run.playerStr, a: run.playerAgi, d: run.playerDef, m: run.playerMag, hp: run.playerMaxHp, extra: {} as any, bonuses: {} as any } as any;
+function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean; dodged: boolean; blocked: boolean; counterDmg: number; vampHeal: number } {
+    const stats = { s: run.playerStr, a: run.playerAgi, d: run.playerDef, m: run.playerMag, hp: run.playerMaxHp, extra: (run.playerExtra || {}) as any, bonuses: {} as any, vampirism: run.playerVamp || 0 } as any;
     const target = run.enemies[run.targetIndex];
-    if (!target) return { damage: 0, isCrit: false, dodged: false, blocked: false, counterDmg: 0 };
+    if (!target) return { damage: 0, isCrit: false, dodged: false, blocked: false, counterDmg: 0, vampHeal: 0 };
     
     // Статы врага для формул
     const mobStats = { s: target.dmg, a: target.dmg, d: Math.floor(target.dmg * 0.5), m: Math.floor(target.dmg * 0.3), hp: target.maxHp, extra: {}, bonuses: {} } as any;
@@ -147,25 +148,50 @@ function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean; d
     const dodge = dodgeChance(mobStats, stats);
     if (Math.random() < dodge) {
         run.log.push(`↗ ${target.name} уклоняется`);
-        return { damage: 0, isCrit: false, dodged: true, blocked: false, counterDmg: 0 };
+        return { damage: 0, isCrit: false, dodged: true, blocked: false, counterDmg: 0, vampHeal: 0 };
     }
-    
-    // Проверка блока врага
-    const block = blockChance(mobStats);
-    const blocked = Math.random() < block;
-    const blockRed = blocked ? blockReduction(mobStats, stats) : 0;
     
     // Урон и крит
     const dmg = rollDamage(stats, run.playerLevel);
     const isCrit = Math.random() < critChance(stats);
-    const finalDmg = Math.floor(isCrit ? dmg * critMult(stats) : dmg);
-    const afterBlock = Math.max(1, Math.floor(finalDmg * (1 - blockRed)));
+    let finalDmg = Math.floor(isCrit ? dmg * critMult(stats) : dmg);
+    
+    // fullBlock врага
+    const fb = mobStats.extra?.fullBlock || 0;
+    const fullBlockChance = fb / (fb + 300);
+    if (Math.random() < fullBlockChance) {
+        run.log.push(`🛡 ${target.name} — полный блок!`);
+        return { damage: 0, isCrit: false, dodged: false, blocked: true, counterDmg: 0, vampHeal: 0 };
+    }
+    
+    // Блок врага
+    let blocked = false;
+    if (Math.random() < blockChance(mobStats)) {
+        let blockRed = blockReduction(mobStats, stats);
+        const blockPen = stats.blockPen || 0;
+        if (blockPen > 0) blockRed = Math.max(0, blockRed * (1 - blockPen / 100));
+        finalDmg = Math.max(1, Math.floor(finalDmg * (1 - blockRed)));
+        blocked = true;
+    }
     
     // Battle cry бонус
     const bcBonus = run.buffs['battle_cry'] ? (1 + run.buffs['battle_cry'].value / 100) : 1;
-    const totalDmg = Math.floor(afterBlock * bcBonus);
+    finalDmg = Math.floor(finalDmg * bcBonus);
     
-    return { damage: totalDmg, isCrit, dodged: false, blocked, counterDmg: 0 };
+    // Вампиризм
+    let vampHeal = 0;
+    const vamp = stats.vampirism || 0;
+    if (vamp > 0 && finalDmg > 0) {
+        vampHeal = Math.round(finalDmg * vamp / 100);
+    }
+    
+    // Execute: добивание при <10% HP
+    if (stats.extra?.execute && target.hp > 0 && target.hp < target.maxHp * 0.1) {
+        run.log.push(`💀 Добивание!`);
+        return { damage: target.hp, isCrit: false, dodged: false, blocked: false, counterDmg: 0, vampHeal };
+    }
+    
+    return { damage: finalDmg, isCrit, dodged: false, blocked, counterDmg: 0, vampHeal };
 }
 
 function calcEnemyDamage(enemy: EnemyData, playerStats: any, floor: number): { damage: number; dodged: boolean; blocked: boolean } {
@@ -177,19 +203,27 @@ function calcEnemyDamage(enemy: EnemyData, playerStats: any, floor: number): { d
         return { damage: 0, dodged: true, blocked: false };
     }
     
-    // Проверка блока игрока
-    const block = blockChance(playerStats);
-    const blocked = Math.random() < block;
-    const blockRed = blocked ? blockReduction(playerStats, stats) : 0;
-    
     // Урон врага
     const base = enemy.dmg + Math.floor(floor * 0.3);
     const debuffPct = enemy.debuffs?.['demoralize']?.value || 0;
     const debuff = 1 - debuffPct / 100;
-    const dmg = Math.floor((base + Math.random() * 2) * debuff);
-    const afterBlock = Math.max(1, Math.floor(dmg * (1 - blockRed)));
+    let dmg = Math.floor((base + Math.random() * 2) * debuff);
     
-    return { damage: afterBlock, dodged: false, blocked };
+    // fullBlock игрока
+    const fb = playerStats.extra?.fullBlock || 0;
+    const fullBlockChance = fb / (fb + 300);
+    if (Math.random() < fullBlockChance) {
+        return { damage: 0, dodged: false, blocked: true };
+    }
+    
+    // Блок игрока
+    if (Math.random() < blockChance(playerStats)) {
+        const blockRed = blockReduction(playerStats, stats);
+        dmg = Math.max(1, Math.floor(dmg * (1 - blockRed)));
+        return { damage: dmg, dodged: false, blocked: true };
+    }
+    
+    return { damage: dmg, dodged: false, blocked: false };
 }
 
 // Кеш мобов — загружается один раз
@@ -376,6 +410,7 @@ router.post('/dungeon/start', async (req, res) => {
         playerHp: playerMaxHp, playerMaxHp,
         playerStr: stats.s, playerAgi: stats.a,
         playerDef: stats.d, playerMag: stats.m,
+        playerExtra: (stats as any).extra || {}, playerVamp: (stats as any).vampirism || 0,
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         equippedWeaponStr: weapon?.bonuses?.s || 0,
@@ -737,6 +772,7 @@ router.post('/dungeon/continue', async (req, res) => {
         playerHp: saved.playerhp, playerMaxHp: saved.playermaxhp,
         playerStr: stats.s, playerAgi: stats.a,
         playerDef: stats.d, playerMag: stats.m,
+        playerExtra: (stats as any).extra || {}, playerVamp: (stats as any).vampirism || 0,
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         equippedWeaponStr: equip.weapon1?.bonuses?.s || 0,
@@ -932,12 +968,11 @@ function tickCombat(run: DungeonRun) {
         run.lastPlayerAttackAt = Date.now() / 1000;
         const target = getTarget(run);
         if (target && target.hp > 0) {
-            const { damage: dmg, isCrit, dodged, blocked } = calcPlayerDamage(run);
+            const { damage: dmg, isCrit, dodged, blocked, vampHeal } = calcPlayerDamage(run);
             target.hp -= dmg;
+            if (vampHeal > 0) { run.playerHp = Math.min(run.playerMaxHp, run.playerHp + vampHeal); run.log.push(`🩸 Вампиризм +${vampHeal} HP`); }
             if (!dodged) run.rage = Math.min(100, run.rage + 5 + (run.buffs['battle_cry'] ? 2 : 0));
-            if (blocked) run.log.push(isCrit ? `💥 Крит ${dmg} по ${target.name} (блок)` : `⚔️ ${dmg} по ${target.name} (блок)`);
-            else if (isCrit) run.log.push(`💥 Крит ${dmg} по ${target.name}`);
-            else if (!dodged) run.log.push(`⚔️ ${dmg} по ${target.name}`);
+            run.log.push(blocked ? (isCrit ? `💥 Крит ${dmg} по ${target.name} (блок)` : `⚔️ ${dmg} по ${target.name} (блок)`) : (isCrit ? `💥 Крит ${dmg} по ${target.name}` : `⚔️ ${dmg} по ${target.name}`));
         }
     }
 
