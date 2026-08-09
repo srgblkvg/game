@@ -188,7 +188,7 @@ export default function DungeonPage() {
         const maxFloor = status?.checkpointFloor || 0;
         const points: number[] = [1]; // этаж 1 всегда доступен
         for (let f = 6; f <= maxFloor; f += 5) points.push(f);
-        return points;
+        return points.reverse(); // высший этаж первым
     };
 
     const handleStart = async (startFloor: number) => {
