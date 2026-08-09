@@ -620,6 +620,25 @@ export default function DungeonPage() {
                         </div>
                     </Card>
 
+                    {/* Умения */}
+                    <div className="grid grid-cols-4 gap-2">
+                        {skills.map(s => {
+                            const onCd = cooldowns[s.id] && cooldowns[s.id] > Date.now() / 1000;
+                            const cdLeft = onCd ? Math.ceil(cooldowns[s.id] - Date.now() / 1000) : 0;
+                            const canUse = !onCd && rage >= s.rageCost;
+                            return (
+                                <button key={s.id} onClick={() => handleSkill(s.id)} disabled={!canUse}
+                                    className={`relative p-2 rounded-lg text-center transition-colors cursor-pointer ${canUse
+                                        ? 'bg-[var(--color-accent-info)]/20 border border-[var(--color-accent-info)] hover:bg-[var(--color-accent-info)]/30'
+                                        : 'bg-[var(--color-bg-input)] border border-[var(--color-border-light)] opacity-60'}`}>
+                                    <span className="text-xl">{s.icon || '❓'}</span>
+                                    {onCd && <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white bg-black/40 rounded-lg">{cdLeft}</span>}
+                                    <div className="text-[0.55rem] text-[var(--color-text-muted)] mt-0.5 truncate">{s.nameRu}</div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     {/* Враги */}
                     <div className="space-y-2">
                         {enemies.map((e, i) => {
@@ -675,25 +694,6 @@ export default function DungeonPage() {
                                         </div>
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Умения — компактные иконки */}
-                    <div className="grid grid-cols-4 gap-2">
-                        {skills.map(s => {
-                            const onCd = cooldowns[s.id] && cooldowns[s.id] > Date.now() / 1000;
-                            const cdLeft = onCd ? Math.ceil(cooldowns[s.id] - Date.now() / 1000) : 0;
-                            const canUse = !onCd && rage >= s.rageCost;
-                            return (
-                                <button key={s.id} onClick={() => handleSkill(s.id)} disabled={!canUse}
-                                    className={`relative p-2 rounded-lg text-center transition-colors cursor-pointer ${canUse
-                                        ? 'bg-[var(--color-accent-info)]/20 border border-[var(--color-accent-info)] hover:bg-[var(--color-accent-info)]/30'
-                                        : 'bg-[var(--color-bg-input)] border border-[var(--color-border-light)] opacity-60'}`}>
-                                    <span className="text-xl">{s.icon || '❓'}</span>
-                                    {onCd && <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white bg-black/40 rounded-lg">{cdLeft}</span>}
-                                    <div className="text-[0.55rem] text-[var(--color-text-muted)] mt-0.5 truncate">{s.nameRu}</div>
-                                </button>
                             );
                         })}
                     </div>
