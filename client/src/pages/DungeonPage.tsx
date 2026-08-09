@@ -700,6 +700,7 @@ export default function DungeonPage() {
                                 {totalLoot.items.map((it, i) => <p key={i} className="text-xs">🔮 {it}</p>)}
                                 {totalLoot.pages.map((p, i) => <p key={i} className="text-xs">📜 {p}</p>)}
                             </div>
+                            <p className="text-[0.6rem] text-[var(--color-accent-danger)] text-center mb-2">⚠ При смерти вся накопленная добыча будет потеряна</p>
                         </>
                     )}
 
