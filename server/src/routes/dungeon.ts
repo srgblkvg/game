@@ -450,6 +450,7 @@ router.get('/dungeon/state', async (req, res) => {
             lastAttackAt: e._lastAttackTime || run.startedAt,
             attackInterval: (e._attackInterval || 2.5),
             stunned: !!(e.stunTimer && e.stunTimer > 0),
+            stunLeft: (e.stunTimer && e.stunTimer > 0) ? e.stunTimer : 0,
         })),
         playerAttackInterval: (1 / attackSpeed),
         lastPlayerAttackAt: run.lastPlayerAttackAt,

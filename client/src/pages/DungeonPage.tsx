@@ -10,7 +10,7 @@ import { toCharCardData } from '../utils/character';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
-    image?: string; attackInterval?: number; stunned?: boolean; lastAttackAt?: number;
+    image?: string; attackInterval?: number; stunned?: boolean; lastAttackAt?: number; stunLeft?: number;
 }
 
 interface SkillInfo {
@@ -654,8 +654,9 @@ export default function DungeonPage() {
                                             )}
                                             {!isDead && e.stunned && (
                                             <div className="flex items-center gap-1 mt-1">
-                                                <div className="w-6 h-6 rounded-full bg-[var(--color-bg-input)] border border-[var(--color-border-light)] flex items-center justify-center text-xs shrink-0">
+                                                <div className="relative w-6 h-6 rounded-full bg-[var(--color-bg-input)] border border-[var(--color-border-light)] flex items-center justify-center text-xs shrink-0">
                                                     <span>⚡</span>
+                                                    <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{Math.ceil(e.stunLeft || 0)}</span>
                                                 </div>
                                                 <span className="text-[0.55rem] text-[var(--color-accent-warning)]">Оглушение</span>
                                             </div>
