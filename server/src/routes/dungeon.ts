@@ -1013,9 +1013,6 @@ function tickCombat(run: DungeonRun) {
 
     checkEnemyDeaths(run);
 
-    // Округляем ярость до 2 знаков (без потери спада)
-    run.rage = Math.round(run.rage * 100) / 100;
-
     // Смерть игрока
     if (run.playerHp <= 0) {
         run.playerHp = 0;
