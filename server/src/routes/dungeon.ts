@@ -811,7 +811,7 @@ router.post('/dungeon/flee', async (req, res) => {
 
     await db.run(
         `UPDATE dungeon_runs SET startedAt = $1, maxfloor = GREATEST(maxfloor, $2), maxreward = GREATEST(maxreward, $3) WHERE userId = $4`,
-        [Math.floor(Date.now() / 1000), run.checkpointFloor, loot.silver, userId]
+        [Math.floor(Date.now() / 1000), run.currentFloor, loot.silver, userId]
     );
     res.json({ success: true, loot });
 });
@@ -988,7 +988,7 @@ function tickCombat(run: DungeonRun) {
     if (run.playerHp <= 0) {
         run.playerHp = 0;
         if (run.tickTimer) clearInterval(run.tickTimer);
-        db.run('UPDATE dungeon_runs SET startedAt = $1, maxfloor = GREATEST(maxfloor, $2) WHERE userId = $3', [Math.floor(Date.now() / 1000), run.checkpointFloor, run.userId]);
+        db.run('UPDATE dungeon_runs SET startedAt = $1, maxfloor = GREATEST(maxfloor, $2) WHERE userId = $3', [Math.floor(Date.now() / 1000), run.currentFloor, run.userId]);
     }
 }
 
@@ -1013,7 +1013,7 @@ router.get('/dungeon/leaderboard', async (_req, res) => {
         `SELECT u.username, dr.maxfloor FROM dungeon_runs dr JOIN users u ON dr.userId = u.id ORDER BY dr.maxfloor DESC LIMIT 5`
     ).catch(() => ({ rows: [] })) as any;
     const topReward = await db.raw(
-        `SELECT u.username, dr.maxreward FROM dungeon_runs dr JOIN users u ON dr.userId = u.id WHERE dr.maxreward > 0 ORDER BY dr.maxreward DESC LIMIT 5`
+        `SELECT u.username, dr.maxreward FROM dungeon_runs dr JOIN users u ON dr.userId = u.id ORDER BY dr.maxreward DESC LIMIT 5`
     ).catch(() => ({ rows: [] })) as any;
 
     res.json({
