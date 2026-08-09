@@ -78,7 +78,7 @@ export default function ShopPage() {
 
   return (
     <div className="px-4 py-4">
-      <BackButton />
+      <div data-tutorial="shop-back"><BackButton /></div>
       {actionCard && <PageHeader title="Магазин" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
       <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
         Ежедневное обновление ассортимента. 10 случайных предметов. Чем выше редкость — тем меньше шанс появления.

@@ -631,7 +631,7 @@ export default function CraftPage() {
 
     return (
         <div className="px-4 py-4 min-h-screen">
-            <BackButton />
+            <div data-tutorial="craft-back"><BackButton /></div>
           {actionCard && <PageHeader title="Ремесло" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Создавайте материалы и улучшайте предметы в верстаке. Добывайте ресурсы в PvE, крафтите материалы из трёх предыдущей редкости. Улучшайте снаряжение камнями — с шансом на успех.
