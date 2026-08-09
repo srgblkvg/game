@@ -398,7 +398,7 @@ export default function DungeonPage() {
                     )}
                     {leaderboard.topReward.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold mb-1">💰 Топ по вынесенному</h4>
+                            <h4 className="text-xs font-bold mb-1">💰 Рейтинг награды</h4>
                             {leaderboard.topReward.map((r: any, i: number) => (
                                 <div key={i} className="flex justify-between text-xs py-0.5">
                                     <span>{i+1}. {r.username}</span>
