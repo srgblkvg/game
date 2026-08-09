@@ -26,6 +26,18 @@ function stringToColor(str: string): string {
     return `hsl(${h}, 50%, 35%)`;
 }
 
+function CooldownTimer({ seconds: initial }: { seconds: number }) {
+    const [left, setLeft] = useState(initial);
+    useEffect(() => {
+        setLeft(initial);
+        if (initial <= 0) return;
+        const iv = setInterval(() => setLeft(prev => Math.max(0, prev - 1)), 1000);
+        return () => clearInterval(iv);
+    }, [initial]);
+    if (left <= 0) return null;
+    return <span className="text-[var(--color-text-muted)]">Кулдаун: {Math.floor(left / 60)}м {left % 60}с</span>;
+}
+
 export default function DungeonPage() {
     const { user: _user } = useAuth();
     const { character, setCharacter } = useGame();
@@ -348,7 +360,7 @@ export default function DungeonPage() {
         <Card>
             <p className="text-sm mb-2">
                 {status?.cooldownRemaining > 0 && (
-                    <span className="text-[var(--color-text-muted)]">Кулдаун: {Math.floor(status.cooldownRemaining / 60)}м {status.cooldownRemaining % 60}с</span>
+                    <CooldownTimer seconds={status.cooldownRemaining} />
                 )}
             </p>
 
