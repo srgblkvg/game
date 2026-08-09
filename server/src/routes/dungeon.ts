@@ -329,12 +329,6 @@ router.post('/dungeon/start', async (req, res) => {
         }
     }
 
-    // Лимит попыток
-    const dailyRuns = (lastRun && lastRun.dailyrundate === today) ? lastRun.dailyruns : 0;
-    if (dailyRuns >= DAILY_RUNS_MAX) {
-        return res.status(400).json({ error: 'Лимит попыток на сегодня (4)' });
-    }
-
     // Данные игрока
     const user = await db.one(
         'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink, roomtype, roomuntil, premiumuntil FROM users WHERE id = ?',
@@ -388,7 +382,7 @@ router.post('/dungeon/start', async (req, res) => {
         enemies, rage: 0, autoTimer: 0, lastPlayerAttackAt: now, skills,
         buffs: {}, skillCooldowns: {}, log: [],
         startedAt: Math.floor(Date.now() / 1000),
-        dailyRuns: dailyRuns + 1, dailyRunDate: today,
+        dailyRuns: 0, dailyRunDate: today,
         tickTimer: null, cleared: false,
         lastHpUpdate: Math.floor(Date.now() / 1000),
         regenRate: getHpRegenRate(user),

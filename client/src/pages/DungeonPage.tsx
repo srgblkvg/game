@@ -391,7 +391,7 @@ export default function DungeonPage() {
                             {leaderboard.topFloor.map((r: any, i: number) => (
                                 <div key={i} className="flex justify-between text-xs py-0.5">
                                     <span>{i+1}. {r.username}</span>
-                                    <span className="text-[var(--color-accent-gold)]">Этаж {r.maxfloor}</span>
+                                    <span className="text-[#8b6914] dark:text-[var(--color-accent-gold)]">Этаж {r.maxfloor}</span>
                                 </div>
                             ))}
                         </div>
@@ -402,7 +402,7 @@ export default function DungeonPage() {
                             {leaderboard.topReward.map((r: any, i: number) => (
                                 <div key={i} className="flex justify-between text-xs py-0.5">
                                     <span>{i+1}. {r.username}</span>
-                                    <span className="text-[var(--color-accent-gold)]">{r.maxreward.toLocaleString()} серебра</span>
+                                    <span className="text-[#8b6914] dark:text-[var(--color-accent-gold)]">{r.maxreward.toLocaleString()} серебра</span>
                                 </div>
                             ))}
                         </div>
@@ -512,7 +512,7 @@ export default function DungeonPage() {
                                 <span className="text-[var(--color-text-muted)]">📜 {pagesCount}/{cost.pages} страниц</span>
                                 <button onClick={() => handleUpgradeSkill(s.id)}
                                     disabled={pagesCount < cost.pages}
-                                    className="ml-auto px-1.5 py-0.5 rounded bg-[var(--color-accent-gold)]/20 text-[var(--color-accent-gold)] border border-[var(--color-accent-gold)]/50 hover:bg-[var(--color-accent-gold)]/30 disabled:opacity-30 cursor-pointer disabled:cursor-default">
+                                    className="ml-auto px-1.5 py-0.5 rounded bg-[var(--color-accent-gold)]/20 text-[#8b6914] dark:text-[var(--color-accent-gold)] border border-[var(--color-accent-gold)]/50 hover:bg-[var(--color-accent-gold)]/30 disabled:opacity-30 cursor-pointer disabled:cursor-default">
                                     Улучшить ({cost.silver.toLocaleString()} серебра)
                                 </button>
                             </div>
