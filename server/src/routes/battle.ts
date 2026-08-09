@@ -308,11 +308,6 @@ router.post('/battle', async (req, res) => {
 
     markDirty(result.winnerId, 'quests');
 
-    // Туториал: после боя в Склепе (шаг 1) → переход к Добыче (шаг 2)
-    if (!attacker.tutorialCompleted && (attacker.tutorialStep || 0) === 1) {
-        await db.run('UPDATE users SET tutorial_step = 2 WHERE id = ?', [attacker.id]);
-    }
-
     // Добавляем шаг с ELO в лог (до сохранения в БД!)
     const attackerEloChange = newAttackerElo - (attacker.elo || 1000);
     const defenderEloChange = newDefenderElo - (defender.elo || 1000);

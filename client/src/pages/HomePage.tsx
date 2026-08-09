@@ -22,13 +22,6 @@ export default function HomePage() {
   useEffect(() => { if (user && !user.role) navigate('/login'); }, [user, navigate]);
   useEffect(() => { if (character?.activeJob) navigate('/jobs'); }, [character, navigate]);
 
-  // Туториал: навигация в крафт
-  useEffect(() => {
-    const handler = () => navigate('/craft');
-    window.addEventListener('navigate-craft', handler);
-    return () => window.removeEventListener('navigate-craft', handler);
-  }, [navigate]);
-
   useEffect(() => {
     if (!user) return;
     fetchCharacter().then(setCharacter).catch(console.error);
