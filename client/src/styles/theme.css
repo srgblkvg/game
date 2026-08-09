@@ -587,3 +587,8 @@ h1, h2, h3 {
     from { width: 0%; }
     to { width: 100%; }
 }
+
+@keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-40px); }
+}

@@ -446,6 +446,7 @@ router.post('/dungeon/skill', async (req, res) => {
             const stun = 1.5 + skillBonus(lvl, 0.2);
             target.hp -= bashDmg;
             target.stunTimer = stun;
+            target['_lastAttack'] = 0; // сброс автоатаки
             run.log.push(`⚡ Удар щитом: ${bashDmg} урона, оглушение ${stun.toFixed(1)}с`);
             break;
         }
@@ -497,7 +498,7 @@ router.post('/dungeon/skill', async (req, res) => {
             const rageGain = skill.rageGain + skillBonus(lvl, 3);
             const stun = 1 + skillBonus(lvl, 0.2);
             run.rage = Math.min(100, run.rage + rageGain);
-            if (run.enemies[0]) run.enemies[0].stunTimer = stun;
+            if (run.enemies[0]) { run.enemies[0].stunTimer = stun; run.enemies[0]['_lastAttack'] = 0; }
             run.log.push(`🏃 Рывок: +${rageGain} ярости, оглушение ${stun.toFixed(1)}с`);
             break;
         }

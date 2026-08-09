@@ -62,6 +62,48 @@ export default function DungeonPage() {
 
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const logRef = useRef<HTMLDivElement>(null);
+    const floatIdRef = useRef(0);
+
+    // Плавающий текст урона и эффектов
+    interface FloatText { id: number; text: string; side: 'left' | 'right'; color: string; }
+    const [floatTexts, setFloatTexts] = useState<FloatText[]>([]);
+
+    const addFloats = (logLines: string[]) => {
+        const floats: FloatText[] = [];
+        for (const line of logLines) {
+            const id = ++floatIdRef.current;
+            // Урон врагу (автоатака, скилл)
+            const dmgMatch = line.match(/^[⚔️💥⚡↔🌀💀🩸]\s*.*?(\d+)\s*(урона|по)/);
+            if (dmgMatch) {
+                floats.push({ id, text: dmgMatch[1], side: 'right', color: line.includes('Крит') ? '#ffaa00' : '#ffffff' });
+            }
+            // Крит эффект
+            if (line.includes('Крит')) {
+                floats.push({ id: ++floatIdRef.current, text: 'Крит!', side: 'right', color: '#ffaa00' });
+            }
+            // Оглушение
+            if (line.includes('оглушение')) {
+                floats.push({ id: ++floatIdRef.current, text: 'Оглушение!', side: 'right', color: '#fbbf24' });
+            }
+            // Урон игроку
+            const hitMatch = line.match(/👊.*бьёт на (\d+)/);
+            if (hitMatch) {
+                floats.push({ id, text: hitMatch[1], side: 'left', color: '#ef4444' });
+            }
+            // Ярость
+            const rageMatch = line.match(/🏃.*\+(\d+)\s*ярости/);
+            if (rageMatch) {
+                floats.push({ id, text: `+${rageMatch[1]} ярости`, side: 'left', color: '#f97316' });
+            }
+        }
+        if (floats.length > 0) {
+            setFloatTexts(prev => [...prev, ...floats]);
+            // Автоочистка через 1.5с
+            setTimeout(() => {
+                setFloatTexts(prev => prev.filter(f => !floats.some(nf => nf.id === f.id)));
+            }, 1500);
+        }
+    };
 
     useEffect(() => { loadStatus(); loadPages(); loadSkills(); }, []);
 
@@ -116,7 +158,7 @@ export default function DungeonPage() {
                 setAttackSpeed(data.attackSpeed || '0');
                 if (data.cleared) { setCleared(true); /* НЕ останавливаем опрос — реген */ }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
-                if (data.log?.length) setCombatLog(prev => [...prev, ...data.log].slice(-50));
+                if (data.log?.length) { setCombatLog(prev => [...prev, ...data.log].slice(-50)); addFloats(data.log); }
             } catch { /* */ }
         }, 500);
     };
@@ -448,7 +490,20 @@ export default function DungeonPage() {
 
             {/* Бой */}
             {inCombat && !cleared && playerHp > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-3 relative">
+                    {/* Плавающий текст */}
+                    {floatTexts.map(ft => (
+                        <span key={ft.id}
+                            className={`absolute pointer-events-none font-bold text-sm z-20 ${ft.side === 'left' ? 'left-4' : 'right-4'}`}
+                            style={{
+                                color: ft.color,
+                                top: '20%',
+                                animation: 'floatUp 1.5s ease-out forwards',
+                                textShadow: '0 0 4px rgba(0,0,0,0.8)',
+                            }}>
+                            {ft.text}
+                        </span>
+                    ))}
                     {/* Игрок */}
                     <Card>
                         <div className="flex items-center gap-3 mb-2">
