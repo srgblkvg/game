@@ -128,6 +128,7 @@ export default function DungeonPage() {
     // Локальный тик для плавных прогресс-баров
     const [frameTick, setFrameTick] = useState(0);
     const [leaderboard, setLeaderboard] = useState<{ topFloor: any[]; topReward: any[] }>({ topFloor: [], topReward: [] });
+    const [showAllFloors, setShowAllFloors] = useState(false);
     useEffect(() => {
         if (!inCombat) return;
         const iv = setInterval(() => setFrameTick(t => t + 1), 50);
@@ -351,25 +352,35 @@ export default function DungeonPage() {
 
             <h3 className="text-sm font-bold mb-2">Выбор этажа:</h3>
             <div className="space-y-2 mb-4">
-                {getCheckpoints().map(cp => (
-                    <div key={cp} className={`p-3 rounded-lg border cursor-pointer transition-colors ${cp === 1 || (cp - 1) % 5 === 0
-     ? 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] hover:border-[var(--color-accent-info)]'
-     : 'opacity-50'}`}>
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm font-bold">
-                                {cp === 1 ? 'Этаж 1' : `Этаж ${cp}`}
-                            </span>
-                            <Button variant="danger" size="md"
-                                onClick={() => handleStart(cp)}
-                                disabled={loading || status?.remainingRuns <= 0 || status?.cooldownRemaining > 0}>
-                                🗡️ В бой
-                            </Button>
-                        </div>
-                    </div>
-                ))}
-                {getCheckpoints().length === 1 && (
-                    <p className="text-xs text-[var(--color-text-muted)]">Новые чекпоинты открываются на этажах-боссах (5, 10, 15...)</p>
-                )}
+                {(() => {
+                    const allCP = getCheckpoints();
+                    const visible = showAllFloors ? allCP : allCP.slice(0, 5);
+                    return (
+                        <>
+                            {visible.map(cp => (
+                                <div key={cp} className={`p-3 rounded-lg border cursor-pointer transition-colors ${cp === 1 || (cp - 1) % 5 === 0
+                                    ? 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] hover:border-[var(--color-accent-info)]'
+                                    : 'opacity-50'}`}>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-bold">
+                                            {cp === 1 ? 'Этаж 1' : `Этаж ${cp}`}
+                                        </span>
+                                        <Button variant="danger" size="md"
+                                            onClick={() => handleStart(cp)}
+                                            disabled={loading || status?.remainingRuns <= 0 || status?.cooldownRemaining > 0}>
+                                            🗡️ В бой
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                            {allCP.length > 5 && !showAllFloors && (
+                                <Button variant="secondary" size="sm" fullWidth onClick={() => setShowAllFloors(true)}>
+                                    Ещё ({allCP.length - 5})
+                                </Button>
+                            )}
+                        </>
+                    );
+                })()}
             </div>
 
             {(leaderboard.topFloor.length > 0 || leaderboard.topReward.length > 0) && (
