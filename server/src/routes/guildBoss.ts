@@ -358,9 +358,9 @@ router.get('/guild/boss/ratings', async (req, res) => {
 
   // 4. Топ-5 сильнейших одиночных ударов (из steps)
   const allBattles = await db.query(
-    'SELECT b.userId, b.username, u.level, g.name as guildName, b.steps FROM guild_boss_battles b JOIN users u ON b.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id'
+    'SELECT b.userId, b.username, u.level, u.guildId as guildid, g.name as guildName, b.steps FROM guild_boss_battles b JOIN users u ON b.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id'
   ) as any[];
-  const playerMaxHit: Record<number, { userId: number; username: string; level: number; guildName: string; maxHit: number }> = {};
+  const playerMaxHit: Record<number, { userId: number; username: string; level: number; guildid: number; guildName: string; maxHit: number }> = {};
   for (const row of allBattles) {
     const steps = typeof row.steps === 'string' ? JSON.parse(row.steps) : (row.steps || []);
     let maxHit = 0;
@@ -369,7 +369,7 @@ router.get('/guild/boss/ratings', async (req, res) => {
     }
     const uid = row.userid;
     if (!playerMaxHit[uid] || maxHit > playerMaxHit[uid].maxHit) {
-      playerMaxHit[uid] = { userId: uid, username: row.username, level: row.level, guildName: row.guildname, maxHit };
+      playerMaxHit[uid] = { userId: uid, username: row.username, level: row.level, guildid: row.guildid, guildName: row.guildname, maxHit };
     }
   }
   const topHits = Object.values(playerMaxHit)
@@ -387,7 +387,7 @@ router.get('/guild/boss/ratings', async (req, res) => {
     personalTop: personalTop.map(r => ({ userId: r.userid, username: r.username, level: r.level, guildid: r.guildid, guildName: r.guildname, total: r.total })),
     guildRank: guildRank ? { rank: guildRank.rank, total: guildRank.total } : null,
     guildTopList: guildTopList.map(r => ({ id: r.id, name: r.name, total: r.total })),
-    topHits: topHits.map(r => ({ userId: r.userId, username: r.username, level: r.level, guildName: r.guildName, maxDmg: r.maxHit })),
+    topHits: topHits.map(r => ({ userId: r.userId, username: r.username, level: r.level, guildid: r.guildid, guildName: r.guildName, maxDmg: r.maxHit })),
     topGuildKills: topGuildKills.map(r => ({ id: r.id, name: r.name, kills: r.killcount })),
   });
 });
