@@ -177,6 +177,13 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
       return;
     }
 
+    // Для навигационных шагов: клик → переход на другую страницу → авто-push
+    const navSteps = [0, 3, 4, 5, 8, 9]; // Охота, Магазин, Выход из маг, Ремесло, На главную, Арена
+    if (navSteps.includes(current) && onSkipStep) {
+      const advance = () => { setTimeout(() => onSkipStep(), 400); }; // задержка чтобы navigate сработал
+      el.addEventListener('click', advance, { once: true });
+    }
+
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
