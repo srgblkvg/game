@@ -172,14 +172,24 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
 
     const el = document.querySelector(step.targetSelector);
     if (!el) {
-      // Элемент не найден — возможно переключается вкладка, пробуем ещё раз
+      // Элемент не найден — ретрай. После 15 попыток (~3с) авто-переход
+      const retries = (calcPosition as any)._retries || 0;
+      if (retries > 15 && onSkipStep) {
+        (calcPosition as any)._retries = 0;
+        onSkipStep();
+        return;
+      }
+      (calcPosition as any)._retries = retries + 1;
       setTimeout(() => calcPosition(), 200);
       return;
     }
+    (calcPosition as any)._retries = 0;
 
-    // При клике на целевой элемент — авто-переход к следующему шагу
-    const advanceOnClick = () => { if (onSkipStep) onSkipStep(); };
-    el.addEventListener('click', advanceOnClick, { once: true });
+    // При клике на целевой элемент → действие + переход к след. шагу (с шага 4)
+    if (current >= 4) {
+      const advanceOnClick = () => { if (onSkipStep) onSkipStep(); };
+      el.addEventListener('click', advanceOnClick, { once: true });
+    }
 
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
