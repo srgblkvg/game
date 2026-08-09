@@ -247,7 +247,7 @@ router.get('/dungeon/status', async (req, res) => {
 
     // Кулдаун 6 часов с последнего захода
     const cdRemaining = lastRun?.startedat
-        ? Math.max(0, 6 * 3600 - (Math.floor(Date.now() / 1000) - lastRun.startedat))
+        ? Math.max(0, 30 * 60 - (Math.floor(Date.now() / 1000) - lastRun.startedat))
         : 0;
 
     // Чекпоинт — с какого этажа можно начать
@@ -283,9 +283,9 @@ router.post('/dungeon/start', async (req, res) => {
 
     // Кулдаун 6ч
     if (lastRun?.startedat) {
-        const cd = 6 * 3600 - (Math.floor(Date.now() / 1000) - lastRun.startedat);
+        const cd = 30 * 60 - (Math.floor(Date.now() / 1000) - lastRun.startedat);
         if (cd > 0) {
-            return res.status(400).json({ error: `Кулдаун: ${Math.floor(cd / 3600)}ч ${Math.floor((cd % 3600) / 60)}м` });
+            return res.status(400).json({ error: `Кулдаун: ${Math.floor(cd / 60)}м ${cd % 60}с` });
         }
     }
 

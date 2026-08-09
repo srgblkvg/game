@@ -325,9 +325,8 @@ export default function DungeonPage() {
     const renderStatus = () => (
         <Card>
             <p className="text-sm mb-2">
-                Попыток сегодня: {status?.remainingRuns ?? 0}/4
                 {status?.cooldownRemaining > 0 && (
-                    <span className="text-[var(--color-text-muted)]"> · Кулдаун: {Math.floor(status.cooldownRemaining / 3600)}ч {Math.floor((status.cooldownRemaining % 3600) / 60)}м</span>
+                    <span className="text-[var(--color-text-muted)]">Кулдаун: {Math.floor(status.cooldownRemaining / 60)}м {status.cooldownRemaining % 60}с</span>
                 )}
             </p>
 
