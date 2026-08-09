@@ -168,6 +168,13 @@ function App() {
               await fetch('/api/character/tutorial-done', { method: 'POST', headers: getHeaders() });
             } catch {}
           }}
+          onSkipStep={async () => {
+            const nextStep = (character?.tutorialStep ?? 0) + 1;
+            setCharacter(prev => prev ? { ...prev, tutorialStep: nextStep } : prev);
+            try {
+              await fetch('/api/character/tutorial-step', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ step: nextStep }) });
+            } catch {}
+          }}
         />
       )}
     </ToastProvider>
