@@ -308,14 +308,9 @@ router.post('/battle', async (req, res) => {
 
     markDirty(result.winnerId, 'quests');
 
-    // Туториал: PvP-бой продвигает шаг вперёд
-    if (!attacker.tutorialCompleted && (attacker.tutorialStep || 0) < 4) {
-        const newStep = (attacker.tutorialStep || 0) + 1;
-        if (newStep >= 4) {
-            await db.run('UPDATE users SET tutorial_step = 4, tutorial_completed = 1 WHERE id = ?', [attacker.id]);
-        } else {
-            await db.run('UPDATE users SET tutorial_step = ? WHERE id = ?', [newStep, attacker.id]);
-        }
+    // Туториал: после боя в Склепе (шаг 1) → переход к Добыче (шаг 2)
+    if (!attacker.tutorialCompleted && (attacker.tutorialStep || 0) === 1) {
+        await db.run('UPDATE users SET tutorial_step = 2 WHERE id = ?', [attacker.id]);
     }
 
     // Добавляем шаг с ELO в лог (до сохранения в БД!)

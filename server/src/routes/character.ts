@@ -254,7 +254,7 @@ router.post('/character/tutorial-step', async (req, res) => {
     await db.run('UPDATE users SET tutorial_step = tutorial_step + 1 WHERE id = ?', [userId]);
     // Если дошли до шага 4 — завершаем
     const user = await db.one('SELECT tutorial_step FROM users WHERE id = ?', [userId]) as any;
-    if ((user?.tutorial_step || 0) >= 6) {
+    if ((user?.tutorial_step || 0) >= 10) {
         await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
     }
     res.json({ success: true, step: user?.tutorial_step || 0 });

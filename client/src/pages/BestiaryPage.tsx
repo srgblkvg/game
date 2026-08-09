@@ -558,7 +558,7 @@ export default function BestiaryPage() {
                 <p className="text-[var(--color-accent-danger)] text-sm mb-3">Потеряно: {formatMoney(battleResult.goldLost)}</p>
               )}
               <div className="flex justify-center gap-3">
-                <Button variant="danger" size="md" onClick={() => { stopAuto(); navigate('/'); }}>
+                <Button variant="danger" size="md" onClick={() => { stopAuto(); navigate('/'); }} data-tutorial="bestiary-back">
                   На главную
                 </Button>
               </div>
