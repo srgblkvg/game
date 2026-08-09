@@ -392,6 +392,13 @@ router.get('/dungeon/state', async (req, res) => {
     const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.equippedWeaponStr);
     const playerAttackProgress = Math.min(1, run.autoTimer / (1 / attackSpeed));
 
+    // Валидация цели: если мертва или нет — авто-таргет на первого живого
+    const target = run.enemies[run.targetIndex];
+    if (!target || target.hp <= 0) {
+        const aliveIdx = run.enemies.findIndex(e => e.hp > 0);
+        run.targetIndex = aliveIdx >= 0 ? aliveIdx : 0;
+    }
+
     res.json({
         active: true,
         currentFloor: run.currentFloor,

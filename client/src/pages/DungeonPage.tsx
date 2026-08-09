@@ -542,7 +542,7 @@ export default function DungeonPage() {
                             <span>Автоатака ({attackSpeed} в сек.)</span>
                         </div>
                         <div className="h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
-                            {(() => { void frameTick; const elapsed = (Date.now() / 1000) - playerLastAttackAt; const pct = Math.min(100, (elapsed / Math.max(0.1, playerAtkInterval)) * 100); return <div className="h-full bg-[var(--color-accent-info)] rounded-full" style={{ width: `${pct}%`, transition: 'width 0.05s linear' }} />; })()}
+                            {(() => { void frameTick; const elapsed = (Date.now() / 1000) - playerLastAttackAt; const pct = Math.min(100, (elapsed / Math.max(0.1, playerAtkInterval * 3)) * 100); return <div className="h-full bg-[var(--color-accent-info)] rounded-full" style={{ width: `${pct}%`, transition: 'width 0.05s linear' }} />; })()}
                         </div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-[var(--color-text-muted)]">Ярость</span>
