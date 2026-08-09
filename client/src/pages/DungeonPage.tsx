@@ -50,6 +50,7 @@ export default function DungeonPage() {
     const [selectedSkills, setSelectedSkills] = useState<number[]>([7, 2, 3]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
+    const [exited, setExited] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [claimResult, setClaimResult] = useState<any>(null);
     const [pages, setPages] = useState<any[]>([]);
@@ -123,14 +124,6 @@ export default function DungeonPage() {
     const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
     useEffect(() => { return () => stopPolling(); }, []);
     useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [combatLog]);
-
-    // Авто-перезагрузка при смерти
-    useEffect(() => {
-        if (dead && playerHp <= 0) {
-            const t = setTimeout(() => window.location.reload(), 1500);
-            return () => clearTimeout(t);
-        }
-    }, [dead, playerHp]);
 
     // Получить список доступных чекпоинтов (кратные 5)
     const getCheckpoints = () => {
@@ -416,7 +409,7 @@ export default function DungeonPage() {
     };
 
     // renderStatus + renderPrepare in tabs when not in combat
-    if (!inCombat && !claimed && !dead) {
+    if (!inCombat && !claimed && !dead && !exited) {
         return (
             <div className="flex justify-center px-4 py-4">
                 <div className="w-full max-w-3xl">
@@ -446,8 +439,10 @@ export default function DungeonPage() {
             {dead && playerHp <= 0 && (
                 <Card>
                     <h3 className="font-bold text-lg mb-2 text-center text-[var(--color-accent-danger)]">💀 Вы погибли</h3>
-                    <p className="text-sm text-center mb-1">Награда потеряна.</p>
-                    <p className="text-sm text-center text-[var(--color-text-muted)]">Перенаправление на страницу данжа...</p>
+                    <p className="text-sm text-center mb-3">Награда потеряна.</p>
+                    <Button variant="secondary" size="md" fullWidth onClick={() => { setDead(false); setInCombat(false); stopPolling(); loadStatus(); }}>
+                        Вернуться
+                    </Button>
                 </Card>
             )}
 
@@ -619,10 +614,29 @@ export default function DungeonPage() {
                         <Button variant="danger" size="md" onClick={handleContinue} className="flex-1" disabled={!claimed || loading}>
                             ➡ Этаж {claimResult?.nextFloor || floor + 1}
                         </Button>
-                        <Button variant="secondary" size="md" onClick={() => { setCleared(false); setClaimed(false); setLooting(false); setLootProgress(0); setInCombat(false); setTotalLoot({ silver: 0, items: [], pages: [] }); stopPolling(); handleFlee(); }}>
+                        <Button variant="secondary" size="md" onClick={() => { setExited(true); setCleared(false); setClaimed(false); setLooting(false); setLootProgress(0); setInCombat(false); stopPolling(); }}>
                             🚪 Выйти
                         </Button>
                     </div>
+                </Card>
+            )}
+
+            {/* Выход — итоги похода */}
+            {exited && (
+                <Card>
+                    <h3 className="font-bold text-lg mb-3 text-center text-[var(--color-accent-success)]">🚪 Вы покидаете подземелье</h3>
+                    <div className="bg-[var(--color-bg-card)] rounded-lg p-3 mb-3">
+                        <h4 className="text-xs font-bold mb-1">📦 Добыча за поход:</h4>
+                        <p className="text-xs">💰 {totalLoot.silver.toLocaleString()} серебра</p>
+                        {totalLoot.items.map((it, i) => <p key={i} className="text-xs">🔮 {it}</p>)}
+                        {totalLoot.pages.map((p, i) => <p key={i} className="text-xs">📜 {p}</p>)}
+                        {totalLoot.silver === 0 && totalLoot.items.length === 0 && totalLoot.pages.length === 0 && (
+                            <p className="text-xs text-[var(--color-text-muted)]">Ничего не собрано</p>
+                        )}
+                    </div>
+                    <Button variant="primary" size="md" fullWidth onClick={() => { setExited(false); setTotalLoot({ silver: 0, items: [], pages: [] }); handleFlee(); }}>
+                        Покинуть подземелье
+                    </Button>
                 </Card>
             )}
 
