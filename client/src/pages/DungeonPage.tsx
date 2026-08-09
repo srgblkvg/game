@@ -66,40 +66,42 @@ export default function DungeonPage() {
     const floatIdRef = useRef(0);
 
     // Плавающий текст урона и эффектов
-    interface FloatText { id: number; text: string; side: 'left' | 'right'; color: string; }
+    interface FloatText { id: number; text: string; color: string; enemyIndex?: number; }
     const [floatTexts, setFloatTexts] = useState<FloatText[]>([]);
 
-    const addFloats = (logLines: string[]) => {
+    const addFloats = (logLines: string[], currentEnemies: EnemyView[]) => {
         const floats: FloatText[] = [];
         for (const line of logLines) {
             const id = ++floatIdRef.current;
-            // Урон врагу (автоатака, скилл)
-            const dmgMatch = line.match(/^[⚔️💥⚡↔🌀💀🩸]\s*.*?(\d+)\s*(урона|по)/);
+            // Урон врагу — ищем имя врага в строке
+            const dmgMatch = line.match(/^[⚔️💥⚡↔🌀💀🩸]\s*.*?(\d+)\s*(урона|по)\s*(.+)/);
             if (dmgMatch) {
-                floats.push({ id, text: dmgMatch[1], side: 'right', color: line.includes('Крит') ? '#ffaa00' : '#ffffff' });
+                const enemyName = dmgMatch[3]?.trim();
+                const enemyIdx = currentEnemies.findIndex(e => e.name === enemyName);
+                floats.push({ id, text: dmgMatch[1], color: line.includes('Крит') ? '#ffaa00' : '#ffffff', enemyIndex: enemyIdx >= 0 ? enemyIdx : undefined });
             }
-            // Крит эффект
+            // Крит эффект — на того же врага что и урон
             if (line.includes('Крит')) {
-                floats.push({ id: ++floatIdRef.current, text: 'Крит!', side: 'right', color: '#ffaa00' });
+                const critEnemy = floats.find(f => f.color === '#ffaa00' && f.enemyIndex !== undefined);
+                floats.push({ id: ++floatIdRef.current, text: 'Крит!', color: '#ffaa00', enemyIndex: critEnemy?.enemyIndex });
             }
-            // Оглушение
+            // Оглушение — на текущую цель
             if (line.includes('оглушение')) {
-                floats.push({ id: ++floatIdRef.current, text: 'Оглушение!', side: 'right', color: '#fbbf24' });
+                floats.push({ id: ++floatIdRef.current, text: 'Оглушение!', color: '#fbbf24', enemyIndex: targetIndex });
             }
             // Урон игроку
             const hitMatch = line.match(/👊.*бьёт на (\d+)/);
             if (hitMatch) {
-                floats.push({ id, text: hitMatch[1], side: 'left', color: '#ef4444' });
+                floats.push({ id, text: hitMatch[1], color: '#ef4444' });
             }
             // Ярость
             const rageMatch = line.match(/🏃.*\+(\d+)\s*ярости/);
             if (rageMatch) {
-                floats.push({ id, text: `+${rageMatch[1]} ярости`, side: 'left', color: '#f97316' });
+                floats.push({ id, text: `+${rageMatch[1]} ярости`, color: '#f97316' });
             }
         }
         if (floats.length > 0) {
             setFloatTexts(prev => [...prev, ...floats]);
-            // Автоочистка через 1.5с
             setTimeout(() => {
                 setFloatTexts(prev => prev.filter(f => !floats.some(nf => nf.id === f.id)));
             }, 1500);
@@ -160,7 +162,7 @@ export default function DungeonPage() {
                 if (data.cleared) { setCleared(true); /* НЕ останавливаем опрос — реген */ }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 setTargetIndex(data.targetIndex ?? 0);
-                if (data.log?.length) { setCombatLog(prev => [...prev, ...data.log].slice(-50)); addFloats(data.log); }
+                if (data.log?.length) { setCombatLog(prev => [...prev, ...data.log].slice(-50)); addFloats(data.log, data.enemies || []); }
             } catch { /* */ }
         }, 500);
     };
@@ -496,21 +498,16 @@ export default function DungeonPage() {
             {/* Бой */}
             {inCombat && !cleared && playerHp > 0 && (
                 <div className="space-y-3 relative">
-                    {/* Плавающий текст */}
-                    {floatTexts.map(ft => (
-                        <span key={ft.id}
-                            className={`absolute pointer-events-none font-bold text-sm z-20 ${ft.side === 'left' ? 'left-4' : 'right-4'}`}
-                            style={{
-                                color: ft.color,
-                                top: '20%',
-                                animation: 'floatUp 1.5s ease-out forwards',
-                                textShadow: '0 0 4px rgba(0,0,0,0.8)',
-                            }}>
-                            {ft.text}
-                        </span>
-                    ))}
                     {/* Игрок */}
                     <Card>
+                        <div className="relative">
+                        {/* Плавающий текст по игроку */}
+                        {floatTexts.filter(ft => ft.enemyIndex === undefined).map(ft => (
+                            <span key={ft.id} className="absolute pointer-events-none font-bold text-sm z-20 right-4"
+                                style={{ color: ft.color, top: '-10px', animation: 'floatUp 1.5s ease-out forwards', textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>
+                                {ft.text}
+                            </span>
+                        ))}
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-10 h-10 rounded-full bg-[var(--color-bg-input)] border-2 border-[var(--color-accent-info)] flex items-center justify-center text-lg shrink-0 overflow-hidden">
                                 {character?.avatar ? (
@@ -552,6 +549,7 @@ export default function DungeonPage() {
                                 ))}
                             </div>
                         )}
+                        </div>
                     </Card>
 
                     {/* Враги */}
@@ -562,7 +560,14 @@ export default function DungeonPage() {
                             const isDead = e.hp <= 0;
                             return (
                                 <div key={e.id} onClick={() => !isDead && handleTarget(e.id)}
-                                    className={`p-2 rounded-lg border transition-colors ${isDead ? 'opacity-40 grayscale border-[var(--color-border-light)] bg-[var(--color-bg-card)]' : isTarget ? 'border-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10 cursor-pointer' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer'}`}>
+                                    className={`p-2 rounded-lg border transition-colors relative ${isDead ? 'opacity-40 grayscale border-[var(--color-border-light)] bg-[var(--color-bg-card)]' : isTarget ? 'border-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10 cursor-pointer' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer'}`}>
+                                    {/* Плавающий текст по этому врагу */}
+                                    {floatTexts.filter(ft => ft.enemyIndex === i).map(ft => (
+                                        <span key={ft.id} className="absolute pointer-events-none font-bold text-sm z-20 left-1/2 -translate-x-1/2"
+                                            style={{ color: ft.color, top: '-12px', animation: 'floatUp 1.5s ease-out forwards', textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>
+                                            {ft.text}
+                                        </span>
+                                    ))}
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 overflow-hidden font-bold text-white ${e.isBoss ? 'border-2 border-[var(--color-accent-gold)]' : 'border-2 border-[var(--color-border-light)]'}`}
                                             style={{ backgroundColor: e.image ? undefined : stringToColor(e.name) }}>
