@@ -905,7 +905,7 @@ function tickCombat(run: DungeonRun) {
     if (run.playerHp <= 0) {
         run.playerHp = 0;
         if (run.tickTimer) clearInterval(run.tickTimer);
-        db.run('DELETE FROM dungeon_runs WHERE userId = ?', [run.userId]);
+        db.run('UPDATE dungeon_runs SET startedAt = ? WHERE userId = ?', [Math.floor(Date.now() / 1000), run.userId]);
     }
 }
 

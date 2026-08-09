@@ -610,7 +610,7 @@ export default function DungeonPage() {
                     </div>
 
                     {/* Умения — компактные иконки */}
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-5 gap-2">
                         {/* Автоатака */}
                         {(() => { void frameTick; const cdLeft = Math.max(0, Math.ceil(((playerLastAttackAt + playerAtkInterval * 3) - Date.now() / 1000))); return (
                             <div className="relative p-2 rounded-lg text-center bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]">
