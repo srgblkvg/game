@@ -51,6 +51,7 @@ export default function DungeonPage() {
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
     const [exited, setExited] = useState(false);
+    const [targetIndex, setTargetIndex] = useState(0);
     const [claimed, setClaimed] = useState(false);
     const [claimResult, setClaimResult] = useState<any>(null);
     const [pages, setPages] = useState<any[]>([]);
@@ -158,6 +159,7 @@ export default function DungeonPage() {
                 setAttackSpeed(data.attackSpeed || '0');
                 if (data.cleared) { setCleared(true); /* НЕ останавливаем опрос — реген */ }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
+                setTargetIndex(data.targetIndex ?? 0);
                 if (data.log?.length) { setCombatLog(prev => [...prev, ...data.log].slice(-50)); addFloats(data.log); }
             } catch { /* */ }
         }, 500);
@@ -220,20 +222,20 @@ export default function DungeonPage() {
         } catch (e: any) { setMessage(e.message); }
     };
 
-    // Авто-лут после очистки этажа
+    // Авто-лут после зачистки этажа (лут показывается, но не выдаётся до выхода)
     useEffect(() => {
         if (!cleared || !inCombat || looting || claimed) return;
         setLooting(true);
         const corpseCount = enemies.length || 1;
         let progress = 0;
-        const tick = 50; // 50ms per tick
-        const totalTicks = (corpseCount * 1000) / tick; // 1 сек на труп
+        const tick = 50;
+        const totalTicks = (corpseCount * 1000) / tick;
         const interval = setInterval(() => {
             progress += 1;
             setLootProgress(Math.min(100, (progress / totalTicks) * 100));
             if (progress >= totalTicks) {
                 clearInterval(interval);
-                handleClaim(); // авто-клейм
+                handleClaim();
             }
         }, tick);
         return () => clearInterval(interval);
@@ -267,7 +269,10 @@ export default function DungeonPage() {
         try {
             const res = await fetch('/api/dungeon/flee', { method: 'POST', headers: getHeaders() });
             const data = await res.json();
-            setInCombat(false); setMessage(data.message || 'Вы сбежали'); stopPolling(); loadStatus();
+            if (data.loot) {
+                setTotalLoot({ silver: data.loot.silver, items: data.loot.items.map((it: any) => `${it.name} (${it.rarity})`), pages: data.loot.pages.map((p: any) => p.name) });
+            }
+            setInCombat(false); stopPolling(); loadStatus();
         } catch (e: any) { setMessage(e.message); }
         finally { setLoading(false); }
     };
@@ -553,10 +558,11 @@ export default function DungeonPage() {
                     <div className="space-y-2">
                         {enemies.map((e, i) => {
                             const eHpPct = e.maxHp > 0 ? (e.hp / e.maxHp) * 100 : 0;
-                            const isTarget = i === 0;
+                            const isTarget = i === targetIndex;
+                            const isDead = e.hp <= 0;
                             return (
-                                <div key={e.id} onClick={() => handleTarget(e.id)}
-                                    className={`p-2 rounded-lg border cursor-pointer transition-colors ${isTarget ? 'border-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)]'}`}>
+                                <div key={e.id} onClick={() => !isDead && handleTarget(e.id)}
+                                    className={`p-2 rounded-lg border transition-colors ${isDead ? 'opacity-40 grayscale border-[var(--color-border-light)] bg-[var(--color-bg-card)]' : isTarget ? 'border-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10 cursor-pointer' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer'}`}>
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 overflow-hidden font-bold text-white ${e.isBoss ? 'border-2 border-[var(--color-accent-gold)]' : 'border-2 border-[var(--color-border-light)]'}`}
                                             style={{ backgroundColor: e.image ? undefined : stringToColor(e.name) }}>

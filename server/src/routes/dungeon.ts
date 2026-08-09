@@ -40,6 +40,7 @@ db.run(`CREATE TABLE IF NOT EXISTS skill_levels (
 
 const WEAPON_SPEED: Record<number, number> = { 0: 0.3, 1: 0.5, 2: 0.7, 3: 0.9, 4: 1.1, 5: 1.3, 6: 1.5 };
 const TICK_MS = 100;
+const COMBAT_SPEED = 1/3; // замедление боя в 3 раза
 const DAILY_RUNS_MAX = 4;
 const BASE_SKILL_IDS = new Set([7, 2, 3, 1]); // Рывок, Размах, Боевой клич, Удар щитом
 
@@ -111,6 +112,12 @@ interface DungeonRun {
     lastHpUpdate: number;
     regenRate: number;
     cleared: boolean;
+    targetIndex: number;
+    accumulatedLoot: { silver: number; items: any[]; pages: any[] };
+}
+
+function getTarget(run: DungeonRun): EnemyData | undefined {
+    return run.enemies[run.targetIndex];
 }
 
 const activeRuns = new Map<number, DungeonRun>();
@@ -345,6 +352,8 @@ router.post('/dungeon/start', async (req, res) => {
         tickTimer: null, cleared: false,
         lastHpUpdate: Math.floor(Date.now() / 1000),
         regenRate: getHpRegenRate(user),
+        targetIndex: 0,
+        accumulatedLoot: { silver: 0, items: [], pages: [] },
     };
 
     // Запускаем тик-цикл
@@ -405,6 +414,7 @@ router.get('/dungeon/state', async (req, res) => {
         log: run.log.splice(0),
         cleared: run.cleared,
         dead: run.playerHp <= 0,
+        targetIndex: run.targetIndex,
     });
 });
 
@@ -441,7 +451,7 @@ router.post('/dungeon/skill', async (req, res) => {
 
     switch (skill.name) {
         case 'shield_bash': {
-            const target = run.enemies[0]; if (!target) break;
+            const target = getTarget(run); if (!target) break;
             const bashDmg = Math.floor(dmg * (0.8 + skillBonus(lvl, 0.1)));
             const stun = 1.5 + skillBonus(lvl, 0.2);
             target.hp -= bashDmg;
@@ -468,14 +478,14 @@ router.post('/dungeon/skill', async (req, res) => {
             break;
         }
         case 'rend': {
-            const target = run.enemies[0]; if (!target) break;
+            const target = getTarget(run); if (!target) break;
             const dotDmg = Math.floor(dmg * (0.2 + skillBonus(lvl, 0.05)));
             run.log.push(`🩸 Раздирание: кровотечение ${dotDmg}×3 за 9с`);
             target.hp -= dotDmg * 3;
             break;
         }
         case 'execute': {
-            const target = run.enemies[0]; if (!target) break;
+            const target = getTarget(run); if (!target) break;
             if (target.hp > target.maxHp * 0.3) {
                 run.rage += skill.rageCost;
                 return res.status(400).json({ error: 'Цель должна быть <30% HP' });
@@ -486,7 +496,7 @@ router.post('/dungeon/skill', async (req, res) => {
             break;
         }
         case 'demoralize': {
-            const target = run.enemies[0]; if (!target) break;
+            const target = getTarget(run); if (!target) break;
             if (!target.debuffs) target.debuffs = {};
             const debuffPct = 10 + skillBonus(lvl, 2);
             const debuffDur = 15 + skillBonus(lvl, 2);
@@ -498,7 +508,8 @@ router.post('/dungeon/skill', async (req, res) => {
             const rageGain = skill.rageGain + skillBonus(lvl, 3);
             const stun = 1 + skillBonus(lvl, 0.2);
             run.rage = Math.min(100, run.rage + rageGain);
-            if (run.enemies[0]) { run.enemies[0].stunTimer = stun; run.enemies[0]['_lastAttack'] = 0; }
+            const target = getTarget(run);
+            if (target) { target.stunTimer = stun; target['_lastAttack'] = 0; }
             run.log.push(`🏃 Рывок: +${rageGain} ярости, оглушение ${stun.toFixed(1)}с`);
             break;
         }
@@ -532,27 +543,24 @@ router.post('/dungeon/target', async (req, res) => {
 
     const idx = run.enemies.findIndex(e => e.id === enemyId);
     if (idx === -1) return res.status(400).json({ error: 'Враг не найден' });
+    const enemy = run.enemies[idx];
+    if (!enemy) return res.status(400).json({ error: 'Враг не найден' });
+    if (enemy.hp <= 0) return res.status(400).json({ error: 'Враг уже мёртв' });
 
-    // Перемещаем выбранного врага на первую позицию
-    const [target] = run.enemies.splice(idx, 1);
-    if (!target) return res.status(400).json({ error: 'Враг не найден' });
-    run.enemies.unshift(target);
-
-    res.json({ targetId: target.id, targetName: target.name });
+    run.targetIndex = idx;
+    res.json({ targetId: enemyId, targetName: enemy.name });
 });
 
-// Забрать награду и выйти (между этажами)
+// Забрать награду (накапливается, выдаётся при выходе)
 router.post('/dungeon/claim', async (req, res) => {
     const userId = req.userId;
     const run = activeRuns.get(userId);
     if (!run) return res.status(400).json({ error: 'Данж не активен' });
     if (run.enemies.length > 0) return res.status(400).json({ error: 'Сначала убейте всех врагов' });
 
-    // Награда за этаж
+    // Награда за этаж (накапливаем, НЕ выдаём сразу)
     const floor = run.currentFloor;
     const silverReward = 10 + floor * 15 + Math.floor(Math.random() * floor * 10);
-
-    await db.run('UPDATE users SET money = money + ? WHERE id = ?', [silverReward, userId]);
 
     // Шанс руны/предмета
     let itemReward: any = null;
@@ -573,19 +581,7 @@ router.post('/dungeon/claim', async (req, res) => {
         ).catch(() => null) as any;
 
         if (craftItem) {
-            itemReward = { name: craftItem.name, rarity: craftItem.display_name, image: craftItem.image };
-            const inventory = JSON.parse((await db.one('SELECT inventory FROM users WHERE id = ?', [userId]) as any).inventory || '[]');
-            const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === craftItem.id);
-            if (existing) {
-                existing.count = (existing.count || 0) + 1;
-            } else {
-                inventory.push({
-                    type: 'craft_item', id: craftItem.id, name: craftItem.name,
-                    rarity_id: craftItem.rarity_id, rarity_display: craftItem.display_name,
-                    rarity_color: craftItem.color, count: 1, itemType: 'upgrade', image: craftItem.image,
-                });
-            }
-            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+            itemReward = { id: craftItem.id, name: craftItem.name, rarity: craftItem.display_name, rarity_id: craftItem.rarity_id, image: craftItem.image, type: 'craft_item', itemType: 'upgrade', rarity_color: craftItem.color };
         }
     }
 
@@ -594,13 +590,15 @@ router.post('/dungeon/claim', async (req, res) => {
     const pageChance = isBossFloor ? 0.3 : 0.03;
     if (Math.random() < pageChance) {
         const randomSkill = SKILLS[Math.floor(Math.random() * SKILLS.length)];
-        if (!randomSkill) return;
-        await db.run(
-            'INSERT INTO skill_pages (userId, skillId, count) VALUES (?, ?, 1) ON CONFLICT (userId, skillId) DO UPDATE SET count = skill_pages.count + 1',
-            [userId, randomSkill.id]
-        );
-        pageReward = { skillId: randomSkill.id, name: randomSkill.nameRu };
+        if (randomSkill) {
+            pageReward = { skillId: randomSkill.id, name: randomSkill.nameRu };
+        }
     }
+
+    // Накапливаем лут
+    run.accumulatedLoot.silver += silverReward;
+    if (itemReward) run.accumulatedLoot.items.push(itemReward);
+    if (pageReward) run.accumulatedLoot.pages.push(pageReward);
 
     // Чекпоинт на этажах-боссах — сохраняем следующий этаж
     if (isBossFloor && floor > run.checkpointFloor) {
@@ -679,6 +677,8 @@ router.post('/dungeon/continue', async (req, res) => {
         tickTimer: null, cleared: false,
         lastHpUpdate: Math.floor(Date.now() / 1000),
         regenRate: getHpRegenRate(user),
+        targetIndex: existingRun?.targetIndex ?? 0,
+        accumulatedLoot: existingRun?.accumulatedLoot || { silver: 0, items: [], pages: [] },
     };
 
     run.tickTimer = setInterval(() => tickCombat(run), TICK_MS);
@@ -696,17 +696,39 @@ router.post('/dungeon/continue', async (req, res) => {
     });
 });
 
-// Сбежать (потеря лута)
+// Сбежать (потеря лута) или Выйти (получить накопленный лут)
 router.post('/dungeon/flee', async (req, res) => {
     const userId = req.userId;
     const run = activeRuns.get(userId);
     if (!run) return res.status(400).json({ error: 'Данж не активен' });
 
+    // Выдаём накопленный лут
+    const loot = run.accumulatedLoot || { silver: 0, items: [], pages: [] };
+    if (loot.silver > 0) {
+        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [loot.silver, userId]);
+    }
+    for (const item of loot.items) {
+        const inventory = JSON.parse((await db.one('SELECT inventory FROM users WHERE id = ?', [userId]) as any).inventory || '[]');
+        const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === item.id);
+        if (existing) {
+            existing.count = (existing.count || 0) + 1;
+        } else {
+            inventory.push(item);
+        }
+        await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+    }
+    for (const page of loot.pages) {
+        await db.run(
+            'INSERT INTO skill_pages (userId, skillId, count) VALUES (?, ?, 1) ON CONFLICT (userId, skillId) DO UPDATE SET count = skill_pages.count + 1',
+            [userId, page.skillId]
+        );
+    }
+
     if (run.tickTimer) clearInterval(run.tickTimer);
     activeRuns.delete(userId);
 
     await db.run('DELETE FROM dungeon_runs WHERE userId = ?', [userId]);
-    res.json({ success: true, message: 'Вы сбежали из данжа' });
+    res.json({ success: true, loot });
 });
 
 // Список всех умений
@@ -809,24 +831,24 @@ function tickCombat(run: DungeonRun) {
     // Пассивный спад ярости (вне боя ярость уходит быстрее)
     const enemiesAlive = run.enemies.some(e => e.hp > 0);
     if (!enemiesAlive) {
-        run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 5); // 5/сек вне боя
+        run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 5 * COMBAT_SPEED); // 5/сек вне боя
         // Ускоренный реген HP в комнате отдыха (~5% от максимума в сек с бонусами)
         const regenPerSec = run.playerMaxHp * 0.03 * run.regenRate;
-        const regenThisTick = Math.floor(regenPerSec * (TICK_MS / 1000));
+        const regenThisTick = Math.floor(regenPerSec * (TICK_MS / 1000) * COMBAT_SPEED);
         if (regenThisTick > 0 && run.playerHp < run.playerMaxHp) {
             run.playerHp = Math.min(run.playerMaxHp, run.playerHp + regenThisTick);
         }
     } else {
-        run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 0.5); // 0.5/сек в бою
+        run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 0.5 * COMBAT_SPEED); // 0.5/сек в бою
     }
 
     // Автоатака игрока — одна атака за тик
-    run.autoTimer += TICK_MS / 1000;
+    run.autoTimer += (TICK_MS / 1000) * COMBAT_SPEED;
     const attackInterval = 1 / attackSpeed;
     if (run.autoTimer >= attackInterval) {
         run.autoTimer -= attackInterval;
         run.lastPlayerAttackAt = Date.now() / 1000;
-        const target = run.enemies[0];
+        const target = getTarget(run);
         if (target && target.hp > 0) {
             const { damage: dmg, isCrit } = calcPlayerDamage(run);
             target.hp -= dmg;
@@ -839,12 +861,12 @@ function tickCombat(run: DungeonRun) {
     for (const enemy of run.enemies) {
         if (enemy.hp <= 0) continue;
         if (enemy.stunTimer && enemy.stunTimer > 0) {
-            enemy.stunTimer -= TICK_MS / 1000;
+            enemy.stunTimer -= (TICK_MS / 1000) * COMBAT_SPEED;
             continue;
         }
         const interval = enemy._attackInterval || 2.5;
         if (!enemy['_lastAttack']) enemy['_lastAttack'] = 0;
-        enemy['_lastAttack'] += TICK_MS / 1000;
+        enemy['_lastAttack'] += (TICK_MS / 1000) * COMBAT_SPEED;
         if (enemy['_lastAttack'] >= interval) {
             enemy['_lastAttack'] -= interval;
             enemy._lastAttackTime = Date.now() / 1000;
@@ -880,17 +902,17 @@ function tickCombat(run: DungeonRun) {
 }
 
 function checkEnemyDeaths(run: DungeonRun) {
-    // Удаляем мёртвых
-    const alive = run.enemies.filter(e => e.hp > 0);
-    if (alive.length < run.enemies.length) {
-        run.enemies = alive;
-        // Авто-таргет на врага с наименьшим HP
-        if (run.enemies.length > 0) {
-            run.enemies.sort((a, b) => a.hp - b.hp);
-        } else {
-            run.cleared = true;
-            // НЕ останавливаем тик — нужен для регена в комнате отдыха
-        }
+    // Мёртвых не удаляем — оставляем в списке (серый портрет на клиенте)
+    const allDead = run.enemies.every(e => e.hp <= 0);
+    if (allDead) {
+        run.cleared = true;
+        // НЕ останавливаем тик — нужен для регена в комнате отдыха
+    }
+    // Если цель мертва — авто-таргет на первого живого
+    const target = getTarget(run);
+    if (target && target.hp <= 0) {
+        const aliveIdx = run.enemies.findIndex(e => e.hp > 0);
+        if (aliveIdx >= 0) run.targetIndex = aliveIdx;
     }
 }
 
