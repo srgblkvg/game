@@ -15,12 +15,18 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
 
   // Туториал: раскрыть случайный Хлам-рецепт
   useEffect(() => {
-    const handler = () => {
+    let fired = false;
+    const handler = () => { fired = true; };
+    window.addEventListener('tutorial-expand-craft-recipe', handler);
+    // Если событие уже сработало до монтирования — раскрываем при загрузке
+    const tryExpand = () => {
+      if (!fired) return;
       const cats = Object.keys(groupedRecipes);
+      if (cats.length === 0) return;
       const junkCat = cats.find(c => c.toLowerCase().includes('хлам')) || cats[0];
       if (junkCat && !openCategories[junkCat]) onToggleCategory(junkCat);
     };
-    window.addEventListener('tutorial-expand-craft-recipe', handler);
+    tryExpand();
     return () => window.removeEventListener('tutorial-expand-craft-recipe', handler);
   }, [groupedRecipes, openCategories, onToggleCategory]);
 
