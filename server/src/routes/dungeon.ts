@@ -842,7 +842,7 @@ function tickCombat(run: DungeonRun) {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 5 * COMBAT_SPEED); // 5/сек вне боя
         // Ускоренный реген HP в комнате отдыха (~5% от максимума в сек с бонусами)
         const regenPerSec = run.playerMaxHp * 0.03 * run.regenRate;
-        const regenThisTick = Math.floor(regenPerSec * (TICK_MS / 1000) * COMBAT_SPEED);
+        const regenThisTick = Math.floor(regenPerSec * (TICK_MS / 1000));
         if (regenThisTick > 0 && run.playerHp < run.playerMaxHp) {
             run.playerHp = Math.min(run.playerMaxHp, run.playerHp + regenThisTick);
         }
