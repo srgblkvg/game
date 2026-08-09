@@ -599,7 +599,7 @@ export default function DungeonPage() {
                                             {!isDead && !e.stunned && (
                                             <div className="flex items-center gap-1 mt-1">
                                                 {(() => { void frameTick; const cdLeft = Math.max(0, Math.ceil(((e.lastAttackAt || 0) + (e.attackInterval || 2.5) * 3 - Date.now() / 1000))); return (
-                                                    <div className="relative w-6 h-6 rounded-full bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)] flex items-center justify-center text-xs shrink-0">
+                                                    <div className="relative w-6 h-6 rounded-full bg-[var(--color-bg-input)] flex items-center justify-center text-xs shrink-0">
                                                         <span>⚔️</span>
                                                         {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{cdLeft}</span>}
                                                     </div>
