@@ -450,7 +450,7 @@ router.get('/dungeon/state', async (req, res) => {
         lastPlayerAttackAt: run.lastPlayerAttackAt,
         playerAttackProgress,
         attackSpeed: attackSpeed.toFixed(1),
-        rage: run.rage,
+        rage: Math.round(run.rage),
         regenRate: run.regenRate,
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
         skillCooldowns: run.skillCooldowns,
@@ -480,8 +480,8 @@ router.post('/dungeon/skill', async (req, res) => {
     }
 
     // Ярость
-    if (run.rage < skill.rageCost) {
-        return res.status(400).json({ error: `Недостаточно ярости (${run.rage}/${skill.rageCost})` });
+    if (Math.floor(run.rage) < skill.rageCost) {
+        return res.status(400).json({ error: `Недостаточно ярости (${Math.floor(run.rage)}/${skill.rageCost})` });
     }
 
     run.rage -= skill.rageCost;
@@ -570,7 +570,7 @@ router.post('/dungeon/skill', async (req, res) => {
     res.json({
         playerHp: run.playerHp,
         enemies: run.enemies.map(e => ({ id: e.id, name: e.name, hp: Math.max(0, e.hp), maxHp: e.maxHp, isBoss: e.isBoss })),
-        rage: run.rage,
+        rage: Math.round(run.rage),
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
         skillCooldowns: run.skillCooldowns,
         log: run.log.splice(0),
@@ -977,6 +977,9 @@ function tickCombat(run: DungeonRun) {
     }
 
     checkEnemyDeaths(run);
+
+    // Округляем ярость
+    run.rage = Math.round(run.rage);
 
     // Смерть игрока
     if (run.playerHp <= 0) {
