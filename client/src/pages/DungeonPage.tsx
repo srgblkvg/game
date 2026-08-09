@@ -566,6 +566,9 @@ export default function DungeonPage() {
             {/* Бой */}
             {inCombat && !cleared && playerHp > 0 && (
                 <div className="space-y-3 relative">
+                    <div className="flex flex-col md:flex-row gap-3">
+                        {/* Левая колонка: игрок + умения */}
+                        <div className="md:w-1/2 space-y-3">
                     {/* Игрок */}
                     <Card>
                         <div className="relative">
@@ -639,6 +642,9 @@ export default function DungeonPage() {
                         })}
                     </div>
 
+                        </div>
+                        {/* Правая колонка: враги */}
+                        <div className="md:w-1/2">
                     {/* Враги */}
                     <div className="space-y-2">
                         {enemies.map((e, i) => {
@@ -696,6 +702,9 @@ export default function DungeonPage() {
                                 </div>
                             );
                         })}
+                    </div>
+
+                        </div>
                     </div>
 
                     {/* Лог боя */}
