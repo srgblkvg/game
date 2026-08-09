@@ -114,6 +114,7 @@ export default function DungeonPage() {
 
     // Локальный тик для плавных прогресс-баров
     const [frameTick, setFrameTick] = useState(0);
+    const [leaderboard, setLeaderboard] = useState<{ topFloor: any[]; topReward: any[] }>({ topFloor: [], topReward: [] });
     useEffect(() => {
         if (!inCombat) return;
         const iv = setInterval(() => setFrameTick(t => t + 1), 50);
@@ -144,6 +145,11 @@ export default function DungeonPage() {
                 if (data.cleared) setCleared(true);
                 startPolling();
             }
+            // Рейтинг
+            try {
+                const lb = await fetch('/api/dungeon/leaderboard', { headers: getHeaders() });
+                setLeaderboard(await lb.json());
+            } catch { /* */ }
         } catch { /* */ }
     };
 
@@ -352,6 +358,33 @@ export default function DungeonPage() {
                     <p className="text-xs text-[var(--color-text-muted)]">Новые чекпоинты открываются на этажах-боссах (5, 10, 15...)</p>
                 )}
             </div>
+
+            {(leaderboard.topFloor.length > 0 || leaderboard.topReward.length > 0) && (
+                <div className="border-t border-[var(--color-border-light)] pt-3 mt-3">
+                    {leaderboard.topFloor.length > 0 && (
+                        <div className="mb-3">
+                            <h4 className="text-xs font-bold mb-1">🏆 Высший этаж</h4>
+                            {leaderboard.topFloor.map((r: any, i: number) => (
+                                <div key={i} className="flex justify-between text-xs py-0.5">
+                                    <span>{i+1}. {r.username}</span>
+                                    <span className="text-[var(--color-accent-gold)]">Этаж {r.maxfloor}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {leaderboard.topReward.length > 0 && (
+                        <div>
+                            <h4 className="text-xs font-bold mb-1">💰 Высшая награда</h4>
+                            {leaderboard.topReward.map((r: any, i: number) => (
+                                <div key={i} className="flex justify-between text-xs py-0.5">
+                                    <span>{i+1}. {r.username}</span>
+                                    <span className="text-[var(--color-accent-gold)]">{r.maxreward.toLocaleString()} серебра</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </Card>
     );
 

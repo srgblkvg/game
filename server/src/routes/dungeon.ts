@@ -18,8 +18,13 @@ db.run(`CREATE TABLE IF NOT EXISTS dungeon_runs (
     skills TEXT NOT NULL DEFAULT '[]',
     startedAt INTEGER NOT NULL,
     dailyRuns INTEGER DEFAULT 0,
-    dailyRunDate TEXT DEFAULT ''
+    dailyRunDate TEXT DEFAULT '',
+    maxfloor INTEGER DEFAULT 0,
+    maxreward INTEGER DEFAULT 0
 )`).catch(() => {});
+
+db.run('ALTER TABLE dungeon_runs ADD COLUMN IF NOT EXISTS maxfloor INTEGER DEFAULT 0').catch(() => {});
+db.run('ALTER TABLE dungeon_runs ADD COLUMN IF NOT EXISTS maxreward INTEGER DEFAULT 0').catch(() => {});
 
 db.run(`CREATE TABLE IF NOT EXISTS skill_pages (
     id SERIAL PRIMARY KEY,
@@ -735,7 +740,10 @@ router.post('/dungeon/flee', async (req, res) => {
     if (run.tickTimer) clearInterval(run.tickTimer);
     activeRuns.delete(userId);
 
-    await db.run('UPDATE dungeon_runs SET startedAt = ? WHERE userId = ?', [Math.floor(Date.now() / 1000), userId]);
+    await db.run(
+        `UPDATE dungeon_runs SET startedAt = $1, maxfloor = GREATEST(maxfloor, $2), maxreward = GREATEST(maxreward, $3) WHERE userId = $4`,
+        [Math.floor(Date.now() / 1000), run.checkpointFloor, loot.silver, userId]
+    );
     res.json({ success: true, loot });
 });
 
@@ -905,7 +913,7 @@ function tickCombat(run: DungeonRun) {
     if (run.playerHp <= 0) {
         run.playerHp = 0;
         if (run.tickTimer) clearInterval(run.tickTimer);
-        db.run('UPDATE dungeon_runs SET startedAt = ? WHERE userId = ?', [Math.floor(Date.now() / 1000), run.userId]);
+        db.run('UPDATE dungeon_runs SET startedAt = $1, maxfloor = GREATEST(maxfloor, $2) WHERE userId = $3', [Math.floor(Date.now() / 1000), run.checkpointFloor, run.userId]);
     }
 }
 
@@ -923,5 +931,20 @@ function checkEnemyDeaths(run: DungeonRun) {
         if (aliveIdx >= 0) run.targetIndex = aliveIdx;
     }
 }
+
+// Рейтинг данжа
+router.get('/dungeon/leaderboard', async (_req, res) => {
+    const topFloor = await db.raw(
+        `SELECT u.username, dr.maxfloor FROM dungeon_runs dr JOIN users u ON dr.userId = u.id WHERE dr.maxfloor > 0 ORDER BY dr.maxfloor DESC LIMIT 5`
+    ).catch(() => ({ rows: [] })) as any;
+    const topReward = await db.raw(
+        `SELECT u.username, dr.maxreward FROM dungeon_runs dr JOIN users u ON dr.userId = u.id WHERE dr.maxreward > 0 ORDER BY dr.maxreward DESC LIMIT 5`
+    ).catch(() => ({ rows: [] })) as any;
+
+    res.json({
+        topFloor: topFloor.rows || [],
+        topReward: topReward.rows || [],
+    });
+});
 
 export default router;
