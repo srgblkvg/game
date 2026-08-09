@@ -76,7 +76,7 @@ export default function DungeonPage() {
         for (const line of logLines) {
             const id = ++floatIdRef.current;
             // Урон врагу — ищем имя врага в строке
-            const dmgMatch = line.match(/^[⚔️💥⚡↔🌀💀🩸]\s*.*?(\d+)\s*(урона|по)\s*(.+)/);
+            const dmgMatch = line.match(/^[⚔️💥⚡↔🌀💀🩸]\s*.*?(\d+)\s*(урона|по|\(блок\))\s*(.+)/);
             if (dmgMatch) {
                 const enemyName = dmgMatch[3]?.trim();
                 const enemyIdx = currentEnemies.findIndex(e => e.name === enemyName);
@@ -90,6 +90,19 @@ export default function DungeonPage() {
             // Оглушение — на текущую цель
             if (line.includes('оглушение')) {
                 floats.push({ id: ++floatIdRef.current, text: 'Оглушение!', color: '#fbbf24', enemyIndex: targetIndex });
+            }
+            // Уклонение врага
+            if (line.match(/^↗.*уклоняется/)) {
+                const enemyName = line.replace(/^↗\s*/, '').replace(' уклоняется', '').trim();
+                const enemyIdx = currentEnemies.findIndex(e => e.name === enemyName);
+                if (enemyIdx >= 0) floats.push({ id: ++floatIdRef.current, text: 'Уклонение!', color: '#60a5fa', enemyIndex: enemyIdx });
+            }
+            // Уклонение / блок игрока
+            if (line.includes('Вы уклоняетесь')) {
+                floats.push({ id, text: 'Уклонение!', color: '#60a5fa' });
+            }
+            if (line.includes('Блок!')) {
+                floats.push({ id, text: 'Блок!', color: '#818cf8' });
             }
             // Урон игроку
             const hitMatch = line.match(/👊.*бьёт на (\d+)/);

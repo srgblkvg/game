@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { buildPlayerStats, getBaseStats } from '../db/helpers';
+import { dodgeChance, critChance, critMult, blockChance, blockReduction, counterChance, rollDamage } from '../game/battle';
+import { currentStats } from '../game/stats';
 
 const router = Router();
 
@@ -133,28 +135,61 @@ function getAttackSpeed(rarity: number, weaponStrBonus: number): number {
     return Math.max(0.3, base / (1 + weaponStrBonus * 0.005));
 }
 
-function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean } {
-    // Урон: делим scaled stat на 3 для баланса
-    const rs = run.playerStr / 3;
-    const ra = run.playerAgi / 3;
-    const rm = run.playerMag / 3;
-    const weaponBonus = 3 + run.equippedWeaponRarity * 3;
-    const baseDmg = rs + ra * 0.3 + rm * 0.2 + run.playerLevel + weaponBonus;
-    const dmgBonus = (run.buffs['battle_cry'] ? (1 + (run.buffs['battle_cry'].value / 100)) : 1.0);
-    const dmg = Math.floor((baseDmg + Math.random() * (run.playerLevel + weaponBonus)) * dmgBonus);
-
-    // Крит: сырая ловкость × 0.5% шанс (используем /4 как для урона)
-    const critChance = ra * 0.5;
-    const isCrit = Math.random() * 100 < critChance;
-
-    return { damage: isCrit ? Math.floor(dmg * 2) : dmg, isCrit };
+function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean; dodged: boolean; blocked: boolean; counterDmg: number } {
+    const stats = { s: run.playerStr, a: run.playerAgi, d: run.playerDef, m: run.playerMag, hp: run.playerMaxHp, extra: {} as any, bonuses: {} as any } as any;
+    const target = run.enemies[run.targetIndex];
+    if (!target) return { damage: 0, isCrit: false, dodged: false, blocked: false, counterDmg: 0 };
+    
+    // Статы врага для формул
+    const mobStats = { s: target.dmg, a: target.dmg, d: Math.floor(target.dmg * 0.5), m: Math.floor(target.dmg * 0.3), hp: target.maxHp, extra: {}, bonuses: {} } as any;
+    
+    // Проверка уклонения врага
+    const dodge = dodgeChance(mobStats, stats);
+    if (Math.random() < dodge) {
+        run.log.push(`↗ ${target.name} уклоняется`);
+        return { damage: 0, isCrit: false, dodged: true, blocked: false, counterDmg: 0 };
+    }
+    
+    // Проверка блока врага
+    const block = blockChance(mobStats);
+    const blocked = Math.random() < block;
+    const blockRed = blocked ? blockReduction(mobStats, stats) : 0;
+    
+    // Урон и крит
+    const dmg = rollDamage(stats, run.playerLevel);
+    const isCrit = Math.random() < critChance(stats);
+    const finalDmg = Math.floor(isCrit ? dmg * critMult(stats) : dmg);
+    const afterBlock = Math.max(1, Math.floor(finalDmg * (1 - blockRed)));
+    
+    // Battle cry бонус
+    const bcBonus = run.buffs['battle_cry'] ? (1 + run.buffs['battle_cry'].value / 100) : 1;
+    const totalDmg = Math.floor(afterBlock * bcBonus);
+    
+    return { damage: totalDmg, isCrit, dodged: false, blocked, counterDmg: 0 };
 }
 
-function calcEnemyDamage(enemy: EnemyData, floor: number): number {
+function calcEnemyDamage(enemy: EnemyData, playerStats: any, floor: number): { damage: number; dodged: boolean; blocked: boolean } {
+    const stats = { s: enemy.dmg, a: enemy.dmg, d: Math.floor(enemy.dmg * 0.5), m: Math.floor(enemy.dmg * 0.3), hp: enemy.maxHp, extra: {}, bonuses: {} } as any;
+    
+    // Проверка уклонения игрока
+    const dodge = dodgeChance(playerStats, stats);
+    if (Math.random() < dodge) {
+        return { damage: 0, dodged: true, blocked: false };
+    }
+    
+    // Проверка блока игрока
+    const block = blockChance(playerStats);
+    const blocked = Math.random() < block;
+    const blockRed = blocked ? blockReduction(playerStats, stats) : 0;
+    
+    // Урон врага
     const base = enemy.dmg + Math.floor(floor * 0.3);
     const debuffPct = enemy.debuffs?.['demoralize']?.value || 0;
     const debuff = 1 - debuffPct / 100;
-    return Math.floor((base + Math.random() * 2) * debuff);
+    const dmg = Math.floor((base + Math.random() * 2) * debuff);
+    const afterBlock = Math.max(1, Math.floor(dmg * (1 - blockRed)));
+    
+    return { damage: afterBlock, dodged: false, blocked };
 }
 
 // Кеш мобов — загружается один раз
@@ -844,6 +879,9 @@ function tickCombat(run: DungeonRun) {
     const now = Date.now() / 1000;
     const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.equippedWeaponStr);
 
+    // Статы игрока для формул боя
+    const playerStats = { s: run.playerStr, a: run.playerAgi, d: run.playerDef, m: run.playerMag, hp: run.playerMaxHp, extra: {} as any, bonuses: {} as any } as any;
+
     // Пассивный спад ярости (вне боя ярость уходит быстрее)
     const enemiesAlive = run.enemies.some(e => e.hp > 0);
     if (!enemiesAlive) {
@@ -866,10 +904,12 @@ function tickCombat(run: DungeonRun) {
         run.lastPlayerAttackAt = Date.now() / 1000;
         const target = getTarget(run);
         if (target && target.hp > 0) {
-            const { damage: dmg, isCrit } = calcPlayerDamage(run);
+            const { damage: dmg, isCrit, dodged, blocked } = calcPlayerDamage(run);
             target.hp -= dmg;
-            run.rage = Math.min(100, run.rage + 5 + (run.buffs['battle_cry'] ? 2 : 0));
-            run.log.push(isCrit ? `💥 Крит ${dmg} по ${target.name}` : `⚔️ ${dmg} по ${target.name}`);
+            if (!dodged) run.rage = Math.min(100, run.rage + 5 + (run.buffs['battle_cry'] ? 2 : 0));
+            if (blocked) run.log.push(isCrit ? `💥 Крит ${dmg} по ${target.name} (блок)` : `⚔️ ${dmg} по ${target.name} (блок)`);
+            else if (isCrit) run.log.push(`💥 Крит ${dmg} по ${target.name}`);
+            else if (!dodged) run.log.push(`⚔️ ${dmg} по ${target.name}`);
         }
     }
 
@@ -886,12 +926,13 @@ function tickCombat(run: DungeonRun) {
         if (enemy['_lastAttack'] >= interval) {
             enemy['_lastAttack'] -= interval;
             enemy._lastAttackTime = Date.now() / 1000;
-            const dmg = calcEnemyDamage(enemy, run.currentFloor);
-            // Минимальная защита (0.1% за очко — почти без блокирования)
-            const reduced = Math.max(1, Math.floor(dmg * (1 - run.playerDef * 0.0008)));
+            const result = calcEnemyDamage(enemy, playerStats, run.currentFloor);
+            const reduced = result.damage;
             run.playerHp -= reduced;
-            run.rage = Math.min(100, run.rage + 3); // ярость от получения урона
-            run.log.push(`👊 ${enemy.name} бьёт на ${reduced}`);
+            run.rage = Math.min(100, run.rage + 3);
+            if (result.dodged) run.log.push(`↗ Вы уклоняетесь от ${enemy.name}`);
+            else if (result.blocked) run.log.push(`🛡 Блок! ${enemy.name} бьёт на ${reduced}`);
+            else run.log.push(`👊 ${enemy.name} бьёт на ${reduced}`);
         }
     }
 
