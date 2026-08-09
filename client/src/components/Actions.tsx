@@ -232,7 +232,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 <button
                     onClick={() => setActiveTab('dungeon')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'dungeon' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
-                >🏰 Подземелья(Бета)</button>
+                >⛏️ Подземелья(Бета)</button>
             </div>
             {activeTab === 'dungeon' ? (
                 <Card>
