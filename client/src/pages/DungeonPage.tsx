@@ -597,13 +597,22 @@ export default function DungeonPage() {
                                                     style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
                                             </div>
                                             {!isDead && !e.stunned && (
-                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
-                                            {(() => { void frameTick; const elapsed = (Date.now() / 1000) - (e.lastAttackAt || 0); const pct = Math.min(100, (elapsed / Math.max(0.1, (e.attackInterval || 2.5) * 3)) * 100); return <div className="h-full bg-[var(--color-accent-warning)] rounded-full" style={{ width: `${pct}%`, transition: 'width 0.05s linear' }} />; })()}
+                                            <div className="flex items-center gap-1 mt-1">
+                                                {(() => { void frameTick; const cdLeft = Math.max(0, Math.ceil(((e.lastAttackAt || 0) + (e.attackInterval || 2.5) * 3 - Date.now() / 1000))); return (
+                                                    <div className="relative w-6 h-6 rounded-full bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)] flex items-center justify-center text-xs shrink-0">
+                                                        <span>⚔️</span>
+                                                        {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{cdLeft}</span>}
+                                                    </div>
+                                                ); })()}
+                                                <span className="text-[0.55rem] text-[var(--color-text-muted)]">Атака</span>
                                             </div>
                                             )}
                                             {!isDead && e.stunned && (
-                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
-                                                <div className="h-full bg-[var(--color-accent-warning)] rounded-full" style={{ width: '0%' }} />
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <div className="w-6 h-6 rounded-full bg-[var(--color-bg-input)] border border-[var(--color-border-light)] flex items-center justify-center text-xs shrink-0">
+                                                    <span>⚡</span>
+                                                </div>
+                                                <span className="text-[0.55rem] text-[var(--color-accent-warning)]">Оглушение</span>
                                             </div>
                                             )}
                                             {!isDead && e.stunned && (
