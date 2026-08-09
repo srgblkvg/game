@@ -169,10 +169,9 @@ function App() {
             } catch {}
           }}
           onSkipStep={async () => {
-            const nextStep = (character?.tutorialStep ?? 0) + 1;
-            setCharacter(prev => prev ? { ...prev, tutorialStep: nextStep } : prev);
+            setCharacter(prev => prev ? { ...prev, tutorialStep: (character?.tutorialStep ?? 0) + 1 } : prev);
             try {
-              await fetch('/api/character/tutorial-step', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ step: nextStep }) });
+              await fetch('/api/character/tutorial-step', { method: 'POST', headers: getHeaders() });
             } catch {}
           }}
         />
