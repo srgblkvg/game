@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
+import Card from './ui/Card';
 import Modal from './ui/Modal';
 import { getHeaders } from '../api/helpers';
 
@@ -207,9 +208,9 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const heroCards = cards.filter(c => c.section === 'hero');
     const worldCards = cards.filter(c => c.section === 'world');
     const castleCards = cards.filter(c => c.section === 'castle');
-    const [activeTab, setActiveTab] = useState<'world' | 'castle'>('world');
+    const [activeTab, setActiveTab] = useState<'dungeon' | 'world' | 'castle'>('dungeon');
 
-    const activeCards = activeTab === 'world' ? worldCards : castleCards;
+    const activeCards = activeTab === 'dungeon' ? [] : activeTab === 'world' ? worldCards : castleCards;
 
     return (
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
@@ -221,6 +222,10 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             {/* Категории */}
             <div className="flex justify-center gap-2" data-tutorial="actions-tabs">
                 <button
+                    onClick={() => setActiveTab('dungeon')}
+                    className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'dungeon' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >🏰 Подземелья(Бета)</button>
+                <button
                     onClick={() => setActiveTab('world')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'world' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🌍 Мир</button>
@@ -229,7 +234,18 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🏰 Площадь</button>
             </div>
+            {activeTab === 'dungeon' ? (
+                <Card>
+                    <h3 className="text-sm font-bold mb-1">⚔️ Одиночное подземелье</h3>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Сражайтесь с монстрами, собирайте добычу, открывайте новые этажи</p>
+                    <p className="text-[0.65rem] text-[var(--color-text-muted)] h-4 leading-4"></p>
+                    <div className="mt-auto">
+                        <Button variant="primary" size="md" fullWidth onClick={() => navigate('/dungeon')}>🗡️ В данж</Button>
+                    </div>
+                </Card>
+            ) : (
             <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} trainingCD={activeTab === 'world' ? trainingCD : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} isGuest={isGuest} />
+            )}
         </div>
     );
 }
