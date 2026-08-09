@@ -518,7 +518,7 @@ export default function GuildPage() {
                         <h4 className="font-medium mb-1 text-[var(--color-accent-gold)]">⭐ Гильдия (топ-5)</h4>
                         {ratings.guildTop?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
+                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildid}`); }}>[{r.guildName}]</span>}</span>
                                 <span className="text-[var(--color-text-muted)]">{formatNum(r.total)}</span>
                             </div>
                         ))}
@@ -529,7 +529,7 @@ export default function GuildPage() {
                         <h4 className="font-medium mb-1 text-[var(--color-accent-info)]">👤 Игроки (топ-5)</h4>
                         {ratings.personalTop?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
+                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildid}`); }}>[{r.guildName}]</span>}</span>
                                 <span className="text-[var(--color-text-muted)]">{formatNum(r.total)}</span>
                             </div>
                         ))}
@@ -555,7 +555,7 @@ export default function GuildPage() {
                         <h4 className="font-medium mb-1 text-[var(--color-accent-warning)]">💥 Рекордные удары (топ-5)</h4>
                         {ratings.topHits?.map((r: any, i: number) => (
                             <div key={i} className="flex justify-between py-0.5 border-b border-[var(--color-border-light)]">
-                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
+                                <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildid}`); }}>[{r.guildName}]</span>}</span>
                                 <span className="text-[var(--color-text-muted)]">{formatNum(r.maxDmg)}</span>
                             </div>
                         ))}
