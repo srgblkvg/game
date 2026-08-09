@@ -437,7 +437,7 @@ export default function BestiaryPage() {
             </div>
           )}
           {error && <p className="text-[var(--color-accent-danger)] mb-4">{error}</p>}
-          <div className="space-y-4">
+          <div className="space-y-4" data-tutorial="bestiary-attack">
             {(diffGroups || []).map((diff, idx) => {
               const groupFloors = floors.filter(f => floorsData.some(fd => fd.name === f && (fd.difficulty||0) === diff.difficulty));
               if (groupFloors.length === 0 && user?.username !== 'TODD') return null;
