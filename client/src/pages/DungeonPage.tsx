@@ -387,7 +387,7 @@ export default function DungeonPage() {
                 <div className="border-t border-[var(--color-border-light)] pt-3 mt-3">
                     {leaderboard.topFloor.length > 0 && (
                         <div className="mb-3">
-                            <h4 className="text-xs font-bold mb-1">🏆 Высший этаж</h4>
+                            <h4 className="text-xs font-bold mb-1">🏆 Рейтинг этажа</h4>
                             {leaderboard.topFloor.map((r: any, i: number) => (
                                 <div key={i} className="flex justify-between text-xs py-0.5">
                                     <span>{i+1}. {r.username}</span>
@@ -398,7 +398,7 @@ export default function DungeonPage() {
                     )}
                     {leaderboard.topReward.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold mb-1">💰 Высшая награда</h4>
+                            <h4 className="text-xs font-bold mb-1">💰 Топ по вынесенному</h4>
                             {leaderboard.topReward.map((r: any, i: number) => (
                                 <div key={i} className="flex justify-between text-xs py-0.5">
                                     <span>{i+1}. {r.username}</span>
