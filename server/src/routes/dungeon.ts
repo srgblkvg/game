@@ -735,7 +735,7 @@ router.post('/dungeon/flee', async (req, res) => {
     if (run.tickTimer) clearInterval(run.tickTimer);
     activeRuns.delete(userId);
 
-    await db.run('DELETE FROM dungeon_runs WHERE userId = ?', [userId]);
+    await db.run('UPDATE dungeon_runs SET startedAt = ? WHERE userId = ?', [Math.floor(Date.now() / 1000), userId]);
     res.json({ success: true, loot });
 });
 
