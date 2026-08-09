@@ -25,7 +25,7 @@ const tutorialSteps: TutorialStep[] = [
     title: 'Крафт',
     description: 'Создай предмет в Ремесле. Сейчас откроется страница крафта — выбери рецепт.',
     tooltipPosition: 'top',
-    action: 'tutorial-tab-castle,navigate-craft',
+    action: 'tutorial-tab-castle',
   },
   {
     targetSelector: '[data-tutorial="craft-recipe"]',
