@@ -185,10 +185,6 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
     }
     (calcPosition as any)._retries = 0;
 
-    // При клике на целевой элемент → действие + переход к след. шагу
-    const advanceOnClick = () => { if (onSkipStep) onSkipStep(); };
-    el.addEventListener('click', advanceOnClick, { once: true });
-
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
