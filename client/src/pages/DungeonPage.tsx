@@ -334,9 +334,9 @@ export default function DungeonPage() {
             <h3 className="text-sm font-bold mb-2">Выбор этажа:</h3>
             <div className="space-y-2 mb-4">
                 {getCheckpoints().map(cp => (
-                    <div key={cp} className={`p-3 rounded-lg border cursor-pointer transition-colors ${cp === 1 || cp % 5 === 0
-                        ? 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] hover:border-[var(--color-accent-info)]'
-                        : 'opacity-50'}`}>
+                    <div key={cp} className={`p-3 rounded-lg border cursor-pointer transition-colors ${cp === 1 || (cp - 1) % 5 === 0
+     ? 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] hover:border-[var(--color-accent-info)]'
+     : 'opacity-50'}`}>
                         <div className="flex justify-between items-center">
                             <span className="text-sm font-bold">
                                 {cp === 1 ? 'Этаж 1' : `Этаж ${cp}`}
