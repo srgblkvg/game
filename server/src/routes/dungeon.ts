@@ -211,16 +211,22 @@ router.get('/dungeon/status', async (req, res) => {
 
     const active = activeRuns.get(userId);
     if (active) {
-        return res.json({
-            active: true,
-            currentFloor: active.currentFloor,
-            checkpointFloor: active.checkpointFloor,
-            playerHp: active.playerHp,
-            playerMaxHp: active.playerMaxHp,
-            enemies: active.enemies.map(e => ({ id: e.id, name: e.name, hp: e.hp, maxHp: e.maxHp, isBoss: e.isBoss })),
-            rage: active.rage,
-            cleared: active.cleared,
-        });
+        // Мёртвый ран — чистим, возвращаем неактивный статус
+        if (active.playerHp <= 0) {
+            if (active.tickTimer) clearInterval(active.tickTimer);
+            activeRuns.delete(userId);
+        } else {
+            return res.json({
+                active: true,
+                currentFloor: active.currentFloor,
+                checkpointFloor: active.checkpointFloor,
+                playerHp: active.playerHp,
+                playerMaxHp: active.playerMaxHp,
+                enemies: active.enemies.map(e => ({ id: e.id, name: e.name, hp: e.hp, maxHp: e.maxHp, isBoss: e.isBoss })),
+                rage: active.rage,
+                cleared: active.cleared,
+            });
+        }
     }
 
     const today = new Date().toISOString().slice(0, 10);
@@ -868,7 +874,6 @@ function tickCombat(run: DungeonRun) {
     if (run.playerHp <= 0) {
         run.playerHp = 0;
         if (run.tickTimer) clearInterval(run.tickTimer);
-        activeRuns.delete(run.userId);
         db.run('DELETE FROM dungeon_runs WHERE userId = ?', [run.userId]);
     }
 }
