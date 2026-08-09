@@ -10,7 +10,7 @@ import { toCharCardData } from '../utils/character';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
-    image?: string; attackInterval?: number;
+    image?: string; attackInterval?: number; stunned?: boolean; lastAttackAt?: number;
 }
 
 interface SkillInfo {
@@ -531,7 +531,7 @@ export default function DungeonPage() {
                         </div>
                         <div className="h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
                             <div className="h-full bg-[var(--color-accent-info)] rounded-full"
-                                style={{ animation: `dungeonAttack ${1 / parseFloat(attackSpeed || '1')}s linear infinite` }} />
+                                style={{ animation: `dungeonAttack ${(1 / parseFloat(attackSpeed || '1')) * 3}s linear infinite` }} />
                         </div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-[var(--color-text-muted)]">Ярость</span>
@@ -584,11 +584,19 @@ export default function DungeonPage() {
                                                 <div className="h-full rounded-full transition-all duration-300 ease-linear"
                                                     style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
                                             </div>
-                                            {!isDead && (
-                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
+                                            {!isDead && !e.stunned && (
+                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1" key={`atk-${e.id}-${e.lastAttackAt}`}>
                                             <div className="h-full bg-[var(--color-accent-warning)] rounded-full"
-                                                style={{ animation: `dungeonAttack ${(e.attackInterval || 2.5)}s linear infinite` }} />
+                                                style={{ animation: `dungeonAttack ${(e.attackInterval || 2.5) * 3}s linear infinite` }} />
                                             </div>
+                                            )}
+                                            {!isDead && e.stunned && (
+                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1" key={`stun-${e.id}-${e.lastAttackAt}`}>
+                                                <div className="h-full bg-[var(--color-accent-warning)] rounded-full" style={{ width: '0%' }} />
+                                            </div>
+                                            )}
+                                            {!isDead && e.stunned && (
+                                                <div className="text-[0.55rem] text-[var(--color-accent-warning)] mt-0.5">⚡ Оглушение</div>
                                             )}
                                         </div>
                                     </div>
