@@ -208,7 +208,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const heroCards = cards.filter(c => c.section === 'hero');
     const worldCards = cards.filter(c => c.section === 'world');
     const castleCards = cards.filter(c => c.section === 'castle');
-    const [activeTab, setActiveTab] = useState<'dungeon' | 'world' | 'castle'>('dungeon');
+    const [activeTab, setActiveTab] = useState<'dungeon' | 'world' | 'castle'>('world');
 
     const activeCards = activeTab === 'dungeon' ? [] : activeTab === 'world' ? worldCards : castleCards;
 
@@ -222,10 +222,6 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             {/* Категории */}
             <div className="flex justify-center gap-2" data-tutorial="actions-tabs">
                 <button
-                    onClick={() => setActiveTab('dungeon')}
-                    className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'dungeon' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
-                >🏰 Подземелья(Бета)</button>
-                <button
                     onClick={() => setActiveTab('world')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'world' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🌍 Мир</button>
@@ -233,6 +229,10 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     onClick={() => setActiveTab('castle')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🏰 Площадь</button>
+                <button
+                    onClick={() => setActiveTab('dungeon')}
+                    className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'dungeon' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >🏰 Подземелья(Бета)</button>
             </div>
             {activeTab === 'dungeon' ? (
                 <Card>
