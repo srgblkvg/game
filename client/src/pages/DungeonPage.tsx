@@ -767,7 +767,7 @@ export default function DungeonPage() {
                             <div className="bg-[var(--color-bg-card)] rounded-lg p-3 mb-3">
                                 <h4 className="text-xs font-bold mb-1">📦 Вся добыча за поход:</h4>
                                 <p className="text-xs">💰 {totalLoot.silver.toLocaleString()} серебра</p>
-                                {totalLoot.items.map((it, i) => <p key={i} className="text-xs">🔮 {it}</p>)}
+                                {totalLoot.items.map((it: any, i: number) => <p key={i} className="text-xs">🔮 {it.name || it.rarity_display || 'Предмет'}{it.count > 1 ? ` ×${it.count}` : ''}</p>)}
                                 {totalLoot.pages.map((p, i) => <p key={i} className="text-xs">📜 {p}</p>)}
                             </div>
                             <p className="text-[0.6rem] text-[var(--color-accent-danger)] text-center mb-2">⚠ При смерти вся накопленная добыча будет потеряна</p>
