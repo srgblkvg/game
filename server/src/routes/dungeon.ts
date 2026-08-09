@@ -634,6 +634,31 @@ router.post('/dungeon/claim', async (req, res) => {
         }
     }
 
+    // Шанс экипировки
+    let equipReward: any = null;
+    const equipChance = isBossFloor ? 0.3 : 0.1;
+    if (Math.random() < equipChance) {
+        // Редкость зависит от этажа: выше этаж → выше шанс хорошей редкости
+        const maxRarity = Math.min(6, Math.floor(floor / 3)); // этаж 3→1, 6→2, 9→3, ...
+        const rarityRoll = Math.random();
+        let rarityId = 0;
+        if (rarityRoll < 0.4) rarityId = Math.min(maxRarity, 0);
+        else if (rarityRoll < 0.7) rarityId = Math.min(maxRarity, 1);
+        else if (rarityRoll < 0.85) rarityId = Math.min(maxRarity, 2);
+        else if (rarityRoll < 0.94) rarityId = Math.min(maxRarity, 3);
+        else if (rarityRoll < 0.98) rarityId = Math.min(maxRarity, 4);
+        else rarityId = Math.min(maxRarity, 5);
+
+        const equip = await db.one(
+            'SELECT i.*, r.display_name as rarity_display, r.color as rarity_color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.rarity_id = $1 ORDER BY RANDOM() LIMIT 1',
+            [rarityId]
+        ).catch(() => null) as any;
+
+        if (equip) {
+            equipReward = { id: Date.now(), name: equip.name, slot: equip.slot, rarity_id: equip.rarity_id, rarity_display: equip.rarity_display, rarity_color: equip.rarity_color, bonuses: JSON.parse(equip.bonuses || '{}'), extra: JSON.parse(equip.extra || '{}'), image: equip.image };
+        }
+    }
+
     // Шанс страницы скилла
     let pageReward: any = null;
     const pageChance = isBossFloor ? 0.3 : 0.03;
@@ -647,6 +672,7 @@ router.post('/dungeon/claim', async (req, res) => {
     // Накапливаем лут
     run.accumulatedLoot.silver += silverReward;
     if (itemReward) run.accumulatedLoot.items.push(itemReward);
+    if (equipReward) run.accumulatedLoot.items.push(equipReward);
     if (pageReward) run.accumulatedLoot.pages.push(pageReward);
 
     // Чекпоинт на этажах-боссах — сохраняем следующий этаж
@@ -668,6 +694,7 @@ router.post('/dungeon/claim', async (req, res) => {
         nextFloor: floor + 1,
         silver: silverReward,
         item: itemReward,
+        equip: equipReward,
         page: pageReward,
         playerHp: run.playerHp,
         checkpoint: run.checkpointFloor,
@@ -758,10 +785,16 @@ router.post('/dungeon/flee', async (req, res) => {
     }
     for (const item of loot.items) {
         const inventory = JSON.parse((await db.one('SELECT inventory FROM users WHERE id = ?', [userId]) as any).inventory || '[]');
-        const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === item.id);
-        if (existing) {
-            existing.count = (existing.count || 0) + 1;
+        if (item.type === 'craft_item') {
+            // Камень улучшения — стакаем
+            const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === item.id);
+            if (existing) {
+                existing.count = (existing.count || 0) + 1;
+            } else {
+                inventory.push(item);
+            }
         } else {
+            // Экипировка — добавляем как новый предмет
             inventory.push(item);
         }
         await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
@@ -977,7 +1010,7 @@ function checkEnemyDeaths(run: DungeonRun) {
 // Рейтинг данжа
 router.get('/dungeon/leaderboard', async (_req, res) => {
     const topFloor = await db.raw(
-        `SELECT u.username, dr.maxfloor FROM dungeon_runs dr JOIN users u ON dr.userId = u.id WHERE dr.maxfloor > 0 ORDER BY dr.maxfloor DESC LIMIT 5`
+        `SELECT u.username, dr.maxfloor FROM dungeon_runs dr JOIN users u ON dr.userId = u.id ORDER BY dr.maxfloor DESC LIMIT 5`
     ).catch(() => ({ rows: [] })) as any;
     const topReward = await db.raw(
         `SELECT u.username, dr.maxreward FROM dungeon_runs dr JOIN users u ON dr.userId = u.id WHERE dr.maxreward > 0 ORDER BY dr.maxreward DESC LIMIT 5`
