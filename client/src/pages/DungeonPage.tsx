@@ -47,7 +47,7 @@ export default function DungeonPage() {
     const [cooldowns, setCooldowns] = useState<Record<number, number>>({});
     const [combatLog, setCombatLog] = useState<string[]>([]);
     const [attackSpeed, setAttackSpeed] = useState('0');
-    const [selectedSkills, setSelectedSkills] = useState<number[]>([7, 2, 3]);
+    const [selectedSkills, setSelectedSkills] = useState<number[]>([7, 2, 3, 1]);
     const [cleared, setCleared] = useState(false);
     const [dead, setDead] = useState(false);
     const [exited, setExited] = useState(false);

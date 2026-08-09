@@ -41,7 +41,7 @@ db.run(`CREATE TABLE IF NOT EXISTS skill_levels (
 const WEAPON_SPEED: Record<number, number> = { 0: 0.3, 1: 0.5, 2: 0.7, 3: 0.9, 4: 1.1, 5: 1.3, 6: 1.5 };
 const TICK_MS = 100;
 const DAILY_RUNS_MAX = 4;
-const BASE_SKILL_IDS = new Set([7, 2, 3]); // Рывок, Размах, Боевой клич
+const BASE_SKILL_IDS = new Set([7, 2, 3, 1]); // Рывок, Размах, Боевой клич, Удар щитом
 
 function getHpRegenRate(user: any): number {
     const now = Math.floor(Date.now() / 1000);
