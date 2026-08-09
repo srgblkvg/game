@@ -10,9 +10,6 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { getCompatibleSlots } from '../utils/itemUtils';
 import { getRemaining } from '../hooks/useServerTime';
-import TutorialOverlay from '../components/TutorialOverlay';
-import tutorialSteps from '../data/tutorialSteps';
-import { getHeaders } from '../api/helpers';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -21,7 +18,6 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [noOpponentModal, setNoOpponentModal] = useState<string | null>(null);
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string | null>(null);
-  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => { if (user && !user.role) navigate('/login'); }, [user, navigate]);
   useEffect(() => { if (character?.activeJob) navigate('/jobs'); }, [character, navigate]);
@@ -38,15 +34,6 @@ export default function HomePage() {
     fetchCharacter().then(setCharacter).catch(console.error);
     // Header already polls character — no need for duplicate interval here
   }, [user, setCharacter]);
-
-  // Показываем туториал тем, кто ещё не прошёл (флаг в БД)
-  useEffect(() => {
-    if (!character) return;
-    if (!character.tutorialCompleted && (character.tutorialStep ?? 0) < tutorialSteps.length) {
-      const t = setTimeout(() => setShowTutorial(true), 500);
-      return () => clearTimeout(t);
-    }
-  }, [character]);
 
   const handleArenaClick = async () => {
     try { await enterArena(); const fresh = await fetchCharacter(); setCharacter(fresh); navigate('/arena'); }
@@ -124,28 +111,6 @@ export default function HomePage() {
         <p className="mb-4">{noOpponentModal}</p>
         <Button variant="danger" fullWidth onClick={() => setNoOpponentModal(null)}>OK</Button>
       </Modal>
-
-      {showTutorial && (
-        <TutorialOverlay
-          steps={tutorialSteps}
-          stepIndex={character?.tutorialStep ?? 0}
-          onComplete={async () => {
-            setShowTutorial(false);
-            // Обновляем персонажа локально, чтобы не переоткрылся при следующем poll
-            setCharacter(prev => prev ? { ...prev, tutorialCompleted: 1 } : prev);
-            try {
-              await fetch('/api/character/tutorial-done', { method: 'POST', headers: getHeaders() });
-            } catch {}
-          }}
-          onSkipStep={async () => {
-            try {
-              await fetch('/api/character/tutorial-step', { method: 'POST', headers: getHeaders() });
-              // Обновляем персонажа локально
-              setCharacter(prev => prev ? { ...prev, tutorialStep: (prev.tutorialStep || 0) + 1 } : prev);
-            } catch {}
-          }}
-        />
-      )}
     </div>
   );
 }

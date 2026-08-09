@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
+import { useGame } from './contexts/GameContext';
+import TutorialOverlay from './components/TutorialOverlay';
+import tutorialSteps from './data/tutorialSteps';
+import { getHeaders } from './api/helpers';
 import LoginPage from './pages/LoginPage';
 import LoginClassicPage from './pages/LoginClassicPage';
 import WikiPage from './pages/WikiPage';
@@ -69,6 +73,16 @@ function Loading() {
 
 function App() {
   const { user } = useAuth();
+  const { character, setCharacter } = useGame();
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    if (!character) return;
+    if (!character.tutorialCompleted && (character.tutorialStep ?? 0) < tutorialSteps.length) {
+      const t = setTimeout(() => setShowTutorial(true), 500);
+      return () => clearTimeout(t);
+    }
+  }, [character]);
 
   const searchParams = new URLSearchParams(window.location.search);
   const isVkLaunch = searchParams.has('vk_user_id');
@@ -143,6 +157,19 @@ function App() {
       <VkKeyboard />
       {/* TODO: удалить после ответа поддержки VK ↑ */}
       <NoMoneyModal />
+      {showTutorial && (
+        <TutorialOverlay
+          steps={tutorialSteps}
+          stepIndex={character?.tutorialStep ?? 0}
+          onComplete={async () => {
+            setShowTutorial(false);
+            setCharacter(prev => prev ? { ...prev, tutorialCompleted: 1 } : prev);
+            try {
+              await fetch('/api/character/tutorial-done', { method: 'POST', headers: getHeaders() });
+            } catch {}
+          }}
+        />
+      )}
     </ToastProvider>
     </BrowserRouter>
   );
