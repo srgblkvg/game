@@ -538,12 +538,6 @@ export default function DungeonPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mb-0.5">
-                            <span>Автоатака ({attackSpeed} в сек.)</span>
-                        </div>
-                        <div className="h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
-                            {(() => { void frameTick; const elapsed = (Date.now() / 1000) - playerLastAttackAt; const pct = Math.min(100, (elapsed / Math.max(0.1, playerAtkInterval * 3)) * 100); return <div className="h-full bg-[var(--color-accent-info)] rounded-full" style={{ width: `${pct}%`, transition: 'width 0.05s linear' }} />; })()}
-                        </div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-[var(--color-text-muted)]">Ярость</span>
                             <div className="flex-1 h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
@@ -617,6 +611,14 @@ export default function DungeonPage() {
 
                     {/* Умения — компактные иконки */}
                     <div className="grid grid-cols-4 gap-2">
+                        {/* Автоатака */}
+                        {(() => { void frameTick; const cdLeft = Math.max(0, Math.ceil(((playerLastAttackAt + playerAtkInterval * 3) - Date.now() / 1000))); return (
+                            <div className="relative p-2 rounded-lg text-center bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]">
+                                <span className="text-xl">⚔️</span>
+                                {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white bg-black/40 rounded-lg">{cdLeft}</span>}
+                                <div className="text-[0.55rem] text-[var(--color-text-muted)] mt-0.5 truncate">Автоатака</div>
+                            </div>
+                        ); })()}
                         {skills.map(s => {
                             const onCd = cooldowns[s.id] && cooldowns[s.id] > Date.now() / 1000;
                             const cdLeft = onCd ? Math.ceil(cooldowns[s.id] - Date.now() / 1000) : 0;
