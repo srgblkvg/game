@@ -155,7 +155,7 @@ router.post('/vk-bridge', async (req: Request, res: Response) => {
 
     const insertResult = await db.raw(
       `INSERT INTO users (username, passwordhash, email, emailverified, oauthprovider, oauthid,
-        currenthp, lasthpupdate, level, gender, avatar, lastloginat, premiumuntil, money, equipment_1)
+        currenthp, lasthpupdate, level, gender, avatar, lastloginat, premiumuntil, money, equipment)
        VALUES ($1, $2, $3, 1, 'vk', $4, $5, $6, 1, $7, $8, $9, $10, $11, $12) RETURNING id`,
       [finalUsername, randomHash, `vk_${vkUserId}@oauth.local`, vkUserId, startHp, now, gender, avatar, now, premiumUntil, 1000, eqObj],
     );

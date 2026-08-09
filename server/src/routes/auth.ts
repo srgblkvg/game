@@ -41,7 +41,7 @@ router.post('/register', async (req, res) => {
 
     const equipment1 = getStarterEquipment();
     const eqObj = JSON.parse(equipment1);
-    await db.raw(`INSERT INTO users (username, passwordhash, email, emailcode, emailcodeexpires, currenthp, lasthpupdate, level, gender, money, equipment_1)
+    await db.raw(`INSERT INTO users (username, passwordhash, email, emailcode, emailcodeexpires, currenthp, lasthpupdate, level, gender, money, equipment)
         VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'male', $8, $9) RETURNING id`,
         [username, passwordHash, email, code, codeExpires, startHp, now, 1000, eqObj]);
 
@@ -151,7 +151,7 @@ router.post('/guest', async (req, res) => {
     const equipment1 = getStarterEquipment();
     const eqObj = JSON.parse(equipment1);
 
-    const insertResult = await db.raw(`INSERT INTO users (username, passwordhash, currenthp, lasthpupdate, level, gender, isguest, emailverified, exp, money, equipment_1)
+    const insertResult = await db.raw(`INSERT INTO users (username, passwordhash, currenthp, lasthpupdate, level, gender, isguest, emailverified, exp, money, equipment)
         VALUES ($1, '', $2, $3, 1, 'male', 1, 1, 0, $4, $5) RETURNING id`,
         [guestId, startHp, now, 1000, eqObj]);
     const newUserId = insertResult.rows[0].id;

@@ -92,7 +92,7 @@ async function findOrCreateUser(provider: string, oauthId: string, username: str
     const premiumUntil = now + 86400; // 1 день премиума за привязку
     const equipment1 = getStarterEquipment();
     const eqObj = JSON.parse(equipment1);
-    const insertResult = await db.raw(`INSERT INTO users (username, passwordhash, email, emailverified, oauthprovider, oauthid, currenthp, lasthpupdate, level, gender, lastloginat, premiumuntil, money, equipment_1)
+    const insertResult = await db.raw(`INSERT INTO users (username, passwordhash, email, emailverified, oauthprovider, oauthid, currenthp, lasthpupdate, level, gender, lastloginat, premiumuntil, money, equipment)
         VALUES ($1, $2, $3, 1, $4, $5, $6, $7, 1, 'male', $8, $9, $10, $11) RETURNING id`,
         [finalUsername, randomHash, `${provider}_${oauthId}@oauth.local`, provider, oauthId, startHp, now, now, premiumUntil, 1000, eqObj]);
     return { id: Number(insertResult.rows[0].id), username: finalUsername, level: 1 };
