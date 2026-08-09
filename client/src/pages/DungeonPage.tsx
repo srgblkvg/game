@@ -579,10 +579,12 @@ export default function DungeonPage() {
                                                 <div className="h-full rounded-full transition-all duration-300 ease-linear"
                                                     style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
                                             </div>
+                                            {!isDead && (
                                             <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
                                             <div className="h-full bg-[var(--color-accent-warning)] rounded-full"
                                                 style={{ animation: `dungeonAttack ${(e.attackInterval || 2.5)}s linear infinite` }} />
                                             </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

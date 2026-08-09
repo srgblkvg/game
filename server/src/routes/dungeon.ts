@@ -556,7 +556,7 @@ router.post('/dungeon/claim', async (req, res) => {
     const userId = req.userId;
     const run = activeRuns.get(userId);
     if (!run) return res.status(400).json({ error: 'Данж не активен' });
-    if (run.enemies.length > 0) return res.status(400).json({ error: 'Сначала убейте всех врагов' });
+    if (run.enemies.some(e => e.hp > 0)) return res.status(400).json({ error: 'Сначала убейте всех врагов' });
 
     // Награда за этаж (накапливаем, НЕ выдаём сразу)
     const floor = run.currentFloor;
