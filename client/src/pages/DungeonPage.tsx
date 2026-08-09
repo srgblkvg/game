@@ -52,6 +52,8 @@ export default function DungeonPage() {
     const [dead, setDead] = useState(false);
     const [exited, setExited] = useState(false);
     const [targetIndex, setTargetIndex] = useState(0);
+    const [playerLastAttackAt, setPlayerLastAttackAt] = useState(0);
+    const [playerAtkInterval, setPlayerAtkInterval] = useState(1);
     const [claimed, setClaimed] = useState(false);
     const [claimResult, setClaimResult] = useState<any>(null);
     const [pages, setPages] = useState<any[]>([]);
@@ -110,6 +112,14 @@ export default function DungeonPage() {
 
     useEffect(() => { loadStatus(); loadPages(); loadSkills(); }, []);
 
+    // Локальный тик для плавных прогресс-баров
+    const [frameTick, setFrameTick] = useState(0);
+    useEffect(() => {
+        if (!inCombat) return;
+        const iv = setInterval(() => setFrameTick(t => t + 1), 50);
+        return () => clearInterval(iv);
+    }, [inCombat]);
+
     const loadSkills = async () => {
         try {
             const res = await fetch('/api/dungeon/skills', { headers: getHeaders() });
@@ -162,6 +172,8 @@ export default function DungeonPage() {
                 if (data.cleared) { setCleared(true); /* НЕ останавливаем опрос — реген */ }
                 if (data.dead) { setDead(true); setInCombat(false); stopPolling(); }
                 setTargetIndex(data.targetIndex ?? 0);
+                setPlayerLastAttackAt(data.lastPlayerAttackAt || 0);
+                setPlayerAtkInterval(data.playerAttackInterval || 1);
                 if (data.log?.length) { setCombatLog(prev => [...prev, ...data.log].slice(-50)); addFloats(data.log, data.enemies || []); }
             } catch { /* */ }
         }, 500);
@@ -530,8 +542,7 @@ export default function DungeonPage() {
                             <span>Автоатака ({attackSpeed} в сек.)</span>
                         </div>
                         <div className="h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-2">
-                            <div className="h-full bg-[var(--color-accent-info)] rounded-full"
-                                style={{ animation: `dungeonAttack ${(1 / parseFloat(attackSpeed || '1')) * 3}s linear infinite` }} />
+                            {(() => { void frameTick; const elapsed = (Date.now() / 1000) - playerLastAttackAt; const pct = Math.min(100, (elapsed / Math.max(0.1, playerAtkInterval)) * 100); return <div className="h-full bg-[var(--color-accent-info)] rounded-full" style={{ width: `${pct}%`, transition: 'width 0.05s linear' }} />; })()}
                         </div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-[var(--color-text-muted)]">Ярость</span>
@@ -585,13 +596,12 @@ export default function DungeonPage() {
                                                     style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
                                             </div>
                                             {!isDead && !e.stunned && (
-                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1" key={`atk-${e.id}-${e.lastAttackAt}`}>
-                                            <div className="h-full bg-[var(--color-accent-warning)] rounded-full"
-                                                style={{ animation: `dungeonAttack ${(e.attackInterval || 2.5) * 3}s linear infinite` }} />
+                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
+                                            {(() => { void frameTick; const elapsed = (Date.now() / 1000) - (e.lastAttackAt || 0); const pct = Math.min(100, (elapsed / Math.max(0.1, (e.attackInterval || 2.5) * 3)) * 100); return <div className="h-full bg-[var(--color-accent-warning)] rounded-full" style={{ width: `${pct}%`, transition: 'width 0.05s linear' }} />; })()}
                                             </div>
                                             )}
                                             {!isDead && e.stunned && (
-                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1" key={`stun-${e.id}-${e.lastAttackAt}`}>
+                                            <div className="h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden mt-1">
                                                 <div className="h-full bg-[var(--color-accent-warning)] rounded-full" style={{ width: '0%' }} />
                                             </div>
                                             )}
