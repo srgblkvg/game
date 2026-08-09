@@ -113,7 +113,20 @@ export default function CastlePage() {
                         </div>
                         <Icon icon="game-icons:arrow-right" width="16" height="16" className="text-[var(--color-text-muted)] shrink-0" />
                     </Card>
-                ) : null}
+                ) : (
+                    <Card className="p-3 border border-[var(--color-border-light)] bg-[var(--color-bg-card)]">
+                        <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">Фракции доступны с 5 уровня. Бонусы фракций:</p>
+                        {(['bandit', 'crafter', 'guard'] as const).map(f => (
+                            <div key={f} className={`flex items-start gap-2 py-1.5 border-b border-[var(--color-border-light)] last:border-0 ${FACTION_INFO[f]?.bgColor || ''}`}>
+                                <Icon icon={FACTION_INFO[f]?.icon || ''} width="16" height="16" className={`${FACTION_INFO[f]?.color || ''} mt-0.5 shrink-0`} />
+                                <div>
+                                    <span className={`font-bold text-xs ${FACTION_INFO[f]?.color || ''}`}>{FACTION_INFO[f]?.name}</span>
+                                    <p className="text-[0.55rem] text-[var(--color-text-muted)]">{FACTION_INFO[f]?.bonus}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </Card>
+                )}
             </div>
 
             <div className="space-y-3 mb-4">
