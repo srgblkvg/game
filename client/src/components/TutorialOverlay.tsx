@@ -172,18 +172,10 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
 
     const el = document.querySelector(step.targetSelector);
     if (!el) {
-      // Элемент не найден — ретрай. После 15 попыток (~3с) авто-переход
-      const retries = (calcPosition as any)._retries || 0;
-      if (retries > 15 && onSkipStep) {
-        (calcPosition as any)._retries = 0;
-        onSkipStep();
-        return;
-      }
-      (calcPosition as any)._retries = retries + 1;
+      // Элемент не найден — возможно переключается вкладка, пробуем ещё раз
       setTimeout(() => calcPosition(), 200);
       return;
     }
-    (calcPosition as any)._retries = 0;
 
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
@@ -313,11 +305,9 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  if (!targetRect) {
-    return null;
-  }
-
-  const r = targetRect;
+  // Цель не в DOM — показываем по центру, чтобы была видна кнопка «Пропустить шаг»
+  const r = targetRect || { top: window.innerHeight / 2 - 50, left: window.innerWidth / 2 - 160, width: 320, height: 100, bottom: window.innerHeight / 2 + 50, right: window.innerWidth / 2 + 160 };
+  const isFake = !targetRect;
   const pr = PADDING;
 
   // Стили tooltip с учётом мобильного режима
@@ -349,7 +339,7 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
         left: 0,
         right: 0,
         height: `${Math.max(0, r.top - pr)}px`,
-        background: 'rgba(0,0,0,0.75)',
+        background: isFake ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.75)',
         zIndex: 100,
       }} />
       {/* Нижний */}
@@ -359,7 +349,7 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.75)',
+        background: isFake ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.75)',
         zIndex: 100,
       }} />
       {/* Левый */}
@@ -369,7 +359,7 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
         left: 0,
         width: `${Math.max(0, r.left - pr)}px`,
         height: `${r.height + pr * 2}px`,
-        background: 'rgba(0,0,0,0.75)',
+        background: isFake ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.75)',
         zIndex: 100,
       }} />
       {/* Правый */}
@@ -379,7 +369,7 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkipSt
         left: `${r.left + r.width + pr}px`,
         right: 0,
         height: `${r.height + pr * 2}px`,
-        background: 'rgba(0,0,0,0.75)',
+        background: isFake ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.75)',
         zIndex: 100,
       }} />
 
