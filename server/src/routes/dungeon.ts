@@ -1042,10 +1042,10 @@ function checkEnemyDeaths(run: DungeonRun) {
 // Рейтинг данжа
 router.get('/dungeon/leaderboard', async (_req, res) => {
     const topFloor = await db.raw(
-        `SELECT u.username, dr.maxfloor FROM dungeon_runs dr JOIN users u ON dr.userId = u.id ORDER BY dr.maxfloor DESC LIMIT 5`
+        `SELECT u.id as userId, u.username, u.level, g.name as guildName, dr.maxfloor FROM dungeon_runs dr JOIN users u ON dr.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id ORDER BY dr.maxfloor DESC LIMIT 5`
     ).catch(() => ({ rows: [] })) as any;
     const topReward = await db.raw(
-        `SELECT u.username, dr.maxreward FROM dungeon_runs dr JOIN users u ON dr.userId = u.id ORDER BY dr.maxreward DESC LIMIT 5`
+        `SELECT u.id as userId, u.username, u.level, g.name as guildName, dr.maxreward FROM dungeon_runs dr JOIN users u ON dr.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id ORDER BY dr.maxreward DESC LIMIT 5`
     ).catch(() => ({ rows: [] })) as any;
 
     res.json({

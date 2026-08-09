@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getHeaders } from '../api/helpers';
 import Button from '../components/ui/Button';
@@ -28,6 +29,7 @@ function stringToColor(str: string): string {
 export default function DungeonPage() {
     const { user: _user } = useAuth();
     const { character, setCharacter } = useGame();
+    const navigate = useNavigate();
 
     const [tab, setTab] = useState<'status' | 'prepare'>('status');
     const [status, setStatus] = useState<any>(null);
@@ -387,23 +389,23 @@ export default function DungeonPage() {
                 <div className="border-t border-[var(--color-border-light)] pt-3 mt-3">
                     <div className="flex flex-col md:flex-row gap-3">
                     {leaderboard.topFloor.length > 0 && (
-                        <div className="md:w-1/2">
+                        <div className="md:flex-1">
                             <h4 className="text-xs font-bold mb-1">🏆 Рейтинг этажа</h4>
                             {leaderboard.topFloor.map((r: any, i: number) => (
-                                <div key={i} className="flex justify-between text-xs py-0.5">
-                                    <span>{i+1}. {r.username}</span>
-                                    <span className="text-[#8b6914] dark:text-[var(--color-accent-gold)]">Этаж {r.maxfloor}</span>
+                                <div key={i} className="flex justify-between text-xs py-0.5 border-b border-[var(--color-border-light)]">
+                                    <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
+                                    <span className="text-[#8b6914] dark:text-[var(--color-accent-gold)] shrink-0 ml-2">Этаж {r.maxfloor}</span>
                                 </div>
                             ))}
                         </div>
                     )}
                     {leaderboard.topReward.length > 0 && (
-                        <div className="md:w-1/2">
+                        <div className="md:flex-1">
                             <h4 className="text-xs font-bold mb-1">💰 Рейтинг награды</h4>
                             {leaderboard.topReward.map((r: any, i: number) => (
-                                <div key={i} className="flex justify-between text-xs py-0.5">
-                                    <span>{i+1}. {r.username}</span>
-                                    <span className="text-[#8b6914] dark:text-[var(--color-accent-gold)]">{r.maxreward.toLocaleString()} серебра</span>
+                                <div key={i} className="flex justify-between text-xs py-0.5 border-b border-[var(--color-border-light)]">
+                                    <span>{i+1}. <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={() => navigate(`/profile/${r.userId}`)}>{r.username}</span> <span className="text-[var(--color-text-muted)]">{r.level}ур.</span>{r.guildName && <span className="text-green-400 cursor-pointer hover:underline ml-1" onClick={(e) => { e.stopPropagation(); navigate(`/guild/${r.guildName}`); }}>[{r.guildName}]</span>}</span>
+                                    <span className="text-[#8b6914] dark:text-[var(--color-accent-gold)] shrink-0 ml-2">{r.maxreward.toLocaleString()} сер.</span>
                                 </div>
                             ))}
                         </div>
