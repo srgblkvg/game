@@ -528,6 +528,13 @@ export default function DungeonPage() {
                                     <span>⚔️</span>
                                 )}
                             </div>
+                            {/* Автоатака */}
+                            {(() => { void frameTick; const cdLeft = Math.max(0, Math.ceil(((playerLastAttackAt + playerAtkInterval * 3) - Date.now() / 1000))); return (
+                                <div className="relative w-10 h-10 rounded-full bg-[var(--color-accent-warning)]/10 border-2 border-[var(--color-accent-warning)] flex items-center justify-center text-lg shrink-0">
+                                    <span>⚔️</span>
+                                    {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.6rem] font-bold text-white bg-black/40 rounded-full">{cdLeft}</span>}
+                                </div>
+                            ); })()}
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="text-sm font-bold">Этаж {floor}</span>
@@ -610,15 +617,7 @@ export default function DungeonPage() {
                     </div>
 
                     {/* Умения — компактные иконки */}
-                    <div className="grid grid-cols-5 gap-2">
-                        {/* Автоатака */}
-                        {(() => { void frameTick; const cdLeft = Math.max(0, Math.ceil(((playerLastAttackAt + playerAtkInterval * 3) - Date.now() / 1000))); return (
-                            <div className="relative p-2 rounded-lg text-center bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]">
-                                <span className="text-xl">⚔️</span>
-                                {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white bg-black/40 rounded-lg">{cdLeft}</span>}
-                                <div className="text-[0.55rem] text-[var(--color-text-muted)] mt-0.5 truncate">Автоатака</div>
-                            </div>
-                        ); })()}
+                    <div className="grid grid-cols-4 gap-2">
                         {skills.map(s => {
                             const onCd = cooldowns[s.id] && cooldowns[s.id] > Date.now() / 1000;
                             const cdLeft = onCd ? Math.ceil(cooldowns[s.id] - Date.now() / 1000) : 0;
