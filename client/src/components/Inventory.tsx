@@ -69,7 +69,7 @@ export default function Inventory({
     const { showToast } = useToast();
     const [equipTarget, setEquipTarget] = useState<any>(null);
     const [inventoryOrder, setInventoryOrder] = useState<string[]>([]);
-    const [dragIndex, setDragIndex] = useState<number | null>(null);
+    const [dragItemId, setDragItemId] = useState<string | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
     // Инициализируем порядок из снаряжения (не трогаем ресурсы) — только при изменении состава
@@ -298,12 +298,30 @@ export default function Inventory({
     const handleDropSlot = async (e: React.DragEvent, toIdx: number) => {
         e.preventDefault();
         setDragOverIndex(null);
-        setDragIndex(null);
-        if (dragIndex === null || dragIndex === toIdx) return;
+        setDragItemId(null);
+        if (dragItemId === null) return;
+        
+        // Находим индекс в inventoryOrder по ID предмета
+        const fromOrderIdx = inventoryOrder.indexOf(dragItemId);
+        if (fromOrderIdx === -1) return;
+        
+        // toIdx — позиция в визуальной сетке. Находим соответствующий индекс в inventoryOrder
+        const targetItem = inventory[toIdx] ?? null;
+        let toOrderIdx: number;
+        if (targetItem) {
+            toOrderIdx = inventoryOrder.indexOf(String(targetItem.id));
+            if (toOrderIdx === -1) return;
+        } else {
+            // Пустой слот — вставляем в конец
+            toOrderIdx = inventoryOrder.length;
+        }
+        if (fromOrderIdx === toOrderIdx) return;
         
         const newOrder = [...inventoryOrder];
-        const [moved] = newOrder.splice(dragIndex, 1);
-        newOrder.splice(toIdx, 0, moved);
+        const [moved] = newOrder.splice(fromOrderIdx, 1);
+        // После удаления fromOrderIdx, индекс toOrderIdx мог сдвинуться
+        const insertIdx = fromOrderIdx < toOrderIdx ? toOrderIdx - 1 : toOrderIdx;
+        newOrder.splice(insertIdx, 0, moved);
         setInventoryOrder(newOrder);
         
         // Обновляем character.inventory: снаряжение в новом порядке, ресурсы в конце
@@ -323,11 +341,11 @@ export default function Inventory({
         } catch {}
     };
     const handleDragEndSlot = () => {
-        setDragIndex(null);
+        setDragItemId(null);
         setDragOverIndex(null);
     };
-    const handleDragStartSlot = (e: React.DragEvent, idx: number, item: any) => {
-        setDragIndex(idx);
+    const handleDragStartSlot = (e: React.DragEvent, _idx: number, item: any) => {
+        setDragItemId(String(item.id));
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', String(item.id));
     };
