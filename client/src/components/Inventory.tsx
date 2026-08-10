@@ -319,12 +319,17 @@ export default function Inventory({
         
         const newOrder = [...inventoryOrder];
         const [moved] = newOrder.splice(fromOrderIdx, 1);
-        // После удаления fromOrderIdx, индекс toOrderIdx мог сдвинуться
-        const insertIdx = fromOrderIdx < toOrderIdx ? toOrderIdx - 1 : toOrderIdx;
-        newOrder.splice(insertIdx, 0, moved);
+        // После удаления fromOrderIdx все индексы >= fromOrderIdx сдвинулись влево на 1.
+        // toOrderIdx указывает на позицию в оригинальном массиве.
+        // Если fromOrderIdx < toOrderIdx: цель была справа, теперь она на toOrderIdx-1.
+        //   Вставляем на toOrderIdx → dragged-элемент после цели. Визуально: swap.
+        // Если fromOrderIdx > toOrderIdx: цель слева, удаление её не затронуло.
+        //   Вставляем на toOrderIdx → dragged-элемент перед целью. Визуально: swap.
+        newOrder.splice(toOrderIdx, 0, moved);
         setInventoryOrder(newOrder);
         
-        // Обновляем character.inventory: снаряжение в новом порядке, ресурсы в конце
+        // Обновляем character.inventory только если порядок реально изменился
+        if (newOrder.join(',') === inventoryOrder.join(',')) return;
         const idToItem = new Map(character!.inventory.map((item: any) => [String(item.id), item]));
         const reorderedEquip = newOrder.map(id => idToItem.get(id)).filter(Boolean);
         const resources = character!.inventory.filter((item: any) => isCraftItem(item));
