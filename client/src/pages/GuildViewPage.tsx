@@ -95,8 +95,8 @@ export default function GuildViewPage() {
                     </Button>
                     <Card className="mb-4">
                         <div className="flex items-start gap-3">
-                            {guild.image && (
-                                <img src={guild.image} alt="Герб" className="w-16 h-16 object-cover rounded border-2 border-[var(--color-accent-gold)] flex-shrink-0" />
+                            {guild.hasImage && (
+                                <img src={`${BASE_URL}/guild/${guild.id}/image`} alt="Герб" className="w-16 h-16 object-cover rounded border-2 border-[var(--color-accent-gold)] flex-shrink-0" />
                             )}
                             <div className="flex-1 min-w-0">
                                 <h1 className="font-bold text-lg flex items-center gap-2">

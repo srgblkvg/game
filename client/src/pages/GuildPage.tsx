@@ -313,16 +313,16 @@ export default function GuildPage() {
 
         {/* Header */}
         <Card className="mb-4"><div className="flex justify-between items-start"><div className="flex gap-3">
-            {guild.image ? <img src={guild.image} alt="Герб" className="w-14 h-14 object-cover rounded border-2 border-[var(--color-accent-gold)]"/> :
+            {guild.hasImage ? <img src={guild.image || `${BASE_URL}/guild/${guild.id}/image`} alt="Герб" className="w-14 h-14 object-cover rounded border-2 border-[var(--color-accent-gold)]"/> :
                 <div className="w-14 h-14 rounded border-2 border-dashed border-[var(--color-border-light)] flex items-center justify-center text-[0.5rem] text-[var(--color-text-muted)]">герб</div>}
             <div><h2 className="font-bold text-lg">🏚️ {guild.name}</h2><p className="text-xs text-[var(--color-text-muted)]">Ур.{guild.level} • {members.length}/20 уч.{taxRate > 0 ? ` • Налог ${taxRate}%` : ''} • 💰 {treasuryBalance.toLocaleString()}</p>
                 <ExpBar exp={guild.exp||0} level={guild.level||1}/></div></div>
             <div className="flex gap-1"><Button variant="secondary" size="md" onClick={()=>navigate('/guild/rating')}>Рейтинг</Button>
                 <Button variant="secondary" size="md" onClick={handleLeave}>Покинуть</Button></div></div>
             {myRank==='leader' ? (<div className="mt-3 space-y-2"><div className="flex items-center gap-2">
-                <label className="text-xs cursor-pointer text-[var(--color-accent-info)] hover:underline">{guild.image?'Сменить герб':'Загрузить герб'}
+                <label className="text-xs cursor-pointer text-[var(--color-accent-info)] hover:underline">{guild.hasImage?'Сменить герб':'Загрузить герб'}
                     <input type="file" accept="image/*" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();
-                        r.onload=()=>{const url=r.result as string;setGuild((p:any)=>p?{...p,image:url}:p);fetch('/api/guild/settings',{method:'POST',headers:{...getHeaders(),'Content-Type':'application/json'},body:JSON.stringify({image:url})}).catch(()=>{});};r.readAsDataURL(f);}}/></label></div>
+                        r.onload=()=>{const url=r.result as string;setGuild((p:any)=>p?{...p,image:url,hasImage:true}:p);fetch('/api/guild/settings',{method:'POST',headers:{...getHeaders(),'Content-Type':'application/json'},body:JSON.stringify({image:url})}).catch(()=>{});};r.readAsDataURL(f);}}/></label></div>
                 <textarea value={guild.description||''} onChange={e=>setGuild((p:any)=>p?{...p,description:e.target.value}:p)}
                     onBlur={async()=>{try{await fetch('/api/guild/settings',{method:'POST',headers:{...getHeaders(),'Content-Type':'application/json'},body:JSON.stringify({description:guild.description||''})});}catch{}}}
                     placeholder="Описание гильдии..." rows={2} className="w-full text-xs bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-2 py-1 text-[var(--color-text-primary)] resize-none"/>
