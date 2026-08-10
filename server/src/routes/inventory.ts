@@ -185,13 +185,25 @@ router.post('/character/reorder-inventory', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory = typeof user.inventory === 'string' ? JSON.parse(user.inventory) : (user.inventory || []);
-    
-    // Пересортировываем инвентарь согласно новому порядку id
-    const idMap = new Map(inventory.map((item: any) => [String(item.id), item]));
-    const reordered = order.map(id => idMap.get(String(id))).filter(Boolean);
-    // Добавляем предметы, которых нет в order (на всякий случай)
+
+    // Удаляем дубликаты экипировки (один предмет не может быть в инвентаре дважды)
+    const seenEquip = new Set<string>();
+    const deduped: any[] = [];
     for (const item of inventory) {
-        if (!order.some(id => String(id) === String(item.id))) {
+        const isEquip = item.type !== 'craft_item';
+        const key = String(item.id);
+        if (isEquip && seenEquip.has(key)) continue;
+        if (isEquip) seenEquip.add(key);
+        deduped.push(item);
+    }
+
+    // Дедуплицируем order и пересортировываем
+    const uniqueOrder = [...new Set(order.map(String))];
+    const idMap = new Map(deduped.map((item: any) => [String(item.id), item]));
+    const reordered = uniqueOrder.map(id => idMap.get(String(id))).filter(Boolean);
+    // Добавляем предметы, которых нет в order
+    for (const item of deduped) {
+        if (!uniqueOrder.includes(String(item.id))) {
             reordered.push(item);
         }
     }
