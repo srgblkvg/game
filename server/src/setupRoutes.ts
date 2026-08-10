@@ -136,6 +136,25 @@ export function setupRoutes(app: Express) {
     res.json({ guestRestrictionsDisabled: disabled });
   });
 
+  // Гербы гильдий — публичный доступ (кешируются браузером)
+  app.get('/api/guild/:id/image', async (req, res) => {
+    const guildId = parseInt(req.params.id);
+    if (isNaN(guildId)) return res.status(404).end();
+    const { db } = await import('./db/index');
+    const row = await db.one('SELECT image FROM guilds WHERE id = ?', [guildId]) as any;
+    if (!row?.image) return res.status(404).end();
+    const img: string = row.image;
+    const mime = img.startsWith('data:image/') 
+        ? img.slice(5, img.indexOf(';')) 
+        : 'image/jpeg';
+    const data = img.includes(',') 
+        ? Buffer.from(img.split(',')[1] || '', 'base64')
+        : Buffer.from(img, 'base64');
+    res.set('Content-Type', mime);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(data);
+  });
+
   // Игровые маршруты (только для игроков) + замедление гостей
   app.use('/api', authMiddleware, requirePlayer, guestCooldown);
   app.use('/api', battleSimRoutes);  // симулятор боёв
