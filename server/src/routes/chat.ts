@@ -7,23 +7,36 @@ const router = Router();
 router.get('/chat/recent', async (req, res) => {
   const userId = req.userId;
   const limit = parseInt(req.query.limit as string) || 20;
-  // Fetch regular chat (last N) + ALL active auction messages
-  const messages = await db.query(`
+
+  // Два отдельных запроса вместо одного тяжёлого JOIN на 300k строк:
+  // 1. Активные аукционные сообщения (всего ~700 штук)
+  const auctionMessages = await db.query(`
     SELECT m.id, m.senderId, m.targetId, m.content, m.createdAt, m.item_data,
            m.senderguild, m.senderguildid,
            CASE WHEN m.senderId = 0 THEN 'Глашатай' ELSE u.username END as senderName,
-           CASE WHEN al.id IS NOT NULL THEN 1 ELSE 0 END as is_active_auction
+           1 as is_active_auction
     FROM chat_messages m
     LEFT JOIN users u ON m.senderId = u.id
-    LEFT JOIN auction_lots al ON m.item_data IS NOT NULL AND al.id = (m.item_data::jsonb->>'lotId')::int
-    WHERE (al.id IS NOT NULL)
-       OR ((m.targetId IS NULL OR m.senderId = ? OR m.targetId = ?) AND m.id IN (
-         SELECT id FROM chat_messages
-         WHERE item_data IS NULL AND (targetId IS NULL OR senderId = ? OR targetId = ?)
-         ORDER BY createdAt DESC LIMIT ?
-       ))
+    JOIN auction_lots al ON al.id = (m.item_data::jsonb->>'lotId')::int
+    WHERE m.item_data IS NOT NULL
     ORDER BY m.createdAt ASC
-  `, [userId, userId, userId, userId, limit]);
+  `);
+
+  // 2. Последние N обычных сообщений (публичные + личные)
+  const recentMessages = await db.query(`
+    SELECT m.id, m.senderId, m.targetId, m.content, m.createdAt, m.item_data,
+           m.senderguild, m.senderguildid,
+           CASE WHEN m.senderId = 0 THEN 'Глашатай' ELSE u.username END as senderName,
+           0 as is_active_auction
+    FROM chat_messages m
+    LEFT JOIN users u ON m.senderId = u.id
+    WHERE m.item_data IS NULL
+      AND (m.targetId IS NULL OR m.senderId = ? OR m.targetId = ?)
+    ORDER BY m.createdAt DESC
+    LIMIT ?
+  `, [userId, userId, limit]);
+
+  const messages = [...(auctionMessages as any[]), ...(recentMessages as any[])];
 
   const result = messages.map((m) => {
     const msg = { ...m, content: m.content || '' };
