@@ -17,7 +17,13 @@ router.post('/character/equip', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
-    const equipment: Record<string, any> = JSON.parse(user.equipment || '{}');
+    // Читаем экипировку из АКТИВНОГО слота (как buildPlayerStats)
+    const activeSlot = user.active_equip_slot || 1;
+    const equipKey = `equipment_${activeSlot}`;
+    let equipment: Record<string, any> = typeof user[equipKey] === 'string' ? JSON.parse(user[equipKey] || '{}') : (user[equipKey] && typeof user[equipKey] === 'object' ? user[equipKey] : {});
+    if (Object.keys(equipment).length === 0) {
+        equipment = typeof user.equipment === 'string' ? JSON.parse(user.equipment || '{}') : (user.equipment && typeof user.equipment === 'object' ? user.equipment : {});
+    }
     const currentEquipped = equipment[slotId];
 
     const drinkBonuses = getDrinkBonuses(user);
@@ -39,7 +45,6 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
         const newHp = recalcHpOnEquip(user.currentHp, oldMaxHp, newMaxHp);
 
         const now = Math.floor(Date.now() / 1000);
-        const activeSlot = user.active_equip_slot || 1;
         await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
             [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
         // Синхронизируем с активным equipment_N
@@ -88,7 +93,6 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
     const newHp = recalcHpOnEquip(user.currentHp, oldStats.hp, newMaxHp);
 
     const now = Math.floor(Date.now() / 1000);
-    const activeSlot = user.active_equip_slot || 1;
     await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
         [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
     // Синхронизируем с активным equipment_N
