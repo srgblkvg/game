@@ -35,8 +35,11 @@ export default function ExchangePage() {
     const fetchStatus = async () => {
         try {
             const res = await fetch('/api/exchange/status', { headers: getHeaders() });
+            if (!res.ok) throw new Error(res.status.toString());
             setStatus(await res.json());
-        } catch {}
+        } catch (e: any) {
+            setError('Не удалось загрузить биржу: ' + (e.message || 'ошибка'));
+        }
     };
 
     const handleBuy = async () => {
@@ -75,7 +78,16 @@ export default function ExchangePage() {
         finally { setLoading(false); }
     };
 
-    if (!character || !status) return null;
+    if (!character) return null;
+    if (!status) return (
+        <div className="max-w-3xl mx-auto px-4 py-4 text-center text-sm">
+            {error ? (
+                <span className="text-[var(--color-accent-danger)]">{error}</span>
+            ) : (
+                <span className="text-[var(--color-text-muted)]">Загрузка биржи...</span>
+            )}
+        </div>
+    );
 
     const maxBuy = Math.min(character.money, Math.floor(status.silver * 0.1)); // ограничим 10% казны
     const maxBuyGold = Math.floor(maxBuy / (status.buyPrice || 1));
@@ -108,9 +120,8 @@ export default function ExchangePage() {
     useEffect(() => {
         fetchStatus();
         fetchHistory();
-        const onStatus = (e: Event) => setStatus((e as CustomEvent).detail);
-        window.addEventListener('exchange_status', onStatus);
-        return () => window.removeEventListener('exchange_status', onStatus);
+        const interval = setInterval(fetchStatus, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     const switchPeriod = (p: string) => { setPeriod(p); fetchHistory(p); };
