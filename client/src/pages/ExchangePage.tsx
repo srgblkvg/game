@@ -62,6 +62,7 @@ export default function ExchangePage() {
             setCharacter((prev: any) => prev ? { ...prev, money: data.newSilver, gold: data.newGold } : prev);
             setBuyAmount(0);
             fetchStatus();
+            fetchHistory();
         } catch { setError('Ошибка сети'); }
         finally { setLoading(false); }
     };
@@ -80,6 +81,7 @@ export default function ExchangePage() {
             setCharacter((prev: any) => prev ? { ...prev, money: data.newSilver, gold: data.newGold } : prev);
             setSellAmount(0);
             fetchStatus();
+            fetchHistory();
         } catch { setError('Ошибка сети'); }
         finally { setLoading(false); }
     };
