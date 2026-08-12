@@ -39,7 +39,11 @@ export default function ExchangePage() {
         } catch {}
     };
 
-    useEffect(() => { fetchStatus(); }, []);
+    useEffect(() => {
+        fetchStatus();
+        const interval = setInterval(fetchStatus, 5000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleBuy = async () => {
         if (buyAmount <= 0) return;
