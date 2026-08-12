@@ -3,29 +3,31 @@ import { useGame } from '../contexts/GameContext';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { getHeaders } from '../api/helpers';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler } from 'chart.js';
 
-// AMM: рассчитать цену для покупки dx золота
-function buyPrice(dx: number, Rs: number, Rg: number): number {
-    if (dx <= 0 || dx >= Rg) return 0;
-    const newSilver = (Rs * Rg) / (Rg - dx);
-    return (newSilver - Rs) / dx;
-}
-
-// AMM: рассчитать цену для продажи dx золота
-function sellPrice(dx: number, Rs: number, Rg: number): number {
-    if (dx <= 0) return 0;
-    const newSilver = (Rs * Rg) / (Rg + dx);
-    return (Rs - newSilver) / dx;
-}
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
 function formatMoney(n: number): string {
     return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(0) + 'K' : String(Math.round(n));
 }
 
+// AMM price for buying dx gold
+function buyPrice(dx: number, Rs: number, Rg: number): number {
+    if (dx <= 0 || dx >= Rg) return Rs / Rg;
+    return ((Rs * Rg) / (Rg - dx) - Rs) / dx;
+}
+// AMM price for selling dx gold
+function sellPrice(dx: number, Rs: number, Rg: number): number {
+    if (dx <= 0) return Rs / Rg;
+    return (Rs - (Rs * Rg) / (Rg + dx)) / dx;
+}
+
 export default function ExchangePage() {
     const { character, setCharacter } = useGame();
     const [status, setStatus] = useState<any>(null);
-    const [goldAmount, setGoldAmount] = useState('');
+    const [buyAmount, setBuyAmount] = useState(0);
+    const [sellAmount, setSellAmount] = useState(0);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -33,48 +35,43 @@ export default function ExchangePage() {
     const fetchStatus = async () => {
         try {
             const res = await fetch('/api/exchange/status', { headers: getHeaders() });
-            const data = await res.json();
-            setStatus(data);
+            setStatus(await res.json());
         } catch {}
     };
 
     useEffect(() => { fetchStatus(); }, []);
 
     const handleBuy = async () => {
-        setError(''); setMessage('');
-        const amount = parseInt(goldAmount);
-        if (!amount || amount <= 0) { setError('Укажите количество золота'); return; }
-        setLoading(true);
+        if (buyAmount <= 0) return;
+        setError(''); setMessage(''); setLoading(true);
         try {
             const res = await fetch('/api/exchange/buy', {
                 method: 'POST', headers: getHeaders(),
-                body: JSON.stringify({ goldAmount: amount }),
+                body: JSON.stringify({ goldAmount: buyAmount }),
             });
             const data = await res.json();
             if (!res.ok) { setError(data.error); return; }
             setMessage(`Куплено ${data.goldReceived} золота за ${data.silverPaid.toLocaleString()} серебра`);
-            setCharacter((prev: any) => prev ? { ...prev, money: data.newSilverBalance, gold: data.newGoldBalance } : prev);
-            setGoldAmount('');
+            setCharacter((prev: any) => prev ? { ...prev, money: data.newSilver, gold: data.newGold } : prev);
+            setBuyAmount(0);
             fetchStatus();
         } catch { setError('Ошибка сети'); }
         finally { setLoading(false); }
     };
 
     const handleSell = async () => {
-        setError(''); setMessage('');
-        const amount = parseInt(goldAmount);
-        if (!amount || amount <= 0) { setError('Укажите количество золота'); return; }
-        setLoading(true);
+        if (sellAmount <= 0) return;
+        setError(''); setMessage(''); setLoading(true);
         try {
             const res = await fetch('/api/exchange/sell', {
                 method: 'POST', headers: getHeaders(),
-                body: JSON.stringify({ goldAmount: amount }),
+                body: JSON.stringify({ goldAmount: sellAmount }),
             });
             const data = await res.json();
             if (!res.ok) { setError(data.error); return; }
             setMessage(`Продано ${data.goldSold} золота за ${data.silverReceived.toLocaleString()} серебра`);
-            setCharacter((prev: any) => prev ? { ...prev, money: data.newSilverBalance, gold: data.newGoldBalance } : prev);
-            setGoldAmount('');
+            setCharacter((prev: any) => prev ? { ...prev, money: data.newSilver, gold: data.newGold } : prev);
+            setSellAmount(0);
             fetchStatus();
         } catch { setError('Ошибка сети'); }
         finally { setLoading(false); }
@@ -82,133 +79,141 @@ export default function ExchangePage() {
 
     if (!character || !status) return null;
 
-    const Rs = status.silver;
-    const Rg = status.gold;
-    const basePrice = status.basePrice;
-    const comm = 0.05;
+    const maxBuy = Math.min(character.money, Math.floor(status.silver * 0.1)); // ограничим 10% казны
+    const maxBuyGold = Math.floor(maxBuy / (status.buyPrice || 1));
+    const maxSellGold = character.gold || 0;
 
-    // Генерируем точки для графика AMM
-    const W = 300, H = 180, pad = { l: 45, r: 15, t: 15, b: 30 };
-    const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+    const estimatedBuyCost = buyAmount > 0 ? Math.ceil(buyAmount * buyPrice(buyAmount, status.silver, status.gold) * 1.05) : 0;
+    const estimatedSellPayout = sellAmount > 0 ? Math.floor(sellAmount * sellPrice(sellAmount, status.silver, status.gold) * (status.sellCoef || 1) * 0.95) : 0;
 
-    const points: { x: number; y: number; price: number; gold: number }[] = [];
-    const maxGold = Math.floor(Rg * 0.3); // показываем до 30% резерва золота
-    const step = Math.max(1, Math.floor(maxGold / 50));
-
-    for (let dx = -maxGold; dx <= maxGold; dx += step) {
-        let price: number;
-        if (dx < 0) {
-            price = sellPrice(-dx, Rs, Rg) * (1 - comm) * (status.sellCoef || 1);
-        } else if (dx > 0) {
-            price = buyPrice(dx, Rs, Rg) * (1 + comm);
+    // Chart data: AMM price curve
+    const Rg = status.gold, Rs = status.silver;
+    const chartPoints = 40;
+    const maxGoldRange = Math.floor(Rg * 0.25);
+    const labels: string[] = [];
+    const buyPrices: number[] = [];
+    const sellPricesArr: number[] = [];
+    for (let i = -maxGoldRange; i <= maxGoldRange; i += Math.max(1, Math.floor(maxGoldRange * 2 / chartPoints))) {
+        labels.push(i === 0 ? '0' : (i > 0 ? '+' + formatMoney(i) : formatMoney(-i)));
+        if (i > 0) {
+            buyPrices.push(Math.round(buyPrice(i, Rs, Rg)));
+            sellPricesArr.push(NaN as any);
+        } else if (i < 0) {
+            buyPrices.push(NaN as any);
+            sellPricesArr.push(Math.round(sellPrice(-i, Rs, Rg) * (status.sellCoef || 1)));
         } else {
-            price = basePrice;
-        }
-        if (price > 0 && price < basePrice * 4) {
-            points.push({ x: dx, y: price, price, gold: dx });
+            buyPrices.push(status.basePrice);
+            sellPricesArr.push(status.basePrice);
         }
     }
 
-    const xScale = (v: number) => pad.l + ((v + maxGold) / (2 * maxGold)) * plotW;
-    const maxPrice = basePrice * 2.5;
-    const yScale = (v: number) => pad.t + plotH - (v / maxPrice) * plotH;
-
-    const pathD = points.map((p, i) =>
-        `${i === 0 ? 'M' : 'L'}${xScale(p.gold)},${yScale(p.price)}`
-    ).join(' ');
-
-    const xTicks = [-maxGold, -Math.floor(maxGold / 2), 0, Math.floor(maxGold / 2), maxGold];
-    const yTicks = [0, basePrice / 2, basePrice, basePrice * 1.5, basePrice * 2];
+    const chartData = {
+        labels,
+        datasets: [
+            {
+                label: 'Покупка',
+                data: buyPrices,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.1)',
+                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2, spanGaps: false,
+            },
+            {
+                label: 'Продажа',
+                data: sellPricesArr,
+                borderColor: '#94a3b8',
+                backgroundColor: 'rgba(148,163,184,0.05)',
+                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2, spanGaps: false,
+            },
+        ],
+    };
+    const chartOptions = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            tooltip: { callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()} серебра` } },
+        },
+        scales: {
+            x: { ticks: { font: { size: 9 }, color: '#888', maxTicksLimit: 8 }, grid: { display: false } },
+            y: { ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => formatMoney(v) }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        },
+    };
 
     return (
-        <div className="max-w-md mx-auto px-4 py-4">
-            <h1 className="text-xl font-bold mb-4 text-center">🏦 Биржа</h1>
+        <div className="max-w-3xl mx-auto px-4 py-4 space-y-3">
+            <h1 className="text-xl font-bold mb-0 text-center">🏦 Биржа</h1>
 
-            {message && <div className="text-sm text-center mb-3 text-[var(--color-accent-success)]">{message}</div>}
-            {error && <div className="text-sm text-center mb-3 text-[var(--color-accent-danger)]">{error}</div>}
+            {message && <div className="text-sm text-center text-[var(--color-accent-success)]">{message}</div>}
+            {error && <div className="text-sm text-center text-[var(--color-accent-danger)]">{error}</div>}
 
-            {/* График AMM */}
+            {/* Купить золото */}
             <Card>
-                <h3 className="font-bold text-sm mb-1">Кривая цены (AMM)</h3>
-                <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: '220px' }}>
-                    {/* Сетка */}
-                    {yTicks.map(t => (
-                        <g key={'y'+t}>
-                            <line x1={pad.l} y1={yScale(t)} x2={W-pad.r} y2={yScale(t)} stroke="var(--color-border-light)" strokeWidth="0.5" />
-                            <text x={pad.l-4} y={yScale(t)+3} textAnchor="end" fill="var(--color-text-muted)" fontSize="8">{formatMoney(t)}</text>
-                        </g>
-                    ))}
-                    {xTicks.map(t => (
-                        <text key={'x'+t} x={xScale(t)} y={H-pad.b+14} textAnchor="middle" fill="var(--color-text-muted)" fontSize="8">
-                            {t === 0 ? 'сейчас' : (t > 0 ? `купить ${formatMoney(t)}` : `продать ${formatMoney(-t)}`)}
-                        </text>
-                    ))}
-                    {/* Ось X */}
-                    <line x1={pad.l} y1={yScale(0)} x2={W-pad.r} y2={yScale(0)} stroke="var(--color-text-muted)" strokeWidth="0.5" />
-                    {/* Кривая */}
-                    <path d={pathD} fill="none" stroke="var(--color-accent-gold)" strokeWidth="1.5" />
-                    {/* Точка текущей цены */}
-                    <circle cx={xScale(0)} cy={yScale(basePrice)} r="4" fill="var(--color-accent-gold)" stroke="var(--color-bg-card)" strokeWidth="2" />
-                    {/* Метка базовой цены */}
-                    <line x1={pad.l} y1={yScale(basePrice)} x2={W-pad.r} y2={yScale(basePrice)} stroke="var(--color-accent-gold)" strokeWidth="0.5" strokeDasharray="3,3" />
-                </svg>
+                <h3 className="font-bold text-sm mb-3">💳 Купить золото</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">Курс: 1 золото = 7 ₽. Покупка через VK Payments.</p>
+                <div className="flex items-center gap-2">
+                    <input type="number" inputMode="numeric" placeholder="Кол-во золота"
+                        className="flex-1 bg-[var(--color-bg-input)] p-2 rounded text-sm border border-[var(--color-border-light)]"
+                        onChange={() => {}} />
+                    <Button variant="primary" size="md" disabled>Скоро</Button>
+                </div>
+            </Card>
+
+            {/* График */}
+            <Card>
+                <h3 className="font-bold text-sm mb-2">Курс золота</h3>
+                <div className="grid grid-cols-3 gap-2 text-xs mb-3">
+                    <div className="text-center">
+                        <div className="text-[var(--color-text-muted)]">Покупка</div>
+                        <div className="font-bold">{status.buyPrice?.toLocaleString()} серебра</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="text-[var(--color-text-muted)]">Базовая</div>
+                        <div className="font-bold text-[var(--color-accent-gold)]">{status.basePrice?.toLocaleString()}</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="text-[var(--color-text-muted)]">Продажа</div>
+                        <div className="font-bold">{status.sellPrice?.toLocaleString()}</div>
+                    </div>
+                </div>
+                <div style={{ height: 160 }}>
+                    <Line data={chartData} options={chartOptions as any} />
+                </div>
                 <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mt-1">
-                    <span>← продажа золота (дешевле)</span>
-                    <span>покупка золота (дороже) →</span>
+                    <span>← продажа золота</span>
+                    <span>покупка золота →</span>
                 </div>
             </Card>
 
-            {/* Курс */}
-            <Card>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="text-[var(--color-text-muted)]">Базовая цена:</div>
-                    <div className="text-right font-bold">{basePrice?.toLocaleString()} серебра</div>
-                    <div className="text-[var(--color-text-muted)]">Покупка:</div>
-                    <div className="text-right text-[var(--color-accent-danger)]">~{status.buyPrice?.toLocaleString()}</div>
-                    <div className="text-[var(--color-text-muted)]">Продажа:</div>
-                    <div className="text-right text-[var(--color-accent-success)]">{status.sellPrice?.toLocaleString()}</div>
-                    <div className="text-[var(--color-text-muted)]">Резерв:</div>
-                    <div className="text-right">{status.silver?.toLocaleString()} серебра / {status.gold?.toLocaleString()} золота</div>
-                </div>
-            </Card>
-
-            {/* Покупка золота за рубли */}
-            <Card>
-                <h3 className="font-bold text-sm mb-2">💳 Купить золото за рубли</h3>
-                <p className="text-xs text-[var(--color-text-muted)] mb-2">Курс: 1 золото = 7 ₽</p>
-                <Button variant="primary" size="md" fullWidth disabled>Скоро</Button>
-            </Card>
-
-            {/* Покупка за серебро */}
+            {/* Купить за серебро */}
             <Card>
                 <h3 className="font-bold text-sm mb-2">💰 Купить золото за серебро</h3>
-                <div className="flex gap-2">
-                    <input type="number" inputMode="numeric" placeholder="Кол-во золота"
-                        className="flex-1 bg-[var(--color-bg-input)] p-2 rounded text-sm border border-[var(--color-border-light)]"
-                        value={goldAmount} onChange={e => setGoldAmount(e.target.value)} />
-                    <Button variant="primary" size="md" onClick={handleBuy} disabled={loading}>Купить</Button>
+                <div className="text-xs text-[var(--color-text-muted)] mb-2">
+                    Доступно: {character.money.toLocaleString()} серебра
                 </div>
-                {goldAmount && (
-                    <div className="text-xs text-[var(--color-text-muted)] mt-1">
-                        ~{(parseInt(goldAmount) * (status.buyPrice || 0)).toLocaleString()} серебра
-                    </div>
-                )}
+                <input type="range" min={0} max={maxBuyGold} value={buyAmount}
+                    onChange={e => setBuyAmount(parseInt(e.target.value))}
+                    className="w-full mb-2 accent-[var(--color-accent-gold)]" />
+                <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-[var(--color-accent-gold)]">{buyAmount} золота</span>
+                    <Button variant="primary" size="md" onClick={handleBuy} disabled={loading || buyAmount <= 0}>
+                        Купить за {estimatedBuyCost.toLocaleString()} серебра
+                    </Button>
+                </div>
             </Card>
 
-            {/* Продажа за серебро */}
+            {/* Продать за серебро */}
             <Card>
                 <h3 className="font-bold text-sm mb-2">💱 Продать золото за серебро</h3>
-                <div className="flex gap-2">
-                    <input type="number" inputMode="numeric" placeholder="Кол-во золота"
-                        className="flex-1 bg-[var(--color-bg-input)] p-2 rounded text-sm border border-[var(--color-border-light)]"
-                        value={goldAmount} onChange={e => setGoldAmount(e.target.value)} />
-                    <Button variant="secondary" size="md" onClick={handleSell} disabled={loading}>Продать</Button>
+                <div className="text-xs text-[var(--color-text-muted)] mb-2">
+                    Доступно: {(character.gold || 0).toLocaleString()} золота
                 </div>
-                {goldAmount && (
-                    <div className="text-xs text-[var(--color-text-muted)] mt-1">
-                        ~{(parseInt(goldAmount) * (status.sellPrice || 0)).toLocaleString()} серебра
-                    </div>
-                )}
+                <input type="range" min={0} max={maxSellGold} value={sellAmount}
+                    onChange={e => setSellAmount(parseInt(e.target.value))}
+                    className="w-full mb-2 accent-[var(--color-accent-gold)]" />
+                <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-[var(--color-accent-gold)]">{sellAmount} золота</span>
+                    <Button variant="secondary" size="md" onClick={handleSell} disabled={loading || sellAmount <= 0}>
+                        Продать за {estimatedSellPayout.toLocaleString()} серебра
+                    </Button>
+                </div>
             </Card>
 
             {/* Баланс */}

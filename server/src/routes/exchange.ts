@@ -1,27 +1,26 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { getReserves, updateReserves, getSellCoef, calcBuyCost, calcSellPayout } from '../game/exchange';
-import { getTreasury } from '../game/treasury';
+import { getGoldReserve, updateGoldReserve, getSellCoef, calcBuyCost, calcSellPayout } from '../game/exchange';
+import { getTreasury, addToTreasury, deductFromTreasury } from '../game/treasury';
 import { sendToUser } from '../events';
 
 const router = Router();
+const COMMISSION = 0.05;
 
-const COMMISSION = 0.05; // 5% комиссия сжигается
-
-// Статус биржи: резервы, курс, коэффициенты
+// Статус биржи
 router.get('/exchange/status', async (_req, res) => {
     try {
-        const reserves = await getReserves();
-        const treasury = await getTreasury();
-        const basePrice = reserves.gold > 0 ? reserves.silver / reserves.gold : 0;
-        const sellCoef = getSellCoef(treasury);
+        const R_silver = await getTreasury();
+        const R_gold = await getGoldReserve();
+        const basePrice = R_gold > 0 ? Math.round(R_silver / R_gold) : 0;
+        const sellCoef = getSellCoef(R_silver);
 
         res.json({
-            silver: reserves.silver,
-            gold: reserves.gold,
-            basePrice: Math.round(basePrice),
+            silver: R_silver,
+            gold: R_gold,
+            basePrice,
             sellPrice: Math.round(basePrice * sellCoef * (1 - COMMISSION)),
-            buyPrice: Math.round(basePrice / (1 - COMMISSION)), // approximate
+            buyPrice: Math.round(basePrice / (1 - COMMISSION)),
             sellCoef,
             buyCoef: 1,
         });
@@ -33,87 +32,62 @@ router.get('/exchange/status', async (_req, res) => {
 // Купить золото за серебро
 router.post('/exchange/buy', async (req, res) => {
     const userId = req.userId;
-    const { goldAmount } = req.body; // сколько золота хочет купить
+    const goldAmount = parseInt(req.body.goldAmount) || 0;
+    if (goldAmount <= 0) return res.status(400).json({ error: 'Укажите количество золота' });
 
-    if (!goldAmount || goldAmount <= 0) {
-        return res.status(400).json({ error: 'Укажите количество золота' });
-    }
+    const R_silver = await getTreasury();
+    const R_gold = await getGoldReserve();
+    if (goldAmount >= R_gold) return res.status(400).json({ error: 'Недостаточно золота в резерве' });
 
-    const reserves = await getReserves();
-    if (goldAmount >= reserves.gold) {
-        return res.status(400).json({ error: 'Недостаточно золота в резерве биржи' });
-    }
-
-    const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT money, gold FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    // AMM: dy серебра за dx золота
-    const rawCost = calcBuyCost(goldAmount, reserves.silver, reserves.gold);
-    const totalCost = Math.ceil(rawCost * (1 + COMMISSION)); // +5% комиссия
-    const commission = totalCost - Math.ceil(rawCost);
+    const rawCost = calcBuyCost(goldAmount, R_silver, R_gold);
+    const totalCost = Math.ceil(rawCost * (1 + COMMISSION));
 
-    if (user.money < totalCost) {
-        return res.status(400).json({ error: `Недостаточно серебра. Нужно ${totalCost.toLocaleString()}, есть ${(user.money || 0).toLocaleString()}` });
+    if ((user.money || 0) < totalCost) {
+        return res.status(400).json({ error: `Недостаточно серебра. Нужно ${totalCost.toLocaleString()}` });
     }
 
-    // Атомарно: списать серебро, начислить золото, обновить резервы
+    // Серебро → в казну, золото ← из резерва, комиссия сжигается
     await db.run('UPDATE users SET money = money - ?, gold = gold + ? WHERE id = ?', [totalCost, goldAmount, userId]);
-    await updateReserves(totalCost - commission, -goldAmount); // комиссия сжигается (не идёт в резерв)
+    await addToTreasury(totalCost, 'exchange_buy');
+    await updateGoldReserve(-goldAmount);
 
-    const newReserves = await getReserves();
     res.json({
-        success: true,
-        goldReceived: goldAmount,
-        silverPaid: totalCost,
-        commission,
-        newGoldBalance: (user.gold || 0) + goldAmount,
-        newSilverBalance: user.money - totalCost,
-        reserves: newReserves,
+        success: true, goldReceived: goldAmount, silverPaid: totalCost,
+        newGold: (user.gold || 0) + goldAmount, newSilver: (user.money || 0) - totalCost,
     });
 });
 
 // Продать золото за серебро
 router.post('/exchange/sell', async (req, res) => {
     const userId = req.userId;
-    const { goldAmount } = req.body;
+    const goldAmount = parseInt(req.body.goldAmount) || 0;
+    if (goldAmount <= 0) return res.status(400).json({ error: 'Укажите количество золота' });
 
-    if (!goldAmount || goldAmount <= 0) {
-        return res.status(400).json({ error: 'Укажите количество золота' });
-    }
-
-    const treasury = await getTreasury();
-    const sellCoef = getSellCoef(treasury);
-    if (sellCoef <= 0) {
-        return res.status(400).json({ error: 'Продажа золота временно недоступна (недостаточно серебра в казне)' });
-    }
+    const R_silver = await getTreasury();
+    const sellCoef = getSellCoef(R_silver);
+    if (sellCoef <= 0) return res.status(400).json({ error: 'Продажа золота недоступна (мало серебра в казне)' });
 
     const user = await db.one('SELECT money, gold FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-    if ((user.gold || 0) < goldAmount) {
-        return res.status(400).json({ error: `Недостаточно золота. Есть ${user.gold || 0}, хотите продать ${goldAmount}` });
-    }
+    if (!user) return res.status(404);
+    if ((user.gold || 0) < goldAmount) return res.status(400).json({ error: 'Недостаточно золота' });
 
-    const reserves = await getReserves();
-    const rawPayout = calcSellPayout(goldAmount, reserves.silver, reserves.gold);
+    const R_gold = await getGoldReserve();
+    const rawPayout = calcSellPayout(goldAmount, R_silver, R_gold);
     const payout = Math.floor(rawPayout * sellCoef * (1 - COMMISSION));
 
-    if (reserves.silver < payout) {
-        return res.status(400).json({ error: 'В казне недостаточно серебра для выкупа' });
-    }
+    if (R_silver < payout) return res.status(400).json({ error: 'В казне недостаточно серебра' });
 
-    // Атомарно
+    // Золото → в резерв, серебро ← из казны
     await db.run('UPDATE users SET gold = gold - ?, money = money + ? WHERE id = ?', [goldAmount, payout, userId]);
-    await updateReserves(-payout, goldAmount);
+    await deductFromTreasury(payout, 'exchange_sell');
+    await updateGoldReserve(goldAmount);
 
-    const newReserves = await getReserves();
     res.json({
-        success: true,
-        goldSold: goldAmount,
-        silverReceived: payout,
-        sellCoef,
-        newGoldBalance: (user.gold || 0) - goldAmount,
-        newSilverBalance: (user.money || 0) + payout,
-        reserves: newReserves,
+        success: true, goldSold: goldAmount, silverReceived: payout,
+        newGold: (user.gold || 0) - goldAmount, newSilver: (user.money || 0) + payout,
     });
 });
 
