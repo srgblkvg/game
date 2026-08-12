@@ -9,8 +9,10 @@ interface StatsOverlayProps {
   equipmentBonuses?: { s: number; a: number; d: number; m: number };
   extraStats?: { crit: number; dodge: number; counter: number; fullBlock: number };
   collectionBonus?: number;
+  collectionSetBonus?: number;
   guildBonus?: number;
   buildings?: { type: string; icon: string; label: string; level: number; bonus: number }[];
+  setBonuses?: string[];
   noFlip?: boolean;
 }
 
@@ -35,7 +37,7 @@ const BONUS_LABELS: Record<string, string> = {
   'fullBlock': 'Блок',
 };
 
-export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, guildBonus, buildings, noFlip }: StatsOverlayProps) {
+export default function StatsOverlay({ stats, compact, baseStats, equipmentBonuses, extraStats, collectionBonus, collectionSetBonus: _collectionSetBonus, guildBonus, buildings, setBonuses, noFlip }: StatsOverlayProps) {
   const [flipped, setFlipped] = useState(false);
   const [animating, setAnimating] = useState(false);
   const isMobile = compact === 'mobile' || compact === 'verySmall';
@@ -142,6 +144,17 @@ export default function StatsOverlay({ stats, compact, baseStats, equipmentBonus
                       {b.label}
                     </td>
                     <td className="text-right pl-[2px] text-[var(--color-accent-info)]">+{b.bonus}%</td>
+                  </tr>
+                ))}
+              </>
+            )}
+            {setBonuses && setBonuses.length > 0 && (
+              <>
+                <tr><td colSpan={2}><div className="border-t border-[var(--color-border-light)] my-0.5" /></td></tr>
+                <tr><td colSpan={2} className="text-[0.6rem] text-[var(--color-accent-purple)] font-bold pb-0.5">Сетовые бонусы</td></tr>
+                {setBonuses.map((b, i) => (
+                  <tr key={i}>
+                    <td colSpan={2} className="text-[0.55rem] text-[var(--color-accent-success)] pl-1">{b}</td>
                   </tr>
                 ))}
               </>

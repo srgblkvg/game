@@ -75,13 +75,10 @@ export default function GuildViewPage() {
         && !myWar
         && !war;
 
+    const [showWarModal, setShowWarModal] = useState(false);
+
     const handleDeclareWar = async () => {
-        if (!confirm(`Объявить войну гильдии «${guild.name}»?\nКазна обеих гильдий будет заморожена на 24 часа.`)) return;
-        try {
-            const d = await api('/guild/war/declare', { targetGuildId: guild.id });
-            setMessage(d.message);
-            load();
-        } catch (e: any) { setMessage(e.message); }
+        setShowWarModal(true);
     };
 
     return (
@@ -98,8 +95,8 @@ export default function GuildViewPage() {
                     </Button>
                     <Card className="mb-4">
                         <div className="flex items-start gap-3">
-                            {guild.image && (
-                                <img src={guild.image} alt="Герб" className="w-16 h-16 object-cover rounded border-2 border-[var(--color-accent-gold)] flex-shrink-0" />
+                            {guild.hasImage && (
+                                <img src={`${BASE_URL}/guild/${guild.id}/image`} alt="Герб" className="w-16 h-16 object-cover rounded border-2 border-[var(--color-accent-gold)] flex-shrink-0" />
                             )}
                             <div className="flex-1 min-w-0">
                                 <h1 className="font-bold text-lg flex items-center gap-2">
@@ -111,7 +108,7 @@ export default function GuildViewPage() {
                                 )}
                                 <div className="flex gap-4 mt-2 text-xs text-[var(--color-text-muted)] flex-wrap">
                                     <span>👑 {guild.leaderName}</span>
-                                    <span>👥 {guild.memberCount} уч.</span>
+                                    <span>👥 {guild.memberCount}/20 уч.</span>
                                     <span>
                                         {guild.joinType === 'open' ? '🔓 Открытая' : guild.joinType === 'request' ? '📝 По заявке' : '🔒 По приглашению'}
                                     </span>
@@ -145,11 +142,11 @@ export default function GuildViewPage() {
                                 ⚔️ Поле битвы
                                 <span className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold"
                                     style={{
-                                        color: war.status === 'pending' ? 'var(--color-war-pending-text)' : 'var(--color-war-active-text)',
-                                        backgroundColor: war.status === 'pending' ? 'var(--color-war-pending-bg)' : 'var(--color-war-active-bg)',
+                                        color: 'var(--color-war-active-text)',
+                                        backgroundColor: 'var(--color-war-active-bg)',
                                     }}
                                 >
-                                    {war.status === 'pending' ? 'Ожидает ответа' : 'Активна'}
+                                    Активна
                                 </span>
                             </h3>
                             <div className="text-xs space-y-1">
@@ -172,31 +169,61 @@ export default function GuildViewPage() {
                     )}
 
                     <Card>
-                        <h3 className="font-bold text-sm mb-2">Участники ({members.length})</h3>
+                        <h3 className="font-bold text-sm mb-2">Участники ({members.length}/20)</h3>
                         <div className="space-y-1">
-                            {members.map((m: any) => (
-                                <div key={m.userId} className="flex items-center gap-2 text-xs py-1 border-b border-[var(--color-border-light)]">
-                                    <span className="w-6 text-center">
-                                        {m.rank === 'leader' ? '👑' : m.rank === 'officer' ? '🛡️' : '⚔️'}
-                                    </span>
-                                    <span className="text-[var(--color-accent-info)] cursor-pointer hover:underline"
+                            {[...members].sort((a: any, b: any) => {
+                                const rankOrder = (r: string) => r === 'leader' ? 0 : r === 'officer' ? 1 : 2;
+                                const ro = rankOrder(a.rank) - rankOrder(b.rank);
+                                if (ro !== 0) return ro;
+                                return (b.level || 0) - (a.level || 0);
+                            }).map((m: any) => (
+                                <div key={m.userId} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] text-xs">
+                                    <span className="cursor-pointer hover:text-[var(--color-accent-info)]"
                                         onClick={() => navigate(`/profile/${m.userId}`)}>
-                                        {m.username}
+                                        {m.rank === 'leader' ? '👑' : m.rank === 'officer' ? '🛡️' : '⚔️'} {m.username} ур.{m.level}
                                     </span>
-                                    <span className="text-[var(--color-text-muted)] text-[0.6rem]">
-                                        {m.rank === 'leader' ? 'лидер' : m.rank === 'officer' ? 'офицер' : 'боец'}
-                                    </span>
-                                    {(() => {
-                                        if (m.online) {
-                                            return <span className="text-green-500 dark:text-green-400 ml-auto font-medium">В игре</span>;
-                                        }
-                                        return <span className="text-[var(--color-text-muted)] ml-auto">ур.{m.level} · Был в игре: {getLastSeen(m.lastLoginAt).text}</span>;
-                                    })()}
+                                    {m.online
+                                        ? <span className="text-green-500 dark:text-green-400 whitespace-nowrap font-medium">В игре</span>
+                                        : <span className="text-[var(--color-text-muted)] whitespace-nowrap">Был в игре: {getLastSeen(m.lastLoginAt).text}</span>
+                                    }
                                 </div>
                             ))}
                         </div>
                     </Card>
                 </>
+            )}
+            {/* Модалка подтверждения войны */}
+            {showWarModal && guild && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowWarModal(false)}>
+                    <Card className="max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-lg mb-3 text-center">⚔️ Объявить войну</h3>
+                        <p className="text-sm mb-2">Противник: <span className="font-bold text-[var(--color-accent-danger)]">{guild.name}</span></p>
+                        <div className="text-xs text-[var(--color-text-muted)] space-y-1.5 mb-4">
+                            <p className="font-bold text-[var(--color-text-primary)]">Как проходит война:</p>
+                            <p>• ⚔️ Война начинается <b>сразу</b> и длится <b>72 часа</b></p>
+                            <p>• 🛡️ Каждый участник может быть атакован до <b>5 раз</b></p>
+                            <p>• ⚔️ Каждый участник может атаковать до <b>3 раз</b></p>
+                            <p>• 🏆 Побеждает гильдия с наибольшим счётом побед</p>
+                            <p>• 💸 Проигравший передаёт всю казну победителю</p>
+                            <p className="font-bold text-[var(--color-accent-warning)] mt-1">⚠️ Ограничения:</p>
+                            <p>• 💰 Казна заморожена до конца войны</p>
+                            <p>• 🚫 Нельзя покинуть гильдию</p>
+                            <p>• 📛 Нельзя исключать участников</p>
+                            <p>• 🚷 Нельзя принять новых участников</p>
+                        </div>
+                        <div className="flex gap-2 justify-center">
+                            <Button variant="secondary" size="md" onClick={() => setShowWarModal(false)}>Отмена</Button>
+                            <Button variant="danger" size="md" onClick={async () => {
+                                setShowWarModal(false);
+                                try {
+                                    const d = await api('/guild/war/declare', { targetGuildId: guild.id });
+                                    setMessage(d.message);
+                                    load();
+                                } catch (e: any) { setMessage(e.message); }
+                            }}>⚔️ Объявить войну</Button>
+                        </div>
+                    </Card>
+                </div>
             )}
         </div>
     );

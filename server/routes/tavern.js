@@ -1,0 +1,155 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const index_1 = require("../db/index");
+const helpers_1 = require("../db/helpers");
+const guildBuildings_1 = require("../game/guildBuildings");
+const treasury_1 = require("../game/treasury");
+const router = (0, express_1.Router)();
+// Комнаты отдыха
+const rooms = {
+    closet: { name: 'Чулан', rate: 3, cost1h: 100, cost8h: 600 },
+    bed: { name: 'Койка', rate: 10, cost1h: 500, cost8h: 3000 },
+    chamber: { name: 'Аппартаменты', rate: 50, cost1h: 2000, cost8h: 12000 },
+    lux: { name: 'Люкс', rate: 250, cost1h: 10000, cost8h: 60000 },
+};
+// Напитки
+const drinks = {
+    rage_small: { name: 'Настойка ярости', bonuses: { s: 10 }, cost: 150, category: 'Сила' },
+    rage_med: { name: 'Крепкая настойка ярости', bonuses: { s: 25 }, cost: 600, category: 'Сила' },
+    rage_big: { name: 'Эликсир берсерка', bonuses: { s: 50 }, cost: 2500, category: 'Сила' },
+    shadow_small: { name: 'Настойка теней', bonuses: { a: 10 }, cost: 150, category: 'Ловкость' },
+    shadow_med: { name: 'Крепкая настойка теней', bonuses: { a: 25 }, cost: 600, category: 'Ловкость' },
+    shadow_big: { name: 'Эликсир призрака', bonuses: { a: 50 }, cost: 2500, category: 'Ловкость' },
+    stone_small: { name: 'Настойка камня', bonuses: { d: 10 }, cost: 150, category: 'Защита' },
+    stone_med: { name: 'Крепкая настойка камня', bonuses: { d: 25 }, cost: 600, category: 'Защита' },
+    stone_big: { name: 'Эликсир бастиона', bonuses: { d: 50 }, cost: 2500, category: 'Защита' },
+    eye_small: { name: 'Настойка ока', bonuses: { m: 10 }, cost: 150, category: 'Мастерство' },
+    eye_med: { name: 'Крепкая настойка ока', bonuses: { m: 25 }, cost: 600, category: 'Мастерство' },
+    eye_big: { name: 'Эликсир пророка', bonuses: { m: 50 }, cost: 2500, category: 'Мастерство' },
+    grog_small: { name: 'Грог Моры', bonuses: { s: 5, a: 5, d: 5, m: 5 }, cost: 400, category: 'Универсальные' },
+    grog_med: { name: 'Крепкий грог', bonuses: { s: 12, a: 12, d: 12, m: 12 }, cost: 1800, category: 'Универсальные' },
+    dragon_blood: { name: 'Кровь дракона', bonuses: { s: 30, a: 30, d: 30, m: 30 }, cost: 10000, category: 'Универсальные' },
+};
+// Статус трактира
+router.get('/tavern', async (req, res) => {
+    const userId = req.userId;
+    const user = await index_1.db.one('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    const now = Math.floor(Date.now() / 1000);
+    const guildBonus = await (0, guildBuildings_1.getGuildBonus)(req.userId, 'arena');
+    const stats = await (0, helpers_1.buildPlayerStats)(user, 'arena');
+    const maxHp = stats.hp;
+    const adHealCooldownSec = 300;
+    const adHealRemaining = Math.max(0, adHealCooldownSec - (now - (user.adhealat || 0)));
+    res.json({
+        currentHp: user.currentHp,
+        maxHp,
+        money: user.money,
+        room: user.roomType && user.roomUntil > now ? { type: user.roomType, until: user.roomUntil } : null,
+        drink: user.activeDrink && user.drinkUntil > now ? { type: user.activeDrink, until: user.drinkUntil } : null,
+        rooms: Object.entries(rooms).map(([key, r]) => ({ key, ...r })),
+        drinks: Object.entries(drinks).map(([key, d]) => ({ key, ...d })),
+        adHealRemaining,
+    });
+});
+// Мгновенное лечение
+router.post('/tavern/heal', async (req, res) => {
+    const userId = req.userId;
+    const { full } = req.body; // full=true — полное, иначе 50%
+    const user = await index_1.db.one('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    const now = Math.floor(Date.now() / 1000);
+    const guildBonus = await (0, guildBuildings_1.getGuildBonus)(req.userId, 'arena');
+    const stats = await (0, helpers_1.buildPlayerStats)(user, 'arena');
+    const maxHp = stats.hp;
+    const missingHp = maxHp - user.currentHp;
+    if (missingHp <= 0)
+        return res.status(400).json({ error: 'HP уже полное' });
+    const healAmount = full ? missingHp : Math.ceil(missingHp * 0.5);
+    const cost = healAmount * 2;
+    if (user.money < cost)
+        return res.status(400).json({ error: `Недостаточно монет (нужно ${cost})` });
+    await index_1.db.run('UPDATE users SET money = money - ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?', [cost, user.currentHp + healAmount, Math.floor(Date.now() / 1000), userId]);
+    (0, treasury_1.addToTreasury)(Math.floor(cost * 0.22), 'tavern_heal').catch(() => { });
+    res.json({ success: true, hpAfter: user.currentHp + healAmount, cost });
+});
+// Бесплатное полное лечение за просмотр рекламы (VK)
+router.post('/tavern/heal-ad', async (req, res) => {
+    const userId = req.userId;
+    const user = await index_1.db.one('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    const now = Math.floor(Date.now() / 1000);
+    const cooldownSec = 300; // 5 минут
+    const lastAdHeal = user.adhealat || 0;
+    if (now - lastAdHeal < cooldownSec) {
+        const remaining = cooldownSec - (now - lastAdHeal);
+        const min = Math.ceil(remaining / 60);
+        return res.status(400).json({ error: `Реклама будет доступна через ${min} мин.` });
+    }
+    const guildBonus = await (0, guildBuildings_1.getGuildBonus)(req.userId, 'arena');
+    const stats = await (0, helpers_1.buildPlayerStats)(user, 'arena');
+    const maxHp = stats.hp;
+    const missingHp = maxHp - user.currentHp;
+    if (missingHp <= 0)
+        return res.status(400).json({ error: 'HP уже полное' });
+    await index_1.db.run('UPDATE users SET currentHp = ?, lastHpUpdate = ?, adhealat = ? WHERE id = ?', [user.currentHp + missingHp, now, now, userId]);
+    res.json({ success: true, hpAfter: user.currentHp + missingHp });
+});
+// Аренда комнаты
+router.post('/tavern/room', async (req, res) => {
+    const userId = req.userId;
+    const { roomType, hours } = req.body; // hours: 1 or 8
+    const room = rooms[roomType];
+    if (!room)
+        return res.status(400).json({ error: 'Неизвестный тип комнаты' });
+    const duration = hours === 8 ? 8 : 1;
+    const cost = hours === 8 ? room.cost8h : room.cost1h;
+    const user = await index_1.db.one('SELECT money, roomType, roomUntil FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    if (user.money < cost)
+        return res.status(400).json({ error: `Недостаточно монет (нужно ${cost})` });
+    const now = Math.floor(Date.now() / 1000);
+    // Стакаем время: если та же комната уже активна — добавляем к существующему until
+    let until;
+    if (user.roomType === roomType && (user.roomUntil || 0) > now) {
+        until = user.roomUntil + duration * 3600;
+    }
+    else {
+        until = now + duration * 3600;
+    }
+    await index_1.db.run('UPDATE users SET money = money - ?, roomType = ?, roomUntil = ? WHERE id = ?', [cost, roomType, until, userId]);
+    (0, treasury_1.addToTreasury)(Math.floor(cost * 0.22), 'tavern_room').catch(() => { });
+    res.json({ success: true, room: { type: roomType, name: room.name, until, rate: room.rate } });
+});
+// Купить напиток
+router.post('/tavern/drink', async (req, res) => {
+    const userId = req.userId;
+    const { drinkType } = req.body;
+    const drink = drinks[drinkType];
+    if (!drink)
+        return res.status(400).json({ error: 'Неизвестный напиток' });
+    const user = await index_1.db.one('SELECT money, activeDrink, drinkUntil FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    if (user.money < drink.cost)
+        return res.status(400).json({ error: `Недостаточно монет (нужно ${drink.cost})` });
+    const now = Math.floor(Date.now() / 1000);
+    // Стакаем время: если тот же напиток уже активен — добавляем к существующему until
+    let until;
+    if (user.activeDrink === drinkType && (user.drinkUntil || 0) > now) {
+        until = user.drinkUntil + 3600;
+    }
+    else {
+        until = now + 3600;
+    }
+    await index_1.db.run('UPDATE users SET money = money - ?, activeDrink = ?, drinkUntil = ? WHERE id = ?', [drink.cost, drinkType, until, userId]);
+    (0, treasury_1.addToTreasury)(Math.floor(drink.cost * 0.22), 'tavern').catch(() => { });
+    res.json({ success: true, drink: { type: drinkType, name: drink.name, bonuses: drink.bonuses, until } });
+});
+exports.default = router;
+//# sourceMappingURL=tavern.js.map

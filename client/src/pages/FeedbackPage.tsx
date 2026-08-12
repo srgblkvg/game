@@ -35,7 +35,7 @@ export default function FeedbackPage() {
     };
 
     return (
-        <div className="max-w-lg mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <h1 className="text-xl font-bold mb-4">📬 Обратная связь</h1>
             <p className="text-sm text-[var(--color-text-muted)] mb-4">

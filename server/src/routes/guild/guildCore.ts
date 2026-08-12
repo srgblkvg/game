@@ -44,7 +44,7 @@ router.get('/guild/my', async (req, res) => {
     if (!member) return res.json({ guild: null });
 
     const members = await db.query(
-        'SELECT gm.userId, gm.rank, gm.joinedAt, gm.can_quests, gm.can_buildings, gm.can_war, u.username, u.level, u.lastLoginAt FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC',
+        'SELECT gm.userId, gm.rank, gm.joinedAt, gm.can_quests, gm.can_buildings, gm.can_war, u.username, u.level, u.faction, u.lastLoginAt FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC',
         [member.guildId]
     );
 
@@ -55,7 +55,7 @@ router.get('/guild/my', async (req, res) => {
     }));
 
     const inviteCount = await db.one(
-        "SELECT COUNT(*) as cnt FROM guild_invites WHERE guildId = ? AND status = 'pending'",
+        "SELECT COUNT(*) as cnt FROM guild_invites WHERE guildId = ? AND status = 'pending' AND invitedBy = 0",
         [member.guildId]
     ) as any;
 
@@ -82,7 +82,7 @@ router.get('/guild/my', async (req, res) => {
             id: member.guildId,
             name: member.name,
             description: member.description,
-            image: member.image,
+            hasImage: !!member.image,
             joinType: member.joinType,
             level: member.level,
             exp: member.exp,
@@ -100,13 +100,31 @@ router.get('/guild/my', async (req, res) => {
     });
 });
 
+// Герб гильдии — отдельный URL для кеширования браузером
+router.get('/guild/:id/image', async (req, res, next) => {
+    const guildId = parseInt(req.params.id);
+    if (isNaN(guildId)) return next();
+    const row = await db.one('SELECT image FROM guilds WHERE id = ?', [guildId]) as any;
+    if (!row?.image) return res.status(404).end();
+    const mime = row.image.startsWith('data:image/') 
+        ? row.image.slice(5, row.image.indexOf(';')) 
+        : 'image/jpeg';
+    const data = row.image.includes(',') 
+        ? Buffer.from(row.image.split(',')[1], 'base64')
+        : Buffer.from(row.image, 'base64');
+    res.set('Content-Type', mime);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(data);
+});
+
 // Список гильдий (должен быть до /guild/:id)
 router.get('/guild/list', async (req, res) => {
     const guilds = await db.query(`
-        SELECT g.id, g.name, g.description, g.image, g.joinType, g.level, g.exp, g.leaderId, u.username as leaderName, u.id as leaderUserId,
-            (SELECT COUNT(*) FROM guild_members WHERE guildId = g.id) as memberCount,
-            (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status IN ('pending','active') LIMIT 1) as warStatus,
-            (SELECT gw2.id FROM guild_wars gw2 WHERE (gw2.attackerGuildId = g.id OR gw2.defenderGuildId = g.id) AND gw2.status IN ('pending','active') LIMIT 1) as warId
+        SELECT g.id, g.name, g.description, g.joinType, g.level, g.exp, g.leaderId, u.username as leaderName, u.id as leaderUserId,
+            (g.image IS NOT NULL) as hasImage,
+            (SELECT COUNT(*) FROM guild_members gm2 JOIN users u2 ON gm2.userId = u2.id WHERE gm2.guildId = g.id) as memberCount,
+            (SELECT gw.status FROM guild_wars gw WHERE (gw.attackerGuildId = g.id OR gw.defenderGuildId = g.id) AND gw.status = 'active' LIMIT 1) as warStatus,
+            (SELECT gw2.id FROM guild_wars gw2 WHERE (gw2.attackerGuildId = g.id OR gw2.defenderGuildId = g.id) AND gw2.status = 'active' LIMIT 1) as warId
         FROM guilds g
         JOIN users u ON g.leaderId = u.id
         ORDER BY g.level DESC, g.exp DESC
@@ -146,6 +164,10 @@ router.post('/guild/settings', async (req, res) => {
         await db.run('UPDATE guilds SET description = ? WHERE id = ?', [description, member.guildId]);
     }
     if (image !== undefined) {
+        // Валидация: только data:image/... или пустая строка (сброс)
+        if (image !== '' && !String(image).startsWith('data:image/')) {
+            return res.status(400).json({ error: 'Изображение должно быть в формате data:image/...' });
+        }
         await db.run('UPDATE guilds SET image = ? WHERE id = ?', [image, member.guildId]);
     }
 
@@ -184,11 +206,11 @@ router.post('/guild/officer-permissions', async (req, res) => {
 router.get('/guild/:id', async (req, res, next) => {
     const guildId = parseInt(req.params.id);
     if (isNaN(guildId)) return next();
-    const guild = await db.one('SELECT g.id, g.name, g.description, g.image, g.joinType, g.level, g.exp, g.leaderId, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?', [guildId]) as any;
+    const guild = await db.one('SELECT g.id, g.name, g.description, (g.image IS NOT NULL) as hasImage, g.joinType, g.level, g.exp, g.leaderId, u.username as leaderName FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?', [guildId]) as any;
     if (!guild) return res.status(404).json({ error: 'Гильдия не найдена' });
 
     const members = await db.query(
-        'SELECT gm.userId, gm.rank, gm.joinedAt, gm.can_quests, gm.can_buildings, gm.can_war, u.username, u.level, u.lastLoginAt FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC',
+        'SELECT gm.userId, gm.rank, gm.joinedAt, gm.can_quests, gm.can_buildings, gm.can_war, u.username, u.level, u.faction, u.lastLoginAt FROM guild_members gm JOIN users u ON gm.userId = u.id WHERE gm.guildId = ? ORDER BY gm.rank DESC, gm.joinedAt ASC',
         [guildId]
     );
 

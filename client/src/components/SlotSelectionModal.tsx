@@ -1,6 +1,6 @@
 import { useGame } from '../contexts/GameContext';
 import { equipItem } from '../api';
-import { slotNames, slotCategories } from '../utils/itemUtils';
+import { slotNames, slotCategories, getItemImage, getRarityColor } from '../utils/itemUtils';
 import { useToast } from '../contexts/ToastContext';
 
 interface SlotSelectionModalProps {
@@ -40,18 +40,36 @@ export default function SlotSelectionModal({ slotId, onClose, onEquip }: SlotSel
     });
 
     return (
-        <div style={{ marginTop: '1rem', background: '#1e1e30', padding: '0.5rem', borderRadius: '8px', border: '1px solid #555', width: '100%' }}>
-            <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>Выберите предмет для {slotNames[slotId]}:</div>
-            {availableItems.map((item: any) => (
-                <div
-                    key={item.id}
-                    onClick={() => handleEquip(item.id)}
-                    style={{ padding: '0.3rem 0.5rem', background: '#333', marginBottom: '0.2rem', cursor: 'pointer', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
-                >
-                    {item.name}
-                </div>
-            ))}
-            <button onClick={onClose} style={{ marginTop: '0.5rem', background: '#555', border: 'none', borderRadius: '4px', color: '#fff', padding: '0.3rem 0.6rem', cursor: 'pointer' }}>Закрыть</button>
+        <div className="mt-4 bg-[var(--color-bg-card)] p-3 rounded-lg border border-[var(--color-border-light)] w-full">
+            <div className="text-sm font-bold mb-2">Выберите предмет для {slotNames[slotId]}:</div>
+            {availableItems.length === 0 ? (
+                <p className="text-xs text-[var(--color-text-muted)]">Нет подходящих предметов</p>
+            ) : (
+                availableItems.map((item: any) => {
+                    const img = getItemImage(item);
+                    const color = getRarityColor(item);
+                    return (
+                        <div
+                            key={item.id}
+                            onClick={() => handleEquip(item.id)}
+                            className="flex items-center gap-2 p-2 bg-[var(--color-bg-input)] mb-1 cursor-pointer rounded hover:bg-[var(--color-bg-hover)] text-sm"
+                        >
+                            {img ? (
+                                <div className="w-8 h-8 rounded flex-shrink-0 border-2" style={{ borderColor: color, background: `url(${img}) center / contain no-repeat` }} />
+                            ) : (
+                                <div className="w-8 h-8 rounded flex-shrink-0 border-2 flex items-center justify-center text-xs" style={{ borderColor: color, color }}>?</div>
+                            )}
+                            <span className="text-[var(--color-text-primary)]">{item.name}</span>
+                            {item.upgradeLevel > 0 && (
+                                <span className="text-[var(--color-text-accent)] text-xs ml-auto">+{item.upgradeLevel}</span>
+                            )}
+                        </div>
+                    );
+                })
+            )}
+            <button onClick={onClose} className="mt-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-3 py-1 text-xs cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+                Закрыть
+            </button>
         </div>
     );
 }

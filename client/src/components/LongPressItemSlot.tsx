@@ -1,4 +1,3 @@
-// client/src/components/LongPressItemSlot.tsx
 import React from 'react';
 import ItemSlot from './ItemSlot';
 import { useLongPress } from '../hooks/useLongPress';
@@ -19,7 +18,7 @@ interface LongPressItemSlotProps {
     title?: string;
 }
 
-export default function LongPressItemSlot({
+const LongPressItemSlot = React.memo(function LongPressItemSlot({
     item,
     onClick,
     onDragStart,
@@ -58,4 +57,6 @@ export default function LongPressItemSlot({
             title={title}
         />
     );
-}
+});
+
+export default LongPressItemSlot;

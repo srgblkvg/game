@@ -83,7 +83,7 @@ export default function HistoryPage() {
     const tabs = [
         {key:'all',label:'Все'},{key:'battles',label:'PvP'},{key:'pve',label:'Охота'},
         {key:'jobs',label:'Работы'},{key:'tournaments',label:'Турниры'},{key:'quests',label:'Квесты'},
-        {key:'messages',label:'Сообщения'},{key:'massacre',label:'Резня'},
+        {key:'messages',label:'Сообщения'},{key:'massacre',label:'Лотерея'},
     ] as const;
 
     if(!user) return null;
@@ -146,9 +146,16 @@ export default function HistoryPage() {
         const { data, type } = entry;
         if (type === 'battle') {
             const win = data.winnerId === user.id;
+            let eloInfo = '';
+            try {
+                const steps = typeof data.steps === 'string' ? JSON.parse(data.steps) : (data.steps || []);
+                const lastStep = steps[steps.length - 1];
+                if (lastStep?.message?.startsWith('Рейтинг:')) eloInfo = lastStep.message.replace('Рейтинг:', '').trim();
+            } catch {}
             return <EntryRow time={fmt(data.createdAt)} onClick={()=>setSelectedBattle(data)}>
                 <span><Icon icon="game-icons:crossed-swords" width="14" height="14" className="inline mr-1"/>{data.attackerId===user.id?'Вы атаковали':'На вас напал'} <strong>{data.attackerId===user.id?data.defenderName:data.attackerName}</strong> <GuildTag guildName={data.attackerId===user.id?data.defenderGuild:data.attackerGuild} guildId={data.attackerId===user.id?data.defenderGuildId:data.attackerGuildId} /></span>
                 <span className={`font-bold ml-2 ${win?'text-[var(--color-accent-success)]':'text-[var(--color-accent-danger)]'}`}>{win?'Победа':'Поражение'}</span>
+                {eloInfo && <span className="text-[var(--color-accent-info)] ml-1 text-xs">{eloInfo}</span>}
                 {win && data.expGained>0&&<span className="text-[var(--color-accent-purple)] ml-1"> +{data.expGained} XP</span>}
                 {!win && data.expLost>0&&<span className="text-[var(--color-accent-danger)] ml-1"> -{data.expLost} XP</span>}
                 {data.moneyStolen>0&&<span className="text-[var(--color-text-accent)] ml-1"> {win?'+':'-'}{formatMoney(data.moneyStolen)}</span>}
@@ -172,7 +179,7 @@ export default function HistoryPage() {
             const ss = data.snapshotStats?JSON.parse(data.snapshotStats):null;
             const canc = data.status==='cancelled';
             const top3 = data.top3 || [];
-            const divisionLabel: Record<string,string> = {iron:'Железный',copper:'Медный',bronze:'Бронзовый',silver:'Серебряный',gold:'Золотой',platinum:'Платиновый',diamond:'Алмазный'};
+            const divisionLabel: Record<string,string> = {copper:'Медный',bronze:'Бронзовый',iron:'Железный',steel:'Стальной',silver:'Серебряный',gold:'Золотой',platinum:'Платиновый',mithril:'Мифриловый',adamant:'Адамантиновый',orichalcum:'Орихалковый'};
             const divName = data.division==='custom'?data.name||'Турнир':(divisionLabel[data.division]||data.division);
             return <EntryRow time={fmt(toMs(data.completedAt || data.createdAt))} onClick={()=>navigate('/tournament?tab=completed')}>
                 <div>
@@ -207,7 +214,7 @@ export default function HistoryPage() {
             const wname = data.winner_name ?? '?';
             const ts = toMs(data.gathering_end || data.created_at);
             return <EntryRow time={fmt(ts)} onClick={()=>navigate(`/massacre?eventId=${data.id}`)}>
-                <span><Icon icon="game-icons:battered-axe" width="14" height="14" className="inline mr-1"/>Резня — {pc} участников</span>
+                <span><Icon icon="game-icons:fist" width="14" height="14" className="inline mr-1"/>Кровавая лотерея — {pc} участников</span>
                 <span className={`font-bold ml-2 ${wid === user.id ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-text-muted)]'}`}>
                     {wid === user.id ? `🏆 ${wname}` : data.participated ? 'Поражение' : '⚔️'}
                 </span>

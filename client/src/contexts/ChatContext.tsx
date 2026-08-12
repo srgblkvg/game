@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import { useAuth } from './AuthContext';
 
 interface ChatMessage { id: number; senderId: number; senderName: string; targetId: number | null; content: string; createdAt: string; item?: any; itemRarity?: number; }
-interface OnlineUser { id: number; username: string; level: number; }
+interface OnlineUser { id: number; username: string; level: number; faction?: string | null; }
 interface ChatContextType {
   messages: ChatMessage[]; onlineUsers: OnlineUser[];
   addMessages: (msgs: ChatMessage[]) => void;
@@ -53,6 +53,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               const time = data.time || Math.floor(Date.now() / 1000);
               window.dispatchEvent(new CustomEvent('serverTick', { detail: time }));
               window.dispatchEvent(new CustomEvent('balance', { detail: { money: data.money, bank: data.bank || 0 } }));
+              // HP — актуальное значение с сервера
+              if (data.currentHp != null) {
+                window.dispatchEvent(new CustomEvent('hpTick', { detail: { currentHp: data.currentHp, lastHpUpdate: data.lastHpUpdate } }));
+              }
               // Уведомления
               if (data.notifications && data.notifications.length > 0) {
                 window.dispatchEvent(new CustomEvent('notifications', { detail: data.notifications }));
@@ -60,6 +64,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               // Квесты
               if (data.quests) {
                 window.dispatchEvent(new CustomEvent('questsUpdate', { detail: data.quests }));
+              }
+              // HP-реген
+              if (data.type === 'hpUpdate') {
+                window.dispatchEvent(new CustomEvent('hpTick', { detail: { currentHp: data.currentHp, lastHpUpdate: data.lastHpUpdate } }));
               }
               // Рейтинг
               if (data.rating) {
@@ -90,6 +98,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               if (data.bankTransfers !== undefined) {
                 localStorage.setItem('bankBadge', String(data.bankTransfers));
                 window.dispatchEvent(new CustomEvent('bankBadge'));
+              }
+              // Фракция: очки обновляются динамически
+              if (data.faction !== undefined || data.karma !== undefined) {
+                window.dispatchEvent(new CustomEvent('factionStats', {
+                  detail: {
+                    faction: data.faction ?? null,
+                    karma: data.karma ?? 0,
+                    factionCraftCount: data.factionCraftCount ?? 0,
+                    banditReputation: data.banditReputation ?? 0,
+                  }
+                }));
               }
               break;
             }
@@ -149,8 +168,28 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               }
               break;
             }
+            case 'guildExp': {
+              window.dispatchEvent(new CustomEvent('guildExp', { detail: { exp: data.exp, level: data.level } }));
+              break;
+            }
+            case 'guildLevelUp': {
+              window.dispatchEvent(new CustomEvent('guildLevelUp', { detail: { level: data.level, exp: data.exp } }));
+              break;
+            }
+            case 'guild_boss_update': {
+              window.dispatchEvent(new CustomEvent('guildBossUpdate', { detail: data }));
+              break;
+            }
+            case 'guild_boss_kill': {
+              window.dispatchEvent(new CustomEvent('guildBossKill', { detail: data }));
+              break;
+            }
             case 'tournamentCreated': {
               window.dispatchEvent(new CustomEvent('tournamentUpdated'));
+              break;
+            }
+            case 'protection': {
+              window.dispatchEvent(new CustomEvent('protectionChanged', { detail: data.protectionUntil }));
               break;
             }
             case 'error': {

@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { formatMoney } from '../utils/money';
 import Button from './ui/Button';
+import Card from './ui/Card';
+import Modal from './ui/Modal';
 import { getHeaders } from '../api/helpers';
 
 interface ActionsProps {
@@ -12,6 +14,7 @@ interface ActionsProps {
     bankCooldownSec: number;
     onArenaClick: () => void;
     hasActiveJob?: boolean;
+    isGuest?: boolean;
 }
 
 interface ActionCard {
@@ -21,7 +24,7 @@ interface ActionCard {
     buttonText: string;
 }
 
-export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob }: ActionsProps) {
+export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob, isGuest }: ActionsProps) {
     const navigate = useNavigate();
     const [cards, setCards] = useState<ActionCard[]>([]);
     const [tournamentInfo, setTournamentInfo] = useState<any>(null);
@@ -35,6 +38,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [treasury, setTreasury] = useState(0);
     const [massacreCount, setMassacreCount] = useState(0);
     const [massacreTimeLeft, setMassacreTimeLeft] = useState(0);
+    const [trainingCD, setTrainingCD] = useState(0);
 
     useEffect(() => {
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
@@ -59,6 +63,24 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
             })
             .catch(() => {});
         return () => window.removeEventListener('massacreTick', handler);
+    }, []);
+
+    // Таймер кулдауна Лудуса — получаем через WS, не поллим
+    useEffect(() => {
+        const handler = (e: any) => {
+            if (e.detail?.type === 'trainingCooldown') {
+                const sec = Math.max(0, e.detail.cooldownUntil - Math.floor(Date.now() / 1000));
+                setTrainingCD(sec);
+            }
+        };
+        window.addEventListener('wsMessage', handler);
+        // Загружаем начальное состояние один раз
+        fetch('/api/training', { headers: getHeaders() })
+            .then(r => r.json())
+            .then(d => { if (d.onCooldown) setTrainingCD(Math.max(0, d.cooldownUntil - Math.floor(Date.now()/1000))); })
+            .catch(() => {});
+        const tick = setInterval(() => setTrainingCD(p => Math.max(0, p - 1)), 1000);
+        return () => { clearInterval(tick); window.removeEventListener('wsMessage', handler); };
     }, []);
 
     // Бейдж аукциона через localStorage + событие
@@ -186,15 +208,15 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const heroCards = cards.filter(c => c.section === 'hero');
     const worldCards = cards.filter(c => c.section === 'world');
     const castleCards = cards.filter(c => c.section === 'castle');
-    const [activeTab, setActiveTab] = useState<'world' | 'castle'>('world');
+    const [activeTab, setActiveTab] = useState<'dungeon' | 'world' | 'castle'>('world');
 
-    const activeCards = activeTab === 'world' ? worldCards : castleCards;
+    const activeCards = activeTab === 'dungeon' ? [] : activeTab === 'world' ? worldCards : castleCards;
 
     return (
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
             {heroCards.length > 0 && (
                 <div>
-                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={tournamentInfo} setTournamentInfo={setTournamentInfo} myRegistration={myRegistration} setMyRegistration={setMyRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} nextTournamentLabel={nextTournamentLabel} />
+                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} trainingCD={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} isGuest={isGuest} tournamentInfo={tournamentInfo} setTournamentInfo={setTournamentInfo} myRegistration={myRegistration} setMyRegistration={setMyRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} nextTournamentLabel={nextTournamentLabel} />
                 </div>
             )}
             {/* Категории */}
@@ -207,19 +229,36 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     onClick={() => setActiveTab('castle')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'castle' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🏰 Площадь</button>
+                <button
+                    onClick={() => setActiveTab('dungeon')}
+                    className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'dungeon' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >🕳️ Подземелья(Бета)</button>
             </div>
-            <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} />
+            {activeTab === 'dungeon' ? (
+                <Card>
+                    <h3 className="text-sm font-bold mb-1">⚔️ Одиночное подземелье</h3>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Сражайтесь с монстрами, собирайте добычу, открывайте новые этажи</p>
+                    <p className="text-[0.65rem] text-[var(--color-text-muted)] h-4 leading-4"></p>
+                    <div className="mt-auto">
+                        <Button variant="primary" size="md" fullWidth onClick={() => navigate('/dungeon')}>🗡️ В данж</Button>
+                    </div>
+                </Card>
+            ) : (
+            <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} trainingCD={activeTab === 'world' ? trainingCD : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} isGuest={isGuest} />
+            )}
         </div>
     );
 }
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, setTournamentInfo, myRegistration, setMyRegistration, registerMsg, setRegisterMsg, nextTournamentSec, nextTournamentLabel }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, trainingCD, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, setTournamentInfo, myRegistration, setMyRegistration, registerMsg, setRegisterMsg, nextTournamentSec, nextTournamentLabel, isGuest }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
-    navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; treasury: number; massacreCount: number; massacreTimeLeft: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
+    navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; treasury: number; massacreCount: number; massacreTimeLeft: number; trainingCD: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
     tournamentInfo?: any; setTournamentInfo?: (info: any) => void; myRegistration?: any; setMyRegistration?: (r: any) => void; registerMsg?: string; setRegisterMsg?: (msg: string) => void; nextTournamentSec?: number; nextTournamentLabel?: string;
+    isGuest?: boolean;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
     const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
+    const [registerModal, setRegisterModal] = useState(false);
 
     useEffect(() => {
         const update = () => {
@@ -248,6 +287,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
     }, [highlightCard]);
 
     return (
+        <>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {cards.map((card, i) => {
                 const isArena = card.path === null || card.title === 'Арена';
@@ -352,13 +392,40 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <Icon icon={card.icon} width="14" height="14" />{card.title}
                                     </h3>
                                     <p className="text-sm text-[var(--color-text-muted)] mb-1">
-                                        Хаотичный PvP{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount} уч.</span>}
+                                        Кулачный бой{massacreCount > 0 && <span className="text-[var(--color-accent-danger)]"> · {massacreCount} уч.</span>}
                                     </p>
                                     <p className="text-xs text-[var(--color-text-muted)] h-4 leading-4">Вход: {formatMoney(card.cost)}</p>
                                     <div className="mt-auto">
                                         <Button variant="danger" size="md" fullWidth
                                             onClick={() => { if (card.path) navigate(card.path); }}>
                                             {massacreTimeLeft > 0 ? formatTime(massacreTimeLeft) : 'В бой'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // Лудус
+                if (card.path === '/training') {
+                    const fmt = (sec: number) => { const m = Math.floor(sec/60); const s = sec%60; return `${m}:${s.toString().padStart(2,'0')}`; };
+                    const bgStyle = card.bg_image ? { backgroundImage: `url(${card.bg_image})` } : {};
+                    return (
+                        <div key={i} className="relative group">
+                            <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
+                                <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
+                                <div className="relative w-full flex flex-col flex-1">
+                                    <h3 className="text-base font-bold mb-0.5 flex items-center justify-center gap-1">
+                                        <Icon icon={card.icon} width="14" height="14" />{card.title}
+                                    </h3>
+                                    <p className="text-sm text-[var(--color-text-muted)] mb-1">{card.subtitle}</p>
+                                    <p className="text-xs text-[var(--color-text-muted)] h-4 leading-4">&nbsp;</p>
+                                    <div className="mt-auto">
+                                        <Button variant={trainingCD > 0 ? 'secondary' : 'danger'} size="md" fullWidth
+                                            disabled={trainingCD > 0}
+                                            onClick={() => { if (card.path) navigate(card.path); }}>
+                                            {trainingCD > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{fmt(trainingCD)}</span> : 'Тренировка'}
                                         </Button>
                                     </div>
                                 </div>
@@ -383,7 +450,17 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                             <div className="mt-auto">
                                 <p className="text-xs text-[var(--color-text-muted)] h-4 leading-4">{card.cost > 0 ? `${card.path === '/massacre' ? 'Вход' : 'Цена'}: ${formatMoney(card.cost)}` : ''}</p>
                                 <Button variant={disabled ? 'secondary' : 'danger'} size="md" fullWidth disabled={disabled}
-                                    onClick={() => { if (card.path) { if (card.title === 'Аукцион' && onAuctionClick) onAuctionClick(); if (card.title === 'Гильдия' && onGuildClick) onGuildClick(); if (card.title === 'Банк' && onBankClick) onBankClick(); navigate(card.path); } }}>
+                                    onClick={() => {
+                                        if (!card.path) return;
+                                        if (isGuest && (card.title === 'Аукцион' || card.title === 'Банк')) {
+                                            setRegisterModal(true);
+                                            return;
+                                        }
+                                        if (card.title === 'Аукцион' && onAuctionClick) onAuctionClick();
+                                        if (card.title === 'Гильдия' && onGuildClick) onGuildClick();
+                                        if (card.title === 'Банк' && onBankClick) onBankClick();
+                                        navigate(card.path);
+                                    }}>
                                     {disabled && cdSec > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{btnText}</span> : btnText}
                                 </Button>
                             </div>
@@ -408,6 +485,13 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                 );
             })}
         </div>
+        {registerModal && (
+            <Modal open={registerModal} onClose={() => setRegisterModal(false)}>
+                <p className="mb-4">Доступно после регистрации</p>
+                <Button variant="danger" size="md" fullWidth onClick={() => setRegisterModal(false)}>OK</Button>
+            </Modal>
+        )}
+        </>
     );
 }
 

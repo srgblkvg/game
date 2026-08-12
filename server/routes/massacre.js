@@ -1,0 +1,102 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+// server/src/routes/massacre.ts
+const express_1 = require("express");
+const index_1 = require("../db/index");
+const router = (0, express_1.Router)();
+// --- Состояние текущей резни ---
+router.get('/massacre/state', async (req, res) => {
+    const userId = req.userId;
+    const now = Math.floor(Date.now() / 1000);
+    // Найти активное gathering-событие
+    let event = await index_1.db.one(`SELECT * FROM massacre_events WHERE status = 'gathering' ORDER BY id DESC LIMIT 1`, []);
+    // Если нет активного — создать новое
+    if (!event) {
+        await index_1.db.run(`INSERT INTO massacre_events (status, gathering_end) VALUES ('gathering', ?)`, [now + 1800]);
+        event = await index_1.db.one(`SELECT * FROM massacre_events WHERE id = (SELECT MAX(id) FROM massacre_events)`, []);
+    }
+    const participantCount = (await index_1.db.one(`SELECT COUNT(*) as cnt FROM massacre_participants WHERE event_id = ?`, [event.id])).cnt;
+    const myPart = await index_1.db.one(`SELECT COUNT(*) as cnt FROM massacre_participants WHERE event_id = ? AND user_id = ?`, [event.id, userId]);
+    const timeLeft = Math.max(0, event.gathering_end - now);
+    // Последний завершённый бой
+    const lastEvent = await index_1.db.one(`SELECT e.id, e.status, e.turn_order,
+                (SELECT COUNT(*) FROM massacre_participants WHERE event_id = e.id) as participant_count
+         FROM massacre_events e WHERE e.status = 'finished' ORDER BY e.id DESC LIMIT 1`, []);
+    // Если сбор закончился но статус ещё gathering — бой скоро начнётся (scheduler подхватит)
+    if (timeLeft <= 0 && event.status === 'gathering') {
+        return res.json({
+            event: { id: event.id, status: 'starting', entry_fee: event.entry_fee, participant_count: participantCount },
+            myParticipation: myPart.cnt > 0,
+            timeLeft: 0,
+            lastEvent: lastEvent ? { id: lastEvent.id, participant_count: lastEvent.participant_count } : null,
+        });
+    }
+    res.json({
+        event: { id: event.id, status: event.status, entry_fee: event.entry_fee, participant_count: participantCount, gathering_end: event.gathering_end },
+        prizePool: participantCount * event.entry_fee + 1000,
+        myParticipation: myPart.cnt > 0,
+        timeLeft,
+        lastEvent: lastEvent ? { id: lastEvent.id, participant_count: lastEvent.participant_count } : null,
+    });
+});
+// --- Присоединиться к резне ---
+router.post('/massacre/join', async (req, res) => {
+    const userId = req.userId;
+    const now = Math.floor(Date.now() / 1000);
+    const event = await index_1.db.one(`SELECT * FROM massacre_events WHERE status = 'gathering' AND gathering_end > ? ORDER BY id DESC LIMIT 1`, [now]);
+    if (!event) {
+        return res.status(400).json({ error: 'Нет активной резни' });
+    }
+    // Проверить что ещё не участвует
+    const already = await index_1.db.one(`SELECT COUNT(*) as cnt FROM massacre_participants WHERE event_id = ? AND user_id = ?`, [event.id, userId]);
+    if (already.cnt > 0) {
+        return res.status(400).json({ error: 'Вы уже в резне' });
+    }
+    // Загрузить игрока (голые статы: база + лудус, без экипировки/напитков/гильдии)
+    const user = await index_1.db.one(`SELECT id, username, level, baseS, baseA, baseD, baseM, money, currentHp, 
+                COALESCE(trained_s,0) as ts, COALESCE(trained_a,0) as ta, 
+                COALESCE(trained_d,0) as td, COALESCE(trained_m,0) as tm
+         FROM users WHERE id = ?`, [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'Пользователь не найден' });
+    // Проверить деньги
+    if (user.money < event.entry_fee) {
+        return res.status(400).json({ error: `Недостаточно серебра (нужно ${event.entry_fee})` });
+    }
+    // Голые статы: база + лудус
+    const s = user.baseS + (user.ts || 0);
+    const a = user.baseA + (user.ta || 0);
+    const d = user.baseD + (user.td || 0);
+    const m = user.baseM + (user.tm || 0);
+    const hp = s + a + m;
+    const stats = { s, a, d, m, hp, maxHp: hp, bonuses: {}, extra: {}, drinks: {}, collection: 0 };
+    // Списать деньги
+    await index_1.db.run('UPDATE users SET money = money - ? WHERE id = ?', [event.entry_fee, userId]);
+    // Добавить в казну замка
+    // В казну не идёт — резня для игроков
+    // Добавить участника
+    await index_1.db.run(`INSERT INTO massacre_participants (event_id, user_id, level, base_s, base_a, base_d, base_m, hp_current, hp_max, stats_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [event.id, userId, user.level, stats.s, stats.a, stats.d, stats.m, stats.hp, stats.hp, JSON.stringify(stats)]);
+    res.json({ success: true, eventId: event.id });
+});
+// --- Лог боя ---
+router.get('/massacre/log/:eventId', async (req, res) => {
+    const userId = req.userId;
+    const eventId = parseInt(req.params.eventId);
+    const event = await index_1.db.one(`SELECT * FROM massacre_events WHERE id = ?`, [eventId]);
+    if (!event)
+        return res.status(404).json({ error: 'Событие не найдено' });
+    const turns = await index_1.db.query(`SELECT * FROM massacre_turns WHERE event_id = ? ORDER BY turn_number, id`, [eventId]);
+    const participants = await index_1.db.query(`SELECT mp.*, u.username FROM massacre_participants mp JOIN users u ON mp.user_id = u.id WHERE mp.event_id = ?`, [eventId]);
+    const turnsWithFlag = turns.map(t => ({
+        ...t,
+        isMyTurn: t.actor_id === userId,
+    }));
+    res.json({
+        event: { id: event.id, status: event.status, participant_count: participants.length },
+        participants: participants.map(p => ({ id: p.user_id, name: p.username, level: p.level, alive: p.alive, hp_max: p.hp_max, hp_current: p.hp_current })),
+        turns: turnsWithFlag,
+    });
+});
+exports.default = router;
+//# sourceMappingURL=massacre.js.map

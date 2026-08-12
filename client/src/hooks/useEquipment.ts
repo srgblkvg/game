@@ -17,7 +17,7 @@ export function useEquipment(onEquip?: () => void) {
         if (!itemId || !character) return;
         try {
             const data = await equipItem(slotId, itemId);
-setCharacter({
+            setCharacter({
                 ...character,
                 inventory: data.inventory,
                 equipment: data.equipment,
@@ -41,6 +41,7 @@ setCharacter({
                     inventory: data.inventory,
                     equipment: data.equipment,
                     currentHp: data.currentHp ?? Math.max(1, character.currentHp),
+                    stats: data.stats ?? character.stats,
                 });
                 onEquip?.();
             } catch (err: any) {

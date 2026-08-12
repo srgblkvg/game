@@ -12,7 +12,7 @@ interface ItemTooltipProps {
 const TOOLTIP_MARGIN = 8;
 const SCREEN_PADDING = 8;
 
-const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
+const ItemTooltip: React.FC<ItemTooltipProps & { equipment?: Record<string, any> }> = ({ item, position, equipment }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [adjustedPos, setAdjustedPos] = useState({ left: 0, top: 0, opacity: 0 });
 
@@ -65,7 +65,7 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({ item, position }) => {
         visibility: adjustedPos.opacity ? 'visible' : 'hidden',
       }}
     >
-      <ItemStats item={item} imageSize={36} />
+      <ItemStats item={item} imageSize={36} viewEquipment={equipment} />
     </div>
   );
 

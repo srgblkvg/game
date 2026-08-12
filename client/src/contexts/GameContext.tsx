@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 
 interface GameItem {
   id?: string | number;
@@ -12,6 +12,7 @@ interface GameItem {
   bonuses?: { s: number; a: number; d: number; m: number };
   extra?: { crit: number; dodge: number; counter: number; fullBlock: number };
   upgradeLevel?: number;
+  locked?: boolean;
 }
 
 export interface Character {
@@ -32,6 +33,7 @@ export interface Character {
     id: string;
     itemType?: string;
     image?: string;
+    locked?: boolean;
   })[];
   equipment: Record<string, GameItem>;
   baseStats: { s: number; a: number; d: number; m: number };
@@ -88,56 +90,137 @@ export interface Character {
   avatar?: string | null;
   elo?: number;
   pveRating?: number;
+  faction?: string | null;
+  karma?: number;
+  factionCraftCount?: number;
+  banditReputation?: number;
+  equipment1?: Record<string, any>;
+  equipment2?: Record<string, any>;
+  equipment3?: Record<string, any>;
+  activeEquipSlot?: number;
   tutorialCompleted?: number;
+  tutorialStep?: number;
+  totalIncome?: number;
+  overflowmoney?: number;
+  achievements?: AchievementSummary[];
+}
+
+interface AchievementSummary {
+  key: string;
+  name: string;
+  icon: string;
+  progress: number;
+  highestTier: number;
+  currentTier: { tier: number; name: string; icon: string } | null;
 }
 
 interface GameContextType {
   character: Character | null;
   setCharacter: React.Dispatch<React.SetStateAction<Character | null>>;
   serverTime: number;
+  /** Текущее HP с регенерацией — единое значение для всех компонентов */
+  regenHp: number;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
 
-// HP regen snapshot: { hp, time } — обновляется при setCharacter
-let _hpSnapshot = { hp: 100, time: Math.floor(Date.now() / 1000) };
-
-/** Вычислить текущий HP с учётом регенерации (1 HP / 10 сек, ×rate от комнаты) */
-export function getRegenHp(currentHp: number, maxHp: number, serverTime: number, roomType?: string | null, roomUntil?: number): number {
-  const elapsed = serverTime - _hpSnapshot.time;
+/** Вычислить HP с учётом регенерации (1 HP / 5 сек, ×rate от комнаты) */
+function calcRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, serverTime: number, roomType?: string | null, roomUntil?: number, premiumUntil?: number): number {
+  const elapsed = serverTime - lastHpUpdate;
   if (elapsed <= 0) return Math.min(currentHp, maxHp);
 
-  // Базовый реген: 1 HP каждые 10 секунд
   let regenRate = 1;
   if (roomType && roomUntil && roomUntil > serverTime) {
     if (roomType === 'closet') regenRate = 3;
     else if (roomType === 'bed') regenRate = 10;
     else if (roomType === 'chamber') regenRate = 50;
+    else if (roomType === 'lux') regenRate = 250;
   }
+  if (premiumUntil && premiumUntil > serverTime) regenRate *= 3;
 
-  const regenAmount = Math.floor(elapsed / 10) * regenRate;
-  return Math.min(maxHp, _hpSnapshot.hp + regenAmount);
+  const regenAmount = Math.floor(elapsed * regenRate / 5);
+  return Math.min(maxHp, currentHp + regenAmount);
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [character, setCharacter] = useState<Character | null>(null);
   const [serverTime, setServerTime] = useState(Math.floor(Date.now() / 1000));
+  const [regenHp, setRegenHp] = useState(100);
 
-  // Обновляем снапшот HP при изменении character
+  // serverTick — обновляем время и HP с регенерацией
   useEffect(() => {
-    if (character) {
-      _hpSnapshot = { hp: character.currentHp, time: character.lastHpUpdate || serverTime };
-    }
-  }, [character]);
-
-  useEffect(() => {
-    const handler = (e: Event) => setServerTime((e as CustomEvent).detail);
+    const handler = (e: Event) => {
+      const time = (e as CustomEvent).detail as number;
+      setServerTime(time);
+      // hpData приходит из ChatContext через отдельный канал
+    };
     window.addEventListener('serverTick', handler as EventListener);
     return () => window.removeEventListener('serverTick', handler as EventListener);
   }, []);
 
+  // hpTick — обновление currentHp/lastHpUpdate из serverTick
+  useEffect(() => {
+    const handler = (e: Event) => {
+      // Во время боя не обновляем HP — чтобы не спойлерить исход
+      if ((window as any).__battling) return;
+      const { currentHp: hp, lastHpUpdate: lhu } = (e as CustomEvent).detail;
+      setCharacter(prev => {
+        if (!prev) return prev;
+        if (hp !== undefined) {
+          return { ...prev, currentHp: hp, lastHpUpdate: lhu ?? prev.lastHpUpdate };
+        }
+        return prev;
+      });
+    };
+    window.addEventListener('hpTick', handler as EventListener);
+    return () => window.removeEventListener('hpTick', handler as EventListener);
+  }, []);
+
+  // factionStats — динамическое обновление очков фракции из serverTick
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { faction, karma, factionCraftCount, banditReputation } = (e as CustomEvent).detail;
+      setCharacter(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          faction: faction ?? prev.faction,
+          karma: karma ?? prev.karma,
+          factionCraftCount: factionCraftCount ?? prev.factionCraftCount,
+          banditReputation: banditReputation ?? prev.banditReputation,
+        };
+      });
+    };
+    window.addEventListener('factionStats', handler as EventListener);
+    return () => window.removeEventListener('factionStats', handler as EventListener);
+  }, []);
+
+  // Пересчёт regenHp при изменении character или serverTime
+  const frozenHp = useRef<number | null>(null);
+  useEffect(() => {
+    if (!character) return;
+    // Во время боя замораживаем HP — чтобы не спойлерить исход
+    if ((window as any).__battling) {
+      if (frozenHp.current === null) frozenHp.current = character.currentHp;
+      setRegenHp(frozenHp.current);
+      return;
+    }
+    frozenHp.current = null;
+    const maxHp = character.stats?.hp ?? 100;
+    const hp = calcRegenHp(
+      character.currentHp,
+      maxHp,
+      character.lastHpUpdate || serverTime,
+      serverTime,
+      character.room?.type,
+      character.room?.until,
+      character.premium?.until
+    );
+    setRegenHp(hp);
+  }, [character?.currentHp, character?.lastHpUpdate, character?.room?.until, character?.premium?.until, serverTime]);
+
   return (
-    <GameContext.Provider value={{ character, setCharacter, serverTime }}>
+    <GameContext.Provider value={{ character, setCharacter, serverTime, regenHp }}>
       {children}
     </GameContext.Provider>
   );

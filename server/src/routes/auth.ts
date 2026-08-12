@@ -9,6 +9,8 @@ import { auditRegister, auditLoginSuccess, auditLoginFailure, auditAccountLocked
 import { sendVerificationCode } from '../email';
 import { applyDecay } from '../game/rating';
 import { currentStats } from '../game/stats';
+import { getStarterEquipment } from '../db/helpers';
+import logger from '../logger';
 
 const router = Router();
 
@@ -20,7 +22,8 @@ router.post('/register', async (req, res) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные', details: parsed.error.flatten() });
 
-    const { username, email, password } = parsed.data;
+    const { username, email: rawEmail, password } = parsed.data;
+    const email = rawEmail.toLowerCase().trim();
 
     const existing = await db.one('SELECT id, username FROM users WHERE username = ? OR email = ?', [username, email]) as any;
     if (existing) {
@@ -36,9 +39,11 @@ router.post('/register', async (req, res) => {
     const code = generateCode();
     const codeExpires = now + 600; // 10 минут
 
-    await db.run(`INSERT INTO users (username, passwordHash, email, emailCode, emailCodeExpires, currentHp, lastHpUpdate, level, gender)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'male')`,
-        [username, passwordHash, email, code, codeExpires, startHp, now]);
+    const equipment1 = getStarterEquipment();
+    const eqObj = JSON.parse(equipment1);
+    await db.raw(`INSERT INTO users (username, passwordhash, email, emailcode, emailcodeexpires, currenthp, lasthpupdate, level, gender, money, equipment)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'male', $8, $9) RETURNING id`,
+        [username, passwordHash, email, code, codeExpires, startHp, now, 1000, eqObj]);
 
     const sent = await sendVerificationCode(email, code);
     if (!sent) {
@@ -55,14 +60,18 @@ router.post('/verify-email', async (req, res) => {
     const parsed = verifyEmailSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
-    const { email, code } = parsed.data;
+    const { email: rawEmail, code } = parsed.data;
+    const email = rawEmail.toLowerCase().trim();
     const now = Math.floor(Date.now() / 1000);
 
     const user: any = await db.one('SELECT id, username, emailCode, emailCodeExpires, emailVerified FROM users WHERE email = ?', [email]);
     if (!user) return res.status(400).json({ error: 'Email не найден' });
     if (user.emailVerified) return res.status(400).json({ error: 'Email уже подтверждён' });
-    if (user.emailCode !== code) return res.status(400).json({ error: 'Неверный код' });
-    if (user.emailCodeExpires < now) return res.status(400).json({ error: 'Код истёк. Запросите новый.' });
+    if (!user.emailCode || user.emailCodeExpires < now) return res.status(400).json({ error: 'Код истёк. Запросите новый.' });
+    if (String(user.emailCode) !== String(code)) {
+        logger.warn({ email, expectedCode: String(user.emailCode), receivedCode: String(code) }, 'Email verification: wrong code');
+        return res.status(400).json({ error: 'Неверный код' });
+    }
 
     await db.run('UPDATE users SET emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, lastLoginAt = ? WHERE id = ?', [now, user.id]);
 
@@ -73,7 +82,8 @@ router.post('/verify-email', async (req, res) => {
 
 // Повторная отправка кода подтверждения
 router.post('/resend-code', async (req, res) => {
-    const { email } = req.body;
+    const rawEmail = (req.body.email || '').trim();
+    const email = rawEmail.toLowerCase();
     if (!email) return res.status(400).json({ error: 'Email обязателен' });
 
     const now = Math.floor(Date.now() / 1000);
@@ -138,20 +148,22 @@ router.post('/guest', async (req, res) => {
     
     const guestId = nickname || `Гость_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const startHp = currentStats({ s: 5, a: 5, d: 5, m: 5 }, {}).hp;
+    const equipment1 = getStarterEquipment();
+    const eqObj = JSON.parse(equipment1);
 
-    await db.run(`INSERT INTO users (username, passwordHash, currentHp, lastHpUpdate, level, gender, isGuest, emailVerified, exp, money)
-        VALUES (?, '', ?, ?, 1, 'male', 1, 1, 0, 0)`,
-        [guestId, startHp, now]);
+    const insertResult = await db.raw(`INSERT INTO users (username, passwordhash, currenthp, lasthpupdate, level, gender, isguest, emailverified, exp, money, equipment)
+        VALUES ($1, '', $2, $3, 1, 'male', 1, 1, 0, $4, $5) RETURNING id`,
+        [guestId, startHp, now, 1000, eqObj]);
+    const newUserId = insertResult.rows[0].id;
 
-    const user: any = await db.one('SELECT id FROM users WHERE username = ?', [guestId]);
-    const token = jwt.sign({ userId: user.id, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: newUserId, role: 'player', isGuest: true, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
 
-    auditLoginSuccess(guestId, user.id, req.ip);
+    auditLoginSuccess(guestId, newUserId, req.ip);
     if (req.ip) {
-        try { await db.run('INSERT INTO login_logs (userId, ip) VALUES (?, ?)', [user.id, req.ip]); } catch {}
+        try { await db.run('INSERT INTO login_logs (userId, ip) VALUES (?, ?)', [newUserId, req.ip]); } catch {}
     }
 
-    res.json({ token, user: { id: user.id, username: guestId, level: 1, role: 'player', isGuest: true, gender: 'male' } });
+    res.json({ token, user: { id: newUserId, username: guestId, level: 1, role: 'player', isGuest: true, gender: 'male' } });
 });
 
 router.post('/login', async (req, res) => {
@@ -159,7 +171,7 @@ router.post('/login', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
     const { username, password } = parsed.data;
-    const login = username; // может быть email или username
+    const login = username.includes('@') ? username.toLowerCase().trim() : username; // может быть email или username
     const now = Math.floor(Date.now() / 1000);
 
     // Ищем пользователя по email или username

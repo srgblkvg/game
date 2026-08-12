@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 import { useAuth } from './contexts/AuthContext';
+import { useGame } from './contexts/GameContext';
 import LoginPage from './pages/LoginPage';
 import LoginClassicPage from './pages/LoginClassicPage';
 import WikiPage from './pages/WikiPage';
@@ -9,18 +10,22 @@ import PrivacyPage from './pages/PrivacyPage';
 import RegisterPage from './pages/RegisterPage';
 import VkLoginPage from './pages/VkLoginPage';
 import LogoutPage from './pages/LogoutPage';
-import HomePage from './pages/HomePage';
+const HomePage = lazy(() => import('./pages/HomePage'));
 import AdminRegisterPage from './pages/AdminRegisterPage';
 import ChatPanel from './components/chat/ChatPanel';
 import Header from './components/Header';
 import RightSidebar from './components/RightSidebar';
 import NotificationToast from './components/NotificationToast';
 import { ToastProvider } from './contexts/ToastContext';
+import NoMoneyModal from './components/NoMoneyModal';
 import ScrollToTop from './components/ScrollToTop';
 import MetrikaTracker from './components/MetrikaTracker';
 // TODO: удалить после ответа поддержки VK ↓
 import VkKeyboard from './components/VkKeyboard';
 // TODO: удалить после ответа поддержки VK ↑
+import TutorialOverlay from './components/TutorialOverlay';
+import tutorialSteps from './data/tutorialSteps';
+import { BASE_URL, getHeaders } from './api/helpers';
 
 // Ленивая загрузка тяжёлых страниц
 const ArenaPage = lazy(() => import('./pages/Arena/ArenaPage'));
@@ -46,10 +51,17 @@ const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
 const BattleSimPage = lazy(() => import('./pages/BattleSimPage'));
 const CastlePage = lazy(() => import('./pages/CastlePage'));
+const FactionPage = lazy(() => import('./pages/FactionPage'));
 const ForumPage = lazy(() => import('./pages/ForumPage'));
 const ForumThreadPage = lazy(() => import('./pages/ForumThreadPage'));
 const MassacrePage = lazy(() => import('./pages/MassacrePage'));
 const CasinoPage = lazy(() => import('./pages/CasinoPage'));
+const DicePage = lazy(() => import('./pages/DicePage'));
+const ConflictsPage = lazy(() => import('./pages/ConflictsPage'));
+const TrainingPage = lazy(() => import('./pages/TrainingPage'));
+const StarterPackPage = lazy(() => import('./pages/StarterPackPage'));
+const DebugStatsPage = lazy(() => import('./pages/DebugStatsPage'));
+const DungeonPage = lazy(() => import('./pages/DungeonPage'));
 
 function Loading() {
   return (
@@ -59,8 +71,43 @@ function Loading() {
   );
 }
 
-function App() {
+function AppContent() {
   const { user } = useAuth();
+  const { character, setCharacter } = useGame();
+
+  // Туториал активен для игроков 1 уровня, которые не завершили обучение
+  const tutorialActive =
+    user?.role === 'player' &&
+    character &&
+    (character.tutorialCompleted !== 1) &&
+    (character.level ?? 0) <= 1;
+
+  const handleTutorialNext = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/character/tutorial-step`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (character) {
+        setCharacter({ ...character, tutorialStep: data.step });
+      }
+    } catch { /* ignore */ }
+  }, [character, setCharacter]);
+
+  const handleTutorialComplete = useCallback(async () => {
+    try {
+      await fetch(`${BASE_URL}/character/tutorial-done`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      });
+      if (character) {
+        setCharacter({ ...character, tutorialCompleted: 1, tutorialStep: tutorialSteps.length });
+      }
+    } catch { /* ignore */ }
+  }, [character, setCharacter]);
 
   const searchParams = new URLSearchParams(window.location.search);
   const isVkLaunch = searchParams.has('vk_user_id');
@@ -70,8 +117,9 @@ function App() {
       <ToastProvider>
       <ScrollToTop />
       <MetrikaTracker />
-      <Header />
-      {user?.role === 'player' && <RightSidebar />}
+      {/* Скрываем UI для игроков в туториале */}
+      {!tutorialActive && <Header />}
+      {!tutorialActive && user?.role === 'player' && <RightSidebar />}
       <NotificationToast />
       <div style={{
         maxWidth: '1024px',
@@ -109,27 +157,48 @@ function App() {
             <Route path="/guild/rating" element={user?.role === 'player' ? <GuildRatingPage /> : <Navigate to="/login" />} />
             <Route path="/guild/war" element={user?.role === 'player' ? <GuildWarPage /> : <Navigate to="/login" />} />
             <Route path="/castle" element={user?.role === 'player' ? <CastlePage /> : <Navigate to="/login" />} />
+            <Route path="/faction" element={user?.role === 'player' ? <FactionPage /> : <Navigate to="/login" />} />
             <Route path="/forum" element={user?.role === 'player' ? <ForumPage /> : <Navigate to="/login" />} />
             <Route path="/forum/:id" element={user?.role === 'player' ? <ForumThreadPage /> : <Navigate to="/login" />} />
             <Route path="/massacre" element={user?.role === 'player' ? <MassacrePage /> : <Navigate to="/login" />} />
             <Route path="/casino" element={user?.role === 'player' ? <CasinoPage /> : <Navigate to="/login" />} />
+            <Route path="/dice" element={user?.role === 'player' ? <DicePage /> : <Navigate to="/login" />} />
+            <Route path="/conflicts" element={user?.role === 'player' ? <ConflictsPage /> : <Navigate to="/login" />} />
+            <Route path="/training" element={user?.role === 'player' ? <TrainingPage /> : <Navigate to="/login" />} />
+            <Route path="/starter-pack" element={user?.role === 'player' ? <StarterPackPage /> : <Navigate to="/login" />} />
+            <Route path="/debug-stats" element={user?.role === 'player' || user?.role === 'admin' ? <DebugStatsPage /> : <Navigate to="/login" />} />
             <Route path="/feedback" element={user?.role === 'player' ? <FeedbackPage /> : <Navigate to="/login" />} />
             <Route path="/collections" element={user?.role === 'player' ? <CollectionsPage /> : <Navigate to="/login" />} />
             <Route path="/guild/:id" element={user?.role === 'player' ? <GuildViewPage /> : <Navigate to="/login" />} />
             <Route path="/battle-sim" element={user?.role === 'player' || user?.role === 'admin' ? <BattleSimPage /> : <Navigate to="/login" />} />
+            <Route path="/dungeon" element={user?.role === 'player' ? <DungeonPage /> : <Navigate to="/login" />} />
             <Route path="/admin/register" element={<AdminRegisterPage />} />
             <Route path="/adminpanel" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Suspense>
       </div>
-      <ChatPanel key={user?.id} />
+      {!tutorialActive && user?.role === 'player' && <ChatPanel key={user?.id} />}
       {/* TODO: удалить после ответа поддержки VK ↓ */}
       <VkKeyboard />
       {/* TODO: удалить после ответа поддержки VK ↑ */}
+      <NoMoneyModal />
+      {/* Туториал для новых игроков */}
+      {tutorialActive && (
+        <TutorialOverlay
+          steps={tutorialSteps}
+          stepIndex={character?.tutorialStep ?? 0}
+          onComplete={handleTutorialComplete}
+          onNextStep={handleTutorialNext}
+        />
+      )}
     </ToastProvider>
     </BrowserRouter>
   );
+}
+
+function App() {
+  return <AppContent />;
 }
 
 export default App;

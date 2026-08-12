@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { currentStats, isSlotCompatible } from '../game/stats';
-import { getUserById, getBaseStats, recalcHpOnEquip } from '../db/helpers';
+import { getUserById, getBaseStats, recalcHpOnEquip, getCollectionBonus } from '../db/helpers';
 import { getDrinkBonuses } from '../game/drinks';
 import { getGuildBonus } from '../game/guildBuildings';
 
@@ -17,11 +17,17 @@ router.post('/character/equip', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
-    const equipment: Record<string, any> = JSON.parse(user.equipment || '{}');
+    // Читаем экипировку из АКТИВНОГО слота (как buildPlayerStats)
+    const activeSlot = user.active_equip_slot || 1;
+    const equipKey = `equipment_${activeSlot}`;
+    let equipment: Record<string, any> = typeof user[equipKey] === 'string' ? JSON.parse(user[equipKey] || '{}') : (user[equipKey] && typeof user[equipKey] === 'object' ? user[equipKey] : {});
+    if (Object.keys(equipment).length === 0) {
+        equipment = typeof user.equipment === 'string' ? JSON.parse(user.equipment || '{}') : (user.equipment && typeof user.equipment === 'object' ? user.equipment : {});
+    }
     const currentEquipped = equipment[slotId];
 
     const drinkBonuses = getDrinkBonuses(user);
-    const collectionCount = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt;
+    const collectionCount = await getCollectionBonus(userId);
     const guildBonus = await getGuildBonus(userId, 'arena');
 
     if (itemId === undefined || itemId === null) {
@@ -41,12 +47,16 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
         const now = Math.floor(Date.now() / 1000);
         await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
             [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
+        // Синхронизируем с активным equipment_N
+        await db.run(`UPDATE users SET equipment_${activeSlot} = ?::jsonb WHERE id = ?`,
+            [JSON.stringify(equipment), userId]);
         return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
     }
 
     const itemIndex = inventory.findIndex((i: any) => i.id == itemId);
     if (itemIndex === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
     const item = inventory[itemIndex];
+    if (item.locked) return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
     if (!item || item.type === 'material' || item.type === 'craft_item') return res.status(400).json({ error: 'Нельзя надеть материал или ресурс' });
 
     if (!isSlotCompatible(slotId, item)) return res.status(400).json({ error: 'Предмет не подходит к слоту' });
@@ -85,6 +95,9 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
     const now = Math.floor(Date.now() / 1000);
     await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
         [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
+    // Синхронизируем с активным equipment_N
+    await db.run(`UPDATE users SET equipment_${activeSlot} = ?::jsonb WHERE id = ?`,
+        [JSON.stringify(equipment), userId]);
 
     res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
 });
@@ -155,13 +168,70 @@ router.post('/character/expand-inventory', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const currentSlots = user.inventorySlots || 10;
+    const MAX_SLOTS = 30;
+    if (currentSlots >= MAX_SLOTS) return res.status(400).json({ error: `Достигнут максимум слотов (${MAX_SLOTS})` });
     const price = 100 * Math.pow(2, currentSlots - 10);
-    if (user.money < price) return res.status(400).json({ error: 'Недостаточно монет' });
+    if (user.money < price) return res.status(400).json({ error: `Недостаточно серебра. Нужно ${price}, есть ${user.money}` });
 
     await db.run('UPDATE users SET money = money - ?, inventorySlots = inventorySlots + 1 WHERE id = ?',
         [price, userId]);
 
     res.json({ inventorySlots: currentSlots + 1, moneyAfter: user.money - price });
+});
+
+// Сохранить новый порядок предметов в инвентаре (drag & drop)
+router.post('/character/reorder-inventory', async (req, res) => {
+    const userId = req.userId;
+    const { order } = req.body; // массив id предметов в новом порядке
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'Неверный формат' });
+
+    const user = await db.one('SELECT id, inventory FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const inventory = typeof user.inventory === 'string' ? JSON.parse(user.inventory) : (user.inventory || []);
+
+    // Удаляем дубликаты экипировки (один предмет не может быть в инвентаре дважды)
+    const seenEquip = new Set<string>();
+    const deduped: any[] = [];
+    for (const item of inventory) {
+        const isEquip = item.type !== 'craft_item';
+        const key = String(item.id);
+        if (isEquip && seenEquip.has(key)) continue;
+        if (isEquip) seenEquip.add(key);
+        deduped.push(item);
+    }
+
+    // Дедуплицируем order и пересортировываем
+    const uniqueOrder = [...new Set(order.map(String))];
+    const idMap = new Map(deduped.map((item: any) => [String(item.id), item]));
+    const reordered = uniqueOrder.map(id => idMap.get(String(id))).filter(Boolean);
+    // Добавляем предметы, которых нет в order
+    for (const item of deduped) {
+        if (!uniqueOrder.includes(String(item.id))) {
+            reordered.push(item);
+        }
+    }
+
+    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(reordered), userId]);
+    res.json({ success: true });
+});
+
+// Заблокировать/разблокировать предмет в инвентаре
+router.post('/character/toggle-lock', async (req, res) => {
+    const userId = req.userId;
+    const { itemId } = req.body;
+    if (!itemId) return res.status(400).json({ error: 'itemId обязателен' });
+
+    const user = await db.one('SELECT id, inventory FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const inventory = typeof user.inventory === 'string' ? JSON.parse(user.inventory) : (user.inventory || []);
+    const idx = inventory.findIndex((i: any) => String(i.id) === String(itemId));
+    if (idx === -1) return res.status(400).json({ error: 'Предмет не найден' });
+
+    inventory[idx] = { ...inventory[idx], locked: !inventory[idx].locked };
+    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+    res.json({ success: true, locked: inventory[idx].locked });
 });
 
 export default router;

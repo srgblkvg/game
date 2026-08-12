@@ -51,6 +51,14 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
             setGuestMsg('Пароль: минимум 8 символов');
             return;
         }
+        if (!/[0-9]/.test(guestPassword)) {
+            setGuestMsg('Пароль должен содержать хотя бы одну цифру');
+            return;
+        }
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(guestPassword)) {
+            setGuestMsg('Пароль должен содержать хотя бы один спецсимвол');
+            return;
+        }
         try {
             setGuestLoading(true);
             // Отправляем код на почту (обновляет emailCode у существующего гостя)
@@ -94,6 +102,9 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
 
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault(); setPasswordMsg('');
+        if (newPassword.length < 8) { setPasswordMsg('Пароль: минимум 8 символов'); return; }
+        if (!/[0-9]/.test(newPassword)) { setPasswordMsg('Пароль должен содержать хотя бы одну цифру'); return; }
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(newPassword)) { setPasswordMsg('Пароль должен содержать хотя бы один спецсимвол'); return; }
         try {
             await changePassword(oldPassword, newPassword);
             setOldPassword(''); setNewPassword(''); setPasswordMsg('Пароль успешно изменён');
@@ -124,17 +135,17 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
     const currentGender = character?.gender || user.gender || 'male';
 
     return (
-        <div className="max-w-lg mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <h2 className="text-xl font-bold mb-4">Аккаунт</h2>
             <p className="mb-4">Текущее имя: <strong>{character?.username || user.username}</strong></p>
 
             {!isVK && user.isGuest && (
                 <Card className="mb-4 border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-gold)]/5">
-                    <p className="text-sm text-[var(--color-accent-gold)] mb-2">🎁 Привяжите почту или OAuth — получите <b>3 дня премиума</b>!</p>
+                    <p className="text-sm text-[var(--color-accent-gold)] mb-2">🎁 Привяжите почту или OAuth — получите <b>1 день премиума</b>!</p>
                     <div className="flex gap-2">
-                        <a href="/api/oauth/yandex" className="text-xs px-2 py-1 rounded bg-[#FC3F1D] text-white no-underline">Яндекс ID</a>
-                        <a href="/api/oauth/vk" className="text-xs px-2 py-1 rounded bg-[#0077FF] text-white no-underline">VK ID</a>
+                        <a href={`/api/oauth/yandex?link_token=${encodeURIComponent(localStorage.getItem('token') || '')}`} className="text-xs px-2 py-1 rounded bg-[#FC3F1D] text-white no-underline">Яндекс ID</a>
+                        <a href={`/api/oauth/vk?link_token=${encodeURIComponent(localStorage.getItem('token') || '')}`} className="text-xs px-2 py-1 rounded bg-[#0077FF] text-white no-underline">VK ID</a>
                     </div>
                 </Card>
             )}

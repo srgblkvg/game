@@ -1,16 +1,67 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
+import { getHeaders } from '../api/helpers';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
 export default function PremiumPage() {
-    const { character } = useGame();
+    const { character, setCharacter } = useGame();
     const navigate = useNavigate();
     const [selectedDays, setSelectedDays] = useState(7);
     const [loading, setLoading] = useState(false);
     const [paymentMsg, setPaymentMsg] = useState('');
     const isVK = localStorage.getItem('isVK') === '1';
+
+    // Кулдауны рекламы
+    const nowSec = Math.floor(Date.now() / 1000);
+    const [adPremiumCd, setAdPremiumCd] = useState(Math.max(0, 3600 - (nowSec - ((character as any)?.adPremiumAt || 0))));
+    const [adSilverCd, setAdSilverCd] = useState(Math.max(0, 1800 - (nowSec - ((character as any)?.adSilverAt || 0))));
+    const [adLoading, setAdLoading] = useState<'premium' | 'silver' | null>(null);
+    const adPremiumTimer = useRef<number>(0);
+    const adSilverTimer = useRef<number>(0);
+
+    useEffect(() => {
+        if (adPremiumCd > 0) {
+            adPremiumTimer.current = window.setInterval(() => setAdPremiumCd(c => Math.max(0, c - 1)), 1000);
+            return () => clearInterval(adPremiumTimer.current);
+        }
+    }, [adPremiumCd > 0]);
+    useEffect(() => {
+        if (adSilverCd > 0) {
+            adSilverTimer.current = window.setInterval(() => setAdSilverCd(c => Math.max(0, c - 1)), 1000);
+            return () => clearInterval(adSilverTimer.current);
+        }
+    }, [adSilverCd > 0]);
+
+    const handleAdReward = async (type: 'premium' | 'silver') => {
+        setAdLoading(type);
+        try {
+            const bridge = (window as any).vkBridge;
+            if (!bridge) throw new Error('Реклама доступна только в VK');
+            const check: any = await bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' });
+            if (!check?.result) throw new Error('Реклама сейчас недоступна');
+            const ad: any = await bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' });
+            if (!ad?.result) throw new Error('Реклама не досмотрена');
+
+            const endpoint = type === 'premium' ? '/api/premium/ad' : '/api/shop/ad-silver';
+            const res = await fetch(endpoint, { method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' } });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            if (type === 'premium') {
+                setAdPremiumCd(3600);
+                setCharacter({ ...character!, premium: { until: data.premiumUntil } });
+            } else {
+                setAdSilverCd(1800);
+                setCharacter({ ...character!, money: (character?.money || 0) + 1000 });
+            }
+        } catch (e: any) {
+            // silently ignore — user cancelled or ad unavailable
+        } finally {
+            setAdLoading(null);
+        }
+    };
 
     const plans = [
         { days: 7, price: 99, vkPrice: 14, vkItem: 'premium_7d', label: '7 дней' },
@@ -81,7 +132,7 @@ export default function PremiumPage() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto px-4 py-6">
             <button onClick={() => navigate(-1)} className="text-sm text-[var(--color-accent-info)] hover:underline mb-4 inline-block cursor-pointer">← Назад</button>
 
             <h1 className="text-xl font-bold text-center mb-1">⭐ Премиум</h1>
@@ -97,6 +148,7 @@ export default function PremiumPage() {
                     <li>⚡ Кулдаун PvP: 5 мин вместо 10 • PvE: 2.5 мин вместо 5</li>
                     <li>💰 +30% серебра с PvE и работ</li>
                     <li>🏥 Автоматический реген HP (×3, как чулан в трактире)</li>
+                    <li>📦 +10 слотов аукциона (всего 20)</li>
                     <li>⏭ Пропуск боя — мгновенное завершение PvE и PvP</li>
                 </ul>
             </Card>
@@ -126,6 +178,16 @@ export default function PremiumPage() {
                         : 'Оплата через ЮKassa. После оплаты премиум активируется автоматически.'}
                 </p>
             </Card>
+
+            {isVK && (
+              <Card className="p-4 mb-4">
+                <h3 className="font-bold text-sm mb-2">▶️ Бесплатный премиум</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">+1 час премиума за просмотр рекламы. Раз в час.</p>
+                <Button variant="secondary" size="md" fullWidth onClick={() => handleAdReward('premium')} disabled={adPremiumCd > 0 || adLoading === 'premium'}>
+                  {adLoading === 'premium' ? '⏳' : adPremiumCd > 0 ? `⏳ ${Math.ceil(adPremiumCd / 60)} мин` : '▶️ Смотреть рекламу'}
+                </Button>
+              </Card>
+            )}
 
             {paymentMsg && (
                 <div className={`rounded-xl p-3 mb-3 text-center text-sm font-bold ${paymentMsg.startsWith('✅') ? 'bg-[var(--color-accent-success)]/15 text-[var(--color-accent-success)]' : paymentMsg.startsWith('❌') ? 'bg-[var(--color-accent-danger)]/15 text-[var(--color-accent-danger)]' : 'bg-[var(--color-bg-secondary)] text-[var(--color-accent-info)] border border-[var(--color-border-light)]'}`}>

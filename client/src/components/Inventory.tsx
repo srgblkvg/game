@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +10,7 @@ import LongPressResourceSlot from './LongPressResourceSlot';
 import ItemTooltip from './ItemTooltip';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useToast } from '../contexts/ToastContext';
+import { getHeaders, BASE_URL } from '../api/helpers';
 
 interface InventoryProps {
     onItemClick?: (item: any) => void;
@@ -18,6 +19,8 @@ interface InventoryProps {
     selectedItemId?: string | null;
     onDragStartItem?: () => void;
     collapsible?: boolean;
+    /** true (default): клик показывает кнопку Надеть. false: вызывает onItemClick */
+    clickToEquip?: boolean;
 }
 
 type SortOrder = 'none' | 'asc' | 'desc';
@@ -39,7 +42,11 @@ const sortItems = (items: any[], order: SortOrder): any[] => {
 
 const typeLocalization: Record<string, string> = {
     'craft': 'Материалы',
-    'upgrade': 'Камни усиления',
+    'material': 'Материалы',
+    'craft_item': 'Материалы',
+    'soul_crystal': 'Улучшение',
+    'upgrade': 'Улучшение',
+    'stone': 'Улучшение',
 };
 
 const getLocalizedType = (type: string): string => {
@@ -53,12 +60,106 @@ export default function Inventory({
     selectedItemId,
     onDragStartItem,
     collapsible = true,
+    clickToEquip = true,
 }: InventoryProps) {
     const { character, setCharacter } = useGame();
     const { user } = useAuth();
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const { sendItemLink } = useGlobalChat();
     const { showToast } = useToast();
+    const [equipTarget, setEquipTarget] = useState<any>(null);
+    const [inventoryOrder, setInventoryOrder] = useState<string[]>([]);
+    const [dragItemId, setDragItemId] = useState<string | null>(null);
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+    // Инициализируем порядок из снаряжения (не трогаем ресурсы) — только при изменении состава
+    const inventoryRef = useRef<string>('');
+    useEffect(() => {
+        if (!character?.inventory) return;
+        const equipIds = character.inventory
+            .filter((item: any) => !isCraftItem(item))
+            .map((item: any) => String(item.id))
+            .join(',');
+        if (equipIds === inventoryRef.current) return; // состав не изменился
+        inventoryRef.current = equipIds;
+        setInventoryOrder(equipIds ? equipIds.split(',') : []);
+    }, [character?.inventory]);
+    const toggleLock = async (item: any) => {
+        if (!character) return;
+        const inventory = [...(character.inventory || [])];
+        const idx = inventory.findIndex((i: any) => String(i.id) === String(item.id));
+        if (idx === -1) return;
+        const newLocked = !inventory[idx].locked;
+        inventory[idx] = { ...inventory[idx], locked: newLocked };
+        setCharacter({ ...character, inventory });
+        setEquipTarget(null);
+        try {
+            await fetch('/api/character/toggle-lock', {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itemId: item.id }),
+            });
+        } catch {}
+    };
+    const equipTargetRef = useRef<any>(null);
+    useEffect(() => { equipTargetRef.current = equipTarget; }, [equipTarget]);
+
+    // Закрытие кнопки «Надеть» при клике/тапе вне этого слота
+    useEffect(() => {
+        const handler = (e: Event) => {
+            if (!equipTargetRef.current) return;
+            const target = e.target as HTMLElement;
+            // Оставляем только если клик внутри того же слота где кнопка
+            const slot = target.closest('.equip-slot');
+            if (!slot || !slot.querySelector('.equip-btn-visible')) setEquipTarget(null);
+        };
+        document.addEventListener('mousedown', handler);
+        document.addEventListener('touchstart', handler);
+        return () => {
+            document.removeEventListener('mousedown', handler);
+            document.removeEventListener('touchstart', handler);
+        };
+    }, []);
+
+    const equipItem = async (item: any) => {
+        if (!character) return;
+        const equipment = character.equipment || {};
+
+        let slotId = item.slot;
+
+        // Кольца: выбираем слот
+        if (slotId === 'ring' || slotId?.startsWith('ring')) {
+            const ring1 = equipment.ring1;
+            const ring2 = equipment.ring2;
+
+            // Проверка на дубликат
+            if ((ring1 && ring1.name === item.name) || (ring2 && ring2.name === item.name)) {
+                showToast('Нельзя надеть два одинаковых кольца');
+                return;
+            }
+
+            if (!ring1) { slotId = 'ring1'; }
+            else if (!ring2) { slotId = 'ring2'; }
+            else {
+                // Заменяем худшее: сравниваем редкость, потом уровень улучшения
+                const r1 = (ring1.rarity_id ?? 0) + (ring1.upgradeLevel ?? 0) * 0.1;
+                const r2 = (ring2.rarity_id ?? 0) + (ring2.upgradeLevel ?? 0) * 0.1;
+                slotId = r1 <= r2 ? 'ring1' : 'ring2';
+            }
+        }
+
+        try {
+            const r = await fetch(`${BASE_URL}/character/equip`, {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slotId, itemId: item.id }),
+            });
+            const d = await r.json();
+            if (!r.ok) { showToast(d.error || 'Ошибка'); return; }
+            setCharacter((prev: any) => prev ? { ...prev, equipment: d.equipment, inventory: d.inventory, currentHp: d.currentHp, stats: d.stats } : prev);
+            showToast('Надето', 'success');
+        } catch { showToast('Ошибка соединения', 'error'); }
+    };
 
     const [sortEquipment, setSortEquipment] = useState<SortOrder>(
         () => (localStorage.getItem('invSort') as SortOrder) || 'none'
@@ -69,11 +170,21 @@ export default function Inventory({
     const [sortCraft, setSortCraft] = useState<SortOrder>('none');
     const [activeType, setActiveType] = useState<string>('all');
 
-    // Закрытие тултипа при любом клике в документе
+    // Закрытие тултипа при клике (десктоп) или touchstart (мобила, не на слоте)
     useEffect(() => {
-        const handleGlobalClick = () => setTooltipData(null);
-        document.addEventListener('click', handleGlobalClick);
-        return () => document.removeEventListener('click', handleGlobalClick);
+        const handleClick = () => setTooltipData(null);
+        const handleTouch = (e: TouchEvent) => {
+            const target = e.target as HTMLElement;
+            // Не закрываем если тап по слоту — long press сам покажет/обновит тултип
+            if (target.closest('[data-slot]')) return;
+            setTooltipData(null);
+        };
+        document.addEventListener('click', handleClick);
+        document.addEventListener('touchstart', handleTouch, { passive: true });
+        return () => {
+            document.removeEventListener('click', handleClick);
+            document.removeEventListener('touchstart', handleTouch);
+        };
     }, []);
 
     // Сохраняем состояние в localStorage
@@ -103,13 +214,26 @@ export default function Inventory({
     const uniqueTypes = useMemo(() => {
         const typeSet = new Set<string>();
         craftItems.forEach(item => {
-            typeSet.add(item.itemType || 'craft');
+            const raw = item.itemType || item.type || 'craft';
+            typeSet.add(getLocalizedType(raw));
         });
         return Array.from(typeSet).sort();
     }, [craftItems]);
 
-    const sortedEquipment = sortItems(equipmentItems, sortEquipment);
-    const inventory = sortedEquipment.slice(0, maxSlots);
+    const sortedEquipment = useMemo(() => sortItems(equipmentItems, sortEquipment), [equipmentItems, sortEquipment]);
+    // Если есть пользовательский порядок — используем его, иначе сортировка по редкости
+    const orderedEquipment = useMemo(() => {
+        if (inventoryOrder.length === 0) return sortedEquipment;
+        const idToItem = new Map(equipmentItems.map((item: any) => [String(item.id), item]));
+        const ordered = inventoryOrder.map(id => idToItem.get(id)).filter(Boolean) as any[];
+        // Добавляем новые предметы, которых нет в inventoryOrder
+        const orderSet = new Set(inventoryOrder);
+        for (const item of equipmentItems) {
+            if (!orderSet.has(String(item.id))) ordered.push(item);
+        }
+        return ordered;
+    }, [equipmentItems, inventoryOrder, sortedEquipment]);
+    const inventory = orderedEquipment.slice(0, maxSlots);
     const hasMore = equipmentItems.length > maxSlots;
 
     const handleExpand = async () => {
@@ -127,13 +251,13 @@ export default function Inventory({
         onDragStartItem?.();
     };
 
-    const handleMouseEnter = (e: React.MouseEvent, item: any) => {
+    const handleMouseEnter = useCallback((e: React.MouseEvent, item: any) => {
         setTooltipData({ item, x: e.clientX, y: e.clientY });
-    };
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (tooltipData) setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
-    };
-    const handleMouseLeave = () => setTooltipData(null);
+    }, []);
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+    }, []);
+    const handleMouseLeave = useCallback(() => setTooltipData(null), []);
 
     const priceForNextSlot = 100 * Math.pow(2, maxSlots - 10);
 
@@ -146,15 +270,15 @@ export default function Inventory({
     const filteredCraft = useMemo(() => {
         let items = craftItems;
         if (activeType !== 'all') {
-            items = items.filter(item => (item.itemType || 'craft') === activeType);
+            items = items.filter(item => getLocalizedType(item.itemType || item.type || 'craft') === activeType);
         }
         return sortItems(items, sortCraft);
     }, [craftItems, activeType, sortCraft]);
 
-    const handleLongPress = (item: any, e: React.TouchEvent | React.MouseEvent) => {
+    const handleLongPress = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
         const touch = (e as React.TouchEvent).touches?.[0] ?? e;
         setTooltipData({ item, x: touch.clientX, y: touch.clientY });
-    };
+    }, []);
 
     const fillRatio = inventory.length / Math.max(1, maxSlots);
     const fillPct = Math.round(fillRatio * 100);
@@ -165,10 +289,76 @@ export default function Inventory({
         : fillRatio >= 0.8 ? 'text-[var(--color-accent-warning)]'
         : '';
 
+    // Drag & drop handlers
+    const handleDragOverSlot = (e: React.DragEvent, idx: number) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverIndex(idx);
+    };
+    const handleDropSlot = async (e: React.DragEvent, toIdx: number) => {
+        e.preventDefault();
+        setDragOverIndex(null);
+        setDragItemId(null);
+        if (dragItemId === null) return;
+        
+        // Находим индекс в inventoryOrder по ID предмета
+        const fromOrderIdx = inventoryOrder.indexOf(dragItemId);
+        if (fromOrderIdx === -1) return;
+        
+        // toIdx — позиция в визуальной сетке. Находим соответствующий индекс в inventoryOrder
+        const targetItem = inventory[toIdx] ?? null;
+        let toOrderIdx: number;
+        if (targetItem) {
+            toOrderIdx = inventoryOrder.indexOf(String(targetItem.id));
+            if (toOrderIdx === -1) return;
+        } else {
+            // Пустой слот — вставляем в конец
+            toOrderIdx = inventoryOrder.length;
+        }
+        if (fromOrderIdx === toOrderIdx) return;
+        
+        const newOrder = [...inventoryOrder];
+        const [moved] = newOrder.splice(fromOrderIdx, 1);
+        // После удаления fromOrderIdx все индексы >= fromOrderIdx сдвинулись влево на 1.
+        // toOrderIdx указывает на позицию в оригинальном массиве.
+        // Если fromOrderIdx < toOrderIdx: цель была справа, теперь она на toOrderIdx-1.
+        //   Вставляем на toOrderIdx → dragged-элемент после цели. Визуально: swap.
+        // Если fromOrderIdx > toOrderIdx: цель слева, удаление её не затронуло.
+        //   Вставляем на toOrderIdx → dragged-элемент перед целью. Визуально: swap.
+        newOrder.splice(toOrderIdx, 0, moved);
+        setInventoryOrder(newOrder);
+        
+        // Обновляем character.inventory только если порядок реально изменился
+        if (newOrder.join(',') === inventoryOrder.join(',')) return;
+        const idToItem = new Map(character!.inventory.map((item: any) => [String(item.id), item]));
+        const reorderedEquip = newOrder.map(id => idToItem.get(id)).filter(Boolean);
+        const resources = character!.inventory.filter((item: any) => isCraftItem(item));
+        const newInventory = [...reorderedEquip, ...resources];
+        setCharacter((prev: any) => ({ ...prev, inventory: newInventory }));
+        
+        // Сохраняем на сервер
+        try {
+            await fetch('/api/character/reorder-inventory', {
+                method: 'POST',
+                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order: newInventory.map((i: any) => String(i.id)) }),
+            });
+        } catch {}
+    };
+    const handleDragEndSlot = () => {
+        setDragItemId(null);
+        setDragOverIndex(null);
+    };
+    const handleDragStartSlot = (e: React.DragEvent, _idx: number, item: any) => {
+        setDragItemId(String(item.id));
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(item.id));
+    };
+
     return (
-        <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)] overflow-hidden" data-tutorial="inventory">
+        <div className="w-full max-w-2xl mx-auto bg-[var(--color-bg-secondary)] rounded-xl border-2 border-[var(--color-border-light)] text-[var(--color-text-primary)]" data-tutorial="inventory">
             {/* Индикатор заполнения */}
-            <div className={`h-1 ${fillColor} transition-all duration-300`} style={{ width: `${fillPct}%` }} />
+            <div className="h-1 rounded-t-xl overflow-hidden"><div className={`h-full ${fillColor} transition-all duration-300`} style={{ width: `${fillPct}%` }} /></div>
 
             <div className="p-4">
             <div className="flex items-center justify-between mb-2">
@@ -190,22 +380,32 @@ export default function Inventory({
 
             {(!collapsible || !collapsed) && (<>
 
-            <div className="grid grid-cols-[repeat(auto-fill,48px)] gap-2.5 mb-2 overflow-hidden">
+            <div className="grid grid-cols-[repeat(auto-fill,48px)] gap-2.5 mb-2">
                 {Array.from({ length: maxSlots }).map((_, idx) => {
                     const item = inventory[idx] || null;
                     const isSelected = selectedItemId && item && item.id === selectedItemId;
+                    const isDragOver = dragOverIndex === idx;
 
                     return (
+                        <div key={item?.id ?? `empty-${idx}`} className="relative equip-slot"
+                            onDragOver={(e) => handleDragOverSlot(e, idx)}
+                            onDrop={(e) => handleDropSlot(e, idx)}
+                            onDragLeave={() => setDragOverIndex(null)}
+                            onDragEnd={handleDragEndSlot}
+                        >
+                        <div className={`rounded ${isDragOver ? 'ring-2 ring-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10' : ''}`}>
                         <LongPressItemSlot
-                            key={idx}
                             item={item}
                             draggable={!!item && !isCraftItem(item)}
-                            onDragStart={item && !isCraftItem(item) ? (e) => handleDragStart(e, item.id) : undefined}
+                            onDragStart={item && !isCraftItem(item) ? (e) => handleDragStartSlot(e, idx, item) : undefined}
                             onClick={(e) => {
                                 if (item && !isCraftItem(item)) {
                                     if (e.shiftKey) {
                                         e.stopPropagation();
                                         sendItemLink(item.id, item);
+                                    } else if (clickToEquip) {
+                                        setTooltipData(null);
+                                        setEquipTarget(equipTarget?.id === item.id ? null : item);
                                     } else if (onItemClick) {
                                         setTooltipData(null);
                                         onItemClick(item);
@@ -218,14 +418,35 @@ export default function Inventory({
                             onLongPress={handleLongPress}
                             highlighted={isSelected}
                         />
+                        {item?.locked && (
+                            <span className="absolute bottom-0.5 right-0.5 text-[0.5rem] z-10">🔒</span>
+                        )}
+                        {item && equipTarget?.id === item?.id && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 z-50 equip-btn-visible bg-[var(--color-bg-secondary)]/80 rounded">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); equipItem(item); setEquipTarget(null); }}
+                                    className="bg-[var(--color-accent-info)] text-white text-xs font-bold px-2 py-1 rounded shadow-lg cursor-pointer"
+                                >Надеть</button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); toggleLock(item); }}
+                                    className={`text-white text-xs font-bold px-2 py-1 rounded shadow-lg cursor-pointer ${item.locked ? 'bg-[var(--color-accent-warning)]' : 'bg-[var(--color-bg-input)]'}`}
+                                >{item.locked ? '🔒' : '🔓'}</button>
+                            </div>
+                        )}
+                        </div>
+                        </div>
                     );
                 })}
             </div>
 
             <div className="flex justify-between items-center">
-                <button onClick={handleExpand} className="bg-[var(--color-accent-info)] border-none text-white px-3 py-1.5 rounded cursor-pointer text-sm font-medium">
-                    + Слот ({formatMoney(priceForNextSlot)})
-                </button>
+                {maxSlots < 30 ? (
+                    <button onClick={handleExpand} className="bg-[var(--color-accent-info)] border-none text-white px-3 py-1.5 rounded cursor-pointer text-sm font-medium">
+                        + Слот ({formatMoney(priceForNextSlot)})
+                    </button>
+                ) : (
+                    <span className="text-xs text-[var(--color-text-muted)]">Макс. слотов</span>
+                )}
             </div>
 
             {hasMore && <div className="mt-2 text-[var(--color-text-muted)] text-xs">Есть ещё предметы вне инвентаря.</div>}

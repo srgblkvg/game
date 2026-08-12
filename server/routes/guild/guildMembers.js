@@ -1,0 +1,284 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const index_1 = require("../../db/index");
+const events_1 = require("../../events");
+const guildWar_1 = require("./guildWar");
+const router = (0, express_1.Router)();
+const MAX_MEMBERS = 20;
+async function checkGuildFull(guildId) {
+    const cnt = await index_1.db.one('SELECT COUNT(*) as cnt FROM guild_members WHERE guildId = ?', [guildId]);
+    return (cnt?.cnt || 0) >= MAX_MEMBERS;
+}
+router.get('/guild/requests', async (req, res) => {
+    const userId = req.userId;
+    const member = await index_1.db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]);
+    if (!member || (member.rank !== 'leader' && member.rank !== 'officer'))
+        return res.status(400).json({ error: 'Нет прав' });
+    const requests = await index_1.db.query(`
+        SELECT gi.*, u.username
+        FROM guild_invites gi
+        JOIN users u ON gi.userId = u.id
+        WHERE gi.guildId = ? AND gi.status = 'pending' AND gi.invitedBy = 0
+        ORDER BY gi.createdAt DESC
+    `, [member.guildId]);
+    res.json(requests);
+});
+// Мои заявки в гильдии
+router.get('/guild/my-requests', async (req, res) => {
+    const userId = req.userId;
+    const requests = await index_1.db.query(`
+        SELECT gi.*, g.name as guildName
+        FROM guild_invites gi
+        JOIN guilds g ON gi.guildId = g.id
+        WHERE gi.userId = ? AND gi.status = 'pending' AND gi.invitedBy = 0
+        ORDER BY gi.createdAt DESC
+    `, [userId]);
+    res.json(requests);
+});
+// Отменить свою заявку
+router.post('/guild/cancel-request/:id', async (req, res) => {
+    const userId = req.userId;
+    const requestId = parseInt(req.params.id);
+    const invite = await index_1.db.one("SELECT * FROM guild_invites WHERE id = ? AND userId = ? AND invitedBy = 0 AND status = 'pending'", [requestId, userId]);
+    if (!invite)
+        return res.status(404).json({ error: 'Заявка не найдена' });
+    await index_1.db.run("UPDATE guild_invites SET status = 'declined' WHERE id = ?", [requestId]);
+    res.json({ success: true });
+});
+// Мои приглашения
+router.get('/guild/invites', async (req, res) => {
+    const userId = req.userId;
+    const invites = await index_1.db.query(`
+        SELECT gi.*, g.name as guildName, u.username as inviterName
+        FROM guild_invites gi
+        JOIN guilds g ON gi.guildId = g.id
+        LEFT JOIN users u ON gi.invitedBy = u.id
+        WHERE gi.userId = ? AND gi.status = 'pending'
+        ORDER BY gi.createdAt DESC
+    `, [userId]);
+    res.json(invites);
+});
+// --- Гильд-чат ---
+router.post('/guild/join/:id', async (req, res) => {
+    const userId = req.userId;
+    const guildId = parseInt(req.params.id);
+    const alreadyInGuild = await index_1.db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
+    if (alreadyInGuild?.guildId)
+        return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
+    const guild = await index_1.db.one('SELECT * FROM guilds WHERE id = ?', [guildId]);
+    if (!guild)
+        return res.status(404).json({ error: 'Гильдия не найдена' });
+    if (guild.joinType !== 'open')
+        return res.status(400).json({ error: 'Гильдия доступна только по заявке или приглашению' });
+    if (await checkGuildFull(guildId))
+        return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
+    if (await (0, guildWar_1.isGuildAtWar)(guildId))
+        return res.status(400).json({ error: 'Нельзя вступить в гильдию во время войны' });
+    await index_1.db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'member']);
+    await index_1.db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
+    res.json({ success: true });
+});
+// Подать заявку
+router.post('/guild/request/:id', async (req, res) => {
+    const userId = req.userId;
+    const guildId = parseInt(req.params.id);
+    const alreadyInGuild = await index_1.db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
+    if (alreadyInGuild?.guildId)
+        return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
+    const guild = await index_1.db.one('SELECT * FROM guilds WHERE id = ?', [guildId]);
+    if (!guild)
+        return res.status(404).json({ error: 'Гильдия не найдена' });
+    if (guild.joinType !== 'request')
+        return res.status(400).json({ error: 'Эта гильдия не принимает заявки' });
+    if (await (0, guildWar_1.isGuildAtWar)(guildId))
+        return res.status(400).json({ error: 'Нельзя подать заявку в гильдию во время войны' });
+    const existing = await index_1.db.one("SELECT id FROM guild_invites WHERE guildId = ? AND userId = ? AND status = 'pending'", [guildId, userId]);
+    if (existing)
+        return res.status(400).json({ error: 'Заявка уже отправлена' });
+    await index_1.db.run('INSERT INTO guild_invites (guildId, userId, invitedBy) VALUES (?, ?, ?)', [guildId, userId, 0]);
+    res.json({ success: true });
+});
+// Пригласить игрока (отправить ЛС)
+router.post('/guild/invite', async (req, res) => {
+    const userId = req.userId;
+    const { targetId } = req.body;
+    if (!targetId)
+        return res.status(400).json({ error: 'Укажите targetId' });
+    const member = await index_1.db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]);
+    if (!member)
+        return res.status(400).json({ error: 'Вы не состоите в гильдии' });
+    if (member.rank !== 'leader' && member.rank !== 'officer')
+        return res.status(400).json({ error: 'Только лидер и офицеры могут приглашать' });
+    if (await (0, guildWar_1.isGuildAtWar)(member.guildId))
+        return res.status(400).json({ error: 'Нельзя приглашать игроков во время войны' });
+    const target = await index_1.db.one('SELECT id, username, guildId FROM users WHERE id = ?', [targetId]);
+    if (!target)
+        return res.status(404).json({ error: 'Игрок не найден' });
+    if (target.guildId)
+        return res.status(400).json({ error: 'Игрок уже в гильдии' });
+    const existing = await index_1.db.one("SELECT id, createdAt FROM guild_invites WHERE guildId = ? AND userId = ? AND status = 'pending'", [member.guildId, targetId]);
+    if (existing) {
+        const now = Math.floor(Date.now() / 1000);
+        const inviteTime = Math.floor(new Date(existing.createdAt).getTime() / 1000);
+        const elapsed = now - inviteTime;
+        if (elapsed < 3600) {
+            const remaining = Math.ceil((3600 - elapsed) / 60);
+            return res.status(400).json({ error: `Приглашение уже отправлено. Повторно можно через ${remaining} мин` });
+        }
+        // Старое приглашение — отменяем
+        await index_1.db.run("UPDATE guild_invites SET status = 'declined' WHERE id = ?", [existing.id]);
+    }
+    const guild = await index_1.db.one('SELECT name FROM guilds WHERE id = ?', [member.guildId]);
+    await index_1.db.run('INSERT INTO guild_invites (guildId, userId, invitedBy) VALUES (?, ?, ?)', [member.guildId, targetId, userId]);
+    // ЛС с приглашением
+    const inviter = await index_1.db.one('SELECT username FROM users WHERE id = ?', [userId]);
+    const msg = `🏚️ ${inviter.username} приглашает вас в гильдию «${guild.name}». Нажмите чтобы принять.`;
+    const info = await index_1.db.run('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)', [0, targetId, msg, JSON.stringify({ type: 'guild_invite', guildId: member.guildId, guildName: guild.name })]);
+    (0, events_1.broadcast)('message', { message: {
+            id: info.lastInsertRowid, senderId: 0, senderName: 'Глашатай', targetId,
+            content: msg, createdAt: new Date().toISOString(),
+            item: { type: 'guild_invite', guildId: member.guildId, guildName: guild.name },
+        } });
+    res.json({ success: true });
+});
+// Принять / отклонить приглашение (по guildId)
+router.post('/guild/accept-invite', async (req, res) => {
+    const userId = req.userId;
+    const { guildId, accept } = req.body;
+    if (!guildId)
+        return res.status(400).json({ error: 'Укажите guildId' });
+    const invite = await index_1.db.one("SELECT * FROM guild_invites WHERE guildId = ? AND userId = ? AND status = 'pending' ORDER BY id DESC LIMIT 1", [guildId, userId]);
+    if (!invite)
+        return res.status(404).json({ error: 'Приглашение не найдено' });
+    if (accept) {
+        const alreadyInGuild = await index_1.db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
+        if (alreadyInGuild?.guildId)
+            return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
+        if (await checkGuildFull(guildId))
+            return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
+        if (await (0, guildWar_1.isGuildAtWar)(guildId))
+            return res.status(400).json({ error: 'Нельзя вступить в гильдию во время войны' });
+        await index_1.db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'member']);
+        await index_1.db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
+        await index_1.db.run("UPDATE guild_invites SET status = 'accepted' WHERE guildId = ? AND userId = ? AND status = 'pending'", [guildId, userId]);
+    }
+    else {
+        await index_1.db.run("UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND userId = ? AND status = 'pending'", [guildId, userId]);
+    }
+    res.json({ success: true });
+});
+// Принять / отклонить приглашение (по ID)
+router.post('/guild/invite/:id', async (req, res) => {
+    const userId = req.userId;
+    const inviteId = parseInt(req.params.id);
+    const { accept } = req.body; // true/false
+    const invite = await index_1.db.one('SELECT * FROM guild_invites WHERE id = ? AND userId = ? AND status = ?', [inviteId, userId, 'pending']);
+    if (!invite)
+        return res.status(404).json({ error: 'Приглашение не найдено' });
+    if (accept) {
+        const alreadyInGuild = await index_1.db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
+        if (alreadyInGuild?.guildId)
+            return res.status(400).json({ error: 'Вы уже состоите в гильдии' });
+        if (await checkGuildFull(invite.guildId))
+            return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
+        if (await (0, guildWar_1.isGuildAtWar)(invite.guildId))
+            return res.status(400).json({ error: 'Нельзя вступить в гильдию во время войны' });
+        await index_1.db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [invite.guildId, userId, 'member']);
+        await index_1.db.run('UPDATE users SET guildId = ? WHERE id = ?', [invite.guildId, userId]);
+        await index_1.db.run('UPDATE guild_invites SET status = ? WHERE id = ?', ['accepted', inviteId]);
+    }
+    else {
+        await index_1.db.run('UPDATE guild_invites SET status = ? WHERE id = ?', ['declined', inviteId]);
+    }
+    // Удаляем другие pending приглашения для этого игрока
+    if (accept) {
+        await index_1.db.run("DELETE FROM guild_invites WHERE userId = ? AND id != ? AND status = 'pending'", [userId, inviteId]);
+    }
+    res.json({ success: true });
+});
+// Принять/отклонить заявку (для лидера/офицеров)
+router.post('/guild/handle-request', async (req, res) => {
+    const userId = req.userId;
+    const { requestId, accept } = req.body;
+    const member = await index_1.db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]);
+    if (!member || (member.rank !== 'leader' && member.rank !== 'officer'))
+        return res.status(400).json({ error: 'Нет прав' });
+    const invite = await index_1.db.one("SELECT * FROM guild_invites WHERE id = ? AND guildId = ? AND status = 'pending'", [requestId, member.guildId]);
+    if (!invite)
+        return res.status(404).json({ error: 'Заявка не найдена' });
+    if (accept) {
+        const targetGuild = await index_1.db.one('SELECT guildId FROM users WHERE id = ?', [invite.userId]);
+        if (targetGuild?.guildId)
+            return res.status(400).json({ error: 'Игрок уже в гильдии' });
+        if (await checkGuildFull(member.guildId))
+            return res.status(400).json({ error: `Гильдия заполнена (макс. ${MAX_MEMBERS} человек)` });
+        if (await (0, guildWar_1.isGuildAtWar)(member.guildId))
+            return res.status(400).json({ error: 'Нельзя принять игрока во время войны' });
+        await index_1.db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [member.guildId, invite.userId, 'member']);
+        await index_1.db.run('UPDATE users SET guildId = ? WHERE id = ?', [member.guildId, invite.userId]);
+        await index_1.db.run('UPDATE guild_invites SET status = ? WHERE id = ?', ['accepted', requestId]);
+    }
+    else {
+        await index_1.db.run('UPDATE guild_invites SET status = ? WHERE id = ?', ['declined', requestId]);
+    }
+    res.json({ success: true });
+});
+// Покинуть гильдию
+router.post('/guild/kick', async (req, res) => {
+    const userId = req.userId;
+    const { targetId } = req.body;
+    if (!targetId)
+        return res.status(400).json({ error: 'Укажите targetId' });
+    const actor = await index_1.db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]);
+    if (!actor || (actor.rank !== 'leader' && actor.rank !== 'officer'))
+        return res.status(400).json({ error: 'Нет прав' });
+    const target = await index_1.db.one('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?', [actor.guildId, targetId]);
+    if (!target)
+        return res.status(400).json({ error: 'Игрок не в гильдии' });
+    if (target.rank === 'leader')
+        return res.status(400).json({ error: 'Нельзя исключить лидера' });
+    if (actor.rank === 'officer' && target.rank === 'officer')
+        return res.status(400).json({ error: 'Офицер не может исключить другого офицера' });
+    if (await (0, guildWar_1.isGuildAtWar)(actor.guildId))
+        return res.status(400).json({ error: 'Нельзя исключать участников во время войны' });
+    await index_1.db.run('DELETE FROM guild_members WHERE guildId = ? AND userId = ?', [actor.guildId, targetId]);
+    await index_1.db.run('UPDATE users SET guildId = NULL WHERE id = ?', [targetId]);
+    res.json({ success: true });
+});
+// Сменить роль участника (только лидер)
+router.post('/guild/role', async (req, res) => {
+    const userId = req.userId;
+    const { targetId, rank } = req.body;
+    if (!targetId || !rank)
+        return res.status(400).json({ error: 'Укажите targetId и rank' });
+    if (!['officer', 'member'].includes(rank))
+        return res.status(400).json({ error: 'Неверный ранг' });
+    const actor = await index_1.db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]);
+    if (!actor || actor.rank !== 'leader')
+        return res.status(400).json({ error: 'Только лидер может менять роли' });
+    const target = await index_1.db.one('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?', [actor.guildId, targetId]);
+    if (!target)
+        return res.status(400).json({ error: 'Игрок не в гильдии' });
+    if (target.rank === 'leader')
+        return res.status(400).json({ error: 'Нельзя изменить роль лидера' });
+    await index_1.db.run('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?', [rank, actor.guildId, targetId]);
+    // Если повысили до лидера — передаём лидерство
+    if (rank === 'leader') {
+        await index_1.db.run('UPDATE guilds SET leaderId = ? WHERE id = ?', [targetId, actor.guildId]);
+        // Старого лидера понижаем до офицера
+        await index_1.db.run("UPDATE guild_members SET rank = 'officer' WHERE guildId = ? AND userId = ?", [actor.guildId, userId]);
+    }
+    res.json({ success: true });
+});
+// Отменить все отправленные приглашения (лидер/офицер)
+router.post('/guild/cancel-invites', async (req, res) => {
+    const userId = req.userId;
+    const member = await index_1.db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]);
+    if (!member || (member.rank !== 'leader' && member.rank !== 'officer'))
+        return res.status(400).json({ error: 'Нет прав' });
+    const info = await index_1.db.run("UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND status = 'pending'", [member.guildId]);
+    res.json({ success: true, cancelled: info.changes });
+});
+exports.default = router;
+//# sourceMappingURL=guildMembers.js.map

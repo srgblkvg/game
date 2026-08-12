@@ -59,10 +59,9 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             const data = await res.json();
             if (!res.ok) {
                 setModalMessage(data.error || 'Ошибка загрузки соперника');
-                setOpponent(null); // сбрасываем, чтобы избежать показа невалидного соперника
+                setOpponent(null);
                 return;
             }
-            // Защита от неполных данных
             if (!data || !data.id || !data.stats) {
                 setModalMessage('Некорректный ответ сервера');
                 setOpponent(null);
@@ -75,12 +74,11 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             }
             setHpLeft(character.currentHp);
             setMaxHpRight(data.stats.hp);
-            setHpRight(data.stats.hp);
+            setHpRight(data.currentHp ?? data.stats.hp);
             speedRef.current = speed;
             if (change && data.playerMoney !== undefined) {
                 setCharacter({ ...character, money: data.playerMoney });
             }
-            // also update money on non-change (difficulty switch charges on server)
             if (!change && data.playerMoney !== undefined && data.playerMoney !== character.money) {
                 setCharacter({ ...character, money: data.playerMoney });
             }
@@ -99,15 +97,24 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     const handleStartBattle = async () => {
         if (!opponent) return;
         setLoading(true);
-        (window as any).__battling = true; // блокируем WS balance
+        (window as any).__battling = true;
         try {
             const result = await startBattle(opponent.id);
-            setHpLeft(character.currentHp);
-            setHpRight(opponent.stats.hp);
-            setBattleSteps(result.steps || result.log);
             setBattleResult(result);
+
+            // Mercy: противник сдался без боя — сразу показываем итог
+            if ((result as any).mercy) {
+                setHpLeft(character.currentHp);
+                setHpRight(0);
+                setBattleSteps(result.steps || []);
+                setCurrentStep(0);
+                return;
+            }
+
+            setHpLeft(character.currentHp);
+            setHpRight(opponent.currentHp ?? opponent.stats.hp);
+            setBattleSteps(result.steps || result.log);
             setCurrentStep(-1);
-            // Деньги/опыт обновятся в finishBattle после анимации
         } catch (e: any) {
             setModalMessage(e.message);
         } finally {
@@ -116,14 +123,11 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     };
 
     const executeStep = useCallback((step: any, stepIndex: number) => {
-        // Рамки со слотами (для анимаций)
         const leftFrame = document.getElementById('fighter-left');
         const rightFrame = document.getElementById('fighter-right');
-        // Карточки целиком (для z-index)
         const leftCard = document.querySelector('.fighter-card.left') as HTMLElement;
         const rightCard = document.querySelector('.fighter-card.right') as HTMLElement;
 
-        // Проверяем: был ли крит перед этим damage-шагом
         const isCritDamage = step.type === 'damage' && battleSteps[stepIndex - 1]?.type === 'crit';
 
         if (step.type === 'damage' && step.damage) {
@@ -134,7 +138,6 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
                 setHpRight(prev => Math.max(0, prev - step.damage));
                 showDamageNumber('right', step.damage, isCritDamage);
             }
-            // Screen shake при крит-уроне
             if (isCritDamage) {
                 const arena = document.querySelector('[data-battle-arena]');
                 if (arena) {
@@ -165,7 +168,7 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             const frame = side === 'left' ? leftFrame : rightFrame;
             const card = side === 'left' ? leftCard : rightCard;
             if (card) card.style.zIndex = '20';
-            if (frame) frame.style.filter = ''; // сброс blur перед dodging
+            if (frame) frame.style.filter = '';
             frame?.classList.add('dodging');
             setTimeout(() => {
                 frame?.classList.remove('dodging');
@@ -201,7 +204,6 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             const frame = side === 'left' ? leftFrame : rightFrame;
             const card = side === 'left' ? leftCard : rightCard;
             if (card) card.style.zIndex = '30';
-            // Снимаем attacking чтобы не конфликтовало с critting
             frame?.classList.remove('attacking');
             frame?.classList.add('critting');
             setTimeout(() => {
@@ -217,6 +219,19 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
             frame?.classList.add('stunned');
             setTimeout(() => frame?.classList.remove('stunned'), 800);
             showEffectText(side, 'ОГЛУШЁН!', '#f1c40f');
+        }
+
+        // Вампиризм / отхил
+        if (step.type === 'info' && step.message?.includes('Вампиризм')) {
+            const match = step.message.match(/\+(\d+) HP/);
+            if (match) {
+                const heal = parseInt(match[1]);
+                if (step.actor === 'attacker' || battleSteps[stepIndex - 1]?.actor === 'attacker') {
+                    setHpLeft(prev => Math.min(maxHpLeft, prev + heal));
+                } else {
+                    setHpRight(prev => Math.min(maxHpRight, prev + heal));
+                }
+            }
         }
 
         if (logContainerRef.current) {
@@ -235,7 +250,6 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
         stepLock.current = true;
         setCurrentStep(next);
         executeStep(battleSteps[next], next);
-        // extra pause after damage so HP bar animates before next step
         const isDamage = battleSteps[next]?.type === 'damage';
         await new Promise(r => setTimeout(r, (isDamage ? 1000 : 700) / speedRef.current));
         stepLock.current = false;
@@ -297,20 +311,23 @@ export function useBattleLogic(userId: number, character: any, setCharacter: (c:
     const finishBattle = () => {
         if (!battleResult) return;
         const statsGained = (battleResult.levelsGained || 0) * 5;
-        setCharacter({
-            ...character,
+        setCharacter((prev: any) => ({
+            ...prev!,
             currentHp: Math.max(0, battleResult.hpAfter),
             level: battleResult.newLevel,
             exp: battleResult.newExp,
-            statPoints: (character.statPoints || 0) + statsGained,
-            money: battleResult.moneyAfter ?? character.money,
-            totalBattles: character.totalBattles + 1,
-            wins: battleResult.winnerId === userId ? character.wins + 1 : character.wins,
-        });
-        // Полное обновление с сервера (ELO, рейтинги, etc.)
-        import('../api/character').then(m => m.fetchCharacter().then(setCharacter).catch(() => {}));
+            statPoints: (prev!.statPoints || 0) + statsGained,
+            money: battleResult.moneyAfter ?? prev!.money,
+            totalBattles: prev!.totalBattles + 1,
+            wins: battleResult.winnerId === userId ? prev!.wins + 1 : prev!.wins,
+        }));
+        import('../api/character').then(m => m.fetchCharacter().then(c => {
+            setCharacter(c);
+            (window as any).__battling = false;
+        }).catch(() => {
+            (window as any).__battling = false;
+        }));
         window.dispatchEvent(new CustomEvent('battleEnd'));
-        (window as any).__battling = false;
     };
 
     return {

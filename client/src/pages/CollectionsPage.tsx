@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { getHeaders } from '../api/helpers';
 import { getItemImage } from '../utils/itemUtils';
 import ItemTooltip from '../components/ItemTooltip';
 import { useLongPress } from '../hooks/useLongPress';
+import { useGame } from '../contexts/GameContext';
 
 interface ShopItem {
     id: number;
@@ -38,6 +39,7 @@ interface CollectionSet {
     totalItems: number;
     collectedCount: number;
     completed: boolean;
+    items?: ShopItem[];
 }
 
 const slotOrder = ['helmet', 'chest', 'gloves', 'boots', 'weapon1', 'shield', 'amulet', 'ring', 'belt'];
@@ -87,14 +89,18 @@ function CollectionSlot({ item, owned, collected, hasInventory, onAdd, onShowToo
 }
 
 export default function CollectionsPage() {
+    const { setCharacter } = useGame();
     const [items, setItems] = useState<ShopItem[]>([]);
     const [ownedKeys, setOwnedKeys] = useState<Set<string>>(new Set());
     const [collectionKeys, setCollectionKeys] = useState<Set<string>>(new Set());
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+    const [fullInventory, setFullInventory] = useState<InventoryItem[]>([]);
     const [sets, setSets] = useState<CollectionSet[]>([]);
     const [collectionCount, setCollectionCount] = useState(0);
-    const [totalCollectionItems, setTotalCollectionItems] = useState(189);
+    const [collectionSetBonus, setCollectionSetBonus] = useState(0);
+    const [totalCollectionItems, setTotalCollectionItems] = useState(225);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<number>(0);
 
     const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null);
     const [selectedInvItem, setSelectedInvItem] = useState<InventoryItem | null>(null);
@@ -103,40 +109,58 @@ export default function CollectionsPage() {
     const confirmOpenTime = useRef(0);
 
     useEffect(() => {
+        setLoading(true);
         Promise.all([
             fetch('/api/items', { headers: getHeaders() }).then(r => r.json()),
             fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
-            fetch('/api/collections', { headers: getHeaders() }).then(r => r.json()),
+            fetch(`/api/collections?upgradelevel=${activeTab}`, { headers: getHeaders() }).then(r => r.json()),
         ])
             .then(([shopItems, character, collectionData]) => {
                 setItems(shopItems);
                 setSets(collectionData.sets || []);
                 setCollectionCount(character.collectionCount || 0);
+                setCollectionSetBonus(character.collectionSetBonus || 0);
                 setTotalCollectionItems(character.totalCollectionItems || 189);
 
                 const inv = character.inventory || [];
-                setInventoryItems(inv);
+                setFullInventory(inv);
+                const filteredInv = activeTab === 0
+                    ? inv.filter((i: any) => !i.upgradeLevel || i.upgradeLevel < 7)
+                    : inv.filter((i: any) => i.upgradeLevel >= 7);
+                setInventoryItems(filteredInv);
 
                 const owned = new Set<string>();
                 for (const invItem of inv) {
-                    if (invItem.name && invItem.slot) owned.add(`${invItem.name}|${invItem.slot}`);
+                    if (invItem.name && invItem.slot && invItem.rarity_id != null) {
+                        const itemUpg = invItem.upgradeLevel || 0;
+                        if (activeTab === 0 ? itemUpg < 7 : itemUpg >= 7) {
+                            owned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
+                        }
+                    }
                 }
                 setOwnedKeys(owned);
 
-                const collItems = collectionData.items || [];
+                // Ключи коллекции — нормализуем к уровню текущего таба
                 const coll = new Set<string>();
-                for (const c of collItems) {
-                    coll.add(`${c.itemName}|${c.slot}`);
+                const normalizedLevel = activeTab === 0 ? 0 : 7;
+                for (const c of (collectionData.items || [])) {
+                    coll.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${normalizedLevel}`);
                 }
                 setCollectionKeys(coll);
 
                 setLoading(false);
             })
             .catch(() => setLoading(false));
-    }, []);
+    }, [activeTab]);
+
+    useLayoutEffect(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    }, [activeTab]);
 
     const handleAddToCollection = (shopItem: ShopItem) => {
-        const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot);
+        const matching = inventoryItems.filter(inv => inv.name === shopItem.name && inv.slot === shopItem.slot && inv.rarity_id === shopItem.rarity_id && !(inv as any).locked);
         if (matching.length === 0) {
             setMessage('Нет подходящих предметов в инвентаре');
             return;
@@ -153,29 +177,41 @@ export default function CollectionsPage() {
             const res = await fetch('/api/collections/add', {
                 method: 'POST',
                 headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itemName: selectedShopItem.name, slot: selectedShopItem.slot, itemId: selectedInvItem.id }),
+                body: JSON.stringify({ itemName: selectedShopItem.name, slot: selectedShopItem.slot, itemId: selectedInvItem.id, rarityId: selectedShopItem.rarity_id, upgradeLevel: activeTab }),
             });
             const data = await res.json();
             if (!res.ok) { setMessage(data.error || 'Ошибка'); return; }
 
             const [charRes, collRes] = await Promise.all([
                 fetch('/api/character/me', { headers: getHeaders() }).then(r => r.json()),
-                fetch('/api/collections', { headers: getHeaders() }).then(r => r.json()),
+                fetch(`/api/collections?upgradelevel=${activeTab}`, { headers: getHeaders() }).then(r => r.json()),
             ]);
 
-            setInventoryItems(charRes.inventory || []);
+            const filteredInv = activeTab === 0
+                ? (charRes.inventory || []).filter((i: any) => !i.upgradeLevel || i.upgradeLevel < 7)
+                : (charRes.inventory || []).filter((i: any) => i.upgradeLevel >= 7);
+            setInventoryItems(filteredInv);
+            setCharacter((prev: any) => ({ ...prev, inventory: charRes.inventory, collectionCount: charRes.collectionCount, collectionSetBonus: charRes.collectionSetBonus, collectedItems: charRes.collectedItems }));
             setCollectionCount(charRes.collectionCount || 0);
+            setCollectionSetBonus(charRes.collectionSetBonus || 0);
             setSets(collRes.sets || []);
+            setFullInventory(charRes.inventory || []);
 
             const newOwned = new Set<string>();
             for (const invItem of (charRes.inventory || [])) {
-                if (invItem.name && invItem.slot) newOwned.add(`${invItem.name}|${invItem.slot}`);
+                if (invItem.name && invItem.slot && invItem.rarity_id != null) {
+                    const itemUpg = invItem.upgradeLevel || 0;
+                    if (activeTab === 0 ? itemUpg < 7 : itemUpg >= 7) {
+                        newOwned.add(`${invItem.name}|${invItem.slot}|${invItem.rarity_id}`);
+                    }
+                }
             }
             setOwnedKeys(newOwned);
 
             const newColl = new Set<string>();
+            const normalizedLevel = activeTab === 0 ? 0 : 7;
             for (const c of (collRes.items || [])) {
-                newColl.add(`${c.itemName}|${c.slot}`);
+                newColl.add(`${c.itemName}|${c.slot}|${c.rarity_id}|${normalizedLevel}`);
             }
             setCollectionKeys(newColl);
 
@@ -187,22 +223,43 @@ export default function CollectionsPage() {
     };
 
     if (loading) {
-        return <div className="p-4 max-w-4xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
+        return <div className="p-4 max-w-3xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
     }
 
     const totalPercent = Math.round((collectionCount / totalCollectionItems) * 100);
+    const totalBonus = collectionCount;
 
     return (
-        <div className="p-4 max-w-4xl mx-auto">
+        <div className="p-4 max-w-3xl mx-auto">
             <h1 className="text-xl font-bold mb-2">Коллекция — {totalPercent}%</h1>
+
+            {/* Табы */}
+            <div className="flex gap-2 mb-3">
+                <button onClick={() => setActiveTab(0)}
+                    className={`px-3 py-1 rounded text-sm font-medium cursor-pointer relative ${activeTab === 0 ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >Базовая</button>
+                <button onClick={() => setActiveTab(7)}
+                    className={`px-3 py-1 rounded text-sm font-medium cursor-pointer relative ${activeTab === 7 ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >
+                    +7
+                    {(() => {
+                        const hasPlusItems = (items.length > 0) && fullInventory.some((inv: any) => (inv.upgradeLevel ?? inv.upgradelevel ?? 0) >= 7 && !inv.locked);
+                        if (!hasPlusItems) return null;
+                        return <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#2ecc71] border border-[var(--color-bg-primary)]" />;
+                    })()}
+                </button>
+            </div>
 
             {/* Бонус */}
             <div className="mb-3 p-3 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-secondary)]">
                 <p className="text-xs font-medium mb-1">Текущий бонус</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                    Собрано: <span className="text-[var(--color-accent-gold)] font-medium">{collectionCount}/{totalCollectionItems}</span>
-                    {collectionCount > 0 && (
-                        <span> — <span className="text-[var(--color-accent-success)]">+{collectionCount}%</span> к Силе, Ловкости, Защите, Мастерству и HP</span>
+                    Собрано: <span className="text-[var(--color-accent-gold)] font-medium">{collectionCount - collectionSetBonus}/{totalCollectionItems}</span>
+                    {collectionSetBonus > 0 && (
+                        <span> + <span className="text-[var(--color-accent-gold)] font-medium">{collectionSetBonus}%</span> за закрытые сеты</span>
+                    )}
+                    {totalBonus > 0 && (
+                        <span> — <span className="text-[var(--color-accent-success)]">+{totalBonus}%</span> к Силе, Ловкости, Защите, Мастерству и HP</span>
                     )}
                 </p>
             </div>
@@ -213,8 +270,8 @@ export default function CollectionsPage() {
                     <summary className="cursor-pointer hover:text-[var(--color-text-primary)] font-medium">Как работает коллекция?</summary>
                     <p className="mt-1">
                         Каждый собранный предмет даёт <span className="text-[var(--color-accent-success)]">+1%</span> к основным характеристикам (Сила, Ловкость, Защита, Мастерство) и HP.
-                        В одном сете <span className="text-[var(--color-accent-gold)]">27</span> предметов (9 слотов × 3 варианта). Всего <span className="text-[var(--color-accent-gold)]">7</span> сетов — <span className="text-[var(--color-accent-gold)]">189</span> предметов.
-                        Максимальный бонус: <span className="text-[var(--color-accent-gold)]">+189%</span>.
+                        В одном сете <span className="text-[var(--color-accent-gold)]">27</span> предметов (9 слотов × 3 варианта). Всего <span className="text-[var(--color-accent-gold)]">16</span> сетов — <span className="text-[var(--color-accent-gold)]">225</span> предметов.
+                        Максимальный бонус: <span className="text-[var(--color-accent-gold)]">+225%</span>.
                     </p>
                 </details>
             </div>
@@ -225,11 +282,11 @@ export default function CollectionsPage() {
                     <SetBlock
                         key={set.id}
                         set={set}
-                        items={items}
                         ownedKeys={ownedKeys}
                         collectionKeys={collectionKeys}
                         inventoryItems={inventoryItems}
                         onAddToCollection={handleAddToCollection}
+                        upgradeLevel={activeTab}
                     />
                 ))}
             </div>
@@ -261,18 +318,18 @@ export default function CollectionsPage() {
     );
 }
 
-function SetBlock({ set, items, ownedKeys, collectionKeys, inventoryItems, onAddToCollection }: {
+function SetBlock({ set, ownedKeys, collectionKeys, inventoryItems, onAddToCollection, upgradeLevel }: {
     set: CollectionSet;
-    items: ShopItem[];
     ownedKeys: Set<string>;
     collectionKeys: Set<string>;
     inventoryItems: InventoryItem[];
     onAddToCollection: (item: ShopItem) => void;
+    upgradeLevel: number;
 }) {
     const [collapsed, setCollapsed] = useState(true);
-    const [tooltip, setTooltip] = useState<{ item: ShopItem; x: number; y: number } | null>(null);
+    const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
 
-    const showTooltip = useCallback((item: ShopItem, e: React.TouchEvent | React.MouseEvent) => {
+    const showTooltip = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
         const pos = 'touches' in e ? e.touches[0] : e;
         setTooltip({ item, x: pos.clientX, y: pos.clientY });
     }, []);
@@ -289,18 +346,12 @@ function SetBlock({ set, items, ownedKeys, collectionKeys, inventoryItems, onAdd
         };
     }, [tooltip]);
 
-    // Filter items that belong to this set (by name+slot from collection_set_items via API)
-    // We don't have set items from API, so we use items matching the set's collected items
-    // Instead, use all items grouped by rarity which matches the default sets
-    const rarityId = set.sort_order - 1; // hack: sort_order matches rarity+1
-    const setItems = items.filter(item => item.rarity_id === rarityId).sort((a, b) => slotOrder.indexOf(a.slot) - slotOrder.indexOf(b.slot));
+    const blockItems = (set.items || []).sort((a: ShopItem, b: ShopItem) => slotOrder.indexOf(a.slot) - slotOrder.indexOf(b.slot));
+    const color = blockItems[0]?.rarity_color || '#888';
 
-    const color = ['#888888', '#cccccc', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e74c3c'][rarityId] || '#888';
-
-    // Есть ли предметы в инвентаре, которые можно добавить в этот сет
-    const hasAddableItems = setItems.some(item => {
-        if (collectionKeys.has(`${item.name}|${item.slot}`)) return false;
-        return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot);
+    const hasAddableItems = blockItems.some(item => {
+        if (collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}|${upgradeLevel}`)) return false;
+        return inventoryItems.some(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id && !(inv as any).locked);
     });
 
     return (
@@ -321,10 +372,10 @@ function SetBlock({ set, items, ownedKeys, collectionKeys, inventoryItems, onAdd
             </div>
             {!collapsed && (
                 <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-10 gap-1.5">
-                    {setItems.map(item => {
-                        const owned = ownedKeys.has(`${item.name}|${item.slot}`);
-                        const collected = collectionKeys.has(`${item.name}|${item.slot}`);
-                        const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot);
+                    {blockItems.map((item: ShopItem) => {
+                        const owned = ownedKeys.has(`${item.name}|${item.slot}|${item.rarity_id}`);
+                        const collected = collectionKeys.has(`${item.name}|${item.slot}|${item.rarity_id}|${upgradeLevel}`);
+                        const matchingInventory = inventoryItems.filter(inv => inv.name === item.name && inv.slot === item.slot && inv.rarity_id === item.rarity_id && !(inv as any).locked);
 
                         return (
                             <CollectionSlot

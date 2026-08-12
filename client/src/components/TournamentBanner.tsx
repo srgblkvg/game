@@ -33,8 +33,8 @@ const DIVISION_ICONS: Record<string, string> = {
 };
 
 const DIVISION_LEVELS: Record<string, [number, number]> = {
-    copper: [1, 5], bronze: [3, 7], iron: [5, 9], steel: [7, 11], silver: [9, 13],
-    gold: [11, 15], platinum: [13, 17], mithril: [15, 19], adamant: [17, 21], orichalcum: [19, 999],
+    copper: [1, 3], bronze: [2, 4], iron: [3, 5], steel: [4, 6], silver: [5, 7],
+    gold: [6, 8], platinum: [7, 9], mithril: [8, 10], adamant: [9, 11], orichalcum: [10, 999],
 };
 
 function formatTimer(seconds: number): string {
@@ -70,7 +70,6 @@ function tournamentIcon(t: TournamentInfo): string {
 export default function TournamentBanner() {
     const [tournaments, setTournaments] = useState<TournamentInfo[]>([]);
     const [userLevel, setUserLevel] = useState(1);
-    const [warnings, setWarnings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -84,7 +83,6 @@ export default function TournamentBanner() {
                 .then((data: any) => {
                     setTournaments(data.tournaments || []);
                     setUserLevel(data.userLevel || 1);
-                    setWarnings(data.warnings || []);
                 })
                 .catch(() => {})
                 .finally(() => setLoading(false));
@@ -136,15 +134,6 @@ export default function TournamentBanner() {
             </h3>
 
             <div className="space-y-2">
-                {warnings.map((w: any) => {
-                    const label = w.type === 'custom' ? (w.name || 'Турнир') : DIVISION_LABELS[w.division] || w.division;
-                    const secLeft = w.registrationEnd - now;
-                    return (
-                        <div key={w.id} className="text-xs text-[var(--color-warning-text)] font-semibold bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/20 rounded p-1.5">
-                            ⏰ {label}: регистрация закроется через {formatTimer(Math.max(0, secLeft))}!
-                        </div>
-                    );
-                })}
                 {active.slice(0, 3).map(t => {
                     const joinable = canJoin(t, userLevel);
                     const untilEnd = t.registrationEnd - now;

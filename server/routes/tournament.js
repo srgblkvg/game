@@ -1,0 +1,972 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.resolveCurrentRound = resolveCurrentRound;
+exports.autoAdvance = autoAdvance;
+exports.getOrCreateTournament = getOrCreateTournament;
+const express_1 = require("express");
+const index_1 = require("../db/index");
+const battle_1 = require("../game/battle");
+const helpers_1 = require("../db/helpers");
+const stats_1 = require("../game/stats");
+const events_1 = require("../events");
+const drinks_1 = require("../game/drinks");
+const achievements_1 = require("./achievements");
+const router = (0, express_1.Router)();
+const MAX_PLAYERS = 8;
+const REGISTRATION_WINDOW = 60 * 60; // 1 час
+const divisions = [
+    { name: 'copper', label: 'Медный', tier: 1, minLevel: 1, maxLevel: 3, icon: '🥉' },
+    { name: 'bronze', label: 'Бронзовый', tier: 2, minLevel: 2, maxLevel: 4, icon: '🥉' },
+    { name: 'iron', label: 'Железный', tier: 3, minLevel: 3, maxLevel: 5, icon: '🥈' },
+    { name: 'steel', label: 'Стальной', tier: 4, minLevel: 4, maxLevel: 6, icon: '🥈' },
+    { name: 'silver', label: 'Серебряный', tier: 5, minLevel: 5, maxLevel: 7, icon: '🥈' },
+    { name: 'gold', label: 'Золотой', tier: 6, minLevel: 6, maxLevel: 8, icon: '🥇' },
+    { name: 'platinum', label: 'Платиновый', tier: 7, minLevel: 7, maxLevel: 9, icon: '🥇' },
+    { name: 'mithril', label: 'Мифриловый', tier: 8, minLevel: 8, maxLevel: 10, icon: '🥇' },
+    { name: 'adamant', label: 'Адамантиновый', tier: 9, minLevel: 9, maxLevel: 11, icon: '👑' },
+    { name: 'orichalcum', label: 'Орихалковый', tier: 10, minLevel: 10, maxLevel: 999, icon: '💎' },
+];
+const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
+// Расчёт призового фонда дивизиона: 10% казны * tier / TIERS_TOTAL
+async function calcDivisionPool(tier) {
+    try {
+        const { getTreasury } = await Promise.resolve().then(() => __importStar(require('../game/treasury')));
+        const treasury = await getTreasury();
+        const share = Math.floor(treasury * 0.1);
+        return Math.floor(share * tier / TIERS_TOTAL);
+    }
+    catch {
+        return 0;
+    }
+}
+// ---------------------------------------------------------------------------
+// Брекет
+// ---------------------------------------------------------------------------
+function nextPowerOfTwo(n) {
+    let p = 1;
+    while (p < n)
+        p *= 2;
+    return p;
+}
+/**
+ * Создать сетку первого раунда.
+ * Участники сортируются: goldenTicket DESC, затем userId.
+ * Добиваем до степени 2 нулями (bye).
+ * Пары: 1-й с последним, 2-й с предпоследним и т.д.
+ */
+async function generateBracket(tournamentId) {
+    // Проверяем, что сетка ещё не создана
+    const existing = await index_1.db.one('SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = ?', [tournamentId]);
+    if (existing?.cnt > 0) {
+        console.log(`[bracket] tid=${tournamentId} already has matches, skip`);
+        return;
+    }
+    const partRows = await index_1.pool.query(`SELECT tp.userid, u.tournamentelo FROM tournament_participants tp JOIN users u ON tp.userid = u.id WHERE tp.tournamentid = $1 ORDER BY u.tournamentelo ASC`, [tournamentId]);
+    const participants = partRows.rows;
+    const getUserId = (p) => p ? p.userid : null;
+    console.log(`[bracket] tid=${tournamentId} participants=${participants.length}`);
+    if (participants.length < 2) {
+        console.log(`[bracket] tid=${tournamentId} SKIP < 2`);
+        // Отмена
+        const t = await index_1.db.one('SELECT * FROM tournaments WHERE id = ?', [tournamentId]);
+        if (t && t.type === 'custom') {
+            // Возврат базового призового фонда создателю
+            if ((t.basePool || 0) > 0) {
+                await index_1.db.run('UPDATE users SET money = money + ? WHERE id = ?', [t.basePool, t.creatorId]);
+            }
+            // Возврат входных взносов всем участникам
+            if ((t.entryFee || 0) > 0) {
+                const parts = await index_1.db.query('SELECT userId FROM tournament_participants WHERE tournamentId = ?', [tournamentId]);
+                for (const p of parts) {
+                    await index_1.db.run('UPDATE users SET money = money + ? WHERE id = ?', [t.entryFee, p.userId]);
+                }
+            }
+        }
+        await index_1.db.run('UPDATE tournaments SET status = ?, completedAt = ? WHERE id = ?', ['cancelled', new Date().toISOString(), tournamentId]);
+        return;
+    }
+    const n = participants.length;
+    const slots = nextPowerOfTwo(n);
+    const byes = slots - n; // сколько игроков проходят без боя
+    const playInRound1 = n - byes; // сколько играют в 1-м раунде
+    console.log('[bracket] n=' + n + ' slots=' + slots + ' byes=' + byes + ' playR1=' + playInRound1);
+    // Сильнейшие (первые byes в отсортированном по ELO массиве) получают bye
+    for (let i = 0; i < byes; i++) {
+        const p = participants[i];
+        await index_1.pool.query('INSERT INTO tournament_matches (tournamentid, round, player1id, player2id, winnerid) VALUES ($1, 1, $2, NULL, $2) RETURNING id', [tournamentId, p.userid]);
+        console.log('[bracket] bye: userid=' + p.userid + ' -> round 2');
+    }
+    // Остальные играют попарно (соседние по ELO)
+    for (let i = 0; i < playInRound1 / 2; i++) {
+        const p1 = participants[byes + i * 2];
+        const p2 = participants[byes + i * 2 + 1];
+        await index_1.pool.query('INSERT INTO tournament_matches (tournamentid, round, player1id, player2id) VALUES ($1, 1, $2, $3) RETURNING id', [tournamentId, p1.userid, p2.userid]);
+        console.log('[bracket] R1: ' + p1.userid + ' vs ' + p2.userid);
+    }
+}
+// ---------------------------------------------------------------------------
+// Симуляция раунда
+// ---------------------------------------------------------------------------
+async function loadPlayerForBattle(userId) {
+    const u = await index_1.db.one(`
+        SELECT id, username, level, money, baseS, baseA, baseD, baseM,
+               equipment, currentHp, activeDrink, drinkUntil
+        FROM users WHERE id = ?
+    `, [userId]);
+    if (!u)
+        return null;
+    let equipment = {};
+    try {
+        equipment = JSON.parse(u.equipment || '{}');
+    }
+    catch { }
+    const { enriched } = await (0, helpers_1.enrichEquipment)(equipment);
+    const base = (0, helpers_1.getBaseStats)(u);
+    const collCnt = await (0, helpers_1.getCollectionBonus)(userId);
+    const drinkBonuses = (0, drinks_1.getDrinkBonuses)(u);
+    const { getGuildBonus } = await Promise.resolve().then(() => __importStar(require('../game/guildBuildings')));
+    const guildBonus = await getGuildBonus(userId, 'tournament');
+    const stats = (0, stats_1.currentStats)(base, enriched, drinkBonuses, collCnt, guildBonus);
+    return {
+        id: u.id,
+        name: u.username,
+        base,
+        equipment: enriched,
+        level: u.level,
+        money: u.money || 0,
+        currentHp: stats.hp, // всегда полное HP для турнирных боёв
+        drinkBonuses,
+        collectionBonus: collCnt,
+        guildBonus,
+    };
+}
+async function loadPlayerForBattleTx(client, userId) {
+    const uResult = await client.query(`
+        SELECT id, username, level, money, bases, basea, based, basem,
+               equipment, currenthp, activedrink, drinkuntil
+        FROM users WHERE id = $1
+    `, [userId]);
+    const u = uResult.rows[0];
+    if (!u)
+        return null;
+    let equipment = {};
+    try {
+        equipment = JSON.parse(u.equipment || '{}');
+    }
+    catch { }
+    const { enriched } = await (0, helpers_1.enrichEquipment)(equipment);
+    const base = (0, helpers_1.getBaseStats)({ baseS: u.bases, baseA: u.basea, baseD: u.based, baseM: u.basem });
+    const collCnt = await (0, helpers_1.getCollectionBonus)(userId);
+    const drinkBonuses = (0, drinks_1.getDrinkBonuses)({ activeDrink: u.activedrink, drinkUntil: u.drinkuntil });
+    const { getGuildBonus } = await Promise.resolve().then(() => __importStar(require('../game/guildBuildings')));
+    const guildBonus = await getGuildBonus(userId, 'tournament');
+    const stats = (0, stats_1.currentStats)(base, enriched, drinkBonuses, collCnt, guildBonus);
+    return {
+        id: u.id,
+        name: u.username,
+        base,
+        equipment: enriched,
+        level: u.level,
+        money: u.money || 0,
+        currentHp: stats.hp,
+        drinkBonuses,
+        collectionBonus: collCnt,
+        guildBonus,
+    };
+}
+/**
+ * Разрешить все незавершённые матчи текущего раунда.
+ * Возвращает номер разрешённого раунда (или 0 если ничего не сделано).
+ */
+async function resolveCurrentRound(tournamentId) {
+    // Находим минимальный раунд с незавершёнными матчами
+    const pendingRound = await index_1.db.one(`
+        SELECT round FROM tournament_matches
+        WHERE tournamentId = ? AND winnerId IS NULL
+        ORDER BY round LIMIT 1
+    `, [tournamentId]);
+    if (!pendingRound)
+        return 0;
+    const round = pendingRound.round;
+    const matches = await index_1.db.query(`
+        SELECT * FROM tournament_matches
+        WHERE tournamentId = ? AND round = ? AND winnerId IS NULL
+    `, [tournamentId, round]);
+    for (const match of matches) {
+        if (!match.player1Id || !match.player2Id)
+            continue; // bye уже обработан
+        const p1 = await loadPlayerForBattle(match.player1Id);
+        const p2 = await loadPlayerForBattle(match.player2Id);
+        if (!p1 || !p2)
+            continue;
+        const result = (0, battle_1.runBattle)(p1, p2);
+        // В турнирах серебро не воруем — убираем money-шаги из лога
+        const tourSteps = result.steps.filter((s) => s.type !== 'money');
+        await index_1.db.run('UPDATE tournament_matches SET winnerId = ?, log = ? WHERE id = ?', [result.winnerId, JSON.stringify(tourSteps), match.id]);
+    }
+    return round;
+}
+/**
+ * После завершения раунда создать матчи следующего раунда из победителей.
+ */
+async function advanceWinners(tournamentId, finishedRound) {
+    const nextRound = finishedRound + 1;
+    // Sanity guard: жёсткий предел раундов — не даём лавине разрастись
+    // ceil(log2(MAX_PLAYERS=128)) + 2 = 9, берём с запасом 32
+    if (nextRound > 32) {
+        console.error(`[advanceWinners] tid=${tournamentId} nextRound=${nextRound} exceeds limit — forcing finish`);
+        await finishTournament(tournamentId);
+        return;
+    }
+    // Идемпотентность: если матчи этого раунда уже созданы — пропускаем
+    const existingCnt = (await index_1.db.one('SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = ? AND round = ?', [tournamentId, nextRound]))?.cnt || 0;
+    if (existingCnt > 0) {
+        console.log(`[advanceWinners] tid=${tournamentId} round=${nextRound} already has ${existingCnt} matches — skipping`);
+        return;
+    }
+    const winners = await index_1.db.query(`
+        SELECT winnerId FROM tournament_matches
+        WHERE tournamentId = ? AND round = ? AND winnerId IS NOT NULL
+        ORDER BY id
+    `, [tournamentId, finishedRound]);
+    if (winners.length < 2) {
+        // Турнир завершён — остался один победитель
+        await finishTournament(tournamentId);
+        return;
+    }
+    // Соседние пары: 1-2, 3-4...
+    const n = winners.length;
+    const half = Math.floor(n / 2);
+    for (let i = 0; i < half; i++) {
+        const info = await index_1.db.run(`
+            INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
+            VALUES (?, ?, ?, ?, NULL)
+        `, [tournamentId, nextRound, winners[i * 2].winnerId, winners[i * 2 + 1].winnerId]);
+    }
+    // Нечётный победитель — проходит автоматом (bye)
+    if (n % 2 === 1) {
+        await index_1.db.run(`
+            INSERT INTO tournament_matches (tournamentId, round, player1Id, player2Id, winnerId)
+            VALUES (?, ?, ?, NULL, ?)
+        `, [tournamentId, nextRound, winners[n - 1].winnerId, winners[n - 1].winnerId]);
+    }
+}
+// ---------------------------------------------------------------------------
+// Завершение турнира и призы
+// ---------------------------------------------------------------------------
+async function finishTournament(tournamentId) {
+    const t = await index_1.db.one('SELECT * FROM tournaments WHERE id = ?', [tournamentId]);
+    if (!t || t.status === 'completed' || t.status === 'cancelled')
+        return;
+    const prizePool = t.prizePool || 0;
+    // Собираем результаты: финал (последний раунд) → 1-е место,
+    // проигравший в финале → 2-е место,
+    // полуфиналисты → 3-е место (берём того, кто проиграл победителю)
+    const lastRound = await index_1.db.one(`
+        SELECT MAX(round) as maxRound FROM tournament_matches WHERE tournamentId = ?
+    `, [tournamentId]);
+    const finalRound = lastRound?.maxRound || 1;
+    // Победитель (1-е место) — winnerId последнего матча финала
+    const finalMatches = await index_1.db.query(`
+        SELECT * FROM tournament_matches WHERE tournamentId = ? AND round = ?
+    `, [tournamentId, finalRound]);
+    if (finalMatches.length === 0)
+        return;
+    const winnerId = finalMatches[0].winnerId;
+    if (!winnerId)
+        return;
+    // 2-е место — проигравший в финале
+    let secondPlaceId = null;
+    for (const fm of finalMatches) {
+        if (fm.winnerId === winnerId) {
+            secondPlaceId = fm.player1Id === winnerId ? fm.player2Id : fm.player1Id;
+            break;
+        }
+    }
+    // 3-е место — проигравшие в полуфинале (первый, кто не чемпион и не 2-е место)
+    let thirdPlaceId = null;
+    if (finalRound >= 2) {
+        const semiMatches = await index_1.db.query(`
+            SELECT * FROM tournament_matches WHERE tournamentId = ? AND round = ?
+        `, [tournamentId, finalRound - 1]);
+        for (const sm of semiMatches) {
+            if (!sm.winnerId)
+                continue;
+            const loser = sm.player1Id === sm.winnerId ? sm.player2Id : sm.player1Id;
+            console.log('[finish] semi loser:', loser, 'winnerId:', winnerId, 'secondPlaceId:', secondPlaceId);
+            if (loser && loser !== winnerId && loser !== secondPlaceId) {
+                thirdPlaceId = loser;
+                break;
+            }
+        }
+    }
+    console.log('[finish] tid=' + tournamentId + ' prizes: 1st=' + winnerId + ' 2nd=' + secondPlaceId + ' 3rd=' + thirdPlaceId + ' pool=' + prizePool);
+    // Распределение призов
+    let firstPrize, secondPrize, thirdPrize;
+    if (!secondPlaceId) {
+        // 1 участник — всё победителю
+        firstPrize = prizePool;
+        secondPrize = 0;
+        thirdPrize = 0;
+    }
+    else if (!thirdPlaceId) {
+        // 2 участника — 70/30
+        firstPrize = Math.floor(prizePool * 0.7);
+        secondPrize = prizePool - firstPrize;
+        thirdPrize = 0;
+    }
+    else {
+        // 3+ участников — 50/30/20
+        firstPrize = Math.floor(prizePool * 0.5);
+        secondPrize = Math.floor(prizePool * 0.3);
+        thirdPrize = prizePool - firstPrize - secondPrize;
+    }
+    if (prizePool > 0) {
+        (0, helpers_1.addMoney)(winnerId, firstPrize);
+        if (secondPlaceId)
+            (0, helpers_1.addMoney)(secondPlaceId, secondPrize);
+        if (thirdPlaceId)
+            (0, helpers_1.addMoney)(thirdPlaceId, thirdPrize);
+    }
+    // Сохраняем результаты в таблицу tournament_participants
+    await index_1.db.run('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?', [JSON.stringify({ place: 1, prize: firstPrize }), tournamentId, winnerId]);
+    await index_1.db.run('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?', [winnerId]);
+    (0, achievements_1.checkAchievement)(winnerId, 'tournament').catch(() => { });
+    if (secondPlaceId) {
+        await index_1.db.run('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?', [JSON.stringify({ place: 2, prize: secondPrize }), tournamentId, secondPlaceId]);
+        await index_1.db.run('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?', [secondPlaceId]);
+    }
+    if (thirdPlaceId) {
+        await index_1.db.run('UPDATE tournament_participants SET snapshotStats = ? WHERE tournamentId = ? AND userId = ?', [JSON.stringify({ place: 3, prize: thirdPrize }), tournamentId, thirdPlaceId]);
+        await index_1.db.run('UPDATE users SET tournamentWins = tournamentWins + 1 WHERE id = ?', [thirdPlaceId]);
+    }
+    await index_1.db.run('UPDATE tournaments SET status = ?, completedAt = ? WHERE id = ?', ['completed', new Date().toISOString(), tournamentId]);
+    // --- Обновление скрытого tournamentElo для посева ---
+    // Победитель +25, 2-е +15, 3-е +10, полуфиналисты +5, остальные 0
+    // Проигравшие в первом раунде получают небольшой минус
+    const allParts = await index_1.db.query('SELECT userId FROM tournament_participants WHERE tournamentId = ?', [tournamentId]);
+    for (const p of allParts) {
+        let delta = 0;
+        if (p.userId === winnerId)
+            delta = 25;
+        else if (p.userId === secondPlaceId)
+            delta = 15;
+        else if (p.userId === thirdPlaceId)
+            delta = 10;
+        else {
+            // Проверяем, прошёл ли игрок дальше первого раунда
+            const wonInR1 = await index_1.db.one('SELECT id FROM tournament_matches WHERE tournamentId = ? AND round = 1 AND winnerId = ?', [tournamentId, p.userId]);
+            if (wonInR1)
+                delta = 3; // прошёл первый раунд
+            else
+                delta = -3; // вылетел в первом раунде
+        }
+        await index_1.db.run('UPDATE users SET tournamentElo = GREATEST(100, tournamentElo + ?) WHERE id = ?', [delta, p.userId]);
+    }
+}
+/**
+ * Транзакционная версия finishTournament (использует client вместо db).
+ */
+async function finishTournamentTx(client, tournamentId) {
+    const tResult = await client.query('SELECT * FROM tournaments WHERE id = $1', [tournamentId]);
+    const t = tResult.rows[0];
+    if (!t || t.status === 'completed' || t.status === 'cancelled')
+        return;
+    const prizePool = t.prizepool || 0;
+    const lastRoundResult = await client.query('SELECT MAX(round) as maxround FROM tournament_matches WHERE tournamentid = $1', [tournamentId]);
+    const finalRound = lastRoundResult.rows[0]?.maxround || 1;
+    const finalMatches = await client.query('SELECT * FROM tournament_matches WHERE tournamentid = $1 AND round = $2', [tournamentId, finalRound]);
+    if (finalMatches.rows.length === 0)
+        return;
+    const winnerId = finalMatches.rows[0].winnerid;
+    if (!winnerId)
+        return;
+    let secondPlaceId = null;
+    for (const fm of finalMatches.rows) {
+        if (fm.winnerid === winnerId) {
+            secondPlaceId = fm.player1id === winnerId ? fm.player2id : fm.player1id;
+            break;
+        }
+    }
+    let thirdPlaceId = null;
+    if (finalRound >= 2) {
+        const semiMatches = await client.query('SELECT * FROM tournament_matches WHERE tournamentid = $1 AND round = $2', [tournamentId, finalRound - 1]);
+        for (const sm of semiMatches.rows) {
+            if (!sm.winnerid)
+                continue;
+            const loser = sm.player1id === sm.winnerid ? sm.player2id : sm.player1id;
+            if (loser && loser !== winnerId && loser !== secondPlaceId) {
+                thirdPlaceId = loser;
+                break;
+            }
+        }
+    }
+    let firstPrize, secondPrize, thirdPrize;
+    if (!secondPlaceId) {
+        firstPrize = prizePool;
+        secondPrize = 0;
+        thirdPrize = 0;
+    }
+    else if (!thirdPlaceId) {
+        firstPrize = Math.floor(prizePool * 0.7);
+        secondPrize = prizePool - firstPrize;
+        thirdPrize = 0;
+    }
+    else {
+        firstPrize = Math.floor(prizePool * 0.5);
+        secondPrize = Math.floor(prizePool * 0.3);
+        thirdPrize = prizePool - firstPrize - secondPrize;
+    }
+    if (prizePool > 0) {
+        if (winnerId)
+            await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [firstPrize, winnerId]);
+        if (secondPlaceId)
+            await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [secondPrize, secondPlaceId]);
+        if (thirdPlaceId)
+            await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [thirdPrize, thirdPlaceId]);
+    }
+    await client.query('UPDATE tournament_participants SET snapshotstats = $1 WHERE tournamentid = $2 AND userid = $3', [JSON.stringify({ place: 1, prize: firstPrize }), tournamentId, winnerId]);
+    await client.query('UPDATE users SET tournamentwins = tournamentwins + 1 WHERE id = $1', [winnerId]);
+    (0, achievements_1.checkAchievement)(winnerId, 'tournament').catch(() => { });
+    if (secondPlaceId) {
+        await client.query('UPDATE tournament_participants SET snapshotstats = $1 WHERE tournamentid = $2 AND userid = $3', [JSON.stringify({ place: 2, prize: secondPrize }), tournamentId, secondPlaceId]);
+        await client.query('UPDATE users SET tournamentwins = tournamentwins + 1 WHERE id = $1', [secondPlaceId]);
+    }
+    if (thirdPlaceId) {
+        await client.query('UPDATE tournament_participants SET snapshotstats = $1 WHERE tournamentid = $2 AND userid = $3', [JSON.stringify({ place: 3, prize: thirdPrize }), tournamentId, thirdPlaceId]);
+        await client.query('UPDATE users SET tournamentwins = tournamentwins + 1 WHERE id = $1', [thirdPlaceId]);
+    }
+    await client.query('UPDATE tournaments SET status = $1, completedat = $2 WHERE id = $3', ['completed', new Date().toISOString(), tournamentId]);
+    const allParts = await client.query('SELECT userid FROM tournament_participants WHERE tournamentid = $1', [tournamentId]);
+    for (const p of allParts.rows) {
+        let delta = 0;
+        if (p.userid === winnerId)
+            delta = 25;
+        else if (p.userid === secondPlaceId)
+            delta = 15;
+        else if (p.userid === thirdPlaceId)
+            delta = 10;
+        else {
+            const wonInR1 = await client.query('SELECT id FROM tournament_matches WHERE tournamentid = $1 AND round = 1 AND winnerid = $2', [tournamentId, p.userid]);
+            if (wonInR1.rows.length > 0)
+                delta = 3;
+            else
+                delta = -3;
+        }
+        await client.query('UPDATE users SET tournamentelo = GREATEST(100, tournamentelo + $1) WHERE id = $2', [delta, p.userid]);
+    }
+}
+// ---------------------------------------------------------------------------
+// Автопродвижение (вызывается при каждом GET /tournament)
+// ---------------------------------------------------------------------------
+async function autoAdvance(tournamentId) {
+    // Защита от параллельных вызовов через транзакционный advisory lock
+    try {
+        await index_1.db.tx(async (client) => {
+            const lockResult = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [tournamentId]);
+            if (!lockResult.rows[0]?.locked) {
+                // Другой вызов уже обрабатывает этот турнир — выходим
+                return;
+            }
+            const tResult = await client.query('SELECT * FROM tournaments WHERE id = $1', [tournamentId]);
+            const t = tResult.rows[0];
+            if (!t)
+                return;
+            const now = Math.floor(Date.now() / 1000);
+            if (t.status === 'registration' && now >= t.registrationend) {
+                console.log(`[autoAdv] tid=${tournamentId} registration→in_progress`);
+                await client.query('UPDATE tournaments SET status = $1 WHERE id = $2', ['in_progress', tournamentId]);
+                // Генерируем скобку внутри той же транзакции — защита от дубликатов
+                await generateBracketTx(client, tournamentId);
+                // После генерации скобки — разрешаем все раунды в цикле
+                await advanceAllRoundsTx(client, tournamentId);
+                return;
+            }
+            if (t.status === 'in_progress') {
+                const matchCountResult = await client.query('SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = $1', [tournamentId]);
+                const matchCount = parseInt(matchCountResult.rows[0]?.cnt, 10) || 0;
+                if (matchCount === 0) {
+                    console.log('[autoAdv] tid=' + tournamentId + ' in_progress but 0 matches - regenerating bracket');
+                    await generateBracketTx(client, tournamentId);
+                    await advanceAllRoundsTx(client, tournamentId);
+                    return;
+                }
+                await advanceAllRoundsTx(client, tournamentId);
+                return;
+            }
+            // Турнир завершён или отменён — новый создаст getOrCreateTournament в следующем тике
+            if ((t.status === 'completed' || t.status === 'cancelled') && t.type === 'official') {
+                return;
+            }
+        });
+    }
+    catch (err) {
+        console.error('[autoAdv] tid=' + tournamentId + ' error:', err);
+    }
+}
+/**
+ * Генерация скобки внутри транзакции (client вместо db).
+ */
+async function generateBracketTx(client, tournamentId) {
+    const existing = await client.query('SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = $1', [tournamentId]);
+    if (parseInt(existing.rows[0]?.cnt, 10) > 0) {
+        console.log(`[bracket] tid=${tournamentId} already has matches, skip`);
+        return;
+    }
+    const partRows = await client.query(`SELECT tp.userid, u.tournamentelo FROM tournament_participants tp JOIN users u ON tp.userid = u.id WHERE tp.tournamentid = $1 ORDER BY u.tournamentelo ASC`, [tournamentId]);
+    const participants = partRows.rows;
+    console.log(`[bracket] tid=${tournamentId} participants=${participants.length}`);
+    if (participants.length < 2) {
+        console.log(`[bracket] tid=${tournamentId} SKIP < 2`);
+        const tResult = await client.query('SELECT * FROM tournaments WHERE id = $1', [tournamentId]);
+        const t = tResult.rows[0];
+        if (t && t.type === 'custom') {
+            if ((t.basepool || 0) > 0) {
+                await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [t.basepool, t.creatorid]);
+            }
+            if ((t.entryfee || 0) > 0) {
+                const parts = await client.query('SELECT userid FROM tournament_participants WHERE tournamentid = $1', [tournamentId]);
+                for (const p of parts.rows) {
+                    await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [t.entryfee, p.userid]);
+                }
+            }
+        }
+        await client.query('UPDATE tournaments SET status = $1, completedat = $2 WHERE id = $3', ['cancelled', new Date().toISOString(), tournamentId]);
+        return;
+    }
+    const n = participants.length;
+    const slots = nextPowerOfTwo(n);
+    const byes = slots - n;
+    const playInRound1 = n - byes;
+    console.log('[bracket] n=' + n + ' slots=' + slots + ' byes=' + byes + ' playR1=' + playInRound1);
+    for (let i = 0; i < byes; i++) {
+        const p = participants[i];
+        await client.query('INSERT INTO tournament_matches (tournamentid, round, player1id, player2id, winnerid) VALUES ($1, 1, $2, NULL, $2)', [tournamentId, p.userid]);
+        console.log('[bracket] bye: userid=' + p.userid + ' -> round 2');
+    }
+    for (let i = 0; i < playInRound1 / 2; i++) {
+        const p1 = participants[byes + i * 2];
+        const p2 = participants[byes + i * 2 + 1];
+        await client.query('INSERT INTO tournament_matches (tournamentid, round, player1id, player2id) VALUES ($1, 1, $2, $3)', [tournamentId, p1.userid, p2.userid]);
+        console.log('[bracket] R1: ' + p1.userid + ' vs ' + p2.userid);
+    }
+}
+/**
+ * Разрешить все раунды турнира последовательно внутри одной транзакции.
+ */
+async function advanceAllRoundsTx(client, tournamentId) {
+    let safety = 0;
+    const MAX_ROUNDS = 32;
+    while (safety < MAX_ROUNDS) {
+        safety++;
+        // Находим минимальный раунд с незавершёнными матчами
+        const pendingResult = await client.query(`SELECT round FROM tournament_matches WHERE tournamentid = $1 AND winnerid IS NULL ORDER BY round LIMIT 1`, [tournamentId]);
+        if (pendingResult.rows.length === 0) {
+            // Все раунды завершены
+            const tCheck = await client.query('SELECT status FROM tournaments WHERE id = $1', [tournamentId]);
+            if (tCheck.rows[0]?.status === 'in_progress') {
+                await finishTournamentTx(client, tournamentId);
+            }
+            return;
+        }
+        const round = pendingResult.rows[0].round;
+        const matches = await client.query(`SELECT * FROM tournament_matches WHERE tournamentid = $1 AND round = $2 AND winnerid IS NULL`, [tournamentId, round]);
+        for (const match of matches.rows) {
+            if (!match.player1id || !match.player2id)
+                continue;
+            const p1 = await loadPlayerForBattleTx(client, match.player1id);
+            const p2 = await loadPlayerForBattleTx(client, match.player2id);
+            if (!p1 || !p2)
+                continue;
+            const result = (0, battle_1.runBattle)(p1, p2);
+            const tourSteps = result.steps.filter((s) => s.type !== 'money');
+            await client.query('UPDATE tournament_matches SET winnerid = $1, log = $2 WHERE id = $3', [result.winnerId, JSON.stringify(tourSteps), match.id]);
+        }
+        // Создаём матчи следующего раунда
+        const nextRound = round + 1;
+        if (nextRound > 32) {
+            console.error(`[advanceAllRounds] tid=${tournamentId} nextRound=${nextRound} exceeds limit — forcing finish`);
+            await finishTournamentTx(client, tournamentId);
+            return;
+        }
+        // Идемпотентность: если матчи этого раунда уже созданы — пропускаем
+        const existingCnt = await client.query('SELECT COUNT(*) as cnt FROM tournament_matches WHERE tournamentid = $1 AND round = $2', [tournamentId, nextRound]);
+        if (parseInt(existingCnt.rows[0]?.cnt, 10) > 0) {
+            console.log(`[advanceAllRounds] tid=${tournamentId} round=${nextRound} already has matches — skipping`);
+            continue;
+        }
+        const winners = await client.query(`SELECT DISTINCT winnerid FROM tournament_matches WHERE tournamentid = $1 AND round = $2 AND winnerid IS NOT NULL ORDER BY winnerid`, [tournamentId, round]);
+        if (winners.rows.length < 2) {
+            await finishTournamentTx(client, tournamentId);
+            return;
+        }
+        const w = winners.rows;
+        const n = w.length;
+        const half = Math.floor(n / 2);
+        for (let i = 0; i < half; i++) {
+            await client.query('INSERT INTO tournament_matches (tournamentid, round, player1id, player2id) VALUES ($1, $2, $3, $4)', [tournamentId, nextRound, w[i * 2].winnerid, w[i * 2 + 1].winnerid]);
+        }
+        if (n % 2 === 1) {
+            await client.query('INSERT INTO tournament_matches (tournamentid, round, player1id, player2id, winnerid) VALUES ($1, $2, $3, NULL, $3)', [tournamentId, nextRound, w[n - 1].winnerid]);
+        }
+    }
+    // Если вышли по safety — финишируем
+    console.error(`[advanceAllRounds] tid=${tournamentId} safety limit reached — forcing finish`);
+    await finishTournamentTx(client, tournamentId);
+}
+// ---------------------------------------------------------------------------
+// Создание турнира (если нет активного)
+// ---------------------------------------------------------------------------
+async function getOrCreateTournament(type) {
+    const now = Math.floor(Date.now() / 1000);
+    // Ищем активные турниры по каждому дивизиону (только official)
+    const activeByDivision = {};
+    const activeTournaments = await index_1.db.query(`SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') AND type = 'official' ORDER BY id DESC`, []);
+    for (const t of activeTournaments) {
+        if (!activeByDivision[t.division]) {
+            activeByDivision[t.division] = t;
+        }
+    }
+    // Для дивизионов без активного турнира — создаём новый official с 30-мин окном
+    // Каждый дивизион создаётся в ОТДЕЛЬНОЙ транзакции чтобы избежать гонки
+    for (const div of divisions) {
+        if (!activeByDivision[div.name]) {
+            // Проверяем: есть ли игроки в этом дивизионе
+            const playerCount = (await index_1.db.one('SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND level >= ? AND level <= ?', [div.minLevel, div.maxLevel])).cnt;
+            if (playerCount === 0)
+                continue;
+            // Проверяем: когда завершился последний турнир этого дивизиона
+            const lastCompleted = await index_1.db.one("SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1", [div.name]);
+            if (lastCompleted?.completedAt) {
+                const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
+                    : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
+                if (Date.now() < ts + 14400 * 1000)
+                    continue;
+            }
+            const pool = await calcDivisionPool(div.tier);
+            // Транзакция: проверка + вставка атомарно, с advisory lock на дивизион
+            try {
+                await index_1.db.tx(async (client) => {
+                    // Блокировка на уровне дивизиона — предотвращает гонку
+                    const lockKey = div.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+                    const lockResult = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [lockKey]);
+                    if (!lockResult.rows[0]?.locked)
+                        return; // другой вызов уже обрабатывает
+                    const recheck = (await client.query(`SELECT id FROM tournaments WHERE division = $1 AND status IN ('registration', 'in_progress') AND type = 'official' LIMIT 1`, [div.name])).rows[0];
+                    if (recheck)
+                        return; // уже создан
+                    await client.query('INSERT INTO tournaments (division, status, registrationstart, registrationend, prizepool, createdat, type, maxplayers) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [div.name, 'registration', now, now + REGISTRATION_WINDOW, pool, new Date().toISOString(), 'official', MAX_PLAYERS]);
+                });
+            }
+            catch { } // если транзакция упала — уже создан
+        }
+    }
+    const query = "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC";
+    return await index_1.db.query(query, []);
+}
+// ---------------------------------------------------------------------------
+// Роуты
+// ---------------------------------------------------------------------------
+// Статус турнира
+router.get('/tournament', async (req, res) => {
+    const userId = req.userId;
+    const user = await index_1.db.one('SELECT level FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    const now = Math.floor(Date.now() / 1000);
+    const tab = req.query.tab || 'active';
+    if (tab === 'completed') {
+        // Завершённые турниры с пагинацией
+        const page = parseInt(req.query.page) || 1;
+        const limit = 20;
+        const offset = (page - 1) * limit;
+        const total = (await index_1.db.one(`
+            SELECT COUNT(*) as cnt FROM tournaments t 
+            WHERE t.status = 'completed' 
+            AND (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) >= 2
+        `, [])).cnt;
+        const completed = await index_1.db.query(`
+            SELECT t.*, (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) as participantCount
+            FROM tournaments t 
+            WHERE t.status = 'completed' 
+            AND (SELECT COUNT(*) FROM tournament_participants WHERE tournamentId = t.id) >= 2
+            ORDER BY COALESCE(t.completedAt, t.createdAt) DESC LIMIT ? OFFSET ?
+        `, [limit, offset]);
+        const result = await Promise.all(completed.map(async (t) => {
+            const participants = await index_1.db.query('SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?', [t.id]);
+            const matches = await index_1.db.query('SELECT * FROM tournament_matches WHERE tournamentId = ? ORDER BY round, id', [t.id]);
+            const matchesWithNames = await Promise.all(matches.map(async (m) => ({
+                ...m,
+                player1Name: m.player1Id ? (await index_1.db.one('SELECT username FROM users WHERE id = ?', [m.player1Id]))?.username : null,
+                player2Name: m.player2Id ? (await index_1.db.one('SELECT username FROM users WHERE id = ?', [m.player2Id]))?.username : null,
+                winnerName: m.winnerId ? (await index_1.db.one('SELECT username FROM users WHERE id = ?', [m.winnerId]))?.username : null,
+                log: m.log ? (() => { try {
+                    return JSON.parse(m.log);
+                }
+                catch {
+                    return m.log;
+                } })() : null,
+            })));
+            return {
+                ...t,
+                createdAt: typeof t.createdAt === 'string' && /^\d+$/.test(t.createdAt) ? Number(t.createdAt) : (t.createdAt ? Math.floor(new Date(t.createdAt).getTime() / 1000) : 0),
+                completedAt: Number(t.completedAt) || t.completedAt,
+                registrationEnd: Number(t.registrationEnd) || t.registrationEnd,
+                participantCount: participants.length,
+                matches: matchesWithNames,
+                maxPlayers: t.maxPlayers || MAX_PLAYERS,
+                participants: participants.map((p) => ({
+                    id: p.userId, username: p.username, goldenTicket: p.goldenTicket,
+                    guildName: p.guildName, guildId: p.guildId,
+                    snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
+                })),
+                top3: participants
+                    .filter((p) => p.snapshotStats)
+                    .map((p) => ({ ...JSON.parse(p.snapshotStats), username: p.username }))
+                    .sort((a, b) => a.place - b.place),
+            };
+        }));
+        return res.json({ tournaments: result, total, page, totalPages: Math.ceil(total / limit), userLevel: user.level, tab: 'completed' });
+    }
+    // Активные турниры — только получаем, не продвигаем (продвижение в scheduler)
+    const tournaments = await getOrCreateTournament();
+    const typeFilter = req.query.type || 'all';
+    let typeCondition = '';
+    const typeParams = [];
+    if (typeFilter === 'official') {
+        typeCondition = "AND type = 'official'";
+    }
+    else if (typeFilter === 'custom') {
+        typeCondition = "AND type = 'custom'";
+    }
+    const updated = await index_1.db.query(`SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ${typeCondition} ORDER BY id DESC`, typeParams);
+    const allTournaments = [...updated];
+    const result = await Promise.all(allTournaments.map(async (t) => {
+        const participants = await index_1.db.query('SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?', [t.id]);
+        const myReg = participants.find((p) => p.userId === userId);
+        const matches = await index_1.db.query('SELECT * FROM tournament_matches WHERE tournamentId = ? ORDER BY round, id', [t.id]);
+        return {
+            ...t,
+            divisionLabel: t.type === 'official' ? (divisions.find(x => x.name === t.division)?.label || t.division) : t.division,
+            minLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.minLevel; })() : t.minLevel,
+            maxLevel: t.type === 'official' ? (() => { const d = divisions.find(x => x.name === t.division); return d?.maxLevel; })() : t.maxLevel,
+            participantCount: participants.length,
+            maxPlayers: t.maxPlayers || MAX_PLAYERS,
+            participants: participants.map((p) => ({
+                id: p.userId,
+                username: p.username,
+                goldenTicket: p.goldenTicket,
+                guildName: p.guildName, guildId: p.guildId,
+                snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
+            })),
+            myRegistration: myReg || null,
+            matches: await Promise.all(matches.map(async (m) => ({
+                ...m,
+                player1Name: m.player1Id
+                    ? (await index_1.db.one('SELECT username FROM users WHERE id = ?', [m.player1Id]))?.username
+                    : null,
+                player2Name: m.player2Id
+                    ? (await index_1.db.one('SELECT username FROM users WHERE id = ?', [m.player2Id]))?.username
+                    : null,
+                winnerName: m.winnerId
+                    ? (await index_1.db.one('SELECT username FROM users WHERE id = ?', [m.winnerId]))?.username
+                    : null,
+                log: m.log ? JSON.parse(m.log) : null,
+            }))),
+        };
+    }));
+    // Сортировка: сначала доступные игроку, затем по registrationEnd
+    result.sort((a, b) => {
+        const aCanJoin = a.type === 'official'
+            ? (() => { const d = divisions.find(x => x.name === a.division); return d ? user.level >= d.minLevel && user.level <= d.maxLevel : false; })()
+            : (user.level >= (a.minLevel || 1) && user.level <= (a.maxLevel || 999));
+        const bCanJoin = b.type === 'official'
+            ? (() => { const d = divisions.find(x => x.name === b.division); return d ? user.level >= d.minLevel && user.level <= d.maxLevel : false; })()
+            : (user.level >= (b.minLevel || 1) && user.level <= (b.maxLevel || 999));
+        if (aCanJoin && !bCanJoin)
+            return -1;
+        if (!aCanJoin && bCanJoin)
+            return 1;
+        return a.registrationEnd - b.registrationEnd;
+    });
+    // Предстоящие официальные турниры (ждём час после завершения)
+    const upcomingOfficial = [];
+    for (const div of divisions) {
+        const hasActive = await index_1.db.one("SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress') AND type = 'official'", [div.name]);
+        if (hasActive)
+            continue;
+        const lastCompleted = await index_1.db.one("SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1", [div.name]);
+        if (lastCompleted?.completedAt) {
+            const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
+                : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
+            const registrationOpensAt = ts + 14400 * 1000;
+            if (Date.now() < registrationOpensAt) {
+                upcomingOfficial.push({
+                    division: div.name,
+                    label: div.label,
+                    icon: div.icon,
+                    minLevel: div.minLevel,
+                    maxLevel: div.maxLevel,
+                    registrationOpensAt: Math.floor(registrationOpensAt / 1000),
+                });
+            }
+        }
+    }
+    res.json({ tournaments: result, userLevel: user.level, tab: 'active', typeFilter,
+        upcomingOfficial
+    });
+});
+// Регистрация
+router.post('/tournament/register', async (req, res) => {
+    const userId = req.userId;
+    const { division, goldenTicket } = req.body;
+    const user = await index_1.db.one('SELECT level, money FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    let tournament;
+    if (division) {
+        // Официальный турнир по дивизиону
+        const div = divisions.find(d => d.name === division);
+        if (!div)
+            return res.status(400).json({ error: 'Неизвестный дивизион' });
+        if (user.level < div.minLevel || user.level > div.maxLevel) {
+            return res.status(400).json({ error: `Ваш уровень не подходит для дивизиона «${div.label}»` });
+        }
+        tournament = await index_1.db.one("SELECT * FROM tournaments WHERE division = ? AND status = 'registration' AND type = 'official'", [division]);
+    }
+    else {
+        // Кастомный турнир по ID
+        const tournamentId = req.body.tournamentId;
+        if (!tournamentId)
+            return res.status(400).json({ error: 'Укажите tournamentId или division' });
+        tournament = await index_1.db.one("SELECT * FROM tournaments WHERE id = ? AND status = 'registration'", [tournamentId]);
+        if (!tournament)
+            return res.status(400).json({ error: 'Турнир не найден или регистрация закрыта' });
+        // Проверка уровня
+        if (user.level < (tournament.minLevel || 1) || user.level > (tournament.maxLevel || 999)) {
+            return res.status(400).json({ error: `Ваш уровень не подходит (нужен ${tournament.minLevel}–${tournament.maxLevel})` });
+        }
+        // Вступительный взнос
+        if ((tournament.entryFee || 0) > 0) {
+            if (user.money < tournament.entryFee) {
+                return res.status(400).json({ error: `Недостаточно серебра для взноса (${tournament.entryFee})` });
+            }
+            await index_1.db.run('UPDATE users SET money = money - ? WHERE id = ?', [tournament.entryFee, userId]);
+            await index_1.db.run('UPDATE tournaments SET prizePool = prizePool + ? WHERE id = ?', [tournament.entryFee, tournament.id]);
+        }
+    }
+    if (!tournament)
+        return res.status(400).json({ error: 'Регистрация закрыта' });
+    const existing = await index_1.db.one('SELECT id FROM tournament_participants WHERE tournamentId = ? AND userId = ?', [tournament.id, userId]);
+    if (existing)
+        return res.status(400).json({ error: 'Вы уже зарегистрированы' });
+    // Проверка лимита игроков (8 для official, переменный для custom)
+    const maxPlayers = tournament.type === 'custom' ? (tournament.maxPlayers || 8) : MAX_PLAYERS;
+    const currentCount = (await index_1.db.one('SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?', [tournament.id])).cnt;
+    if (currentCount >= maxPlayers)
+        return res.status(400).json({ error: 'Турнир заполнен' });
+    if (goldenTicket && tournament.type === 'official') {
+        if (user.money < 1000)
+            return res.status(400).json({ error: 'Недостаточно монет для Золотого билета (1000)' });
+        await index_1.db.run('UPDATE users SET money = money - 1000 WHERE id = ?', [userId]);
+        await index_1.db.run('UPDATE tournaments SET prizePool = prizePool + 800 WHERE id = ?', [tournament.id]);
+    }
+    await index_1.db.run('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)', [tournament.id, userId, goldenTicket ? 1 : 0]);
+    await index_1.db.run('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?', [userId]);
+    // Автостарт при заполнении
+    const count = (await index_1.db.one('SELECT COUNT(*) as cnt FROM tournament_participants WHERE tournamentId = ?', [tournament.id])).cnt;
+    if (count >= maxPlayers) {
+        await index_1.db.tx(async (client) => {
+            await client.query('UPDATE tournaments SET status = $1 WHERE id = $2', ['in_progress', tournament.id]);
+            await generateBracketTx(client, tournament.id);
+            await advanceAllRoundsTx(client, tournament.id);
+        });
+        res.json({ success: true, started: true });
+        return;
+    }
+    res.json({ success: true });
+});
+// Создание самоорганизованного турнира
+router.post('/tournament/create-custom', async (req, res) => {
+    const userId = req.userId;
+    const prizePool = parseInt(req.body.prizePool) || 0;
+    const entryFee = parseInt(req.body.entryFee) || 0;
+    const registrationMinutes = parseInt(req.body.registrationMinutes) || 30;
+    const maxPlayers = parseInt(req.body.maxPlayers) || 8;
+    const minLevel = parseInt(req.body.minLevel) || 1;
+    const maxLevel = parseInt(req.body.maxLevel) || 999;
+    const name = (req.body.name || '').trim() || 'Турнир';
+    if (prizePool < 0)
+        return res.status(400).json({ error: 'Призовой фонд не может быть отрицательным' });
+    if (entryFee < 0)
+        return res.status(400).json({ error: 'Вступительный взнос не может быть отрицательным' });
+    const regMins = Math.max(5, Math.min(120, registrationMinutes));
+    const players = Math.max(2, Math.min(16, maxPlayers));
+    const minLvl = Math.max(1, minLevel);
+    const maxLvl = Math.min(999, maxLevel);
+    if (minLvl > maxLvl)
+        return res.status(400).json({ error: 'Минимальный уровень больше максимального' });
+    const user = await index_1.db.one('SELECT level, money FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    const now = Math.floor(Date.now() / 1000);
+    const regEnd = now + regMins * 60;
+    if (prizePool > 0) {
+        if (user.money < prizePool)
+            return res.status(400).json({ error: 'Недостаточно серебра для призового фонда' });
+        await index_1.db.run('UPDATE users SET money = money - ? WHERE id = ?', [prizePool, userId]);
+    }
+    // Создатель тоже платит входной взнос (если есть)
+    if (entryFee > 0) {
+        if (user.money < entryFee)
+            return res.status(400).json({ error: 'Недостаточно серебра для входного взноса' });
+        await index_1.db.run('UPDATE users SET money = money - ? WHERE id = ?', [entryFee, userId]);
+    }
+    let result;
+    try {
+        result = await index_1.db.run('INSERT INTO tournaments (division, status, registrationStart, registrationEnd, prizePool, createdAt, type, creatorId, entryFee, name, minLevel, maxLevel, basePool, maxPlayers) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', ['custom', 'registration', now, regEnd, prizePool + entryFee, new Date().toISOString(), 'custom', userId, entryFee, name, minLvl, maxLvl, prizePool, players]);
+    }
+    catch (e) {
+        return res.status(500).json({ error: 'Ошибка создания турнира: ' + e.message });
+    }
+    // Авто-регистрация создателя
+    await index_1.db.run('INSERT INTO tournament_participants (tournamentId, userId, goldenTicket) VALUES (?, ?, ?)', [result.lastInsertRowid, userId, 0]);
+    await index_1.db.run('UPDATE users SET tournamentCount = tournamentCount + 1 WHERE id = ?', [userId]);
+    (0, events_1.broadcast)('tournamentCreated', { tournamentId: result.lastInsertRowid, name });
+    res.json({ success: true, tournamentId: result.lastInsertRowid });
+});
+exports.default = router;
+//# sourceMappingURL=tournament.js.map

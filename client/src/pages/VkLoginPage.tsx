@@ -41,6 +41,7 @@ export default function VkLoginPage() {
                     vkAppId: params.get('vk_app_id'),
                     launchParams: window.location.search.substring(1),
                     vkUserInfo,  // доп. данные из VK Bridge
+                    linkToken: localStorage.getItem('token') || undefined,  // привязка существующего аккаунта
                 }),
             });
 

@@ -126,7 +126,7 @@ export default function MassacrePage() {
             if (!res.ok) { setError(data.error); setLoading(false); return; }
             setJoined(true);
             if (character) {
-                setCharacter({ ...character, money: character.money - 100 });
+                setCharacter({ ...character, money: character.money - (state?.event?.entry_fee || 10) });
             }
             fetchState();
         } catch { setError('Ошибка сети'); }
@@ -234,13 +234,12 @@ export default function MassacrePage() {
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
-          {actionCard && <PageHeader title="Резня" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
+          {actionCard && <PageHeader title="Кровавая лотерея" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-4">
-                Хаотичный массовый PvP-бой без правил. Вход — {formatMoney(100)}. Сбор участников длится 30 минут,
-                затем все сражаются, атакуя случайного противника.
-                Победитель получает +10 опыта и весь призовой фонд. Выживает сильнейший!
-            </p>
+                Хаотичный кулачный бой без экипировки и усилений. Только сила и удача.
+                Не важно, откуда ты и во что одет — здесь решает случай. Победитель один!
+ </p>
 
             {/* Сбор участников */}
             {isGathering && (
@@ -254,25 +253,28 @@ export default function MassacrePage() {
                     <p className="text-sm mb-4">
                         Участников: <span className="font-bold text-[var(--color-accent-warning)]">{state!.event!.participant_count}</span>
                     </p>
+                    <p className="text-lg font-bold text-[var(--color-text-accent)] mb-4">
+                        🏆 Призовой фонд: {formatMoney((state as any).prizePool || 0)}
+                    </p>
 
                     {!joined ? (
                         <Button
                             variant="danger"
                             size="md"
                             onClick={handleJoin}
-                            disabled={loading || character.money < 100}
+                            disabled={loading || character.money < (state?.event?.entry_fee || 10)}
                             className="w-full sm:w-auto"
                         >
-                            {loading ? 'Вступление...' : `Вступить (${formatMoney(100)})`}
+                            {loading ? 'Вступление...' : `Вступить (${formatMoney(state?.event?.entry_fee || 10)})`}
                         </Button>
                     ) : (
                         <p className="text-[var(--color-accent-success)] text-sm font-bold">
                             <Icon icon="game-icons:checked-shield" width="14" height="14" className="inline mr-1" />
-                            Вы в резне! Ожидайте начала боя...
+                            Вы в лотерее! Ожидайте начала боя..."
                         </p>
                     )}
 
-                    {character.money < 100 && !joined && (
+                    {character.money < (state?.event?.entry_fee || 10) && !joined && (
                         <p className="text-[var(--color-accent-danger)] text-xs mt-2">Недостаточно серебра</p>
                     )}
                 </Card>
@@ -413,13 +415,19 @@ export default function MassacrePage() {
                         {turns.map((t, i) => {
                             const act = actionLabels[t.action_type] || { icon: '❓', color: '#aaa', label: t.action_type };
                             const isMy = t.isMyTurn;
+                            const evenTurn = t.turn_number % 2 === 0;
+                            const isDeath = t.action_type === 'death';
                             return (
                                 <div
                                     key={i}
                                     className={`px-2 py-1 rounded border ${
-                                        isMy
-                                            ? 'bg-[#3d2e00] border-[#5a4200]'
-                                            : 'border-transparent'
+                                        isDeath
+                                            ? 'bg-red-700 border-red-600 text-white font-bold'
+                                            : isMy
+                                                ? 'bg-[#3d2e00] border-[#5a4200]'
+                                                : evenTurn
+                                                    ? 'bg-[var(--color-bg-input)] border-transparent'
+                                                    : 'border-transparent'
                                     }`}
                                 >
                                     <span className="text-[0.6rem] text-[var(--color-text-muted)] mr-1">

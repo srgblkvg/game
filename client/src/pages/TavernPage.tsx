@@ -1,5 +1,5 @@
 import PageHeader from '../components/ui/PageHeader';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import BackButton from '../components/BackButton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
@@ -41,6 +41,7 @@ export default function TavernPage() {
     });
     const [quests, setQuests] = useState<any>(null);
     const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+    const claimingRef = useRef(false);
 
     useEffect(() => { if (!user) navigate('/login'); else { load(); loadQuests(); } }, [user]);
 
@@ -68,7 +69,9 @@ export default function TavernPage() {
         try { await api('/tavern/quests/take',{questId}); setMessage('Квест взят!'); setError(''); loadQuests(); } catch(e:any){setError(e.message)}
     };
     const handleClaimQuest = async (questId: number) => {
-        try { const d = await api('/tavern/quests/claim',{questId}); setMessage(`Награда: +${d.rewardXp} XP, +${formatMoney(d.rewardMoney)}`); setError(''); showAcquire({name:'Квест выполнен!',rarity_id:3},1,`+${d.rewardXp} XP, ${formatMoney(d.rewardMoney)}`); loadQuests(); load(); } catch(e:any){setError(e.message)}
+        if (claimingRef.current) return;
+        claimingRef.current = true;
+        try { const d = await api('/tavern/quests/claim',{questId}); setMessage(`Награда: +${d.rewardXp} XP, +${formatMoney(d.rewardMoney)}`); setError(''); showAcquire({name:'Квест выполнен!',rarity_id:3},1,`+${d.rewardXp} XP, ${formatMoney(d.rewardMoney)}`); loadQuests(); load(); } catch(e:any){setError(e.message)} finally { claimingRef.current = false; }
     };
 
     const [adLoading, setAdLoading] = useState(false);
@@ -105,15 +108,33 @@ export default function TavernPage() {
     const missingHp = Math.max(0, (character?.stats?.hp || tavern.maxHp) - tavern.currentHp);
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Трактир" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
+            {(tavern.room || tavern.drink) && (
+                <div className="flex flex-wrap gap-2 mb-3 text-xs">
+                    {tavern.room && (() => {
+                        const r = tavern.rooms.find((x: any) => x.key === tavern.room.type);
+                        const left = Math.max(0, tavern.room.until - now);
+                        return <span className="px-2 py-1 rounded bg-[var(--color-accent-info)]/10 border border-[var(--color-accent-info)]/30 text-[var(--color-accent-info)]">
+                            🏠 {r?.name || tavern.room.type} — {formatTime(left)}
+                        </span>;
+                    })()}
+                    {tavern.drink && (() => {
+                        const d = tavern.drinks.find((x: any) => x.key === tavern.drink.type);
+                        const left = Math.max(0, tavern.drink.until - now);
+                        return <span className="px-2 py-1 rounded bg-[var(--color-accent-warning)]/10 border border-[var(--color-accent-warning)]/30 text-[var(--color-accent-warning)]">
+                            🍺 {d?.name || tavern.drink.type} — {formatTime(left)}
+                        </span>;
+                    })()}
+                </div>
+            )}
             <div className="flex gap-2 mb-4">{(['heal','room','drink','quests'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>setTab(t)}>{t==='heal'?'Лечение':t==='room'?'Комнаты':t==='drink'?'Напитки':'Задания'}</Button>)}</div>
             {message && <p className="mb-4 text-sm text-[var(--color-accent-success)]">{message}</p>}
             {error && <p className="mb-4 text-sm text-[var(--color-accent-danger)]">{error}</p>}
 
-            {tab==='heal' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Восстановите здоровье за монеты. Быстрое лечение — половина недостающего HP, полное — всё сразу.</p><Card><h3 className="font-bold mb-2">Мгновенное лечение</h3><p className="text-xs text-[var(--color-text-muted)] mb-3">Недостаёт HP: {missingHp} (2 монеты за HP)</p><div className="flex gap-3 flex-wrap"><Button variant="danger" fullWidth onClick={()=>handleHeal(false)} disabled={missingHp<=0}>50% — {formatMoney(Math.ceil(missingHp*0.5)*2)}</Button><Button variant="danger" fullWidth onClick={()=>handleHeal(true)} disabled={missingHp<=0}>Всё — {formatMoney(missingHp*2)}</Button></div>{(document.documentElement.classList.contains('vk-iframe')) && <div className="mt-3 pt-3 border-t border-[var(--color-border-light)]">{(() => { const onCd = adCooldown > 0; const btnDisabled = missingHp <= 0 || adLoading || onCd; const cdMin = Math.floor(adCooldown / 60); const cdSec = adCooldown % 60; const cdText = onCd ? `⏳ ${cdMin}:${String(cdSec).padStart(2, '0')}` : adLoading ? '⏳ Загрузка...' : '▶️ За рекламу — бесплатно'; return <><Button variant="primary" fullWidth onClick={handleAdHeal} disabled={btnDisabled}>{cdText}</Button><p className="text-[0.6rem] text-[var(--color-text-muted)] mt-1">{onCd ? 'Подождите до следующего бесплатного лечения' : 'Полное восстановление HP за просмотр рекламы. Доступно раз в 30 минут.'}</p></> })()}</div>}</Card></>}
-            {tab==='room' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Арендуйте комнату для ускоренной регенерации HP. Во время аренды здоровье восстанавливается быстрее. Можно продлить, арендовав ту же комнату повторно.</p><div className="space-y-3">{tavern.rooms.map((room:any)=><Card key={room.key}><h3 className="font-bold">{room.name}</h3><p className="text-xs text-[var(--color-text-muted)] mb-2">Регенерация: ×{room.rate}</p><div className="flex gap-2"><Button variant="primary" size="md" onClick={()=>handleRent(room.key,1)}>1 ч — {formatMoney(room.cost1h)}</Button><Button variant="secondary" size="md" onClick={()=>handleRent(room.key,8)}>8 ч — {formatMoney(room.cost8h)}</Button></div></Card>)}</div></>}
+            {tab==='heal' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Восстановите здоровье за монеты. Быстрое лечение — половина недостающего HP, полное — всё сразу.</p><Card><h3 className="font-bold mb-2">Мгновенное лечение</h3><p className="text-xs text-[var(--color-text-muted)] mb-3">Недостаёт HP: {missingHp} (2 монеты за HP)</p><div className="flex gap-3 flex-wrap"><Button variant="danger" fullWidth onClick={()=>handleHeal(false)} disabled={missingHp<=0}>50% — {formatMoney(Math.ceil(missingHp*0.5)*2)}</Button><Button variant="danger" fullWidth onClick={()=>handleHeal(true)} disabled={missingHp<=0}>Всё — {formatMoney(missingHp*2)}</Button></div>{(document.documentElement.classList.contains('vk-iframe')) && <div className="mt-3 pt-3 border-t border-[var(--color-border-light)]">{(() => { const onCd = adCooldown > 0; const btnDisabled = missingHp <= 0 || adLoading || onCd; const cdMin = Math.floor(adCooldown / 60); const cdSec = adCooldown % 60; const cdText = onCd ? `⏳ ${cdMin}:${String(cdSec).padStart(2, '0')}` : adLoading ? '⏳ Загрузка...' : '▶️ За рекламу — бесплатно'; return <><Button variant="primary" fullWidth onClick={handleAdHeal} disabled={btnDisabled}>{cdText}</Button><p className="text-[0.6rem] text-[var(--color-text-muted)] mt-1">{onCd ? 'Подождите до следующего бесплатного лечения' : 'Полное восстановление HP за просмотр рекламы. Доступно раз в 5 минут.'}</p></> })()}</div>}</Card></>}
+            {tab==='room' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Арендуйте комнату для ускоренной регенерации HP. Во время аренды здоровье восстанавливается быстрее. Можно продлить, арендовав ту же комнату повторно.</p><div className="space-y-3">{tavern.rooms.map((room:any)=><Card key={room.key}><h3 className="font-bold">{room.name}</h3><p className="text-xs text-[var(--color-text-muted)] mb-2">Регенерация: x{room.rate}</p><div className="flex gap-2"><Button variant="primary" size="md" onClick={()=>handleRent(room.key,1)}>1 ч — {formatMoney(room.cost1h)}</Button><Button variant="secondary" size="md" onClick={()=>handleRent(room.key,8)}>8 ч — {formatMoney(room.cost8h)}</Button></div></Card>)}</div></>}
             {tab==='drink' && <><p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Напитки временно увеличивают характеристики на 1 час. Повторное употребление того же напитка продлевает действие. При употреблении другого напитка эффект заменяется.</p>{(() => { const cats: Record<string, any[]> = {}; for (const d of tavern.drinks) { const c = d.category || 'Прочее'; if (!cats[c]) cats[c] = []; cats[c].push(d); } return Object.entries(cats).sort(([a], [b]) => a === 'Универсальные' ? -1 : b === 'Универсальные' ? 1 : a.localeCompare(b)).map(([cat, items]) => { const expanded = expandedCats[cat]; return <div key={cat} className="mb-4"><h3 className="text-sm font-bold mb-2 text-[var(--color-accent-info)] cursor-pointer select-none flex items-center gap-1" onClick={() => setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }))}><span className="text-xs">{expanded ? '▼' : '▶'}</span>{cat}</h3>{expanded && <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{items.map((drink:any)=><Card key={drink.key} className="flex flex-col"><div className="w-full h-20 bg-[var(--color-bg-input)] rounded mb-2 flex items-center justify-center text-2xl"><Icon icon="game-icons:potion-ball" width="32" height="32"/></div><h3 className="font-bold text-xs mb-1">{drink.name}</h3><div className="text-[0.65rem] text-[var(--color-text-muted)] mb-2 flex-1">{Object.entries(drink.bonuses as Record<string,number>).map(([k,v])=><span key={k} className="block">{statNames[k]||k}: +{v}</span>)}<span className="block">1 час</span></div><Button variant="danger" size="md" fullWidth onClick={()=>handleDrink(drink.key)}>{formatMoney(drink.cost)}</Button></Card>)}</div>}</div>; }) })()}</>}
 
             {tab==='quests' && quests && <>

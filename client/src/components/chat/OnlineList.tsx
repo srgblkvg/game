@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { Icon } from '@iconify/react';
 import type { OnlineUser } from './types';
 
 interface OnlineListProps {
@@ -94,6 +95,9 @@ export default function OnlineList({ users, currentUserId, privateChatWith, guil
                                             : 'cursor-pointer text-[var(--color-text-primary)] font-normal'
                             }`}
                         >
+                            {u.faction === 'bandit' && <Icon icon="game-icons:hood" width="10" height="10" className="inline-block text-red-300 mr-0.5" />}
+                            {u.faction === 'crafter' && <Icon icon="game-icons:anvil" width="10" height="10" className="inline-block text-blue-300 mr-0.5" />}
+                            {u.faction === 'guard' && <Icon icon="game-icons:shield" width="10" height="10" className="inline-block text-yellow-300 mr-0.5" />}
                             {truncate(u.username)}
                             {isMe && ' (Вы)'}
                             {' '}[<span className="text-[var(--color-text-primary)]">{u.level}</span>]

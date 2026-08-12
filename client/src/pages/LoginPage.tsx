@@ -79,7 +79,7 @@ export default function LoginPage() {
                         </a>
                     </div>
                     <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-2">
-                        За привязку аккаунта — <span className="text-[var(--color-accent-gold)]">3 дня премиума</span>
+                        За привязку аккаунта — <span className="text-[var(--color-accent-gold)]">1 день премиума</span>
                     </p>
 
                     <div className="flex items-center gap-2 my-4">

@@ -9,6 +9,12 @@ import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
 import { fmtSafeDate } from '../utils/date';
 
+const FACTION_INFO: Record<string, { icon: string; color: string; bgColor: string; name: string; bonus: string }> = {
+    bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'bg-[#2a1515] border-[#5a2828]', name: 'Бандит', bonus: '+10% к основным характеристикам против Ремесленников. Атаки ±4 уровня. +1% дополнительного награбленного серебра за каждые 100 побед в PvP. Кулдаун между атаками в PvP уменьшен в два раза.' },
+    crafter: { icon: 'game-icons:anvil', color: 'text-blue-600', bgColor: 'bg-[#15152a] border-[#28285a]', name: 'Ремесленник', bonus: '+10% шанс создания/улучшения +1% за 100 успешных созданных и улучшенных предметов. +100% награда за работы.' },
+    guard: { icon: 'game-icons:shield', color: 'text-yellow-300', bgColor: 'bg-[#2a2a15] border-[#5a5a28]', name: 'Стражник', bonus: '+10% к основным характеристикам против Бандитов и в PvE. Карма: +1 за победу над бандитом или монстром, -1 за победу над мирным игроком. +1% к жалованию за очко кармы.' },
+};
+
 const links = [
     { path: '/tournament', icon: 'game-icons:trophy-cup', title: 'Турниры', desc: 'Участвуйте в турнирах и выигрывайте призы' },
     { path: '/rating', icon: 'game-icons:rank-3', title: 'Рейтинг игроков', desc: 'Таблица лидеров PvP-арены' },
@@ -16,19 +22,23 @@ const links = [
 ];
 
 export default function CastlePage() {
+  const navigate = useNavigate();
   const [actionCard, setActionCard] = useState<any>(null);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/castle'); if (c) setActionCard(c); }).catch(() => {}); }, []);
-    const navigate = useNavigate();
     const [treasury, setTreasury] = useState<number | null>(null);
     const [latestThreads, setLatestThreads] = useState<any[]>([]);
+    const [activeWars, setActiveWars] = useState<any[]>([]);
+    const [factionData, setFactionData] = useState<any>(null);
 
     useEffect(() => {
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
         fetch('/api/forum/latest').then(r => r.json()).then(d => setLatestThreads(Array.isArray(d) ? d : [])).catch(() => {});
+        fetch('/api/guild/war/active', { headers: getHeaders() }).then(r => r.json()).then(d => setActiveWars(d.wars || [])).catch(() => {});
+        fetch('/api/faction', { headers: getHeaders() }).then(r => r.json()).then(d => setFactionData(d)).catch(() => {});
     }, []);
 
     return (
-        <div className="px-4 py-4 max-w-md mx-auto">
+        <div className="px-4 py-4 max-w-3xl mx-auto">
             <BackButton />
           {actionCard && <PageHeader title="Замок" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
@@ -46,6 +56,79 @@ export default function CastlePage() {
                 </div>
             )}
 
+            {/* Фракция */}
+            <div className="mb-4">
+                <h2 className="text-sm font-bold mb-2 flex items-center gap-1">
+                    <Icon icon="game-icons:swords-emblem" width="16" height="16" />
+                    Фракция
+                </h2>
+                {/* Диаграмма участников */}
+                {factionData?.memberCounts && (() => {
+                    const counts = factionData.memberCounts;
+                    const total = (counts.bandit || 0) + (counts.crafter || 0) + (counts.guard || 0);
+                    if (total === 0) return null;
+                    const colors: Record<string, string> = { bandit: '#991b1b', crafter: '#60a5fa', guard: '#a16207' };
+                    return (
+                        <div className="mb-3 p-2 bg-[var(--color-bg-card)] rounded-lg border border-[var(--color-border-light)]">
+                            <div className="flex h-3 rounded-full overflow-hidden mb-1">
+                                {(['bandit', 'crafter', 'guard'] as const).map(f => (
+                                    <div key={f} style={{ width: `${(counts[f] || 0) / total * 100}%`, background: colors[f], minWidth: counts[f] > 0 ? '2px' : '0' }} />
+                                ))}
+                            </div>
+                            <div className="flex justify-between text-[0.55rem] text-[var(--color-text-muted)]">
+                                <span style={{ color: '#f87171' }}>Бандиты: {counts.bandit || 0}</span>
+                                <span style={{ color: colors.crafter }}>Ремесленники: {counts.crafter || 0}</span>
+                                <span style={{ color: colors.guard }}>Стражники: {counts.guard || 0}</span>
+                            </div>
+                        </div>
+                    );
+                })()}
+                {factionData?.current ? (
+                    <Card
+                        className={`flex items-center gap-3 p-3 cursor-pointer border ${FACTION_INFO[factionData.current]?.bgColor || ''}`}
+                        onClick={() => navigate('/faction')}
+                    >
+                        <Icon icon={FACTION_INFO[factionData.current]?.icon || 'game-icons:swords-emblem'} width="28" height="28" className={FACTION_INFO[factionData.current]?.color || ''} />
+                        <div className="flex-1 min-w-0">
+                            <h3 className={`font-bold text-sm ${FACTION_INFO[factionData.current]?.color || ''}`}>
+                                {FACTION_INFO[factionData.current]?.name || factionData.current}
+                            </h3>
+                            <p className="text-[0.65rem] text-[var(--color-text-muted)]">
+                                {FACTION_INFO[factionData.current]?.bonus || ''}
+                            </p>
+                        </div>
+                        <Icon icon="game-icons:arrow-right" width="16" height="16" className="text-[var(--color-text-muted)] shrink-0" />
+                    </Card>
+                ) : factionData?.canChoose ? (
+                    <Card
+                        className="flex items-center gap-3 p-3 cursor-pointer border border-[var(--color-accent-gold)] bg-[var(--color-bg-card)] hover:border-[var(--color-accent-info)] transition-colors"
+                        onClick={() => navigate('/faction')}
+                    >
+                        <Icon icon="game-icons:swords-emblem" width="28" height="28" className="text-[var(--color-accent-gold)]" />
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-sm text-[var(--color-accent-gold)]">Выберите фракцию</h3>
+                            <p className="text-[0.65rem] text-[var(--color-text-muted)]">
+                                Бандиты, Ремесленники или Стражники — у каждой свои бонусы
+                            </p>
+                        </div>
+                        <Icon icon="game-icons:arrow-right" width="16" height="16" className="text-[var(--color-text-muted)] shrink-0" />
+                    </Card>
+                ) : (
+                    <Card className="p-3 border border-[var(--color-border-light)] bg-[var(--color-bg-card)]">
+                        <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">Фракции доступны с 5 уровня. Бонусы фракций:</p>
+                        {(['bandit', 'crafter', 'guard'] as const).map(f => (
+                            <div key={f} className={`flex items-start gap-2 py-1.5 border-b border-[var(--color-border-light)] last:border-0 ${FACTION_INFO[f]?.bgColor || ''}`}>
+                                <Icon icon={FACTION_INFO[f]?.icon || ''} width="16" height="16" className={`${FACTION_INFO[f]?.color || ''} mt-0.5 shrink-0`} />
+                                <div>
+                                    <span className={`font-bold text-xs ${FACTION_INFO[f]?.color || ''}`}>{FACTION_INFO[f]?.name}</span>
+                                    <p className="text-[0.55rem] text-[var(--color-text-muted)]">{FACTION_INFO[f]?.bonus}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </Card>
+                )}
+            </div>
+
             <div className="space-y-3 mb-4">
                 {links.map(link => (
                     <Card
@@ -62,6 +145,41 @@ export default function CastlePage() {
                     </Card>
                 ))}
             </div>
+
+            {/* Конфликты */}
+            {activeWars.length > 0 && (
+                <div className="mb-4">
+                    <div className="flex items-center justify-between mb-1">
+                        <h2 className="text-sm font-bold flex items-center gap-1 cursor-pointer hover:text-[var(--color-accent-info)]"
+                            onClick={() => navigate('/conflicts')}>
+                            <Icon icon="game-icons:crossed-swords" width="16" height="16" />Конфликты ({activeWars.length})
+                        </h2>
+                        <Button variant="secondary" size="md" onClick={() => navigate('/conflicts')}>Все</Button>
+                    </div>
+                    <div className="space-y-2">
+                        {activeWars.slice(0, 3).map((war: any) => {
+                            const expiresIn = Math.max(0, new Date(war.expiresAt).getTime() - Date.now());
+                            const hoursLeft = Math.floor(expiresIn / (1000 * 60 * 60));
+                            return (
+                                <Card key={war.id} className="p-2 cursor-pointer hover:border-[var(--color-accent-info)] transition-colors"
+                                    onClick={() => navigate('/conflicts')}>
+                                    <div className="flex items-center gap-1 text-xs">
+                                        <span className="font-bold truncate">{war.attackerGuild.name}</span>
+                                        <span className="text-[var(--color-accent-danger)] text-[0.65rem]">VS</span>
+                                        <span className="font-bold truncate">{war.defenderGuild.name}</span>
+                                        <span className="ml-auto text-[0.65rem] font-bold">
+                                            {war.attackerScore}:{war.defenderScore}
+                                        </span>
+                                    </div>
+                                    <div className="text-[0.6rem] text-[var(--color-text-muted)] text-right">
+                                        {expiresIn > 0 ? `${hoursLeft}ч` : '...'}
+                                    </div>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Форум */}
             <div className="mb-4">

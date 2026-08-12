@@ -25,7 +25,7 @@ export default function BestiaryPage() {
   const [actionCard, setActionCard] = useState<any>(null);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/bestiary'); if (c) setActionCard(c); }).catch(() => {}); }, []);
   const { user } = useAuth();
-  const { character, setCharacter } = useGame();
+  const { character, setCharacter, regenHp } = useGame();
   const serverTime = useServerTime();
   const navigate = useNavigate();
   const { showAcquire } = useAcquire();
@@ -55,6 +55,7 @@ export default function BestiaryPage() {
   const timerRef = useRef<number | null>(null);
   const cooldownTimerRef = useRef<number | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const playerMaxHpRef = useRef(0);
   const stepLock = useRef(false);
   const stepsRef = useRef<any[]>([]);
   const currentStepRef = useRef(-1);
@@ -245,7 +246,7 @@ export default function BestiaryPage() {
       }, 800);
       showEffectText(crSide, 'КРИТ!', '#e74c3c');
     } else if (step.type === 'stun') {
-      const sSide = step.actor === 'attacker' ? 'right' : 'left';
+      const sSide = step.actor === 'attacker' ? 'left' : 'right';
       const frame = sSide === 'left' ? leftFrame : rightFrame;
       frame?.classList.add('stunned');
       setTimeout(() => frame?.classList.remove('stunned'), 800);
@@ -268,7 +269,8 @@ export default function BestiaryPage() {
       pendingDropsRef.current = [];
     }
     window.dispatchEvent(new CustomEvent('battleEnd'));
-    (window as any).__battling = false;
+    // Снимаем флаг после обработки setCharacter (через microtask)
+    setTimeout(() => { (window as any).__battling = false; }, 0);
   }, [setCharacter, showAcquire]);
 
   const nextStep = useCallback(async () => {
@@ -295,14 +297,22 @@ export default function BestiaryPage() {
       executeStep(step, playerActor ? 'right' : 'left');
     }
 
-    // Apply damage
+    // Apply damage (player = attacker in PvE)
     if (step.type === 'damage' && step.damage) {
-      if (step.target === 'player') {
+      if (step.target === 'attacker') {
         setPlayerHp(prev => Math.max(0, prev - step.damage));
         showDamageNumber('left', step.damage);
       } else {
         setMobHp(prev => Math.max(0, prev - step.damage));
         showDamageNumber('right', step.damage);
+      }
+    }
+
+    // Вампиризм / отхил (всегда игроку в PvE)
+    if (step.type === 'info' && step.message?.includes('Вампиризм')) {
+      const match = step.message.match(/\+(\d+) HP/);
+      if (match) {
+        setPlayerHp(prev => Math.min(playerMaxHpRef.current, prev + parseInt(match[1])));
       }
     }
 
@@ -338,10 +348,11 @@ export default function BestiaryPage() {
     // Start battle immediately
     if (!character || cooldownRemaining > 0) return;
     setPhase('battle');
-    const startHp = character.currentHp;
-    const pStats = character.stats || { hp: character.currentHp || 100 };
+    const startHp = regenHp;
+    const pStats = character.stats || { hp: regenHp || 100 };
     initialHpRef.current = { player: startHp, mob: mob.hp };
     setPlayerMaxHp(pStats.hp);
+    playerMaxHpRef.current = pStats.hp;
     setPlayerHp(startHp);
     setLoading(true);
     window.dispatchEvent(new CustomEvent('battleStart')); // ДО запроса — блокируем WS balance
@@ -352,15 +363,8 @@ export default function BestiaryPage() {
       setBattleResult(result);
       // Дропы с задержкой
       const drops: any[] = [];
-      if (result.materialDropped) drops.push(result.materialDropped);
+      if (result.materialDropped?.length) drops.push(...result.materialDropped);
       if (result.itemsDropped?.length) drops.push(...result.itemsDropped);
-      // Камень улучшения мог выпасть вместе с материалом (тогда он только в steps)
-      const hasStoneInSteps = result.steps?.some((s: any) => s.message?.includes('Камень улучшения'));
-      const hasStoneInMaterial = result.materialDropped?.itemType === 'upgrade';
-      if (hasStoneInSteps && !hasStoneInMaterial) {
-        drops.push({ name: 'Камень улучшения (Хлам)', rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888', count: 1, type: 'craft_item', itemType: 'upgrade' });
-      }
-      // Дропы будут показаны после завершения анимации
       pendingDropsRef.current = drops;
       const fresh = await fetchCharacter();
       // Не обновляем character сразу — откладываем до конца анимации
@@ -389,8 +393,7 @@ export default function BestiaryPage() {
       setPlayerHp(Math.max(0, battleResult.hpAfter ?? 0));
       setMobHp(Math.max(0, battleResult.mobHpAfter ?? 0));
     }
-    // Применяем отложенное обновление персонажа и дропы
-    applyPending();
+    // applyPending вызывается через useEffect на currentStep
   };
 
   const backToFloors = () => {
@@ -419,7 +422,7 @@ export default function BestiaryPage() {
 
   return (
     <>
-    <div className="px-4 py-4 max-w-4xl mx-auto">
+    <div className="px-4 py-4 max-w-3xl mx-auto">
     <BackButton />
     {actionCard && <PageHeader title="Охота" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
@@ -434,11 +437,11 @@ export default function BestiaryPage() {
             </div>
           )}
           {error && <p className="text-[var(--color-accent-danger)] mb-4">{error}</p>}
-          <div className="space-y-4">
-            {(diffGroups || []).map(diff => {
+          <div className="space-y-4" data-tutorial="bestiary-attack">
+            {(diffGroups || []).map((diff, idx) => {
               const groupFloors = floors.filter(f => floorsData.some(fd => fd.name === f && (fd.difficulty||0) === diff.difficulty));
-              if (groupFloors.length === 0) return null;
-              return <FloorGroup key={diff.label} diff={diff} floors={groupFloors} getFloorInfo={getFloorInfo} floorBgMap={floorBgMap} cooldownRemaining={cooldownRemaining} selectFloor={selectFloor} />;
+              if (groupFloors.length === 0 && user?.username !== 'TODD') return null;
+              return <FloorGroup key={diff.label} diff={diff} floors={groupFloors} getFloorInfo={getFloorInfo} floorBgMap={floorBgMap} cooldownRemaining={cooldownRemaining} selectFloor={selectFloor} defaultOpen={idx === 0 && (character as any)?.tutorialStep < 2} />;
             })}
           </div>
         </>
@@ -529,7 +532,7 @@ export default function BestiaryPage() {
           {/* Battle log */}
           {battleActive && (
             <div ref={logRef} className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed mb-4">
-              {renderBattleLog(visibleSteps)}
+              {renderBattleLog(visibleSteps, false, true)}
             </div>
           )}
 
@@ -546,16 +549,16 @@ export default function BestiaryPage() {
                   {battleResult.xpGained > 0 && <p>Опыт: +{battleResult.xpGained}</p>}
                   {battleResult.goldGained > 0 && <p>Награда: +{formatMoney(battleResult.goldGained)}{battleResult.premiumBonus > 0 ? <span className="text-[var(--color-text-accent)]"> (+{battleResult.premiumBonus} премиум)</span> : null}</p>}
                   {battleResult.levelsGained > 0 && <p className="text-[var(--color-accent-purple)]">Уровень +{battleResult.levelsGained}</p>}
-                  {battleResult.materialDropped && (
-                    <p className={rarityTextColors[battleResult.materialDropped.rarity_id] || 'text-[#aaa]'}>Добыто: {battleResult.materialDropped.name}</p>
-                  )}
+                  {battleResult.materialDropped?.map((m: any, i: number) => (
+                    <p key={i} className={rarityTextColors[m.rarity_id] || 'text-[#aaa]'}>Добыто: {m.name}</p>
+                  ))}
                 </div>
               )}
               {!battleResult.playerWon && battleResult.goldLost > 0 && (
                 <p className="text-[var(--color-accent-danger)] text-sm mb-3">Потеряно: {formatMoney(battleResult.goldLost)}</p>
               )}
               <div className="flex justify-center gap-3">
-                <Button variant="danger" size="md" onClick={() => { stopAuto(); navigate('/'); }}>
+                <Button variant="danger" size="md" onClick={() => { stopAuto(); navigate('/'); }} data-tutorial="bestiary-back">
                   На главную
                 </Button>
               </div>
@@ -576,11 +579,11 @@ export default function BestiaryPage() {
   );
 }
 
-function FloorGroup({ diff, floors, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor }: any) {
+function FloorGroup({ diff, floors, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor, defaultOpen }: any) {
   const key = `floor_${diff.label}`;
   const [open, setOpen] = useState(() => {
     const saved = localStorage.getItem(key);
-    return saved !== null ? saved === '1' : false;
+    return saved !== null ? saved === '1' : (defaultOpen || false);
   });
   const toggle = () => { const v = !open; setOpen(v); localStorage.setItem(key, v ? '1' : '0'); };
   return (

@@ -77,6 +77,30 @@ export default function ArenaPage() {
 
   if (!user || !character) return null;
 
+  const equipSets = (character as any).equipment1 !== undefined ? {
+    1: (character as any).equipment1 || {},
+    2: (character as any).equipment2 || {},
+    3: (character as any).equipment3 || {},
+  } : undefined;
+  const activeSlot = (character as any).activeEquipSlot || 1;
+
+  const handleSwitchSet = async (slot: number) => {
+    if (slot === activeSlot) return;
+    try {
+      const res = await fetch('/api/character/switch-equip', {
+        method: 'POST',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slot }),
+      });
+      if (res.ok) {
+        // Перезагружаем персонажа полностью для свежих статов
+        const { fetchCharacter } = await import('../../api/character');
+        const fresh = await fetchCharacter();
+        setCharacter(fresh);
+      }
+    } catch {}
+  };
+
   const isBattleActive = battleSteps.length > 0;
 
   const visibleSteps = battleSteps.slice(
@@ -93,7 +117,7 @@ export default function ArenaPage() {
             {actionCard && <PageHeader title="Арена" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
 
       {/* Карточки бойцов */}
-      <div data-battle-arena className="flex justify-between sm:justify-center gap-2 sm:gap-8 my-4 px-1 sm:px-0">
+      <div data-battle-arena className="flex justify-between sm:justify-center items-start gap-2 sm:gap-8 my-4 px-1 sm:px-0">
         <CharacterCard
           char={toCharCardData(character, { currentHp: hpLeft, maxHp: maxHpLeft })}
           side="left"
@@ -103,8 +127,12 @@ export default function ArenaPage() {
           showHealButton={false}
           readOnly
           compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
+          equipSets={isBattleActive ? undefined : equipSets}
+          activeEquipSlot={isBattleActive ? undefined : activeSlot}
+          onSwitchSet={isBattleActive ? undefined : handleSwitchSet}
         />
         {opponent && (
+          <div className={isBattleActive ? '' : 'pt-6'}>
           <CharacterCard
             char={{
               username: opponent.name,
@@ -116,6 +144,7 @@ export default function ArenaPage() {
               guildName: opponent.guildName,
               guildId: opponent.guildId,
               avatar: opponent.avatar || null,
+              faction: opponent.faction || null,
             }}
             side="right"
             showHealth={isBattleActive}
@@ -125,6 +154,7 @@ export default function ArenaPage() {
             readOnly
             compact={isVerySmall ? 'verySmall' : isMobile ? 'mobile' : false}
           />
+          </div>
         )}
       </div>
 
@@ -185,9 +215,12 @@ export default function ArenaPage() {
       {battleSteps.length > 0 && (
         <div>
           <div ref={logContainerRef} className="bg-[var(--color-bg-primary)]/90 rounded-lg p-3 min-h-[8em] max-h-[24em] overflow-y-auto font-mono text-xs leading-relaxed">
-            {renderBattleLog(visibleSteps)}
+            {(battleResult as any)?.mercy
+              ? <div className="text-center text-[var(--color-accent-warning)] py-4">{battleSteps[1]?.message || 'Противник капитулировал'}</div>
+              : renderBattleLog(visibleSteps, false, true)
+            }
           </div>
-          {currentStep >= battleSteps.length - 1 && battleResult && (
+          {((currentStep >= battleSteps.length - 1 && battleSteps.length > 0) || (battleResult as any)?.mercy) && battleResult && (
             <div className="text-center mt-4">
               <p className="font-bold text-lg">
                 {battleResult.winnerId === user.id

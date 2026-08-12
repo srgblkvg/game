@@ -1,0 +1,86 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const index_1 = require("../db/index");
+const events_1 = require("../events");
+const router = (0, express_1.Router)();
+// Все сообщения (для админки)
+router.get('/messages', async (req, res) => {
+    const messages = await index_1.db.query(`
+    SELECT m.*, s.username as senderName, t.username as targetName
+    FROM chat_messages m
+    JOIN users s ON m.senderId = s.id
+    LEFT JOIN users t ON m.targetId = t.id
+    ORDER BY m.createdAt DESC
+    LIMIT 200
+  `, []);
+    const result = messages.map((m) => {
+        if (m.item_data) {
+            try {
+                const item = JSON.parse(m.item_data);
+                return { ...m, item, itemRarity: item.rarity };
+            }
+            catch { }
+        }
+        return m;
+    });
+    res.json(result);
+});
+// Удалить одно сообщение
+router.delete('/messages/:id', async (req, res) => {
+    const { id } = req.params;
+    await index_1.db.run('DELETE FROM chat_messages WHERE id = ?', [id]);
+    res.json({ success: true });
+});
+// Удалить все сообщения
+router.delete('/messages', async (req, res) => {
+    await index_1.db.run('DELETE FROM chat_messages', []);
+    res.json({ success: true });
+});
+// Заблокировать игрока в чате на N минут
+router.post('/ban-chat', async (req, res) => {
+    const { userId, minutes } = req.body;
+    if (!userId || !minutes)
+        return res.status(400).json({ error: 'userId и minutes обязательны' });
+    const banUntil = Math.floor(Date.now() / 1000) + minutes * 60;
+    await index_1.db.run('UPDATE users SET chatBannedUntil = ? WHERE id = ?', [banUntil, userId]);
+    res.json({ success: true, banUntil });
+});
+// Список забаненных в чате
+router.get('/banned', async (req, res) => {
+    const now = Math.floor(Date.now() / 1000);
+    const users = await index_1.db.query(`
+    SELECT id, username, chatBannedUntil
+    FROM users
+    WHERE chatBannedUntil > ?
+    ORDER BY chatBannedUntil ASC
+  `, [now]);
+    res.json(users);
+});
+// Разбанить игрока
+router.post('/unban', async (req, res) => {
+    const { userId } = req.body;
+    if (!userId)
+        return res.status(400).json({ error: 'userId required' });
+    await index_1.db.run('UPDATE users SET chatBannedUntil = 0 WHERE id = ?', [userId]);
+    res.json({ success: true });
+});
+// Системное сообщение в чат (от system id=0)
+router.post('/system-message', async (req, res) => {
+    const { content } = req.body;
+    if (!content)
+        return res.status(400).json({ error: 'content обязателен' });
+    const info = await index_1.db.run('INSERT INTO chat_messages (senderId, targetId, content) VALUES (?, ?, ?)', [0, null, content]);
+    const msg = {
+        id: info.lastInsertRowid,
+        senderId: 0,
+        senderName: 'Глашатай',
+        targetId: null,
+        content,
+        createdAt: new Date().toISOString(),
+    };
+    (0, events_1.broadcast)('message', { message: msg });
+    res.json({ success: true });
+});
+exports.default = router;
+//# sourceMappingURL=adminChat.js.map

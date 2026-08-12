@@ -1,0 +1,512 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const index_1 = require("../db/index");
+const helpers_1 = require("../db/helpers");
+const stats_1 = require("../game/stats");
+const hpRegen_1 = require("../game/hpRegen");
+const battle_1 = require("../game/battle");
+const events_1 = require("../events");
+const achievements_1 = require("./achievements");
+const vkLeaderboard_1 = require("../vkLeaderboard");
+const guild_1 = require("./guild");
+const router = (0, express_1.Router)();
+// Шансы дропа камней улучшения (независимые роллы на каждого моба)
+const STONE_DROP_CHANCES = {
+    'Рунный булыжник': 0.03,
+    'Рунный белокамень': 0.02,
+    'Руна Изумруда': 0.015,
+    'Руна Сапфира': 0.01,
+    'Руна Аметиста': 0.005,
+    'Руна Топаза': 0.0025,
+    'Руна Рубина': 0.001,
+};
+// Редкие мифические ресурсы — 5% с конкретных монстров (начиная со Смерти)
+const MYTHIC_RESOURCE_DROPS = {
+    30: 'Кровь демона', // Смерть (100)
+    47: 'Эссенция гнева', // Бес-кровопускатель (110)
+    48: 'Пыльца фей', // Одержимый рыцарь (115)
+    49: 'Кристалл душ', // Инкуб-искуситель (118)
+    50: 'Чешуя василиска', // Архидемон (122)
+    51: 'Кровь демона', // Василиск адский (125)
+    52: 'Эссенция гнева', // Лорд пламени (130)
+    53: 'Пыльца фей', // Костяной дракон (135)
+    54: 'Кристалл душ', // Падший серафим (140)
+    55: 'Кристалл душ', // Рыцарь крови (145)
+    56: 'Кристалл душ', // Палач предела (155)
+    57: 'Кристалл душ', // Кровавый лорд (165)
+    58: 'Кристалл душ', // Проклятый страж (180)
+    59: 'Кристалл душ', // Архилич проклятых (195)
+    60: 'Кристалл душ', // Король проклятых (210)
+};
+// Шансы дропа предметов по редкостям в зависимости от уровня моба
+function getItemDropTable(level) {
+    const table = [];
+    if (level <= 10) {
+        table.push({ rarity: 0, chance: 0.07 }); // Хлам 7%
+        table.push({ rarity: 1, chance: 0.02 }); // Обычный 2%
+    }
+    else if (level <= 25) {
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.05 }); // Обычный 5%
+        table.push({ rarity: 2, chance: 0.02 }); // Необычный 2%
+    }
+    else if (level <= 45) {
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.07 });
+        table.push({ rarity: 2, chance: 0.05 });
+        table.push({ rarity: 3, chance: 0.03 }); // Редкий 3%
+    }
+    else if (level <= 65) {
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.07 });
+        table.push({ rarity: 2, chance: 0.07 });
+        table.push({ rarity: 3, chance: 0.05 });
+        table.push({ rarity: 4, chance: 0.03 }); // Эпический 3%
+    }
+    else if (level <= 85) {
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.07 });
+        table.push({ rarity: 2, chance: 0.07 });
+        table.push({ rarity: 3, chance: 0.07 });
+        table.push({ rarity: 4, chance: 0.05 });
+        table.push({ rarity: 5, chance: 0.03 }); // Легендарный 3%
+    }
+    else if (level <= 100) {
+        table.push({ rarity: 0, chance: 0.07 });
+        table.push({ rarity: 1, chance: 0.07 });
+        table.push({ rarity: 2, chance: 0.07 });
+        table.push({ rarity: 3, chance: 0.07 });
+        table.push({ rarity: 4, chance: 0.05 });
+        table.push({ rarity: 5, chance: 0.05 });
+        table.push({ rarity: 6, chance: 0.03 }); // Мифический (не-сет) 3%
+    }
+    else if (level <= 140) {
+        // Уровни 101-140 (Ад I/II/III): мусор не падает, высокий шанс сетов/мификов
+        table.push({ rarity: 3, chance: 0.05 }); // Редкий 5%
+        table.push({ rarity: 4, chance: 0.08 }); // Эпический 8%
+        table.push({ rarity: 5, chance: 0.15 }); // Легендарный 15%
+        table.push({ rarity: 6, chance: 0.08 }); // Мифический 8%
+    }
+    else {
+        // Уровни 141+ (Ад IV): только сеты и мифики
+        table.push({ rarity: 4, chance: 0.05 }); // Эпический 5%
+        table.push({ rarity: 5, chance: 0.20 }); // Легендарный 20%
+        table.push({ rarity: 6, chance: 0.15 }); // Мифический 15%
+    }
+    return table;
+}
+// Получить список мобов
+router.get('/mobs', async (req, res) => {
+    const mobs = await index_1.db.query('SELECT * FROM mobs ORDER BY level, id', []);
+    // Собираем изображения и названия материалов по редкостям (первое попавшееся для каждой)
+    const craftInfo = {};
+    const allCraft = await index_1.db.query('SELECT rarity_id, image, name FROM craft_items WHERE image IS NOT NULL', []);
+    for (const c of allCraft) {
+        if (!craftInfo[c.rarity_id] && c.image) {
+            craftInfo[c.rarity_id] = { image: c.image, name: c.name };
+        }
+    }
+    // Обогащаем мобов изображениями лута
+    // Все камни улучшения (для лут-превью)
+    const allStones = await index_1.db.query("SELECT name, image FROM craft_items WHERE type = 'upgrade' ORDER BY rarity_id", []);
+    const enriched = mobs.map((m) => {
+        const lootImages = [];
+        const rarityMap = [
+            [0, 'loot_junk', 'Хлам'], [1, 'loot_common', 'Обычный'],
+            [2, 'loot_uncommon', 'Необычный'], [3, 'loot_rare', 'Редкий'],
+            [4, 'loot_epic', 'Эпический'], [5, 'loot_legendary', 'Легендарный'],
+            [6, 'loot_mythic', 'Мифический'],
+        ];
+        for (const [r, key, rarityName] of rarityMap) {
+            const chance = m[key] || 0;
+            if (chance > 0 && craftInfo[r]) {
+                lootImages.push({ rarity: r, name: craftInfo[r].name, image: craftInfo[r].image, chance });
+            }
+        }
+        // Все камни улучшения (веса → реальные шансы при 5% ролле)
+        const totalStoneWeight = Object.values(STONE_DROP_CHANCES).reduce((s, w) => s + w, 0);
+        for (const stone of allStones) {
+            const weight = STONE_DROP_CHANCES[stone.name] || 0;
+            if (weight > 0) {
+                const realChance = (weight / totalStoneWeight) * 0.05;
+                lootImages.push({ rarity: -1, name: stone.name, image: stone.image, chance: realChance });
+            }
+        }
+        const itemTable = getItemDropTable(m.level);
+        return { ...m, hp: (m.hp || 50) * 2, lootImages, itemDropTable: itemTable };
+    });
+    res.json(enriched);
+});
+// Атака моба
+router.post('/mob/attack', async (req, res) => {
+    const userId = req.userId;
+    const { mobId } = req.body;
+    if (!mobId)
+        return res.status(400).json({ error: 'Не указан ID моба' });
+    const now = Math.floor(Date.now() / 1000);
+    // Проверка кулдауна PvE (раздельный с PvP — 5 мин, премиум 2.5 мин)
+    const user = await index_1.db.one('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return res.status(404).json({ error: 'User not found' });
+    const hasPremium = (user.premiumUntil || 0) > now;
+    const pveCooldown = hasPremium ? 150 : 300; // премиум: 2.5 мин, базовый: 5 мин
+    if (user.lastPveAttackTime > 0 && (now - user.lastPveAttackTime) < pveCooldown) {
+        const remaining = pveCooldown - (now - user.lastPveAttackTime);
+        return res.status(400).json({ error: `До следующей атаки осталось ${Math.floor(remaining / 60)} мин ${remaining % 60} сек` });
+    }
+    const mob = await index_1.db.one('SELECT * FROM mobs WHERE id = ?', [mobId]);
+    if (!mob)
+        return res.status(404).json({ error: 'Моб не найден' });
+    // Бой
+    const userStats = await (0, helpers_1.buildPlayerStats)(user, 'pve');
+    // Бонус фракции Стражник: +10% против монстров
+    if (user.faction === 'guard') {
+        const mult = 1.10;
+        userStats.s = Math.round(userStats.s * mult);
+        userStats.a = Math.round(userStats.a * mult);
+        userStats.d = Math.round(userStats.d * mult);
+        userStats.m = Math.round(userStats.m * mult);
+        userStats.hp = Math.round(userStats.hp * mult);
+    }
+    const mobBase = { s: mob.atk || 10, a: mob.agi || 5, d: mob.def || 5, m: mob.mst || 5 };
+    const mobStats = (0, stats_1.currentStats)(mobBase, {});
+    // Применяем эффекты моба из JSON
+    if (mob.effects) {
+        try {
+            const fx = typeof mob.effects === 'string' ? JSON.parse(mob.effects) : mob.effects;
+            Object.assign(mobStats, fx);
+        }
+        catch { }
+    }
+    const mobHp = (mob.hp || 50) * 2;
+    // Применяем регенерацию HP перед боем
+    const regeneratedHp = await (0, hpRegen_1.applyHpRegen)({
+        id: user.id, currentHp: user.currentHp, maxHp: userStats.hp,
+        lastHpUpdate: user.lastHpUpdate || now, roomType: user.roomType, roomUntil: user.roomUntil,
+        premiumUntil: user.premiumUntil,
+    });
+    let userHp = regeneratedHp;
+    let mobCurrentHp = mobHp;
+    const steps = [];
+    const addStep = (s) => steps.push(s);
+    addStep({
+        type: 'attack', actor: 'attacker', message: `⚔ ${user.username} vs ${mob.name}`,
+        hp1: userHp, hp2: mobCurrentHp, maxHp1: userHp, maxHp2: mobHp,
+        stats1: { name: user.username, level: user.level, S: userStats.s, A: userStats.a, D: userStats.d, M: userStats.m, HP: userHp },
+        stats2: { name: mob.name, level: mob.level, S: mobBase.s, A: mobBase.a, D: mobBase.d, M: mobBase.m, HP: mobHp },
+    });
+    let playerWon = false;
+    let stunnedUser = false;
+    let stunnedMob = false;
+    // Симуляция боя (как в PvP, но без воровства денег)
+    for (let turn = 0; turn < 50 && userHp > 0 && mobCurrentHp > 0; turn++) {
+        // Ход игрока
+        if (stunnedUser) {
+            addStep({ type: 'stun', actor: 'attacker', message: `${user.username} оглушён и пропускает ход` });
+            stunnedUser = false;
+        }
+        else {
+            const ctx1 = {
+                actorName: user.username, targetName: mob.name,
+                actorStats: userStats, targetStats: mobStats,
+                actorLevel: user.level,
+                hpActor: userHp, hpTarget: mobCurrentHp,
+                maxHpActor: userStats.hp, maxHpTarget: mobHp,
+                actor: 'attacker', target: 'defender',
+            };
+            const result1 = (0, battle_1.runTurn)(ctx1, addStep);
+            userHp = result1.hpActor;
+            mobCurrentHp = result1.hpTarget;
+            stunnedMob = result1.stunnedTarget;
+        }
+        if (mobCurrentHp <= 0) {
+            playerWon = true;
+            break;
+        }
+        // Ход моба
+        if (stunnedMob) {
+            addStep({ type: 'stun', actor: 'defender', message: `${mob.name} оглушён и пропускает ход` });
+            stunnedMob = false;
+        }
+        else {
+            const ctx2 = {
+                actorName: mob.name, targetName: user.username,
+                actorStats: mobStats, targetStats: userStats,
+                actorLevel: mob.level,
+                hpActor: mobCurrentHp, hpTarget: userHp,
+                maxHpActor: mobHp, maxHpTarget: userStats.hp,
+                actor: 'defender', target: 'attacker',
+            };
+            const result2 = (0, battle_1.runTurn)(ctx2, addStep);
+            mobCurrentHp = result2.hpActor;
+            userHp = result2.hpTarget;
+            stunnedUser = result2.stunnedTarget;
+        }
+        if (userHp <= 0)
+            break;
+        if (mobCurrentHp <= 0) {
+            playerWon = true;
+            break;
+        }
+    }
+    if (playerWon) {
+        addStep({ type: 'end', message: `${user.username} победил!` });
+    }
+    else {
+        addStep({ type: 'end', message: `${mob.name} победил!` });
+    }
+    // Опыт
+    let expGained = 0;
+    if (playerWon) {
+        const levelDiff = mob.level - user.level;
+        if (levelDiff >= -2)
+            expGained = mob.xp || 1;
+        else if (levelDiff >= -5)
+            expGained = 1;
+    }
+    // Золото
+    let goldGained = 0;
+    let premiumBonus = 0;
+    if (playerWon) {
+        goldGained = Math.floor(Math.random() * (mob.gold_max - mob.gold_min + 1)) + mob.gold_min;
+        if (hasPremium) {
+            premiumBonus = Math.max(1, Math.floor(Math.random() * Math.floor(goldGained * 0.3)) + 1);
+            goldGained = goldGained + premiumBonus;
+        }
+    }
+    // Шанс дропа материала (~35%)
+    const materialsDropped = [];
+    let itemsDropped = [];
+    if (playerWon) {
+        const isTutorial = (user.tutorial_step || 0) === 0;
+        const dropRoll = Math.random();
+        // Туториал: гарантированный дроп материала для крафта
+        if (isTutorial || dropRoll < 0.35) {
+            // Определяем редкость по таблице дропа
+            const lootTable = [
+                { rarity: 0, chance: mob.loot_junk },
+                { rarity: 1, chance: mob.loot_common },
+                { rarity: 2, chance: mob.loot_uncommon },
+                { rarity: 3, chance: mob.loot_rare },
+                { rarity: 4, chance: mob.loot_epic },
+                { rarity: 5, chance: mob.loot_legendary },
+                { rarity: 6, chance: mob.loot_mythic },
+            ];
+            let rarityRoll = Math.random();
+            let selectedRarity = -1;
+            for (const lt of lootTable) {
+                if (rarityRoll < lt.chance) {
+                    selectedRarity = lt.rarity;
+                    break;
+                }
+                rarityRoll -= lt.chance;
+            }
+            if (selectedRarity >= 0) {
+                // Туториал: даём материал для крафта (исключаем камни улучшения)
+                const matQuery = isTutorial
+                    ? 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? AND c.type != \'upgrade\' ORDER BY RANDOM() LIMIT 1'
+                    : mob.level >= 100
+                        ? 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? ORDER BY RANDOM() LIMIT 1'
+                        : "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? AND c.type != 'material' ORDER BY RANDOM() LIMIT 1";
+                const craftItem = await index_1.db.one(matQuery, [selectedRarity]);
+                if (craftItem) {
+                    const matDrop = {
+                        type: 'craft_item',
+                        id: craftItem.id,
+                        name: craftItem.name,
+                        rarity_id: craftItem.rarity_id,
+                        rarity_display: craftItem.display_name,
+                        rarity_color: craftItem.color,
+                        count: 1,
+                        itemType: craftItem.type || 'craft',
+                        image: craftItem.image || null,
+                    };
+                    materialsDropped.push(matDrop);
+                    // Добавляем в инвентарь
+                    const inventory = JSON.parse(user.inventory || '[]');
+                    const existing = inventory.find((i) => i.type === 'craft_item' && i.id === craftItem.id);
+                    if (existing) {
+                        existing.count = (existing.count || 0) + 1;
+                    }
+                    else {
+                        inventory.push(matDrop);
+                    }
+                    await index_1.db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+                    user.inventory = JSON.stringify(inventory);
+                    addStep({ type: 'money', message: `Добыто: ${craftItem.display_name} материал` });
+                }
+            } // if (selectedRarity >= 0)
+        }
+        // Камни улучшения — один ролл 5%, выбор по весам
+        if (Math.random() < 0.05) {
+            // Веса для выбора типа камня
+            const stoneWeights = Object.entries(STONE_DROP_CHANCES);
+            const totalWeight = stoneWeights.reduce((s, [, w]) => s + w, 0);
+            let roll = Math.random() * totalWeight;
+            let pickedName = (stoneWeights[0]?.[0]) || '';
+            for (const [name, weight] of stoneWeights) {
+                roll -= weight;
+                if (roll <= 0) {
+                    pickedName = name;
+                    break;
+                }
+            }
+            const stone = await index_1.db.one("SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?", [pickedName]);
+            if (stone) {
+                const inventory = JSON.parse(user.inventory || '[]');
+                const stoneDrop = {
+                    type: 'craft_item',
+                    id: stone.id,
+                    name: stone.name,
+                    rarity_id: stone.rarity_id,
+                    rarity_display: stone.display_name,
+                    rarity_color: stone.color,
+                    count: 1,
+                    itemType: stone.type || 'upgrade',
+                    image: stone.image || null,
+                };
+                materialsDropped.push(stoneDrop);
+                const existing = inventory.find((i) => i.type === 'craft_item' && i.id === stone.id);
+                if (existing) {
+                    existing.count = (existing.count || 0) + 1;
+                }
+                else {
+                    inventory.push(stoneDrop);
+                }
+                await index_1.db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+                user.inventory = JSON.stringify(inventory);
+                addStep({ type: 'money', message: `Добыто: ${stone.name}` });
+            }
+        }
+        // Мифический ресурс — 1% с конкретных монстров
+        const mythicName = MYTHIC_RESOURCE_DROPS[mob.id];
+        if (mythicName && Math.random() < 0.01) {
+            const mythicItem = await index_1.db.one("SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?", [mythicName]);
+            if (mythicItem) {
+                const inventory = JSON.parse(user.inventory || '[]');
+                const mythicDrop = {
+                    type: 'craft_item',
+                    id: mythicItem.id,
+                    name: mythicItem.name,
+                    rarity_id: mythicItem.rarity_id,
+                    rarity_display: mythicItem.display_name,
+                    rarity_color: mythicItem.color,
+                    count: 1,
+                    itemType: mythicItem.type || 'craft',
+                    image: mythicItem.image || null,
+                };
+                materialsDropped.push(mythicDrop);
+                const existing = inventory.find((i) => i.type === 'craft_item' && i.id === mythicItem.id);
+                if (existing) {
+                    existing.count = (existing.count || 0) + 1;
+                }
+                else {
+                    inventory.push(mythicDrop);
+                }
+                await index_1.db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
+                user.inventory = JSON.stringify(inventory);
+                addStep({ type: 'money', message: `Добыто: ${mythicItem.name}` });
+            }
+        }
+        // Случайный предмет — каждый уровень редкости проверяется отдельно
+        const itemTable = getItemDropTable(mob.level);
+        const canDropSets = mob.level >= 100;
+        for (const entry of itemTable) {
+            if (Math.random() < entry.chance) {
+                let itemQuery = 'SELECT i.*, r.display_name, r.color FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.rarity_id = ?';
+                if (!canDropSets) {
+                    itemQuery += " AND (i.extra IS NULL OR i.extra::text NOT LIKE '%\"set\"%')";
+                }
+                itemQuery += ' ORDER BY RANDOM() LIMIT 1';
+                const randomItem = await index_1.db.one(itemQuery, [entry.rarity]);
+                if (randomItem) {
+                    const inv = JSON.parse(user.inventory || '[]');
+                    const drop = {
+                        id: Date.now() + Math.random(),
+                        name: randomItem.name,
+                        slot: randomItem.slot,
+                        rarity_id: randomItem.rarity_id,
+                        rarity_display: randomItem.display_name,
+                        rarity_color: randomItem.color,
+                        bonuses: JSON.parse(randomItem.bonuses || '{}'),
+                        extra: JSON.parse(randomItem.extra || '{}'),
+                        image: randomItem.image || null,
+                    };
+                    inv.push(drop);
+                    await index_1.db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inv), userId]);
+                    itemsDropped.push(drop);
+                    user.inventory = JSON.stringify(inv);
+                    addStep({ type: 'money', message: `Добыто: ${randomItem.display_name} предмет — ${randomItem.name}` });
+                }
+            }
+        }
+    }
+    // Обновление игрока
+    const { newExp, newLevel, levelsGained, newStatPoints } = await (0, helpers_1.applyExp)(userId, expGained, user.exp, user.level, user.statPoints || 0);
+    // Потеря золота при поражении: 10% от имеющегося
+    let goldLost = 0;
+    if (!playerWon) {
+        goldLost = Math.max(1, Math.floor(user.money * 0.05));
+    }
+    const finalMoney = user.money + goldGained - goldLost;
+    const finalHp = Math.max(1, userHp);
+    // Налог гильдии
+    const goldAfterTax = playerWon ? await (0, helpers_1.collectGuildTax)(userId, goldGained, 'tax_pve') : goldGained;
+    const finalMoneyAfterTax = user.money + goldAfterTax - goldLost;
+    await index_1.db.run('UPDATE users SET level=?, exp=?, money=?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?', [newLevel, newExp, finalMoneyAfterTax, finalHp, now, now, levelsGained * 5, playerWon ? 1 : 0, goldGained, goldLost, userId]);
+    // Достижения
+    if (playerWon) {
+        (0, achievements_1.checkAchievement)(userId, 'pve_wins').catch(() => { });
+        if (goldAfterTax > 0)
+            (0, achievements_1.trackIncome)(userId, goldAfterTax).catch(() => { });
+        // Туториал: первый PvE-бой → шаг 1 (Магазин)
+        if ((user.tutorial_step || 0) === 0) {
+            await index_1.db.run('UPDATE users SET tutorial_step = 1 WHERE id = ?', [userId]);
+        }
+    }
+    // Карма Стражника: +1 за победу над мобом
+    if (playerWon && user.faction === 'guard') {
+        await index_1.db.run('UPDATE users SET karma = GREATEST(-100, LEAST(100, karma + 1)) WHERE id = ?', [userId]);
+    }
+    // VK Leaderboard
+    if (levelsGained > 0 && user.oauthProvider === 'vk' && user.oauthId) {
+        (0, vkLeaderboard_1.sendLeaderboardLevel)(userId, newLevel, String(user.oauthId)).catch(() => { });
+    }
+    // Обновление прогресса гильдейского квеста (PvE)
+    if (playerWon) {
+        const userGuild = await index_1.db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
+        if (userGuild?.guildId) {
+            (0, guild_1.updateGuildQuestProgress)(userGuild.guildId, 'pve').catch(e => console.error('guildQuest PvE:', e.message));
+        }
+    }
+    // Обновление ежедневных квестов (PvE)
+    if (playerWon) {
+        (0, events_1.markDirty)(userId, 'quests');
+    }
+    // Сохраняем в историю PvE
+    await index_1.db.run(`INSERT INTO pve_battles (userId, mobId, mobName, mobLevel, playerWon, steps, expGained, goldGained, goldLost, materialDropped, itemsDropped, premiumBonus)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [userId, mobId, mob.name, mob.level, playerWon ? 1 : 0, JSON.stringify(steps), playerWon ? expGained : 0, goldGained, goldLost, materialsDropped.length > 0 ? JSON.stringify(materialsDropped) : null, itemsDropped.length > 0 ? JSON.stringify(itemsDropped) : null, premiumBonus]);
+    const updatedUser = await index_1.db.one('SELECT level, exp, money, statPoints, pveWins, pveTotalBattles FROM users WHERE id = ?', [userId]);
+    res.json({
+        log: steps.map((s) => s.message),
+        steps,
+        expGained: playerWon ? expGained : 0,
+        goldGained,
+        goldLost,
+        newLevel,
+        newExp,
+        levelsGained,
+        playerWon,
+        mob: { name: mob.name, level: mob.level, hp: mobHp },
+        currentHp: finalHp,
+        hpAfter: finalHp,
+        mobHpAfter: mobCurrentHp,
+        stats: await (0, helpers_1.buildPlayerStats)(updatedUser, 'pve'),
+        materialDropped: materialsDropped,
+        itemsDropped,
+        premiumBonus,
+    });
+});
+exports.default = router;
+//# sourceMappingURL=mobs.js.map

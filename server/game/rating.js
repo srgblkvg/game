@@ -1,0 +1,99 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.calcElo = calcElo;
+exports.applyDecay = applyDecay;
+exports.addPveRating = addPveRating;
+exports.checkSeasonReset = checkSeasonReset;
+const index_1 = require("../db/index");
+/**
+ * Расчёт нового ELO по формуле:
+ *   Новый = Старый + K × (Результат − Ожидание)
+ *   Ожидание = 1 / (1 + 10^((R_оппонента − R_игрока) / 400))
+ */
+function calcElo(playerElo, opponentElo, playerWon, level) {
+    const k = level <= 10 ? 40 : level <= 25 ? 30 : level <= 50 ? 20 : 15;
+    const expected = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
+    const result = playerWon ? 1 : 0;
+    return Math.max(100, Math.round(playerElo + k * (result - expected)));
+}
+/**
+ * Декай рейтинга за неактивность в PvP
+ */
+async function applyDecay(userId, lastPvpTime, elo) {
+    const now = Math.floor(Date.now() / 1000);
+    if (!lastPvpTime)
+        return elo;
+    const daysSinceLastPvp = Math.floor((now - lastPvpTime) / 86400);
+    if (daysSinceLastPvp < 7)
+        return elo;
+    let decayPerDay = 5;
+    if (daysSinceLastPvp >= 30)
+        decayPerDay = 20;
+    else if (daysSinceLastPvp >= 14)
+        decayPerDay = 10;
+    const daysToDecay = daysSinceLastPvp - 6; // первые 6 дней без штрафа
+    const decay = daysToDecay * decayPerDay;
+    const newElo = Math.max(100, elo - decay);
+    if (newElo !== elo) {
+        await index_1.db.run('UPDATE users SET elo = ?, lastEloDecay = ? WHERE id = ?', [newElo, now, userId]);
+    }
+    return newElo;
+}
+/**
+ * Начисление PvE-рейтинга
+ * Возвращает { eloAdded, newElo }
+ */
+async function addPveRating(userId, amount, pveRating, elo, cooldownCheck) {
+    const user = await index_1.db.one('SELECT lastPveRatingTime, lastBossKillDate, pveRating, elo FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return null;
+    if (!cooldownCheck(user))
+        return null;
+    // PvE-потолок: не более 15% от общего ELO
+    const pveCap = Math.floor(Math.max(1000, elo) * 0.15);
+    if ((user.pveRating || 0) >= pveCap)
+        return null;
+    const actualAmount = Math.min(amount, pveCap - (user.pveRating || 0));
+    if (actualAmount <= 0)
+        return null;
+    const newElo = Math.max(100, (elo || 1000) + actualAmount);
+    const newPveRating = (user.pveRating || 0) + actualAmount;
+    return { eloAdded: actualAmount, newElo };
+}
+/**
+ * Проверка и сброс сезона при необходимости
+ */
+async function checkSeasonReset() {
+    const season = await index_1.db.one("SELECT * FROM seasons WHERE status = 'active' LIMIT 1");
+    if (!season)
+        return false;
+    const now = new Date();
+    const endDate = new Date(season.endDate);
+    if (now < endDate)
+        return false;
+    // Сезон закончился — архивируем топ-10
+    const top10 = await index_1.db.query('SELECT id, username, elo FROM users ORDER BY elo DESC LIMIT 10');
+    for (let i = 0; i < top10.length; i++) {
+        await index_1.db.run('INSERT INTO hall_of_fame (seasonId, userId, rank, elo, title) VALUES (?, ?, ?, ?, ?)', [season.id, top10[i].id, i + 1, top10[i].elo, null]);
+    }
+    // Закрываем старый сезон
+    await index_1.db.run("UPDATE seasons SET status = 'finished' WHERE id = ?", [season.id]);
+    // Создаём новый
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const endOfNext = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0, 23, 59, 59);
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    const seasonName = `${monthNames[nextMonth.getMonth()]} ${nextMonth.getFullYear()}`;
+    await index_1.db.run('INSERT INTO seasons (name, startDate, endDate) VALUES (?, ?, ?)', [
+        seasonName, nextMonth.toISOString(), endOfNext.toISOString()
+    ]);
+    // Мягкий сброс ELO: Новый = 1000 + (Старый − 1000) × 0.5
+    const allUsers = await index_1.db.query('SELECT id, elo FROM users');
+    for (const u of allUsers) {
+        const oldElo = u.elo || 1000;
+        const newElo = Math.round(1000 + (oldElo - 1000) * 0.5);
+        await index_1.db.run('UPDATE users SET elo = ?, seasonWins = 0, seasonLosses = 0, pveRating = 0 WHERE id = ?', [newElo, u.id]);
+    }
+    return true;
+}
+//# sourceMappingURL=rating.js.map

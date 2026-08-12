@@ -15,8 +15,21 @@ import { inputClass } from '../utils/formStyles';
 import { formatMoney } from '../utils/money';
 import { fmtSafeDate } from '../utils/date';
 import { getItemImage } from '../utils/itemUtils';
+import { showNoMoney } from '../components/NoMoneyModal';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler,
+} from 'chart.js';
 
-const PRICE_FLOOR: Record<number, number> = { 0: 5, 1: 15, 2: 50, 3: 150, 4: 400, 5: 1000, 6: 3000 };
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
+
+const PRICE_FLOOR: Record<number, number> = { 0: 5, 1: 20, 2: 100, 3: 400, 4: 1500, 5: 6000, 6: 20000 };
 
 const findItemById = (inventory: any[] | undefined, id: string): any => {
     if (!inventory) return undefined;
@@ -107,22 +120,134 @@ function parseSearch(query: string): { text: string; stats: Record<string, numbe
 }
 
 
+// Компонент графика цен
+function PriceChart({ item }: { item: any }) {
+    const [points, setPoints] = useState<any[] | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const itemKey = `${item.name}|${item.slot || ''}|${item.rarity_id ?? 0}|${item.upgradeLevel ?? 0}`;
+
+    // Сброс при смене предмета
+    useEffect(() => {
+        setPoints(null);
+        setLoading(false);
+        setError('');
+    }, [itemKey]);
+
+    const fetchHistory = useCallback(async () => {
+        if (points !== null) return;
+        setLoading(true);
+        setError('');
+        try {
+            const qs = new URLSearchParams({
+                name: item.name || '',
+                slot: item.slot || '',
+                rarity: String(item.rarity_id ?? 0),
+                upgradeLevel: String(item.upgradeLevel ?? 0),
+            });
+            const res = await fetch(`/api/auction/price-history?${qs}`, { headers: getHeaders() });
+            const data = await res.json();
+            setPoints(data.points || []);
+        } catch {
+            setError('Не удалось загрузить историю');
+        } finally {
+            setLoading(false);
+        }
+    }, [item.name, item.slot, item.rarity_id, points]);
+
+    if (loading) return <div className="text-xs text-[var(--color-text-muted)] py-2">Загрузка графика...</div>;
+    if (error) return <div className="text-xs text-red-400 py-2">{error}</div>;
+    if (!points) {
+        return (
+            <button onClick={fetchHistory}
+                className="text-xs text-[var(--color-accent-info)] hover:underline cursor-pointer py-1">
+                📈 История цен
+            </button>
+        );
+    }
+    if (points.length < 2) {
+        return <div className="text-xs text-[var(--color-text-muted)] py-2">Недостаточно данных для графика</div>;
+    }
+
+    const data = {
+        labels: points.map((p: any) => { const d = p.day.slice(0, 10).split('-'); return `${d[2]}.${d[1]}`; }),
+        datasets: [
+            {
+                label: 'Средняя',
+                data: points.map((p: any) => p.avg_price),
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2,
+                borderWidth: 2,
+            },
+            {
+                label: 'Мин',
+                data: points.map((p: any) => p.min_price),
+                borderColor: '#22c55e',
+                borderDash: [3, 3],
+                pointRadius: 0,
+                borderWidth: 1,
+                fill: false,
+            },
+            {
+                label: 'Макс',
+                data: points.map((p: any) => p.max_price),
+                borderColor: '#ef4444',
+                borderDash: [3, 3],
+                pointRadius: 0,
+                borderWidth: 1,
+                fill: false,
+            },
+        ],
+    };
+
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: (ctx: any) => `${ctx.dataset.label}: ${formatMoney(ctx.raw)}`,
+                },
+            },
+        },
+        scales: {
+            x: { ticks: { font: { size: 9 }, color: '#888' }, grid: { display: false } },
+            y: { ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(1)}k` : v }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        },
+    };
+
+    return (
+        <div className="mt-2" style={{ height: 120 }}>
+            <Line data={data} options={options as any} />
+        </div>
+    );
+}
+
 
 export default function AuctionPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [actionCard, setActionCard] = useState<any>(null);
+  useEffect(() => { if (user?.isGuest) navigate('/'); }, [user, navigate]);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/auction'); if (c) setActionCard(c); }).catch(() => {}); }, []);
-    const { user } = useAuth();
     const { character, setCharacter } = useGame();
     const isVk = document.documentElement.classList.contains('vk-iframe');
-    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { showAcquire } = useAcquire();
 
     const [lots, setLots] = useState<any[]>([]);
+    const [groups, setGroups] = useState<any[]>([]);
+    const [viewMode, setViewMode] = useState<'groups' | 'list'>('groups');
+    const [groupFilter, setGroupFilter] = useState<string | null>(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [tab, setTab] = useState<'buy' | 'sell' | 'history'>('buy');
     const [history, setHistory] = useState<any[]>([]);
+    const [historyPage, setHistoryPage] = useState(1);
+    const [historyTotalPages, setHistoryTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
 
     // Highlight specific lot from chat link
@@ -162,9 +287,14 @@ export default function AuctionPage() {
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const limit = 10;
+    const [groupPage, setGroupPage] = useState(1);
+    const [groupTotalCount, setGroupTotalCount] = useState(0);
+    const [groupTotalPages, setGroupTotalPages] = useState(1);
+    const GROUP_LIMIT = 12;
 
     // Sell form
     const [sellItemId, setSellItemId] = useState('');
+    const [similarStats, setSimilarStats] = useState<{ count: number; avgBid?: number; avgBuyout?: number | null; minBid?: number; perUnit?: boolean } | null>(null);
     const [sellCount, setSellCount] = useState(1);
     const [startPrice, setStartPrice] = useState('');
     const [buyoutPrice, setBuyoutPrice] = useState('');
@@ -198,26 +328,30 @@ export default function AuctionPage() {
         if (searchTimer.current) clearTimeout(searchTimer.current);
         searchTimer.current = setTimeout(() => load(1), 300);
         return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-    }, [auctionSearch, category, sort]);
+    }, [auctionSearch, category, sort, groupPage]);
 
     useEffect(() => {
         const handler = () => load(page);
         window.addEventListener('auctionChanged', handler);
         return () => window.removeEventListener('auctionChanged', handler);
-    }, [page, auctionSearch, category, sort]);
+    }, [page, auctionSearch, category, sort, groupFilter, groupPage]);
 
-    const load = async (pg?: number) => {
+    const load = async (pg?: number, groupKey?: string) => {
         setLoading(true);
+        const activeGroupKey = groupKey !== undefined ? groupKey : groupFilter;
         try {
             const p = pg || page;
             const { text, stats, category: parsedCategory } = parseSearch(auctionSearch);
             const qs = new URLSearchParams();
             qs.set('page', String(p));
             qs.set('limit', String(limit));
+            qs.set('groupPage', String(groupPage));
+            qs.set('groupLimit', String(GROUP_LIMIT));
             if (text) qs.set('search', text);
             if (highlightLotId && p === 1) qs.set('highlightLot', highlightLotId);
             const activeCategory = parsedCategory !== 'all' ? parsedCategory : category;
             if (activeCategory !== 'all') qs.set('category', activeCategory);
+            if (activeGroupKey) qs.set('group', activeGroupKey);
             qs.set('sort', sort);
             for (const [k, v] of Object.entries(stats)) {
                 if (v > 0) qs.set(k, String(v));
@@ -225,17 +359,21 @@ export default function AuctionPage() {
             const res = await fetch(`${BASE_URL}/auction?${qs}`, { headers: getHeaders() });
             const data = await res.json();
             setLots(Array.isArray(data.lots) ? data.lots : []);
+            setGroups(Array.isArray(data.groups) ? data.groups : []);
             setTotalCount(data.totalCount || 0);
             setTotalPages(data.totalPages || 1);
             setPage(data.page || 1);
+            setGroupTotalCount(data.groupTotalCount || 0);
+            setGroupTotalPages(data.groupTotalPages || 1);
+            setGroupPage(data.groupPage || 1);
             setUserLotCount(data.myLotCount || 0);
         } catch (e: any) { setError(e.message); }
         finally { setLoading(false); }
     };
 
-    const loadHistory = async () => {
-        try { const res = await fetch(`${BASE_URL}/auction/history?limit=50`, { headers: getHeaders() }); const data = await res.json(); setHistory(Array.isArray(data) ? data : []); }
-        catch {}
+    const loadHistory = async (p = 1) => {
+        try { const res = await fetch(`${BASE_URL}/auction/history?page=${p}&limit=10`, { headers: getHeaders() }); const data = await res.json(); setHistory(Array.isArray(data.history) ? data.history : []); setHistoryPage(data.page || 1); setHistoryTotalPages(data.totalPages || 1); }
+        catch { setHistory([]); }
     };
 
     const api = async (url: string, body?: any) => {
@@ -246,11 +384,12 @@ export default function AuctionPage() {
     };
 
     const [userLotCount, setUserLotCount] = useState(0);
-    const maxSlots = 5;
+    const maxSlots = character?.premium ? 20 : 10;
     const getSelectedItem = () => findItemById(character?.inventory, sellItemId);
     const getAutoMinPrice = () => {
         const item = getSelectedItem();
         if (!item) return 0;
+        if (item.itemType === 'upgrade') return 2000;
         const rarity = item.rarity_id ?? 0;
         return PRICE_FLOOR[rarity] || 5;
     };
@@ -262,9 +401,13 @@ export default function AuctionPage() {
             void (isMaterial ? (item.count || 1) : 1);
             setSellCount(1);
             const rarity = item.rarity_id ?? 0;
-            const floor = PRICE_FLOOR[rarity] || 5;
+            const floor = item.itemType === 'upgrade' ? 2000 : (PRICE_FLOOR[rarity] || 5);
             setStartPrice(String(floor));
             setBuyoutPrice('');
+            // Запросить статистику похожих лотов
+            const qs = `name=${encodeURIComponent(item.name || '')}&slot=${encodeURIComponent(item.slot || '')}&rarity=${item.rarity_id ?? 0}&upgradeLevel=${item.upgradeLevel ?? 0}&sellCount=${isMaterial ? (item.count || 1) : 1}`;
+            fetch(`/api/auction/similar?${qs}`, { headers: getHeaders() })
+                .then(r => r.json()).then(setSimilarStats).catch(() => setSimilarStats(null));
         }
     };
     const handleCountChange = (count: number) => { setSellCount(count); };
@@ -284,13 +427,25 @@ export default function AuctionPage() {
             setMessage(''); setSellItemId(''); setStartPrice(''); setBuyoutPrice(''); setSellCount(1);
             (document.activeElement as HTMLElement)?.blur();
             load(1);
-        } catch (e: any) { setError(e.message); }
+        } catch (e: any) {
+            const msg = e.message || '';
+            if (msg.includes('Недостаточно')) {
+                showNoMoney(msg);
+            } else if (msg.includes('Максимум')) {
+                setCenterModal(msg);
+            } else {
+                setError(msg);
+            }
+        }
     };
     const handleBid = async (lotId: number, amount: string, minBid: number) => {
         const amt = parseInt(amount);
         if (!amt || amt < minBid) { setError(`Мин. ставка: ${formatMoney(minBid)}`); return; }
         try { await api('/auction/bid', { lotId, amount: amt }); setMessage('Ставка сделана!'); setBidAmount(prev => { const n = { ...prev }; delete n[lotId]; return n; }); (document.activeElement as HTMLElement)?.blur(); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
-        catch (e: any) { setError(e.message); }
+        catch (e: any) {
+            const msg = e.message || '';
+            if (msg.includes('Недостаточно')) showNoMoney(msg); else setError(msg);
+        }
     };
     const handleBuyout = async (lotId: number) => {
         try {
@@ -299,7 +454,10 @@ export default function AuctionPage() {
             if (lot) showAcquire(lot.itemData, lot.itemData.count || 1, 'Выкуплено');
             (document.activeElement as HTMLElement)?.blur();
             setMessage(''); load(page); const fresh = await fetchCharacter(); setCharacter(fresh);
-        } catch (e: any) { setError(e.message); }
+        } catch (e: any) {
+            const msg = e.message || '';
+            if (msg.includes('Недостаточно')) showNoMoney(msg); else setError(msg);
+        }
     };
     const handleBuyPartial = async (lotId: number, quantity: number) => {
         try {
@@ -307,12 +465,19 @@ export default function AuctionPage() {
             const lot = lots.find(l => l.id === lotId);
             if (lot) showAcquire(lot.itemData, quantity, 'Куплено');
             setMessage(''); load(page); const fresh = await fetchCharacter(); setCharacter(fresh);
-        } catch (e: any) { setError(e.message); }
+        } catch (e: any) {
+            const msg = e.message || '';
+            if (msg.includes('Недостаточно')) showNoMoney(msg); else setError(msg);
+        }
     };
+    const [confirmPopup, setConfirmPopup] = useState<any>(null);
+    const [centerModal, setCenterModal] = useState<string | null>(null);
     const handleCancel = async (lotId: number) => {
-        if (!confirm('Снять лот с аукциона? Предмет вернётся в инвентарь.')) return;
-        try { await api('/auction/cancel', { lotId }); setMessage('Лот снят с аукциона'); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
-        catch (e: any) { setError(e.message); }
+        setConfirmPopup({ message: 'Снять лот с аукциона? Предмет вернётся в инвентарь.', onConfirm: async () => {
+            setConfirmPopup(null);
+            try { await api('/auction/cancel', { lotId }); setMessage('Лот снят с аукциона'); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
+            catch (e: any) { setError(e.message); }
+        }});
     };
     const clearMessages = () => { setMessage(''); setError(''); };
     const selectedItem = getSelectedItem();
@@ -391,7 +556,7 @@ export default function AuctionPage() {
             <div className="flex gap-2 mb-4">
                 <Button variant={tab === 'buy' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('buy'); clearMessages(); }}>Покупка</Button>
                 <Button variant={tab === 'sell' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('sell'); clearMessages(); }}>Продажа</Button>
-                <Button variant={tab === 'history' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('history'); loadHistory(); clearMessages(); }}>История</Button>
+                <Button variant={tab === 'history' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('history'); loadHistory(1); clearMessages(); }}>История</Button>
             </div>
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
@@ -410,7 +575,7 @@ export default function AuctionPage() {
                             <p className="text-xs text-[var(--color-text-muted)]">Нет предметов для продажи</p>
                         ) : (
                             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                                {character.inventory.map((item: any) => {
+                                {character.inventory.filter((item: any) => !item.locked).map((item: any) => {
                                     const isSelected = String(item.id) === sellItemId;
                                     const cnt = (item.type === 'craft_item' || item.type === 'material') ? (item.count || 1) : 1;
                                     return (
@@ -418,8 +583,19 @@ export default function AuctionPage() {
                                             onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                                             onTouchStart={e => handleTouchStart(e, item)} onTouchEnd={handleTouchEnd} onContextMenu={e => e.preventDefault()}
                                             className={`relative flex flex-col items-center p-2 rounded-lg border cursor-pointer transition-all ${isSelected ? 'border-[var(--color-accent-info)] bg-[var(--color-accent-info)]/10 ring-1 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-hover)]'}`}>
-                                            <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-8 h-8 object-contain mb-1" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
-                                            <span className="text-[0.6rem] text-[var(--color-text-primary)] text-center leading-tight line-clamp-2">{item.name}</span>
+                                            <div className="relative">
+                                                <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-8 h-8 object-contain mb-1" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                                {(item.upgradeLevel ?? 0) > 0 && (
+                                                    <span style={{
+                                                        position: 'absolute', top: -6, right: -6,
+                                                        background: 'var(--color-text-accent)', color: '#000',
+                                                        borderRadius: '50%', width: '14px', height: '14px',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '7px', fontWeight: 'bold', lineHeight: 1,
+                                                    }}>+{item.upgradeLevel}</span>
+                                                )}
+                                            </div>
+                                            <span className="text-[0.6rem] text-[var(--color-text-primary)] text-center leading-tight line-clamp-2">{item.name}{(item.upgradeLevel ?? 0) > 0 && <span className="text-[var(--color-text-accent)]"> +{item.upgradeLevel}</span>}</span>
                                             {cnt > 1 && <span className="text-[0.55rem] text-[var(--color-accent-info)] absolute top-0.5 right-1">x{cnt}</span>}
                                             <span className="text-[0.55rem] text-[var(--color-text-muted)]">{item.rarity_display || ''}</span>
                                         </div>
@@ -432,11 +608,31 @@ export default function AuctionPage() {
                         <div className="mt-2 flex items-center gap-2 p-2 rounded bg-[var(--color-bg-primary)] cursor-default"
                             onMouseEnter={e => showTooltip(e, selectedItem)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                             onTouchStart={e => handleTouchStart(e, selectedItem)} onTouchEnd={handleTouchEnd} onContextMenu={e => e.preventDefault()}>
-                            <img src={getItemImage(selectedItem) || '/items/default.webp'} alt={selectedItem.name} className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
-                            <span className="text-xs text-[var(--color-text-primary)]">{selectedItem.name}</span>
+                            <div className="relative shrink-0">
+                                <img src={getItemImage(selectedItem) || '/items/default.webp'} alt={selectedItem.name} className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                {(selectedItem.upgradeLevel ?? 0) > 0 && (
+                                    <span style={{
+                                        position: 'absolute', top: -4, right: -4,
+                                        background: 'var(--color-text-accent)', color: '#000',
+                                        borderRadius: '50%', width: '16px', height: '16px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '9px', fontWeight: 'bold', lineHeight: 1,
+                                    }}>+{selectedItem.upgradeLevel}</span>
+                                )}
+                            </div>
+                            <span className="text-xs text-[var(--color-text-primary)]">{selectedItem.name}{(selectedItem.upgradeLevel ?? 0) > 0 && <span className="text-[var(--color-text-accent)]"> +{selectedItem.upgradeLevel}</span>}</span>
                             <span className="text-xs text-[var(--color-text-muted)]">{selectedItem.rarity_display}</span>
                         </div>
                     )}
+                    {similarStats && similarStats.count > 0 && (
+                        <div className="text-[0.65rem] text-[var(--color-text-muted)] bg-[var(--color-bg-input)] rounded p-2 mb-2 space-y-0.5">
+                            <div>Похожих лотов: {similarStats.count}</div>
+                            <div>Мин. ставка: {formatMoney(similarStats.minBid || 0)}{similarStats.perUnit ? ' / шт' : ''}</div>
+                            <div>Средняя ставка: {formatMoney(similarStats.avgBid || 0)}{similarStats.perUnit ? ' / шт' : ''}</div>
+                            {similarStats.avgBuyout && <div>Средний выкуп: {formatMoney(similarStats.avgBuyout)}{similarStats.perUnit ? ' / шт' : ''}</div>}
+                        </div>
+                    )}
+                    {selectedItem && <PriceChart item={selectedItem} />}
                     {isMaterial && maxItemCount > 1 && (
                         <div className="mb-2">
                             <label className="text-xs text-[var(--color-text-muted)] block mb-1">Количество для продажи (макс: {maxItemCount})</label>
@@ -457,7 +653,14 @@ export default function AuctionPage() {
 
             {/* History tab */}
             {tab === 'history' && (
-                <div>{history.length === 0 ? <p className="text-sm text-[var(--color-text-muted)]">Нет завершённых сделок</p> : <div className="space-y-2">{history.map((h: any) => { const isBuyer = h.buyerId === user?.id; const itemData = h.itemData ? (typeof h.itemData === 'string' ? JSON.parse(h.itemData) : h.itemData) : null; return <Card key={h.id} className="text-xs"><div className="flex items-center gap-1 flex-wrap"><span className={isBuyer ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}>{isBuyer ? '📥 Куплено' : '📤 Продано'}</span><span className="font-medium">{h.itemName}</span>{itemData?.count > 1 && <span className="text-[var(--color-text-muted)]">x{itemData.count}</span>}<span>за</span><span className="font-bold">{formatMoney(h.price)}</span><span className="text-[var(--color-text-muted)]">—</span><span className="text-[var(--color-text-muted)]">Продавец {h.sellerName}, покупатель {h.buyerName}</span></div><div className="text-[var(--color-text-muted)] mt-0.5">{h.commission > 0 && <>ком. {formatMoney(h.commission)} • </>}{fmtSafeDate(h.createdAt)}</div></Card>; })}</div>}</div>
+                <div>{history.length === 0 ? <p className="text-sm text-[var(--color-text-muted)]">Нет завершённых сделок</p> : <div className="space-y-2">{history.map((h: any) => { const isBuyer = h.buyerId === user?.id; const itemData = h.itemData ? (typeof h.itemData === 'string' ? JSON.parse(h.itemData) : h.itemData) : null; return <Card key={h.id} className="text-xs"><div className="flex items-center gap-1 flex-wrap"><span className={isBuyer ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}>{isBuyer ? '📥 Куплено' : '📤 Продано'}</span><span className="font-medium">{h.itemName}</span>{itemData?.count > 1 && <span className="text-[var(--color-text-muted)]">x{itemData.count}</span>}<span>за</span><span className="font-bold">{formatMoney(h.price)}</span><span className="text-[var(--color-text-muted)]">—</span><span className="text-[var(--color-text-muted)]">Продавец {h.sellerName}, покупатель {h.buyerName}</span></div><div className="text-[var(--color-text-muted)] mt-0.5">{h.commission > 0 && <>ком. {formatMoney(h.commission)} • </>}{fmtSafeDate(h.createdAt)}</div></Card>; })}
+                {historyTotalPages > 1 && (
+                    <div className="flex items-center justify-center gap-1 mt-3">
+                        <button onClick={() => loadHistory(historyPage - 1)} disabled={historyPage <= 1} className="px-2 py-0.5 text-xs rounded bg-[var(--color-bg-secondary)] disabled:opacity-30 cursor-pointer">←</button>
+                        <span className="text-xs text-[var(--color-text-muted)]">{historyPage}/{historyTotalPages}</span>
+                        <button onClick={() => loadHistory(historyPage + 1)} disabled={historyPage >= historyTotalPages} className="px-2 py-0.5 text-xs rounded bg-[var(--color-bg-secondary)] disabled:opacity-30 cursor-pointer">→</button>
+                    </div>
+                )}</div>}</div>
             )}
 
             {/* Buy tab */}
@@ -466,7 +669,7 @@ export default function AuctionPage() {
                     {/* Search + sort */}
                     <div className="flex gap-2 mb-3">
                         <input type="text" placeholder="Поиск..." value={auctionSearch}
-                            onChange={e => { setAuctionSearch(e.target.value); setPage(1); }}
+                            onChange={e => { setAuctionSearch(e.target.value); setPage(1); setGroupPage(1); }}
                             className="flex-1 px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm" />
                         <select value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}
                             className="px-2 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm w-32 cursor-pointer">
@@ -477,22 +680,95 @@ export default function AuctionPage() {
                     {/* Categories */}
                     <div className="flex gap-1.5 mb-4 overflow-x-auto hide-scrollbar flex-wrap">
                         {CATEGORIES.map(c => (
-                            <button key={c.key} onClick={() => { setCategory(c.key); setPage(1); }}
+                            <button key={c.key} onClick={() => { setCategory(c.key); setPage(1); setGroupPage(1); }}
                                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer ${category === c.key ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]'}`}>
                                 <Icon icon={c.icon} width="12" height="12" />{c.label}
                             </button>
                         ))}
                     </div>
 
-                    {/* Top pagination */}
-                    {totalPages > 1 && renderPagination()}
+                    {/* View toggle */}
+                    <div className="flex gap-2 mb-3">
+                        <button onClick={() => { setViewMode('groups'); setGroupFilter(null); setPage(1); setGroupPage(1); }}
+                            className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'groups' && !groupFilter ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
+                            📦 Группы
+                        </button>
+                        <button onClick={() => { setViewMode('list'); setGroupFilter(null); }}
+                            className={`px-2 py-1 rounded text-xs cursor-pointer ${viewMode === 'list' && !groupFilter ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
+                            📋 Списком
+                        </button>
+                        {groupFilter && (
+                            <button onClick={() => { setGroupFilter(null); setViewMode('groups'); setPage(1); }}
+                                className="px-2 py-1 rounded text-xs cursor-pointer bg-[var(--color-bg-input)] text-[var(--color-text-muted)]">
+                                ← Назад
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Group view */}
+                    {viewMode === 'groups' && !groupFilter && groups.length > 0 && (
+                        <>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                            {groups.map((g: any, i: number) => {
+                                const item = g.item;
+                                return (
+                                    <div key={i} onClick={() => { const key = `${item.name || ''}|${item.slot || ''}|${item.rarity_id ?? ''}|${item.upgradeLevel ?? 0}`; setGroupFilter(key); setViewMode('list'); setPage(1); load(1, key); }}
+                                        onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
+                                        className="rounded-lg p-2 border border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer hover:border-[var(--color-accent-info)] transition-colors">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="relative shrink-0">
+                                                <img src={getItemImage(item) || '/items/default.webp'} alt={item.name}
+                                                    className="w-8 h-8 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                                {(item.upgradeLevel ?? 0) > 0 && (
+                                                    <span style={{
+                                                        position: 'absolute', top: -4, right: -4,
+                                                        background: 'var(--color-text-accent)', color: '#000',
+                                                        borderRadius: '50%', width: '16px', height: '16px',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '9px', fontWeight: 'bold', lineHeight: 1,
+                                                    }}>+{item.upgradeLevel}</span>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-xs font-bold truncate">{item.name}{(item.upgradeLevel ?? 0) > 0 && <span className="text-[var(--color-text-accent)]"> +{item.upgradeLevel}</span>}</div>
+                                                <div className="text-[0.6rem] text-[var(--color-text-muted)]">{item.rarity_display} · {g.count === 1 ? '1 лот' : `×${g.count}`}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-[0.65rem] text-[var(--color-text-muted)] space-y-0.5">
+                                            <div>Мин. ставка: {formatMoney(g.minBid)}{g.isStack ? ' / шт' : ''}</div>
+                                            {g.minBuyout && <div>Мин. выкуп: {formatMoney(g.minBuyout)}{g.isStack ? ' / шт' : ''}</div>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {groupTotalPages > 1 && (
+                            <div className="flex items-center justify-center gap-1 mb-3">
+                                <button onClick={() => { setGroupPage(Math.max(1, groupPage - 1)); }}
+                                    disabled={groupPage <= 1}
+                                    className="px-2 py-0.5 text-xs rounded bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 cursor-pointer">←</button>
+                                <span className="text-xs text-[var(--color-text-muted)]">{groupPage}/{groupTotalPages} ({groupTotalCount} групп)</span>
+                                <button onClick={() => { setGroupPage(Math.min(groupTotalPages, groupPage + 1)); }}
+                                    disabled={groupPage >= groupTotalPages}
+                                    className="px-2 py-0.5 text-xs rounded bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 cursor-pointer">→</button>
+                            </div>
+                        )}
+                        </>
+                    )}
+
+                    {/* List view (or group-filtered) — Top pagination (только не в режиме групп) */}
+                    {(viewMode !== 'groups' || groupFilter) && totalPages > 1 && renderPagination()}
 
                     {loading ? (
                         <p className="text-sm text-[var(--color-text-muted)] text-center py-8">Загрузка...</p>
                     ) : lots.length === 0 ? (
                         <p className="text-sm text-[var(--color-text-muted)]">{totalCount === 0 ? 'Нет активных лотов' : 'Нет лотов по фильтру'}</p>
                     ) : (
-                        lots.map((lot: any) => {
+                        (() => {
+                            const displayLots = lots;
+                            if (groupFilter && displayLots.length === 0) return <p className="text-sm text-[var(--color-text-muted)]">Нет лотов в этой группе</p>;
+                            if (!groupFilter && viewMode === 'groups') return null;
+                            return displayLots.map((lot: any) => {
                             const item = lot.itemData;
                             const stackCount = item.count || 1;
                             const isStack = stackCount > 1;
@@ -509,10 +785,21 @@ export default function AuctionPage() {
                                         <div onMouseEnter={e => showTooltip(e, item)} onMouseMove={moveTooltip} onMouseLeave={hideTooltip}
                                             onTouchStart={e => handleTouchStart(e, item)} onTouchEnd={handleTouchEnd} onContextMenu={e => e.preventDefault()}
                                             className="cursor-default flex gap-3 flex-1 min-w-0">
-                                            <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-10 h-10 object-contain rounded shrink-0" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                            <div className="relative shrink-0">
+                                                <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-10 h-10 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                                {(item.upgradeLevel ?? 0) > 0 && (
+                                                    <span style={{
+                                                        position: 'absolute', top: -4, right: -4,
+                                                        background: 'var(--color-text-accent)', color: '#000',
+                                                        borderRadius: '50%', width: '16px', height: '16px',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '9px', fontWeight: 'bold', lineHeight: 1,
+                                                    }}>+{item.upgradeLevel}</span>
+                                                )}
+                                            </div>
                                             <div className="min-w-0 flex-1">
-                                                <h3 className="font-bold text-sm truncate">{item.name}{isStack && <span className="text-xs text-[var(--color-accent-info)] ml-1">x{stackCount}</span>}</h3>
-                                                <p className="text-xs text-[var(--color-text-muted)]">{item.rarity_display} • {lot.sellerName}</p>
+                                                <h3 className="font-bold text-sm truncate">{item.name}{item.upgradeLevel > 0 && <span className="text-[var(--color-text-accent)] ml-1">+{item.upgradeLevel}</span>}{isStack && <span className="text-xs text-[var(--color-accent-info)] ml-1">x{stackCount}</span>}</h3>
+                                                <p className="text-xs text-[var(--color-text-muted)]">{item.rarity_display}{(item.type === 'craft_item' || item.type === 'material' || item.type === 'upgrade') ? ' • Ресурс' : ''} • {lot.sellerName}</p>
                                                 <p className="text-xs">Старт: {formatMoney(lot.startPrice)}{isStack && <span className="text-[var(--color-accent-info)]"> ({formatMoney(pricePerItem)} / шт)</span>}{lot.currentBid && <> • Ставка: {formatMoney(lot.currentBid)}{(lot.currentBidderName || lot.currentbiddername) && <> ({(lot.currentBidderName || lot.currentbiddername)})</>}</>}</p>
                                                 {lot.buyoutPrice && <p className="text-xs">Выкуп: {formatMoney(lot.buyoutPrice)}{isStack && <span className="text-[var(--color-accent-info)]"> ({formatMoney(Math.ceil(lot.buyoutPrice / stackCount))} / шт)</span>}</p>}
                                             </div>
@@ -551,20 +838,47 @@ export default function AuctionPage() {
                                             )}
                                         </div>
                                     </div>
+                                    <PriceChart item={item} />
                                 </Card>
                                 </div>
                             );
                         })
-                    )}
+                        })() )}
 
-                    {/* Bottom pagination */}
-                    {renderPagination()}
+                    {/* Bottom pagination (только не в режиме групп) */}
+                    {(viewMode !== 'groups' || groupFilter) && renderPagination()}
                 </>
             )}
 
             {tooltip && (
                 <div ref={tooltipRef} className="fixed z-50 pointer-events-none">
                     <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />
+                </div>
+            )}
+            {confirmPopup && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setConfirmPopup(null)}>
+                    <Card className="max-w-xs w-full" onClick={e => e.stopPropagation()}>
+                        <p className="text-sm mb-3">{confirmPopup.message}</p>
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="secondary" size="md" onClick={() => setConfirmPopup(null)}>Отмена</Button>
+                            <Button size="md" onClick={confirmPopup.onConfirm}>OK</Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+            {centerModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setCenterModal(null)}>
+                    <Card className="max-w-xs w-full" onClick={e => e.stopPropagation()}>
+                        <p className="text-sm mb-3">{centerModal}</p>
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="secondary" size="md" onClick={() => setCenterModal(null)}>Закрыть</Button>
+                            {!character?.premium && (
+                                <Button size="md" onClick={() => { setCenterModal(null); navigate('/premium'); }}>
+                                    ⭐ Премиум (+10 слотов)
+                                </Button>
+                            )}
+                        </div>
+                    </Card>
                 </div>
             )}
         </div>

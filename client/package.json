@@ -14,9 +14,11 @@
     "@iconify-json/game-icons": "^1.2.4",
     "@iconify/react": "^6.0.2",
     "@tailwindcss/vite": "^4.3.0",
+    "chart.js": "^4.5.1",
     "dompurify": "^3.4.11",
     "marked": "^18.0.6",
     "react": "^19.2.5",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.15.0",
     "tailwindcss": "^4.3.0"

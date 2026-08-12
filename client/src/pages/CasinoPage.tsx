@@ -6,6 +6,7 @@ import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
 import { formatMoney } from '../utils/money';
 import { inputClass } from '../utils/formStyles';
+import DiceGame from '../components/DiceGame';
 
 const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
 const inputType = isVK ? 'text' : 'number';
@@ -68,6 +69,9 @@ export default function CasinoPage() {
     const [loading, setLoading] = useState(false);
     const [balance, setBalance] = useState(0);
     const [actionCard, setActionCard] = useState<any>(null);
+    const [todayGames, setTodayGames] = useState(0);
+    const [remaining, setRemaining] = useState(10);
+    const [countersLoaded, setCountersLoaded] = useState(false);
 
     // Загрузить карточку действия
     useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/casino'); if (c) setActionCard(c); }).catch(() => {}); }, []);
@@ -81,7 +85,18 @@ export default function CasinoPage() {
         } catch {}
     };
 
-    // Загрузить активную игру
+    // Загрузить счётчик дневного лимита (не трогает game)
+    const loadCounters = async () => {
+        try {
+            const r = await fetch('/api/casino/active', { headers: getHeaders() });
+            const d = await r.json();
+            setTodayGames(d.todayGames || 0);
+            setRemaining(d.remaining ?? 10);
+            setCountersLoaded(true);
+        } catch {}
+    };
+
+    // Загрузить активную игру + счётчик (при монтировании)
     const loadGame = async () => {
         try {
             const r = await fetch('/api/casino/active', { headers: getHeaders() });
@@ -91,6 +106,9 @@ export default function CasinoPage() {
             } else {
                 setGame(null);
             }
+            setTodayGames(d.todayGames || 0);
+            setRemaining(d.remaining ?? 10);
+            setCountersLoaded(true);
         } catch {}
     };
 
@@ -133,7 +151,7 @@ export default function CasinoPage() {
             const d = await r.json();
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
-            if (d.status !== 'playing') loadBalance();
+            if (d.status !== 'playing') { loadBalance(); loadCounters(); }
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -150,6 +168,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
+            loadCounters();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -166,6 +185,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
+            loadCounters();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -182,6 +202,7 @@ export default function CasinoPage() {
             if (!r.ok) { showToast(d.error); setLoading(false); return; }
             setGame(d);
             loadBalance();
+            loadCounters();
         } catch { showToast('Ошибка сети'); }
         setLoading(false);
     };
@@ -190,7 +211,7 @@ export default function CasinoPage() {
     const isFinished = game && game.status !== 'playing';
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             {actionCard && <PageHeader title="Игорный дом" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
@@ -203,6 +224,10 @@ export default function CasinoPage() {
                     onClick={() => setTab('blackjack')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${tab === 'blackjack' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
                 >🃏 Блэкджек</button>
+                <button
+                    onClick={() => setTab('dice')}
+                    className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${tab === 'dice' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
+                >🎲 Кости</button>
             </div>
 
             {tab === 'blackjack' && (
@@ -213,6 +238,14 @@ export default function CasinoPage() {
                             <p className="text-sm text-[var(--color-text-muted)]">
                                 Сделайте ставку. Блэкджек оплачивается 3:2. Дилер добирает до 17.
                             </p>
+                            {!countersLoaded ? (
+                                <p className="text-sm text-[var(--color-text-muted)] text-center py-2">Загрузка...</p>
+                            ) : remaining <= 0 ? (
+                                <p className="text-sm text-[var(--color-accent-danger)] text-center py-2">
+                                    🚫 Дневной лимит исчерпан (10/10). Возвращайтесь завтра!
+                                </p>
+                            ) : (
+                                <>
                             <div className="flex gap-2 items-end">
                                 <div className="flex-1">
                                     <label className="text-[0.6rem] text-[var(--color-text-muted)]">Ставка</label>
@@ -227,11 +260,16 @@ export default function CasinoPage() {
                                         className={inputClass}
                                     />
                                 </div>
-                                <Button variant="danger" size="md" onClick={startGame} disabled={loading}>
+                                <Button variant="danger" size="md" onClick={startGame} disabled={loading || remaining <= 0}>
                                     {loading ? '...' : 'Играть'}
                                 </Button>
                             </div>
-                            <p className="text-xs text-[var(--color-text-muted)]">Баланс: {formatMoney(balance)}</p>
+                            <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
+                                <span>Баланс: {formatMoney(balance)}</span>
+                                <span>Игр сегодня: <span className={remaining <= 3 ? 'text-[var(--color-accent-warning)]' : ''}>{todayGames}/10</span></span>
+                            </div>
+                                </>
+                            )}
                         </div>
                     )}
 
@@ -320,13 +358,19 @@ export default function CasinoPage() {
                             {/* Новая игра */}
                             {isFinished && (
                                 <div className="flex gap-2 justify-center">
-                                    <Button variant="danger" size="md" onClick={() => { setGame(null); setBet(''); }}>
+                                    <Button variant="danger" size="md" onClick={() => { setGame(null); setBet(''); loadGame(); }}>
                                         Новая игра
                                     </Button>
                                 </div>
                             )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {tab === 'dice' && (
+                <div className="bg-[var(--color-bg-secondary)] rounded-xl p-4 border border-[var(--color-border-default)]">
+                    <DiceGame onBalanceChange={loadBalance} />
                 </div>
             )}
         </div>

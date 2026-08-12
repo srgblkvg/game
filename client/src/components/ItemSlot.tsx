@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import SlotBase from './SlotBase';
 import { getRarityColor } from '../utils/itemUtils';
 
@@ -19,7 +19,7 @@ interface ItemSlotProps {
   title?: string;
 }
 
-export default function ItemSlot(props: ItemSlotProps) {
+const ItemSlot = memo(function ItemSlot(props: ItemSlotProps) {
   const { item, highlighted, style, title, ...rest } = props;
   const itemColor = getRarityColor(item);
   const borderColor = item ? itemColor : (highlighted ? 'var(--color-accent-success)' : 'var(--color-border-light)');
@@ -48,4 +48,6 @@ export default function ItemSlot(props: ItemSlotProps) {
       )}
     </SlotBase>
   );
-}
+});
+
+export default ItemSlot;

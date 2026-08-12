@@ -92,7 +92,7 @@ export default function RatingPage() {
     }, [page, search, minElo]);
 
     return (
-        <div className="max-w-xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <h2 className="text-xl font-bold mb-4"><Icon icon="game-icons:trophy" width="22" height="22" className="inline mr-2"/>Рейтинг игроков</h2>
 
@@ -227,6 +227,9 @@ export default function RatingPage() {
                                             className={`cursor-pointer hover:text-[var(--color-accent-info)] transition-colors block truncate ${isMe ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-primary)]'}`}
                                         >
                                             {i + 1 + (page - 1) * LIMIT + SKIP_TOP}. {p.username} {isMe ? '(Вы)' : ''}
+                                            {p.faction === 'bandit' && <Icon icon="game-icons:hood" width="12" height="12" className="inline-block ml-1 text-red-300" />}
+                                            {p.faction === 'crafter' && <Icon icon="game-icons:anvil" width="12" height="12" className="inline-block ml-1 text-blue-300" />}
+                                            {p.faction === 'guard' && <Icon icon="game-icons:shield" width="12" height="12" className="inline-block ml-1 text-yellow-300" />}
                                         </span>
                                         <span className="sm:hidden"><GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                                     </td>

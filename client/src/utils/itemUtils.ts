@@ -12,12 +12,17 @@ export const slotCategories: Record<string, string> = {
 
 const rarityColors = ['#888888', '#cccccc', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e74c3c'];
 const rarityColorNames = ['gray', 'white', 'green', 'blue', 'purple', 'yellow', 'red'];
+const rarityDisplayNames = ['Хлам', 'Обычный', 'Необычный', 'Редкий', 'Эпический', 'Легендарный', 'Мифический'];
 const slotImageFolders: Record<string, string> = {
     weapon1: 'sword', shield: 'shield', ring1: 'ring', ring2: 'ring',
 };
 
 export function getRarityColor(item: any): string {
     return item?.rarity_color || (item?.rarity_id != null ? rarityColors[item.rarity_id] : undefined) || '#888';
+}
+
+export function getRarityDisplay(item: any): string {
+    return item?.rarity_display || (item?.rarity_id != null ? rarityDisplayNames[item.rarity_id] : undefined) || 'Хлам';
 }
 
 const rarityClasses = ['rarity-junk', 'rarity-common', 'rarity-uncommon', 'rarity-rare', 'rarity-epic', 'rarity-legendary', 'rarity-mythic'];
@@ -33,7 +38,7 @@ export function getItemImage(item: any): string | null {
     if (item?.image) return ensureLeadingSlash(item.image);
     if (item?.rarity_id == null) return null;
     const color = rarityColorNames[item.rarity_id] || 'gray';
-    if (item?.type === 'upgrade') {
+    if (item?.type === 'upgrade' || item?.itemType === 'upgrade') {
         return `/stone/stoneUpgrade_${color}.webp`;
     }
     if (item?.type === 'craft_item' || item?.type === 'material') {
@@ -56,6 +61,7 @@ export function isCraftItem(item: any): item is {
     rarity_display?: string;
     rarity_color?: string;
     image?: string;
+    locked?: boolean;
 } {
     return item?.type === 'material' || item?.type === 'craft_item' || item?.type === 'upgrade';
 }
@@ -64,7 +70,9 @@ const typeNameRu: Record<string, string> = {
   craft: 'Материал',
   material: 'Материал',
   craft_item: 'Материал',
-  upgrade: 'Камень',
+  soul_crystal: 'Улучшение',
+  upgrade: 'Улучшение',
+  stone: 'Улучшение',
 };
 
 export function getItemTypeName(item: any): string {

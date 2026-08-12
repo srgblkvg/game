@@ -1,8 +1,9 @@
 // client/src/components/CharacterCard.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import { useGlobalChat } from '../contexts/ChatContext';
-import { slotNames, slotCategories } from '../utils/itemUtils';
+import { slotNames, slotCategories, getItemImage, getRarityColor } from '../utils/itemUtils';
 import ItemTooltip from './ItemTooltip';
 import GuildTag from './GuildTag';
 import HealthBar from './CharacterCard/HealthBar';
@@ -27,15 +28,19 @@ interface CharacterCardProps {
   isMob?: boolean;
   showHealButton?: boolean;
   profileId?: number;
+  equipSets?: Record<number, Record<string, any>>;
+  activeEquipSlot?: number;
+  onSwitchSet?: (slot: number) => void;
 }
 
-export default function CharacterCard({
+const CharacterCard = memo(function CharacterCard({
   char, side = 'left', showHealth = true,
   showExp = true, showRegenHint = true, regenRate = 1, readOnly = false,
   onEquip, availableItems, selectedItemId, highlightedSlots,
   compact = false, isMob = false, hideNoGuild = false,
   showHealButton = true,
   profileId,
+  equipSets, activeEquipSlot = 1, onSwitchSet,
 }: CharacterCardProps) {
   const navigate = useNavigate();
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -44,9 +49,18 @@ export default function CharacterCard({
   const { sendItemLink } = useGlobalChat();
 
   useEffect(() => {
-    const handleGlobalClick = () => { setHoveredSlot(null); setTooltipPos(null); };
-    document.addEventListener('click', handleGlobalClick);
-    return () => document.removeEventListener('click', handleGlobalClick);
+    const dismiss = () => { setHoveredSlot(null); setTooltipPos(null); };
+    const handleTouch = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-slot]')) return;
+      dismiss();
+    };
+    document.addEventListener('click', dismiss);
+    document.addEventListener('touchstart', handleTouch, { passive: true });
+    return () => {
+      document.removeEventListener('click', dismiss);
+      document.removeEventListener('touchstart', handleTouch);
+    };
   }, []);
 
   if (!char) return null;
@@ -59,6 +73,7 @@ export default function CharacterCard({
   const eqBonuses = stats?.bonuses || (char as any).equipmentBonuses || { s: 0, a: 0, d: 0, m: 0 };
   const exStats = stats?.extra || (char as any).extraStats || { crit: 0, dodge: 0, counter: 0, fullBlock: 0 };
   const collBonus = Number((char as any).collectionCount ?? (char as any).collectionBonus ?? 0);
+  const collSetBonus = Number((char as any).collectionSetBonus ?? 0);
   const gBonus = Number((char as any).guildBonus ?? 0);
   const buildingsList = (char as any).buildings || [];
 
@@ -154,7 +169,12 @@ export default function CharacterCard({
           className={`overflow-hidden text-ellipsis whitespace-nowrap max-w-full${profileId ? ' cursor-pointer hover:text-[var(--color-accent-info)] transition-colors' : ''}`}
           style={{ margin: '0 0 -4px 0', fontSize: fontSizeName, lineHeight: '1.1' }}
           onClick={profileId ? () => navigate(`/profile/${profileId}`) : undefined}
-        >{char.username}</h2>
+        >
+          {char.faction === 'bandit' && <Icon icon="game-icons:hood" width="14" height="14" className="inline-block mr-0.5 text-red-300" />}
+          {char.faction === 'crafter' && <Icon icon="game-icons:anvil" width="14" height="14" className="inline-block mr-0.5 text-blue-300" />}
+          {char.faction === 'guard' && <Icon icon="game-icons:shield" width="14" height="14" className="inline-block mr-0.5 text-yellow-300" />}
+          {char.username}
+        </h2>
         <div className="h-[0.75rem]">
           <GuildTag guildName={(char as any).guildName} guildId={(char as any).guildId} hideNoGuild={hideNoGuild} />
         </div>
@@ -172,6 +192,28 @@ export default function CharacterCard({
       </div>
 
       {/* Фрейм с фоном и слотами */}
+      {equipSets && onSwitchSet && (
+        <div className="flex gap-1 mb-1 justify-center">
+          {[1, 2, 3].map(slot => {
+            const hasItems = equipSets[slot] && Object.keys(equipSets[slot]).length > 0;
+            return (
+              <button
+                key={slot}
+                onClick={() => onSwitchSet(slot)}
+                className={`px-2 py-0.5 text-xs rounded font-bold transition-colors cursor-pointer ${
+                  activeEquipSlot === slot
+                    ? 'bg-[var(--color-accent-info)] text-white'
+                    : hasItems
+                      ? 'bg-[var(--color-bg-input)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+                      : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'
+                }`}
+              >
+                {slot === 1 ? 'I' : slot === 2 ? 'II' : 'III'}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div id={cardId} className="border-2 border-[var(--color-border-light)] rounded-xl p-[0.8rem] w-full bg-[var(--color-bg-card)] relative"
         style={{ height: frameHeight }}>
         <div className="absolute inset-0 overflow-hidden rounded-[10px]">
@@ -199,8 +241,10 @@ export default function CharacterCard({
           equipmentBonuses={eqBonuses}
           extraStats={exStats}
           collectionBonus={collBonus}
+          collectionSetBonus={collSetBonus}
           guildBonus={gBonus}
           buildings={buildingsList}
+          setBonuses={stats?.setBonuses}
           noFlip={readOnly}
         />
 
@@ -232,25 +276,43 @@ export default function CharacterCard({
 
       {/* Тултип */}
       {hoveredSlot && char.equipment[hoveredSlot] && tooltipPos && (
-        <ItemTooltip item={char.equipment[hoveredSlot]} position={tooltipPos} />
+        <ItemTooltip item={char.equipment[hoveredSlot]} position={tooltipPos} equipment={char.equipment} />
       )}
 
       {/* Выбор предмета для слота */}
       {!readOnly && selectedSlot && (
-        <div className="mt-4 bg-[var(--color-bg-secondary)] p-2 rounded-lg border border-[var(--color-border-light)] w-full">
-          <div className="mb-2 text-[0.9rem]">Выберите предмет для {slotNames[selectedSlot]}:</div>
-          {getFilteredItems().map((item: any) => (
-            <div key={item.id} onClick={() => handleEquipSelect(item.id)}
-              className="p-1.5 bg-[var(--color-bg-input)] mb-0.5 cursor-pointer rounded text-[var(--color-text-primary)] text-xs">
-              {item.name}
-            </div>
-          ))}
+        <div className="mt-4 bg-[var(--color-bg-card)] p-3 rounded-lg border border-[var(--color-border-light)] w-full">
+          <div className="text-sm font-bold mb-2">Выберите предмет для {slotNames[selectedSlot]}:</div>
+          {getFilteredItems().length === 0 ? (
+            <p className="text-xs text-[var(--color-text-muted)]">Нет подходящих предметов</p>
+          ) : (
+            getFilteredItems().map((item: any) => {
+              const img = getItemImage(item);
+              const color = getRarityColor(item);
+              return (
+                <div key={item.id} onClick={() => handleEquipSelect(item.id)}
+                  className="flex items-center gap-2 p-2 bg-[var(--color-bg-input)] mb-1 cursor-pointer rounded hover:bg-[var(--color-bg-hover)] text-sm">
+                  {img ? (
+                    <div className="w-8 h-8 rounded flex-shrink-0 border-2" style={{ borderColor: color, background: `url(${img}) center / contain no-repeat` }} />
+                  ) : (
+                    <div className="w-8 h-8 rounded flex-shrink-0 border-2 flex items-center justify-center text-xs" style={{ borderColor: color, color }}>?</div>
+                  )}
+                  <span className="text-[var(--color-text-primary)]">{item.name}</span>
+                  {item.upgradeLevel > 0 && (
+                    <span className="text-[var(--color-text-accent)] text-xs ml-auto">+{item.upgradeLevel}</span>
+                  )}
+                </div>
+              );
+            })
+          )}
           <button onClick={() => setSelectedSlot(null)}
-            className="mt-2 bg-[var(--color-border-light)] border-none rounded text-[var(--color-text-primary)] px-2 py-1 cursor-pointer text-xs">
+            className="mt-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-3 py-1 text-xs cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
             Закрыть
           </button>
         </div>
       )}
     </div>
   );
-}
+});
+
+export default CharacterCard;

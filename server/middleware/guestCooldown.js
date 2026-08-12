@@ -1,0 +1,36 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.guestCooldown = guestCooldown;
+const auth_1 = require("./auth");
+// В памяти: userId → timestamp последнего действия
+const guestLastAction = new Map();
+const GUEST_COOLDOWN_MS = 0; // задержка отключена
+/**
+ * Замедляет гостевые запросы — не чаще 1 действия в 5 секунд.
+ */
+async function guestCooldown(req, res, next) {
+    if (await (0, auth_1.isGuestRestrictionsDisabled)())
+        return next();
+    if (!req.isGuest)
+        return next();
+    const userId = req.userId;
+    const now = Date.now();
+    const last = guestLastAction.get(userId) || 0;
+    if (now - last < GUEST_COOLDOWN_MS) {
+        return res.status(429).json({
+            error: 'Слишком часто. Гости могут выполнять действия не чаще раза в 5 секунд.',
+            retryAfter: Math.ceil((GUEST_COOLDOWN_MS - (now - last)) / 1000),
+        });
+    }
+    guestLastAction.set(userId, now);
+    next();
+}
+// Очистка старых записей раз в минуту
+setInterval(() => {
+    const cutoff = Date.now() - GUEST_COOLDOWN_MS * 2;
+    for (const [id, ts] of guestLastAction) {
+        if (ts < cutoff)
+            guestLastAction.delete(id);
+    }
+}, 60000);
+//# sourceMappingURL=guestCooldown.js.map

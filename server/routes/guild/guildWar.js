@@ -1,0 +1,353 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.isGuildAtWar = isGuildAtWar;
+const express_1 = require("express");
+const index_1 = require("../../db/index");
+const events_1 = require("../../events");
+const drinks_1 = require("../../game/drinks");
+const battle_1 = require("../../game/battle");
+const helpers_1 = require("../../db/helpers");
+const guildBuildings_1 = require("../../game/guildBuildings");
+const router = (0, express_1.Router)();
+async function isGuildAtWar(guildId) {
+    const now = new Date().toISOString();
+    // Авто-завершение просроченных active войн (с переводом казны)
+    const expiredWars = await index_1.db.query(`SELECT * FROM guild_wars WHERE status = 'active' AND expiresAt <= ?`, [now]);
+    for (const war of expiredWars) {
+        const attackerScore = war.attackerScore || 0;
+        const defenderScore = war.defenderScore || 0;
+        let winnerId = null;
+        let loserId = null;
+        if (attackerScore > defenderScore) {
+            winnerId = war.attackerGuildId;
+            loserId = war.defenderGuildId;
+        }
+        else if (defenderScore > attackerScore) {
+            winnerId = war.defenderGuildId;
+            loserId = war.attackerGuildId;
+        }
+        // Перевести казну проигравшего победителю
+        if (winnerId && loserId) {
+            const loserTreasury = (await index_1.db.one('SELECT treasury FROM guilds WHERE id = ?', [loserId]))?.treasury || 0;
+            if (loserTreasury > 0) {
+                await index_1.db.run('UPDATE guilds SET treasury = treasury + ? WHERE id = ?', [loserTreasury, winnerId]);
+                await index_1.db.run('UPDATE guilds SET treasury = 0 WHERE id = ?', [loserId]);
+                // Запись в лог казны
+                await index_1.db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type, createdat) VALUES (?, ?, ?, ?, ?)', [winnerId, 0, loserTreasury, 'war_win', new Date().toISOString()]);
+                await index_1.db.run('INSERT INTO guild_treasury_log (guildId, userId, amount, type, createdat) VALUES (?, ?, ?, ?, ?)', [loserId, 0, -loserTreasury, 'war_loss', new Date().toISOString()]);
+            }
+        }
+        await index_1.db.run(`UPDATE guild_wars SET status = 'ended', endedAt = ?, winnerGuildId = ? WHERE id = ?`, [now, winnerId, war.id]);
+        // Обновить статистику гильдий
+        await index_1.db.run('UPDATE guilds SET wars_participated = wars_participated + 1 WHERE id = ?', [war.attackerGuildId]);
+        await index_1.db.run('UPDATE guilds SET wars_participated = wars_participated + 1 WHERE id = ?', [war.defenderGuildId]);
+        if (winnerId) {
+            await index_1.db.run('UPDATE guilds SET wars_won = wars_won + 1 WHERE id = ?', [winnerId]);
+        }
+    }
+    return await index_1.db.one(`SELECT * FROM guild_wars WHERE (attackerGuildId = ? OR defenderGuildId = ?) AND status = 'active' LIMIT 1`, [guildId, guildId]) || null;
+}
+// Объявить войну (только лидер)
+router.post('/guild/war/declare', async (req, res) => {
+    const userId = req.userId;
+    const { targetGuildId } = req.body;
+    if (!targetGuildId)
+        return res.status(400).json({ error: 'Укажите targetGuildId' });
+    const member = await index_1.db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]);
+    if (!member || (member.rank !== 'leader' && !(member.rank === 'officer' && member.can_war))) {
+        return res.status(400).json({ error: 'Только лидер или офицер с правом на войну может объявить войну' });
+    }
+    const myGuildId = member.guildId;
+    // Нельзя объявить войну себе
+    if (myGuildId === targetGuildId)
+        return res.status(400).json({ error: 'Нельзя объявить войну своей гильдии' });
+    // Проверить, что целевая гильдия существует
+    const targetGuild = await index_1.db.one('SELECT * FROM guilds WHERE id = ?', [targetGuildId]);
+    if (!targetGuild)
+        return res.status(404).json({ error: 'Гильдия не найдена' });
+    // Проверить, что моя гильдия не в войне
+    const myWar = await isGuildAtWar(myGuildId);
+    if (myWar)
+        return res.status(400).json({ error: 'Ваша гильдия уже участвует в войне' });
+    // Проверить, что целевая гильдия не в войне
+    const theirWar = await isGuildAtWar(targetGuildId);
+    if (theirWar)
+        return res.status(400).json({ error: 'Целевая гильдия уже участвует в войне' });
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    await index_1.db.run('INSERT INTO guild_wars (attackerGuildId, defenderGuildId, declaredAt, expiresAt, status) VALUES (?, ?, ?, ?, ?)', [myGuildId, targetGuildId, now.toISOString(), expiresAt, 'active']);
+    const myGuild = await index_1.db.one('SELECT name FROM guilds WHERE id = ?', [myGuildId]);
+    const targetGuildName = (await index_1.db.one('SELECT name FROM guilds WHERE id = ?', [targetGuildId]))?.name || '';
+    // Уведомление лидеру защищающейся гильдии через ЛС
+    const defenderLeader = await index_1.db.one('SELECT u.id FROM guilds g JOIN users u ON g.leaderId = u.id WHERE g.id = ?', [targetGuildId]);
+    if (defenderLeader) {
+        const msg = `⚔️ Гильдия «${myGuild.name}» напала на вас! Война продлится 72 часа. Приготовьтесь к обороне!`;
+        const info = await index_1.db.run('INSERT INTO chat_messages (senderId, targetId, content, item_data) VALUES (?, ?, ?, ?)', [0, defenderLeader.id, msg, JSON.stringify({ type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name })]);
+        (0, events_1.broadcast)('message', { message: {
+                id: info.lastInsertRowid, senderId: 0, senderName: 'Глашатай', targetId: defenderLeader.id,
+                content: msg, createdAt: new Date().toISOString(),
+                item: { type: 'war_declared', attackerGuildId: myGuildId, attackerName: myGuild.name },
+            } });
+    }
+    res.json({ success: true, message: `Война объявлена гильдии «${targetGuild.name}»! 3 суток на битву.` });
+});
+// Ответ на войну больше не требуется — война начинается сразу
+router.post('/guild/war/respond', async (_req, res) => {
+    res.status(400).json({ error: 'Войны начинаются сразу. Подтверждение не требуется.' });
+});
+// Статус войны для моей гильдии
+router.get('/guild/war/status', async (req, res) => {
+    const userId = req.userId;
+    const member = await index_1.db.one('SELECT guildId FROM guild_members WHERE userId = ?', [userId]);
+    if (!member)
+        return res.json({ war: null });
+    const war = await isGuildAtWar(member.guildId);
+    if (!war)
+        return res.json({ war: null });
+    const attackerGuild = await index_1.db.one('SELECT id, name FROM guilds WHERE id = ?', [war.attackerGuildId]);
+    const defenderGuild = await index_1.db.one('SELECT id, name FROM guilds WHERE id = ?', [war.defenderGuildId]);
+    const isAttacker = war.attackerGuildId === member.guildId;
+    res.json({
+        war: {
+            id: war.id,
+            attackerGuild: attackerGuild,
+            defenderGuild: defenderGuild,
+            status: war.status,
+            declaredAt: war.declaredAt,
+            acceptedAt: war.acceptedAt,
+            expiresAt: war.expiresAt,
+            isAttacker,
+            isDefender: !isAttacker,
+            attackerScore: war.attackerScore || 0,
+            defenderScore: war.defenderScore || 0,
+        }
+    });
+});
+// Детали войны: участники, атаки, счёт
+router.get('/guild/war/details', async (req, res) => {
+    const userId = req.userId;
+    const member = await index_1.db.one('SELECT guildId FROM guild_members WHERE userId = ?', [userId]);
+    if (!member)
+        return res.status(400).json({ error: 'Вы не в гильдии' });
+    const war = await isGuildAtWar(member.guildId);
+    if (!war || war.status !== 'active')
+        return res.json({ war: null });
+    const myGuildId = member.guildId;
+    const enemyGuildId = war.attackerGuildId === myGuildId ? war.defenderGuildId : war.attackerGuildId;
+    const myGuild = await index_1.db.one('SELECT id, name FROM guilds WHERE id = ?', [myGuildId]);
+    const enemyGuild = await index_1.db.one('SELECT id, name FROM guilds WHERE id = ?', [enemyGuildId]);
+    // Участники моей гильдии (только кто был в гильдии на момент объявления войны)
+    const myMembers = await index_1.db.query(`
+        SELECT u.id, u.username, u.level,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id) as attacksMade,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id AND won = 1) as attacksWon,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND attackerId = u.id AND won = 0) as attacksLost,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id AND won = 0) as timesAttacked
+        FROM guild_members gm JOIN users u ON gm.userId = u.id
+        WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt::timestamptz FROM guild_wars WHERE id = ?)
+        ORDER BY gm.rank DESC, u.level DESC
+    `, [war.id, war.id, war.id, war.id, myGuildId, war.id]);
+    // Участники вражеской гильдии (с проверкой защиты, только до войны)
+    const now = new Date().toISOString();
+    const enemyMembers = await index_1.db.query(`
+        SELECT u.id, u.username, u.level,
+            (SELECT COUNT(*) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as timesAttacked,
+            (SELECT MAX(createdAt) FROM guild_war_attacks WHERE warId = ? AND defenderId = u.id) as lastAttackedAt
+        FROM guild_members gm JOIN users u ON gm.userId = u.id
+        WHERE gm.guildId = ? AND gm.joinedAt <= (SELECT declaredAt::timestamptz FROM guild_wars WHERE id = ?)
+        ORDER BY u.level DESC
+    `, [war.id, war.id, enemyGuildId, war.id]);
+    // Проверка защиты: если атаковали меньше часа назад — возвращаем unixtime окончания защиты
+    const enemyWithProtection = enemyMembers.map((m) => {
+        let protectedUntil = null;
+        if (m.lastAttackedAt) {
+            const attackedTime = new Date(m.lastAttackedAt).getTime();
+            const protectionEnd = attackedTime + 60 * 60 * 1000;
+            if (protectionEnd > Date.now()) {
+                protectedUntil = Math.floor(protectionEnd / 1000);
+            }
+        }
+        return { ...m, protectedUntil };
+    });
+    // Мои атаки
+    const myAttacks = await index_1.db.query(`
+        SELECT gwa.*, u.username as defenderName
+        FROM guild_war_attacks gwa
+        JOIN users u ON gwa.defenderId = u.id
+        WHERE gwa.warId = ? AND gwa.attackerId = ?
+        ORDER BY gwa.id DESC
+    `, [war.id, userId]);
+    // Все атаки в войне (для хода войны)
+    const allAttacks = await index_1.db.query(`
+        SELECT gwa.*, au.username as attackerName, du.username as defenderName
+        FROM guild_war_attacks gwa
+        JOIN users au ON gwa.attackerId = au.id
+        JOIN users du ON gwa.defenderId = du.id
+        WHERE gwa.warId = ?
+        ORDER BY gwa.id DESC
+    `, [war.id]);
+    // Сколько атак я сделал
+    const myAttackCount = await index_1.db.one('SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?', [war.id, userId]);
+    // Время последней моей атаки — кулдаун 5 минут (unixtime)
+    const myLastAttack = await index_1.db.one('SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?', [war.id, userId]);
+    let attackCooldownUntil = null;
+    if (myLastAttack?.lastAt) {
+        const lastTime = new Date(myLastAttack.lastAt).getTime();
+        const cooldownEnd = lastTime + 5 * 60 * 1000;
+        if (cooldownEnd > Date.now()) {
+            attackCooldownUntil = Math.floor(cooldownEnd / 1000);
+        }
+    }
+    res.json({
+        war: {
+            id: war.id,
+            myGuild,
+            enemyGuild,
+            status: war.status,
+            expiresAt: war.expiresAt,
+            attackerScore: war.attackerScore || 0,
+            defenderScore: war.defenderScore || 0,
+            myGuildId,
+            enemyGuildId,
+            attackerGuildId: war.attackerGuildId,
+            myMembers,
+            enemyMembers: enemyWithProtection,
+            myAttacks,
+            allAttacks,
+            myAttackCount: myAttackCount.cnt,
+            canAttack: myAttackCount.cnt < 3 && !attackCooldownUntil,
+            attackCooldownUntil,
+        }
+    });
+});
+// Атаковать участника вражеской гильдии
+router.post('/guild/war/attack', async (req, res) => {
+    const userId = req.userId;
+    const { targetId } = req.body;
+    if (!targetId)
+        return res.status(400).json({ error: 'Укажите targetId' });
+    const member = await index_1.db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]);
+    if (!member)
+        return res.status(400).json({ error: 'Вы не в гильдии' });
+    const war = await isGuildAtWar(member.guildId);
+    if (!war || war.status !== 'active')
+        return res.status(400).json({ error: 'Ваша гильдия не в активной войне' });
+    const myGuildId = member.guildId;
+    const enemyGuildId = war.attackerGuildId === myGuildId ? war.defenderGuildId : war.attackerGuildId;
+    // Проверка: цель во вражеской гильдии
+    const targetMember = await index_1.db.one('SELECT * FROM guild_members WHERE guildId = ? AND userId = ?', [enemyGuildId, targetId]);
+    if (!targetMember)
+        return res.status(400).json({ error: 'Цель не во вражеской гильдии' });
+    // Проверка: атакующий был в гильдии на момент объявления войны
+    if (member.joinedAt > war.declaredAt)
+        return res.status(400).json({ error: 'Вы вступили в гильдию после объявления войны' });
+    // Проверка: цель была во вражеской гильдии на момент объявления войны
+    if (targetMember.joinedAt > war.declaredAt)
+        return res.status(400).json({ error: 'Цель вступила в гильдию после объявления войны' });
+    // Лимит: 3 атаки на атакующего
+    const myAttacks = (await index_1.db.one('SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?', [war.id, userId])).cnt;
+    if (myAttacks >= 3)
+        return res.status(400).json({ error: 'Вы исчерпали лимит атак (3)' });
+    // Лимит: 5 атак на защитника
+    const targetAttacks = (await index_1.db.one('SELECT COUNT(*) as cnt FROM guild_war_attacks WHERE warId = ? AND defenderId = ?', [war.id, targetId])).cnt;
+    if (targetAttacks >= 5)
+        return res.status(400).json({ error: 'Этого игрока уже атаковали максимум раз (5)' });
+    // Кулдаун: 5 минут с последней атаки
+    const lastAttack = await index_1.db.one('SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND attackerId = ?', [war.id, userId]);
+    if (lastAttack?.lastAt) {
+        const lastTime = new Date(lastAttack.lastAt).getTime();
+        if (Date.now() - lastTime < 5 * 60 * 1000) {
+            return res.status(400).json({ error: 'Атаковать можно раз в 5 минут' });
+        }
+    }
+    // Защита цели: 1 час после любой атаки на неё
+    const lastDefend = await index_1.db.one('SELECT MAX(createdAt) as lastAt FROM guild_war_attacks WHERE warId = ? AND defenderId = ?', [war.id, targetId]);
+    if (lastDefend?.lastAt) {
+        const lastTime = new Date(lastDefend.lastAt).getTime();
+        if (Date.now() - lastTime < 60 * 60 * 1000) {
+            return res.status(400).json({ error: 'У игрока защита после атаки (1 час)' });
+        }
+    }
+    // Симуляция боя (макс HP + все бонусы, full combat как в PvP)
+    const attacker = await index_1.db.one('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money, u.activeDrink, u.drinkUntil FROM users u WHERE u.id = ?', [userId]);
+    const defender = await index_1.db.one('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money, u.activeDrink, u.drinkUntil FROM users u WHERE u.id = ?', [targetId]);
+    const aCollCnt = await (0, helpers_1.getCollectionBonus)(userId);
+    const dCollCnt = await (0, helpers_1.getCollectionBonus)(targetId);
+    // Контекст бонусов: атакующий получает бонус своей стороны
+    const attackerCtx = myGuildId === war.attackerGuildId ? 'war_attack' : 'war_defense';
+    const defenderCtx = attackerCtx === 'war_attack' ? 'war_defense' : 'war_attack';
+    const aGuildBonus = await (0, guildBuildings_1.getGuildBonus)(userId, attackerCtx);
+    const dGuildBonus = await (0, guildBuildings_1.getGuildBonus)(targetId, defenderCtx);
+    const aEquip = JSON.parse(attacker.equipment || '{}');
+    const dEquip = JSON.parse(defender.equipment || '{}');
+    const { enriched: aEnriched } = await (0, helpers_1.enrichEquipment)(aEquip);
+    const { enriched: dEnriched } = await (0, helpers_1.enrichEquipment)(dEquip);
+    const attackerData = {
+        id: attacker.id,
+        name: attacker.username,
+        base: (0, helpers_1.getBaseStats)(attacker),
+        equipment: aEnriched,
+        level: attacker.level,
+        money: attacker.money || 0,
+        drinkBonuses: (0, drinks_1.getDrinkBonuses)(attacker),
+        collectionBonus: aCollCnt,
+        guildBonus: aGuildBonus,
+    };
+    const defenderData = {
+        id: defender.id,
+        name: defender.username,
+        base: (0, helpers_1.getBaseStats)(defender),
+        equipment: dEnriched,
+        level: defender.level,
+        money: defender.money || 0,
+        drinkBonuses: (0, drinks_1.getDrinkBonuses)(defender),
+        collectionBonus: dCollCnt,
+        guildBonus: dGuildBonus,
+    };
+    const result = (0, battle_1.runBattle)(attackerData, defenderData);
+    const won = result.winnerId === attacker.id;
+    const log = result.log;
+    const steps = result.steps;
+    // В гильдийских войнах деньги не снимаются — убираем шаги кражи
+    const warSteps = steps.filter((s) => s.type !== "money");
+    const warLog = warSteps.map((s) => s.message);
+    // Запись атаки
+    await index_1.db.run(`
+        INSERT INTO guild_war_attacks (warId, attackerId, defenderId, attackerGuildId, defenderGuildId, won, battleLog, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [war.id, userId, targetId, myGuildId, enemyGuildId, won ? 1 : 0, JSON.stringify(warSteps), new Date().toISOString()]);
+    // Обновление счёта
+    if (won) {
+        const scoreField = myGuildId === war.attackerGuildId ? 'attackerScore' : 'defenderScore';
+        await index_1.db.run(`UPDATE guild_wars SET ${scoreField} = ${scoreField} + 1 WHERE id = ?`, [war.id]);
+    }
+    res.json({
+        success: true,
+        won,
+        log: warLog,
+        steps: warSteps,
+        finalAttackerHp: result.attackerHpAfter,
+        finalDefenderHp: result.defenderHpAfter,
+    });
+});
+// Установить ставку налога (только лидер)
+// Все активные войны (публичный список)
+router.get('/guild/war/active', async (_req, res) => {
+    const wars = await index_1.db.query(`SELECT gw.*, ag.name as attacker_name, dg.name as defender_name
+         FROM guild_wars gw
+         JOIN guilds ag ON gw.attackerGuildId = ag.id
+         JOIN guilds dg ON gw.defenderGuildId = dg.id
+         WHERE gw.status = 'active'
+         ORDER BY gw.id DESC`);
+    res.json({ wars: wars.map(w => ({
+            id: w.id,
+            attackerGuild: { id: w.attackerGuildId, name: w.attacker_name },
+            defenderGuild: { id: w.defenderGuildId, name: w.defender_name },
+            attackerScore: w.attackerScore || 0,
+            defenderScore: w.defenderScore || 0,
+            declaredAt: w.declaredAt,
+            expiresAt: w.expiresAt,
+        })) });
+});
+exports.default = router;
+//# sourceMappingURL=guildWar.js.map

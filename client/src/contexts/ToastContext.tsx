@@ -18,10 +18,10 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType>({ showToast: () => {} });
 
 const typeStyles: Record<ToastType, { bg: string; border: string; icon: string; color: string }> = {
-    error:   { bg: 'bg-red-950/80',        border: 'border-red-700',     icon: 'game-icons:cancel',       color: '#ef4444' },
-    success: { bg: 'bg-green-950/80',       border: 'border-green-700',   icon: 'game-icons:check-mark',   color: '#22c55e' },
-    info:    { bg: 'bg-blue-950/80',        border: 'border-blue-700',    icon: 'game-icons:info',         color: '#3b82f6' },
-    warning: { bg: 'bg-yellow-950/80',      border: 'border-yellow-700',  icon: 'game-icons:bright-explosion', color: '#eab308' },
+    error:   { bg: 'bg-red-900',        border: 'border-red-700',     icon: 'game-icons:cancel',       color: '#ef4444' },
+    success: { bg: 'bg-green-900',       border: 'border-green-700',   icon: 'game-icons:check-mark',   color: '#22c55e' },
+    info:    { bg: 'bg-blue-900',        border: 'border-blue-700',    icon: 'game-icons:info',         color: '#3b82f6' },
+    warning: { bg: 'bg-yellow-900',      border: 'border-yellow-700',  icon: 'game-icons:bright-explosion', color: '#eab308' },
 };
 
 let nextId = 1;
@@ -30,6 +30,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     const showToast = useCallback((message: string, type: ToastType = 'error') => {
+        // Перехват сообщений о нехватке денег → модальное окно
+        const lower = message.toLowerCase();
+        if (lower.includes('недостаточно') && (lower.includes('серебра') || lower.includes('монет') || lower.includes('денег') || lower.includes('бронзы'))) {
+            window.dispatchEvent(new CustomEvent('noMoney', { detail: { message, amount: undefined } }));
+            return;
+        }
+        // Перехват сообщений о заполненном инвентаре → модальное окно
+        if (lower.includes('инвентарь заполнен')) {
+            window.dispatchEvent(new CustomEvent('inventoryFull', { detail: { message } }));
+            return;
+        }
         const id = nextId++;
         setToasts(prev => {
             const next = [...prev, { id, message, type, fading: false }];

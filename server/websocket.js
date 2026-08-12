@@ -1,0 +1,514 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.isUserOnline = isUserOnline;
+exports.setupWebSocket = setupWebSocket;
+const ws_1 = require("ws");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const xss_1 = __importDefault(require("xss"));
+const index_1 = require("./db/index");
+const validation_1 = require("./validation");
+const audit_1 = require("./audit");
+const events_1 = require("./events");
+const JWT_SECRET = process.env.JWT_SECRET;
+// Санитизация контента от XSS
+const sanitize = (text) => (0, xss_1.default)(text, { whiteList: {}, stripIgnoreTag: true });
+// Интервал пинг-понга (секунды)
+const HEARTBEAT_INTERVAL = 30;
+const clients = new Map();
+const onlineUsers = new Map();
+/** Проверить, онлайн ли пользователь (есть активное WS-соединение) */
+function isUserOnline(userId) {
+    return onlineUsers.has(userId);
+}
+const userDirtyFlags = new Map();
+let _notificationSeq = 0;
+/** Пометить пользователя — на следующем serverTick ему отправятся свежие данные */
+function _markDirty(userId, ...types) {
+    if (!clients.has(userId))
+        return;
+    let flags = userDirtyFlags.get(userId);
+    if (!flags) {
+        flags = new Set();
+        userDirtyFlags.set(userId, flags);
+    }
+    for (const t of types)
+        flags.add(t);
+}
+/** Очередь уведомлений на отправку через serverTick */
+const notificationQueues = new Map();
+/** Добавить уведомление пользователю — отправится на ближайшем serverTick */
+function _pushNotification(userId, notification) {
+    const queue = notificationQueues.get(userId) || [];
+    queue.push({
+        ...notification,
+        id: ++_notificationSeq,
+        createdAt: Math.floor(Date.now() / 1000),
+    });
+    notificationQueues.set(userId, queue);
+    _markDirty(userId, 'notifications');
+}
+// ---------- Рассылка ----------
+async function _broadcast(type, data, exceptUserId) {
+    const payload = JSON.stringify({ type, ...data });
+    clients.forEach((ws, userId) => {
+        if (userId !== exceptUserId && ws.readyState === ws_1.WebSocket.OPEN) {
+            ws.send(payload);
+        }
+    });
+}
+async function _sendToUser(userId, payload) {
+    const ws = clients.get(userId);
+    if (ws && ws.readyState === ws_1.WebSocket.OPEN) {
+        ws.send(JSON.stringify(payload));
+    }
+}
+async function _sendToGuild(guildId, payload) {
+    const msg = JSON.stringify(payload);
+    onlineUsers.forEach((user, userId) => {
+        if (user.guildId === guildId) {
+            const ws = clients.get(userId);
+            if (ws && ws.readyState === ws_1.WebSocket.OPEN) {
+                ws.send(msg);
+            }
+        }
+    });
+}
+async function notifyUserOnline(user) {
+    _broadcast('userOnline', { user });
+}
+async function notifyUserOffline(userId) {
+    _broadcast('userOffline', { userId });
+}
+// ---------- Heartbeat ----------
+async function heartbeat(ws) {
+    ws.isAlive = true;
+}
+// ---------- Вычислялки для serverTick ----------
+const questData_1 = require("./game/questData");
+async function computeQuestData(userId) {
+    const today = await (0, questData_1.getToday)();
+    const quests = await index_1.db.query('SELECT * FROM daily_quests WHERE userId = ? AND date = ? ORDER BY id', [userId, today]);
+    if (quests.length === 0)
+        return null;
+    for (const q of quests) {
+        if (q.status === 'active') {
+            const prog = await (0, questData_1.getProgress)(userId, q.snapshot, q.questType);
+            if (prog !== q.progress) {
+                await index_1.db.run('UPDATE daily_quests SET progress = ? WHERE id = ?', [Math.min(prog, q.requirement), q.id]);
+                q.progress = Math.min(prog, q.requirement);
+            }
+        }
+    }
+    const active = quests.filter((q) => q.status === 'active');
+    const typeQuest = questData_1.QUEST_INFO;
+    const typeDiff = questData_1.DIFFICULTIES;
+    return {
+        quests: quests.filter((q) => q.status !== 'claimed').map((q) => {
+            const qt = q.questType;
+            const info = typeQuest[qt];
+            return {
+                ...q,
+                typeName: info?.name,
+                typeIcon: info?.icon,
+                description: info?.desc ? info.desc(q.requirement, q.difficulty) : '',
+                difficultyLabel: typeDiff[q.difficulty]?.label || q.difficulty,
+                snapshot: undefined,
+            };
+        }),
+        activeCount: active.length,
+        completedToday: quests.filter((q) => q.status === 'claimed').length,
+        canTake: active.length < 3 && (active.length + quests.filter((q) => q.status === 'claimed').length) < 5,
+        dailyLimit: 5,
+        maxActive: 3,
+    };
+}
+const rating_1 = require("./routes/rating");
+async function computeRatingData(userId) {
+    const user = await index_1.db.one('SELECT elo FROM users WHERE id = ?', [userId]);
+    if (!user)
+        return null;
+    const elo = user.elo || 1000;
+    const position = (await index_1.db.one('SELECT COUNT(*) as cnt FROM users WHERE id > 0 AND (elo > ? OR (elo = ? AND id < ?))', [elo, elo, userId])).cnt + 1;
+    const total = (await index_1.db.one('SELECT COUNT(*) as cnt FROM users WHERE id > 0', [])).cnt;
+    const rank = (0, rating_1.getRank)(elo);
+    return { elo, position, total, rank };
+}
+async function setupWebSocket(server) {
+    const wss = new ws_1.WebSocketServer({ server });
+    // ── Подписка на EventBus ──
+    (0, events_1.on)('markDirty', (e) => {
+        if (e.type === 'markDirty')
+            _markDirty(e.userId, ...e.flags);
+    });
+    (0, events_1.on)('pushNotification', (e) => {
+        if (e.type === 'pushNotification')
+            _pushNotification(e.userId, e.notification);
+    });
+    (0, events_1.on)('broadcast', (e) => {
+        if (e.type === 'broadcast')
+            _broadcast(e.eventType, e.data, e.exceptUserId);
+    });
+    (0, events_1.on)('sendToUser', (e) => {
+        if (e.type === 'sendToUser')
+            _sendToUser(e.userId, e.payload);
+    });
+    (0, events_1.on)('sendToGuild', (e) => {
+        if (e.type === 'sendToGuild')
+            _sendToGuild(e.guildId, e.payload);
+    });
+    // Интервал проверки живых соединений
+    const interval = setInterval(() => {
+        wss.clients.forEach((ws) => {
+            const alive = ws.isAlive;
+            if (alive === false)
+                return ws.terminate();
+            ws.isAlive = false;
+            ws.ping();
+        });
+    }, HEARTBEAT_INTERVAL * 1000);
+    // Интервал serverTick — батчинг: один запрос на всех
+    let tickCount = 0;
+    const tickInterval = setInterval(async () => {
+        const time = Math.floor(Date.now() / 1000);
+        const userIds = Array.from(clients.keys());
+        if (userIds.length === 0)
+            return;
+        tickCount++;
+        try {
+            const placeholders = userIds.map(() => '?').join(',');
+            const rows = await index_1.db.query(`SELECT u.id, u.money, u.bank, u.guildId,
+                u.currentHp, u.lastHpUpdate,
+                COALESCE(u.auction_sales, 0) as auctionSales,
+                COALESCE(u.bank_transfers, 0) as bankTransfers,
+                u.faction, u.karma, u.faction_craft_count, u.bandit_reputation
+         FROM users u WHERE u.id IN (${placeholders})`, userIds);
+            const batch = new Map();
+            for (const r of rows)
+                batch.set(r.id, r);
+            const guildIds = new Set();
+            for (const r of rows) {
+                if (r.guildid)
+                    guildIds.add(r.guildid);
+            }
+            let guildBadges = new Map();
+            if (guildIds.size > 0 && tickCount % 3 === 0) {
+                const gPlaceholders = Array.from(guildIds).map(() => '?').join(',');
+                const cutoff = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+                const gRows = await index_1.db.query(`SELECT guildId,
+                  SUM(CASE WHEN invitedBy = 0 AND status = 'pending' THEN 1 ELSE 0 END) as requests
+           FROM guild_invites WHERE guildId IN (${gPlaceholders}) AND createdat > ? GROUP BY guildId`, [...Array.from(guildIds), cutoff]);
+                for (const g of gRows) {
+                    guildBadges.set(g.guildid, g.requests || 0);
+                }
+            }
+            // Резня: состояние текущего сбора
+            let massacreState = null;
+            try {
+                const mev = await index_1.db.one(`SELECT id, status, entry_fee, gathering_end,
+                  (SELECT COUNT(*) FROM massacre_participants WHERE event_id = massacre_events.id) as participant_count
+           FROM massacre_events WHERE status IN ('gathering','in_progress') ORDER BY id DESC LIMIT 1`, []);
+                if (mev) {
+                    const now = Math.floor(Date.now() / 1000);
+                    massacreState = {
+                        id: mev.id,
+                        status: mev.status,
+                        timeLeft: mev.status === 'gathering' ? Math.max(0, mev.gathering_end - now) : 0,
+                        participant_count: mev.participant_count,
+                    };
+                }
+            }
+            catch { }
+            for (const userId of userIds) {
+                const ws = clients.get(userId);
+                if (!ws || ws.readyState !== ws_1.WebSocket.OPEN)
+                    continue;
+                const stats = batch.get(userId);
+                const payload = { type: 'serverTick', time };
+                if (stats) {
+                    payload.money = stats.money || 0;
+                    payload.bank = stats.bank || 0;
+                    payload.currentHp = stats.currenthp ?? stats.currentHp ?? 0;
+                    payload.lastHpUpdate = stats.lasthpupdate ?? stats.lastHpUpdate ?? 0;
+                    payload.auctionSales = stats.auctionsales ?? stats.auctionSales ?? 0;
+                    payload.bankTransfers = stats.banktransfers ?? stats.bankTransfers ?? 0;
+                    payload.faction = stats.faction || null;
+                    payload.karma = stats.karma || 0;
+                    payload.factionCraftCount = stats.faction_craft_count || 0;
+                    payload.banditReputation = stats.bandit_reputation || 0;
+                    if (stats.guildid && tickCount % 3 === 0) {
+                        const gb = guildBadges.get(stats.guildid) || 0;
+                        if (gb > 0)
+                            payload.guildBadge = gb;
+                    }
+                }
+                if (massacreState)
+                    payload.massacre = massacreState;
+                // Грязные данные (квесты/рейтинг/уведомления) — per-user
+                const flags = userDirtyFlags.get(userId);
+                if (flags && flags.size > 0) {
+                    if (flags.has('quests')) {
+                        try {
+                            const q = await computeQuestData(userId);
+                            if (q)
+                                payload.quests = q;
+                        }
+                        catch { }
+                        flags.delete('quests');
+                    }
+                    if (flags.has('rating')) {
+                        try {
+                            const r = await computeRatingData(userId);
+                            if (r)
+                                payload.rating = r;
+                        }
+                        catch { }
+                        flags.delete('rating');
+                    }
+                    if (flags.has('notifications')) {
+                        const queue = notificationQueues.get(userId);
+                        if (queue && queue.length > 0)
+                            payload.notifications = queue.splice(0, queue.length);
+                        flags.delete('notifications');
+                    }
+                    if (flags.size === 0)
+                        userDirtyFlags.delete(userId);
+                }
+                ws.send(JSON.stringify(payload));
+            }
+        }
+        catch (e) {
+            console.error('tick batch err:', e?.message);
+        }
+    }, 1000);
+    wss.on('close', () => {
+        clearInterval(interval);
+        clearInterval(tickInterval);
+    });
+    // ---------- Подключение ----------
+    wss.on("connection", async (ws, req) => {
+        ws.isAlive = true;
+        ws.on('pong', () => heartbeat(ws));
+        const url = new URL(req.url, 'http://localhost');
+        const token = url.searchParams.get('token');
+        if (!token) {
+            ws.close(1008, 'Token required');
+            return;
+        }
+        let decoded;
+        try {
+            decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        }
+        catch {
+            ws.close(1008, 'Invalid token');
+            return;
+        }
+        // ---------- Администратор ----------
+        if (decoded.role === 'admin') {
+            const admin = await index_1.db.one('SELECT id, username FROM admins WHERE id = ?', [decoded.adminId]);
+            if (!admin) {
+                ws.close(1008, 'Admin not found');
+                return;
+            }
+            const adminId = -admin.id;
+            clients.set(adminId, ws);
+            ws.send(JSON.stringify({
+                type: 'onlineUsers',
+                users: Array.from(onlineUsers.values()),
+            }));
+            ws.on("message", async () => { });
+            ws.on("close", async () => {
+                clients.delete(adminId);
+                userDirtyFlags.delete(adminId);
+                notificationQueues.delete(adminId);
+            });
+            return;
+        }
+        // ---------- Игрок ----------
+        const userId = decoded.userId;
+        const user = await index_1.db.one('SELECT u.id, u.username, u.level, u.faction, u.chatBannedUntil, u.isGuest, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?', [userId]);
+        if (!user) {
+            ws.close(1008, 'User not found');
+            return;
+        }
+        // Закрываем предыдущее соединение, если было
+        const existingWs = clients.get(userId);
+        if (existingWs) {
+            existingWs.close(1000, 'New connection');
+        }
+        clients.set(userId, ws);
+        const onlineUser = { id: user.id, username: user.username, level: user.level, faction: user.faction || null, guildName: user.guildname || user.guildName || null, guildId: user.guildid || user.guildId || null };
+        onlineUsers.set(userId, onlineUser);
+        (0, audit_1.auditWsConnect)(user.username, user.id);
+        // При подключении помечаем квесты + рейтинг — отправятся на первом же тике
+        _markDirty(userId, 'quests', 'rating');
+        // Отправляем текущий список онлайна
+        ws.send(JSON.stringify({
+            type: 'onlineUsers',
+            users: Array.from(onlineUsers.values()),
+        }));
+        // Проверка бана в чате
+        if (user.chatBannedUntil && user.chatBannedUntil > Math.floor(Date.now() / 1000)) {
+            ws.send(JSON.stringify({
+                type: 'chatBanned',
+                until: user.chatBannedUntil,
+            }));
+        }
+        // Уведомляем всех о входе
+        notifyUserOnline(onlineUser);
+        // ---------- Обработка сообщений ----------
+        ws.on("message", async (raw) => {
+            try {
+                let data;
+                try {
+                    data = JSON.parse(raw.toString());
+                }
+                catch {
+                    return;
+                }
+                const currentUser = await index_1.db.one('SELECT chatBannedUntil FROM users WHERE id = ?', [userId]);
+                if (currentUser && currentUser.chatBannedUntil && currentUser.chatBannedUntil > Math.floor(Date.now() / 1000)) {
+                    _sendToUser(userId, {
+                        type: 'chatBanned',
+                        until: currentUser.chatBannedUntil,
+                    });
+                    return;
+                }
+                // Отправка предмета в чат
+                if (data.type === 'itemLink') {
+                    const parsed = validation_1.wsItemLinkSchema.safeParse(data);
+                    if (!parsed.success)
+                        return;
+                    let item = data.itemData;
+                    if (!item) {
+                        const itemId = data.itemId;
+                        if (!itemId)
+                            return;
+                        const userRow = await index_1.db.one('SELECT inventory FROM users WHERE id = ?', [userId]);
+                        const inventory = JSON.parse(userRow.inventory || '[]');
+                        item = inventory.find((i) => i.id == itemId);
+                    }
+                    if (!item)
+                        return;
+                    const itemDataJson = JSON.stringify(item);
+                    const itemName = sanitize(item.name);
+                    const info = await index_1.db.run('INSERT INTO chat_messages (senderId, targetId, content, item_data, senderguild, senderguildid) VALUES (?, NULL, ?, ?, ?, ?)', [userId, `[${itemName}]`, itemDataJson, user.guildName || null, user.guildId || null]);
+                    const msg = {
+                        id: info.lastInsertRowid,
+                        senderId: userId,
+                        senderName: user.username,
+                        senderGuild: user.guildName || null,
+                        senderGuildId: user.guildId || null,
+                        targetId: null,
+                        content: `[${itemName}]` || '',
+                        createdAt: new Date().toISOString(),
+                        item: item,
+                        itemRarity: item.rarity_id ?? item.rarity,
+                    };
+                    _broadcast('message', { message: msg });
+                    return;
+                }
+                if (data.type === 'public') {
+                    const parsed = validation_1.wsPublicMessageSchema.safeParse(data);
+                    if (!parsed.success) {
+                        const err = parsed.error.issues?.[0]?.message || parsed.error.errors?.[0]?.message || 'Некорректное сообщение';
+                        _sendToUser(userId, { type: 'error', message: err });
+                        return;
+                    }
+                    const content = data.content.trim();
+                    // Команда /w — ЛС
+                    if (content.startsWith('/w ')) {
+                        const withoutCommand = content.slice(3).trim();
+                        const spaceIndex = withoutCommand.indexOf(' ');
+                        if (spaceIndex === -1)
+                            return;
+                        const targetName = withoutCommand.slice(0, spaceIndex).toLowerCase();
+                        const privateContent = withoutCommand.slice(spaceIndex + 1).trim();
+                        if (!privateContent)
+                            return;
+                        const targetUser = await index_1.db.one('SELECT id FROM users WHERE LOWER(username) = ?', [targetName]);
+                        if (!targetUser) {
+                            _sendToUser(userId, { type: 'error', message: 'Пользователь не найден' });
+                            return;
+                        }
+                        if (targetUser.id === userId) {
+                            _sendToUser(userId, { type: 'error', message: 'Нельзя отправить личное сообщение самому себе' });
+                            return;
+                        }
+                        const sanitizedPrivate = sanitize(privateContent);
+                        const info = await index_1.db.run('INSERT INTO chat_messages (senderId, targetId, content, senderguild, senderguildid) VALUES (?, ?, ?, ?, ?)', [userId, targetUser.id, sanitizedPrivate, user.guildName || null, user.guildId || null]);
+                        const msg = {
+                            id: info.lastInsertRowid,
+                            senderId: userId,
+                            senderName: user.username,
+                            targetId: targetUser.id,
+                            content: sanitizedPrivate || '',
+                            createdAt: new Date().toISOString(),
+                        };
+                        _sendToUser(userId, { type: 'message', message: msg });
+                        if (clients.has(targetUser.id)) {
+                            _sendToUser(targetUser.id, { type: 'message', message: msg });
+                        }
+                        return;
+                    }
+                    // Обычное сообщение в общий чат
+                    const sanitizedContent = sanitize(content);
+                    const info = await index_1.db.run('INSERT INTO chat_messages (senderId, targetId, content, senderguild, senderguildid) VALUES (?, NULL, ?, ?, ?)', [userId, sanitizedContent, user.guildName || null, user.guildId || null]);
+                    const msg = {
+                        id: info.lastInsertRowid,
+                        senderId: userId,
+                        senderName: user.username,
+                        senderGuild: user.guildName || null,
+                        senderGuildId: user.guildId || null,
+                        targetId: null,
+                        content: sanitizedContent || '',
+                        createdAt: new Date().toISOString(),
+                    };
+                    _broadcast('message', { message: msg });
+                }
+                else if (data.type === 'private') {
+                    const parsed = validation_1.wsPrivateMessageSchema.safeParse(data);
+                    if (!parsed.success) {
+                        const err = parsed.error.issues?.[0]?.message || parsed.error.errors?.[0]?.message || 'Некорректное сообщение';
+                        _sendToUser(userId, { type: 'error', message: err });
+                        return;
+                    }
+                    const targetId = data.targetUserId;
+                    if (!targetId)
+                        return;
+                    const sanitizedContent = sanitize(data.content);
+                    const info = await index_1.db.run('INSERT INTO chat_messages (senderId, targetId, content, senderguild, senderguildid) VALUES (?, ?, ?, ?, ?)', [userId, targetId, sanitizedContent, user.guildName || null, user.guildId || null]);
+                    const msg = {
+                        id: info.lastInsertRowid,
+                        senderId: userId,
+                        senderName: user.username,
+                        senderGuild: user.guildName || null,
+                        senderGuildId: user.guildId || null,
+                        targetId,
+                        content: sanitizedContent || '',
+                        createdAt: new Date().toISOString(),
+                    };
+                    _sendToUser(userId, { type: 'message', message: msg });
+                    if (targetId !== userId) {
+                        _sendToUser(targetId, { type: 'message', message: msg });
+                    }
+                }
+            }
+            catch (e) {
+                console.error('WS msg err:', e?.message || e);
+            }
+        });
+        // ---------- Отключение ----------
+        ws.on("close", async () => {
+            clients.delete(userId);
+            onlineUsers.delete(userId);
+            userDirtyFlags.delete(userId);
+            notificationQueues.delete(userId);
+            (0, audit_1.auditWsDisconnect)(user.username, userId);
+            notifyUserOffline(userId);
+        });
+    });
+}
+//# sourceMappingURL=websocket.js.map

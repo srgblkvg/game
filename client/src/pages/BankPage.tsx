@@ -1,6 +1,6 @@
 import PageHeader from '../components/ui/PageHeader';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { fmtSafeDate, safeDate } from '../utils/date';
@@ -17,8 +17,12 @@ export default function BankPage() {
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/bank'); if (c) setActionCard(c); }).catch(() => {}); }, []);
     const { user } = useAuth();
     const navigate = useNavigate();
+    useEffect(() => { if (user?.isGuest) navigate('/'); }, [user, navigate]);
 
-    const [tab, setTab] = useState<'info' | 'deposit' | 'transfer'>('info');
+    const [searchParams] = useSearchParams();
+    const [tab, setTab] = useState<'info' | 'deposit' | 'transfer' | 'exchange'>(
+      (searchParams.get('tab') as any) || 'info'
+    );
     const [_pocket, setPocket] = useState(0);
     const [_bank, setBank] = useState(0);
     const [accountNumber, setAccountNumber] = useState('');
@@ -73,13 +77,147 @@ export default function BankPage() {
 
     const allHistory = [...transfers.map((t:any)=>({...t,_type:'transfer'})), ...operations.map((o:any)=>({...o,_type:'operation'}))].sort((a,b)=>(safeDate(b.createdAt)?.getTime()||0)-(safeDate(a.createdAt)?.getTime()||0)).slice(0,20);
 
+    // Компонент вкладки Обмен
+    const ExchangeTab = () => {
+      const [exchangeMsg, setExchangeMsg] = useState('');
+      const [exchangeBuying, setExchangeBuying] = useState(false);
+      const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+      const nowSec = Math.floor(Date.now() / 1000);
+      const [adCd, setAdCd] = useState(Math.max(0, 300 - (nowSec - ((window as any).__adSilverAt || 0))));
+      const [adLoading, setAdLoading] = useState(false);
+
+      useEffect(() => {
+        if (adCd <= 0) return;
+        const id = setInterval(() => setAdCd(c => Math.max(0, c - 1)), 1000);
+        return () => clearInterval(id);
+      }, [adCd > 0]);
+
+      const handleAdSilver = async () => {
+        setAdLoading(true);
+        try {
+          const bridge = (window as any).vkBridge;
+          if (!bridge) throw new Error('no vk');
+          const check = await bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' });
+          if (!check?.result) throw new Error('no ad');
+          const ad = await bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' });
+          if (!ad?.result) throw new Error('cancelled');
+          const res = await fetch('/api/shop/ad-silver', { method: 'POST', headers: getHeaders() });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          (window as any).__adSilverAt = Math.floor(Date.now() / 1000);
+          setAdCd(300);
+          setExchangeMsg('✅ +1000 серебра за рекламу!');
+          loadBank();
+        } catch (e: any) {
+          if (e.message !== 'cancelled' && e.message !== 'no ad' && e.message !== 'no vk') setExchangeMsg('❌ ' + e.message);
+        } finally { setAdLoading(false); }
+      };
+
+      const tiers = [
+        { item: 'silver_10000', amount: 10000, vkPrice: 7, rubPrice: 49, label: '10 000 в банк' },
+        { item: 'silver_50000', amount: 50000, vkPrice: 14, rubPrice: 99, label: '50 000 в банк' },
+        { item: 'silver_100000', amount: 100000, vkPrice: 28, rubPrice: 199, label: '100 000 в банк' },
+        { item: 'silver_500000', amount: 500000, vkPrice: 114, rubPrice: 799, label: '500 000 в банк' },
+        { item: 'silver_1000000', amount: 1000000, vkPrice: 200, rubPrice: 1399, label: '1 000 000 в банк' },
+      ];
+
+      const buySilver = (tier: typeof tiers[number]) => {
+        if (isVK) {
+          setExchangeBuying(true);
+          setExchangeMsg('');
+          (window as any).vkBridge?.send('VKWebAppShowOrderBox', {
+            type: 'item',
+            item: tier.item,
+          })
+          .then((data: any) => {
+            if (data?.status === 'cancelled') { setExchangeMsg(''); setExchangeBuying(false); return; }
+            setExchangeMsg('Оплата открыта. Серебро зачислится в банк.');
+          })
+          .catch(() => { setExchangeMsg(''); setExchangeBuying(false); });
+        } else {
+          setExchangeBuying(true);
+          setExchangeMsg('');
+          const token = localStorage.getItem('token');
+          fetch('/api/yukassa/create-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ item: tier.item }),
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.confirmation_url) {
+              window.open(data.confirmation_url, '_blank');
+              setExchangeMsg('Оплата открыта. Серебро зачислится в банк.');
+            } else {
+              setExchangeMsg('❌ ' + (data.error || 'Не удалось создать платёж'));
+            }
+          })
+          .catch(() => setExchangeMsg('❌ Ошибка сети'))
+          .finally(() => setExchangeBuying(false));
+        }
+      };
+
+      // WS уведомление об успешной оплате
+      useEffect(() => {
+        const handler = () => {
+          setExchangeMsg('✅ Серебро зачислено в банк!');
+          setExchangeBuying(false);
+          loadBank();
+        };
+        window.addEventListener('paymentStatus', handler);
+        return () => window.removeEventListener('paymentStatus', handler);
+      }, []);
+
+      return (
+        <Card className="mb-3">
+          <h3 className="font-bold text-sm mb-2">💰 Обменять на серебро</h3>
+          <p className="text-xs text-[var(--color-text-muted)] mb-3">
+            Серебро зачисляется мгновенно в кошелёк.
+          </p>
+          <div className="space-y-2">
+            {tiers.map(t => (
+              <div key={t.item} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{formatMoney(t.amount)}</p>
+                  <p className="text-xs text-[var(--color-accent-gold)]">
+                    {isVK ? `${t.vkPrice} голосов` : `${t.rubPrice} ₽`}
+                  </p>
+                </div>
+                <Button
+                  variant="danger"
+                  size="md"
+                  onClick={() => buySilver(t)}
+                  disabled={exchangeBuying}
+                >
+                  {isVK ? '🛒' : '💳'} Купить
+                </Button>
+              </div>
+            ))}
+          </div>
+          {isVK && (
+            <div className="mt-3 pt-3 border-t border-[var(--color-border-light)]">
+              <Button variant="secondary" size="md" fullWidth onClick={handleAdSilver} disabled={adCd > 0 || adLoading}>
+                {adLoading ? '⏳' : adCd > 0 ? `⏳ ${Math.ceil(adCd / 60)} мин` : '▶️ +1000 серебра за рекламу'}
+              </Button>
+              <p className="text-[0.6rem] text-[var(--color-text-muted)] mt-1 text-center">Раз в 5 минут</p>
+            </div>
+          )}
+          {exchangeMsg && (
+            <p className={`mt-2 text-sm font-bold text-center ${exchangeMsg.startsWith('✅') ? 'text-[var(--color-accent-success)]' : exchangeMsg.startsWith('❌') ? 'text-[var(--color-accent-danger)]' : 'text-[var(--color-accent-info)]'}`}>
+              {exchangeMsg}
+            </p>
+          )}
+        </Card>
+      );
+    };
+
     return (
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Банк" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             {accountNumber && <Card className="mb-3 text-center"><p className="text-xs text-[var(--color-text-muted)]">Номер счёта</p><p className="text-sm font-mono font-bold text-[var(--color-accent-info)] tracking-widest select-all">{accountNumber}</p></Card>}
             <Card className="mb-3"><div className="flex justify-between items-center"><div><p className="text-xs text-[var(--color-text-muted)]">В кошельке</p><p className="text-sm font-bold">{formatMoney(_pocket)}</p></div><div className="text-right"><p className="text-xs text-[var(--color-text-muted)]">В банке</p><p className="text-sm font-bold text-[var(--color-accent-success)]">{formatMoney(_bank)}</p></div></div></Card>
-            <div className="flex gap-2 mb-3">{(['info','deposit','transfer'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'История операций':t==='deposit'?'Пополнить/Снять':'Переводы'}</Button>)}</div>
+            <div className="flex gap-2 mb-3">{(['info','deposit','transfer','exchange'] as const).map(t => <Button key={t} variant={tab===t?'primary':'secondary'} size="md" onClick={()=>{setTab(t);setMessage('');setError('');}}>{t==='info'?'История операций':t==='deposit'?'Пополнить/Снять':t==='transfer'?'Переводы':'Обмен'}</Button>)}</div>
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
@@ -122,6 +260,8 @@ export default function BankPage() {
                     <div className="space-y-2">{transfers.map((t:any)=>{const out=t.fromUserId===user?.id;return<div key={t.id} className="border-b border-[var(--color-border-light)] pb-2 text-xs"><div className="flex items-center gap-1"><span className={out?'text-[var(--color-accent-danger)]':'text-[var(--color-accent-success)]'}>{out?'→':'←'} {formatMoney(out?t.amount:t.received)}</span><span className="text-[var(--color-text-muted)]">{out?`на ${t.toAccount}`:`от ${t.fromAccount}`}</span><span className="ml-auto text-[var(--color-text-muted)]">{fmtSafeDate(t.createdAt)}</span></div><div className="text-[var(--color-text-muted)]">{out?`Кому: ${t.toUsername}`:`От: счёт ${t.fromAccount}`}{t.commission>0&&out?`, ком. ${t.commission}`:''}</div></div>})}</div>}
                 </Card>
             </>}
+
+            {tab==='exchange' && <ExchangeTab />}
         </div>
     );
 }

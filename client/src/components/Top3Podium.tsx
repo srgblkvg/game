@@ -1,5 +1,9 @@
 import { useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import GuildTag from './GuildTag';
+
+const FACTION_ICON: Record<string, string> = { bandit: 'game-icons:hood', crafter: 'game-icons:anvil', guard: 'game-icons:shield' };
+const FACTION_COLOR: Record<string, string> = { bandit: 'text-red-300', crafter: 'text-blue-300', guard: 'text-yellow-300' };
 
 interface Player {
   id: number;
@@ -11,6 +15,7 @@ interface Player {
   guildName: string | null;
   guildId: number | null;
   rank?: { name: string; icon: string; color: string };
+  faction?: string | null;
 }
 
 interface Top3PodiumProps {
@@ -75,6 +80,9 @@ export default function Top3Podium({ players }: Top3PodiumProps) {
                   <div className="flex items-center gap-0.5 max-w-full">
                     <span className="text-sm flex-shrink-0">{place === 1 ? '🏆' : place === 2 ? '🥈' : '🥉'}</span>
                     <span className="text-xs font-bold truncate" style={{ color: medal.color }}>
+                      {player.faction && FACTION_ICON[player.faction] && (
+                        <Icon icon={FACTION_ICON[player.faction]} width="10" height="10" className={`inline-block mr-0.5 ${FACTION_COLOR[player.faction] || ''}`} />
+                      )}
                       {player.username}
                     </span>
                   </div>

@@ -24,9 +24,9 @@ function formatTime(seconds: number) {
     return `${m} мин`;
 }
 
-const roomNames: Record<string, string> = { closet: 'Чулан', bed: 'Койка', chamber: 'Аппартаменты' };
-const roomIcons: Record<string, string> = { closet: 'game-icons:wooden-crate', bed: 'game-icons:bed', chamber: 'game-icons:castle' };
-const roomRates: Record<string, number> = { closet: 3, bed: 10, chamber: 50 };
+const roomNames: Record<string, string> = { closet: 'Чулан', bed: 'Койка', chamber: 'Аппартаменты', lux: 'Люкс' };
+const roomIcons: Record<string, string> = { closet: 'game-icons:wooden-crate', bed: 'game-icons:bed', chamber: 'game-icons:castle', lux: 'game-icons:crystal-growth' };
+const roomRates: Record<string, number> = { closet: 3, bed: 10, chamber: 50, lux: 250 };
 
 const drinkNames: Record<string, string> = {
     rage_small: 'Настойка ярости', rage_med: 'Крепкая настойка ярости', rage_big: 'Эликсир берсерка',
@@ -61,14 +61,19 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     }, []);
 
     useEffect(() => {
-        // Загружаем и коллекцию, и все предметы сетов для точного matching
+        // Загружаем ОБЕ коллекции и все предметы сетов
         Promise.all([
-            fetch('/api/collections', { headers: getHeaders() }).then(r => r.json()),
+            fetch('/api/collections?upgradelevel=0', { headers: getHeaders() }).then(r => r.json()),
+            fetch('/api/collections?upgradelevel=7', { headers: getHeaders() }).then(r => r.json()),
             fetch('/api/collections/set-items', { headers: getHeaders() }).then(r => r.json()),
         ])
-            .then(([data, setItemsData]: [any, any]) => {
-                const collSet = new Set<string>();
-                for (const c of (data.items || [])) collSet.add(`${c.itemName}|${c.slot}`);
+            .then(([basicData, plusData, setItemsData]: [any, any, any]) => {
+                // Ключи: name|slot — предмет считается «свободным» если его нет НИ в одной коллекции
+                // (можно добавить +0 в Базу или +7 в +7)
+                const basicSet = new Set<string>();
+                for (const c of (basicData.items || [])) basicSet.add(`${c.itemName}|${c.slot}`);
+                const plusSet = new Set<string>();
+                for (const c of (plusData.items || [])) plusSet.add(`${c.itemName}|${c.slot}`);
 
                 // Все возможные предметы коллекций (из collection_set_items)
                 const validSet = new Set<string>();
@@ -82,10 +87,19 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
                 for (const slot of Object.values(eq)) {
                     if ((slot as any)?.id != null) equippedIds.add((slot as any).id);
                 }
+                // Зелёная точка: есть предмет который можно добавить ХОТЯ БЫ в один таб
                 const hasAddable = inv.some((invItem: any) => {
                     if (!invItem.name || !invItem.slot) return false;
+                    if (invItem.locked) return false;
+                    if (equippedIds.has(invItem.id)) return false;
                     const key = `${invItem.name}|${invItem.slot}`;
-                    return validSet.has(key) && !collSet.has(key) && !equippedIds.has(invItem.id);
+                    if (!validSet.has(key)) return false;
+                    const upg = invItem.upgradeLevel ?? invItem.upgradelevel ?? 0;
+                    // Можно добавить в Базу (upg<7) если ещё не в Базе
+                    if (upg < 7 && !basicSet.has(key)) return true;
+                    // Можно добавить в +7 (upg>=7) если ещё не в +7
+                    if (upg >= 7 && !plusSet.has(key)) return true;
+                    return false;
                 });
                 setHasCollectionItems(hasAddable);
             })

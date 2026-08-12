@@ -67,6 +67,7 @@ export default function SlotBase({
 
   return (
     <div
+      data-slot
       draggable={draggable}
       onDragStart={onDragStart}
       onClick={onClick}

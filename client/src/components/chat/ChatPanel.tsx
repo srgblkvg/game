@@ -555,6 +555,7 @@ export default function ChatPanel() {
                                 onNickClick={handleNickClick}
                                 renderContent={renderMessageContent}
                                 scrollKey={guildChatActive ? -1 : (privateChatWith ?? 0)}
+                                getFaction={(id) => onlineUsers.find(u => u.id === id)?.faction || null}
                             />
                         </div>
 

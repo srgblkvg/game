@@ -37,6 +37,7 @@ import collectionsRoutes from './routes/collections';
 import adminCollectionsRoutes from './routes/adminCollections';
 import adminBotsRoutes from './routes/adminBots';
 import guildBuildingsRoutes from './routes/guildBuildings';
+import guildBossRoutes from './routes/guildBoss';
 import battleSimRoutes from './routes/battleSim';
 import overflowRoutes from './routes/overflow';
 import vkPaymentsRoutes from './routes/vkPayments';
@@ -46,6 +47,14 @@ import treasuryRoutes from './routes/treasury';
 import forumRoutes from './routes/forum';
 import massacreRoutes from './routes/massacre';
 import casinoRoutes from './routes/casino';
+import diceRoutes from './routes/dice';
+import trainingRoutes from './routes/training';
+import donateRoutes from './routes/donate';
+import tutorialRoutes from './routes/tutorial';
+import achievementsRoutes from './routes/achievements';
+import debugRoutes from './routes/debug';
+import factionRoutes from './routes/faction';
+import dungeonRoutes from './routes/dungeon';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -81,9 +90,12 @@ export function setupRoutes(app: Express) {
         'Лес Черепов':1,'Старый Тракт':1,'Ядовитые луга':1,'Первый ярус':1,
         'Гнилая Топь':2,'Чёрный Монастырь':2,'Башня Плакальщиц':2,'Некрополь Королей':2,
         'Бездонный Овраг':3,'Врата Бездны':3,
+        'Огненные чертоги':4,'Тронный зал':4,
+        'Ледяная бездна':5,'Престол падших':5,
+        'Кровавый предел':6,'Трон Проклятых':6,
     };
-    const DIFF_LABELS = ['Легко','Нормально','Сложно','Ад'];
-    const DIFF_ICONS = ['🟢','🟡','🟠','🔴'];
+    const DIFF_LABELS = ['Легко','Нормально','Сложно','Ад I','Ад II','Ад III','Ад IV'];
+    const DIFF_ICONS = ['🟢','🟡','🟠','🔴','🔴','🔴','🔴'];
     const floors = rows.map(r => ({...r, difficulty: DIFF_MAP[r.name] ?? 0}));
     const groups = DIFF_LABELS.map((label,i) => ({label, icon: DIFF_ICONS[i], difficulty: i}));
     res.json({ floors, groups });
@@ -124,6 +136,25 @@ export function setupRoutes(app: Express) {
     res.json({ guestRestrictionsDisabled: disabled });
   });
 
+  // Гербы гильдий — публичный доступ (кешируются браузером)
+  app.get('/api/guild/:id/image', async (req, res) => {
+    const guildId = parseInt(req.params.id);
+    if (isNaN(guildId)) return res.status(404).end();
+    const { db } = await import('./db/index');
+    const row = await db.one('SELECT image FROM guilds WHERE id = ?', [guildId]) as any;
+    if (!row?.image) return res.status(404).end();
+    const img: string = row.image;
+    const mime = img.startsWith('data:image/') 
+        ? img.slice(5, img.indexOf(';')) 
+        : 'image/jpeg';
+    const data = img.includes(',') 
+        ? Buffer.from(img.split(',')[1] || '', 'base64')
+        : Buffer.from(img, 'base64');
+    res.set('Content-Type', mime);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(data);
+  });
+
   // Игровые маршруты (только для игроков) + замедление гостей
   app.use('/api', authMiddleware, requirePlayer, guestCooldown);
   app.use('/api', battleSimRoutes);  // симулятор боёв
@@ -144,6 +175,9 @@ export function setupRoutes(app: Express) {
   app.use('/api', tavernRoutes);
   app.use('/api', auctionRoutes);
   app.use('/api', questsRoutes);
+  // Гильд-босс напрямую (до guildRoutes с /guild/:id)
+  app.get('/api/guild/boss/ping', (_req, res) => { res.json({ ok: true }); });
+  app.use('/api', guildBossRoutes);
   app.use('/api', guildRoutes);
   app.use('/api', guildBuildingsRoutes);
   app.use('/api', feedbackRoutes);
@@ -153,6 +187,14 @@ export function setupRoutes(app: Express) {
   app.use('/api', forumRoutes);
   app.use('/api', massacreRoutes);
   app.use('/api', casinoRoutes);
+  app.use('/api', diceRoutes);
+  app.use('/api', trainingRoutes);
+  app.use('/api', tutorialRoutes);
+  app.use('/api', achievementsRoutes);
+  app.use('/api', debugRoutes);
+  app.use('/api', factionRoutes);
+  app.use('/api', dungeonRoutes);
+  app.use('/api/donate', donateRoutes);
 
   // Маршруты с полным доступом (гости заблокированы)
   app.use('/api', authMiddleware, requirePlayer, requireFullAccess, guestCooldown);

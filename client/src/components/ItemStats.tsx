@@ -1,4 +1,4 @@
-import { getRarityColor, getItemImage, isCraftItem, getItemTypeName } from '../utils/itemUtils';
+import { getRarityColor, getItemImage, isCraftItem, getItemTypeName, getRarityDisplay } from '../utils/itemUtils';
 import { useGame } from '../contexts/GameContext';
 import type { ReactNode } from 'react';
 
@@ -7,6 +7,7 @@ interface ItemStatsProps {
   showImage?: boolean;
   imageSize?: number;
   extra?: ReactNode;
+  viewEquipment?: Record<string, any>;
 }
 
 const statNameRu: Record<string, string> = {
@@ -15,23 +16,35 @@ const statNameRu: Record<string, string> = {
   fullBlock: 'Полный блок', block: 'Блок',
 };
 
-export default function ItemStats({ item, showImage = true, imageSize = 48, extra }: ItemStatsProps) {
+export default function ItemStats({ item, showImage = true, imageSize = 48, extra, viewEquipment }: ItemStatsProps) {
   if (!item) return null;
   const color = getRarityColor(item);
   const img = getItemImage(item);
-  const upgradeLevel = item.upgradeLevel ?? 0;
+  const upgradeLevel = item.upgradeLevel ?? item.upgradelevel ?? 0;
   const resource = isCraftItem(item);
 
-  // Проверка коллекции
-  let inCollection = false;
+  // Проверка коллекции — по диапазонам (База <7, +7 >=7)
+  let basicCollected = false;
+  let plusCollected = false;
   try {
     const { character } = useGame();
     if (character?.collectedItems && item.name && item.slot) {
-      inCollection = character.collectedItems.some(
-        (c: any) => c.itemName === item.name && c.slot === item.slot
-      );
+      const itemRarity = item.rarity_id;
+      for (const c of (character.collectedItems as any[])) {
+        if (c.itemName === item.name && c.slot === item.slot && (c.rarity_id ?? c.rarity_Id) === itemRarity) {
+          const lvl = c.upgradelevel ?? 0;
+          if (lvl < 7) basicCollected = true;
+          if (lvl >= 7) plusCollected = true;
+        }
+      }
     }
   } catch {}
+
+  // Equipment for set counting: prefer passed viewEquipment, fallback to own character
+  let eqForSet: Record<string, any> | null = viewEquipment || null;
+  if (!eqForSet) {
+    try { eqForSet = useGame().character?.equipment || null; } catch { eqForSet = null; }
+  }
 
   const getBonus = (base: number) => {
     if (!base || upgradeLevel === 0) return base;
@@ -44,9 +57,10 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
       if ((v as number) > 0) rows.push([statNameRu[k] || k, getBonus(v as number)]);
     }
   }
+  const extraSkip = ['set','setBonus2','setBonus3','setBonus4','effect','effectValue','effectDesc'];
   if (item.extra) {
     for (const [k, v] of Object.entries(item.extra)) {
-      if ((v as number) > 0) rows.push([statNameRu[k] || k, v as number]);
+      if ((v as number) > 0 && !extraSkip.includes(k)) rows.push([statNameRu[k] || k, getBonus(v as number)]);
     }
   }
 
@@ -76,7 +90,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
 
       {/* Редкость */}
       <div className="text-xs mb-2 text-center text-[var(--color-text-muted)]">
-        Редкость: {item.rarity_display || 'Обычный'}
+        Редкость: {item.rarity_display || getRarityDisplay(item)}
       </div>
 
       {/* Таблица характеристик */}
@@ -100,6 +114,7 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
           {[
             ['Тип', getItemTypeName(item)],
             ...(item.count != null ? [['Количество', String(item.count)]] : []),
+            ...(item.itemType === 'upgrade' && item.rarity_id > 0 ? [['Шанс улучшения', `+${[0,5,10,15,20,30,50][item.rarity_id]}%`]] : []),
           ].map(([name, val], i) => (
             <div
               key={i}
@@ -120,10 +135,49 @@ export default function ItemStats({ item, showImage = true, imageSize = 48, extr
         </div>
       )}
 
+      {/* Проклятие (curse) */}
+      {!resource && item.curseStat && item.curseValue > 0 && (
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center font-bold" style={{ color: item.curseColor || '#a855f7' }}>
+          ☠ Проклятие {item.curseName || ''}: +{item.curseValue} к {statNameRu[item.curseStat] || item.curseStat}
+        </div>
+      )}
+
+      {/* Set bonuses */}
+      {!resource && item.extra?.set && (() => {
+        let equippedCount = 0;
+        if (eqForSet) {
+          for (const piece of Object.values(eqForSet)) {
+            if ((piece as any)?.extra?.set === item.extra.set) equippedCount++;
+          }
+        }
+        return (
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)]">
+          <div className="text-center font-bold text-[var(--color-accent-purple)]">Сет: {item.extra.set} ({equippedCount}/4)</div>
+          {item.extra.setBonus2 && <div className={`mt-0.5 ${equippedCount >= 2 ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}`}>2 предмета: {item.extra.setBonus2} {equippedCount >= 2 ? '✓' : ''}</div>}
+          {item.extra.setBonus3 && <div className={`${equippedCount >= 3 ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}`}>3 предмета: {item.extra.setBonus3} {equippedCount >= 3 ? '✓' : ''}</div>}
+          {item.extra.setBonus4 && <div className={`${equippedCount >= 4 ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}`}>4 предмета: {item.extra.setBonus4} {equippedCount >= 4 ? '✓' : ''}</div>}
+        </div>
+        );
+      })()}
+
+      {/* Artifact effect */}
+      {!resource && item.extra?.effect && (
+        <div className="text-xs mt-2 pt-1 border-t border-[var(--color-border-light)] text-center">
+          <span className="font-bold text-[var(--color-accent-gold)]">Артефакт</span>
+          <div className="text-[var(--color-text-accent)]">{item.extra.effectDesc || item.extra.effect}</div>
+        </div>
+      )}
+
       {/* Коллекция */}
       {!resource && item.name && item.slot && (
-        <div className={`text-xs mt-1 pt-1 border-t border-[var(--color-border-light)] text-center font-bold ${inCollection ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-warning)]'}`}>
-          {inCollection ? '✓ В коллекции' : '✗ Нет в коллекции'}
+        <div className="text-xs mt-1 pt-1 border-t border-[var(--color-border-light)] text-center">
+          <div className="font-bold text-[var(--color-accent-gold)] mb-0.5">Коллекция</div>
+          <div className={basicCollected ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}>
+            Базовый: {basicCollected ? '✓' : '✗'}
+          </div>
+          <div className={plusCollected ? 'text-[var(--color-accent-success)] font-bold' : 'text-[var(--color-text-muted)]'}>
+            +7: {plusCollected ? '✓' : '✗'}
+          </div>
         </div>
       )}
 

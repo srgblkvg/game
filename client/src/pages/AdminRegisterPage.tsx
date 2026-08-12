@@ -44,7 +44,7 @@ export default function AdminRegisterPage() {
     }
 
     return (
-        <div className="max-w-md mx-auto mt-8 px-4">
+        <div className="max-w-3xl mx-auto mt-8 px-4">
             <Card padding="lg">
                 <h2 className="text-lg font-bold mb-2">Создание администратора</h2>
                 <p className="text-sm text-[var(--color-text-secondary)] mb-4">

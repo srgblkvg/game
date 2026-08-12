@@ -17,7 +17,7 @@ export default function HealthBar({ currentHp, maxHp, compact, showRegenHint, re
 
   const formatRegenTime = () => {
     const missing = maxHp - currentHp;
-    const totalSec = (missing / regenRate) * 10;
+    const totalSec = (missing / regenRate) * 5;
     const min = Math.floor(totalSec / 60);
     const sec = Math.round(totalSec % 60);
     if (min > 0) return `${min} мин ${sec} сек`;
@@ -44,7 +44,7 @@ export default function HealthBar({ currentHp, maxHp, compact, showRegenHint, re
       </div>
       {showRegenHint && currentHp < maxHp && (
         <div className={`${hintFontSize} text-[var(--color-text-muted)] mt-[2px]`}>
-          +{regenRate} HP / 10 сек &mdash; полное через {formatRegenTime()}
+          +{(regenRate / 5).toFixed(1).replace(/\.0$/, '')} HP/сек &mdash; полное через {formatRegenTime()}
         </div>
       )}
     </div>

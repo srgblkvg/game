@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
-import { useGame, getRegenHp } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { useServerTime } from '../contexts/ServerTimeContext';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -21,6 +21,7 @@ const breadcrumbMap: Record<string, string> = {
     bank: 'Банк',
     craft: 'Ремесло',
     auction: 'Аукцион',
+    dungeon: 'Подземелье',
     jobs: 'Работы',
     history: 'Сводка',
     rating: 'Рейтинг',
@@ -31,8 +32,10 @@ const breadcrumbMap: Record<string, string> = {
     premium: 'Премиум',
     guild: 'Гильдия',
     war: 'Поле боя',
-    massacre: 'Резня',
+    massacre: 'Кровавая лотерея',
     casino: 'Игорный дом',
+    training: 'Лудус',
+    dice: 'Кости',
     feedback: 'Обратная связь',
     collections: 'Коллекция',
     castle: 'Замок',
@@ -81,7 +84,7 @@ function Breadcrumbs({ pathname, navigate }: { pathname: string; navigate: (p: s
 
 export default function Header() {
     const { user } = useAuth();
-    const { character, setCharacter } = useGame();
+    const { character, setCharacter, regenHp } = useGame();
     const { now: serverNow } = useServerTime();
     const { messages } = useGlobalChat();
     const { theme, toggleTheme } = useTheme();
@@ -162,6 +165,16 @@ export default function Header() {
         return () => clearInterval(timer);
     }, [character, user]);
 
+    // Динамическое обновление щита через WS
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const protUntil = (e as CustomEvent).detail;
+            setCharacter((prev: any) => prev ? { ...prev, protectionUntil: protUntil } : prev);
+        };
+        window.addEventListener('protectionChanged', handler);
+        return () => window.removeEventListener('protectionChanged', handler);
+    }, [setCharacter]);
+
     // Отслеживание новых личных сообщений
     const userId = user?.id;
     useEffect(() => {
@@ -192,11 +205,9 @@ export default function Header() {
 
     if (!user) return null;
 
-    // HP с регенерацией для VK-бара
+    // HP — единое значение из GameContext (сервер + регенерация)
     const maxHp = character?.stats?.hp ?? 100;
-    const currentHp = character
-        ? getRegenHp(character.currentHp, maxHp, serverNow, character.room?.type ?? undefined, character.room?.until ?? undefined)
-        : 0;
+    const currentHp = regenHp;
     const hpPct = maxHp > 0 ? Math.min(100, Math.max(0, (currentHp / maxHp) * 100)) : 0;
 
     // XP progress
@@ -217,7 +228,7 @@ export default function Header() {
                     <div style={{ width: `${xpPct}%` }} className="h-full bg-[var(--color-accent-purple)] transition-[width] duration-500" />
                 </div>
             )}
-            {/* Аватар/ник/HP слева, время по центру */}
+            {/* Аватар/ник/HP слева, время по центру, фракция справа */}
             {user.role === 'player' && character && (
                 <div className="flex items-center px-3 pt-6 pb-1 relative">
                     <PlayerBadge
@@ -228,10 +239,36 @@ export default function Header() {
                         currentHp={currentHp}
                         maxHp={maxHp}
                         hpPct={hpPct}
+                        faction={character.faction}
                     />
                     <span className="absolute left-1/2 -translate-x-1/2 text-xs text-[var(--color-text-muted)] tabular-nums leading-none pointer-events-none">
                         {formatGameTime(serverNow * 1000)}
                     </span>
+                    {/* Фракция справа */}
+                    <div className="ml-auto text-center leading-tight">
+                        {character.faction ? (
+                            <div>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${character.faction === 'bandit' ? 'bg-[#3a1a1a] text-red-300' : character.faction === 'crafter' ? 'bg-[#1a1a3a] text-blue-300' : 'bg-[#3a3a1a] text-yellow-300'}`}>
+                                    {character.faction === 'bandit' ? 'Бандит' : character.faction === 'crafter' ? 'Ремесленник' : 'Стражник'}
+                                </span>
+                                {character.faction === 'bandit' && (
+                                    <div className="text-[0.55rem] text-[#d47373] mt-1">Репутация: {character.banditReputation || 0}</div>
+                                )}
+                                {character.faction === 'crafter' && (
+                                    <div className="text-[0.55rem] text-[#7373d4] mt-1">Опыт: {character.factionCraftCount || 0}</div>
+                                )}
+                                {character.faction === 'guard' && character.karma != null && (
+                                    <div className={`text-[0.55rem] mt-1 ${character.karma >= 0 ? 'text-[#73d473]' : 'text-[#d47373]'}`}>
+                                        Карма: {character.karma >= 0 ? '+' : ''}{character.karma}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <span onClick={() => navigate('/faction')} className="text-[0.6rem] text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] cursor-pointer">
+                                Фракция: Отсутствует
+                            </span>
+                        )}
+                    </div>
                 </div>
             )}
             <div className="flex items-center justify-between gap-2 px-3 py-1 flex-wrap">
@@ -261,7 +298,7 @@ export default function Header() {
                             title="Сводка"
                         >
                             <Icon icon="game-icons:notebook" width="20" height="20" className="text-[var(--color-text-muted)]" />
-                            <span className="text-[0.55rem] text-[var(--color-text-muted)] leading-none mt-0.5">Сводка</span>
+                            <span className="text-[0.55rem] text-[var(--color-text-muted)] leading-none mt-1">Сводка</span>
                             {(hasNewBattles || hasUnreadPM) && (
                                 <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-[var(--color-bg-secondary)] blink" />
                             )}
@@ -275,7 +312,7 @@ export default function Header() {
                                 title="Настройки"
                             >
                                 <Icon icon="game-icons:cog" width="20" height="20" className="text-[var(--color-text-muted)]" />
-                                <span className="text-[0.55rem] text-[var(--color-text-muted)] leading-none mt-0.5">Настройки</span>
+                                <span className="text-[0.55rem] text-[var(--color-text-muted)] leading-none mt-1">Настройки</span>
                                 {(user.isGuest) && (
                                     <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[var(--color-accent-danger)] rounded-full animate-pulse" />
                                 )}
@@ -338,8 +375,8 @@ export default function Header() {
                                         <div className="border-t border-[var(--color-border-light)] mt-1 pt-1 px-3 py-1.5">
                                             <p className="text-[0.6rem] text-[var(--color-accent-gold)] mb-1">Привяжите аккаунт — 1 день премиума!</p>
                                             <div className="flex gap-1">
-                                                <a href="/api/oauth/yandex" className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#FC3F1D] text-white no-underline">Яндекс</a>
-                                                <a href="/api/oauth/vk" className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#0077FF] text-white no-underline">VK</a>
+                                                <a href={`/api/oauth/yandex?link_token=${encodeURIComponent(localStorage.getItem('token') || '')}`} className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#FC3F1D] text-white no-underline">Яндекс</a>
+                                                <a href={`/api/oauth/vk?link_token=${encodeURIComponent(localStorage.getItem('token') || '')}`} className="flex-1 text-center text-[0.55rem] px-1.5 py-0.5 rounded bg-[#0077FF] text-white no-underline">VK</a>
                                             </div>
                                         </div>
                                     )}

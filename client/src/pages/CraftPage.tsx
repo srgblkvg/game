@@ -1,6 +1,6 @@
 import PageHeader from '../components/ui/PageHeader';
 // client/src/pages/CraftPage.tsx
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { useGame } from '../contexts/GameContext';
@@ -22,6 +22,260 @@ import Card from '../components/ui/Card';
 import RecipeList from './CraftPage/RecipeList';
 import CraftPopup from './CraftPage/CraftPopup';
 
+const PACKS = [
+  {
+    item: 'craft_rare', title: 'Рунный набор', vkPrice: 14, rubPrice: 99,
+    material: 'Сердцевина бездны ×5', materialImg: '/fragment/fragment_purple.webp',
+    stones: 'Рунный булыжник ×6', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    silver: 10000,
+    desc: 'Материалы для крафта случайного эпического предмета (шанс 70%). +10 000 в банк',
+  },
+  {
+    item: 'craft_epic', title: 'Большой рунный набор', vkPrice: 28, rubPrice: 199,
+    material: 'Искра погибели ×5', materialImg: '/fragment/fragment_yellow.webp',
+    stones: 'Рунный булыжник ×10', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    silver: 30000,
+    desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%). +30 000 в банк',
+  },
+  {
+    item: 'craft_rare_200', title: 'Рунный набор ×200', vkPrice: 2800, rubPrice: 19999,
+    craft: true, silver: 2000000,
+    material: 'Сердцевина бездны ×1000', materialImg: '/fragment/fragment_purple.webp',
+    stones: 'Рунный булыжник ×1200', stoneImg: '/stone/stoneUpgrade_gray.webp',
+    desc: '1000 сердцевин + 1200 булыжников + 2M в банк',
+  },
+  {
+    item: 'ruby_rune_1', title: 'Набор рун', vkPrice: 57, rubPrice: 399,
+    rune: true, count: 1, runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
+    ],
+    desc: 'Руны для улучшения предметов',
+  },
+  {
+    item: 'ruby_rune_3', title: 'Набор рун ×3', vkPrice: 144, rubPrice: 999,
+    rune: true, count: 3, runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
+    ],
+    desc: 'Руны для улучшения предметов',
+  },
+  {
+    item: 'ruby_rune_5', title: 'Набор рун ×5', vkPrice: 214, rubPrice: 1499,
+    rune: true, count: 5, runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
+    ],
+    desc: 'Руны для улучшения предметов',
+  },
+  {
+    item: 'curse_small', title: 'Сундук «Проклятый»', vkPrice: 144, rubPrice: 999,
+    curse: true, crystals: 5, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
+    silver: 500000,
+    desc: '5 Кристаллов душ для проклятия предметов. +500 000 в банк',
+  },
+  {
+    item: 'curse_large', title: 'Сундук «Проклятый II»', vkPrice: 258, rubPrice: 1799,
+    curse: true, crystals: 10, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
+    silver: 1000000,
+    desc: '10 Кристаллов душ для проклятия предметов. +1 000 000 в банк',
+  },
+  {
+    item: 'curse_x50', title: 'Сундук «Проклятый III»', vkPrice: 1149, rubPrice: 7999,
+    curse: true, crystals: 50, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
+    silver: 5000000,
+    desc: '50 Кристаллов душ для проклятия предметов. +5 000 000 в банк',
+  },
+  {
+    item: 'curse_x100', title: 'Сундук «Проклятый IV»', vkPrice: 2149, rubPrice: 14999,
+    curse: true, crystals: 100, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
+    silver: 10000000,
+    desc: '100 Кристаллов душ для проклятия предметов. +10 000 000 в банк',
+  },
+  {
+    item: 'large_craft', title: 'Большой набор ремесленника', vkPrice: 7500, rubPrice: 52999,
+    mega: true, silver: 10000000, count: 100,
+    runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста' },
+    ],
+    extraItems: 'Сапфира, Изумруда, Рунный булыжник, Рунный белокамень',
+    materials: [
+      { img: '/fragment/fragment_purple.webp', label: 'Сердцевина' },
+      { img: '/fragment/fragment_yellow.webp', label: 'Искра' },
+      { img: '/fragment/fragment_red.webp', label: 'Слеза' },
+    ],
+    extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
+    desc: '7 рун ×100 + 7 материалов ×100 + 10M в банк',
+  },
+  {
+    item: 'mega_craft', title: 'Мега набор ремесленника', vkPrice: 11000, rubPrice: 79999,
+    mega: true, silver: 20000000, count: 200,
+    runeImgs: [
+      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
+      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
+      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста' },
+    ],
+    extraItems: 'Сапфира, Изумруда, Рунный булыжник, Рунный белокамень',
+    materials: [
+      { img: '/fragment/fragment_purple.webp', label: 'Сердцевина' },
+      { img: '/fragment/fragment_yellow.webp', label: 'Искра' },
+      { img: '/fragment/fragment_red.webp', label: 'Слеза' },
+    ],
+    extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
+    desc: '7 рун ×200 + 7 материалов ×200 + 20M в банк',
+  },
+];
+
+function CraftPacks({ isVK }: { isVK: boolean }) {
+  const [packMsg, setPackMsg] = useState('');
+  const [packBuying, setPackBuying] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === 'left' ? -240 : 240, behavior: 'smooth' });
+  };
+
+  const buyPack = (pack: typeof PACKS[number]) => {
+    if (isVK) {
+      setPackBuying(true);
+      (window as any).vkBridge?.send('VKWebAppShowOrderBox', { type: 'item', item: pack.item })
+      .then((data: any) => {
+        if (data?.status === 'cancelled') { setPackBuying(false); return; }
+        setPackMsg('Оплата открыта. Материалы поступят в инвентарь, серебро — в банк.');
+      })
+      .catch(() => setPackBuying(false));
+    } else {
+      setPackBuying(true);
+      fetch('/api/yukassa/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ item: pack.item }),
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.confirmation_url) {
+          window.open(data.confirmation_url, '_blank');
+          setPackMsg('Оплата открыта. Материалы поступят в инвентарь, серебро — в банк.');
+        } else {
+          setPackMsg('❌ ' + (data.error || 'Ошибка'));
+        }
+      })
+      .catch(() => setPackMsg('❌ Ошибка сети'))
+      .finally(() => setPackBuying(false));
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => {
+      setPackMsg('✅ Материалы добавлены в инвентарь!');
+      setPackBuying(false);
+    };
+    window.addEventListener('paymentStatus', handler);
+    return () => window.removeEventListener('paymentStatus', handler);
+  }, []);
+
+  return (
+    <div className="mb-4">
+      <div className="relative">
+        <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">◀</button>
+        <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 px-4 snap-x snap-mandatory scrollbar-none">
+      {PACKS.map(p => {
+        const borderColor = p.curse ? '#e74c3c' : p.mega ? '#f39c12' : p.rune ? '#c0392b' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
+        return (
+        <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col flex-shrink-0 w-[220px] snap-start"
+          style={{ borderColor }}>
+          <h3 className="font-bold text-sm mb-1 truncate">{p.title}</h3>
+          <div className="text-xs text-[var(--color-text-muted)] space-y-1 mb-2 flex-1">
+            {'curse' in p ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                  <img src={`https://mmoarena.ru${p.crystalImg}`} alt="" className="w-4 h-4 object-contain" />
+                </div>
+                Кристалл душ ×{p.crystals}
+              </div>
+            ) : 'mega' in p ? (
+              <div className="space-y-1">
+                <p className="font-semibold text-[0.65rem]">Руны ×{p.count}:</p>
+                <div className="flex flex-wrap gap-1">
+                  {p.runeImgs?.map((r: { img: string; label: string }, i: number) => (
+                    <div key={i} className="w-5 h-5 bg-[var(--color-bg-input)] rounded flex items-center justify-center" title={r.label}>
+                      <img src={`https://mmoarena.ru${r.img}`} alt="" className="w-3.5 h-3.5 object-contain" />
+                    </div>
+                  ))}
+                  <span className="text-[0.6rem] text-[var(--color-text-muted)]">+4</span>
+                </div>
+                <p className="font-semibold text-[0.65rem]">Материалы ×{p.count}:</p>
+                <div className="flex flex-wrap gap-1">
+                  {p.materials?.map((m: { img: string; label: string }, i: number) => (
+                    <div key={i} className="w-5 h-5 bg-[var(--color-bg-input)] rounded flex items-center justify-center" title={m.label}>
+                      <img src={`https://mmoarena.ru${m.img}`} alt="" className="w-3.5 h-3.5 object-contain" />
+                    </div>
+                  ))}
+                  <span className="text-[0.6rem] text-[var(--color-text-muted)]">+4</span>
+                </div>
+              </div>
+            ) : 'rune' in p ? (
+              <div className="space-y-1">
+                {p.runeImgs?.map((r: { img: string; label: string }, i: number) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                      <img src={`https://mmoarena.ru${r.img}`} alt="" className="w-4 h-4 object-contain" />
+                    </div>
+                    <span>{r.label} ×{p.count}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                    <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-4 h-4 object-contain" />
+                  </div>
+                  {p.material}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
+                    <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-4 h-4 object-contain" />
+                  </div>
+                  {p.stones}
+                </div>
+              </>
+            )}
+            {'silver' in p && <p>💰 {formatMoney(p.silver)}</p>}
+            <p className="text-[0.6rem] italic">{p.desc}</p>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-[var(--color-accent-gold)]">
+              {isVK ? `${p.vkPrice} голосов` : `${p.rubPrice} ₽`}
+            </span>
+            <Button variant="danger" size="md" disabled={packBuying}
+              onClick={() => buyPack(p)}>
+              {isVK ? '🛒' : '💳'} Купить
+            </Button>
+          </div>
+        </div>
+      );
+      })}
+      </div>
+        <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">▶</button>
+      </div>
+      {packMsg && (
+        <div className="w-full text-center text-sm font-bold mt-2"
+          style={{ color: packMsg.startsWith('✅') ? 'var(--color-accent-success)' : packMsg.startsWith('❌') ? 'var(--color-accent-danger)' : 'var(--color-accent-info)' }}>
+          {packMsg}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CraftPage() {
   const [actionCard, setActionCard] = useState<any>(null);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/craft'); if (c) setActionCard(c); }).catch(() => {}); }, []);
@@ -33,6 +287,7 @@ export default function CraftPage() {
     const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
     const [recipes, setRecipes] = useState<any[]>([]);
     const [crafting, setCrafting] = useState(false);
+    const craftingRef = useRef(false);
     const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string; acquire?: { item: any; count: number; msg: string }; pendingData?: any } | null>(null);
     const [errorPopup, setErrorPopup] = useState<string | null>(null);
     const { showAcquire } = useAcquire();
@@ -102,9 +357,75 @@ export default function CraftPage() {
         // Камень любой редкости улучшает предмет
         const nextLevel = (item.upgradeLevel || 0) + 1;
         fetchUpgradeInfo(nextLevel, item.rarity_id)
-            .then((data: any) => setUpgradeInfo({ item, stone, nextLevel, chance: data.chance, cost: data.money_cost }))
+            .then((data: any) => {
+                const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
+                const bonus = STONE_BONUS[stone.rarity_id] || 0;
+                const factionBonus = data.factionBonus || 0;
+                const totalChance = Math.min(100, data.chance + bonus + factionBonus);
+                setUpgradeInfo({ item, stone, nextLevel, chance: totalChance, cost: data.money_cost });
+            })
             .catch(() => setUpgradeInfo(null));
     }, [craftSlots]);
+
+    // Curse info
+    const [curseInfo, setCurseInfo] = useState<{ item: any; crystal: any } | null>(null);
+    useEffect(() => {
+        const nonEmptySlots = craftSlots.filter(s => s !== null);
+        if (nonEmptySlots.length !== 2) { setCurseInfo(null); return; }
+        const items = nonEmptySlots.filter(s => !isCraftItem(s));
+        const crystals = nonEmptySlots.filter(s => isCraftItem(s) && s.itemType === 'soul_crystal');
+        if (items.length !== 1 || crystals.length !== 1) { setCurseInfo(null); return; }
+        setCurseInfo({ item: items[0], crystal: crystals[0] });
+    }, [craftSlots]);
+
+    const [curseResult, setCurseResult] = useState<string | null>(null);
+    const [curseConfirm, setCurseConfirm] = useState<{ oldCurse: any; newCurse: any } | null>(null);
+
+    const handleCurse = async () => {
+        if (!curseInfo || craftingRef.current) return;
+        craftingRef.current = true;
+        setCrafting(true);
+        try {
+            const token = localStorage.getItem('token');
+            // Шаг 1: списание + превью
+            const previewRes = await fetch('/api/craft/curse', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ itemId: curseInfo.item.id, crystalId: curseInfo.crystal.id }),
+            });
+            const preview = await previewRes.json();
+            if (!previewRes.ok) throw new Error(preview.error);
+
+            if (preview.needsConfirm) {
+                setCurseConfirm({ oldCurse: preview.oldCurse, newCurse: preview.newCurse });
+            } else {
+                // Нет старого проклятия — сразу применяем
+                await applyCurse(preview.newCurse);
+            }
+        } catch (e: any) {
+            setErrorPopup(e.message);
+        } finally {
+            craftingRef.current = false;
+            setCrafting(false);
+        }
+    };
+
+    const applyCurse = async (curseData: any, keepOld = false) => {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/craft/curse/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ itemId: curseInfo!.item.id, curse: curseData, keepOld }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setCurseResult(data.message);
+        setCharacter({ ...character, inventory: data.inventory });
+        setCraftSlots(Array(9).fill(null));
+        setMaterialUsage({});
+        setCurseConfirm(null);
+        setTimeout(() => setCurseResult(null), 4000);
+    };
 
     const handleLongPress = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
         if (item) {
@@ -114,7 +435,7 @@ export default function CraftPage() {
     }, []);
 
     const handleItemClick = useCallback((item: any) => {
-        if (isCraftItem(item) && item.itemType !== 'upgrade') return;
+        if (isCraftItem(item) && item.itemType !== 'upgrade' && item.itemType !== 'soul_crystal') return;
         setTooltipData(null);
         const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
         if (freeSlotIndex === -1) { setErrorPopup('Все слоты заняты'); return; }
@@ -124,6 +445,7 @@ export default function CraftPage() {
             setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
             setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = { ...item, count: 1 }; return n; });
         } else {
+            if (item.locked) { setErrorPopup('Предмет заблокирован. Разблокируйте в инвентаре.'); return; }
             setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = item; return n; });
         }
     }, [craftSlots, materialUsage, character.inventory]);
@@ -165,6 +487,7 @@ export default function CraftPage() {
             setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
             setCraftSlots(prev => { const n = [...prev]; n[index] = { ...item, count: 1 }; return n; });
         } else {
+            if (item.locked) { setErrorPopup('Предмет заблокирован. Разблокируйте в инвентаре.'); return; }
             setCraftSlots(prev => { const n = [...prev]; n[index] = item; return n; });
         }
     };
@@ -231,7 +554,8 @@ export default function CraftPage() {
     }, [craftSlots, recipes]);
 
     const handleCreate = async () => {
-        if (!activeRecipe) return;
+        if (!activeRecipe || craftingRef.current) return;
+        craftingRef.current = true;
         setCrafting(true);
         try {
             const res = await fetch('/api/craft/execute', {
@@ -243,19 +567,23 @@ export default function CraftPage() {
             if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
             setCraftSlots(Array(9).fill(null));
             setMaterialUsage({});
-            const itemName = activeRecipe.result?.name || 'Предмет';
+            const itemName = data.item?.name || activeRecipe.result?.name || 'Предмет';
             if (data.success) {
-                setCraftAnim({ success: true, label: itemName, acquire: { item: activeRecipe.result, count: 1, msg: 'Создано' }, pendingData: data });
+                setCraftAnim({ success: true, label: itemName, acquire: { item: data.item || activeRecipe.result, count: 1, msg: 'Создано' }, pendingData: data });
             } else {
                 setCraftAnim({ success: false, label: itemName, pendingData: data });
             }
         } catch (err: any) {
             setErrorPopup(err.message);
-        } finally { setCrafting(false); }
+        } finally {
+            craftingRef.current = false;
+            setCrafting(false);
+        }
     };
 
     const handleUpgrade = async () => {
-        if (!upgradeInfo) return;
+        if (!upgradeInfo || craftingRef.current) return;
+        craftingRef.current = true;
         setCrafting(true);
         try {
             const slots = craftSlots.filter(Boolean);
@@ -270,10 +598,15 @@ export default function CraftPage() {
             }
         } catch (err: any) {
             setErrorPopup(err.message);
-        } finally { setCrafting(false); }
+        } finally {
+            craftingRef.current = false;
+            setCrafting(false);
+        }
     };
 
     const hasItemsInSlots = craftSlots.some(s => s !== null);
+
+    const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
 
     const getRecipeCategory = (recipe: any): string => recipe.category?.name || getRecipeCategoryFallback(recipe);
 
@@ -298,11 +631,14 @@ export default function CraftPage() {
 
     return (
         <div className="px-4 py-4 min-h-screen">
-            <BackButton />
+            <div data-tutorial="craft-back"><BackButton /></div>
           {actionCard && <PageHeader title="Ремесло" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
             <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
                 Создавайте материалы и улучшайте предметы в верстаке. Добывайте ресурсы в PvE, крафтите материалы из трёх предыдущей редкости. Улучшайте снаряжение камнями — с шансом на успех.
             </p>
+
+            {/* Сундуки с материалами */}
+            <CraftPacks isVK={isVK} />
 
             {/* Инструкция */}
             <Card className="mb-4">
@@ -366,6 +702,20 @@ export default function CraftPage() {
                             <h4 className="font-bold text-[var(--color-text-primary)]">💍 Бижутерия</h4>
                             <p className="mt-1">В бижутерии (амулет, кольца, пояс) <b>1 ед. характеристики не даёт +1% к второстепенным характеристикам</b> (крит, уклонение, блок).</p>
                         </div>
+
+                        <div>
+                            <h4 className="font-bold text-[var(--color-accent-purple)]">☠ Проклятие (Кристалл душ)</h4>
+                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                                <li>Кристалл душ добывается с боссов Ада I-III</li>
+                                <li>Поместите <b>предмет</b> и <b>Кристалл душ</b> в верстак, нажмите <b>«Проклясть»</b></li>
+                                <li>Стоимость: <b>100 000 серебра</b> + Кристалл душ</li>
+                                <li>Добавляет случайный основной стат (Сила/Ловкость/Защита/Мастерство)</li>
+                                <li>5 рангов: <span style={{color:'#22c55e'}}>I (10-20)</span> → <span style={{color:'#3b82f6'}}>II (20-30)</span> → <span style={{color:'#a855f7'}}>III (30-40)</span> → <span style={{color:'#f97316'}}>IV (40-50)</span> → <span style={{color:'#ef4444'}}>V (50-60)</span></li>
+                                <li>Ранг I — часто, ранг V — очень редко</li>
+                                <li>Не скалируется от уровня улучшения предмета</li>
+                                <li>При повторном проклятии можно выбрать: заменить или оставить старое</li>
+                            </ul>
+                        </div>
                     </div>
                 )}
             </Card>
@@ -420,34 +770,99 @@ export default function CraftPage() {
                     {activeRecipe && (
                         <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
                             <div>Вы можете создать: <strong className="text-white">{activeRecipe.result?.name}</strong></div>
-                            <div>Шанс создания: {activeRecipe.success_chance ?? 100}%</div>
+                            <div>Шанс создания: {character?.faction === 'crafter' ? Math.min(100, (activeRecipe.success_chance ?? 100) + 10 + Math.floor((character.factionCraftCount || 0) / 100)) : (activeRecipe.success_chance ?? 100)}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 100)}% фракция)</span>}
+                                {character?.faction === 'crafter' && (
+                                    (() => { const craftChance = Math.min(100, (activeRecipe.success_chance ?? 100) + 10 + Math.floor((character.factionCraftCount || 0) / 100)); return craftChance >= 80 ? <span className="text-[var(--color-text-muted)] ml-1">(без опыта)</span> : <span className="text-green-400 ml-1">+1 опыт</span>; })()
+                                )}
+                            </div>
                             <div>Стоимость: {formatMoney(activeRecipe.money_cost)}</div>
                         </div>
                     )}
 
                     {/* Инфо об улучшении */}
-                    {upgradeInfo && (
+                    {upgradeInfo && (() => {
+                        const item = upgradeInfo.item;
+                        const curLvl = item.upgradeLevel || 0;
+                        const nextLvl = upgradeInfo.nextLevel;
+                        const scaleStat = (base: number, lvl: number) => Math.round(base * (1 + lvl * 0.1));
+                        const statNames: Record<string, string> = { s: 'Сила', a: 'Ловк', d: 'Защ', m: 'Маг', crit: 'Крит', dodge: 'Уклон', counter: 'Контр', fullBlock: 'Блок' };
+                        const bonuses = item.bonuses || {};
+                        const extra = item.extra || {};
+                        const allStats: [string, number][] = [];
+                        for (const k of ['s','a','d','m']) if (bonuses[k]) allStats.push([k, bonuses[k]]);
+                        for (const k of ['crit','dodge','counter','fullBlock']) if (extra[k]) allStats.push([k, extra[k]]);
+
+                        return (
                         <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
-                            <div>Улучшение до уровня +{upgradeInfo.nextLevel}</div>
-                            <div>Шанс: {upgradeInfo.chance}%</div>
+                            <div>Улучшение до уровня +{nextLvl}</div>
+                            <div>Шанс: {upgradeInfo.chance}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 100)}% фракция)</span>}
+                                {character?.faction === 'crafter' && (
+                                    upgradeInfo.chance >= 80 ? <span className="text-[var(--color-text-muted)] ml-1">(без опыта)</span> : <span className="text-green-400 ml-1">+1 опыт</span>
+                                )}
+                            </div>
                             <div>Стоимость: {formatMoney(upgradeInfo.cost)}</div>
-                            {upgradeInfo.nextLevel <= 6 ? (
+                            {allStats.length > 0 && (
+                                <div className="mt-1 text-[var(--color-text-muted)]">
+                                    {allStats.map(([k, base]) => {
+                                        const cur = scaleStat(base, curLvl);
+                                        const next = scaleStat(base, nextLvl);
+                                        const same = cur === next;
+                                        return (
+                                            <div key={k}>
+                                                {statNames[k] || k}: {cur} → <span className={same ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-accent-success)]'}>{next}</span>
+                                                {same && <span className="text-[0.6rem] text-[var(--color-text-muted)] ml-1">(без изменений)</span>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {nextLvl <= 6 ? (
                                 <div className="text-[var(--color-accent-warning)] mt-1">При неудаче разрушится только камень</div>
                             ) : (
                                 <div className="text-[var(--color-accent-danger)] font-bold mt-1">ВНИМАНИЕ!!! При неудаче предмет будет разрушен!!!</div>
                             )}
                         </div>
-                    )}
+                        );
+                    })()}
+
+                    {/* Инфо о проклятии */}
+                    {curseInfo && (() => {
+                        const item = curseInfo.item;
+                        const hasCurse = !!(item.curseStat && item.curseValue);
+                        return (
+                        <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
+                            <div className="font-bold text-[var(--color-accent-purple)]">☠ Проклятие предмета</div>
+                            <div>Предмет: <strong className="text-white">{item.name}{item.upgradeLevel > 0 ? ` +${item.upgradeLevel}` : ''}</strong></div>
+                            {hasCurse && (() => {
+                                const statLabels: Record<string, string> = { s: 'Силе', a: 'Ловкости', d: 'Защите', m: 'Мастерству' };
+                                return (
+                                <div className="text-[var(--color-accent-warning)]">
+                                    Текущее: +{item.curseValue} к {statLabels[item.curseStat] || item.curseStat} (ранг {item.curseName})
+                                </div>
+                                );
+                            })()}
+                            <div className="text-[var(--color-text-muted)] mt-1">Ранги: <span style={{color:'#22c55e'}}>I</span> 10-20 • <span style={{color:'#3b82f6'}}>II</span> 20-30 • <span style={{color:'#a855f7'}}>III</span> 30-40 • <span style={{color:'#f97316'}}>IV</span> 40-50 • <span style={{color:'#ef4444'}}>V</span> 50-60</div>
+                            <div>Стоимость: {formatMoney(100000)} + Кристалл душ</div>
+                        </div>
+                        );
+                    })()}
 
                     {/* Кнопки */}
                     <div className="flex flex-col gap-2 items-center mt-2">
-                        <Button variant={activeRecipe ? 'success' : 'secondary'} size="md" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate}>
+                        <Button variant={activeRecipe ? 'success' : 'secondary'} size="md" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate} data-tutorial="craft-create">
                             {crafting ? 'Создание...' : 'Создать'}
                         </Button>
                         <Button variant={upgradeInfo ? 'primary' : 'secondary'} size="md" fullWidth disabled={!upgradeInfo || crafting} onClick={handleUpgrade}
                             className={upgradeInfo ? 'bg-[#f39c12]' : ''}>
                             {crafting ? 'Улучшение...' : 'Улучшить'}
                         </Button>
+                        <Button variant="secondary" size="md" fullWidth disabled={!curseInfo || crafting || (character?.money || 0) < 100000} onClick={handleCurse}
+                            className={curseInfo && (character?.money || 0) >= 100000 ? '!bg-[#7c3aed] !text-white' : ''}>
+                            {crafting ? 'Проклятие...' : '☠ Проклясть'}
+                        </Button>
+                        {curseResult && (
+                            <div className="text-xs text-[var(--color-accent-success)] text-center font-bold">{curseResult}</div>
+                        )}
                         <Button variant="danger" size="md" fullWidth disabled={!hasItemsInSlots} onClick={async () => {
                             const itemsToSalvage = craftSlots.filter(s => s && !isCraftItem(s));
                             const stonesToDisassemble = craftSlots.filter(s => s && isCraftItem(s) && s.itemType === 'upgrade');
@@ -493,6 +908,7 @@ export default function CraftPage() {
                 <div className="flex-1 min-w-[300px]" onDragOver={handleDragOver} onDrop={handleDropOnInventory}>
                     <Inventory
                         collapsible={false}
+                        clickToEquip={false}
                         onItemClick={handleItemClick}
                         onMaterialClick={handleMaterialClick}
                         inventoryOverride={displayInventory}
@@ -512,6 +928,30 @@ export default function CraftPage() {
                     if (craftAnim.acquire) showAcquire(craftAnim.acquire.item, craftAnim.acquire.count, craftAnim.acquire.msg);
                     setCraftAnim(null);
                 }} />
+            )}
+
+            {/* Диалог замены проклятия */}
+            {curseConfirm && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50" />
+                    <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-accent-purple)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center">
+                        <p className="text-sm font-bold text-[var(--color-accent-purple)] mb-3">☠ Замена проклятия</p>
+                        <div className="text-xs space-y-2 mb-4">
+                            <div>
+                                <span className="text-[var(--color-text-muted)]">Текущее: </span>
+                                <span style={{color: curseConfirm.oldCurse.color}}>+{curseConfirm.oldCurse.value} к {curseConfirm.oldCurse.statName} (ранг {curseConfirm.oldCurse.name})</span>
+                            </div>
+                            <div>
+                                <span className="text-[var(--color-text-muted)]">Новое: </span>
+                                <span style={{color: curseConfirm.newCurse.color}}>+{curseConfirm.newCurse.value} к {curseConfirm.newCurse.statName} (ранг {curseConfirm.newCurse.name})</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 justify-center">
+                            <Button variant="secondary" size="md" onClick={() => applyCurse(curseConfirm.newCurse, true)}>Оставить</Button>
+                            <Button variant="danger" size="md" onClick={() => applyCurse(curseConfirm.newCurse)}>Заменить</Button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Попап ошибки */}
