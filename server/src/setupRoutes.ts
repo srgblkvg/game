@@ -68,7 +68,6 @@ export function setupRoutes(app: Express) {
 
   // Казна замка (публичный)
   app.use('/api', treasuryRoutes);
-  app.use('/api', exchangeRoutes);
 
   // Форум — последние темы (публичный, для замка)
   app.get('/api/forum/latest', async (_req: any, res) => {
@@ -176,6 +175,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', bankRoutes);
   app.use('/api', tavernRoutes);
   app.use('/api', auctionRoutes);
+  app.use('/api', exchangeRoutes);
   app.use('/api', questsRoutes);
   // Гильд-босс напрямую (до guildRoutes с /guild/:id)
   app.get('/api/guild/boss/ping', (_req, res) => { res.json({ ok: true }); });
