@@ -714,6 +714,7 @@ export default function DungeonPage() {
                                             </div>
                                             )}
                                         </div>
+                                    </div>
                                 </div>
                             );
                         })}

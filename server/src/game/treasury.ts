@@ -22,6 +22,12 @@ export async function addToTreasury(amount: number, source: string) {
     await db.run('INSERT INTO treasury_log (amount, source, created_at) VALUES (?, ?, NOW())', [amount, source]);
 }
 
+export async function deductFromTreasury(amount: number, source: string) {
+    if (!amount || amount <= 0) return;
+    await db.run('UPDATE castle_treasury SET amount = amount - ?, updated_at = NOW() WHERE id = 1', [amount]);
+    await db.run('INSERT INTO treasury_log (amount, source, created_at) VALUES (?, ?, NOW())', [-amount, source]);
+}
+
 export async function getTreasury(): Promise<number> {
     const row = await db.one('SELECT amount FROM castle_treasury WHERE id = 1') as any;
     return row?.amount || 0;
