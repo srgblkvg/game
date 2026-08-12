@@ -93,51 +93,52 @@ export default function ExchangePage() {
 
     // Chart data: AMM price curve
     const Rg = status.gold, Rs = status.silver;
-    const chartPoints = 40;
     const maxGoldRange = Math.floor(Rg * 0.25);
-    const labels: string[] = [];
-    const buyPrices: number[] = [];
-    const sellPricesArr: number[] = [];
-    for (let i = -maxGoldRange; i <= maxGoldRange; i += Math.max(1, Math.floor(maxGoldRange * 2 / chartPoints))) {
-        labels.push(i === 0 ? '0' : (i > 0 ? '+' + formatMoney(i) : formatMoney(-i)));
-        if (i > 0) {
-            buyPrices.push(Math.round(buyPrice(i, Rs, Rg)));
-            sellPricesArr.push(NaN as any);
-        } else if (i < 0) {
-            buyPrices.push(NaN as any);
-            sellPricesArr.push(Math.round(sellPrice(-i, Rs, Rg) * (status.sellCoef || 1)));
-        } else {
-            buyPrices.push(status.basePrice);
-            sellPricesArr.push(status.basePrice);
-        }
+    const step = Math.max(1, Math.floor(maxGoldRange * 2 / 40));
+
+    // Два независимых датасета
+    const sellPoints: { x: number; y: number }[] = [];
+    const buyPoints: { x: number; y: number }[] = [];
+    for (let dx = step; dx <= maxGoldRange; dx += step) {
+        buyPoints.push({ x: dx, y: Math.round(buyPrice(dx, Rs, Rg)) });
     }
+    for (let dx = step; dx <= maxGoldRange; dx += step) {
+        sellPoints.push({ x: -dx, y: Math.round(sellPrice(dx, Rs, Rg) * (status.sellCoef || 1)) });
+    }
+    // Точка 0
+    sellPoints.unshift({ x: 0, y: status.basePrice });
+    buyPoints.unshift({ x: 0, y: status.basePrice });
 
     const chartData = {
-        labels,
         datasets: [
             {
                 label: 'Покупка',
-                data: buyPrices,
+                data: buyPoints,
                 borderColor: '#f59e0b',
                 backgroundColor: 'rgba(245,158,11,0.1)',
-                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2, spanGaps: false,
+                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
             },
             {
                 label: 'Продажа',
-                data: sellPricesArr,
-                borderColor: '#94a3b8',
-                backgroundColor: 'rgba(148,163,184,0.05)',
-                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2, spanGaps: false,
+                data: sellPoints,
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239,68,68,0.05)',
+                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
             },
         ],
     };
     const chartOptions = {
         responsive: true, maintainAspectRatio: false,
+        parsing: { xAxisKey: 'x', yAxisKey: 'y' } as any,
         plugins: {
-            tooltip: { callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()} серебра` } },
+            tooltip: { callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.raw.y?.toLocaleString()} серебра` } },
         },
         scales: {
-            x: { ticks: { font: { size: 9 }, color: '#888', maxTicksLimit: 8 }, grid: { display: false } },
+            x: {
+                type: 'linear' as const,
+                ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => v === 0 ? '0' : (v > 0 ? '+' + formatMoney(v) : formatMoney(-v)) },
+                grid: { display: false },
+            },
             y: { ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => formatMoney(v) }, grid: { color: 'rgba(255,255,255,0.05)' } },
         },
     };
@@ -229,7 +230,7 @@ export default function ExchangePage() {
                     className="w-full mb-2 accent-[var(--color-accent-gold)]" />
                 <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-[var(--color-accent-gold)]">{sellAmount} золота</span>
-                    <Button variant="secondary" size="md" onClick={handleSell} disabled={loading || sellAmount <= 0}>
+                    <Button variant="danger" size="md" onClick={handleSell} disabled={loading || sellAmount <= 0}>
                         Продать за {estimatedSellPayout.toLocaleString()} серебра
                     </Button>
                 </div>
