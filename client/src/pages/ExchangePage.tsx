@@ -8,6 +8,12 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
+function formatMoney(n: number): string {
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e4) return (n / 1e3).toFixed(0) + 'K';
+    return String(Math.round(n));
+}
+
 // AMM price for buying dx gold
 function buyPrice(dx: number, Rs: number, Rg: number): number {
     if (dx <= 0 || dx >= Rg) return Rs / Rg;
@@ -138,7 +144,7 @@ export default function ExchangePage() {
         scales: {
             x: { ticks: { font: { size: 9 }, color: '#888', maxTicksLimit: 6, maxRotation: 0 }, grid: { display: false } },
             y: {
-                ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => v.toLocaleString() },
+                ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => formatMoney(v) },
                 grid: { color: 'rgba(255,255,255,0.05)' },
             },
         },
