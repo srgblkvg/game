@@ -9,7 +9,9 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
 function formatMoney(n: number): string {
-    return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(0) + 'K' : String(Math.round(n));
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e4) return (n / 1e3).toFixed(0) + 'K';
+    return String(Math.round(n));
 }
 
 // AMM price for buying dx gold
@@ -97,22 +99,12 @@ export default function ExchangePage() {
         { timestamp: Math.floor(Date.now()/1000), price: 1393 },
     ]);
     const [period, setPeriod] = useState('24h');
-    const [priceChange, setPriceChange] = useState<string | null>(null);
 
     const fetchHistory = async (p?: string) => {
         try {
             const res = await fetch(`/api/exchange/history?period=${p || period}`, { headers: getHeaders() });
             const data = await res.json();
             setHistory(data.data || []);
-            // Изменение за период
-            if (data.data?.length >= 2) {
-                const first = data.data[0].price;
-                const last = data.data[data.data.length - 1].price;
-                const pct = first > 0 ? ((last - first) / first * 100) : 0;
-                setPriceChange(`${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`);
-            } else {
-                setPriceChange(null);
-            }
         } catch {}
     };
 
@@ -208,11 +200,6 @@ export default function ExchangePage() {
                 <div className="text-center mb-1">
                     <span className="text-xl font-bold text-[var(--color-accent-gold)]">{status.basePrice?.toLocaleString()}</span>
                     <span className="text-xs text-[var(--color-text-muted)] ml-1">серебра</span>
-                    {priceChange && (
-                        <span className={`text-xs ml-2 ${priceChange.startsWith('+') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>
-                            {priceChange}
-                        </span>
-                    )}
                 </div>
                 <div style={{ height: 160 }}>
                     {history.length > 0 ? (
