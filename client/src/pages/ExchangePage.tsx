@@ -114,7 +114,12 @@ export default function ExchangePage() {
         fetchStatus();
         fetchHistory();
         const interval = setInterval(fetchStatus, 5000);
-        return () => clearInterval(interval);
+        const onExchange = () => { fetchStatus(); fetchHistory(); };
+        window.addEventListener('exchange_status', onExchange);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('exchange_status', onExchange);
+        };
     }, []);
 
     const switchPeriod = (p: string) => { setPeriod(p); fetchHistory(p); };
