@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense, useCallback } from 'react';
+import { lazy, Suspense, useCallback, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useGame } from './contexts/GameContext';
 import LoginPage from './pages/LoginPage';
@@ -76,11 +76,29 @@ function AppContent() {
   const { character, setCharacter } = useGame();
 
   // Туториал активен для игроков 1 уровня, которые не завершили обучение
+  // + защита: если шаг выходит за границы — не показываем и завершаем
   const tutorialActive =
     user?.role === 'player' &&
     character &&
     (character.tutorialCompleted !== 1) &&
-    (character.level ?? 0) <= 1;
+    (character.level ?? 0) <= 1 &&
+    (character.tutorialStep ?? 0) < tutorialSteps.length;
+
+  // Авто-завершение: если tutorialStep вышел за границы, а completed нет — чиним
+  useEffect(() => {
+    if (
+      character &&
+      (character.tutorialCompleted !== 1) &&
+      (character.tutorialStep ?? 0) >= tutorialSteps.length
+    ) {
+      fetch(`${BASE_URL}/character/tutorial-done`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      }).catch(() => {});
+      setCharacter({ ...character, tutorialCompleted: 1, tutorialStep: tutorialSteps.length });
+    }
+  }, [character?.tutorialStep, character?.tutorialCompleted]);
 
   const handleTutorialNext = useCallback(async () => {
     try {
