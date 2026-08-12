@@ -138,12 +138,12 @@ export default function Header() {
             fetchCharacter().then(char => setCharacter(prev => ({ ...prev, ...char }))).catch(console.error);
         }, 30000);
 
-        // Баланс через WS — мгновенное обновление money (кроме времени боя)
+        // Баланс через WS — мгновенное обновление money и gold (кроме времени боя)
         const onBalance = (e: Event) => {
             if ((window as any).__battling) return;
-            const { money } = (e as CustomEvent).detail;
-            if (money !== undefined) {
-                setCharacter((prev: any) => prev ? { ...prev, money } : prev);
+            const { money, gold } = (e as CustomEvent).detail;
+            if (money !== undefined || gold !== undefined) {
+                setCharacter((prev: any) => prev ? { ...prev, ...(money !== undefined ? { money } : {}), ...(gold !== undefined ? { gold } : {}) } : prev);
             }
         };
         window.addEventListener('balance', onBalance);
@@ -275,6 +275,11 @@ export default function Header() {
                 {user.role === 'player' && character && (
                     <span className="text-[var(--color-text-primary)] text-sm font-bold">
                         Серебро: {character.money.toLocaleString()}
+                    </span>
+                )}
+                {user.role === 'player' && character && (
+                    <span className="text-[var(--color-accent-gold)] text-sm font-bold">
+                        Золото: {(character.gold || 0).toLocaleString()}
                     </span>
                 )}
                 {user.role === 'player' && (

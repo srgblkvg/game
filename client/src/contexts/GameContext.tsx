@@ -21,6 +21,7 @@ export interface Character {
   level: number;
   exp: number;
   money: number;
+  gold: number;
   totalBattles: number;
   wins: number;
   inventory: (GameItem | {

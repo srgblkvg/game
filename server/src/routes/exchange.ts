@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { getReserves, updateReserves, getSellCoef, calcBuyCost, calcSellPayout } from '../game/exchange';
 import { getTreasury } from '../game/treasury';
+import { sendToUser } from '../events';
 
 const router = Router();
 
