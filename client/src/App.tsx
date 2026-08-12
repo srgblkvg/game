@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 import { useAuth } from './contexts/AuthContext';
+import { useGame } from './contexts/GameContext';
 import LoginPage from './pages/LoginPage';
 import LoginClassicPage from './pages/LoginClassicPage';
 import WikiPage from './pages/WikiPage';
@@ -22,6 +23,9 @@ import MetrikaTracker from './components/MetrikaTracker';
 // TODO: удалить после ответа поддержки VK ↓
 import VkKeyboard from './components/VkKeyboard';
 // TODO: удалить после ответа поддержки VK ↑
+import TutorialOverlay from './components/TutorialOverlay';
+import tutorialSteps from './data/tutorialSteps';
+import { BASE_URL, getHeaders } from './api/helpers';
 
 // Ленивая загрузка тяжёлых страниц
 const ArenaPage = lazy(() => import('./pages/Arena/ArenaPage'));
@@ -40,7 +44,6 @@ const AuctionPage = lazy(() => import('./pages/AuctionPage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
 const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 const GuildPage = lazy(() => import('./pages/GuildPage'));
-const ExchangePage = lazy(() => import('./pages/ExchangePage'));
 const GuildViewPage = lazy(() => import('./pages/GuildViewPage'));
 const GuildRatingPage = lazy(() => import('./pages/GuildRatingPage'));
 const GuildWarPage = lazy(() => import('./pages/GuildWarPage'));
@@ -68,8 +71,43 @@ function Loading() {
   );
 }
 
-function App() {
+function AppContent() {
   const { user } = useAuth();
+  const { character, setCharacter } = useGame();
+
+  // Туториал активен для игроков 1 уровня, которые не завершили обучение
+  const tutorialActive =
+    user?.role === 'player' &&
+    character &&
+    (character.tutorialCompleted !== 1) &&
+    (character.level ?? 0) <= 1;
+
+  const handleTutorialNext = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/character/tutorial-step`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (character) {
+        setCharacter({ ...character, tutorialStep: data.step });
+      }
+    } catch { /* ignore */ }
+  }, [character, setCharacter]);
+
+  const handleTutorialComplete = useCallback(async () => {
+    try {
+      await fetch(`${BASE_URL}/character/tutorial-done`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      });
+      if (character) {
+        setCharacter({ ...character, tutorialCompleted: 1, tutorialStep: tutorialSteps.length });
+      }
+    } catch { /* ignore */ }
+  }, [character, setCharacter]);
 
   const searchParams = new URLSearchParams(window.location.search);
   const isVkLaunch = searchParams.has('vk_user_id');
@@ -79,8 +117,9 @@ function App() {
       <ToastProvider>
       <ScrollToTop />
       <MetrikaTracker />
-      <Header />
-      {user?.role === 'player' && <RightSidebar />}
+      {/* Скрываем UI для игроков в туториале */}
+      {!tutorialActive && <Header />}
+      {!tutorialActive && user?.role === 'player' && <RightSidebar />}
       <NotificationToast />
       <div style={{
         maxWidth: '1024px',
@@ -116,7 +155,6 @@ function App() {
             <Route path="/premium" element={<PremiumPage />} />
             <Route path="/guild" element={user?.role === 'player' ? <GuildPage /> : <Navigate to="/login" />} />
             <Route path="/guild/rating" element={user?.role === 'player' ? <GuildRatingPage /> : <Navigate to="/login" />} />
-            <Route path="/exchange" element={user?.role === 'player' ? <ExchangePage /> : <Navigate to="/login" />} />
             <Route path="/guild/war" element={user?.role === 'player' ? <GuildWarPage /> : <Navigate to="/login" />} />
             <Route path="/castle" element={user?.role === 'player' ? <CastlePage /> : <Navigate to="/login" />} />
             <Route path="/faction" element={user?.role === 'player' ? <FactionPage /> : <Navigate to="/login" />} />
@@ -140,14 +178,27 @@ function App() {
           </Routes>
         </Suspense>
       </div>
-      {user?.role === 'player' && <ChatPanel key={user?.id} />}
+      {!tutorialActive && user?.role === 'player' && <ChatPanel key={user?.id} />}
       {/* TODO: удалить после ответа поддержки VK ↓ */}
       <VkKeyboard />
       {/* TODO: удалить после ответа поддержки VK ↑ */}
       <NoMoneyModal />
+      {/* Туториал для новых игроков */}
+      {tutorialActive && (
+        <TutorialOverlay
+          steps={tutorialSteps}
+          stepIndex={character?.tutorialStep ?? 0}
+          onComplete={handleTutorialComplete}
+          onNextStep={handleTutorialNext}
+        />
+      )}
     </ToastProvider>
     </BrowserRouter>
   );
+}
+
+function App() {
+  return <AppContent />;
 }
 
 export default App;

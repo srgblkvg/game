@@ -100,7 +100,7 @@ export default function ShopPage() {
       ) : offers.length === 0 ? (
         <p className="text-[var(--color-text-muted)] text-center py-4">Нет предложений</p>
       ) : (
-        <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
+        <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]" data-tutorial="shop-buy-first">
           {offers.map((offer: any) => {
             const price = offer.price;
             const canAfford = character.money >= price;

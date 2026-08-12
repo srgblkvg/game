@@ -216,7 +216,6 @@ router.get('/character/me', async (req, res) => {
         tutorialStep: user.tutorialStep || 0,
         totalIncome: user.totalIncome || 0,
         overflowmoney: user.overflowmoney || 0,
-        gold: user.gold || 0,
         adPremiumAt: user.adpremiumat || 0,
         adSilverAt: user.adsilverat || 0,
         equipment1, equipment2, equipment3,
@@ -244,18 +243,19 @@ router.post('/character/save-tabs', async (req, res) => {
 
 // Отметить туториал как пройденный
 router.post('/character/tutorial-done', async (req, res) => {
+    const reward = 1000;
     const userId = req.userId;
-    await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
-    res.json({ success: true });
+    await db.run('UPDATE users SET tutorial_completed = 1, money = money + ? WHERE id = ?', [reward, userId]);
+    res.json({ success: true, reward });
 });
 
 // Продвинуть туториал на один шаг вперёд (клиентская кнопка «Далее»)
 router.post('/character/tutorial-step', async (req, res) => {
     const userId = req.userId;
     await db.run('UPDATE users SET tutorial_step = tutorial_step + 1 WHERE id = ?', [userId]);
-    // Если дошли до шага 4 — завершаем
+    // Если дошли до последнего шага — завершаем
     const user = await db.one('SELECT tutorial_step FROM users WHERE id = ?', [userId]) as any;
-    if ((user?.tutorial_step || 0) >= 10) {
+    if ((user?.tutorial_step || 0) >= 12) {
         await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
     }
     res.json({ success: true, step: user?.tutorial_step || 0 });
