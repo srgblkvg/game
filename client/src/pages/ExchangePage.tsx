@@ -152,23 +152,24 @@ export default function ExchangePage() {
             {/* Купить золото */}
             <Card>
                 <h3 className="font-bold text-sm mb-2">💳 Купить золото</h3>
-                <p className="text-xs text-[var(--color-text-muted)] mb-3">1 золото = 7 ₽. Без наценок и скидок.</p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">Чем больше пак — тем больше бонусного золота</p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {[
-                        { gold: 1, rub: 7 },
-                        { gold: 7, rub: 49 },
-                        { gold: 14, rub: 98 },
-                        { gold: 21, rub: 147 },
-                        { gold: 35, rub: 245 },
-                        { gold: 70, rub: 490 },
-                        { gold: 143, rub: 1001 },
-                        { gold: 286, rub: 2002 },
-                        { gold: 715, rub: 5005 },
+                        { gold: 1, rub: 7, bonus: 0 },
+                        { gold: 7, rub: 49, bonus: 0 },
+                        { gold: 15, rub: 99, bonus: 5 },
+                        { gold: 24, rub: 149, bonus: 10 },
+                        { gold: 42, rub: 249, bonus: 15 },
+                        { gold: 89, rub: 499, bonus: 20 },
+                        { gold: 185, rub: 999, bonus: 25 },
+                        { gold: 578, rub: 2999, bonus: 30 },
+                        { gold: 1000, rub: 4999, bonus: 35 },
                     ].map(p => (
                         <button key={p.gold} disabled
                             className="p-2 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-secondary)] text-center opacity-60 cursor-not-allowed">
                             <div className="text-[var(--color-accent-gold)] font-bold text-sm">{p.gold} 🪙</div>
                             <div className="text-xs text-[var(--color-text-muted)]">{p.rub} ₽</div>
+                            {p.bonus > 0 && <div className="text-[0.55rem] text-[var(--color-accent-success)]">+{p.bonus}%</div>}
                         </button>
                     ))}
                 </div>
