@@ -273,14 +273,14 @@ export default function Header() {
             )}
             <div className="flex items-center justify-between gap-2 px-3 py-1 flex-wrap">
                 {user.role === 'player' && character && (
-                    <span className="text-[var(--color-text-primary)] text-sm font-bold">
-                        Серебро: {character.money.toLocaleString()}
-                    </span>
-                )}
-                {user.role === 'player' && character && (
-                    <span className="text-[var(--color-accent-gold)] text-sm font-bold">
-                        Золото: {(character.gold || 0).toLocaleString()}
-                    </span>
+                    <div>
+                        <div className="text-[var(--color-text-primary)] text-sm font-bold">
+                            Серебро: {character.money.toLocaleString()}
+                        </div>
+                        <div className="text-[var(--color-accent-gold)] text-sm font-bold">
+                            Золото: {(character.gold || 0).toLocaleString()}
+                        </div>
+                    </div>
                 )}
                 {user.role === 'player' && (
                     protectionSec > 0 ? (
