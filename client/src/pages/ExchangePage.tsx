@@ -151,13 +151,26 @@ export default function ExchangePage() {
 
             {/* Купить золото */}
             <Card>
-                <h3 className="font-bold text-sm mb-3">💳 Купить золото</h3>
-                <p className="text-xs text-[var(--color-text-muted)] mb-3">Курс: 1 золото = 7 ₽. Покупка через VK Payments.</p>
-                <div className="flex items-center gap-2">
-                    <input type="number" inputMode="numeric" placeholder="Кол-во золота"
-                        className="flex-1 bg-[var(--color-bg-input)] p-2 rounded text-sm border border-[var(--color-border-light)]"
-                        onChange={() => {}} />
-                    <Button variant="primary" size="md" disabled>Скоро</Button>
+                <h3 className="font-bold text-sm mb-2">💳 Купить золото</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">1 золото = 7 ₽. Без наценок и скидок.</p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {[
+                        { gold: 1, rub: 7 },
+                        { gold: 7, rub: 49 },
+                        { gold: 14, rub: 98 },
+                        { gold: 21, rub: 147 },
+                        { gold: 35, rub: 245 },
+                        { gold: 70, rub: 490 },
+                        { gold: 143, rub: 1001 },
+                        { gold: 286, rub: 2002 },
+                        { gold: 715, rub: 5005 },
+                    ].map(p => (
+                        <button key={p.gold} disabled
+                            className="p-2 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-secondary)] text-center opacity-60 cursor-not-allowed">
+                            <div className="text-[var(--color-accent-gold)] font-bold text-sm">{p.gold} 🪙</div>
+                            <div className="text-xs text-[var(--color-text-muted)]">{p.rub} ₽</div>
+                        </button>
+                    ))}
                 </div>
             </Card>
 
