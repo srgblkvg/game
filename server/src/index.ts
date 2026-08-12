@@ -31,10 +31,12 @@ import { startMassacreScheduler } from './schedulers/massacre';
 import { startInactiveLeaderCheck } from './schedulers/inactiveLeader';
 import { startJobCompletionScheduler } from './schedulers/jobs';
 import { initTreasury, initTreasuryLog } from './game/treasury';
+import { initExchange } from './game/exchange';
 
 // Init tables
 initTreasury().catch(e => logger.error('Treasury init failed:', e.message));
 initTreasuryLog().catch(e => logger.error('Treasury log init failed:', e.message));
+initExchange().catch(e => logger.error('Exchange init failed:', e.message));
 
 startSalaryScheduler();
 startTournamentScheduler();

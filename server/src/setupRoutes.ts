@@ -44,6 +44,7 @@ import vkPaymentsRoutes from './routes/vkPayments';
 import vkBridgeAuthRoutes from './routes/vkBridgeAuth';
 import yukassaRoutes from './routes/yukassa';
 import treasuryRoutes from './routes/treasury';
+import exchangeRoutes from './routes/exchange';
 import forumRoutes from './routes/forum';
 import massacreRoutes from './routes/massacre';
 import casinoRoutes from './routes/casino';
@@ -67,6 +68,7 @@ export function setupRoutes(app: Express) {
 
   // Казна замка (публичный)
   app.use('/api', treasuryRoutes);
+  app.use('/api', exchangeRoutes);
 
   // Форум — последние темы (публичный, для замка)
   app.get('/api/forum/latest', async (_req: any, res) => {
