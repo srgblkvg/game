@@ -216,6 +216,7 @@ router.get('/character/me', async (req, res) => {
         tutorialStep: user.tutorialStep || 0,
         totalIncome: user.totalIncome || 0,
         overflowmoney: user.overflowmoney || 0,
+        gold: user.gold || 0,
         adPremiumAt: user.adpremiumat || 0,
         adSilverAt: user.adsilverat || 0,
         equipment1, equipment2, equipment3,
