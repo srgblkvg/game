@@ -239,8 +239,11 @@ function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyDa
     const scale = 0.3 + floor * 0.8;
     const hp = Math.floor((mob.hp || 10) * scale * (isBoss ? 5 : 1));
     const dmg = Math.floor((mob.atk || 3) * scale);
-    const interval = isBoss ? 0.5 + Math.random() * 1.0 : 0.5 + Math.random() * 2.0; // 0.5-1.5с босс, 0.5-2.5с обычный
-    return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: interval, _lastAttackTime: Math.floor(Date.now() / 1000) };
+    const interval = isBoss ? 1.5 + Math.random() * 1.0 : 1.0 + Math.random() * 2.0; // босс 1.5-2.5с, обычный 1.0-3.0с
+    // Более сильные монстры атакуют быстрее (atk влияет на скорость)
+    const speedBonus = Math.max(0, (1 - (mob.atk || 3) / 20) * 1.0); // atk=3 → +1.0с, atk=20 → +0с
+    const finalInterval = Math.max(0.8, interval + speedBonus * Math.random());
+    return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: finalInterval, _lastAttackTime: Math.floor(Date.now() / 1000) };
 }
 
 async function generateFloorEnemies(floor: number): Promise<EnemyData[]> {
@@ -980,7 +983,12 @@ function tickCombat(run: DungeonRun) {
     for (const enemy of run.enemies) {
         if (enemy.hp <= 0) continue;
         if (enemy.stunTimer && enemy.stunTimer > 0) {
-            enemy.stunTimer -= (TICK_MS / 1000) * COMBAT_SPEED;
+            enemy.stunTimer -= (TICK_MS / 1000); // реальное время, не COMBAT_SPEED
+            // Когда оглушение только что закончилось — сбрасываем таймер атаки на полный интервал
+            if (enemy.stunTimer <= 0) {
+                enemy['_lastAttack'] = 0;
+                enemy._lastAttackTime = Date.now() / 1000;
+            }
             continue;
         }
         const interval = enemy._attackInterval || 2.5;

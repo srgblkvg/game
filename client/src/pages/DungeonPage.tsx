@@ -604,10 +604,10 @@ export default function DungeonPage() {
                                 )}
                             </div>
                             {/* Автоатака */}
-                            {(() => { void frameTick; const cdLeft = Math.max(0, Math.ceil(((playerLastAttackAt + playerAtkInterval * 3) - Date.now() / 1000))); return (
-                                <div className="relative w-10 h-10 rounded-full bg-[var(--color-accent-warning)]/10 border-2 border-[var(--color-accent-warning)] flex items-center justify-center text-lg shrink-0">
+                            {(() => { void frameTick; const cdLeft = Math.max(0, ((playerLastAttackAt + playerAtkInterval * 3) - Date.now() / 1000)); return (
+                                <div className={`relative w-10 h-10 rounded-full bg-[var(--color-accent-warning)]/10 border-2 border-[var(--color-accent-warning)] flex items-center justify-center text-lg shrink-0 ${cdLeft < 0.5 ? '!border-[var(--color-accent-danger)]' : ''}`}>
                                     <span>⚔️</span>
-                                    {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.6rem] font-bold text-white bg-black/40 rounded-full">{cdLeft}</span>}
+                                    {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.6rem] font-bold text-white bg-black/40 rounded-full">{cdLeft.toFixed(1)}</span>}
                                 </div>
                             ); })()}
                             <div className="flex-1 min-w-0">
@@ -695,22 +695,20 @@ export default function DungeonPage() {
                                             </div>
                                             {!isDead && !e.stunned && (
                                             <div className="flex items-center gap-1 mt-1">
-                                                {(() => { void frameTick; const cdLeft = Math.max(0, Math.ceil(((e.lastAttackAt || 0) + (e.attackInterval || 2.5) * 3 - Date.now() / 1000))); return (
-                                                    <div className="relative w-6 h-6 rounded-full bg-[var(--color-bg-input)] flex items-center justify-center text-xs shrink-0">
+                                                {(() => { void frameTick; const cdLeft = Math.max(0, ((e.lastAttackAt || 0) + (e.attackInterval || 2.5) * 3 - Date.now() / 1000)); return (
+                                                    <div className={`relative w-6 h-6 rounded-full bg-[var(--color-bg-input)] flex items-center justify-center text-xs shrink-0 ${cdLeft < 1 ? 'border border-[var(--color-accent-warning)]' : ''}`}>
                                                         <span>⚔️</span>
-                                                        {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{cdLeft}</span>}
+                                                        {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{cdLeft.toFixed(1)}</span>}
                                                     </div>
                                                 ); })()}
-                                                <span className="text-[0.55rem] text-[var(--color-text-muted)]">Атака</span>
                                             </div>
                                             )}
                                             {!isDead && e.stunned && (
                                             <div className="flex items-center gap-1 mt-1">
                                                 <div className="relative w-6 h-6 rounded-full bg-[var(--color-bg-input)] border border-[var(--color-border-light)] flex items-center justify-center text-xs shrink-0">
                                                     <span>⚡</span>
-                                                    <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{Math.ceil(e.stunLeft || 0)}</span>
+                                                    <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{(e.stunLeft || 0).toFixed(1)}</span>
                                                 </div>
-                                                <span className="text-[0.55rem] text-[var(--color-accent-warning)]">Оглушение</span>
                                             </div>
                                             )}
                                         </div>
@@ -779,7 +777,7 @@ export default function DungeonPage() {
                             <div className="bg-[var(--color-bg-card)] rounded-lg p-3 mb-3">
                                 <h4 className="text-xs font-bold mb-1">📦 Вся добыча за поход:</h4>
                                 <p className="text-xs">💰 {totalLoot.silver.toLocaleString()} серебра</p>
-                                {totalLoot.items.map((it: any, i: number) => <p key={i} className="text-xs">🔮 {it.name || it.rarity_display || 'Предмет'}{it.count > 1 ? ` ×${it.count}` : ''}</p>)}
+                                {totalLoot.items.map((it: any, i: number) => <p key={i} className="text-xs">🔮 {typeof it === 'string' ? it : (it.name || it.rarity_display || 'Предмет')}{it.count > 1 ? ` ×${it.count}` : ''}</p>)}
                                 {totalLoot.pages.map((p, i) => <p key={i} className="text-xs">📜 {p}</p>)}
                             </div>
                             <p className="text-[0.6rem] text-[var(--color-accent-danger)] text-center mb-2">⚠ При смерти вся накопленная добыча будет потеряна</p>
