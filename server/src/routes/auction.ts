@@ -200,7 +200,7 @@ router.get('/auction', async (req, res) => {
     else if (sort === 'price_desc') filtered.sort((a: any, b: any) => (b.currentBid || b.startPrice) - (a.currentBid || a.startPrice));
 
     // Группировка ДО group-фильтра
-    const groupsMap = new Map<string, { item: any; count: number; minBid: number; minBuyout: number | null; isStack: boolean }>();
+    const groupsMap = new Map<string, { item: any; count: number; minBid: number; minBuyout: number | null; isStack: boolean; lastBidder: string | null }>();
     for (const lot of filtered) {
         const key = `${lot.itemData?.name || ''}|${lot.itemData?.slot || ''}|${lot.itemData?.rarity_id ?? ''}|${lot.itemData?.upgradeLevel ?? 0}`;
         const itemData = lot.itemData || {};
@@ -213,6 +213,11 @@ router.get('/auction', async (req, res) => {
             existing.count++;
             if (bid < existing.minBid) existing.minBid = bid;
             if (buyout !== null && (existing.minBuyout === null || buyout < existing.minBuyout)) existing.minBuyout = buyout;
+            // Последняя ставка — у лота с наибольшим currentBid
+            if (lot.currentBidderName && (lot.currentBid || 0) >= (existing as any)._maxBid) {
+                existing.lastBidder = lot.currentBidderName;
+                (existing as any)._maxBid = lot.currentBid || 0;
+            }
         } else {
             groupsMap.set(key, {
                 item: lot.itemData,
@@ -220,7 +225,9 @@ router.get('/auction', async (req, res) => {
                 minBid: bid,
                 minBuyout: buyout,
                 isStack,
+                lastBidder: lot.currentBidderName || null,
             });
+            (groupsMap.get(key) as any)._maxBid = lot.currentBid || 0;
         }
     }
     const groups = [...groupsMap.values()];
