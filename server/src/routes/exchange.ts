@@ -1,11 +1,38 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { getGoldReserve, updateGoldReserve, getSellCoef, calcBuyCost, calcSellPayout } from '../game/exchange';
+import { getGoldReserve, updateGoldReserve, getSellCoef, calcBuyCost, calcSellPayout, recordTrade } from '../game/exchange';
 import { getTreasury, addToTreasury, deductFromTreasury } from '../game/treasury';
 import { sendToUser, broadcast } from '../events';
 
 const router = Router();
 const COMMISSION = 0.05;
+
+// История курса
+router.get('/exchange/history', async (req, res) => {
+    try {
+        const period = (req.query.period as string) || '24h';
+        const hours = period === '1h' ? 1 : period === '7d' ? 168 : period === '30d' ? 720 : period === 'all' ? 87600 : 24;
+        const timeFilter = period === 'all' ? '' : `WHERE created_at > NOW() - INTERVAL '${hours} hours'`;
+        const rows = await db.query(
+            `SELECT price, silver, gold, EXTRACT(EPOCH FROM created_at)::bigint as timestamp
+             FROM exchange_history
+             ${timeFilter}
+             ORDER BY created_at ASC`,
+            []
+        ) as any[];
+        const current = await getTreasury();
+        const currentGold = await getGoldReserve();
+        const currentPrice = currentGold > 0 ? Math.round(current / currentGold) : 0;
+        res.json({
+            data: rows,
+            currentPrice,
+            currentSilver: current,
+            currentGold,
+        });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 async function broadcastStatus() {
     const R_silver = await getTreasury();
@@ -66,6 +93,7 @@ router.post('/exchange/buy', async (req, res) => {
     await db.run('UPDATE users SET money = money - ?, gold = gold + ? WHERE id = ?', [totalCost, goldAmount, userId]);
     await addToTreasury(totalCost, 'exchange_buy');
     await updateGoldReserve(-goldAmount);
+    recordTrade(Math.round((R_silver + totalCost) / (R_gold - goldAmount)), await getTreasury(), await getGoldReserve());
     broadcastStatus();
 
     res.json({
@@ -98,6 +126,7 @@ router.post('/exchange/sell', async (req, res) => {
     await db.run('UPDATE users SET gold = gold - ?, money = money + ? WHERE id = ?', [goldAmount, payout, userId]);
     await deductFromTreasury(payout, 'exchange_sell');
     await updateGoldReserve(goldAmount);
+    recordTrade(Math.round((R_silver - payout) / (R_gold + goldAmount)), await getTreasury(), await getGoldReserve());
     broadcastStatus();
 
     res.json({

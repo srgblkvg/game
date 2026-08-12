@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { getTreasury } from './treasury';
 
 // Золотой резерв биржи — одна строка
 export async function initExchange() {
@@ -13,6 +14,27 @@ export async function initExchange() {
     if (!existing) {
         await db.run('INSERT INTO exchange_gold (id, amount) VALUES (1, 28000)');
     }
+
+    // Таблица истории курса (каждая сделка)
+    await db.run(`
+        CREATE TABLE IF NOT EXISTS exchange_history (
+            id SERIAL PRIMARY KEY,
+            price INTEGER NOT NULL,
+            silver INTEGER NOT NULL,
+            gold INTEGER NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+}
+
+// Записать сделку в историю
+export async function recordTrade(price: number, silver: number, gold: number) {
+    try {
+        await db.run(
+            'INSERT INTO exchange_history (price, silver, gold, created_at) VALUES (?, ?, ?, NOW())',
+            [price, silver, gold]
+        );
+    } catch { /* тихо */ }
 }
 
 export async function getGoldReserve(): Promise<number> {

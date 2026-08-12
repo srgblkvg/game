@@ -39,13 +39,6 @@ export default function ExchangePage() {
         } catch {}
     };
 
-    useEffect(() => {
-        fetchStatus();
-        const onStatus = (e: Event) => setStatus((e as CustomEvent).detail);
-        window.addEventListener('exchange_status', onStatus);
-        return () => window.removeEventListener('exchange_status', onStatus);
-    }, []);
-
     const handleBuy = async () => {
         if (buyAmount <= 0) return;
         setError(''); setMessage(''); setLoading(true);
@@ -91,55 +84,67 @@ export default function ExchangePage() {
     const estimatedBuyCost = buyAmount > 0 ? Math.ceil(buyAmount * buyPrice(buyAmount, status.silver, status.gold) * 1.05) : 0;
     const estimatedSellPayout = sellAmount > 0 ? Math.floor(sellAmount * sellPrice(sellAmount, status.silver, status.gold) * (status.sellCoef || 1) * 0.95) : 0;
 
-    // Chart data: AMM price curve
-    const Rg = status.gold, Rs = status.silver;
-    const maxGoldRange = Math.floor(Rg * 0.25);
-    const step = Math.max(1, Math.floor(maxGoldRange * 2 / 40));
+    const [history, setHistory] = useState<any[]>([]);
+    const [period, setPeriod] = useState('24h');
+    const [priceChange, setPriceChange] = useState<string | null>(null);
 
-    // Два независимых датасета
-    const sellPoints: { x: number; y: number }[] = [];
-    const buyPoints: { x: number; y: number }[] = [];
-    for (let dx = step; dx <= maxGoldRange; dx += step) {
-        buyPoints.push({ x: dx, y: Math.round(buyPrice(dx, Rs, Rg)) });
-    }
-    for (let dx = step; dx <= maxGoldRange; dx += step) {
-        sellPoints.push({ x: -dx, y: Math.round(sellPrice(dx, Rs, Rg) * (status.sellCoef || 1)) });
-    }
-    // Точка 0
-    sellPoints.unshift({ x: 0, y: status.basePrice });
-    buyPoints.unshift({ x: 0, y: status.basePrice });
+    const fetchHistory = async (p?: string) => {
+        try {
+            const res = await fetch(`/api/exchange/history?period=${p || period}`, { headers: getHeaders() });
+            const data = await res.json();
+            setHistory(data.data || []);
+            // Изменение за период
+            if (data.data?.length >= 2) {
+                const first = data.data[0].price;
+                const last = data.data[data.data.length - 1].price;
+                const pct = first > 0 ? ((last - first) / first * 100) : 0;
+                setPriceChange(`${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`);
+            } else {
+                setPriceChange(null);
+            }
+        } catch {}
+    };
 
+    useEffect(() => {
+        fetchStatus();
+        fetchHistory();
+        const onStatus = (e: Event) => setStatus((e as CustomEvent).detail);
+        window.addEventListener('exchange_status', onStatus);
+        return () => window.removeEventListener('exchange_status', onStatus);
+    }, []);
+
+    const switchPeriod = (p: string) => { setPeriod(p); fetchHistory(p); };
+
+    // History chart — как на аукционе
+    const fmtTime = (ts: number) => {
+        const d = new Date(ts * 1000);
+        return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    };
     const chartData = {
-        datasets: [
-            {
-                label: 'Покупка',
-                data: buyPoints,
-                borderColor: '#f59e0b',
-                backgroundColor: 'rgba(245,158,11,0.1)',
-                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
-            },
-            {
-                label: 'Продажа',
-                data: sellPoints,
-                borderColor: '#ef4444',
-                backgroundColor: 'rgba(239,68,68,0.05)',
-                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
-            },
-        ],
+        labels: history.map((p: any) => fmtTime(p.timestamp)),
+        datasets: [{
+            label: 'Цена',
+            data: history.map((p: any) => p.price),
+            borderColor: '#f1c40f',
+            backgroundColor: 'rgba(241,196,15,0.1)',
+            fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
+        }],
     };
     const chartOptions = {
         responsive: true, maintainAspectRatio: false,
-        parsing: { xAxisKey: 'x', yAxisKey: 'y' } as any,
         plugins: {
-            tooltip: { callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.raw.y?.toLocaleString()} серебра` } },
+            tooltip: {
+                callbacks: {
+                    label: (ctx: any) => `${ctx.raw?.toLocaleString()} серебра`,
+                },
+            },
         },
         scales: {
-            x: {
-                type: 'linear' as const,
-                ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => v === 0 ? '0' : (v > 0 ? '+' + formatMoney(v) : formatMoney(-v)) },
-                grid: { display: false },
+            x: { ticks: { font: { size: 9 }, color: '#888', maxTicksLimit: 6, maxRotation: 0 }, grid: { display: false } },
+            y: {
+                ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => formatMoney(v) },
+                grid: { color: 'rgba(255,255,255,0.05)' },
             },
-            y: { ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => formatMoney(v) }, grid: { color: 'rgba(255,255,255,0.05)' } },
         },
     };
 
@@ -178,27 +183,32 @@ export default function ExchangePage() {
 
             {/* График */}
             <Card>
-                <h3 className="font-bold text-sm mb-2">Курс золота</h3>
-                <div className="grid grid-cols-3 gap-2 text-xs mb-3">
-                    <div className="text-center">
-                        <div className="text-[var(--color-text-muted)]">Покупка</div>
-                        <div className="font-bold">{status.buyPrice?.toLocaleString()} серебра</div>
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-sm">Курс золота</h3>
+                    <div className="flex gap-1">
+                        {['1h','24h','7d','30d','all'].map(p => (
+                            <button key={p} onClick={() => switchPeriod(p)}
+                                className={`text-xs px-2 py-0.5 rounded cursor-pointer ${period === p ? 'bg-[var(--color-accent-gold)] text-black font-bold' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}>
+                                {p}
+                            </button>
+                        ))}
                     </div>
-                    <div className="text-center">
-                        <div className="text-[var(--color-text-muted)]">Базовая</div>
-                        <div className="font-bold text-[var(--color-accent-gold)]">{status.basePrice?.toLocaleString()}</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-[var(--color-text-muted)]">Продажа</div>
-                        <div className="font-bold">{status.sellPrice?.toLocaleString()}</div>
-                    </div>
+                </div>
+                <div className="text-center mb-1">
+                    <span className="text-xl font-bold text-[var(--color-accent-gold)]">{status.basePrice?.toLocaleString()}</span>
+                    <span className="text-xs text-[var(--color-text-muted)] ml-1">серебра</span>
+                    {priceChange && (
+                        <span className={`text-xs ml-2 ${priceChange.startsWith('+') ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>
+                            {priceChange}
+                        </span>
+                    )}
                 </div>
                 <div style={{ height: 160 }}>
-                    <Line data={chartData} options={chartOptions as any} />
-                </div>
-                <div className="flex justify-between text-[0.6rem] text-[var(--color-text-muted)] mt-1">
-                    <span>← продажа золота</span>
-                    <span>покупка золота →</span>
+                    {history.length > 0 ? (
+                        <Line data={chartData} options={chartOptions as any} />
+                    ) : (
+                        <div className="h-full flex items-center justify-center text-xs text-[var(--color-text-muted)]">Нет данных</div>
+                    )}
                 </div>
             </Card>
 
