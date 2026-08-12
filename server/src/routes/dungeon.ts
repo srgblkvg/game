@@ -242,7 +242,7 @@ function generateEnemyFromMob(mob: any, floor: number, isBoss: boolean): EnemyDa
     const interval = isBoss ? 1.5 + Math.random() * 1.0 : 1.0 + Math.random() * 2.0; // босс 1.5-2.5с, обычный 1.0-3.0с
     // Более сильные монстры атакуют быстрее (atk влияет на скорость)
     const speedBonus = Math.max(0, (1 - (mob.atk || 3) / 20) * 1.0); // atk=3 → +1.0с, atk=20 → +0с
-    const finalInterval = Math.max(0.8, interval + speedBonus * Math.random());
+    const finalInterval = Math.max(0.8, interval + speedBonus * Math.random()) / COMBAT_SPEED; // реальные секунды
     return { id, name: mob.name, hp, maxHp: hp, dmg, isBoss, image: mob.background || '', _attackInterval: finalInterval, _lastAttackTime: Math.floor(Date.now() / 1000) };
 }
 
@@ -462,7 +462,7 @@ router.get('/dungeon/state', async (req, res) => {
     if (!run) return res.json({ active: false });
 
     const attackSpeed = getAttackSpeed(run.equippedWeaponRarity, run.equippedWeaponStr);
-    const playerAttackProgress = Math.min(1, run.autoTimer / (1 / attackSpeed));
+    const playerAttackProgress = Math.min(1, run.autoTimer / ((1 / attackSpeed) / COMBAT_SPEED));
 
     // Валидация цели: если мертва или нет — авто-таргет на первого живого
     const target = run.enemies[run.targetIndex];
@@ -484,7 +484,7 @@ router.get('/dungeon/state', async (req, res) => {
             stunned: !!(e.stunTimer && e.stunTimer > 0),
             stunLeft: (e.stunTimer && e.stunTimer > 0) ? e.stunTimer : 0,
         })),
-        playerAttackInterval: (1 / attackSpeed),
+        playerAttackInterval: (1 / attackSpeed) / COMBAT_SPEED,
         lastPlayerAttackAt: run.lastPlayerAttackAt,
         playerAttackProgress,
         attackSpeed: attackSpeed.toFixed(1),
@@ -964,8 +964,8 @@ function tickCombat(run: DungeonRun) {
     }
 
     // Автоатака игрока — одна атака за тик
-    run.autoTimer += (TICK_MS / 1000) * COMBAT_SPEED;
-    const attackInterval = 1 / attackSpeed;
+    run.autoTimer += (TICK_MS / 1000); // реальное время
+    const attackInterval = (1 / attackSpeed) / COMBAT_SPEED; // реальные секунды
     if (run.autoTimer >= attackInterval) {
         run.autoTimer -= attackInterval;
         run.lastPlayerAttackAt = Date.now() / 1000;
@@ -993,7 +993,7 @@ function tickCombat(run: DungeonRun) {
         }
         const interval = enemy._attackInterval || 2.5;
         if (!enemy['_lastAttack']) enemy['_lastAttack'] = 0;
-        enemy['_lastAttack'] += (TICK_MS / 1000) * COMBAT_SPEED;
+        enemy['_lastAttack'] += (TICK_MS / 1000); // реальное время
         if (enemy['_lastAttack'] >= interval) {
             enemy['_lastAttack'] -= interval;
             enemy._lastAttackTime = Date.now() / 1000;

@@ -604,7 +604,7 @@ export default function DungeonPage() {
                                 )}
                             </div>
                             {/* Автоатака */}
-                            {(() => { void frameTick; const cdLeft = Math.max(0, ((playerLastAttackAt + playerAtkInterval * 3) - Date.now() / 1000)); return (
+                            {(() => { void frameTick; const cdLeft = Math.max(0, ((playerLastAttackAt + playerAtkInterval) - Date.now() / 1000)); return (
                                 <div className={`relative w-10 h-10 rounded-full bg-[var(--color-accent-warning)]/10 border-2 border-[var(--color-accent-warning)] flex items-center justify-center text-lg shrink-0 ${cdLeft < 0.5 ? '!border-[var(--color-accent-danger)]' : ''}`}>
                                     <span>⚔️</span>
                                     {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.6rem] font-bold text-white bg-black/40 rounded-full">{cdLeft.toFixed(1)}</span>}
@@ -695,12 +695,13 @@ export default function DungeonPage() {
                                             </div>
                                             {!isDead && !e.stunned && (
                                             <div className="flex items-center gap-1 mt-1">
-                                                {(() => { void frameTick; const cdLeft = Math.max(0, ((e.lastAttackAt || 0) + (e.attackInterval || 2.5) * 3 - Date.now() / 1000)); return (
+                                                {(() => { void frameTick; const cdLeft = Math.max(0, ((e.lastAttackAt || 0) + (e.attackInterval || 2.5) - Date.now() / 1000)); return (
                                                     <div className={`relative w-6 h-6 rounded-full bg-[var(--color-bg-input)] flex items-center justify-center text-xs shrink-0 ${cdLeft < 1 ? 'border border-[var(--color-accent-warning)]' : ''}`}>
                                                         <span>⚔️</span>
                                                         {cdLeft > 0 && <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{cdLeft.toFixed(1)}</span>}
                                                     </div>
                                                 ); })()}
+                                                <span className="text-[0.55rem] text-[var(--color-text-muted)]">Атака</span>
                                             </div>
                                             )}
                                             {!isDead && e.stunned && (
@@ -709,10 +710,10 @@ export default function DungeonPage() {
                                                     <span>⚡</span>
                                                     <span className="absolute inset-0 flex items-center justify-center text-[0.5rem] font-bold text-white bg-black/40 rounded-full">{(e.stunLeft || 0).toFixed(1)}</span>
                                                 </div>
+                                                <span className="text-[0.55rem] text-[var(--color-accent-warning)]">Оглушение</span>
                                             </div>
                                             )}
                                         </div>
-                                    </div>
                                 </div>
                             );
                         })}
