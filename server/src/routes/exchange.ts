@@ -2,10 +2,23 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { getGoldReserve, updateGoldReserve, getSellCoef, calcBuyCost, calcSellPayout } from '../game/exchange';
 import { getTreasury, addToTreasury, deductFromTreasury } from '../game/treasury';
-import { sendToUser } from '../events';
+import { sendToUser, broadcast } from '../events';
 
 const router = Router();
 const COMMISSION = 0.05;
+
+async function broadcastStatus() {
+    const R_silver = await getTreasury();
+    const R_gold = await getGoldReserve();
+    const basePrice = R_gold > 0 ? Math.round(R_silver / R_gold) : 0;
+    const sellCoef = getSellCoef(R_silver);
+    broadcast('exchange_status', {
+        silver: R_silver, gold: R_gold, basePrice,
+        sellPrice: Math.round(basePrice * sellCoef * (1 - COMMISSION)),
+        buyPrice: Math.round(basePrice / (1 - COMMISSION)),
+        sellCoef, buyCoef: 1,
+    });
+}
 
 // Статус биржи
 router.get('/exchange/status', async (_req, res) => {
@@ -53,6 +66,7 @@ router.post('/exchange/buy', async (req, res) => {
     await db.run('UPDATE users SET money = money - ?, gold = gold + ? WHERE id = ?', [totalCost, goldAmount, userId]);
     await addToTreasury(totalCost, 'exchange_buy');
     await updateGoldReserve(-goldAmount);
+    broadcastStatus();
 
     res.json({
         success: true, goldReceived: goldAmount, silverPaid: totalCost,
@@ -84,6 +98,7 @@ router.post('/exchange/sell', async (req, res) => {
     await db.run('UPDATE users SET gold = gold - ?, money = money + ? WHERE id = ?', [goldAmount, payout, userId]);
     await deductFromTreasury(payout, 'exchange_sell');
     await updateGoldReserve(goldAmount);
+    broadcastStatus();
 
     res.json({
         success: true, goldSold: goldAmount, silverReceived: payout,

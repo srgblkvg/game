@@ -41,8 +41,9 @@ export default function ExchangePage() {
 
     useEffect(() => {
         fetchStatus();
-        const interval = setInterval(fetchStatus, 5000);
-        return () => clearInterval(interval);
+        const onStatus = (e: Event) => setStatus((e as CustomEvent).detail);
+        window.addEventListener('exchange_status', onStatus);
+        return () => window.removeEventListener('exchange_status', onStatus);
     }, []);
 
     const handleBuy = async () => {
