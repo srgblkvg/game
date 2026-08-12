@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -277,8 +277,11 @@ export default function Header() {
                         <div className="text-[var(--color-text-primary)] text-sm font-bold">
                             Серебро: {character.money.toLocaleString()}
                         </div>
-                        <div className="text-[var(--color-accent-gold)] text-sm font-bold">
-                            Золото: {(character.gold || 0).toLocaleString()}
+                        <div className="flex items-center gap-1">
+                            <span className="text-[var(--color-accent-gold)] text-sm font-bold">
+                                Золото: {(character.gold || 0).toLocaleString()}
+                            </span>
+                            <Link to="/exchange" className="text-[var(--color-accent-gold)] text-lg font-bold leading-none hover:opacity-70">+</Link>
                         </div>
                     </div>
                 )}
