@@ -44,6 +44,7 @@ import vkPaymentsRoutes from './routes/vkPayments';
 import vkBridgeAuthRoutes from './routes/vkBridgeAuth';
 import yukassaRoutes from './routes/yukassa';
 import treasuryRoutes from './routes/treasury';
+import exchangeRoutes from './routes/exchange';
 import forumRoutes from './routes/forum';
 import massacreRoutes from './routes/massacre';
 import casinoRoutes from './routes/casino';
@@ -174,6 +175,7 @@ export function setupRoutes(app: Express) {
   app.use('/api', bankRoutes);
   app.use('/api', tavernRoutes);
   app.use('/api', auctionRoutes);
+  app.use('/api', exchangeRoutes);
   app.use('/api', questsRoutes);
   // Гильд-босс напрямую (до guildRoutes с /guild/:id)
   app.get('/api/guild/boss/ping', (_req, res) => { res.json({ ok: true }); });

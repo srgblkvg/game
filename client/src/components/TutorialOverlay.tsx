@@ -135,6 +135,13 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onNextSt
     if (stepIndex !== undefined) setCurrent(stepIndex);
   }, [stepIndex]);
 
+  // Защита от выхода индекса за границы массива шагов
+  useEffect(() => {
+    if (stepIndex !== undefined && stepIndex >= steps.length) {
+      onComplete();
+    }
+  }, [stepIndex, steps.length, onComplete]);
+
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
   const [arrowDir, setArrowDir] = useState<'up' | 'down' | 'none'>('none');
@@ -143,6 +150,10 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onNextSt
 
   const step = steps[current];
   const isLast = current >= steps.length - 1;
+
+  // Если шаг не определён (выход за границы) — ничего не рендерим,
+  // useEffect выше вызовет onComplete и компонент размонтируется
+  if (!step) return null;
 
   useEffect(() => {
     if (step?.action) {

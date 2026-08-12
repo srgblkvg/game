@@ -21,6 +21,7 @@ export interface CharacterData {
   openPrivateTabs?: number[];
   gender?: string;
   statPoints?: number;
+  gold?: number;
 }
 
 export interface CharacterCardData {

@@ -72,19 +72,36 @@ async function generateBracket(tournamentId: number) {
         console.log(`[bracket] tid=${tournamentId} SKIP < 2`);
         // Отмена
         const t = await db.one('SELECT * FROM tournaments WHERE id = ?', [tournamentId]) as any;
-        if (t && t.type === 'custom') {
-            // Возврат базового призового фонда создателю
-            if ((t.basePool || 0) > 0) {
-                await db.run('UPDATE users SET money = money + ? WHERE id = ?', [t.basePool, t.creatorId]);
-            }
-            // Возврат входных взносов всем участникам
-            if ((t.entryFee || 0) > 0) {
-                const parts = await db.query(
-                    'SELECT userId FROM tournament_participants WHERE tournamentId = ?',
-                    [tournamentId]
-                ) as any[];
-                for (const p of parts) {
-                    await db.run('UPDATE users SET money = money + ? WHERE id = ?', [t.entryFee, p.userId]);
+        if (t) {
+            if (t.type === 'custom') {
+                // Возврат базового призового фонда создателю
+                if ((t.basePool || 0) > 0) {
+                    await db.run('UPDATE users SET money = money + ? WHERE id = ?', [t.basePool, t.creatorId]);
+                }
+                // Возврат входных взносов всем участникам
+                if ((t.entryFee || 0) > 0) {
+                    const parts = await db.query(
+                        'SELECT userId FROM tournament_participants WHERE tournamentId = ?',
+                        [tournamentId]
+                    ) as any[];
+                    for (const p of parts) {
+                        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [t.entryFee, p.userId]);
+                    }
+                }
+            } else {
+                // official: возврат basePool в казну, взносы — игрокам
+                if ((t.basePool || 0) > 0) {
+                    const { addToTreasury } = await import('../game/treasury');
+                    await addToTreasury(t.basePool, 'tournament_cancel_official');
+                }
+                if ((t.entryFee || 0) > 0) {
+                    const parts = await db.query(
+                        'SELECT userId FROM tournament_participants WHERE tournamentId = ?',
+                        [tournamentId]
+                    ) as any[];
+                    for (const p of parts) {
+                        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [t.entryFee, p.userId]);
+                    }
                 }
             }
         }
@@ -608,6 +625,20 @@ async function generateBracketTx(client: any, tournamentId: number) {
                     await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [t.entryfee, p.userid]);
                 }
             }
+        } else if (t) {
+            // official: возврат basePool в казну, взносы — игрокам
+            if ((t.basepool || 0) > 0) {
+                await client.query('UPDATE castle_treasury SET amount = amount + $1, updated_at = NOW() WHERE id = 1', [t.basepool]);
+                await client.query('INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())', [t.basepool, 'tournament_cancel_official']);
+            }
+            if ((t.entryfee || 0) > 0) {
+                const parts = await client.query(
+                    'SELECT userid FROM tournament_participants WHERE tournamentid = $1', [tournamentId]
+                );
+                for (const p of parts.rows) {
+                    await client.query('UPDATE users SET money = money + $1 WHERE id = $2', [t.entryfee, p.userid]);
+                }
+            }
         }
         await client.query('UPDATE tournaments SET status = $1, completedat = $2 WHERE id = $3',
             ['cancelled', new Date().toISOString(), tournamentId]);
@@ -792,10 +823,15 @@ export async function getOrCreateTournament(type?: string) {
                     if (recheck) return; // уже создан
 
                     await client.query(
-                        'INSERT INTO tournaments (division, status, registrationstart, registrationend, prizepool, createdat, type, maxplayers) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-                        [div.name, 'registration', now, now + REGISTRATION_WINDOW, pool, new Date().toISOString(), 'official', MAX_PLAYERS]
+                        'INSERT INTO tournaments (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                        [div.name, 'registration', now, now + REGISTRATION_WINDOW, pool, pool, new Date().toISOString(), 'official', MAX_PLAYERS]
                     );
                 });
+                // Списать призовой фонд из казны
+                if (pool > 0) {
+                    const { deductFromTreasury } = await import('../game/treasury');
+                    await deductFromTreasury(pool, `tournament_create_${div.name}`);
+                }
             } catch {} // если транзакция упала — уже создан
         }
     }

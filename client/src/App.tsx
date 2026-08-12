@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense, useCallback } from 'react';
+import { lazy, Suspense, useCallback, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useGame } from './contexts/GameContext';
 import LoginPage from './pages/LoginPage';
@@ -44,6 +44,7 @@ const AuctionPage = lazy(() => import('./pages/AuctionPage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
 const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 const GuildPage = lazy(() => import('./pages/GuildPage'));
+const ExchangePage = lazy(() => import('./pages/ExchangePage'));
 const GuildViewPage = lazy(() => import('./pages/GuildViewPage'));
 const GuildRatingPage = lazy(() => import('./pages/GuildRatingPage'));
 const GuildWarPage = lazy(() => import('./pages/GuildWarPage'));
@@ -76,11 +77,29 @@ function AppContent() {
   const { character, setCharacter } = useGame();
 
   // Туториал активен для игроков 1 уровня, которые не завершили обучение
+  // + защита: если шаг выходит за границы — не показываем и завершаем
   const tutorialActive =
     user?.role === 'player' &&
     character &&
     (character.tutorialCompleted !== 1) &&
-    (character.level ?? 0) <= 1;
+    (character.level ?? 0) <= 1 &&
+    (character.tutorialStep ?? 0) < tutorialSteps.length;
+
+  // Авто-завершение: если tutorialStep вышел за границы, а completed нет — чиним
+  useEffect(() => {
+    if (
+      character &&
+      (character.tutorialCompleted !== 1) &&
+      (character.tutorialStep ?? 0) >= tutorialSteps.length
+    ) {
+      fetch(`${BASE_URL}/character/tutorial-done`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      }).catch(() => {});
+      setCharacter({ ...character, tutorialCompleted: 1, tutorialStep: tutorialSteps.length });
+    }
+  }, [character?.tutorialStep, character?.tutorialCompleted]);
 
   const handleTutorialNext = useCallback(async () => {
     try {
@@ -155,6 +174,7 @@ function AppContent() {
             <Route path="/premium" element={<PremiumPage />} />
             <Route path="/guild" element={user?.role === 'player' ? <GuildPage /> : <Navigate to="/login" />} />
             <Route path="/guild/rating" element={user?.role === 'player' ? <GuildRatingPage /> : <Navigate to="/login" />} />
+            <Route path="/exchange" element={user?.role === 'player' ? <ExchangePage /> : <Navigate to="/login" />} />
             <Route path="/guild/war" element={user?.role === 'player' ? <GuildWarPage /> : <Navigate to="/login" />} />
             <Route path="/castle" element={user?.role === 'player' ? <CastlePage /> : <Navigate to="/login" />} />
             <Route path="/faction" element={user?.role === 'player' ? <FactionPage /> : <Navigate to="/login" />} />

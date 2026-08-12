@@ -216,6 +216,7 @@ router.get('/character/me', async (req, res) => {
         tutorialStep: user.tutorialStep || 0,
         totalIncome: user.totalIncome || 0,
         overflowmoney: user.overflowmoney || 0,
+        gold: user.gold || 0,
         adPremiumAt: user.adpremiumat || 0,
         adSilverAt: user.adsilverat || 0,
         equipment1, equipment2, equipment3,
@@ -252,13 +253,29 @@ router.post('/character/tutorial-done', async (req, res) => {
 // Продвинуть туториал на один шаг вперёд (клиентская кнопка «Далее»)
 router.post('/character/tutorial-step', async (req, res) => {
     const userId = req.userId;
+    const user = await db.one('SELECT tutorial_step, tutorial_completed FROM users WHERE id = ?', [userId]) as any;
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const currentStep = user.tutorial_step || 0;
+    // Защита: не даём уйти за пределы (12 шагов, индексы 0-11)
+    const MAX_STEP = 11;
+    if (currentStep >= MAX_STEP) {
+        // Уже на последнем шаге или за ним — завершаем туториал
+        await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
+        return res.json({ success: true, step: MAX_STEP, completed: true });
+    }
+
     await db.run('UPDATE users SET tutorial_step = tutorial_step + 1 WHERE id = ?', [userId]);
+
+    const updated = await db.one('SELECT tutorial_step FROM users WHERE id = ?', [userId]) as any;
+    const newStep = updated?.tutorial_step || 0;
+
     // Если дошли до последнего шага — завершаем
-    const user = await db.one('SELECT tutorial_step FROM users WHERE id = ?', [userId]) as any;
-    if ((user?.tutorial_step || 0) >= 12) {
+    if (newStep >= MAX_STEP) {
         await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
     }
-    res.json({ success: true, step: user?.tutorial_step || 0 });
+
+    res.json({ success: true, step: newStep });
 });
 
 // Поиск пользователя по нику (для перехода из чата в профиль)
