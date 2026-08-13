@@ -226,7 +226,7 @@ export default function CollectionsPage() {
         return <div className="p-4 max-w-3xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
     }
 
-    const totalPercent = Math.round((collectionCount / totalCollectionItems) * 100);
+    const totalPercent = Math.round(((collectionCount - collectionSetBonus) / totalCollectionItems) * 100);
     const totalBonus = collectionCount;
 
     return (

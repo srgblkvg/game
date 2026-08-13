@@ -71,7 +71,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         onSwitchSet={handleSwitchSet}
       />
       <StatAllocation />
-      <BuffsBlock room={effectiveRoom} drink={character.drink} premium={character.premium} inventory={character.inventory} equipment={character.equipment} collectionCount={character.collectionCount || 0} totalCollectionItems={character.totalCollectionItems || 189} />
+      <BuffsBlock room={effectiveRoom} drink={character.drink} premium={character.premium} inventory={character.inventory} equipment={character.equipment} collectionCount={character.collectionCount || 0} collectionSetBonus={character.collectionSetBonus || 0} totalCollectionItems={character.totalCollectionItems || 189} />
       <AchievementsBlock />
     </div>
   );

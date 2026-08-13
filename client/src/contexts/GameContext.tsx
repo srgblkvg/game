@@ -75,6 +75,7 @@ export interface Character {
   premium?: { until: number } | null;
   drinkBonuses?: { s: number; a: number; d: number; m: number };
   collectionCount?: number;
+  collectionSetBonus?: number;
   guildBonus?: number;
   buildings?: { type: string; icon: string; label: string; level: number; bonus: number }[];
   collectedItems?: { itemName: string; slot: string }[];

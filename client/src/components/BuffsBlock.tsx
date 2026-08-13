@@ -11,6 +11,7 @@ interface BuffsBlockProps {
     inventory?: any[];
     equipment?: Record<string, any>;
     collectionCount?: number;
+    collectionSetBonus?: number;
     totalCollectionItems?: number;
 }
 
@@ -36,11 +37,11 @@ const drinkNames: Record<string, string> = {
     grog_small: 'Грог Моры', grog_med: 'Крепкий грог', dragon_blood: 'Кровь дракона',
 };
 
-export default function BuffsBlock({ room, drink, premium, inventory, equipment, collectionCount = 0, totalCollectionItems = 189 }: BuffsBlockProps) {
+export default function BuffsBlock({ room, drink, premium, inventory, equipment, collectionCount = 0, collectionSetBonus = 0, totalCollectionItems = 189 }: BuffsBlockProps) {
     const [now, setNow] = useState(Math.floor(Date.now() / 1000));
     const [collapsed, setCollapsed] = useState(true);
     const [hasCollectionItems, setHasCollectionItems] = useState(false);
-    const collectionPercent = Math.round((collectionCount / totalCollectionItems) * 100);
+    const collectionPercent = Math.round(((collectionCount - collectionSetBonus) / totalCollectionItems) * 100);
     const navigate = useNavigate();
 
     // Разворачиваем/сворачиваем блок по событиям туториала
