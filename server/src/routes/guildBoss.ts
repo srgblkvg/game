@@ -11,6 +11,7 @@ import {
   getGuildTalents, getPlayerTalents, getAntiStats,
 } from '../game/guildBoss';
 import type { TalentType } from '../game/guildBoss';
+import { ensureGuildBossWeeklyReset } from '../schedulers/guildBossWeeklyReset';
 
 const router = Router();
 console.log('[guildBoss] Router loaded, routes registered');
@@ -20,6 +21,7 @@ router.get('/guild/boss/ping', (_req, res) => { console.log('[guildBoss] PING!')
 
 // ── GET /guild/boss — информация о боссе, кулдаун игрока, таланты ──
 router.get('/guild/boss', async (req, res) => {
+  await ensureGuildBossWeeklyReset();
   const userId = req.userId;
   const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]).catch(() => null) as any;
   if (!user?.guildid) return res.status(400).json({ error: 'Не в гильдии' });
@@ -64,6 +66,7 @@ router.get('/guild/boss', async (req, res) => {
 
 // ── POST /guild/boss/attack — атака босса ──
 router.post('/guild/boss/attack', async (req, res) => {
+  await ensureGuildBossWeeklyReset();
   const userId = req.userId;
   const now = Math.floor(Date.now() / 1000);
 
@@ -283,6 +286,7 @@ router.post('/guild/boss/attack', async (req, res) => {
 
 // ── GET /guild/boss/battles — история боёв с боссом ──
 router.get('/guild/boss/battles', async (req, res) => {
+  await ensureGuildBossWeeklyReset();
   const userId = req.userId;
   const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]).catch(() => null) as any;
   if (!user?.guildid) return res.status(400).json({ error: 'Не в гильдии' });
@@ -318,8 +322,9 @@ router.get('/guild/boss/battles', async (req, res) => {
   });
 });
 
-// ── GET /guild/boss/ratings — 4 рейтинга ──
+// ── GET /guild/boss/ratings — 5 рейтингов ──
 router.get('/guild/boss/ratings', async (req, res) => {
+  await ensureGuildBossWeeklyReset();
   const userId = req.userId;
   const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]).catch(() => null) as any;
   if (!user?.guildid) return res.status(400).json({ error: 'Не в гильдии' });

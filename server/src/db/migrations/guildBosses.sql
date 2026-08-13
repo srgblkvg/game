@@ -37,3 +37,9 @@ CREATE TABLE IF NOT EXISTS guild_talents (
 
 -- Очки гильдийских талантов
 ALTER TABLE guilds ADD COLUMN IF NOT EXISTS talentPoints INTEGER DEFAULT 0;
+
+-- Маркер последнего еженедельного сброса (пятница 00:00 UTC)
+CREATE TABLE IF NOT EXISTS guild_boss_weekly_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  week_start INTEGER NOT NULL
+);

@@ -30,6 +30,7 @@ import { startCleanupScheduler } from './schedulers/cleanup';
 import { startMassacreScheduler } from './schedulers/massacre';
 import { startInactiveLeaderCheck } from './schedulers/inactiveLeader';
 import { startJobCompletionScheduler } from './schedulers/jobs';
+import { startGuildBossWeeklyResetScheduler } from './schedulers/guildBossWeeklyReset';
 import { initTreasury, initTreasuryLog } from './game/treasury';
 import { initExchange } from './game/exchange';
 
@@ -44,3 +45,4 @@ startCleanupScheduler();
 startMassacreScheduler();
 startInactiveLeaderCheck();
 startJobCompletionScheduler();
+startGuildBossWeeklyResetScheduler().catch(e => logger.error('Guild boss weekly reset init failed:', e.message));
