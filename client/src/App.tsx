@@ -44,7 +44,6 @@ const AuctionPage = lazy(() => import('./pages/AuctionPage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
 const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 const GuildPage = lazy(() => import('./pages/GuildPage'));
-const ExchangePage = lazy(() => import('./pages/ExchangePage'));
 const GuildViewPage = lazy(() => import('./pages/GuildViewPage'));
 const GuildRatingPage = lazy(() => import('./pages/GuildRatingPage'));
 const GuildWarPage = lazy(() => import('./pages/GuildWarPage'));
@@ -174,7 +173,6 @@ function AppContent() {
             <Route path="/premium" element={<PremiumPage />} />
             <Route path="/guild" element={user?.role === 'player' ? <GuildPage /> : <Navigate to="/login" />} />
             <Route path="/guild/rating" element={user?.role === 'player' ? <GuildRatingPage /> : <Navigate to="/login" />} />
-            <Route path="/exchange" element={user?.role === 'player' ? <ExchangePage /> : <Navigate to="/login" />} />
             <Route path="/guild/war" element={user?.role === 'player' ? <GuildWarPage /> : <Navigate to="/login" />} />
             <Route path="/castle" element={user?.role === 'player' ? <CastlePage /> : <Navigate to="/login" />} />
             <Route path="/faction" element={user?.role === 'player' ? <FactionPage /> : <Navigate to="/login" />} />

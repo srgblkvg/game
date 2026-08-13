@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -138,12 +138,12 @@ export default function Header() {
             fetchCharacter().then(char => setCharacter(prev => ({ ...prev, ...char }))).catch(console.error);
         }, 30000);
 
-        // Баланс через WS — мгновенное обновление money и gold (кроме времени боя)
+        // Баланс через WS — мгновенное обновление money (кроме времени боя)
         const onBalance = (e: Event) => {
             if ((window as any).__battling) return;
-            const { money, gold } = (e as CustomEvent).detail;
-            if (money !== undefined || gold !== undefined) {
-                setCharacter((prev: any) => prev ? { ...prev, ...(money !== undefined ? { money } : {}), ...(gold !== undefined ? { gold } : {}) } : prev);
+            const { money } = (e as CustomEvent).detail;
+            if (money !== undefined) {
+                setCharacter((prev: any) => prev ? { ...prev, money } : prev);
             }
         };
         window.addEventListener('balance', onBalance);
@@ -273,17 +273,9 @@ export default function Header() {
             )}
             <div className="flex items-center justify-between gap-2 px-3 py-1 flex-wrap">
                 {user.role === 'player' && character && (
-                    <div>
-                        <div className="text-[var(--color-text-primary)] text-sm font-bold">
-                            Серебро: {character.money.toLocaleString()}
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <span className="text-[var(--color-accent-gold)] text-sm font-bold">
-                                Золото: {(character.gold || 0).toLocaleString()}
-                            </span>
-                            <Link to="/exchange" className="text-[var(--color-accent-gold)] text-lg font-bold leading-none hover:opacity-70">+</Link>
-                        </div>
-                    </div>
+                    <span className="text-[var(--color-text-primary)] text-sm font-bold">
+                        Серебро: {character.money.toLocaleString()}
+                    </span>
                 )}
                 {user.role === 'player' && (
                     protectionSec > 0 ? (
