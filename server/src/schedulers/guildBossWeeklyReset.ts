@@ -14,6 +14,10 @@ export function getGuildBossWeekStart(now = new Date()): number {
   return Math.floor((midnightUtc - daysSinceFriday * 24 * 60 * 60 * 1000) / 1000);
 }
 
+export function getNextGuildBossResetAt(now = new Date()): number {
+  return getGuildBossWeekStart(now) + 7 * 24 * 60 * 60;
+}
+
 async function initWeeklyResetState(): Promise<void> {
   if (!initPromise) {
     initPromise = db.raw(`

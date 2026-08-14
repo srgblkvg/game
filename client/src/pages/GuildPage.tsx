@@ -77,6 +77,8 @@ export default function GuildPage() {
     const [battleHistory, setBattleHistory] = useState<any[]>([]);
     const [viewingLog, setViewingLog] = useState<any>(null);
     const [ratings, setRatings] = useState<any>(null);
+    const [weeklyResetAt, setWeeklyResetAt] = useState(0);
+    const [weeklyResetLeft, setWeeklyResetLeft] = useState(0);
     const bossTimerRef = useRef<any>(null);
 
     const api = async (url: string, body?: any) => {
@@ -113,6 +115,7 @@ export default function GuildPage() {
             ]);
             setBoss(d.boss);
             setBossCd(d.cooldownRemaining);
+            setWeeklyResetAt(d.weeklyResetAt || 0);
             setTalentInfo(d.talentInfo);
             setPlayerPoints(d.playerPoints);
             setGuildPoints(d.guildPoints);
@@ -128,6 +131,22 @@ export default function GuildPage() {
         bossTimerRef.current = setInterval(() => setBossCd(p => Math.max(0, p - 1)), 1000);
         return () => { if (bossTimerRef.current) clearInterval(bossTimerRef.current); };
     }, [bossCd > 0]);
+
+    // Обратный отсчёт до еженедельного сброса прогресса и рейтингов
+    useEffect(() => {
+        if (!weeklyResetAt) { setWeeklyResetLeft(0); return; }
+        const tick = () => {
+            const now = Math.floor(Date.now() / 1000);
+            if (weeklyResetAt <= now) {
+                setWeeklyResetAt(weeklyResetAt + 7 * 24 * 60 * 60);
+                return;
+            }
+            setWeeklyResetLeft(weeklyResetAt - now);
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [weeklyResetAt]);
 
     // WS: обновление HP босса от других игроков
     useEffect(() => {
@@ -274,6 +293,14 @@ export default function GuildPage() {
       const m = Math.floor(sec / 60);
       const s = sec % 60;
       return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const fmtWeeklyReset = (sec: number) => {
+      const days = Math.floor(sec / 86400);
+      const hours = Math.floor((sec % 86400) / 3600);
+      const minutes = Math.floor((sec % 3600) / 60);
+      const seconds = sec % 60;
+      return `${days}д ${hours}ч ${minutes}м ${seconds}с`;
     };
 
     // ── No guild ──
@@ -442,6 +469,18 @@ export default function GuildPage() {
 
         {/* Tab 4: Босс */}
         {tab===4 && <div className="space-y-4">
+            <Card>
+                <h3 className="font-bold text-sm mb-2">ℹ️ Еженедельный сброс</h3>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">
+                    Раз в неделю сбрасываются прогресс гильдийского босса, история атак и рейтинговые таблицы. Очки, уровни и вложенный прогресс талантов сохраняются.
+                </p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">
+                    Перед сбросом игроки и гильдии, вошедшие в рейтинговые таблицы, получают очки для развития личных или гильдийских талантов.
+                </p>
+                <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-input)] px-3 py-2 text-xs">
+                    До следующего сброса: <span className="font-bold text-[var(--color-accent-warning)]">{weeklyResetAt ? fmtWeeklyReset(weeklyResetLeft) : 'Загрузка...'}</span>
+                </div>
+            </Card>
             {/* Boss card */}
             {boss && <Card>
                 <h3 className="font-bold text-sm mb-2">👾 Кровавый исполин — уровень {boss.level}</h3>

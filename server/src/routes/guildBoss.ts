@@ -11,7 +11,7 @@ import {
   getGuildTalents, getPlayerTalents, getAntiStats,
 } from '../game/guildBoss';
 import type { TalentType } from '../game/guildBoss';
-import { ensureGuildBossWeeklyReset } from '../schedulers/guildBossWeeklyReset';
+import { ensureGuildBossWeeklyReset, getNextGuildBossResetAt } from '../schedulers/guildBossWeeklyReset';
 
 const router = Router();
 console.log('[guildBoss] Router loaded, routes registered');
@@ -46,6 +46,7 @@ router.get('/guild/boss', async (req, res) => {
     },
     cooldownRemaining,
     canAttack: cooldownRemaining <= 0,
+    weeklyResetAt: getNextGuildBossResetAt(),
     playerTalents,
     guildTalents,
     playerPoints: member.talentpoints || 0,
