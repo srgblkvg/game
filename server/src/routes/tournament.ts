@@ -912,8 +912,7 @@ router.get('/tournament', async (req, res) => {
         return res.json({ tournaments: result, total, page, totalPages: Math.ceil(total / limit), userLevel: user.level, tab: 'completed' });
     }
 
-    // Активные турниры — только получаем, не продвигаем (продвижение в scheduler)
-    const tournaments = await getOrCreateTournament();
+    // Создание и продвижение выполняет scheduler, а GET только читает данные.
     const typeFilter = (req.query.type as string) || 'all';
     let typeCondition = '';
     const typeParams: any[] = [];
@@ -926,17 +925,46 @@ router.get('/tournament', async (req, res) => {
     ) as any[];
 
     const allTournaments = [...updated];
+    const tournamentIds = allTournaments.map(t => Number(t.id));
+    const placeholders = tournamentIds.map(() => '?').join(',');
+    const allParticipants = tournamentIds.length > 0 ? await db.query(
+        `SELECT u.username, g.name as guildName, u.guildId, tp.*
+         FROM tournament_participants tp
+         JOIN users u ON tp.userId = u.id
+         LEFT JOIN guilds g ON u.guildId = g.id
+         WHERE tp.tournamentId IN (${placeholders})`,
+        tournamentIds
+    ) as any[] : [];
+    const allMatches = tournamentIds.length > 0 ? await db.query(
+        `SELECT tm.*, p1.username as player1Name, p2.username as player2Name,
+                w.username as winnerName
+         FROM tournament_matches tm
+         LEFT JOIN users p1 ON tm.player1Id = p1.id
+         LEFT JOIN users p2 ON tm.player2Id = p2.id
+         LEFT JOIN users w ON tm.winnerId = w.id
+         WHERE tm.tournamentId IN (${placeholders})
+         ORDER BY tm.tournamentId, tm.round, tm.id`,
+        tournamentIds
+    ) as any[] : [];
+    const participantsByTournament = new Map<number, any[]>();
+    const matchesByTournament = new Map<number, any[]>();
+    for (const participant of allParticipants) {
+        const id = Number(participant.tournamentId);
+        const rows = participantsByTournament.get(id) || [];
+        rows.push(participant);
+        participantsByTournament.set(id, rows);
+    }
+    for (const match of allMatches) {
+        const id = Number(match.tournamentId);
+        const rows = matchesByTournament.get(id) || [];
+        rows.push(match);
+        matchesByTournament.set(id, rows);
+    }
 
-    const result = await Promise.all(allTournaments.map(async (t) => {
-        const participants = await db.query(
-            'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?',
-            [t.id]
-        ) as any[];
+    const result = allTournaments.map((t) => {
+        const participants = participantsByTournament.get(Number(t.id)) || [];
         const myReg = participants.find((p: any) => p.userId === userId);
-        const matches = await db.query(
-            'SELECT * FROM tournament_matches WHERE tournamentId = ? ORDER BY round, id',
-            [t.id]
-        ) as any[];
+        const matches = matchesByTournament.get(Number(t.id)) || [];
 
         return {
             ...t,
@@ -953,21 +981,12 @@ router.get('/tournament', async (req, res) => {
                 snapshotStats: p.snapshotStats ? JSON.parse(p.snapshotStats) : null,
             })),
             myRegistration: myReg || null,
-            matches: await Promise.all(matches.map(async (m) => ({
+            matches: matches.map((m) => ({
                 ...m,
-                player1Name: m.player1Id
-                    ? (await db.one('SELECT username FROM users WHERE id = ?', [m.player1Id]) as any)?.username
-                    : null,
-                player2Name: m.player2Id
-                    ? (await db.one('SELECT username FROM users WHERE id = ?', [m.player2Id]) as any)?.username
-                    : null,
-                winnerName: m.winnerId
-                    ? (await db.one('SELECT username FROM users WHERE id = ?', [m.winnerId]) as any)?.username
-                    : null,
                 log: m.log ? JSON.parse(m.log) : null,
-            }))),
+            })),
         };
-    }));
+    });
 
     // Сортировка: сначала доступные игроку, затем по registrationEnd
     result.sort((a: any, b: any) => {
@@ -984,19 +1003,24 @@ router.get('/tournament', async (req, res) => {
 
     // Предстоящие официальные турниры (ждём час после завершения)
     const upcomingOfficial: any[] = [];
+    const activeOfficialDivisions = new Set(
+        updated.filter(t => t.type === 'official').map(t => t.division)
+    );
+    const completedRows = await db.query(
+        `SELECT DISTINCT ON (division) division, completedAt
+         FROM tournaments
+         WHERE type = 'official' AND status IN ('completed', 'cancelled')
+         ORDER BY division, id DESC`, []
+    ) as any[];
+    const lastCompletedByDivision = new Map<string, any>(
+        completedRows.map(row => [row.division, row.completedAt])
+    );
     for (const div of divisions) {
-        const hasActive = await db.one(
-            "SELECT id FROM tournaments WHERE division = ? AND status IN ('registration', 'in_progress') AND type = 'official'",
-            [div.name]
-        );
-        if (hasActive) continue;
-        const lastCompleted = await db.one(
-            "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1",
-            [div.name]
-        ) as any;
-        if (lastCompleted?.completedAt) {
-            const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
-              : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
+        if (activeOfficialDivisions.has(div.name)) continue;
+        const lastCompleted = lastCompletedByDivision.get(div.name);
+        if (lastCompleted) {
+            const ts = typeof lastCompleted === 'number' ? lastCompleted * 1000
+              : Number(lastCompleted) || new Date(lastCompleted).getTime();
             const registrationOpensAt = ts + 14400 * 1000;
             if (Date.now() < registrationOpensAt) {
                 upcomingOfficial.push({

@@ -2,14 +2,17 @@
 import { db } from '../db/index';
 
 export function startTournamentScheduler(): void {
-  setInterval(async () => {
+  const tick = async () => {
     try {
       const mod = await import('../routes/tournament');
-      await mod.getOrCreateTournament();
       const all = await db.query(
         "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC", []
       ) as any[];
       for (const t of all) await mod.autoAdvance(t.id);
+      await mod.getOrCreateTournament();
     } catch {}
-  }, 5 * 60 * 1000);
+  };
+
+  void tick();
+  setInterval(tick, 5 * 60 * 1000);
 }
