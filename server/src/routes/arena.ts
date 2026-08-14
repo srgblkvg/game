@@ -3,8 +3,29 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { arenaEnterSchema } from '../validation';
 import { getBaseStats, enrichEquipment, spendMoney, USER_ARENA_FIELDS_GUILD, buildPlayerStats } from '../db/helpers';
+import { applyHpRegen } from '../game/hpRegen';
 
 const router = Router();
+const MIN_BATTLE_HP_RATIO = 0.2;
+
+async function getArenaHp(user: any): Promise<{ currentHp: number; maxHp: number }> {
+    const stats = await buildPlayerStats(user, 'arena');
+    const currentHp = await applyHpRegen({
+        id: user.id,
+        currentHp: user.currentHp ?? user.currenthp ?? stats.hp,
+        maxHp: stats.hp,
+        lastHpUpdate: user.lastHpUpdate ?? user.lasthpupdate ?? 0,
+        roomType: user.roomType ?? user.roomtype,
+        roomUntil: user.roomUntil ?? user.roomuntil,
+        premiumUntil: user.premiumUntil ?? user.premiumuntil,
+    });
+    return { currentHp, maxHp: stats.hp };
+}
+
+async function hasEnoughHpForBattle(user: any): Promise<boolean> {
+    const hp = await getArenaHp(user);
+    return hp.currentHp >= hp.maxHp * MIN_BATTLE_HP_RATIO;
+}
 
 // Получить случайного соперника (без боя)
 router.get('/arena/opponent', async (req, res) => {
@@ -17,11 +38,14 @@ router.get('/arena/opponent', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const now = Math.floor(Date.now() / 1000);
+    if (!await hasEnoughHpForBattle(user)) {
+        return res.status(400).json({ error: 'Для участия в PvP необходимо не менее 20% здоровья' });
+    }
 
     // Если не смена — проверяем закреплённого соперника
     if (!change && user.arenaOpponentId) {
         const saved = await db.one(`SELECT ${USER_ARENA_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ? AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)`, [user.arenaOpponentId, now, user.guildId || 0]) as any;
-        if (saved) {
+        if (saved && await hasEnoughHpForBattle(saved)) {
             // Проверяем, соответствует ли сохранённый соперник запрошенной сложности
             const range = user.faction === 'bandit' ? 4 : 2;
             const matchesDifficulty =
@@ -35,10 +59,11 @@ router.get('/arena/opponent', async (req, res) => {
                 const savedEquip = JSON.parse(saved.equipment || '{}');
                 const { enriched: savedEnriched } = await enrichEquipment(savedEquip);
                 const savedStats = await buildPlayerStats(saved, 'arena');
+                const savedHp = await getArenaHp(saved);
                 return res.json({
                     id: saved.id, name: saved.username, level: saved.level,
                     equipment: savedEnriched, stats: savedStats,
-                    currentHp: saved.currenthp ?? savedStats.hp,
+                    currentHp: savedHp.currentHp,
                     playerMoney: user.money,
                     gender: saved.gender || 'male',
                     avatar: saved.avatar || null,
@@ -72,6 +97,10 @@ router.get('/arena/opponent', async (req, res) => {
         opponents = opponents.filter((o: any) => o.level === user.level);
     }
 
+    // Тяжело раненые игроки не участвуют в подборе соперников.
+    const hpEligibility = await Promise.all(opponents.map(hasEnoughHpForBattle));
+    opponents = opponents.filter((_opponent, index) => hpEligibility[index]);
+
     if (opponents.length === 0) {
         return res.status(404).json({ error: `Нет соперников с уровнем ${diffLabel} (${user.level})` });
     }
@@ -104,16 +133,7 @@ router.get('/arena/opponent', async (req, res) => {
     const stats = await buildPlayerStats(opponent, 'arena');
 
     // Актуальное HP с офлайн-регеном
-    const { applyHpRegen } = await import('../game/hpRegen');
-    const actualHp = await applyHpRegen({
-        id: opponent.id,
-        currentHp: opponent.currentHp ?? stats.hp,
-        maxHp: stats.hp,
-        lastHpUpdate: opponent.lastHpUpdate || 0,
-        roomType: opponent.roomType,
-        roomUntil: opponent.roomUntil,
-        premiumUntil: opponent.premiumUntil,
-    });
+    const { currentHp: actualHp } = await getArenaHp(opponent);
 
     res.json({
         id: opponent.id,
@@ -137,8 +157,11 @@ router.post('/arena/enter', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: 'Некорректный запрос' });
 
     const userId = req.userId;
-    const user = await db.one('SELECT money, guildId FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one(`SELECT ${USER_ARENA_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?`, [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!await hasEnoughHpForBattle(user)) {
+        return res.status(400).json({ error: 'Для участия в PvP необходимо не менее 20% здоровья' });
+    }
     if (user.money < 10) return res.status(400).json({ error: 'Недостаточно монет (нужно 10 бронзы)' });
 
     const now = Math.floor(Date.now() / 1000);

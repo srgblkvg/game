@@ -89,6 +89,13 @@ router.post('/battle', async (req, res) => {
         premiumUntil: defender.premiumUntil,
     });
 
+    if (attackerCurrentHp < attackerMaxHp * 0.2) {
+        return res.status(400).json({ error: 'Для участия в PvP необходимо не менее 20% здоровья' });
+    }
+    if (defenderCurrentHp < defenderMaxHp * 0.2) {
+        return res.status(400).json({ error: 'У противника меньше 20% здоровья. Выберите другую цель' });
+    }
+
     const attackerData = {
         id: attacker.id,
         name: attacker.username,

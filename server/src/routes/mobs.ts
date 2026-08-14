@@ -193,6 +193,9 @@ router.post('/mob/attack', async (req, res) => {
         lastHpUpdate: user.lastHpUpdate || now, roomType: user.roomType, roomUntil: user.roomUntil,
         premiumUntil: user.premiumUntil,
     });
+    if (regeneratedHp < userStats.hp * 0.2) {
+        return res.status(400).json({ error: 'Для участия в охоте необходимо не менее 20% здоровья' });
+    }
     let userHp = regeneratedHp;
     let mobCurrentHp = mobHp;
 
