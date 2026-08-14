@@ -15,6 +15,7 @@ interface ActionsProps {
     onArenaClick: () => void;
     hasActiveJob?: boolean;
     isGuest?: boolean;
+    playerLevel?: number;
 }
 
 interface ActionCard {
@@ -24,7 +25,7 @@ interface ActionCard {
     buttonText: string;
 }
 
-export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob, isGuest }: ActionsProps) {
+export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, hasActiveJob, isGuest, playerLevel = 1 }: ActionsProps) {
     const navigate = useNavigate();
     const [cards, setCards] = useState<ActionCard[]>([]);
     const [tournamentInfo, setTournamentInfo] = useState<any>(null);
@@ -238,9 +239,11 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 <Card>
                     <h3 className="text-sm font-bold mb-1">⚔️ Одиночное подземелье</h3>
                     <p className="text-xs text-[var(--color-text-muted)] mb-2">Сражайтесь с монстрами, собирайте добычу, открывайте новые этажи</p>
-                    <p className="text-[0.65rem] text-[var(--color-text-muted)] h-4 leading-4"></p>
+                    <p className="text-[0.65rem] text-[var(--color-text-muted)] h-4 leading-4">Вход доступен с 5 уровня</p>
                     <div className="mt-auto">
-                        <Button variant="primary" size="md" fullWidth onClick={() => navigate('/dungeon')}>🗡️ В данж</Button>
+                        <Button variant="primary" size="md" fullWidth disabled={playerLevel < 5} onClick={() => navigate('/dungeon')}>
+                            {playerLevel < 5 ? '🔒 Доступ с 5 уровня' : '🗡️ В данж'}
+                        </Button>
                     </div>
                 </Card>
             ) : (

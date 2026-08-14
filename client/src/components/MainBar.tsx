@@ -18,7 +18,7 @@ interface MainBarProps {
 }
 
 export default function MainBar({ canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, onArenaClick, selectedInventoryItemId, onInventoryItemClick, hasActiveJob }: MainBarProps) {
-    const { setCharacter } = useGame();
+    const { character, setCharacter } = useGame();
     const { user } = useAuth();
 
     const handleInventoryDrop = async (e: React.DragEvent) => {
@@ -42,7 +42,7 @@ export default function MainBar({ canAttack, attackCooldownSec, pveCooldownSec, 
         >
             <Inventory selectedItemId={selectedInventoryItemId} onItemClick={onInventoryItemClick} />
             <OverflowStorage />
-            <Actions canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} hasActiveJob={hasActiveJob} isGuest={user?.isGuest} />
+            <Actions canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} onArenaClick={onArenaClick} hasActiveJob={hasActiveJob} isGuest={user?.isGuest} playerLevel={character?.level} />
         </div>
     );
 }

@@ -372,6 +372,9 @@ router.post('/dungeon/start', async (req, res) => {
         [userId]
     ) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
+    if (Number(user.level) < 5) {
+        return res.status(403).json({ error: 'Вход в подземелье доступен с 5 уровня' });
+    }
 
     const activeSlot = user.active_equip_slot || 1;
     const equipKey = `equipment_${activeSlot}`;

@@ -226,6 +226,10 @@ export default function DungeonPage() {
     };
 
     const handleStart = async (startFloor: number) => {
+        if ((character?.level || 0) < 5) {
+            setMessage('Вход в подземелье доступен с 5 уровня');
+            return;
+        }
         setLoading(true); setMessage('');
         try {
             const res = await fetch('/api/dungeon/start', {
@@ -359,6 +363,9 @@ export default function DungeonPage() {
     const renderStatus = () => (
         <Card>
             <p className="text-sm mb-2">
+                {(character?.level || 0) < 5 && (
+                    <span className="text-[var(--color-accent-danger)]">Вход в подземелье доступен с 5 уровня</span>
+                )}
                 {status?.cooldownRemaining > 0 && (
                     <CooldownTimer seconds={status.cooldownRemaining} />
                 )}
@@ -381,8 +388,8 @@ export default function DungeonPage() {
                                         </span>
                                         <Button variant="danger" size="md"
                                             onClick={() => handleStart(cp)}
-                                            disabled={loading || status?.remainingRuns <= 0 || status?.cooldownRemaining > 0}>
-                                            🗡️ В бой
+                                            disabled={(character?.level || 0) < 5 || loading || status?.remainingRuns <= 0 || status?.cooldownRemaining > 0}>
+                                            {(character?.level || 0) < 5 ? '🔒 С 5 уровня' : '🗡️ В бой'}
                                         </Button>
                                     </div>
                                 </div>
