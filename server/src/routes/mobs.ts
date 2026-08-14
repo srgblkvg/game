@@ -10,6 +10,10 @@ import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { updateGuildQuestProgress } from './guild';
 
 const router = Router();
+const HUNT_DROP_MULTIPLIER = 1 / 3;
+const MATERIAL_DROP_CHANCE = 0.35 * HUNT_DROP_MULTIPLIER;
+const STONE_DROP_CHANCE = 0.05 * HUNT_DROP_MULTIPLIER;
+const MYTHIC_RESOURCE_DROP_CHANCE = 0.01 * HUNT_DROP_MULTIPLIER;
 
 // Шансы дропа камней улучшения (независимые роллы на каждого моба)
 const STONE_DROP_CHANCES: Record<string, number> = {
@@ -90,7 +94,7 @@ function getItemDropTable(level: number): { rarity: number; chance: number }[] {
         table.push({ rarity: 5, chance: 0.20 }); // Легендарный 20%
         table.push({ rarity: 6, chance: 0.15 }); // Мифический 15%
     }
-    return table;
+    return table.map(entry => ({ ...entry, chance: entry.chance * HUNT_DROP_MULTIPLIER }));
 }
 
 // Получить список мобов
@@ -122,17 +126,17 @@ router.get('/mobs', async (req, res) => {
             [6, 'loot_mythic', 'Мифический'],
         ];
         for (const [r, key, rarityName] of rarityMap) {
-            const chance = m[key] || 0;
+            const chance = (m[key] || 0) * MATERIAL_DROP_CHANCE;
             if (chance > 0 && craftInfo[r]) {
                 lootImages.push({ rarity: r, name: craftInfo[r].name, image: craftInfo[r].image, chance });
             }
         }
-        // Все камни улучшения (веса → реальные шансы при 5% ролле)
+        // Все камни улучшения (веса → реальные шансы общего ролла)
         const totalStoneWeight = Object.values(STONE_DROP_CHANCES).reduce((s, w) => s + w, 0);
         for (const stone of allStones) {
             const weight = STONE_DROP_CHANCES[stone.name] || 0;
             if (weight > 0) {
-                const realChance = (weight / totalStoneWeight) * 0.05;
+                const realChance = (weight / totalStoneWeight) * STONE_DROP_CHANCE;
                 lootImages.push({ rarity: -1, name: stone.name, image: stone.image, chance: realChance });
             }
         }
@@ -282,14 +286,14 @@ router.post('/mob/attack', async (req, res) => {
         }
     }
 
-    // Шанс дропа материала (~35%)
+    // Шанс дропа материала (обучение сохраняет гарантированный ролл)
     const materialsDropped: any[] = [];
     let itemsDropped: any[] = [];
     if (playerWon) {
         const isTutorial = (user.tutorial_step || 0) === 0;
         const dropRoll: number = Math.random();
         // Туториал: гарантированный дроп материала для крафта
-        if (isTutorial || dropRoll < 0.35) {
+        if (isTutorial || dropRoll < MATERIAL_DROP_CHANCE) {
             // Определяем редкость по таблице дропа
             const lootTable: Array<{ rarity: number; chance: number }> = [
                 { rarity: 0, chance: mob.loot_junk },
@@ -347,8 +351,8 @@ router.post('/mob/attack', async (req, res) => {
             } // if (selectedRarity >= 0)
         }
 
-        // Камни улучшения — один ролл 5%, выбор по весам
-        if (Math.random() < 0.05) {
+        // Камни улучшения — один общий ролл, выбор по весам
+        if (Math.random() < STONE_DROP_CHANCE) {
             // Веса для выбора типа камня
             const stoneWeights: [string, number][] = Object.entries(STONE_DROP_CHANCES);
             const totalWeight = stoneWeights.reduce((s, [, w]) => s + w, 0);
@@ -388,9 +392,9 @@ router.post('/mob/attack', async (req, res) => {
             }
         }
 
-        // Мифический ресурс — 1% с конкретных монстров
+        // Мифический ресурс с конкретных монстров
         const mythicName = MYTHIC_RESOURCE_DROPS[mob.id];
-        if (mythicName && Math.random() < 0.01) {
+        if (mythicName && Math.random() < MYTHIC_RESOURCE_DROP_CHANCE) {
             const mythicItem = await db.one(
                 "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.name = ?",
                 [mythicName]
