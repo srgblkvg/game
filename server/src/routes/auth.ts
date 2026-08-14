@@ -175,7 +175,10 @@ router.post('/login', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
 
     // Ищем пользователя по email или username
-    const userRow: any = await db.one('SELECT id, passwordHash, failedLogins, lockedUntil, bannedUntil FROM users WHERE username = ? OR email = ?', [login, login]);
+    const userRow: any = await db.one(
+        'SELECT id, username, level, gender, passwordHash, failedLogins, lockedUntil, bannedUntil FROM users WHERE username = ? OR email = ?',
+        [login, login]
+    );
     if (userRow && userRow.lockedUntil > now) {
       const mins = Math.ceil((userRow.lockedUntil - now) / 60);
       auditAccountLocked(login, req.ip);
@@ -237,9 +240,13 @@ router.post('/login', async (req, res) => {
         try { await db.run('INSERT INTO login_logs (userId, ip) VALUES (?, ?)', [userRow.id, req.ip]); } catch {}
     }
 
-    const token = jwt.sign({ userId: userRow.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
-    const fullUser: any = await db.one('SELECT gender FROM users WHERE id = ?', [userRow.id]);
-    res.json({ token, user: { id: userRow.id, username: userRow.username, level: userRow.level, role: 'player', gender: fullUser?.gender || 'male' } });
+    const gender = userRow.gender || 'male';
+    const token = jwt.sign(
+        { userId: userRow.id, role: 'player', username: userRow.username, gender, jti: crypto.randomUUID() },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+    res.json({ token, user: { id: userRow.id, username: userRow.username, level: userRow.level, role: 'player', gender } });
 });
 
 export default router;

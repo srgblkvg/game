@@ -49,6 +49,18 @@ if (!platform.allowSystemKeyboard) {
 // Регистрируем иконки локально (без API-запросов)
 addCollection(gameIcons);
 
+// После деплоя открытая старая вкладка может запросить уже удалённый lazy-chunk.
+// Один раз обновляем страницу и загружаем актуальный index.html вместо белого экрана.
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  const reloadKey = 'vite-preload-reload';
+  const lastReload = Number(sessionStorage.getItem(reloadKey) || 0);
+  if (Date.now() - lastReload > 60_000) {
+    sessionStorage.setItem(reloadKey, String(Date.now()));
+    window.location.reload();
+  }
+});
+
 // Отправка непойманных ошибок на сервер
 window.onerror = (message, source, lineno, colno, error) => {
     try {

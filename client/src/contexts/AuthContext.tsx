@@ -31,7 +31,12 @@ function getTokenFromURL(): string | null {
 
 function parseUserFromToken(token: string): User | null {
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')));
+        if (!payload.role || !(payload.adminId || payload.userId)) return null;
+        if (payload.exp && payload.exp <= Math.floor(Date.now() / 1000)) return null;
         return {
             id: payload.adminId || payload.userId,
             username: payload.username || '',
@@ -50,10 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [token, setToken] = useState<string | null>(() => {
         const urlJwt = getTokenFromURL();
         if (urlJwt) {
-            localStorage.setItem('token', urlJwt);
-            return urlJwt;
+            if (parseUserFromToken(urlJwt)) {
+                localStorage.setItem('token', urlJwt);
+                return urlJwt;
+            }
+            localStorage.removeItem('token');
+            return null;
         }
-        return localStorage.getItem('token');
+        const stored = localStorage.getItem('token');
+        if (stored && !parseUserFromToken(stored)) {
+            localStorage.removeItem('token');
+            return null;
+        }
+        return stored;
     });
 
     const [user, setUser] = useState<User | null>(() => {
@@ -69,7 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
         }
         const u = parseUserFromToken(token);
-        if (u) setUser(u);
+        if (u) {
+            setUser(u);
+        } else {
+            localStorage.removeItem('token');
+            setToken(null);
+            setUser(null);
+        }
     }, [token]);
 
     const loginUser = (u: User, t: string) => {

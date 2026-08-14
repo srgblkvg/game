@@ -2,6 +2,12 @@ import { BASE_URL, getHeaders } from './helpers';
 
 export async function fetchCharacter() {
     const res = await fetch(`${BASE_URL}/character/me`, { headers: getHeaders() });
+    if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('openPrivateTabs');
+        window.location.assign('/login');
+        throw new Error('Сессия истекла');
+    }
     if (!res.ok) throw new Error('Failed to load character');
     return res.json();
 }
