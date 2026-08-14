@@ -2,7 +2,10 @@
 import { db } from '../db/index';
 
 export function startTournamentScheduler(): void {
+  let running = false;
   const tick = async () => {
+    if (running) return;
+    running = true;
     try {
       const mod = await import('../routes/tournament');
       const all = await db.query(
@@ -10,7 +13,9 @@ export function startTournamentScheduler(): void {
       ) as any[];
       for (const t of all) await mod.autoAdvance(t.id);
       await mod.getOrCreateTournament();
-    } catch {}
+    } catch {} finally {
+      running = false;
+    }
   };
 
   void tick();

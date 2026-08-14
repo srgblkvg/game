@@ -810,25 +810,26 @@ export async function getOrCreateTournament(type?: string) {
 
             // Транзакция: проверка + вставка атомарно, с advisory lock на дивизион
             try {
-                await db.tx(async (client) => {
+                const created = await db.tx(async (client) => {
                     // Блокировка на уровне дивизиона — предотвращает гонку
                     const lockKey = div.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
                     const lockResult = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [lockKey]);
-                    if (!lockResult.rows[0]?.locked) return; // другой вызов уже обрабатывает
+                    if (!lockResult.rows[0]?.locked) return false;
 
                     const recheck = (await client.query(
                         `SELECT id FROM tournaments WHERE division = $1 AND status IN ('registration', 'in_progress') AND type = 'official' LIMIT 1`,
                         [div.name]
                     )).rows[0];
-                    if (recheck) return; // уже создан
+                    if (recheck) return false;
 
                     await client.query(
                         'INSERT INTO tournaments (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
                         [div.name, 'registration', now, now + REGISTRATION_WINDOW, pool, pool, new Date().toISOString(), 'official', MAX_PLAYERS]
                     );
+                    return true;
                 });
                 // Списать призовой фонд из казны
-                if (pool > 0) {
+                if (created && pool > 0) {
                     const { deductFromTreasury } = await import('../game/treasury');
                     await deductFromTreasury(pool, `tournament_create_${div.name}`);
                 }
@@ -1003,9 +1004,11 @@ router.get('/tournament', async (req, res) => {
 
     // Предстоящие официальные турниры (ждём час после завершения)
     const upcomingOfficial: any[] = [];
-    const activeOfficialDivisions = new Set(
-        updated.filter(t => t.type === 'official').map(t => t.division)
-    );
+    const activeOfficialRows = typeFilter === 'custom' ? await db.query(
+        "SELECT division FROM tournaments WHERE status IN ('registration', 'in_progress') AND type = 'official'",
+        []
+    ) as any[] : updated.filter(t => t.type === 'official');
+    const activeOfficialDivisions = new Set(activeOfficialRows.map(t => t.division));
     const completedRows = await db.query(
         `SELECT DISTINCT ON (division) division, completedAt
          FROM tournaments

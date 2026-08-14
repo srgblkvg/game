@@ -34,13 +34,18 @@ import { startGuildBossWeeklyResetScheduler } from './schedulers/guildBossWeekly
 import { initTreasury, initTreasuryLog } from './game/treasury';
 import { initExchange } from './game/exchange';
 
-// Init tables
-initTreasury().catch(e => logger.error('Treasury init failed:', e.message));
-initTreasuryLog().catch(e => logger.error('Treasury log init failed:', e.message));
-initExchange().catch(e => logger.error('Exchange init failed:', e.message));
+// Турниры зависят от казны: первый тик запускаем только после инициализации.
+Promise.allSettled([initTreasury(), initTreasuryLog(), initExchange()]).then((results) => {
+  const labels = ['Treasury', 'Treasury log', 'Exchange'];
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      logger.error(`${labels[index]} init failed:`, result.reason?.message || result.reason);
+    }
+  });
+  startTournamentScheduler();
+});
 
 startSalaryScheduler();
-startTournamentScheduler();
 startCleanupScheduler();
 startMassacreScheduler();
 startInactiveLeaderCheck();
