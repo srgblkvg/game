@@ -145,6 +145,10 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                         const a = msg.item;
                                         const itemName = a.itemData?.name || 'Предмет';
                                         const rarity = a.itemData?.rarity_id ?? 0;
+                                        const itemCount = Math.max(1, Number(a.itemData?.count) || 1);
+                                        const isStack = itemCount > 1;
+                                        const perItem = (price: number | null | undefined) =>
+                                            price ? Math.round(Number(price) / itemCount) : null;
                                         const now = Math.floor(Date.now() / 1000);
                                         const timeLeft = Math.max(0, (a.endsAt || 0) - now);
                                         const hours = Math.floor(timeLeft / 3600);
@@ -163,7 +167,7 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                                         onMouseMove={(e) => { if (tooltipData) setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null); }}
                                                         onMouseLeave={() => setTooltipData(null)}
                                                     >
-                                                        [{itemName}{a.itemData?.upgradeLevel > 0 ? ` +${a.itemData.upgradeLevel}` : ''}]
+                                                        [{itemName}{a.itemData?.upgradeLevel > 0 ? ` +${a.itemData.upgradeLevel}` : ''}{isStack ? ` ×${itemCount}` : ''}]
                                                     </span>
                                                     <span className="text-[var(--color-text-muted)] text-[0.7rem]">
                                                         {a.type === 'auction_lot' ? '📦 Новый лот' : a.type === 'auction_bid' ? '💰 Ставка' : '✅ Выкуп'}
@@ -172,8 +176,9 @@ export default function MessageList({ messages, currentUserId, onNickClick, rend
                                                 {a.type === 'auction_lot' && (
                                                     <>
                                                         <div className="text-[var(--color-text-primary)]">
-                                                            Старт: <span className="text-[var(--color-accent-warning)] font-bold">{a.startPrice} серебра</span>
-                                                            {a.buyoutPrice ? <span className="ml-2">Выкуп: <span className="text-[var(--color-accent-success)] font-bold">{a.buyoutPrice} серебра</span></span> : null}
+                                                            Старт: <span className="text-[var(--color-accent-warning)] font-bold">{isStack ? perItem(a.startPrice) : a.startPrice} серебра</span>
+                                                            {isStack ? <span className="text-[var(--color-text-muted)] text-[0.7rem]"> за 1 шт.</span> : null}
+                                                            {a.buyoutPrice ? <span className="ml-2">Выкуп: <span className="text-[var(--color-accent-success)] font-bold">{isStack ? perItem(a.buyoutPrice) : a.buyoutPrice} серебра</span>{isStack ? <span className="text-[var(--color-text-muted)] text-[0.7rem]"> за 1 шт.</span> : null}</span> : null}
                                                         </div>
                                                         <div className="text-[var(--color-text-muted)] text-[0.72rem]">
                                                             Продавец: {a.sellerName || '?'}
