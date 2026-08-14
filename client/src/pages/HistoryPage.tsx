@@ -16,6 +16,18 @@ import Modal from '../components/ui/Modal';
 
 const LIMIT = 10;
 
+// Компонент должен иметь стабильный тип между рендерами. Если объявлять его
+// внутри HistoryPage, React перемонтирует каждую строку при любом обновлении
+// контекста (в том числе при ежесекундном serverTick), что выглядит как мигание.
+function EntryRow({ children, time, className='', onClick }: { children: React.ReactNode; time: string; className?: string; onClick?: ()=>void }) {
+    return (
+        <div className={`border-b border-[var(--color-border-light)] py-2 text-xs flex items-center gap-2 ${onClick?'cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded':''} ${className}`} onClick={onClick}>
+            <div className="flex-1 min-w-0">{children}</div>
+            <span className="text-[var(--color-text-muted)] shrink-0 ml-auto text-[0.65rem]">{time}</span>
+        </div>
+    );
+}
+
 export default function HistoryPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -87,14 +99,6 @@ export default function HistoryPage() {
     ] as const;
 
     if(!user) return null;
-
-    // Универсальная строка записи: контент слева, время справа
-    const EntryRow = ({ children, time, className='', onClick }: { children: React.ReactNode; time: string; className?: string; onClick?: ()=>void }) => (
-        <div className={`border-b border-[var(--color-border-light)] py-2 text-xs flex items-center gap-2 ${onClick?'cursor-pointer hover:bg-[var(--color-bg-card-hover)] px-1 rounded':''} ${className}`} onClick={onClick}>
-            <div className="flex-1 min-w-0">{children}</div>
-            <span className="text-[var(--color-text-muted)] shrink-0 ml-auto text-[0.65rem]">{time}</span>
-        </div>
-    );
 
     const fmt = (d: any) => formatGameDateTime(d);
 
