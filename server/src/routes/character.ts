@@ -104,7 +104,7 @@ router.get('/character/me', async (req, res) => {
 
     const drinkBonuses = getDrinkBonuses(user);
     const collectionCount = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt;
-    
+
     // Бонус за полностью собранные сеты коллекции
     const completedSetBonus = await db.one(`
       SELECT COALESCE(SUM(cs.bonus_percent), 0) as total
@@ -246,8 +246,11 @@ router.post('/character/save-tabs', async (req, res) => {
 router.post('/character/tutorial-done', async (req, res) => {
     const reward = 1000;
     const userId = req.userId;
-    await db.run('UPDATE users SET tutorial_completed = 1, money = money + ? WHERE id = ?', [reward, userId]);
-    res.json({ success: true, reward });
+    const result = await db.run(
+        'UPDATE users SET tutorial_completed = 1, tutorial_step = GREATEST(COALESCE(tutorial_step, 0), 4), money = money + ? WHERE id = ? AND COALESCE(tutorial_completed, 0) = 0',
+        [reward, userId],
+    );
+    res.json({ success: true, reward: result?.changes ? reward : 0 });
 });
 
 // Продвинуть туториал на один шаг вперёд (клиентская кнопка «Далее»)
@@ -257,23 +260,16 @@ router.post('/character/tutorial-step', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const currentStep = user.tutorial_step || 0;
-    // Защита: не даём уйти за пределы (12 шагов, индексы 0-11)
-    const MAX_STEP = 11;
-    if (currentStep >= MAX_STEP) {
-        // Уже на последнем шаге или за ним — завершаем туториал
-        await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
-        return res.json({ success: true, step: MAX_STEP, completed: true });
+    // Четыре коротких экрана, индексы 0–3. Завершение и награда — отдельным endpoint.
+    const LAST_STEP = 3;
+    if (currentStep >= LAST_STEP) {
+        return res.json({ success: true, step: LAST_STEP, completed: false });
     }
 
     await db.run('UPDATE users SET tutorial_step = tutorial_step + 1 WHERE id = ?', [userId]);
 
     const updated = await db.one('SELECT tutorial_step FROM users WHERE id = ?', [userId]) as any;
     const newStep = updated?.tutorial_step || 0;
-
-    // Если дошли до последнего шага — завершаем
-    if (newStep >= MAX_STEP) {
-        await db.run('UPDATE users SET tutorial_completed = 1 WHERE id = ?', [userId]);
-    }
 
     res.json({ success: true, step: newStep });
 });

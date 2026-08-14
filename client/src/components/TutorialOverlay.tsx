@@ -264,9 +264,13 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onNextSt
   const handleSkip = () => { onComplete(); };
 
   const handleNext = () => {
-    if (onNextStep) onNextStep();
-    else if (!isLast) setCurrent(prev => prev + 1);
-    else onComplete();
+    if (isLast) {
+      onComplete();
+    } else if (onNextStep) {
+      onNextStep();
+    } else {
+      setCurrent(prev => prev + 1);
+    }
   };
 
   useEffect(() => {
