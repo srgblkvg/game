@@ -239,10 +239,10 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 <Card>
                     <h3 className="text-sm font-bold mb-1">⚔️ Одиночное подземелье</h3>
                     <p className="text-xs text-[var(--color-text-muted)] mb-2">Сражайтесь с монстрами, собирайте добычу, открывайте новые этажи</p>
-                    <p className="text-[0.65rem] text-[var(--color-text-muted)] h-4 leading-4">Вход доступен с 5 уровня</p>
+                    <p className="text-[0.65rem] text-[var(--color-text-muted)] h-4 leading-4">Вход доступен со 2 уровня</p>
                     <div className="mt-auto">
-                        <Button variant="primary" size="md" fullWidth disabled={playerLevel < 5} onClick={() => navigate('/dungeon')}>
-                            {playerLevel < 5 ? '🔒 Доступ с 5 уровня' : '🗡️ В данж'}
+                        <Button variant="primary" size="md" fullWidth disabled={playerLevel < 2} onClick={() => navigate('/dungeon')}>
+                            {playerLevel < 2 ? '🔒 Доступ со 2 уровня' : '🗡️ В данж'}
                         </Button>
                     </div>
                 </Card>
