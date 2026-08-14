@@ -188,24 +188,22 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                 </Card>
             )}
 
-            {user.role === 'player' && (
-                <Card className="mb-4">
-                    <h3 className="font-bold mb-2">⭐ Получение опыта</h3>
-                    <p className="text-sm text-[var(--color-text-muted)] mb-3">
-                        {experienceEnabled
-                            ? 'Опыт начисляется из всех игровых источников.'
-                            : 'Получение опыта отключено. Серебро, предметы и остальные награды продолжают начисляться.'}
-                    </p>
-                    <Button
-                        variant={experienceEnabled ? 'secondary' : 'primary'}
-                        size="md"
-                        disabled={experienceLoading}
-                        onClick={handleExperienceToggle}
-                    >
-                        {experienceLoading ? 'Загрузка...' : experienceEnabled ? 'Отключить получение опыта' : 'Включить получение опыта'}
-                    </Button>
-                </Card>
-            )}
+            <Card className="mb-4">
+                <h3 className="font-bold mb-2">⭐ Получение опыта</h3>
+                <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                    {experienceEnabled
+                        ? 'Опыт начисляется из всех игровых источников.'
+                        : 'Получение опыта отключено. Серебро, предметы и остальные награды продолжают начисляться.'}
+                </p>
+                <Button
+                    variant={experienceEnabled ? 'secondary' : 'primary'}
+                    size="md"
+                    disabled={experienceLoading}
+                    onClick={handleExperienceToggle}
+                >
+                    {experienceLoading ? 'Загрузка...' : experienceEnabled ? 'Отключить получение опыта' : 'Включить получение опыта'}
+                </Button>
+            </Card>
 
             {/* Аватар */}
             {user.role === 'player' && (
