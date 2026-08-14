@@ -80,7 +80,7 @@ const SKILLS: Skill[] = [
     { id: 1, name: 'shield_bash', nameRu: 'Удар щитом', rageCost: 5, rageGain: 0, cooldown: 6,
       icon: '🛡️', desc: 'Оглушение', descScale: '+0.2с стана, +10% урона' },
     { id: 2, name: 'sweep', nameRu: 'Размах', rageCost: 15, rageGain: 0, cooldown: 5,
-      icon: '⚔️', desc: 'AoE 3 цели', descScale: '+10% урона' },
+      icon: '⚔️', desc: 'Цель и соседние враги', descScale: '+10% урона' },
     { id: 3, name: 'battle_cry', nameRu: 'Боевой клич', rageCost: 20, rageGain: 0, cooldown: 20,
       icon: '📢', desc: '+20% урона', descScale: '+5% урона, +1с длительности' },
     { id: 4, name: 'rend', nameRu: 'Раздирание', rageCost: 10, rageGain: 0, cooldown: 0,
@@ -543,12 +543,13 @@ router.post('/dungeon/skill', async (req, res) => {
         }
         case 'sweep': {
             const swDmg = Math.floor(dmg * (0.6 + skillBonus(lvl, 0.1)));
-            const count = Math.min(3, run.enemies.length);
-            for (let i = 0; i < count; i++) {
-                const e = run.enemies[i];
-                if (e) e.hp -= swDmg;
-            }
-            run.log.push(`↔ Размах: ${swDmg} урона по ${count} целям`);
+            // Бьём выбранную цель и непосредственно соседние позиции.
+            // Мёртвые враги остаются в списке, но урон по ним не проходит.
+            const from = Math.max(0, run.targetIndex - 1);
+            const to = Math.min(run.enemies.length - 1, run.targetIndex + 1);
+            const targets = run.enemies.slice(from, to + 1).filter(e => e.hp > 0);
+            for (const enemy of targets) enemy.hp -= swDmg;
+            run.log.push(`↔ Размах: ${swDmg} урона по ${targets.length} ${targets.length === 1 ? 'цели' : 'целям'}`);
             break;
         }
         case 'battle_cry': {
