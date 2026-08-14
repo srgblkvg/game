@@ -203,7 +203,7 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
     // Награда победителю: +10 XP и весь сбор
     const winner = await db.one('SELECT exp, level, statPoints, oauthProvider, oauthId FROM users WHERE id = ?', [winnerId]) as any;
     const expGain = 10;
-    const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(winnerId, expGain, winner.exp || 0, winner.level || 1, winner.statPoints || 0);
+    const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(winnerId, expGain, winner.exp || 0, winner.level || 1, winner.statPoints || 0);
     await db.run('UPDATE users SET money = money + ?, exp = ?, level = ?, statPoints = ? WHERE id = ?',
         [prizePool, newExp, newLevel, newStatPoints, winnerId]);
 

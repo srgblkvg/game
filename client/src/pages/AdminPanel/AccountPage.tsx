@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
@@ -28,6 +28,8 @@ export default function AccountPage() {
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteMsg, setDeleteMsg] = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [experienceEnabled, setExperienceEnabled] = useState(true);
+    const [experienceLoading, setExperienceLoading] = useState(true);
 
     // Гостевая регистрация
 const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
@@ -38,6 +40,19 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
     const [guestMsg, setGuestMsg] = useState('');
     const [guestLoading, setGuestLoading] = useState(false);
     const [guestResendMsg, setGuestResendMsg] = useState('');
+
+    useEffect(() => {
+        fetch('/api/account/experience-setting', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        })
+            .then(async r => {
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Ошибка загрузки настройки');
+                setExperienceEnabled(data.enabled !== false);
+            })
+            .catch((e: Error) => showToast(e.message, 'error'))
+            .finally(() => setExperienceLoading(false));
+    }, []);
 
     if (!user) return null;
 
@@ -132,6 +147,29 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
         } catch (err: any) { setDeleteMsg(err.message); }
     };
 
+    const handleExperienceToggle = async () => {
+        const enabled = !experienceEnabled;
+        setExperienceLoading(true);
+        try {
+            const res = await fetch('/api/account/experience-setting', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+                },
+                body: JSON.stringify({ enabled }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Не удалось изменить настройку');
+            setExperienceEnabled(data.enabled);
+            showToast(data.enabled ? 'Получение опыта включено' : 'Получение опыта отключено', 'success');
+        } catch (e: any) {
+            showToast(e.message, 'error');
+        } finally {
+            setExperienceLoading(false);
+        }
+    };
+
     const currentGender = character?.gender || user.gender || 'male';
 
     return (
@@ -147,6 +185,25 @@ const [guestStep, setGuestStep] = useState<'form' | 'code'>('form');
                         <a href={`/api/oauth/yandex?link_token=${encodeURIComponent(localStorage.getItem('token') || '')}`} className="text-xs px-2 py-1 rounded bg-[#FC3F1D] text-white no-underline">Яндекс ID</a>
                         <a href={`/api/oauth/vk?link_token=${encodeURIComponent(localStorage.getItem('token') || '')}`} className="text-xs px-2 py-1 rounded bg-[#0077FF] text-white no-underline">VK ID</a>
                     </div>
+                </Card>
+            )}
+
+            {user.role === 'player' && (
+                <Card className="mb-4">
+                    <h3 className="font-bold mb-2">⭐ Получение опыта</h3>
+                    <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                        {experienceEnabled
+                            ? 'Опыт начисляется из всех игровых источников.'
+                            : 'Получение опыта отключено. Серебро, предметы и остальные награды продолжают начисляться.'}
+                    </p>
+                    <Button
+                        variant={experienceEnabled ? 'secondary' : 'primary'}
+                        size="md"
+                        disabled={experienceLoading}
+                        onClick={handleExperienceToggle}
+                    >
+                        {experienceLoading ? 'Загрузка...' : experienceEnabled ? 'Отключить получение опыта' : 'Включить получение опыта'}
+                    </Button>
                 </Card>
             )}
 

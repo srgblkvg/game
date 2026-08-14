@@ -313,9 +313,11 @@ export function expForLevel(level: number): number {
 
 export const STAT_POINTS_PER_LEVEL = 5;
 
-export function applyExp(userId: number, expGain: number, currentExp: number, currentLevel: number, currentStatPoints: number): {
+export async function applyExp(userId: number, expGain: number, currentExp: number, currentLevel: number, currentStatPoints: number): Promise<{
   newExp: number; newLevel: number; levelsGained: number; newStatPoints: number;
-} {
+}> {
+  const setting = await db.one('SELECT expEnabled FROM users WHERE id = ?', [userId]) as any;
+  if (setting?.expenabled === false || setting?.expEnabled === false) expGain = 0;
   let exp = currentExp + expGain;
   let level = currentLevel;
   let gained = 0;

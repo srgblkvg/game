@@ -23,7 +23,7 @@ export function startJobCompletionScheduler(): void {
         const { updateGuildQuestProgress } = await import('../routes/guild/guildQuests');
 
         const taxedReward = await collectGuildTax(user.id, jobData.reward, 'tax_job');
-        const { newExp, newLevel, levelsGained, newStatPoints } = applyExp(
+        const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(
           user.id, jobData.expReward || 0, user.exp, user.level, user.statpoints || 0
         );
 

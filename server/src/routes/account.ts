@@ -11,6 +11,22 @@ import { JWT_SECRET } from '../env';
 
 const router = Router();
 
+db.run('ALTER TABLE users ADD COLUMN IF NOT EXISTS expEnabled BOOLEAN DEFAULT TRUE').catch(() => {});
+
+router.get('/account/experience-setting', async (req, res) => {
+    const user = await db.one('SELECT expEnabled FROM users WHERE id = ?', [req.userId]) as any;
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    res.json({ enabled: user.expenabled !== false && user.expEnabled !== false });
+});
+
+router.post('/account/experience-setting', async (req, res) => {
+    if (typeof req.body?.enabled !== 'boolean') {
+        return res.status(400).json({ error: 'Некорректная настройка' });
+    }
+    await db.run('UPDATE users SET expEnabled = ? WHERE id = ?', [req.body.enabled, req.userId]);
+    res.json({ success: true, enabled: req.body.enabled });
+});
+
 router.post('/account/change-username', async (req, res) => {
     const parsed = changeUsernameSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректное имя' });
