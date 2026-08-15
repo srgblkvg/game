@@ -37,6 +37,27 @@ const TABS: Array<{ id: Tab; label: string; icon: string }> = [
 const PRIMARY: Record<string, string> = { s: 'Сила', a: 'Ловкость', d: 'Защита', m: 'Мастерство' };
 const EXTRA: Record<string, string> = { crit: 'Критический удар', dodge: 'Уклонение', counter: 'Контратака', fullBlock: 'Полный блок' };
 const inputClass = 'w-full bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)]';
+const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
+
+function objectField(value: unknown): Record<string, any> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch { return {}; }
+  }
+  return {};
+}
+
+function canReforge(item: any) {
+  const rarity = Number(item.rarity_id ?? 0);
+  if (rarity < 0 || rarity > 7) return false;
+  const base = objectField(item.bonuses);
+  if (Object.keys(PRIMARY).some(stat => Number(base[stat]) > 0)) return true;
+  const extra = objectField(item.extra);
+  return rarity !== 7 && !extra.effect && Object.keys(EXTRA).some(stat => Number(extra[stat]) > 0);
+}
 
 type TooltipHandler = (item: any, x: number, y: number) => void;
 
@@ -139,6 +160,13 @@ export default function CraftPage() {
   const materials: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && (i.itemType === 'craft' || i.type === 'material')), [inventory]);
   const stones: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && i.itemType === 'upgrade'), [inventory]);
   const crystals: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && i.itemType === 'soul_crystal'), [inventory]);
+  const relevantMaterials: any[] = useMemo(() => {
+    if (!activeRecipe) return [];
+    const ingredientIds = new Set((activeRecipe.ingredients || []).map((i: any) => String(i.id ?? i.item_id ?? i.itemId ?? '')));
+    const ingredientNames = new Set((activeRecipe.ingredients || []).map((i: any) => String(i.name || '').toLowerCase()));
+    return materials.filter((item: any) => ingredientIds.has(String(item.id)) || ingredientNames.has(String(item.name || '').toLowerCase()));
+  }, [activeRecipe, materials]);
+  const reforgeEquipment: any[] = useMemo(() => equipment.filter(canReforge), [equipment]);
   const groupedRecipes = useMemo(() => {
     const groups: Record<string, any[]> = {};
     recipes.forEach(r => { const key = r.category?.name || 'Материалы'; (groups[key] ||= []).push(r); });
@@ -205,7 +233,7 @@ export default function CraftPage() {
         const destroyed = data.results.filter((r: any) => r.destroyed).length;
         showToast(`Ковка завершена. Камней использовано: ${data.stonesUsed}${destroyed ? `. Разрушено предметов: ${destroyed}` : ''}`, destroyed ? 'warning' : 'success');
       }
-      setForgeItems({}); setForgePreview(null);
+      setForgeItems({}); setForgePreview(null); setForgeStone(null); setSingleInfo(null);
     } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
   };
 
@@ -280,7 +308,7 @@ export default function CraftPage() {
     {tab === 'create' && <div className="grid md:grid-cols-[1fr_260px] gap-4">
       <div><RecipeList groupedRecipes={groupedRecipes} openCategories={openCategories} activeRecipe={activeRecipe} onToggleCategory={cat => setOpenCategories(p => ({ ...p, [cat]: !p[cat] }))} onRecipeClick={setActiveRecipe} /></div>
       <Card><h2 className="font-bold mb-2">Создание</h2>{activeRecipe ? <><p className="text-sm font-bold">{activeRecipe.name}</p><p className="text-xs text-[var(--color-text-muted)] my-2">{activeRecipe.ingredients.map((i: any) => `${i.name} ×${i.quantity}`).join(', ')}</p><p className="text-xs">Шанс: {activeRecipe.success_chance ?? 100}%</p><p className="text-xs mb-3">Стоимость: {formatMoney(activeRecipe.money_cost)}</p><Button size="md" fullWidth disabled={busy} onClick={create}>{busy ? 'Создание...' : 'Создать'}</Button></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
-      <Card className="md:col-span-2"><h3 className="font-bold text-sm mb-2">Используемые материалы</h3><ResourceGrid {...gridTooltipProps} items={materials} onSelect={() => {}} /></Card>
+      <Card className="md:col-span-2"><h3 className="font-bold text-sm mb-2">Используемые материалы</h3>{activeRecipe ? <ResourceGrid {...gridTooltipProps} items={relevantMaterials} onSelect={() => {}} /> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
     </div>}
 
     {tab === 'forge' && <div className="space-y-4">
@@ -289,12 +317,12 @@ export default function CraftPage() {
         {!singleForge && Object.entries(forgeItems).map(([id, target]) => { const item = equipment.find((i: any) => String(i.id) === id); return item && <div key={id} className="mt-2 flex items-center gap-2 text-xs"><span className="flex-1 truncate">{item.name} (+{item.upgradeLevel || 0})</span><label>До уровня</label><select className={inputClass + ' !w-20'} value={target} onChange={e => setForgeItems(p => ({ ...p, [id]: Number(e.target.value) }))}>{Array.from({ length: 10 - (item.upgradeLevel || 0) }, (_, n) => n + (item.upgradeLevel || 0) + 1).map(v => <option key={v} value={v}>+{v}</option>)}</select></div>; })}
       </Card>
       <Card><h3 className="font-bold text-sm mb-2">2. Выберите камень</h3><ResourceGrid {...gridTooltipProps} items={stones} selectedId={forgeStone && String(forgeStone.id)} onSelect={setForgeStone} /></Card>
-      <Card><h3 className="font-bold text-sm mb-2">Расчёт</h3>{singleForge && singleInfo ? <p className="text-xs">Следующий уровень: шанс {singleInfo.chance}% · стоимость {formatMoney(singleInfo.money_cost)}</p> : !singleForge && forgePreview ? <><p className="text-xs">Максимально потребуется камней: {forgePreview.requiredStones}</p><p className="text-xs">Максимальная стоимость: {formatMoney(forgePreview.totalCost)}</p><p className="text-xs text-[var(--color-accent-warning)] mt-1">Для каждого предмета ковка прекращается после первой неудачи. При попытке +7 и выше предмет может разрушиться.</p></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите предметы и целевые уровни.</p>}<Button className="mt-3" size="md" fullWidth disabled={busy || !forgeStone || !Object.keys(forgeItems).length || (!singleForge && !forgePreview)} onClick={runForge}>{busy ? 'Ковка...' : 'Начать ковку'}</Button></Card>
+      <Card><h3 className="font-bold text-sm mb-2">Расчёт</h3>{singleForge && singleInfo ? <p className="text-xs">Следующий уровень: шанс {Math.min(100, Number(singleInfo.chance) + Number(singleInfo.factionBonus || 0) + (STONE_BONUS[Number(forgeStone?.rarity_id)] || 0))}% · стоимость {formatMoney(singleInfo.money_cost)}</p> : !singleForge && forgePreview ? <><p className="text-xs">Максимально потребуется камней: {forgePreview.requiredStones}</p><p className="text-xs">Максимальная стоимость: {formatMoney(forgePreview.totalCost)}</p><p className="text-xs text-[var(--color-accent-warning)] mt-1">Для каждого предмета ковка прекращается после первой неудачи. При попытке +7 и выше предмет может разрушиться.</p></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите предметы и целевые уровни.</p>}<Button className="mt-3" size="md" fullWidth disabled={busy || !forgeStone || !Object.keys(forgeItems).length || (!singleForge && !forgePreview)} onClick={runForge}>{busy ? 'Ковка...' : 'Начать ковку'}</Button></Card>
     </div>}
 
     {tab === 'curse' && <div className="space-y-4"><Card><h2 className="font-bold">Проклятие</h2><p className="text-xs text-[var(--color-text-muted)]">Добавляет случайную базовую характеристику. Текущее проклятие можно оставить после просмотра результата.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={new Set(curseItem ? [String(curseItem.id)] : [])} onSelect={setCurseItem} /></Card><Card><h3 className="font-bold text-sm mb-2">2. Выберите Кристалл душ</h3><ResourceGrid {...gridTooltipProps} items={crystals} selectedId={curseCrystal && String(curseCrystal.id)} onSelect={setCurseCrystal} /></Card><Card><p className="text-xs mb-3">Стоимость: {formatMoney(100000)} + 1 Кристалл душ</p><Button size="md" fullWidth className="!bg-[#7c3aed] !text-white" disabled={busy || !curseItem || !curseCrystal || character.money < 100000} onClick={cursePreview}>{busy ? 'Проклятие...' : 'Проклясть'}</Button></Card></div>}
 
-    {tab === 'reforge' && <div className="space-y-4"><Card><h2 className="font-bold">Перековка</h2><p className="text-xs text-[var(--color-text-muted)]">Переносит всё значение одной характеристики в другую характеристику той же группы. Проклятие, комплект и эффект артефакта не меняются.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={new Set(reforgeItemState ? [String(reforgeItemState.id)] : [])} onSelect={setReforgeItemState} /></Card>{reforgeItemState && <Card><h3 className="font-bold text-sm mb-2">2. Выберите изменение</h3><label className="text-xs">Исходная характеристика</label><select className={inputClass + ' mb-3'} value={fromStat} onChange={e => { setFromStat(e.target.value); setToStat(''); }}><option value="">Выберите</option>{Object.entries(availableReforgeStats).map(([key, s]) => <option key={key} value={key}>{s.label}: +{s.value}</option>)}</select><label className="text-xs">Новая характеристика</label><select className={inputClass} value={toStat} onChange={e => setToStat(e.target.value)}><option value="">Выберите</option>{Object.entries(targetStats).filter(([k]) => k !== fromStat).map(([k, label]) => <option key={k} value={k}>{label}</option>)}</select>{fromStat && toStat && <div className="rounded-lg bg-[var(--color-bg-input)] p-3 text-xs mt-3"><p>Было: {availableReforgeStats[fromStat].label} +{availableReforgeStats[fromStat].value}</p><p className="text-[var(--color-accent-success)]">Станет: {targetStats[toStat]} +{availableReforgeStats[fromStat].value}</p><p className="mt-2">Стоимость: {reforgeInfo ? formatMoney(reforgeInfo.cost) : 'расчёт...'}</p><p>Предыдущих перековок: {reforgeInfo?.reforgeCount || 0}</p></div>}<Button size="md" fullWidth className="mt-3" disabled={busy || !fromStat || !toStat || !reforgeInfo || character.money < reforgeInfo.cost} onClick={runReforge}>{busy ? 'Перековка...' : 'Перековать'}</Button></Card>}</div>}
+    {tab === 'reforge' && <div className="space-y-4"><Card><h2 className="font-bold">Перековка</h2><p className="text-xs text-[var(--color-text-muted)]">Переносит всё значение одной характеристики в другую характеристику той же группы. Проклятие, комплект и эффект артефакта не меняются.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid {...gridTooltipProps} items={reforgeEquipment} selected={new Set(reforgeItemState ? [String(reforgeItemState.id)] : [])} onSelect={setReforgeItemState} /></Card>{reforgeItemState && <Card><h3 className="font-bold text-sm mb-2">2. Выберите изменение</h3><label className="text-xs">Исходная характеристика</label><select className={inputClass + ' mb-3'} value={fromStat} onChange={e => { setFromStat(e.target.value); setToStat(''); }}><option value="">Выберите</option>{Object.entries(availableReforgeStats).map(([key, s]) => <option key={key} value={key}>{s.label}: +{s.value}</option>)}</select><label className="text-xs">Новая характеристика</label><select className={inputClass} value={toStat} onChange={e => setToStat(e.target.value)}><option value="">Выберите</option>{Object.entries(targetStats).filter(([k]) => k !== fromStat).map(([k, label]) => <option key={k} value={k}>{label}</option>)}</select>{fromStat && toStat && <div className="rounded-lg bg-[var(--color-bg-input)] p-3 text-xs mt-3"><p>Было: {availableReforgeStats[fromStat].label} +{availableReforgeStats[fromStat].value}</p><p className="text-[var(--color-accent-success)]">Станет: {targetStats[toStat]} +{availableReforgeStats[fromStat].value}</p><p className="mt-2">Стоимость: {reforgeInfo ? formatMoney(reforgeInfo.cost) : 'расчёт...'}</p><p>Предыдущих перековок: {reforgeInfo?.reforgeCount || 0}</p></div>}<Button size="md" fullWidth className="mt-3" disabled={busy || !fromStat || !toStat || !reforgeInfo || character.money < reforgeInfo.cost} onClick={runReforge}>{busy ? 'Перековка...' : 'Перековать'}</Button></Card>}</div>}
 
     {tab === 'salvage' && <div className="space-y-4"><Card><h2 className="font-bold">Разборка</h2><p className="text-xs text-[var(--color-text-muted)]">Предмет превращается в материал своей редкости. Камни улучшения разбирать нельзя.</p></Card><Card><h3 className="font-bold text-sm mb-2">Выберите предметы</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={salvageSelected} multi onSelect={item => setSalvageSelected(prev => { const next = new Set(prev); const id = String(item.id); if (next.has(id)) next.delete(id); else next.add(id); return next; })} /></Card><Button variant="danger" size="md" fullWidth disabled={busy || !salvageSelected.size} onClick={runSalvage}>{busy ? 'Разборка...' : `Разобрать${salvageSelected.size ? ` (${salvageSelected.size})` : ''}`}</Button></div>}
 
