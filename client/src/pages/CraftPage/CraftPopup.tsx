@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Button from '../../components/ui/Button';
 
 interface Props {
-  result: { success: boolean; label: string };
+  result: { success: boolean; label: string; message?: string };
   onDone: () => void;
 }
 
@@ -59,7 +59,10 @@ export default function CraftPopup({ result, onDone }: Props) {
       <div className="w-full h-4 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden border border-[var(--color-border-default)]">
         <div className={`h-full rounded-full ${barColor}`} style={{ width: `${progress}%` }} />
       </div>
-      {phase === 'result' && <p className={`mt-3 font-bold text-lg animate-bounce ${result.success ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-accent-danger)]'}`}>{result.success ? 'Успех!' : 'Провал'}</p>}
+      {phase === 'result' && <>
+        <p className={`mt-3 font-bold text-lg animate-bounce ${result.success ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-accent-danger)]'}`}>{result.success ? 'Успех!' : 'Провал'}</p>
+        {result.message && <p className="mt-2 text-sm text-[var(--color-text-primary)]">{result.message}</p>}
+      </>}
       <Button className="mt-4" size="sm" variant="secondary" onClick={skip}>Пропустить</Button>
     </div>
   </div>;

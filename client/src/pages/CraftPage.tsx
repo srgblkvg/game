@@ -283,7 +283,14 @@ export default function CraftPage() {
             break;
           }
           const active = entries.find(entry => entry.id === plan.id)!;
-          active.status = 'active'; active.detail = `Попытка +${Number(current.upgradeLevel || 0) + 1}`;
+          const nextLevel = Number(current.upgradeLevel ?? current.upgradelevel ?? 0) + 1;
+          const chanceInfo = await fetchUpgradeInfo(nextLevel, current.rarity_id);
+          const currentChance = Math.min(100,
+            Number(chanceInfo.chance || 0)
+            + Number(chanceInfo.factionBonus || 0)
+            + (STONE_BONUS[Number(liveStone.rarity_id)] || 0)
+          );
+          active.status = 'active'; active.detail = `Попытка +${nextLevel} · шанс ${currentChance}%`;
           setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepResult: null }));
           const data = await upgradeItem([current, { ...liveStone, count: 1 }]);
           latestInventory = data.inventory; latestMoney = data.moneyAfter ?? latestMoney;
