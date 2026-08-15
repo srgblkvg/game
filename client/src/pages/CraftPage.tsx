@@ -20,7 +20,7 @@ import {
   reforgeItem,
   upgradeItem,
 } from '../api/craft';
-import { isCraftItem } from '../utils/itemUtils';
+import { isCraftItem, slotNames } from '../utils/itemUtils';
 import { formatMoney } from '../utils/money';
 import RecipeList from './CraftPage/RecipeList';
 import CraftPacks from './CraftPage/CraftPacks';
@@ -46,6 +46,11 @@ const CURSE_RANKS = [
   { rank: 4, name: 'IV', color: '#f97316', chance: 1.5 },
   { rank: 5, name: 'V', color: '#ef4444', chance: 0.5 },
 ];
+
+function itemSlotLabel(slot: string) {
+  if (slot === 'ring') return 'Кольцо';
+  return slotNames[slot] || slot || 'Предмет';
+}
 
 type ProgressState = {
   title: string;
@@ -158,6 +163,8 @@ export default function CraftPage() {
   const [createQuantity, setCreateQuantity] = useState(1);
   const [createMaximum, setCreateMaximum] = useState(false);
   const [targetItemTemplateId, setTargetItemTemplateId] = useState<string | null>(null);
+  const [targetSearch, setTargetSearch] = useState('');
+  const [targetSlot, setTargetSlot] = useState('');
 
   const [forgeItems, setForgeItems] = useState<Record<string, number>>({});
   const [forgeStone, setForgeStone] = useState<any>(null);
@@ -224,6 +231,15 @@ export default function CraftPage() {
   }, [activeRecipe, materials]);
   const resultOptions: any[] = useMemo(() => activeRecipe?.resultOptions || [], [activeRecipe]);
   const selectedResultOption = useMemo(() => resultOptions.find((option: any) => String(option.id ?? option.templateId ?? option.item_template_id) === targetItemTemplateId) || null, [resultOptions, targetItemTemplateId]);
+  const targetSlots = useMemo(() => [...new Set(resultOptions.map((option: any) => String(option.slot || '')).filter(Boolean))]
+    .sort((left, right) => itemSlotLabel(left).localeCompare(itemSlotLabel(right), 'ru')), [resultOptions]);
+  const filteredResultOptions = useMemo(() => {
+    const search = targetSearch.trim().toLocaleLowerCase('ru');
+    return resultOptions.filter((option: any) => {
+      if (targetSlot && String(option.slot || '') !== targetSlot) return false;
+      return !search || String(option.name || '').toLocaleLowerCase('ru').includes(search);
+    });
+  }, [resultOptions, targetSearch, targetSlot]);
   const createMaxAttempts = useMemo(() => {
     if (!activeRecipe) return 0;
     const required = new Map<string, number>();
@@ -255,6 +271,8 @@ export default function CraftPage() {
     setCreateQuantity(1);
     setCreateMaximum(false);
     setTargetItemTemplateId(null);
+    setTargetSearch('');
+    setTargetSlot('');
   }, [activeRecipe?.id]);
 
   useEffect(() => {
@@ -601,7 +619,7 @@ export default function CraftPage() {
       {TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`flex-shrink-0 min-h-10 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer border ${tab === t.id ? 'bg-[#7c3aed] text-white border-[#7c3aed]' : 'bg-[var(--color-bg-secondary)] border-[var(--color-border-light)] text-[var(--color-text-secondary)]'}`}><span className="mr-1">{t.icon}</span>{t.label}</button>)}
     </div>
 
-    {tab === 'create' && <div className="grid md:grid-cols-[1fr_260px] gap-4">
+    {tab === 'create' && <div className={`grid gap-4 ${activeRecipe?.result_type === 'random_item' ? 'md:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)]' : 'md:grid-cols-[1fr_260px]'}`}>
       <div><RecipeList groupedRecipes={groupedRecipes} openCategories={openCategories} activeRecipe={activeRecipe} onToggleCategory={cat => setOpenCategories(p => ({ ...p, [cat]: !p[cat] }))} onRecipeClick={setActiveRecipe} /></div>
       <Card><h2 className="font-bold mb-2">Создание</h2>{activeRecipe ? <>
         <p className="text-sm font-bold">{activeRecipe.name}</p>
@@ -624,13 +642,32 @@ export default function CraftPage() {
           <p className="text-xs font-bold mb-1">Целевой предмет</p>
           <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">Выберите предмет для автоматического поиска или оставьте создание без цели.</p>
           <button type="button" onClick={() => setTargetItemTemplateId(null)} className={`w-full rounded-lg border p-2 mb-2 text-xs font-bold cursor-pointer ${!targetItemTemplateId ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>Без цели — одна попытка</button>
-          <div className="grid grid-cols-2 gap-2">{resultOptions.map((option: any) => {
-            const optionId = String(option.id ?? option.templateId ?? option.item_template_id);
-            const selected = optionId === targetItemTemplateId;
-            return <button key={optionId} type="button" onClick={() => setTargetItemTemplateId(optionId)} {...tooltipEvents(option, showItemTooltip, hideItemTooltip)} className={`min-w-0 rounded-lg border p-2 text-left cursor-pointer bg-[var(--color-bg-card)] ${selected ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>
-              <div className="flex items-center gap-2 min-w-0"><ItemIcon color={option.rarity_color || activeRecipe.result?.rarity_color || '#777'} image={option.image} name={option.name || '?'} size="md" /><span className="text-xs font-bold truncate">{selected ? '✓ ' : ''}{option.name}</span></div>
-            </button>;
-          })}</div>
+          <div className="grid sm:grid-cols-[minmax(0,1fr)_170px] gap-2 mb-2">
+            <label className="text-[0.65rem] text-[var(--color-text-muted)]">Поиск по названию
+              <input className={inputClass + ' mt-1'} type="search" value={targetSearch} onChange={event => setTargetSearch(event.target.value)} placeholder="Введите хотя бы 1 символ" />
+            </label>
+            <label className="text-[0.65rem] text-[var(--color-text-muted)]">Тип предмета
+              <select className={inputClass + ' mt-1'} value={targetSlot} onChange={event => setTargetSlot(event.target.value)}>
+                <option value="">Все типы</option>
+                {targetSlots.map(slot => <option key={slot} value={slot}>{itemSlotLabel(slot)}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-input)] overflow-hidden">
+            <div data-target-list className="max-h-[280px] overflow-y-auto overscroll-contain divide-y divide-[var(--color-border-light)]">
+              {filteredResultOptions.map((option: any) => {
+                const optionId = String(option.id ?? option.templateId ?? option.item_template_id);
+                const selected = optionId === targetItemTemplateId;
+                return <button data-target-option key={optionId} type="button" onClick={() => setTargetItemTemplateId(optionId)} {...tooltipEvents(option, showItemTooltip, hideItemTooltip)} className={`w-full min-h-14 px-3 py-2 text-left cursor-pointer flex items-center gap-3 transition-colors ${selected ? 'bg-[#f59e0b] text-black' : 'bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)]'}`}>
+                  <ItemIcon color={option.rarity_color || activeRecipe.result?.rarity_color || '#777'} image={option.image} name={option.name || '?'} size="md" />
+                  <span className="min-w-0 flex-1"><span className="block text-xs font-bold truncate">{option.name}</span><span className={`block text-[0.65rem] ${selected ? 'text-[#3f2b00]' : 'text-[var(--color-text-muted)]'}`}>{itemSlotLabel(String(option.slot || ''))}</span></span>
+                  <span className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 ${selected ? 'border-black bg-black text-white' : 'border-[var(--color-border-default)] text-transparent'}`}>✓</span>
+                </button>;
+              })}
+              {!filteredResultOptions.length && <div className="min-h-14 px-3 py-4 text-center text-xs text-[var(--color-text-muted)]">Подходящие предметы не найдены.</div>}
+            </div>
+          </div>
+          <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Показано: {filteredResultOptions.length} из {resultOptions.length}. В списке одновременно видно не более пяти предметов.</p>
           <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-2">Каждая попытка расходует ресурсы, даже если создание не удалось. Успешно созданные неподходящие предметы автоматически разбираются.</p>
           {selectedResultOption && <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-1">Шанс получить цель за попытку зависит от шанса создания и равномерного выбора среди {resultOptions.length} предметов. Точное значение показывается в процессе.</p>}
           {selectedResultOption && createMaxAttempts < 1 && <p className="text-xs text-[var(--color-accent-danger)] mt-2">Недостаточно ресурсов или серебра даже для одной попытки.</p>}
