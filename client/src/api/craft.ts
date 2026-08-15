@@ -65,10 +65,3 @@ export async function reforgeItem(itemId: string | number, fromStat: string, toS
     });
     return readJson(res, 'Ошибка перековки');
 }
-
-export async function disassembleStone(itemId: string | number) {
-    const res = await fetch(`${BASE_URL}/craft/disassemble`, {
-        method: 'POST', headers: getHeaders(), body: JSON.stringify({ itemId }),
-    });
-    return readJson(res, 'Ошибка разбора камня');
-}

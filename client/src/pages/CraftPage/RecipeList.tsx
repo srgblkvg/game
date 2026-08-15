@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ItemIcon from '../../components/ui/ItemIcon';
 import ItemTooltip from '../../components/ItemTooltip';
 
@@ -12,6 +12,7 @@ interface Props {
 
 export default function RecipeList({ groupedRecipes, openCategories, activeRecipe, onToggleCategory, onRecipeClick }: Props) {
   const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
+  const touchTimer = useRef<number | null>(null);
 
   // Туториал: раскрыть случайный Хлам-рецепт
   useEffect(() => {
@@ -34,7 +35,7 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
 
   const handleMouseEnter = (e: React.MouseEvent, recipe: any) => {
     const rtype = recipe.result_type;
-    if (recipe.result && rtype !== 'random_item' && rtype !== 'craft_item') {
+    if (recipe.result && rtype !== 'random_item') {
       setTooltip({ item: recipe.result, x: e.clientX, y: e.clientY });
     }
   };
@@ -42,6 +43,17 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
     if (tooltip) setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
   };
   const handleMouseLeave = () => setTooltip(null);
+  const handleTouchStart = (e: React.TouchEvent, recipe: any) => {
+    const rtype = recipe.result_type;
+    if (!recipe.result || rtype === 'random_item') return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchTimer.current = window.setTimeout(() => setTooltip({ item: recipe.result, x: touch.clientX, y: touch.clientY }), 500);
+  };
+  const cancelTouch = () => {
+    if (touchTimer.current !== null) window.clearTimeout(touchTimer.current);
+    touchTimer.current = null;
+  };
 
   return (
     <div className="mb-4 max-h-[400px] overflow-y-auto bg-[var(--color-bg-secondary)] rounded-lg p-2">
@@ -65,6 +77,9 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
                   onMouseEnter={(e) => handleMouseEnter(e, recipe)}
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
+                  onTouchStart={(e) => handleTouchStart(e, recipe)}
+                  onTouchMove={cancelTouch}
+                  onTouchEnd={cancelTouch}
                   className={`flex items-center justify-between py-1 px-2 border-b border-[var(--color-border-light)] text-xs cursor-pointer ${
                     activeRecipe?.id === recipe.id ? 'bg-[var(--color-bg-card-hover)]' : 'bg-transparent'
                   }`}
