@@ -6,7 +6,7 @@ import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty, broadcast } from '../events';
 import { addToTreasury } from '../game/treasury';
-import { applyReforge, getReforgeCost, planBatchForge, type UpgradeRule } from '../game/craftOperations';
+import { applyReforge, curseMeetsTarget, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, type UpgradeRule } from '../game/craftOperations';
 
 const router = Router();
 
@@ -455,6 +455,66 @@ function rollCurse() {
     return { rank: rank.rank, name: rank.name, color: rank.color, stat, value };
 }
 
+// Одна атомарная попытка целевого проклятия: списание и сохранение результата в одной транзакции.
+router.post('/craft/curse-target-attempt', async (req, res) => {
+    const { itemId, crystalId, targetStat, minimumRank, random } = req.body;
+    const normalizedStat = targetStat || null;
+    const normalizedRank = minimumRank == null || minimumRank === '' ? null : Number(minimumRank);
+    if (!random && ((normalizedStat !== null && !['s', 'a', 'd', 'm'].includes(normalizedStat))
+        || (normalizedRank !== null && (!Number.isInteger(normalizedRank) || normalizedRank < 1 || normalizedRank > 5)))) {
+        return res.status(400).json({ error: 'Укажите характеристику и ранг проклятия' });
+    }
+    try {
+        const result = await db.tx(async client => {
+            const locked = await client.query('SELECT inventory, money FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
+            const user = locked.rows[0];
+            if (!user) throw new Error('Игрок не найден');
+            if (Number(user.money) < CURSE_COST) throw new Error(`Недостаточно серебра. Нужно ${CURSE_COST.toLocaleString()}`);
+            const inventory: any[] = JSON.parse(user.inventory || '[]');
+            const itemIndex = inventory.findIndex(item => !isCraftItem(item) && String(item.id) === String(itemId));
+            if (itemIndex === -1) throw new Error('Предмет не найден в инвентаре');
+            if (inventory[itemIndex].pendingCurse) throw new Error('Сначала выберите результат предыдущего проклятия');
+            const crystalIndex = inventory.findIndex(item => isCraftItem(item)
+                && String(item.id) === String(crystalId) && item.itemType === 'soul_crystal');
+            if (crystalIndex === -1) throw new Error('Кристалл душ не найден в инвентаре');
+
+            const curse = rollCurse();
+            const matched = random || curseMeetsTarget(curse, normalizedStat, normalizedRank);
+            const item = { ...inventory[itemIndex] };
+            const currentCurse = item.curseStat
+                ? { stat: String(item.curseStat), rank: Number(item.curseRank || 1) }
+                : null;
+            const applied = random || shouldApplyCurseCandidate(currentCurse, curse, normalizedStat, normalizedRank);
+            if (applied) {
+                item.curseStat = curse.stat;
+                item.curseValue = curse.value;
+                item.curseRank = curse.rank;
+                item.curseName = curse.name;
+                item.curseColor = curse.color;
+                inventory[itemIndex] = item;
+            }
+            const crystal = inventory[crystalIndex];
+            if (Number(crystal.count) > 1) inventory[crystalIndex] = { ...crystal, count: Number(crystal.count) - 1 };
+            else inventory.splice(crystalIndex, 1);
+            const moneyAfter = Number(user.money) - CURSE_COST;
+            await client.query(
+                'UPDATE users SET inventory = $1, money = $2, craftcount = craftcount + 1 WHERE id = $3',
+                [JSON.stringify(inventory), moneyAfter, req.userId]
+            );
+            const statName = CURSE_STATS[curse.stat] || curse.stat;
+            return {
+                inventory, moneyAfter, matched, applied,
+                curse: { stat: curse.stat, statName, value: curse.value, rank: curse.rank, name: curse.name, color: curse.color },
+            };
+        });
+        checkAchievement(req.userId!, 'craft').catch(() => {});
+        markDirty(req.userId!, 'quests');
+        return res.json({ success: true, ...result });
+    } catch (error: any) {
+        return res.status(400).json({ error: error.message || 'Ошибка проклятия' });
+    }
+});
+
 // Проклятие предмета — списание ресурсов + превью результата
 router.post('/craft/curse', async (req, res) => {
     const userId = req.userId;
@@ -466,8 +526,10 @@ router.post('/craft/curse', async (req, res) => {
     if (user.money < CURSE_COST) return res.status(400).json({ error: `Недостаточно серебра. Нужно ${CURSE_COST.toLocaleString()}` });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
-    const item = inventory.find((i: any) => i.id === itemId && !isCraftItem(i));
-    if (!item) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
+    const itemIdx = inventory.findIndex((i: any) => String(i.id) === String(itemId) && !isCraftItem(i));
+    if (itemIdx === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
+    const item = { ...inventory[itemIdx] };
+    if (item.pendingCurse) return res.status(400).json({ error: 'Сначала выберите результат предыдущего проклятия' });
 
     const crystalIdx = inventory.findIndex((i: any) => isCraftItem(i) && i.id === crystalId && i.itemType === 'soul_crystal');
     if (crystalIdx === -1) return res.status(400).json({ error: 'Кристалл душ не найден в инвентаре' });
@@ -490,6 +552,16 @@ router.post('/craft/curse', async (req, res) => {
     const curse = rollCurse();
     const statName = (CURSE_STATS as Record<string, string>)[curse.stat] || curse.stat;
 
+    if (oldCurse) item.pendingCurse = curse;
+    else {
+        item.curseStat = curse.stat;
+        item.curseValue = curse.value;
+        item.curseRank = curse.rank;
+        item.curseName = curse.name;
+        item.curseColor = curse.color;
+    }
+    inventory[itemIdx] = item;
+
     await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1 WHERE id = ?',
         [JSON.stringify(inventory), newMoney, userId]);
     checkAchievement(userId, 'craft').catch(() => {});
@@ -498,25 +570,29 @@ router.post('/craft/curse', async (req, res) => {
         oldCurse,
         newCurse: { stat: curse.stat, statName, value: curse.value, rank: curse.rank, name: curse.name, color: curse.color },
         needsConfirm: !!oldCurse,
+        inventory,
+        moneyAfter: newMoney,
     });
 });
 
 // Применить проклятие (ресурсы уже списаны на /craft/curse)
 router.post('/craft/curse/apply', async (req, res) => {
     const userId = req.userId;
-    const { itemId, curse: curseData, keepOld } = req.body;
+    const { itemId, keepOld } = req.body;
 
     const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const inventory: any[] = JSON.parse(user.inventory || '[]');
 
-    const itemIdx = inventory.findIndex((i: any) => i.id === itemId && !isCraftItem(i));
+    const itemIdx = inventory.findIndex((i: any) => String(i.id) === String(itemId) && !isCraftItem(i));
     if (itemIdx === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
 
     const item = { ...inventory[itemIdx] };
+    const curseData = item.pendingCurse;
+    if (!curseData) return res.status(400).json({ error: 'Нет ожидающего результата проклятия' });
 
-    // Применяем проклятие только если не keepOld
+    // Применяем ожидающее проклятие только если не keepOld
     if (!keepOld && curseData) {
         item.curseStat = curseData.stat;
         item.curseValue = curseData.value;
@@ -524,6 +600,7 @@ router.post('/craft/curse/apply', async (req, res) => {
         item.curseName = curseData.name;
         item.curseColor = curseData.color;
     }
+    delete item.pendingCurse;
 
     inventory[itemIdx] = item;
 

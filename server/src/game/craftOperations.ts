@@ -34,6 +34,49 @@ const REFORGE_BASE_COST: Record<number, number> = {
 };
 
 const REFORGE_REPEAT_MULTIPLIERS = [1, 1.5, 2, 3] as const;
+const CURSE_RANK_WEIGHTS = [160, 24, 12, 3, 1] as const;
+
+export interface CurseResult {
+  stat: string;
+  rank: number;
+}
+
+export function curseMeetsTarget(curse: CurseResult, targetStat: string | null, minimumRank: number | null): boolean {
+  const statMatches = !targetStat || curse.stat === targetStat;
+  const rankMatches = minimumRank == null || Number(curse.rank) >= Number(minimumRank);
+  return statMatches && rankMatches;
+}
+
+export function shouldApplyCurseCandidate(
+  current: CurseResult | null,
+  candidate: CurseResult,
+  targetStat: string | null,
+  targetRank: number | null,
+): boolean {
+  if (!current) return true;
+  if (targetStat) {
+    const currentStatMatch = current.stat === targetStat;
+    const candidateStatMatch = candidate.stat === targetStat;
+    if (candidateStatMatch !== currentStatMatch) return candidateStatMatch;
+  }
+  if (targetRank == null) return false;
+  const currentDistance = Math.abs(Number(current.rank) - Number(targetRank));
+  const candidateDistance = Math.abs(Number(candidate.rank) - Number(targetRank));
+  if (candidateDistance !== currentDistance) return candidateDistance < currentDistance;
+  return Number(candidate.rank) > Number(current.rank);
+}
+
+export function getTargetCurseChance(targetStat: string, minimumRank: number, attempts: number): number {
+  if (!['s', 'a', 'd', 'm'].includes(targetStat)) throw new Error('Неизвестная характеристика проклятия');
+  const rank = Number(minimumRank);
+  const limit = Number(attempts);
+  if (!Number.isInteger(rank) || rank < 1 || rank > 5) throw new Error('Ранг проклятия должен быть от I до V');
+  if (!Number.isInteger(limit) || limit < 1) throw new Error('Лимит попыток должен быть положительным');
+  const totalWeight = CURSE_RANK_WEIGHTS.reduce((sum, weight) => sum + weight, 0);
+  const acceptableWeight = CURSE_RANK_WEIGHTS.slice(rank - 1).reduce((sum, weight) => sum + weight, 0);
+  const oneAttempt = acceptableWeight / totalWeight / 4;
+  return Math.round((1 - Math.pow(1 - oneAttempt, limit)) * 1000) / 10;
+}
 
 function statGroup(stat: string): 'primary' | 'extra' | null {
   if ((PRIMARY_STATS as readonly string[]).includes(stat)) return 'primary';

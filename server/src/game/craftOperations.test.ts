@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   applyReforge,
+  curseMeetsTarget,
+  getTargetCurseChance,
+  shouldApplyCurseCandidate,
   getReforgeCost,
   planBatchForge,
   type UpgradeRule,
@@ -96,4 +99,35 @@ test('план ковки отклоняет дубли и неверный це
   assert.throws(() => planBatchForge([
     { item: { id: 3, rarity_id: 6, upgradeLevel: 5 }, targetLevel: 5 },
   ], rules), /выше текущего/i);
+});
+
+test('целевое проклятие принимает выбранную характеристику и ранг не ниже требуемого', () => {
+  assert.equal(curseMeetsTarget({ stat: 's', rank: 3 }, 's', 3), true);
+  assert.equal(curseMeetsTarget({ stat: 's', rank: 5 }, 's', 3), true);
+  assert.equal(curseMeetsTarget({ stat: 'a', rank: 5 }, 's', 3), false);
+  assert.equal(curseMeetsTarget({ stat: 's', rank: 2 }, 's', 3), false);
+});
+
+test('вероятность целевого проклятия учитывает характеристику, минимальный ранг и лимит', () => {
+  const oneAttempt = getTargetCurseChance('s', 3, 1);
+  const tenAttempts = getTargetCurseChance('s', 3, 10);
+  assert.equal(oneAttempt, 2);
+  assert.ok(tenAttempts > oneAttempt);
+  assert.ok(tenAttempts < 100);
+});
+
+test('поиск проклятия сначала улучшает характеристику, затем приближает ранг', () => {
+  assert.equal(shouldApplyCurseCandidate(null, { stat: 'a', rank: 1 }, 's', 4), true);
+  assert.equal(shouldApplyCurseCandidate({ stat: 'a', rank: 5 }, { stat: 's', rank: 1 }, 's', 4), true);
+  assert.equal(shouldApplyCurseCandidate({ stat: 's', rank: 1 }, { stat: 'a', rank: 4 }, 's', 4), false);
+  assert.equal(shouldApplyCurseCandidate({ stat: 's', rank: 1 }, { stat: 's', rank: 3 }, 's', 4), true);
+  assert.equal(shouldApplyCurseCandidate({ stat: 's', rank: 3 }, { stat: 's', rank: 2 }, 's', 4), false);
+});
+
+test('цель проклятия позволяет выбрать только характеристику, только ранг или ничего', () => {
+  assert.equal(curseMeetsTarget({ stat: 's', rank: 1 }, 's', null), true);
+  assert.equal(curseMeetsTarget({ stat: 'a', rank: 4 }, null, 4), true);
+  assert.equal(curseMeetsTarget({ stat: 'a', rank: 1 }, null, null), true);
+  assert.equal(shouldApplyCurseCandidate({ stat: 'a', rank: 5 }, { stat: 's', rank: 1 }, 's', null), true);
+  assert.equal(shouldApplyCurseCandidate({ stat: 'a', rank: 2 }, { stat: 'm', rank: 4 }, null, 5), true);
 });

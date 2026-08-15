@@ -13,7 +13,6 @@ import { salvageItems } from '../api';
 
 import { getHeaders } from '../api/helpers';
 import {
-  batchForge,
   fetchRecipes,
   fetchReforgeInfo,
   fetchUpgradeInfo,
@@ -25,6 +24,8 @@ import { isCraftItem } from '../utils/itemUtils';
 import { formatMoney } from '../utils/money';
 import RecipeList from './CraftPage/RecipeList';
 import CraftPacks from './CraftPage/CraftPacks';
+import CraftPopup from './CraftPage/CraftPopup';
+import OperationProgressModal, { type OperationEntry } from './CraftPage/OperationProgressModal';
 
 type Tab = 'create' | 'forge' | 'curse' | 'reforge' | 'salvage';
 const TABS: Array<{ id: Tab; label: string; icon: string }> = [
@@ -38,6 +39,20 @@ const PRIMARY: Record<string, string> = { s: 'Сила', a: 'Ловкость', 
 const EXTRA: Record<string, string> = { crit: 'Критический удар', dodge: 'Уклонение', counter: 'Контратака', fullBlock: 'Полный блок' };
 const inputClass = 'w-full bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)]';
 const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
+const CURSE_RANKS = [
+  { rank: 1, name: 'I', color: '#22c55e', chance: 80 },
+  { rank: 2, name: 'II', color: '#3b82f6', chance: 12 },
+  { rank: 3, name: 'III', color: '#a855f7', chance: 6 },
+  { rank: 4, name: 'IV', color: '#f97316', chance: 1.5 },
+  { rank: 5, name: 'V', color: '#ef4444', chance: 0.5 },
+];
+
+type ProgressState = {
+  title: string;
+  entries: OperationEntry[];
+  stepKey: number;
+  stepResult: { success: boolean; message: string } | null;
+};
 
 function objectField(value: unknown): Record<string, any> {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -122,6 +137,10 @@ export default function CraftPage() {
   const [busy, setBusy] = useState(false);
   const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
   const tooltipShownAt = useRef(0);
+  const [craftResult, setCraftResult] = useState<{ success: boolean; label: string; message: string } | null>(null);
+  const [progressState, setProgressState] = useState<ProgressState | null>(null);
+  const operationContinueRef = useRef<(() => void) | null>(null);
+  const stopRequestedRef = useRef(false);
 
   const [forgeItems, setForgeItems] = useState<Record<string, number>>({});
   const [forgeStone, setForgeStone] = useState<any>(null);
@@ -129,9 +148,14 @@ export default function CraftPage() {
   const [singleForge, setSingleForge] = useState(true);
   const [singleInfo, setSingleInfo] = useState<any>(null);
 
-  const [curseItem, setCurseItem] = useState<any>(null);
+  const [curseItems, setCurseItems] = useState<Set<string>>(new Set());
+  const [curseMode, setCurseMode] = useState<'random' | 'target'>('random');
+  const [singleCurse, setSingleCurse] = useState(true);
   const [curseCrystal, setCurseCrystal] = useState<any>(null);
-  const [curseConfirm, setCurseConfirm] = useState<any>(null);
+  const [curseStat, setCurseStat] = useState('');
+  const [curseRank, setCurseRank] = useState(0);
+  const [curseAttempts, setCurseAttempts] = useState(10);
+  const [randomCurseRoll, setRandomCurseRoll] = useState<any>(null);
 
   const [reforgeItemState, setReforgeItemState] = useState<any>(null);
   const [fromStat, setFromStat] = useState('');
@@ -202,7 +226,8 @@ export default function CraftPage() {
     try {
       const res = await fetch('/api/craft/execute', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ recipe_id: activeRecipe.id }) });
       const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Ошибка создания');
-      updateCharacter(data); showToast(data.message || (data.success ? 'Предмет создан' : 'Создание не удалось'), data.success ? 'success' : 'warning');
+      updateCharacter(data);
+      setCraftResult({ success: !!data.success, label: `Создание: ${activeRecipe.name}`, message: data.message || (data.success ? 'Предмет создан' : 'Создание не удалось') });
     } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
   };
 
@@ -219,38 +244,137 @@ export default function CraftPage() {
   const runForge = async () => {
     if (!forgeStone || !Object.keys(forgeItems).length) return;
     setBusy(true);
+    stopRequestedRef.current = false;
+    const plans = Object.entries(forgeItems).map(([id, target]) => {
+      const item = equipment.find((entry: any) => String(entry.id) === id);
+      return { id, target, item: { ...item } };
+    }).filter(plan => plan.item?.id);
+    let latestInventory = inventory;
+    let latestMoney = character!.money;
+    const entries: OperationEntry[] = plans.map(plan => ({ id: plan.id, name: plan.item.name, detail: `+${plan.item.upgradeLevel || 0} → +${plan.target}`, status: 'pending' }));
+    setProgressState({ title: 'Пошаговое улучшение', entries, stepKey: 0, stepResult: null });
     try {
-      if (singleForge) {
-        const id = Object.keys(forgeItems)[0];
-        const item = equipment.find((i: any) => String(i.id) === id);
-        const data = await upgradeItem([item, { ...forgeStone, count: 1 }]);
-        updateCharacter(data); showToast(data.message, data.success ? 'success' : 'warning');
-      } else {
-        if (!forgePreview) throw new Error('Не удалось рассчитать улучшение');
-        const selections = Object.entries(forgeItems).map(([itemId, targetLevel]) => ({ itemId, targetLevel }));
-        const data = await batchForge(selections, forgeStone.id);
-        updateCharacter(data);
-        const destroyed = data.results.filter((r: any) => r.destroyed).length;
-        showToast(`Улучшение завершено. Камней использовано: ${data.stonesUsed}${destroyed ? `. Разрушено предметов: ${destroyed}` : ''}`, destroyed ? 'warning' : 'success');
+      for (const plan of plans) {
+        let current = plan.item;
+        while (Number(current.upgradeLevel || 0) < plan.target && !stopRequestedRef.current) {
+          const liveStone = latestInventory.find((entry: any) => isCraftItem(entry) && String(entry.id) === String(forgeStone.id) && entry.itemType === 'upgrade');
+          if (!liveStone || Number(liveStone.count || 0) < 1) {
+            entries.find(entry => entry.id === plan.id)!.result = 'Недостаточно камней';
+            stopRequestedRef.current = true;
+            break;
+          }
+          const active = entries.find(entry => entry.id === plan.id)!;
+          active.status = 'active'; active.detail = `Попытка +${Number(current.upgradeLevel || 0) + 1}`;
+          setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepResult: null }));
+          const data = await upgradeItem([current, { ...liveStone, count: 1 }]);
+          latestInventory = data.inventory; latestMoney = data.moneyAfter ?? latestMoney;
+          setCharacter(prev => prev ? ({ ...prev, inventory: latestInventory, money: latestMoney }) : prev);
+          const nextItem = latestInventory.find((entry: any) => !isCraftItem(entry) && String(entry.id) === plan.id);
+          active.result = data.message;
+          active.detail = nextItem ? `Текущий уровень: +${nextItem.upgradeLevel || 0}` : 'Предмет разрушен';
+          setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepKey: prev.stepKey + 1, stepResult: { success: !!data.success, message: data.message } }));
+          await new Promise<void>(resolve => { operationContinueRef.current = resolve; });
+          operationContinueRef.current = null;
+          if (!nextItem) { active.status = 'failure'; break; }
+          current = nextItem;
+          if (Number(current.upgradeLevel || 0) >= plan.target) active.status = 'success';
+          else active.status = 'pending';
+        }
+        const entry = entries.find(row => row.id === plan.id)!;
+        if (entry.status === 'pending' && stopRequestedRef.current) entry.status = 'stopped';
       }
+      entries.forEach(entry => { if (entry.status === 'pending') entry.status = stopRequestedRef.current ? 'stopped' : 'success'; });
+      showToast(stopRequestedRef.current ? 'Улучшение остановлено' : 'Улучшение завершено', stopRequestedRef.current ? 'warning' : 'success');
       setForgeItems({}); setForgePreview(null); setForgeStone(null); setSingleInfo(null);
-    } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
+    } catch (e: any) { showToast(e.message); } finally { setBusy(false); setProgressState(null); operationContinueRef.current = null; }
   };
 
-  const cursePreview = async () => {
-    if (!curseItem || !curseCrystal) return;
+  const toggleCurse = (item: any) => {
+    const id = String(item.id);
+    setCurseItems(prev => {
+      if (singleCurse) return new Set([id]);
+      const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next;
+    });
+  };
+
+  const runCurse = async () => {
+    if (!curseItems.size || !curseCrystal) return;
+    const isSingleRandom = curseMode === 'random' || (!curseStat && !curseRank);
+    if (isSingleRandom) {
+      const itemId = [...curseItems][0];
+      setBusy(true);
+      try {
+        const response = await fetch('/api/craft/curse', {
+          method: 'POST', headers: getHeaders(),
+          body: JSON.stringify({ itemId, crystalId: curseCrystal.id }),
+        });
+        const rolled = await response.json();
+        if (!response.ok) throw new Error(rolled.error || 'Ошибка проклятия');
+        updateCharacter(rolled);
+        setRandomCurseRoll({ ...rolled, itemId });
+        setCraftResult({ success: true, label: 'Наложение проклятия', message: `Выпало: +${rolled.newCurse.value} ${rolled.newCurse.statName}, ранг ${rolled.newCurse.name}` });
+      } catch (error: any) { showToast(error.message); }
+      finally { setBusy(false); }
+      return;
+    }
+    setBusy(true);
+    stopRequestedRef.current = false;
+    const selected = [...curseItems].map(id => equipment.find((item: any) => String(item.id) === id)).filter(Boolean);
+    const targetDescription = [curseStat ? PRIMARY[curseStat] : '', curseRank ? `ранг ${CURSE_RANKS[curseRank - 1].name}+` : ''].filter(Boolean).join(', ');
+    const entries: OperationEntry[] = selected.map(item => ({ id: String(item.id), name: item.name, detail: `Цель: ${targetDescription}`, status: 'pending' }));
+    setProgressState({ title: 'Пошаговое проклятие', entries, stepKey: 0, stepResult: null });
+    let latestInventory = inventory;
+    let latestMoney = character!.money;
+    try {
+      for (const item of selected) {
+        const entry = entries.find(row => row.id === String(item.id))!;
+        const attemptLimit = curseAttempts;
+        for (let attempt = 1; attempt <= attemptLimit && !stopRequestedRef.current; attempt++) {
+          const crystal = latestInventory.find((row: any) => isCraftItem(row) && row.itemType === 'soul_crystal' && String(row.id) === String(curseCrystal.id));
+          if (!crystal || Number(crystal.count || 0) < 1 || latestMoney < 100000) { entry.result = 'Недостаточно ресурсов'; stopRequestedRef.current = true; break; }
+          entry.status = 'active'; entry.detail = `Попытка ${attempt} из ${attemptLimit}`;
+          setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepResult: null }));
+          const attemptRes = await fetch('/api/craft/curse-target-attempt', {
+            method: 'POST', headers: getHeaders(),
+            body: JSON.stringify({ itemId: item.id, crystalId: crystal.id, targetStat: curseStat || null, minimumRank: curseRank || null, random: false }),
+          });
+          const attemptData = await attemptRes.json();
+          if (!attemptRes.ok) throw new Error(attemptData.error || 'Ошибка проклятия');
+          const meets = !!attemptData.matched;
+          const appliedCandidate = !!attemptData.applied;
+          const preview = { newCurse: attemptData.curse };
+          latestInventory = attemptData.inventory; latestMoney = attemptData.moneyAfter;
+          setCharacter(prev => prev ? ({ ...prev, inventory: latestInventory, money: latestMoney }) : prev);
+          const rolled = `Ранг ${preview.newCurse.name}: +${preview.newCurse.value} ${preview.newCurse.statName}`;
+          entry.result = meets ? `${rolled} — цель достигнута` : appliedCandidate ? `${rolled} — применено как ближайшее к цели` : `${rolled} — оставлено более близкое текущее проклятие`;
+          setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepKey: prev.stepKey + 1, stepResult: { success: meets, message: entry.result! } }));
+          await new Promise<void>(resolve => { operationContinueRef.current = resolve; }); operationContinueRef.current = null;
+          if (meets) { entry.status = 'success'; break; }
+          entry.status = attempt === attemptLimit ? 'failure' : 'pending';
+        }
+        if (entry.status === 'pending' && stopRequestedRef.current) entry.status = 'stopped';
+      }
+      entries.forEach(entry => { if (entry.status === 'pending') entry.status = 'stopped'; });
+      showToast(stopRequestedRef.current ? 'Проклятие остановлено' : 'Проклятие завершено', stopRequestedRef.current ? 'warning' : 'success');
+      setCurseItems(new Set()); setCurseCrystal(null);
+    } catch (e: any) { showToast(e.message); } finally { setBusy(false); setProgressState(null); operationContinueRef.current = null; }
+  };
+
+  const resolveRandomCurse = async (keepOld: boolean) => {
+    if (!randomCurseRoll) return;
     setBusy(true);
     try {
-      const res = await fetch('/api/craft/curse', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ itemId: curseItem.id, crystalId: curseCrystal.id }) });
-      const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Ошибка проклятия');
-      if (data.needsConfirm) setCurseConfirm(data);
-      else await applyCurse(data.newCurse, false);
-    } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
-  };
-  const applyCurse = async (curse: any, keepOld: boolean) => {
-    const res = await fetch('/api/craft/curse/apply', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ itemId: curseItem.id, curse, keepOld }) });
-    const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Ошибка применения проклятия');
-    updateCharacter(data); setCurseConfirm(null); setCurseItem(null); setCurseCrystal(null); showToast(data.message, 'success');
+      const response = await fetch('/api/craft/curse/apply', {
+        method: 'POST', headers: getHeaders(),
+        body: JSON.stringify({ itemId: randomCurseRoll.itemId, curse: randomCurseRoll.newCurse, keepOld }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Ошибка применения проклятия');
+      setCharacter(prev => prev ? ({ ...prev, inventory: data.inventory }) : prev);
+      showToast(data.message, 'success');
+      setRandomCurseRoll(null); setCurseItems(new Set()); setCurseCrystal(null);
+    } catch (error: any) { showToast(error.message); }
+    finally { setBusy(false); }
   };
 
   const availableReforgeStats = useMemo(() => {
@@ -314,19 +438,27 @@ export default function CraftPage() {
     {tab === 'forge' && <div className="space-y-4">
       <Card><div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Улучшение</h2><p className="text-xs text-[var(--color-text-muted)]">Усиливайте один предмет или несколько предметов до выбранного уровня.</p></div><div className="flex gap-1"><Button size="sm" variant={singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(true); setForgeItems({}); }}>Один предмет</Button><Button size="sm" variant={!singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(false); setForgeItems({}); }}>Массовое улучшение</Button></div></div></Card>
       <Card><h3 className="font-bold text-sm mb-2">1. Выберите {singleForge ? 'предмет' : 'предметы'}</h3><EquipmentGrid {...gridTooltipProps} items={equipment.filter((i: any) => (i.upgradeLevel || 0) < 10)} selected={new Set(Object.keys(forgeItems))} multi={!singleForge} onSelect={toggleForge} />
-        {!singleForge && Object.entries(forgeItems).map(([id, target]) => { const item = equipment.find((i: any) => String(i.id) === id); return item && <div key={id} className="mt-2 flex items-center gap-2 text-xs"><span className="flex-1 truncate">{item.name} (+{item.upgradeLevel || 0})</span><label>До уровня</label><select className={inputClass + ' !w-20'} value={target} onChange={e => setForgeItems(p => ({ ...p, [id]: Number(e.target.value) }))}>{Array.from({ length: 10 - (item.upgradeLevel || 0) }, (_, n) => n + (item.upgradeLevel || 0) + 1).map(v => <option key={v} value={v}>+{v}</option>)}</select></div>; })}
+        {Object.entries(forgeItems).map(([id, target]) => { const item = equipment.find((i: any) => String(i.id) === id); return item && <div key={id} className="mt-2 flex items-center gap-2 text-xs"><span className="flex-1 truncate">{item.name} (+{item.upgradeLevel || 0})</span><label>Улучшать до</label><select className={inputClass + ' !w-20'} value={target} onChange={e => setForgeItems(p => ({ ...p, [id]: Number(e.target.value) }))}>{Array.from({ length: 10 - (item.upgradeLevel || 0) }, (_, n) => n + (item.upgradeLevel || 0) + 1).map(v => <option key={v} value={v}>+{v}</option>)}</select></div>; })}
       </Card>
       <Card><h3 className="font-bold text-sm mb-2">2. Выберите камень</h3><ResourceGrid {...gridTooltipProps} items={stones} selectedId={forgeStone && String(forgeStone.id)} onSelect={setForgeStone} /></Card>
-      <Card><h3 className="font-bold text-sm mb-2">Расчёт улучшения</h3>{singleForge && singleInfo ? <p className="text-xs">Следующий уровень: шанс {Math.min(100, Number(singleInfo.chance) + Number(singleInfo.factionBonus || 0) + (STONE_BONUS[Number(forgeStone?.rarity_id)] || 0))}% · стоимость {formatMoney(singleInfo.money_cost)}</p> : !singleForge && forgePreview ? <><div className="rounded-lg bg-[var(--color-bg-input)] p-3 mb-3"><p className="text-xs font-bold mb-1">Если все попытки успешны</p><p className="text-xs">Потребуется камней: {forgePreview.requiredStones}</p><p className="text-xs">Стоимость: {formatMoney(forgePreview.totalCost)}</p><p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Это необходимый запас. При первой неудаче улучшение предмета остановится, поэтому фактический расход может быть меньше.</p></div><div className="space-y-2">{forgePreview.entries.map((entry: any) => { const item = equipment.find((i: any) => String(i.id) === String(entry.itemId)); return <div key={entry.itemId} className="rounded-lg border border-[var(--color-border-light)] p-2"><div className="flex justify-between gap-2 text-xs font-bold"><span className="truncate">{item?.name || 'Предмет'}</span><span className="text-[var(--color-accent-warning)]">До цели: {entry.targetChance}%</span></div><div className="flex flex-wrap gap-1 mt-1">{entry.rules.map((rule: any) => <span key={rule.level} className="rounded bg-[var(--color-bg-secondary)] px-2 py-1 text-[0.65rem]">+{rule.level}: {rule.finalChance}%</span>)}</div></div>; })}</div><p className="text-xs text-[var(--color-accent-warning)] mt-2">При неудаче на попытке +7 и выше предмет может разрушиться.</p></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите предметы, целевые уровни и камень.</p>}<Button className="mt-3" size="md" fullWidth disabled={busy || !forgeStone || !Object.keys(forgeItems).length || (!singleForge && !forgePreview)} onClick={runForge}>{busy ? 'Улучшение...' : 'Начать улучшение'}</Button></Card>
+      <Card><h3 className="font-bold text-sm mb-2">Расчёт улучшения</h3>{singleForge && singleInfo ? <><p className="text-xs">Следующий уровень: шанс {Math.min(100, Number(singleInfo.chance) + Number(singleInfo.factionBonus || 0) + (STONE_BONUS[Number(forgeStone?.rarity_id)] || 0))}% · минимальная стоимость {formatMoney(singleInfo.money_cost)}</p><p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Минимум: 1 камень и указанная сумма за одну попытку. При неудачах расход увеличится.</p></> : !singleForge && forgePreview ? <><div className="rounded-lg bg-[var(--color-bg-input)] p-3 mb-3"><p className="text-xs font-bold mb-1">Минимум ресурсов до выбранных уровней</p><p className="text-xs">Минимум камней: {forgePreview.requiredStones}</p><p className="text-xs">Минимум серебра: {formatMoney(forgePreview.totalCost)}</p><p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Расчёт предполагает успех с первой попытки на каждом уровне. При неудачах попытки продолжаются автоматически, поэтому фактический расход будет больше.</p></div><div className="space-y-2">{forgePreview.entries.map((entry: any) => { const item = equipment.find((i: any) => String(i.id) === String(entry.itemId)); return <div key={entry.itemId} className="rounded-lg border border-[var(--color-border-light)] p-2"><div className="flex justify-between gap-2 text-xs font-bold"><span className="truncate">{item?.name || 'Предмет'}</span><span className="text-[var(--color-accent-warning)]">До цели без повторов: {entry.targetChance}%</span></div><div className="flex flex-wrap gap-1 mt-1">{entry.rules.map((rule: any) => <span key={rule.level} className="rounded bg-[var(--color-bg-secondary)] px-2 py-1 text-[0.65rem]">+{rule.level}: {rule.finalChance}%</span>)}</div></div>; })}</div><p className="text-xs text-[var(--color-accent-warning)] mt-2">При неудаче на попытке +7 и выше предмет может разрушиться.</p></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите предметы, целевые уровни и камень.</p>}<Button className="mt-3" size="md" fullWidth disabled={busy || !forgeStone || !Object.keys(forgeItems).length || (!singleForge && !forgePreview)} onClick={runForge}>{busy ? 'Улучшение...' : 'Начать улучшение'}</Button></Card>
     </div>}
 
-    {tab === 'curse' && <div className="space-y-4"><Card><h2 className="font-bold">Проклятие</h2><p className="text-xs text-[var(--color-text-muted)]">Добавляет случайную базовую характеристику. Текущее проклятие можно оставить после просмотра результата.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={new Set(curseItem ? [String(curseItem.id)] : [])} onSelect={setCurseItem} /></Card><Card><h3 className="font-bold text-sm mb-2">2. Выберите Кристалл душ</h3><ResourceGrid {...gridTooltipProps} items={crystals} selectedId={curseCrystal && String(curseCrystal.id)} onSelect={setCurseCrystal} /></Card><Card><p className="text-xs mb-3">Стоимость: {formatMoney(100000)} + 1 Кристалл душ</p><Button size="md" fullWidth className="!bg-[#7c3aed] !text-white" disabled={busy || !curseItem || !curseCrystal || character.money < 100000} onClick={cursePreview}>{busy ? 'Проклятие...' : 'Проклясть'}</Button></Card></div>}
+    {tab === 'curse' && <div className="space-y-4">
+      <Card><h2 className="font-bold">Проклятие</h2><p className="text-xs text-[var(--color-text-muted)]">Каждая попытка полностью случайна и расходует 100 000 серебра и один Кристалл душ. Поиск результата только автоматически повторяет случайные попытки.</p><div className="flex flex-wrap gap-1 mt-3"><Button size="sm" variant={curseMode === 'random' ? 'primary' : 'secondary'} onClick={() => { setCurseMode('random'); setSingleCurse(true); setCurseItems(new Set()); }}>Случайное проклятие</Button><Button size="sm" variant={curseMode === 'target' ? 'primary' : 'secondary'} onClick={() => { setCurseMode('target'); setCurseItems(new Set()); }}>Поиск результата</Button></div>{curseMode === 'target' && <div className="flex gap-1 mt-2"><Button size="sm" variant={singleCurse ? 'primary' : 'secondary'} onClick={() => { setSingleCurse(true); setCurseItems(new Set()); }}>Один предмет</Button><Button size="sm" variant={!singleCurse ? 'primary' : 'secondary'} onClick={() => { setSingleCurse(false); setCurseItems(new Set()); }}>Несколько предметов</Button></div>}</Card>
+      <Card><h3 className="font-bold text-sm mb-2">1. Выберите {curseMode === 'random' || singleCurse ? 'предмет' : 'предметы'}</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={curseItems} multi={curseMode === 'target' && !singleCurse} onSelect={toggleCurse} /></Card>
+      {curseMode === 'target' && <Card><h3 className="font-bold text-sm mb-2">2. Настройте цель</h3><div className="grid sm:grid-cols-3 gap-3"><label className="text-xs">Характеристика<select className={inputClass + ' mt-1'} value={curseStat} onChange={e => setCurseStat(e.target.value)}><option value="">Любая характеристика</option>{Object.entries(PRIMARY).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label className="text-xs">Ранг<select className={inputClass + ' mt-1'} value={curseRank} onChange={e => setCurseRank(Number(e.target.value))}><option value={0}>Любой ранг</option>{CURSE_RANKS.map(rank => <option key={rank.rank} value={rank.rank}>{rank.name} ({rank.chance}%)</option>)}</select></label><label className="text-xs">Попыток на предмет<input className={inputClass + ' mt-1'} type="number" min={1} max={100} value={curseAttempts} disabled={!curseStat && !curseRank} onChange={e => setCurseAttempts(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} /></label></div><div className="flex flex-wrap gap-2 mt-3">{CURSE_RANKS.map(rank => <span key={rank.rank} className="text-xs font-bold" style={{ color: rank.color }}>Ранг {rank.name}: {rank.chance}%</span>)}</div><p className="text-[0.7rem] text-[var(--color-text-muted)] mt-2">Можно выбрать только характеристику, только ранг, оба условия или ничего. Без условий выполняется одна случайная попытка.</p><p className="text-[0.7rem] text-[var(--color-text-muted)] mt-1">Если проклятия нет, применяется первая попытка. Затем сначала сохраняется нужная характеристика, после неё — ранг, ближайший к выбранному.</p></Card>}
+      <Card><h3 className="font-bold text-sm mb-2">{curseMode === 'target' ? '3.' : '2.'} Выберите Кристалл душ</h3><ResourceGrid {...gridTooltipProps} items={crystals} selectedId={curseCrystal && String(curseCrystal.id)} onSelect={setCurseCrystal} /></Card>
+      <Card><p className="text-xs">Минимум на один предмет: {formatMoney(100000)} и 1 Кристалл душ.</p>{curseMode === 'target' && (curseStat || curseRank) && <p className="text-xs">Максимальный запас по лимиту: {formatMoney(100000 * curseAttempts * curseItems.size)} и {curseAttempts * curseItems.size} Кристаллов душ.</p>}<p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1 mb-3">Каждая попытка случайна и отдельно расходует ресурсы. Автоматический поиск остановится при достижении цели, нажатии «Остановить», исчерпании лимита или ресурсов.</p><Button size="md" fullWidth className="!bg-[#7c3aed] !text-white" disabled={busy || !curseItems.size || !curseCrystal || character.money < 100000} onClick={runCurse}>{busy ? 'Проклятие...' : curseMode === 'random' || (!curseStat && !curseRank) ? 'Наложить случайное проклятие' : 'Начать поиск результата'}</Button></Card>
+    </div>}
 
     {tab === 'reforge' && <div className="space-y-4"><Card><h2 className="font-bold">Перековка</h2><p className="text-xs text-[var(--color-text-muted)]">Переносит всё значение одной характеристики в другую характеристику той же группы. Проклятие, комплект и эффект артефакта не меняются.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid {...gridTooltipProps} items={reforgeEquipment} selected={new Set(reforgeItemState ? [String(reforgeItemState.id)] : [])} onSelect={setReforgeItemState} /></Card>{reforgeItemState && <Card><h3 className="font-bold text-sm mb-2">2. Выберите изменение</h3><label className="text-xs">Исходная характеристика</label><select className={inputClass + ' mb-3'} value={fromStat} onChange={e => { setFromStat(e.target.value); setToStat(''); }}><option value="">Выберите</option>{Object.entries(availableReforgeStats).map(([key, s]) => <option key={key} value={key}>{s.label}: +{s.value}</option>)}</select><label className="text-xs">Новая характеристика</label><select className={inputClass} value={toStat} onChange={e => setToStat(e.target.value)}><option value="">Выберите</option>{Object.entries(targetStats).filter(([k]) => k !== fromStat).map(([k, label]) => <option key={k} value={k}>{label}</option>)}</select>{fromStat && toStat && <div className="rounded-lg bg-[var(--color-bg-input)] p-3 text-xs mt-3"><p>Было: {availableReforgeStats[fromStat].label} +{availableReforgeStats[fromStat].value}</p><p className="text-[var(--color-accent-success)]">Станет: {targetStats[toStat]} +{availableReforgeStats[fromStat].value}</p><p className="mt-2">Стоимость: {reforgeInfo ? formatMoney(reforgeInfo.cost) : 'расчёт...'}</p><p>Предыдущих перековок: {reforgeInfo?.reforgeCount || 0}</p></div>}<Button size="md" fullWidth className="mt-3" disabled={busy || !fromStat || !toStat || !reforgeInfo || character.money < reforgeInfo.cost} onClick={runReforge}>{busy ? 'Перековка...' : 'Перековать'}</Button></Card>}</div>}
 
     {tab === 'salvage' && <div className="space-y-4"><Card><h2 className="font-bold">Разборка</h2><p className="text-xs text-[var(--color-text-muted)]">Предмет превращается в материал своей редкости. Камни улучшения разбирать нельзя.</p></Card><Card><h3 className="font-bold text-sm mb-2">Выберите предметы</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={salvageSelected} multi onSelect={item => setSalvageSelected(prev => { const next = new Set(prev); const id = String(item.id); if (next.has(id)) next.delete(id); else next.add(id); return next; })} /></Card><Button variant="danger" size="md" fullWidth disabled={busy || !salvageSelected.size} onClick={runSalvage}>{busy ? 'Разборка...' : `Разобрать${salvageSelected.size ? ` (${salvageSelected.size})` : ''}`}</Button></div>}
 
-    {curseConfirm && <div className="fixed inset-0 z-[1100] flex items-center justify-center"><div className="absolute inset-0 bg-black/60" /><Card className="relative max-w-sm w-full mx-4 text-center"><h3 className="font-bold mb-3">Выберите проклятие</h3><p className="text-xs mb-2">Текущее: +{curseConfirm.oldCurse.value} {curseConfirm.oldCurse.statName} ({curseConfirm.oldCurse.name})</p><p className="text-xs mb-4 text-[var(--color-accent-purple)]">Новое: +{curseConfirm.newCurse.value} {curseConfirm.newCurse.statName} ({curseConfirm.newCurse.name})</p><div className="flex gap-2 justify-center"><Button size="md" variant="secondary" onClick={() => applyCurse(curseConfirm.newCurse, true).catch(e => showToast(e.message))}>Оставить текущее</Button><Button size="md" variant="danger" onClick={() => applyCurse(curseConfirm.newCurse, false).catch(e => showToast(e.message))}>Применить новое</Button></div></Card></div>}
+    {craftResult && <CraftPopup result={craftResult} onDone={() => { if (!randomCurseRoll) showToast(craftResult.message, craftResult.success ? 'success' : 'warning'); setCraftResult(null); }} />}
+    {randomCurseRoll && !craftResult && <div className="fixed inset-0 z-[1100] flex items-center justify-center"><div className="absolute inset-0 bg-black/60" /><Card className="relative max-w-sm w-full mx-4 text-center"><h3 className="font-bold mb-3">Результат проклятия</h3>{randomCurseRoll.oldCurse && <p className="text-xs mb-2">Текущее: +{randomCurseRoll.oldCurse.value} {randomCurseRoll.oldCurse.statName}, ранг {randomCurseRoll.oldCurse.name}</p>}<p className="text-xs mb-4" style={{ color: randomCurseRoll.newCurse.color }}>Новое: +{randomCurseRoll.newCurse.value} {randomCurseRoll.newCurse.statName}, ранг {randomCurseRoll.newCurse.name}</p>{randomCurseRoll.oldCurse ? <div className="flex gap-2 justify-center"><Button size="md" variant="secondary" disabled={busy} onClick={() => resolveRandomCurse(true)}>Оставить старое</Button><Button size="md" variant="danger" disabled={busy} onClick={() => resolveRandomCurse(false)}>Заменить</Button></div> : <Button size="md" disabled={busy} onClick={() => resolveRandomCurse(false)}>Применить</Button>}</Card></div>}
+    {progressState && <OperationProgressModal {...progressState} stopping={stopRequestedRef.current} onStepDone={() => operationContinueRef.current?.()} onStop={() => { stopRequestedRef.current = true; setProgressState(prev => prev && ({ ...prev })); }} />}
     {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />}
   </div>;
 }
