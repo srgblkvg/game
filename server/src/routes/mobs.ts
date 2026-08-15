@@ -351,12 +351,9 @@ router.post('/mob/attack', async (req, res) => {
             }
 
             if (selectedRarity >= 0) {
-            // Туториал: даём материал для крафта (исключаем камни улучшения)
-            const matQuery = isTutorial
-                ? 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? AND c.type != \'upgrade\' ORDER BY RANDOM() LIMIT 1'
-                : mob.level >= 100
-                ? 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? ORDER BY RANDOM() LIMIT 1'
-                : "SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? AND c.type != 'material' ORDER BY RANDOM() LIMIT 1";
+            // Общий ролл выдаёт только обычные материалы ремесла.
+            // Камни, материалы артефактов и Кристалл души имеют отдельные роллы.
+            const matQuery = 'SELECT c.id, c.name, c.rarity_id, c.type, c.image, r.display_name, r.color FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.rarity_id = ? AND c.type = \'craft\' ORDER BY RANDOM() LIMIT 1';
             const craftItem = await db.one(matQuery, [selectedRarity]) as any;
 
             if (craftItem) {
