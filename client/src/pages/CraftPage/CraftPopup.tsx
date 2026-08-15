@@ -24,14 +24,13 @@ export default function CraftPopup({ result, onDone }: Props) {
 
   useEffect(() => {
     finishedRef.current = false;
-    const target = result.success ? 100 : 45;
     const startedAt = performance.now();
     const tick = (now: number) => {
       const elapsed = now - startedAt;
-      setProgress(Math.min(target, (elapsed / 1800) * target));
+      setProgress(Math.min(100, (elapsed / 1800) * 100));
       if (elapsed < 1800) frameRef.current = requestAnimationFrame(tick);
       else {
-        setProgress(target);
+        setProgress(100);
         setPhase('result');
         resultTimerRef.current = window.setTimeout(finish, 1500);
       }
@@ -43,13 +42,15 @@ export default function CraftPopup({ result, onDone }: Props) {
   const skip = () => {
     cancelAnimationFrame(frameRef.current);
     window.clearTimeout(resultTimerRef.current);
-    setProgress(result.success ? 100 : 45);
+    setProgress(100);
     setPhase('result');
     window.setTimeout(finish, 120);
   };
 
   if (phase === 'done') return null;
-  const barColor = result.success ? 'bg-[var(--color-accent-success)]' : progress > 20 ? 'bg-[var(--color-accent-danger)]' : 'bg-[var(--color-accent-success)]';
+  const barColor = phase === 'result'
+    ? result.success ? 'bg-[var(--color-accent-success)]' : 'bg-[var(--color-accent-danger)]'
+    : 'bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f59e0b]';
 
   return <div className="fixed inset-0 z-[1100] flex items-center justify-center">
     <div className="absolute inset-0 bg-black/50" />

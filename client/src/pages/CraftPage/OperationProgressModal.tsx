@@ -79,7 +79,9 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
             <div className="flex justify-between gap-2 text-xs"><span className="font-bold truncate">{entry.name}</span><span className={color}>{entry.detail || (entry.status === 'pending' ? 'Ожидание' : '')}</span></div>
             {active && <>
               <div className="h-3 mt-2 rounded-full overflow-hidden bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
-                <div className={`h-full ${stepResult?.success === false ? 'bg-[var(--color-accent-danger)]' : 'bg-[var(--color-accent-success)]'} ${!stepResult ? 'animate-pulse' : ''}`} style={{ width: `${progress}%` }} />
+                <div className={`h-full ${showResult && stepResult
+                  ? stepResult.success ? 'bg-[var(--color-accent-success)]' : 'bg-[var(--color-accent-danger)]'
+                  : 'bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f59e0b]'} ${!stepResult ? 'animate-pulse' : ''}`} style={{ width: `${progress}%` }} />
               </div>
               {showResult && stepResult && <p className={`text-xs font-bold mt-2 ${stepResult.success ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{stepResult.message}</p>}
             </>}
