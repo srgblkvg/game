@@ -40,18 +40,18 @@ export interface ForgeSelection {
     targetLevel: number;
 }
 
-export async function previewBatchForge(selections: ForgeSelection[]) {
+export async function previewBatchForge(selections: ForgeSelection[], stoneId: string | number) {
     const res = await fetch(`${BASE_URL}/craft/batch-forge/preview`, {
-        method: 'POST', headers: getHeaders(), body: JSON.stringify({ selections }),
+        method: 'POST', headers: getHeaders(), body: JSON.stringify({ selections, stoneId }),
     });
-    return readJson(res, 'Ошибка расчёта массовой ковки');
+    return readJson(res, 'Ошибка расчёта массового улучшения');
 }
 
 export async function batchForge(selections: ForgeSelection[], stoneId: string | number) {
     const res = await fetch(`${BASE_URL}/craft/batch-forge`, {
         method: 'POST', headers: getHeaders(), body: JSON.stringify({ selections, stoneId }),
     });
-    return readJson(res, 'Ошибка массовой ковки');
+    return readJson(res, 'Ошибка массового улучшения');
 }
 
 export async function fetchReforgeInfo(itemId: string | number) {

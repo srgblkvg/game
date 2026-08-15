@@ -614,13 +614,29 @@ async function loadBatchForgePlan(inventory: any[], selections: any[], client?: 
     return planBatchForge(selected, rules);
 }
 
-// Максимальная цена массовой ковки: если все попытки дойдут до цели
+// Необходимый запас и шансы массового улучшения, если все попытки дойдут до цели
 router.post('/craft/batch-forge/preview', async (req, res) => {
-    const user = await db.one('SELECT inventory FROM users WHERE id = ?', [req.userId]) as any;
+    const user = await db.one('SELECT inventory, faction, faction_craft_count FROM users WHERE id = ?', [req.userId]) as any;
     if (!user) return res.status(404).json({ error: 'Игрок не найден' });
     try {
-        const plan = await loadBatchForgePlan(JSON.parse(user.inventory || '[]'), req.body.selections);
-        return res.json(plan);
+        const inventory = JSON.parse(user.inventory || '[]');
+        const stone = inventory.find((item: any) => isCraftItem(item)
+            && String(item.id) === String(req.body.stoneId) && item.itemType === 'upgrade');
+        if (!stone) throw new Error('Выберите камень улучшения');
+        const plan = await loadBatchForgePlan(inventory, req.body.selections);
+        const stoneBonus: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
+        const factionBonus = user.faction === 'crafter'
+            ? 10 + Math.floor(Number(user.faction_craft_count || 0) / 100)
+            : 0;
+        const entries = plan.entries.map(entry => {
+            const rules = entry.rules.map(rule => ({
+                ...rule,
+                finalChance: Math.min(100, rule.chance + (stoneBonus[Number(stone.rarity_id)] || 0) + factionBonus),
+            }));
+            const targetChance = Math.round(rules.reduce((probability, rule) => probability * rule.finalChance / 100, 1) * 1000) / 10;
+            return { ...entry, rules, targetChance };
+        });
+        return res.json({ ...plan, entries, stoneBonus: stoneBonus[Number(stone.rarity_id)] || 0, factionBonus });
     } catch (error: any) {
         return res.status(400).json({ error: error.message });
     }

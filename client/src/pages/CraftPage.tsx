@@ -29,7 +29,7 @@ import CraftPacks from './CraftPage/CraftPacks';
 type Tab = 'create' | 'forge' | 'curse' | 'reforge' | 'salvage';
 const TABS: Array<{ id: Tab; label: string; icon: string }> = [
   { id: 'create', label: 'Создание', icon: '⚗️' },
-  { id: 'forge', label: 'Ковка', icon: '🔨' },
+  { id: 'forge', label: 'Улучшение', icon: '🔨' },
   { id: 'curse', label: 'Проклятие', icon: '☠️' },
   { id: 'reforge', label: 'Перековка', icon: '♻️' },
   { id: 'salvage', label: 'Разборка', icon: '🧰' },
@@ -177,10 +177,10 @@ export default function CraftPage() {
   useEffect(() => {
     setForgePreview(null);
     const selections = Object.entries(forgeItems).map(([itemId, targetLevel]) => ({ itemId, targetLevel }));
-    if (!selections.length) return;
-    const timer = setTimeout(() => previewBatchForge(selections).then(setForgePreview).catch(() => setForgePreview(null)), 250);
+    if (!selections.length || !forgeStone) return;
+    const timer = setTimeout(() => previewBatchForge(selections, forgeStone.id).then(setForgePreview).catch(() => setForgePreview(null)), 250);
     return () => clearTimeout(timer);
-  }, [forgeItems]);
+  }, [forgeItems, forgeStone]);
 
   useEffect(() => {
     setSingleInfo(null);
@@ -226,12 +226,12 @@ export default function CraftPage() {
         const data = await upgradeItem([item, { ...forgeStone, count: 1 }]);
         updateCharacter(data); showToast(data.message, data.success ? 'success' : 'warning');
       } else {
-        if (!forgePreview) throw new Error('Не удалось рассчитать ковку');
+        if (!forgePreview) throw new Error('Не удалось рассчитать улучшение');
         const selections = Object.entries(forgeItems).map(([itemId, targetLevel]) => ({ itemId, targetLevel }));
         const data = await batchForge(selections, forgeStone.id);
         updateCharacter(data);
         const destroyed = data.results.filter((r: any) => r.destroyed).length;
-        showToast(`Ковка завершена. Камней использовано: ${data.stonesUsed}${destroyed ? `. Разрушено предметов: ${destroyed}` : ''}`, destroyed ? 'warning' : 'success');
+        showToast(`Улучшение завершено. Камней использовано: ${data.stonesUsed}${destroyed ? `. Разрушено предметов: ${destroyed}` : ''}`, destroyed ? 'warning' : 'success');
       }
       setForgeItems({}); setForgePreview(null); setForgeStone(null); setSingleInfo(null);
     } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
@@ -312,12 +312,12 @@ export default function CraftPage() {
     </div>}
 
     {tab === 'forge' && <div className="space-y-4">
-      <Card><div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Ковка</h2><p className="text-xs text-[var(--color-text-muted)]">Усиливайте один предмет или несколько предметов до выбранного уровня.</p></div><div className="flex gap-1"><Button size="sm" variant={singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(true); setForgeItems({}); }}>Один предмет</Button><Button size="sm" variant={!singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(false); setForgeItems({}); }}>Массовая ковка</Button></div></div></Card>
+      <Card><div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Улучшение</h2><p className="text-xs text-[var(--color-text-muted)]">Усиливайте один предмет или несколько предметов до выбранного уровня.</p></div><div className="flex gap-1"><Button size="sm" variant={singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(true); setForgeItems({}); }}>Один предмет</Button><Button size="sm" variant={!singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(false); setForgeItems({}); }}>Массовое улучшение</Button></div></div></Card>
       <Card><h3 className="font-bold text-sm mb-2">1. Выберите {singleForge ? 'предмет' : 'предметы'}</h3><EquipmentGrid {...gridTooltipProps} items={equipment.filter((i: any) => (i.upgradeLevel || 0) < 10)} selected={new Set(Object.keys(forgeItems))} multi={!singleForge} onSelect={toggleForge} />
         {!singleForge && Object.entries(forgeItems).map(([id, target]) => { const item = equipment.find((i: any) => String(i.id) === id); return item && <div key={id} className="mt-2 flex items-center gap-2 text-xs"><span className="flex-1 truncate">{item.name} (+{item.upgradeLevel || 0})</span><label>До уровня</label><select className={inputClass + ' !w-20'} value={target} onChange={e => setForgeItems(p => ({ ...p, [id]: Number(e.target.value) }))}>{Array.from({ length: 10 - (item.upgradeLevel || 0) }, (_, n) => n + (item.upgradeLevel || 0) + 1).map(v => <option key={v} value={v}>+{v}</option>)}</select></div>; })}
       </Card>
       <Card><h3 className="font-bold text-sm mb-2">2. Выберите камень</h3><ResourceGrid {...gridTooltipProps} items={stones} selectedId={forgeStone && String(forgeStone.id)} onSelect={setForgeStone} /></Card>
-      <Card><h3 className="font-bold text-sm mb-2">Расчёт</h3>{singleForge && singleInfo ? <p className="text-xs">Следующий уровень: шанс {Math.min(100, Number(singleInfo.chance) + Number(singleInfo.factionBonus || 0) + (STONE_BONUS[Number(forgeStone?.rarity_id)] || 0))}% · стоимость {formatMoney(singleInfo.money_cost)}</p> : !singleForge && forgePreview ? <><p className="text-xs">Максимально потребуется камней: {forgePreview.requiredStones}</p><p className="text-xs">Максимальная стоимость: {formatMoney(forgePreview.totalCost)}</p><p className="text-xs text-[var(--color-accent-warning)] mt-1">Для каждого предмета ковка прекращается после первой неудачи. При попытке +7 и выше предмет может разрушиться.</p></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите предметы и целевые уровни.</p>}<Button className="mt-3" size="md" fullWidth disabled={busy || !forgeStone || !Object.keys(forgeItems).length || (!singleForge && !forgePreview)} onClick={runForge}>{busy ? 'Ковка...' : 'Начать ковку'}</Button></Card>
+      <Card><h3 className="font-bold text-sm mb-2">Расчёт улучшения</h3>{singleForge && singleInfo ? <p className="text-xs">Следующий уровень: шанс {Math.min(100, Number(singleInfo.chance) + Number(singleInfo.factionBonus || 0) + (STONE_BONUS[Number(forgeStone?.rarity_id)] || 0))}% · стоимость {formatMoney(singleInfo.money_cost)}</p> : !singleForge && forgePreview ? <><div className="rounded-lg bg-[var(--color-bg-input)] p-3 mb-3"><p className="text-xs font-bold mb-1">Если все попытки успешны</p><p className="text-xs">Потребуется камней: {forgePreview.requiredStones}</p><p className="text-xs">Стоимость: {formatMoney(forgePreview.totalCost)}</p><p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Это необходимый запас. При первой неудаче улучшение предмета остановится, поэтому фактический расход может быть меньше.</p></div><div className="space-y-2">{forgePreview.entries.map((entry: any) => { const item = equipment.find((i: any) => String(i.id) === String(entry.itemId)); return <div key={entry.itemId} className="rounded-lg border border-[var(--color-border-light)] p-2"><div className="flex justify-between gap-2 text-xs font-bold"><span className="truncate">{item?.name || 'Предмет'}</span><span className="text-[var(--color-accent-warning)]">До цели: {entry.targetChance}%</span></div><div className="flex flex-wrap gap-1 mt-1">{entry.rules.map((rule: any) => <span key={rule.level} className="rounded bg-[var(--color-bg-secondary)] px-2 py-1 text-[0.65rem]">+{rule.level}: {rule.finalChance}%</span>)}</div></div>; })}</div><p className="text-xs text-[var(--color-accent-warning)] mt-2">При неудаче на попытке +7 и выше предмет может разрушиться.</p></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите предметы, целевые уровни и камень.</p>}<Button className="mt-3" size="md" fullWidth disabled={busy || !forgeStone || !Object.keys(forgeItems).length || (!singleForge && !forgePreview)} onClick={runForge}>{busy ? 'Улучшение...' : 'Начать улучшение'}</Button></Card>
     </div>}
 
     {tab === 'curse' && <div className="space-y-4"><Card><h2 className="font-bold">Проклятие</h2><p className="text-xs text-[var(--color-text-muted)]">Добавляет случайную базовую характеристику. Текущее проклятие можно оставить после просмотра результата.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={new Set(curseItem ? [String(curseItem.id)] : [])} onSelect={setCurseItem} /></Card><Card><h3 className="font-bold text-sm mb-2">2. Выберите Кристалл душ</h3><ResourceGrid {...gridTooltipProps} items={crystals} selectedId={curseCrystal && String(curseCrystal.id)} onSelect={setCurseCrystal} /></Card><Card><p className="text-xs mb-3">Стоимость: {formatMoney(100000)} + 1 Кристалл душ</p><Button size="md" fullWidth className="!bg-[#7c3aed] !text-white" disabled={busy || !curseItem || !curseCrystal || character.money < 100000} onClick={cursePreview}>{busy ? 'Проклятие...' : 'Проклясть'}</Button></Card></div>}
