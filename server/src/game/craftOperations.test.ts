@@ -5,6 +5,8 @@ import {
   applyReforge,
   getAdjustedCurseRankWeights,
   getCraftFactionBonus,
+  getCraftFactionBonusParts,
+  shouldGrantCraftExperience,
   calculateMaxCraftAttempts,
   curseMeetsTarget,
   decideAutoCraftResult,
@@ -15,12 +17,22 @@ import {
   type UpgradeRule,
 } from './craftOperations';
 
-test('бонус Ремесленника растёт на 1% за каждые 1000 очков опыта', () => {
+test('бонус Ремесленника растёт на 1% за каждые 100 очков опыта', () => {
   assert.equal(getCraftFactionBonus('guard', 5000), 0);
   assert.equal(getCraftFactionBonus('crafter', 0), 10);
-  assert.equal(getCraftFactionBonus('crafter', 999), 10);
-  assert.equal(getCraftFactionBonus('crafter', 1000), 11);
-  assert.equal(getCraftFactionBonus('crafter', 2000), 12);
+  assert.equal(getCraftFactionBonus('crafter', 99), 10);
+  assert.equal(getCraftFactionBonus('crafter', 100), 11);
+  assert.equal(getCraftFactionBonus('crafter', 200), 12);
+  assert.equal(getCraftFactionBonus('crafter', 2022), 30);
+  assert.deepEqual(getCraftFactionBonusParts('crafter', 2022), { baseBonus: 10, experienceBonus: 20, totalBonus: 30 });
+  assert.deepEqual(getCraftFactionBonusParts('guard', 2022), { baseBonus: 0, experienceBonus: 0, totalBonus: 0 });
+});
+
+test('опыт Ремесленника начисляется только за успешную попытку с шансом ниже 80%', () => {
+  assert.equal(shouldGrantCraftExperience('crafter', 79, true), true);
+  assert.equal(shouldGrantCraftExperience('crafter', 80, true), false);
+  assert.equal(shouldGrantCraftExperience('crafter', 79, false), false);
+  assert.equal(shouldGrantCraftExperience('guard', 79, true), false);
 });
 
 test('бонус Ремесленника повышает ранги II-V за счёт ранга I', () => {

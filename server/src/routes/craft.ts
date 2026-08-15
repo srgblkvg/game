@@ -6,7 +6,7 @@ import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty, broadcast } from '../events';
 import { addToTreasury } from '../game/treasury';
-import { applyReforge, curseMeetsTarget, decideAutoCraftResult, getAdjustedCurseRankWeights, getCraftFactionBonus, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, type UpgradeRule } from '../game/craftOperations';
+import { applyReforge, curseMeetsTarget, decideAutoCraftResult, getAdjustedCurseRankWeights, getCraftFactionBonus, getCraftFactionBonusParts, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, shouldGrantCraftExperience, type UpgradeRule } from '../game/craftOperations';
 
 const router = Router();
 
@@ -20,10 +20,13 @@ function isCraftItem(item: any): boolean {
 // Получить все рецепты (для игрока)
 router.get('/craft/recipes', async (req, res) => {
     const user = await db.one('SELECT faction, faction_craft_count FROM users WHERE id = ?', [req.userId]) as any;
-    const factionBonus = getCraftFactionBonus(user?.faction, user?.faction_craft_count);
+    const factionParts = getCraftFactionBonusParts(user?.faction, user?.faction_craft_count);
+    const factionBonus = factionParts.totalBonus;
     const recipes = await db.query('SELECT * FROM craft_recipes ORDER BY id', []) as any[];
     for (const recipe of recipes) {
         recipe.factionBonus = factionBonus;
+        recipe.factionBaseBonus = factionParts.baseBonus;
+        recipe.factionExperienceBonus = factionParts.experienceBonus;
         recipe.effectiveChance = Math.min(100, Number(recipe.success_chance ?? 100) + factionBonus);
         recipe.ingredients = await db.query(`
       SELECT ci.id as craft_item_id, ci.name, ci.rarity_id, ci.type as itemType, ci.image, cri.quantity,
@@ -232,7 +235,7 @@ router.post('/craft/execute', async (req, res) => {
         }
 
         // Ремесленник: +1 опыт только если итоговый шанс (с бонусом фракции) < 80%
-        const factionInc = (user.faction === 'crafter' && chance < 80) ? ', faction_craft_count = faction_craft_count + 1' : '';
+        const factionInc = shouldGrantCraftExperience(user.faction, chance, true) ? ', faction_craft_count = faction_craft_count + 1' : '';
         await db.run(`UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftCreated = craftCreated + 1${factionInc} WHERE id = ?`, [JSON.stringify(newInventory), newMoney, userId]);
         checkAchievement(userId, 'craft').catch(() => {});
         addToTreasury(Math.floor(recipe.money_cost * 0.22), 'craft_recipe').catch(() => {});
@@ -401,7 +404,7 @@ router.post('/craft/auto-attempt', async (req, res) => {
             }
 
             if (success) {
-                const factionInc = user.faction === 'crafter' && effectiveChance < 80 ? 1 : 0;
+                const factionInc = shouldGrantCraftExperience(user.faction, effectiveChance, success) ? 1 : 0;
                 await client.query(`
                     UPDATE users SET inventory = $1, money = $2, craftCount = craftCount + 1,
                         craftCreated = craftCreated + 1, faction_craft_count = faction_craft_count + $3
@@ -438,10 +441,12 @@ router.get('/craft/upgrade-info/:level/:rarity', async (req, res) => {
     const userId = req.userId;
     const data = await db.one('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?', [level, rarity]) as any;
     if (!data) return res.status(404).json({ error: 'Данные об уровне не найдены' });
-    // Бонус фракции Ремесленник: +10% +1% за каждые 1000 крафтов
+    // Бонус фракции Ремесленник: +10% +1% за каждые 100 очков опыта
     const user = await db.one('SELECT faction, faction_craft_count FROM users WHERE id = ?', [userId]) as any;
-    const factionBonus = getCraftFactionBonus(user?.faction, user?.faction_craft_count);
-    res.json({ chance: data.chance, factionBonus, money_cost: Math.max(1, Math.floor(data.money_cost / 4)) });
+    const factionParts = getCraftFactionBonusParts(user?.faction, user?.faction_craft_count);
+    res.json({ chance: data.chance, factionBonus: factionParts.totalBonus,
+        factionBaseBonus: factionParts.baseBonus, factionExperienceBonus: factionParts.experienceBonus,
+        money_cost: Math.max(1, Math.floor(data.money_cost / 4)) });
 });
 
 // Улучшение предмета
@@ -491,7 +496,7 @@ router.post('/craft/upgrade', async (req, res) => {
     // Бонус к шансу от редкости камня
     const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
     const stoneBonus = STONE_BONUS[stone.rarity_id] || 0;
-    // Бонус фракции Ремесленник: +10% +1% за каждые 1000 крафтов
+    // Бонус фракции Ремесленник: +10% +1% за каждые 100 очков опыта
     const factionBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
     const finalChance = Math.min(100, chance + stoneBonus + factionBonus);
     const actualCost = Math.max(1, Math.floor(money_cost / 4));
@@ -528,7 +533,7 @@ router.post('/craft/upgrade', async (req, res) => {
         if (ratingBonus > 0) {
             const newElo = Math.max(100, (user.elo || 1000) + ratingBonus);
             // Ремесленник: +1 опыт только если итоговый шанс < 80%
-            const upgradeFactionInc = (user.faction === 'crafter' && finalChance < 80) ? ', faction_craft_count = faction_craft_count + 1' : '';
+            const upgradeFactionInc = shouldGrantCraftExperience(user.faction, finalChance, success) ? ', faction_craft_count = faction_craft_count + 1' : '';
             await db.run(`UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1${upgradeFactionInc} WHERE id = ?`,
                 [newMoney, JSON.stringify(newInventory), newElo, ratingBonus, userId]);
             checkAchievement(userId, 'craft').catch(() => {});
@@ -551,7 +556,7 @@ router.post('/craft/upgrade', async (req, res) => {
         }
 
         // Ремесленник: +1 опыт только если итоговый шанс < 80%
-        const upgradeFactionInc2 = (user.faction === 'crafter' && finalChance < 80) ? ', faction_craft_count = faction_craft_count + 1' : '';
+        const upgradeFactionInc2 = shouldGrantCraftExperience(user.faction, finalChance, success) ? ', faction_craft_count = faction_craft_count + 1' : '';
         await db.run(`UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1${upgradeFactionInc2} WHERE id = ?`, [JSON.stringify(newInventory), newMoney, userId]);
         checkAchievement(userId, 'craft').catch(() => {});
         addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade').catch(() => {});
@@ -668,8 +673,10 @@ function rollCurse(factionBonus = 0) {
 
 router.get('/craft/curse-info', async (req, res) => {
     const user = await db.one('SELECT faction, faction_craft_count FROM users WHERE id = ?', [req.userId]) as any;
-    const factionBonus = getCraftFactionBonus(user?.faction, user?.faction_craft_count);
-    res.json({ factionBonus, ranks: getCurseRankChances(factionBonus) });
+    const factionParts = getCraftFactionBonusParts(user?.faction, user?.faction_craft_count);
+    res.json({ factionBonus: factionParts.totalBonus, factionBaseBonus: factionParts.baseBonus,
+        factionExperienceBonus: factionParts.experienceBonus,
+        ranks: getCurseRankChances(factionParts.totalBonus) });
 });
 
 // Одна атомарная попытка целевого проклятия: списание и сохранение результата в одной транзакции.
@@ -928,6 +935,7 @@ router.post('/craft/batch-forge/preview', async (req, res) => {
         const plan = await loadBatchForgePlan(inventory, req.body.selections);
         const stoneBonus: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
         const factionBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
+        const factionParts = getCraftFactionBonusParts(user.faction, user.faction_craft_count);
         const entries = plan.entries.map(entry => {
             const rules = entry.rules.map(rule => ({
                 ...rule,
@@ -936,7 +944,8 @@ router.post('/craft/batch-forge/preview', async (req, res) => {
             const targetChance = Math.round(rules.reduce((probability, rule) => probability * rule.finalChance / 100, 1) * 1000) / 10;
             return { ...entry, rules, targetChance };
         });
-        return res.json({ ...plan, entries, stoneBonus: stoneBonus[Number(stone.rarity_id)] || 0, factionBonus });
+        return res.json({ ...plan, entries, stoneBonus: stoneBonus[Number(stone.rarity_id)] || 0, factionBonus,
+            factionBaseBonus: factionParts.baseBonus, factionExperienceBonus: factionParts.experienceBonus });
     } catch (error: any) {
         return res.status(400).json({ error: error.message });
     }
@@ -979,9 +988,9 @@ router.post('/craft/batch-forge', async (req, res) => {
                     stonesUsed += 1;
                     const chance = Math.min(100, rule.chance + (stoneBonus[Number(stone.rarity_id)] || 0) + factionBonus);
                     const success = Math.random() * 100 < chance;
-                    if (user.faction === 'crafter' && chance < 80) factionProgress += 1;
                     selectionResult.attempts.push({ level: rule.level, chance, success });
                     if (success) {
+                        if (shouldGrantCraftExperience(user.faction, chance, success)) factionProgress += 1;
                         const index = inventory.findIndex(i => !isCraftItem(i) && String(i.id) === entry.itemId);
                         if (index === -1) throw new Error('Предмет пропал во время ковки');
                         const itemName = inventory[index].name || 'Предмет';

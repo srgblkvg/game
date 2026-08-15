@@ -34,7 +34,19 @@ export interface CraftIngredientRequirement {
 
 export function getCraftFactionBonus(faction: unknown, factionCraftCount: unknown): number {
   if (faction !== 'crafter') return 0;
-  return 10 + Math.floor(Math.max(0, Number(factionCraftCount) || 0) / 1000);
+  return 10 + Math.floor(Math.max(0, Number(factionCraftCount) || 0) / 100);
+}
+
+export function getCraftFactionBonusParts(faction: unknown, factionCraftCount: unknown) {
+  const baseBonus = faction === 'crafter' ? 10 : 0;
+  const experienceBonus = faction === 'crafter'
+    ? Math.floor(Math.max(0, Number(factionCraftCount) || 0) / 100)
+    : 0;
+  return { baseBonus, experienceBonus, totalBonus: baseBonus + experienceBonus };
+}
+
+export function shouldGrantCraftExperience(faction: unknown, finalChance: unknown, success: unknown): boolean {
+  return faction === 'crafter' && success === true && Number(finalChance) < 80;
 }
 
 export function getAdjustedCurseRankWeights(baseWeights: number[], factionBonus: number): number[] {
