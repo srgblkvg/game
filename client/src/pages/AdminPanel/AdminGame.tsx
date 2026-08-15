@@ -7,13 +7,13 @@ import { getHeaders } from '../../api/helpers';
 import { inputClass, selectClass } from '../../utils/formStyles';
 
 const SECTIONS = [
-    'world', 'castle',
+    'world', 'castle', 'dungeon',
 ];
 
 const ICONS = [
     'game-icons:crossed-swords', 'game-icons:death-skull', 'game-icons:swap-bag',
     'game-icons:buy-card', 'game-icons:bank', 'game-icons:anvil', 'game-icons:pay-money',
-    'game-icons:drink-me', 'game-icons:castle', 'game-icons:notebook',
+    'game-icons:drink-me', 'game-icons:castle', 'game-icons:notebook', 'game-icons:underground-cave',
 ];
 
 export default function AdminGame() {

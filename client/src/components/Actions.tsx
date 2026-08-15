@@ -40,10 +40,27 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [massacreCount, setMassacreCount] = useState(0);
     const [massacreTimeLeft, setMassacreTimeLeft] = useState(0);
     const [trainingCD, setTrainingCD] = useState(0);
+    const [dungeonStatus, setDungeonStatus] = useState<{ active: boolean; cooldownRemaining: number }>({ active: false, cooldownRemaining: 0 });
 
     useEffect(() => {
         fetch('/api/treasury').then(r => r.json()).then(d => setTreasury(d.amount)).catch(() => {});
     }, []);
+
+    useEffect(() => {
+        fetch('/api/dungeon/status', { headers: getHeaders() })
+            .then(r => r.json())
+            .then(d => setDungeonStatus({ active: !!d.active, cooldownRemaining: Math.max(0, d.cooldownRemaining || 0) }))
+            .catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        if (dungeonStatus.cooldownRemaining <= 0) return;
+        const timer = setInterval(() => setDungeonStatus(prev => ({
+            ...prev,
+            cooldownRemaining: Math.max(0, prev.cooldownRemaining - 1),
+        })), 1000);
+        return () => clearInterval(timer);
+    }, [dungeonStatus.cooldownRemaining > 0]);
 
     // Счётчик и таймер резни — через WS
     useEffect(() => {
@@ -209,6 +226,10 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const heroCards = cards.filter(c => c.section === 'hero');
     const worldCards = cards.filter(c => c.section === 'world');
     const castleCards = cards.filter(c => c.section === 'castle');
+    const dungeonCard = cards.find(c => c.path === '/dungeon' || c.section === 'dungeon');
+    const dungeonCooldown = dungeonStatus.cooldownRemaining;
+    const dungeonDisabled = playerLevel < 2 || (!dungeonStatus.active && dungeonCooldown > 0);
+    const dungeonTime = `${Math.floor(dungeonCooldown / 60)}:${String(dungeonCooldown % 60).padStart(2, '0')}`;
     const [activeTab, setActiveTab] = useState<'dungeon' | 'world' | 'castle'>('world');
 
     const activeCards = activeTab === 'dungeon' ? [] : activeTab === 'world' ? worldCards : castleCards;
@@ -233,17 +254,25 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 <button
                     onClick={() => setActiveTab('dungeon')}
                     className={`cursor-pointer px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${activeTab === 'dungeon' ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)]'}`}
-                >🕳️ Подземелья(Бета)</button>
+                ><Icon icon="game-icons:underground-cave" width="14" height="14" className="inline mr-1" />Подземелье</button>
             </div>
             {activeTab === 'dungeon' ? (
-                <Card>
-                    <h3 className="text-sm font-bold mb-1">⚔️ Одиночное подземелье</h3>
-                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Сражайтесь с монстрами, собирайте добычу, открывайте новые этажи</p>
-                    <p className="text-[0.65rem] text-[var(--color-text-muted)] h-4 leading-4">Вход доступен со 2 уровня</p>
-                    <div className="mt-auto">
-                        <Button variant="primary" size="md" fullWidth disabled={playerLevel < 2} onClick={() => navigate('/dungeon')}>
-                            {playerLevel < 2 ? '🔒 Доступ со 2 уровня' : '🗡️ В данж'}
-                        </Button>
+                <Card className="relative overflow-hidden">
+                    {dungeonCard?.bg_image && <div className="absolute inset-0 bg-cover bg-center opacity-25" style={{ backgroundImage: `url(${dungeonCard.bg_image})` }} />}
+                    <div className="relative">
+                        <h3 className="text-sm font-bold mb-1 flex items-center gap-1">
+                            <Icon icon={dungeonCard?.icon || 'game-icons:underground-cave'} width="16" height="16" />
+                            {dungeonCard?.title || 'Подземелье'}
+                        </h3>
+                        <p className="text-xs text-[var(--color-text-muted)] mb-2">{dungeonCard?.subtitle || 'Сражайтесь с монстрами, собирайте добычу, открывайте новые этажи'}</p>
+                        <p className={`text-[0.65rem] h-4 leading-4 ${dungeonStatus.active ? 'text-[var(--color-accent-success)]' : dungeonCooldown > 0 ? 'text-[var(--color-accent-warning)]' : 'text-[var(--color-text-muted)]'}`}>
+                            {dungeonStatus.active ? 'Поход продолжается' : dungeonCooldown > 0 ? `Отдых: ${dungeonTime}` : 'Доступно · вход со 2 уровня'}
+                        </p>
+                        <div className="mt-auto">
+                            <Button variant="primary" size="md" fullWidth disabled={dungeonDisabled} onClick={() => navigate(dungeonCard?.path || '/dungeon')}>
+                                {playerLevel < 2 ? '🔒 Доступ со 2 уровня' : dungeonStatus.active ? 'Продолжить поход' : dungeonCooldown > 0 ? dungeonTime : 'Спуститься'}
+                            </Button>
+                        </div>
                     </div>
                 </Card>
             ) : (

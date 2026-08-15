@@ -9,6 +9,7 @@ import CharacterCard from '../components/CharacterCard';
 import { useGame } from '../contexts/GameContext';
 import { toCharCardData } from '../utils/character';
 import { groupLoot } from '../utils/dungeonLoot';
+import PageHeader from '../components/ui/PageHeader';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
@@ -114,6 +115,7 @@ export default function DungeonPage() {
 
     const [skillList, setSkillList] = useState<SkillInfo[]>([]);
     const groupedTotalLoot = groupLoot(totalLoot.items, totalLoot.pages);
+    const [actionCard, setActionCard] = useState<any>(null);
 
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const logRef = useRef<HTMLDivElement>(null);
@@ -175,7 +177,13 @@ export default function DungeonPage() {
         }
     };
 
-    useEffect(() => { loadStatus(); loadPages(); loadSkills(); }, []);
+    useEffect(() => {
+        loadStatus(); loadPages(); loadSkills();
+        fetch('/api/actions', { headers: getHeaders() })
+            .then(r => r.json())
+            .then((data: any[]) => setActionCard(data.find(card => card.path === '/dungeon') || null))
+            .catch(() => {});
+    }, []);
 
     // Локальный тик для плавных прогресс-баров
     const [frameTick, setFrameTick] = useState(0);
@@ -596,7 +604,7 @@ export default function DungeonPage() {
             <div className="flex justify-center px-4 py-4">
                 <div className="w-full max-w-3xl">
                 <BackButton />
-                <h1 className="text-xl font-bold mb-4 text-center">🏰 Подземелье</h1>
+                <PageHeader title="Подземелье" icon={actionCard?.icon || 'game-icons:underground-cave'} bgImage={actionCard?.bg_image} />
                 {message && <p className="text-sm text-center mb-3 text-[var(--color-accent-warning)]">{message}</p>}
 
                 <div className="flex gap-2 mb-4 justify-center">
@@ -614,7 +622,7 @@ export default function DungeonPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
-            <h1 className="text-xl font-bold mb-4 text-center">🏰 Подземелье</h1>
+            <PageHeader title="Подземелье" icon={actionCard?.icon || 'game-icons:underground-cave'} bgImage={actionCard?.bg_image} />
             {message && <p className="text-sm text-center mb-3 text-[var(--color-accent-warning)]">{message}</p>}
 
             {/* Смерть */}
