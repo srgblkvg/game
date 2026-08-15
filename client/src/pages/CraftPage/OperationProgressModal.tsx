@@ -14,6 +14,7 @@ type Props = {
   entries: OperationEntry[];
   stepKey: number;
   stepResults: Record<string, { success: boolean; message: string }> | null;
+
   stopping: boolean;
   onStepDone: () => void;
   onStop: () => void;
@@ -68,7 +69,7 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
           const color = entry.status === 'success' ? 'text-[var(--color-accent-success)]' : entry.status === 'failure' ? 'text-[var(--color-accent-danger)]' : entry.status === 'stopped' ? 'text-[var(--color-text-muted)]' : '';
           return <div key={entry.id} className={`rounded-lg border p-3 ${active ? 'border-[#f59e0b]' : 'border-[var(--color-border-light)]'} bg-[var(--color-bg-secondary)]`}>
             <div className="flex justify-between gap-2 text-xs"><span className="font-bold truncate">{entry.name}</span><span className={color}>{entry.detail || (entry.status === 'pending' ? 'Ожидание' : '')}</span></div>
-            {active && <>
+            {active && stepResult && <>
               <div className="h-3 mt-2 rounded-full overflow-hidden bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
                 <div key={`${entry.id}-${stepKey}`} className={`h-full ${showResult && stepResult
                   ? stepResult.success ? 'bg-[var(--color-accent-success)]' : 'bg-[var(--color-accent-danger)]'
@@ -77,6 +78,7 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
               </div>
               {showResult && stepResult && <p className={`text-xs font-bold mt-2 ${stepResult.success ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{stepResult.message}</p>}
             </>}
+            {active && !stepResult && <p className="text-[0.7rem] mt-2 text-[var(--color-text-muted)]">Проверка ресурсов и подготовка попытки…</p>}
             {!active && entry.result && <p className={`text-[0.7rem] mt-1 ${color}`}>{entry.result}</p>}
           </div>;
         })}

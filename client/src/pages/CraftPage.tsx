@@ -52,6 +52,7 @@ type ProgressState = {
   entries: OperationEntry[];
   stepKey: number;
   stepResults: Record<string, { success: boolean; message: string }> | null;
+  neutralProgress?: boolean;
 };
 
 function objectField(value: unknown): Record<string, any> {
@@ -154,6 +155,9 @@ export default function CraftPage() {
   const [progressState, setProgressState] = useState<ProgressState | null>(null);
   const operationContinueRef = useRef<(() => void) | null>(null);
   const stopRequestedRef = useRef(false);
+  const [createQuantity, setCreateQuantity] = useState(1);
+  const [createMaximum, setCreateMaximum] = useState(false);
+  const [targetItemTemplateId, setTargetItemTemplateId] = useState<string | null>(null);
 
   const [forgeItems, setForgeItems] = useState<Record<string, number>>({});
   const [forgeStone, setForgeStone] = useState<any>(null);
@@ -218,6 +222,27 @@ export default function CraftPage() {
     const ingredientNames = new Set((activeRecipe.ingredients || []).map((i: any) => String(i.name || '').toLowerCase()));
     return materials.filter((item: any) => ingredientIds.has(String(item.id)) || ingredientNames.has(String(item.name || '').toLowerCase()));
   }, [activeRecipe, materials]);
+  const resultOptions: any[] = useMemo(() => activeRecipe?.resultOptions || [], [activeRecipe]);
+  const selectedResultOption = useMemo(() => resultOptions.find((option: any) => String(option.id ?? option.templateId ?? option.item_template_id) === targetItemTemplateId) || null, [resultOptions, targetItemTemplateId]);
+  const createMaxAttempts = useMemo(() => {
+    if (!activeRecipe) return 0;
+    const required = new Map<string, number>();
+    for (const ingredient of activeRecipe.ingredients || []) {
+      const id = String(ingredient.id ?? ingredient.craft_item_id ?? ingredient.item_id ?? ingredient.itemId ?? '');
+      if (!id) continue;
+      required.set(id, (required.get(id) || 0) + Number(ingredient.quantity || 0));
+    }
+    const available = new Map<string, number>();
+    for (const item of inventory) {
+      if (!isCraftItem(item)) continue;
+      const id = String(item.id ?? '');
+      available.set(id, (available.get(id) || 0) + Number(item.count || 0));
+    }
+    const limits = [...required].filter(([, quantity]) => quantity > 0).map(([id, quantity]) => Math.floor((available.get(id) || 0) / quantity));
+    const cost = Number(activeRecipe.money_cost || 0);
+    if (cost > 0) limits.push(Math.floor(Number(character?.money || 0) / cost));
+    return limits.length ? Math.max(0, Math.min(...limits)) : 0;
+  }, [activeRecipe, inventory, character?.money]);
   const reforgeEquipment: any[] = useMemo(() => equipment.filter(canReforge), [equipment]);
   const groupedRecipes = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -225,6 +250,12 @@ export default function CraftPage() {
     return groups;
   }, [recipes]);
   const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
+
+  useEffect(() => {
+    setCreateQuantity(1);
+    setCreateMaximum(false);
+    setTargetItemTemplateId(null);
+  }, [activeRecipe?.id]);
 
   useEffect(() => {
     setForgePreview(null);
@@ -257,6 +288,88 @@ export default function CraftPage() {
       updateCharacter(data);
       setCraftResult({ success: !!data.success, label: `Создание: ${activeRecipe.name}`, message: data.message || (data.success ? 'Предмет создан' : 'Создание не удалось') });
     } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
+  };
+
+  const runAutoCreate = async () => {
+    if (!activeRecipe) return;
+    const isTargetSearch = activeRecipe.result_type === 'random_item' && !!selectedResultOption;
+    const isMaterialBatch = activeRecipe.result_type === 'craft_item';
+    if (!isTargetSearch && !isMaterialBatch) return create();
+
+    setBusy(true);
+    stopRequestedRef.current = false;
+    let attempts = 0;
+    let created = 0;
+    let resourcesExhausted = false;
+    let targetMatched = false;
+    const entry: OperationEntry = { id: 'auto-create', name: activeRecipe.name, status: 'active' };
+    setProgressState({ title: isTargetSearch ? 'Поиск нужного предмета' : 'Автоматическое создание', entries: [entry], stepKey: 0, stepResults: null });
+
+    try {
+      while (!stopRequestedRef.current && !resourcesExhausted && (isTargetSearch || createMaximum || created < createQuantity)) {
+        const nextAttempt = attempts + 1;
+        entry.status = 'active';
+        entry.detail = isTargetSearch
+          ? `Подготовка попытки ${nextAttempt} · ищем ${selectedResultOption.name}`
+          : createMaximum ? `Создано ${created} · максимум по ресурсам` : `Создано ${created} из ${createQuantity}`;
+        entry.result = undefined;
+        setProgressState(prev => prev && ({ ...prev, entries: [{ ...entry }], stepResults: null }));
+
+        const response = await fetch('/api/craft/auto-attempt', {
+          method: 'POST', headers: getHeaders(),
+          body: JSON.stringify({ recipeId: activeRecipe.id, ...(isTargetSearch ? { targetItemTemplateId: selectedResultOption.id ?? selectedResultOption.templateId ?? selectedResultOption.item_template_id } : {}) }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const errorMessage = String(data.error || data.message || 'Ошибка создания');
+          if (response.status === 400 && (errorMessage.startsWith('Недостаточно ресурса') || errorMessage === 'Недостаточно денег')) {
+            resourcesExhausted = true;
+            entry.result = errorMessage;
+            break;
+          }
+          throw new Error(errorMessage);
+        }
+        attempts = nextAttempt;
+        entry.detail = isTargetSearch
+          ? `Попытка ${attempts} · ищем ${selectedResultOption.name}`
+          : createMaximum ? `Создано ${created} · максимум по ресурсам` : `Создано ${created} из ${createQuantity}`;
+
+        if (Array.isArray(data.inventory)) {
+          setCharacter(prev => prev ? ({ ...prev, inventory: data.inventory, money: data.moneyAfter ?? prev.money }) : prev);
+        }
+        if (isMaterialBatch && data.success) created += 1;
+        const rolledName = data.rolledItem?.name || data.item?.name || activeRecipe.result?.name || 'предмет';
+        const message = isTargetSearch && data.success && !data.targetMatched
+          ? `Создан ${rolledName} — разобран`
+          : data.message || (data.success ? `Создан ${rolledName}` : 'Создание не удалось');
+        if (Number.isFinite(Number(data.effectiveChance))) {
+          const successChance = Math.min(100, Number(data.effectiveChance));
+          const targetChance = isTargetSearch && resultOptions.length > 0 ? successChance / resultOptions.length : null;
+          entry.detail = `${entry.detail} · шанс создания ${successChance}%${targetChance !== null ? ` · шанс цели ${targetChance.toFixed(2)}%` : ''}`;
+        }
+        entry.result = message;
+        const goalReached = isTargetSearch ? !!data.targetMatched : (!createMaximum && created >= createQuantity);
+        if (isTargetSearch && data.targetMatched) targetMatched = true;
+        setProgressState(prev => prev && ({ ...prev, entries: [{ ...entry }], stepKey: prev.stepKey + 1, stepResults: { [entry.id]: { success: !!data.success, message } } }));
+        await new Promise<void>(resolve => { operationContinueRef.current = resolve; });
+        operationContinueRef.current = null;
+        if (goalReached) break;
+      }
+
+      const stopped = stopRequestedRef.current;
+      const completed = isTargetSearch ? targetMatched : (!createMaximum && created >= createQuantity);
+      entry.status = completed ? 'success' : stopped || resourcesExhausted ? 'stopped' : 'success';
+      const summary = isTargetSearch
+        ? stopped ? 'Поиск предмета остановлен' : resourcesExhausted ? 'Поиск остановлен: недостаточно ресурсов' : 'Целевой предмет создан'
+        : stopped ? `Создание остановлено. Успешно создано: ${created}` : resourcesExhausted ? `Ресурсы закончились. Успешно создано: ${created}` : `Успешно создано: ${created}`;
+      showToast(summary, completed ? 'success' : 'warning');
+    } catch (error: any) {
+      showToast(error.message);
+    } finally {
+      setBusy(false);
+      setProgressState(null);
+      operationContinueRef.current = null;
+    }
   };
 
   const toggleForge = (item: any) => {
@@ -490,7 +603,39 @@ export default function CraftPage() {
 
     {tab === 'create' && <div className="grid md:grid-cols-[1fr_260px] gap-4">
       <div><RecipeList groupedRecipes={groupedRecipes} openCategories={openCategories} activeRecipe={activeRecipe} onToggleCategory={cat => setOpenCategories(p => ({ ...p, [cat]: !p[cat] }))} onRecipeClick={setActiveRecipe} /></div>
-      <Card><h2 className="font-bold mb-2">Создание</h2>{activeRecipe ? <><p className="text-sm font-bold">{activeRecipe.name}</p><p className="text-xs text-[var(--color-text-muted)] my-2">{activeRecipe.ingredients.map((i: any) => `${i.name} ×${i.quantity}`).join(', ')}</p><p className="text-xs">Шанс: {activeRecipe.success_chance ?? 100}%</p><p className="text-xs mb-3">Стоимость: {formatMoney(activeRecipe.money_cost)}</p><Button size="md" fullWidth disabled={busy} onClick={create}>{busy ? 'Создание...' : 'Создать'}</Button></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
+      <Card><h2 className="font-bold mb-2">Создание</h2>{activeRecipe ? <>
+        <p className="text-sm font-bold">{activeRecipe.name}</p>
+        <p className="text-xs text-[var(--color-text-muted)] my-2">{activeRecipe.ingredients.map((i: any) => `${i.name} ×${i.quantity}`).join(', ')}</p>
+        <p className="text-xs">Шанс успешного создания: {activeRecipe.success_chance ?? 100}%{activeRecipe.result_type === 'random_item' && resultOptions.length > 0 ? ` · доступно предметов: ${resultOptions.length}` : ''}</p>
+        <p className="text-xs mb-3">Стоимость попытки: {formatMoney(activeRecipe.money_cost)}</p>
+        {activeRecipe.result_type === 'craft_item' && <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-secondary)] p-3 mb-3">
+          <p className="text-xs font-bold mb-2">Режим создания материалов</p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <Button size="sm" variant={!createMaximum ? 'primary' : 'secondary'} onClick={() => setCreateMaximum(false)}>Указать количество</Button>
+            <Button size="sm" variant={createMaximum ? 'primary' : 'secondary'} onClick={() => setCreateMaximum(true)}>Максимум по ресурсам</Button>
+          </div>
+          {!createMaximum && <label className="text-xs">Нужно успешно создать
+            <input className={inputClass + ' mt-1'} type="number" min={1} max={999} value={createQuantity} onChange={e => setCreateQuantity(Math.max(1, Math.min(999, Number(e.target.value) || 1)))} />
+          </label>}
+          <p className="text-xs mt-2">Максимум попыток сейчас: <strong>{createMaxAttempts}</strong></p>
+          <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Это число доступных попыток, а не гарантированных успехов. Неудачные попытки тоже расходуют материалы и серебро.</p>
+        </div>}
+        {activeRecipe.result_type === 'random_item' && resultOptions.length > 0 && <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-secondary)] p-3 mb-3">
+          <p className="text-xs font-bold mb-1">Целевой предмет</p>
+          <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">Выберите предмет для автоматического поиска или оставьте создание без цели.</p>
+          <button type="button" onClick={() => setTargetItemTemplateId(null)} className={`w-full rounded-lg border p-2 mb-2 text-xs font-bold cursor-pointer ${!targetItemTemplateId ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>Без цели — одна попытка</button>
+          <div className="grid grid-cols-2 gap-2">{resultOptions.map((option: any) => {
+            const optionId = String(option.id ?? option.templateId ?? option.item_template_id);
+            const selected = optionId === targetItemTemplateId;
+            return <button key={optionId} type="button" onClick={() => setTargetItemTemplateId(optionId)} {...tooltipEvents(option, showItemTooltip, hideItemTooltip)} className={`min-w-0 rounded-lg border p-2 text-left cursor-pointer bg-[var(--color-bg-card)] ${selected ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>
+              <div className="flex items-center gap-2 min-w-0"><ItemIcon color={option.rarity_color || activeRecipe.result?.rarity_color || '#777'} image={option.image} name={option.name || '?'} size="md" /><span className="text-xs font-bold truncate">{selected ? '✓ ' : ''}{option.name}</span></div>
+            </button>;
+          })}</div>
+          <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-2">Каждая попытка расходует ресурсы, даже если создание не удалось. Успешно созданные неподходящие предметы автоматически разбираются.</p>
+          {selectedResultOption && <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-1">Шанс получить цель за попытку зависит от шанса создания и равномерного выбора среди {resultOptions.length} предметов. Точное значение показывается в процессе.</p>}
+        </div>}
+        <Button size="md" fullWidth disabled={busy || (activeRecipe.result_type === 'craft_item' && createMaxAttempts < 1)} onClick={activeRecipe.result_type === 'craft_item' || !!selectedResultOption ? runAutoCreate : create}>{busy ? 'Создание...' : selectedResultOption ? `Искать: ${selectedResultOption.name}` : activeRecipe.result_type === 'craft_item' ? 'Начать создание' : 'Создать'}</Button>
+      </> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
       <Card className="md:col-span-2"><h3 className="font-bold text-sm mb-2">Используемые материалы</h3>{activeRecipe ? <ResourceGrid {...gridTooltipProps} items={relevantMaterials} onSelect={() => {}} /> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
     </div>}
 

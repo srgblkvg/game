@@ -22,6 +22,51 @@ export interface ForgeSelection {
   targetLevel: number;
 }
 
+export interface CraftResourceCount {
+  id: string | number;
+  count: number;
+}
+
+export interface CraftIngredientRequirement {
+  craftItemId: string | number;
+  quantity: number;
+}
+
+export function calculateMaxCraftAttempts(
+  inventory: CraftResourceCount[],
+  ingredients: CraftIngredientRequirement[],
+  money: number,
+  moneyCost: number,
+): number {
+  const available = new Map<string, number>();
+  for (const item of inventory) {
+    const id = String(item.id);
+    available.set(id, (available.get(id) || 0) + Math.max(0, Number(item.count) || 0));
+  }
+  const required = new Map<string, number>();
+  for (const ingredient of ingredients) {
+    const id = String(ingredient.craftItemId);
+    required.set(id, (required.get(id) || 0) + Math.max(0, Number(ingredient.quantity) || 0));
+  }
+
+  let maxAttempts = Number.POSITIVE_INFINITY;
+  for (const [id, quantity] of required) {
+    if (quantity > 0) maxAttempts = Math.min(maxAttempts, Math.floor((available.get(id) || 0) / quantity));
+  }
+  const cost = Math.max(0, Number(moneyCost) || 0);
+  if (cost > 0) maxAttempts = Math.min(maxAttempts, Math.floor(Math.max(0, Number(money) || 0) / cost));
+  return Number.isFinite(maxAttempts) ? Math.max(0, maxAttempts) : 0;
+}
+
+export function decideAutoCraftResult(
+  targetItemTemplateId: string | number | null | undefined,
+  rolledItemTemplateId: string | number,
+): { targetMatched: boolean | undefined; salvaged: boolean } {
+  if (targetItemTemplateId == null) return { targetMatched: undefined, salvaged: false };
+  const targetMatched = String(targetItemTemplateId) === String(rolledItemTemplateId);
+  return { targetMatched, salvaged: !targetMatched };
+}
+
 const REFORGE_BASE_COST: Record<number, number> = {
   0: 500,
   1: 2000,

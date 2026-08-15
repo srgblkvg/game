@@ -6,7 +6,7 @@ import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty, broadcast } from '../events';
 import { addToTreasury } from '../game/treasury';
-import { applyReforge, curseMeetsTarget, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, type UpgradeRule } from '../game/craftOperations';
+import { applyReforge, curseMeetsTarget, decideAutoCraftResult, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, type UpgradeRule } from '../game/craftOperations';
 
 const router = Router();
 
@@ -50,6 +50,20 @@ router.get('/craft/recipes', async (req, res) => {
                 [recipe.result_id]
             ) || null;
             if (recipe.result) recipe.result.name = `Случайный предмет (${recipe.result.rarity_display})`;
+            const rawOptions = await db.query(`
+                SELECT i.id, i.name, i.slot, i.rarity_id, i.image, i.bonuses, i.extra,
+                       r.display_name as rarity_display, r.color as rarity_color
+                FROM items i
+                JOIN rarities r ON i.rarity_id = r.id
+                WHERE i.rarity_id = ?
+                  AND (i.extra IS NULL OR i.extra::text NOT LIKE '%"set"%')
+                ORDER BY i.id
+            `, [recipe.result_id]) as any[];
+            recipe.resultOptions = rawOptions.map(option => ({
+                ...option,
+                bonuses: typeof option.bonuses === 'string' ? JSON.parse(option.bonuses || '{}') : (option.bonuses || {}),
+                extra: typeof option.extra === 'string' ? JSON.parse(option.extra || '{}') : (option.extra || {}),
+            }));
         } else if (recipe.result_type === 'craft_item') {
             recipe.result = await db.one(`
         SELECT c.id, c.name, c.rarity_id, c.image, c.type as itemType,
@@ -133,7 +147,7 @@ router.post('/craft/execute', async (req, res) => {
     }).filter(Boolean);
 
     const newMoney = user.money - recipe.money_cost;
-    const craftBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 100) : 0;
+    const craftBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 1000) : 0;
     const chance = (recipe.success_chance ?? 100) + craftBonus;
     const success = Math.random() * 100 < chance;
 
@@ -228,6 +242,182 @@ router.post('/craft/execute', async (req, res) => {
         await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
         addToTreasury(Math.floor(recipe.money_cost * 0.22), 'craft_recipe_fail').catch(() => {});
         return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача, предмет разрушен' });
+    }
+});
+
+// Одна атомарная попытка создания (авторежим зацикливается на клиенте)
+router.post('/craft/auto-attempt', async (req, res) => {
+    const recipeId = Number(req.body.recipeId);
+    const targetItemTemplateId = req.body.targetItemTemplateId == null || req.body.targetItemTemplateId === ''
+        ? null
+        : Number(req.body.targetItemTemplateId);
+    if (!Number.isInteger(recipeId) || recipeId <= 0) return res.status(400).json({ error: 'recipeId required' });
+    if (targetItemTemplateId !== null && (!Number.isInteger(targetItemTemplateId) || targetItemTemplateId <= 0)) {
+        return res.status(400).json({ error: 'Некорректная цель создания' });
+    }
+
+    try {
+        const result = await db.tx(async client => {
+            const locked = await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
+            const user = locked.rows[0] as any;
+            if (!user) throw new Error('Игрок не найден');
+
+            const recipeResult = await client.query('SELECT * FROM craft_recipes WHERE id = $1', [recipeId]);
+            const recipe = recipeResult.rows[0] as any;
+            if (!recipe) throw new Error('Рецепт не найден');
+            if (!['item', 'random_item', 'craft_item'].includes(recipe.result_type)) throw new Error('Неподдерживаемый результат рецепта');
+            if (targetItemTemplateId !== null && recipe.result_type !== 'random_item') {
+                throw new Error('Цель доступна только для случайного предмета');
+            }
+
+            const ingredientsResult = await client.query(`
+                SELECT cri.craft_item_id, cri.quantity
+                FROM craft_recipe_ingredients cri
+                WHERE cri.recipe_id = $1
+            `, [recipe.id]);
+            const ingredientMap = new Map<string, number>();
+            for (const ingredient of ingredientsResult.rows as any[]) {
+                const id = String(ingredient.craft_item_id);
+                ingredientMap.set(id, (ingredientMap.get(id) || 0) + Number(ingredient.quantity));
+            }
+
+            if (targetItemTemplateId !== null) {
+                const targetResult = await client.query(`
+                    SELECT i.id
+                    FROM items i
+                    WHERE i.id = $1 AND i.rarity_id = $2
+                      AND (i.extra IS NULL OR i.extra::text NOT LIKE '%"set"%')
+                `, [targetItemTemplateId, recipe.result_id]);
+                if (!targetResult.rows[0]) throw new Error('Выбранный предмет недоступен для этого рецепта');
+            }
+
+            const inventory: any[] = typeof user.inventory === 'string' ? JSON.parse(user.inventory || '[]') : (user.inventory || []);
+            for (const [itemId, needed] of ingredientMap) {
+                const available = inventory
+                    .filter(item => isCraftItem(item) && String(item.id) === itemId)
+                    .reduce((sum, item) => sum + Number(item.count || 0), 0);
+                if (available < needed) throw new Error(`Недостаточно ресурса (требуется ${needed})`);
+            }
+            const moneyCost = Number(recipe.money_cost || 0);
+            if (Number(user.money) < moneyCost) throw new Error('Недостаточно денег');
+
+            // Любой equipment-результат потенциально займёт слот (включая совпавшую цель).
+            if (recipe.result_type === 'item' || recipe.result_type === 'random_item') {
+                const equipmentCount = inventory.filter(item => !isCraftItem(item)).length;
+                if (equipmentCount >= Number(user.inventoryslots || user.inventorySlots || 10)) throw new Error('Инвентарь заполнен');
+            }
+
+            const newInventory = inventory.map(item => ({ ...item }));
+            for (const [itemId, needed] of ingredientMap) {
+                let remaining = needed;
+                for (let index = newInventory.length - 1; index >= 0 && remaining > 0; index--) {
+                    const item = newInventory[index];
+                    if (!isCraftItem(item) || String(item.id) !== itemId) continue;
+                    const used = Math.min(Number(item.count || 0), remaining);
+                    remaining -= used;
+                    if (Number(item.count) === used) newInventory.splice(index, 1);
+                    else newInventory[index] = { ...item, count: Number(item.count) - used };
+                }
+            }
+            const moneyAfter = Number(user.money) - moneyCost;
+            // Фиксируем списание в транзакции до броска; последующие ошибки откатят его целиком.
+            await client.query('UPDATE users SET inventory = $1, money = $2 WHERE id = $3',
+                [JSON.stringify(newInventory), moneyAfter, req.userId]);
+            const craftBonus = user.faction === 'crafter' ? 10 + Math.floor(Number(user.faction_craft_count || 0) / 1000) : 0;
+            const effectiveChance = Number(recipe.success_chance ?? 100) + craftBonus;
+            const success = Math.random() * 100 < effectiveChance;
+            let item: any;
+            let rolledItem: any;
+            let salvaged: boolean | undefined;
+            let targetMatched: boolean | undefined;
+
+            if (success && recipe.result_type === 'craft_item') {
+                const craftResult = await client.query(`
+                    SELECT c.*, r.display_name as rarity_display, r.color as rarity_color
+                    FROM craft_items c JOIN rarities r ON c.rarity_id = r.id WHERE c.id = $1
+                `, [recipe.result_id]);
+                const template = craftResult.rows[0] as any;
+                if (!template) throw new Error('Результирующий ресурс не найден');
+                const existing = newInventory.find(entry => isCraftItem(entry) && String(entry.id) === String(template.id));
+                if (existing) existing.count = Number(existing.count || 0) + 1;
+                else newInventory.push({ type: 'craft_item', id: template.id, name: template.name, rarity_id: template.rarity_id,
+                    rarity_display: template.rarity_display, rarity_color: template.rarity_color, count: 1,
+                    itemType: template.type || 'craft', image: template.image || null });
+                item = existing ? { ...existing, count: 1 } : newInventory[newInventory.length - 1];
+            } else if (success) {
+                const itemResult = recipe.result_type === 'random_item'
+                    ? await client.query(`
+                        SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
+                        FROM items i JOIN rarities r ON i.rarity_id = r.id
+                        WHERE i.rarity_id = $1 AND (i.extra IS NULL OR i.extra::text NOT LIKE '%"set"%')
+                        ORDER BY RANDOM() LIMIT 1
+                    `, [recipe.result_id])
+                    : await client.query(`
+                        SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
+                        FROM items i JOIN rarities r ON i.rarity_id = r.id WHERE i.id = $1
+                    `, [recipe.result_id]);
+                const template = itemResult.rows[0] as any;
+                if (!template) throw new Error(recipe.result_type === 'random_item' ? 'Нет предметов такой редкости' : 'Результирующий предмет не найден');
+                rolledItem = {
+                    id: Date.now() + Math.random(), templateId: template.id, name: template.name, slot: template.slot,
+                    rarity_id: template.rarity_id, rarity_display: template.rarity_display, rarity_color: template.rarity_color,
+                    bonuses: typeof template.bonuses === 'string' ? JSON.parse(template.bonuses || '{}') : (template.bonuses || {}),
+                    extra: typeof template.extra === 'string' ? JSON.parse(template.extra || '{}') : (template.extra || {}),
+                    image: template.image || null, upgradeLevel: 0,
+                };
+                const decision = recipe.result_type === 'random_item'
+                    ? decideAutoCraftResult(targetItemTemplateId, template.id)
+                    : { targetMatched: undefined, salvaged: false };
+                targetMatched = decision.targetMatched;
+                salvaged = decision.salvaged;
+                if (salvaged) {
+                    const salvageResult = await client.query(`
+                        SELECT c.id, c.name, c.rarity_id, c.type, c.image,
+                               r.display_name as rarity_display, r.color as rarity_color
+                        FROM craft_items c JOIN rarities r ON c.rarity_id = r.id
+                        WHERE c.rarity_id = $1 AND c.type = 'craft' ORDER BY c.id LIMIT 1
+                    `, [template.rarity_id]);
+                    const material = salvageResult.rows[0] as any;
+                    if (!material) throw new Error('Материал для разбора не найден');
+                    const existing = newInventory.find(entry => isCraftItem(entry) && String(entry.id) === String(material.id));
+                    if (existing) existing.count = Number(existing.count || 0) + 1;
+                    else newInventory.push({ type: 'craft_item', id: material.id, name: material.name, rarity_id: material.rarity_id,
+                        rarity_display: material.rarity_display, rarity_color: material.rarity_color, count: 1,
+                        itemType: material.type || 'craft', image: material.image || null });
+                } else {
+                    item = rolledItem;
+                    newInventory.push(item);
+                }
+            }
+
+            if (success) {
+                const factionInc = user.faction === 'crafter' && effectiveChance < 80 ? 1 : 0;
+                await client.query(`
+                    UPDATE users SET inventory = $1, money = $2, craftCount = craftCount + 1,
+                        craftCreated = craftCreated + 1, faction_craft_count = faction_craft_count + $3
+                    WHERE id = $4
+                `, [JSON.stringify(newInventory), moneyAfter, factionInc, req.userId]);
+                await client.query('UPDATE users SET tutorial_step = 3 WHERE id = $1 AND tutorial_step = 2', [req.userId]);
+            } else {
+                await client.query('UPDATE users SET inventory = $1, money = $2, craftBroken = craftBroken + 1 WHERE id = $3',
+                    [JSON.stringify(newInventory), moneyAfter, req.userId]);
+            }
+            return { success, inventory: newInventory, moneyAfter, effectiveChance, item, rolledItem, salvaged, targetMatched,
+                guildId: user.guildid || user.guildId, moneyCost,
+                message: success ? (salvaged ? 'Предмет не совпал с целью и разобран' : 'Предмет создан!') : 'Неудача, предмет разрушен' };
+        });
+
+        addToTreasury(Math.floor(result.moneyCost * 0.22), result.success ? 'craft_recipe' : 'craft_recipe_fail').catch(() => {});
+        if (result.success) {
+            checkAchievement(req.userId, 'craft').catch(() => {});
+            if (result.guildId) updateGuildQuestProgress(result.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message));
+            markDirty(req.userId, 'quests');
+        }
+        const { guildId: _guildId, moneyCost: _moneyCost, ...response } = result;
+        return res.json(response);
+    } catch (error: any) {
+        const message = error?.message || 'Ошибка создания';
+        return res.status(message === 'Игрок не найден' ? 404 : 400).json({ error: message });
     }
 });
 

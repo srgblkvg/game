@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   applyReforge,
+  calculateMaxCraftAttempts,
   curseMeetsTarget,
+  decideAutoCraftResult,
   getTargetCurseChance,
   shouldApplyCurseCandidate,
   getReforgeCost,
@@ -131,4 +133,21 @@ test('цель проклятия позволяет выбрать только
   assert.equal(curseMeetsTarget({ stat: 'a', rank: 1 }, null, null), true);
   assert.equal(shouldApplyCurseCandidate({ stat: 'a', rank: 5 }, { stat: 's', rank: 1 }, 's', null), true);
   assert.equal(shouldApplyCurseCandidate({ stat: 'a', rank: 2 }, { stat: 'm', rank: 4 }, null, 5), true);
+});
+
+test('максимум автосозданий ограничен агрегированными ингредиентами и серебром', () => {
+  const attempts = calculateMaxCraftAttempts(
+    [{ id: 10, count: 11 }, { id: 20, count: 20 }],
+    [{ craftItemId: 10, quantity: 2 }, { craftItemId: 10, quantity: 1 }, { craftItemId: 20, quantity: 4 }],
+    1250,
+    250,
+  );
+  assert.equal(attempts, 3);
+  assert.equal(calculateMaxCraftAttempts([{ id: 10, count: 99 }], [{ craftItemId: 10, quantity: 1 }], 199, 200), 0);
+});
+
+test('автосоздание решает совпадение цели и немедленный разбор промаха', () => {
+  assert.deepEqual(decideAutoCraftResult(42, 42), { targetMatched: true, salvaged: false });
+  assert.deepEqual(decideAutoCraftResult(42, 7), { targetMatched: false, salvaged: true });
+  assert.deepEqual(decideAutoCraftResult(null, 7), { targetMatched: undefined, salvaged: false });
 });
