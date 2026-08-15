@@ -16,22 +16,23 @@ import { renderBattleLog } from '../utils/battleLog';
 import { formatMoney } from '../utils/money';
 import CharacterCard from '../components/CharacterCard';
 import ItemTooltip from '../components/ItemTooltip';
+import { useTheme } from '../contexts/ThemeContext';
 
 const rarityTextColors: Record<number, string> = {
   0: 'text-[#6b6b6b]', 1: 'text-[#a0a0a0]', 2: 'text-[#4a9b4a]', 3: 'text-[#4a7ac0]', 4: 'text-[#a040c0]', 5: 'text-[#d4a020]', 6: 'text-[#e03030]',
 };
 
 const RARITY_NAMES: Record<number, string> = {
-  0: 'Хлам', 1: 'Обычная', 2: 'Необычная', 3: 'Редкая', 4: 'Эпическая', 5: 'Легендарная', 6: 'Мифическая',
+  0: 'Хлам', 1: 'Обычное', 2: 'Необычное', 3: 'Редкое', 4: 'Эпическое', 5: 'Легендарное', 6: 'Мифическое',
 };
 
-const difficultyTextColor = (difficulty: number) => difficulty === 0
-  ? 'text-emerald-600 dark:text-emerald-400'
+const difficultyTextColor = (difficulty: number, theme: 'light' | 'dark') => difficulty === 0
+  ? theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800'
   : difficulty === 1
-    ? 'text-amber-600 dark:text-amber-300'
+    ? theme === 'dark' ? 'text-amber-300' : 'text-amber-800'
     : difficulty === 2
-      ? 'text-orange-600 dark:text-orange-400'
-      : 'text-red-600 dark:text-red-400';
+      ? theme === 'dark' ? 'text-orange-300' : 'text-orange-800'
+      : theme === 'dark' ? 'text-red-300' : 'text-red-800';
 
 const floorCountLabel = (count: number) => {
   const mod100 = count % 100;
@@ -46,6 +47,7 @@ export default function BestiaryPage() {
   const [actionCard, setActionCard] = useState<any>(null);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/bestiary'); if (c) setActionCard(c); }).catch(() => {}); }, []);
   const { user } = useAuth();
+  const { theme } = useTheme();
   const { character, setCharacter, regenHp } = useGame();
   const serverTime = useServerTime();
   const navigate = useNavigate();
@@ -181,18 +183,17 @@ export default function BestiaryPage() {
     const goldMax = fm.reduce((max, m) => Math.max(max, m.gold_max), 0);
     const avgXp = fm.length > 0 ? Math.round(fm.reduce((s, m) => s + (m.xp || 0), 0) / fm.length) : 0;
     // Лут: собираем изображения и макс. шансы по редкостям
-    const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
-    const seenRarities = new Set<number>();
+    const lootImageMap = new Map<string, { rarity: number; name: string; image: string; chance: number }>();
     for (const m of fm) {
       if (m.lootImages) {
         for (const li of m.lootImages) {
-          if (!seenRarities.has(li.rarity)) {
-            seenRarities.add(li.rarity);
-            lootImages.push(li);
-          }
+          const key = li.rarity === -1 ? `stone:${li.name}` : `material:${li.rarity}`;
+          const current = lootImageMap.get(key);
+          if (!current || Number(li.chance) > Number(current.chance)) lootImageMap.set(key, li);
         }
       }
     }
+    const lootImages = Array.from(lootImageMap.values());
     // Предметы: собираем таблицу дропа по этажу (макс шанс по каждой редкости)
     const itemDropMap = new Map<number, number>();
     for (const m of fm) {
@@ -518,6 +519,7 @@ export default function BestiaryPage() {
             floorBgMap={floorBgMap}
             cooldownRemaining={cooldownRemaining}
             selectFloor={selectFloor}
+            theme={theme}
           />
         </>
       ) : (
@@ -654,18 +656,18 @@ export default function BestiaryPage() {
   );
 }
 
-function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFloor, setPreviewFloor, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor }: any) {
+function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFloor, setPreviewFloor, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor, theme }: any) {
   const selected = groups.find((group: any) => group.difficulty === selectedDifficulty) || groups[0];
   const selectedInfo = selected && previewFloor ? getFloorInfo(previewFloor) : null;
   const selectedBg = previewFloor ? floorBgMap.get(previewFloor) : '';
   return (
     <div className="space-y-4" data-tutorial="bestiary-attack">
-      <div className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 sm:grid sm:grid-cols-7 sm:overflow-visible">
+      <div className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--color-border-default)] sm:grid sm:grid-cols-7 sm:overflow-visible">
         {groups.map((diff: any) => {
           const active = diff.difficulty === selectedDifficulty;
           return <button key={diff.label} type="button" onClick={() => setSelectedDifficulty(diff.difficulty)} className={`relative cursor-pointer shrink-0 min-w-28 sm:min-w-0 min-h-11 rounded-lg border px-3 py-2 transition-all ${active ? 'border-[var(--color-accent-info)] bg-[var(--color-bg-card)] ring-2 ring-[var(--color-accent-info)]/25 shadow' : 'border-[var(--color-border-default)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-card-hover)]'}`}>
             {active && <span className="absolute top-1 right-1 text-[0.6rem] font-bold text-[var(--color-accent-info)]">✓</span>}
-            <p className={`font-bold text-xs pr-2 ${difficultyTextColor(diff.difficulty)}`}>{diff.label}</p>
+            <p className={`font-bold text-xs pr-2 ${difficultyTextColor(diff.difficulty, theme)}`}>{diff.label}</p>
             <p className="text-[0.6rem] text-[var(--color-text-secondary)] mt-0.5 whitespace-nowrap">{floorCountLabel(diff.floors.length)}</p>
           </button>;
         })}
@@ -676,7 +678,7 @@ function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFlo
           {selected.floors.map((floor: string, index: number) => <button key={floor} type="button" onClick={() => setPreviewFloor(floor)} className={`relative cursor-pointer min-h-24 overflow-hidden rounded-xl border text-left transition-all ${previewFloor === floor ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]/30' : 'border-[var(--color-border-light)] opacity-80 hover:opacity-100'}`} style={floorBgMap.get(floor) ? { backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.12) 75%), url(${floorBgMap.get(floor)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}><span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-black/60 text-white text-[0.65rem] flex items-center justify-center">{index + 1}</span><span className="absolute inset-x-2 bottom-2 text-xs font-bold text-white drop-shadow">{floor}</span></button>)}
         </div>
         {previewFloor && selectedInfo && <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-light)] min-h-52" style={selectedBg ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88), rgba(0,0,0,.4)), url(${selectedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-          <div className="relative z-10 p-4 sm:p-5 text-white"><div className="flex items-start justify-between gap-3"><div><p className="text-xs text-white/70">Выбранная локация</p><h3 className="text-xl font-bold mt-1">{previewFloor}</h3></div><Icon icon="game-icons:castle-ruins" width="30" height="30" className="text-white/80" /></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5"><Stat label="Уровни" value={`${selectedInfo.minLevel}–${selectedInfo.maxLevel}`} /><Stat label="Противники" value={selectedInfo.count} /><Stat label="Серебро" value={`${selectedInfo.goldMin}–${selectedInfo.goldMax}`} /><Stat label="Средний опыт" value={`~${selectedInfo.avgXp}`} /></div><LootPreview info={selectedInfo} /><div className="flex justify-end mt-4"><Button className="cursor-pointer" size="md" disabled={cooldownRemaining > 0} onClick={() => selectFloor(previewFloor)} data-tutorial="bestiary-attack">{cooldownRemaining > 0 ? `Доступно через ${Math.ceil(cooldownRemaining / 60)} мин.` : 'Начать охоту'}</Button></div></div>
+          <div className="relative z-10 p-4 sm:p-5 text-white"><div className="flex items-start justify-between gap-3"><div><p className="text-xs text-white/70">Выбранная локация</p><h3 className="text-xl font-bold mt-1">{previewFloor}</h3></div><Icon icon="game-icons:castle-ruins" width="30" height="30" className="text-white/80" /></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5"><Stat label="Уровни" value={`${selectedInfo.minLevel}–${selectedInfo.maxLevel}`} /><Stat label="Противники" value={selectedInfo.count} /><Stat label="Серебро" value={`${selectedInfo.goldMin}–${selectedInfo.goldMax}`} /><Stat label="Средний опыт" value={`~${selectedInfo.avgXp}`} /></div><LootPreview info={selectedInfo} /><div className="flex justify-end mt-4"><Button variant="primary" className="cursor-pointer !bg-[#2563eb] hover:!bg-[#1d4ed8] !text-white shadow-md" size="md" disabled={cooldownRemaining > 0} onClick={() => selectFloor(previewFloor)} data-tutorial="bestiary-attack">{cooldownRemaining > 0 ? `Доступно через ${Math.ceil(cooldownRemaining / 60)} мин.` : 'Начать охоту'}</Button></div></div>
         </div>}
       </>}
     </div>
@@ -690,7 +692,7 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
 const chanceLabel = (chance: number) => `${(Number(chance || 0) * 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })}%`;
 
 function LootIcon({ item, label, upTo = false }: { item: any; label?: string; upTo?: boolean }) {
-  return <div className="flex items-center gap-2 rounded-lg bg-black/25 border border-white/10 p-1.5 min-w-0"><div className="w-9 h-9 rounded-md bg-black/25 flex items-center justify-center shrink-0 overflow-hidden">{item.image ? <img src={item.image} alt="" className="w-8 h-8 object-contain" /> : <Icon icon="game-icons:locked-chest" width="24" height="24" className="text-white/70" />}</div><div className="min-w-0"><p className="text-[0.65rem] font-bold truncate">{label || item.name}</p><p className="text-[0.6rem] text-white/65">{upTo ? 'до ' : ''}{chanceLabel(item.chance)}</p></div></div>;
+  return <div className="flex items-center gap-2 rounded-lg bg-black/25 border border-white/10 p-1.5 min-w-0"><div className="w-9 h-9 rounded-md bg-black/25 border flex items-center justify-center shrink-0 overflow-hidden" style={{ borderColor: item.rarityColor || 'rgba(255,255,255,.12)' }}>{item.image ? <img src={item.image} alt="" className="w-8 h-8 object-contain" /> : <Icon icon="game-icons:locked-chest" width="24" height="24" className="text-white/70" />}</div><div className="min-w-0"><p className="text-[0.65rem] font-bold truncate">{label || item.name}</p><p className="text-[0.6rem] text-white/65">{upTo ? 'до ' : ''}{chanceLabel(item.chance)}</p></div></div>;
 }
 
 function LootPreview({ info }: { info: any }) {

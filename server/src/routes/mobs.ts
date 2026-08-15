@@ -123,10 +123,15 @@ router.get('/mobs', async (req, res) => {
     const specialMaterialMap = new Map(specialMaterials.map((item: any) => [item.name, item]));
 
     const equipmentInfo = await db.query(`
-        SELECT rarity_id, MIN(image) FILTER (WHERE image IS NOT NULL) AS image,
+        SELECT i.rarity_id,
+               (ARRAY_AGG(i.image ORDER BY (i.extra::text LIKE '%"set"%'), i.name)
+                   FILTER (WHERE i.image IS NOT NULL))[1] AS image,
+               (ARRAY_AGG(i.name ORDER BY (i.extra::text LIKE '%"set"%'), i.name))[1] AS name,
+               r.color AS rarity_color,
                COUNT(*) AS total_count,
-               COUNT(*) FILTER (WHERE extra::text LIKE '%"set"%') AS set_count
-        FROM items GROUP BY rarity_id ORDER BY rarity_id
+               COUNT(*) FILTER (WHERE i.extra::text LIKE '%"set"%') AS set_count
+        FROM items i JOIN rarities r ON r.id = i.rarity_id
+        GROUP BY i.rarity_id, r.color ORDER BY i.rarity_id
     `, []) as any[];
     const equipmentMap = new Map(equipmentInfo.map((item: any) => [Number(item.rarity_id), item]));
 
@@ -156,11 +161,13 @@ router.get('/mobs', async (req, res) => {
         const itemTable = getItemDropTable(m.level);
         const equipmentDrops = itemTable.map(entry => {
             const info = equipmentMap.get(entry.rarity);
-            const totalCount = Number(info?.total_count || 0);
-            const setCount = m.level >= 100 ? Number(info?.set_count || 0) : 0;
+            const totalCount = Number(info?.totalCount ?? info?.total_count ?? 0);
+            const setCount = m.level >= 100 ? Number(info?.setCount ?? info?.set_count ?? 0) : 0;
             return {
                 ...entry,
                 image: info?.image || null,
+                name: info?.name || null,
+                rarityColor: info?.rarityColor || info?.rarity_color || null,
                 setChance: totalCount > 0 ? entry.chance * setCount / totalCount : 0,
             };
         });
