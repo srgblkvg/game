@@ -312,7 +312,12 @@ export default function CraftPage() {
 
   useEffect(() => {
     setReforgeInfo(null); setFromStat(''); setToStat('');
-    if (reforgeItemState) fetchReforgeInfo(reforgeItemState.id).then(setReforgeInfo).catch(e => showToast(e.message));
+    if (!reforgeItemState) return;
+    let cancelled = false;
+    fetchReforgeInfo(reforgeItemState.id)
+      .then(info => { if (!cancelled) setReforgeInfo(info); })
+      .catch(e => { if (!cancelled) showToast(e.message); });
+    return () => { cancelled = true; };
   }, [reforgeItemState]);
 
   const create = async () => {
@@ -594,7 +599,9 @@ export default function CraftPage() {
     if (Number(reforgeItemState.rarity_id) !== 7 && !extra.effect) Object.entries(EXTRA).forEach(([k, label]) => { if (Number(extra[k]) > 0) out[k] = { label, value: Number(extra[k]), group: 'extra' }; });
     return out;
   }, [reforgeItemState]);
-  const targetStats = fromStat && availableReforgeStats[fromStat]?.group === 'extra' ? EXTRA : PRIMARY;
+  const selectedReforgeStat = fromStat ? availableReforgeStats[fromStat] : undefined;
+  const targetStats = selectedReforgeStat?.group === 'extra' ? EXTRA : PRIMARY;
+  const selectedReforgeTarget = toStat ? targetStats[toStat] : undefined;
 
   if (!user || !character) return null;
 
@@ -607,10 +614,17 @@ export default function CraftPage() {
   const gridTooltipProps = { showTooltip: showItemTooltip, hideTooltip: hideItemTooltip };
 
   const runReforge = async () => {
-    if (!reforgeItemState || !fromStat || !toStat) return;
+    if (!reforgeItemState || !selectedReforgeStat || !selectedReforgeTarget) return;
     setBusy(true);
     try { const data = await reforgeItem(reforgeItemState.id, fromStat, toStat); updateCharacter(data); showToast(data.message, 'success'); setReforgeItemState(null); }
     catch (e: any) { showToast(e.message); } finally { setBusy(false); }
+  };
+
+  const selectReforgeItem = (item: any) => {
+    setFromStat('');
+    setToStat('');
+    setReforgeInfo(null);
+    setReforgeItemState(item);
   };
 
   const runSalvage = async () => {
@@ -722,7 +736,7 @@ export default function CraftPage() {
       <Card><p className="text-xs">Минимум на один предмет: {formatMoney(100000)} и 1 Кристалл душ.</p>{curseMode === 'target' && (curseStat || curseRank) && <p className="text-xs">Максимальный запас по лимиту: {formatMoney(100000 * curseAttempts * curseItems.size)} и {curseAttempts * curseItems.size} Кристаллов душ.</p>}<p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1 mb-3">Каждая попытка случайна и отдельно расходует ресурсы. Автоматический поиск остановится при достижении цели, нажатии «Остановить», исчерпании лимита или ресурсов.</p><Button size="md" fullWidth className="!bg-[#7c3aed] !text-white" disabled={busy || !curseItems.size || !curseCrystal || character.money < 100000} onClick={runCurse}>{busy ? 'Проклятие...' : curseMode === 'random' || (!curseStat && !curseRank) ? 'Наложить случайное проклятие' : 'Начать поиск результата'}</Button></Card>
     </div>}
 
-    {tab === 'reforge' && <div className="space-y-4"><Card><h2 className="font-bold">Перековка</h2><p className="text-xs text-[var(--color-text-muted)]">Переносит всё значение одной характеристики в другую характеристику той же группы. Проклятие, комплект и эффект артефакта не меняются.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid {...gridTooltipProps} items={reforgeEquipment} selected={new Set(reforgeItemState ? [String(reforgeItemState.id)] : [])} onSelect={setReforgeItemState} /></Card>{reforgeItemState && <Card><h3 className="font-bold text-sm mb-2">2. Выберите изменение</h3><label className="text-xs">Исходная характеристика</label><select className={inputClass + ' mb-3'} value={fromStat} onChange={e => { setFromStat(e.target.value); setToStat(''); }}><option value="">Выберите</option>{Object.entries(availableReforgeStats).map(([key, s]) => <option key={key} value={key}>{s.label}: +{s.value}</option>)}</select><label className="text-xs">Новая характеристика</label><select className={inputClass} value={toStat} onChange={e => setToStat(e.target.value)}><option value="">Выберите</option>{Object.entries(targetStats).filter(([k]) => k !== fromStat).map(([k, label]) => <option key={k} value={k}>{label}</option>)}</select>{fromStat && toStat && <div className="rounded-lg bg-[var(--color-bg-input)] p-3 text-xs mt-3"><p>Было: {availableReforgeStats[fromStat].label} +{availableReforgeStats[fromStat].value}</p><p className="text-[var(--color-accent-success)]">Станет: {targetStats[toStat]} +{availableReforgeStats[fromStat].value}</p><p className="mt-2">Стоимость: {reforgeInfo ? formatMoney(reforgeInfo.cost) : 'расчёт...'}</p><p>Предыдущих перековок: {reforgeInfo?.reforgeCount || 0}</p></div>}<Button size="md" fullWidth className="mt-3" disabled={busy || !fromStat || !toStat || !reforgeInfo || character.money < reforgeInfo.cost} onClick={runReforge}>{busy ? 'Перековка...' : 'Перековать'}</Button></Card>}</div>}
+    {tab === 'reforge' && <div className="space-y-4"><Card><h2 className="font-bold">Перековка</h2><p className="text-xs text-[var(--color-text-muted)]">Переносит всё значение одной характеристики в другую характеристику той же группы. Проклятие, комплект и эффект артефакта не меняются.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid {...gridTooltipProps} items={reforgeEquipment} selected={new Set(reforgeItemState ? [String(reforgeItemState.id)] : [])} onSelect={selectReforgeItem} /></Card>{reforgeItemState && <Card><h3 className="font-bold text-sm mb-2">2. Выберите изменение</h3><label className="text-xs">Исходная характеристика</label><select className={inputClass + ' mb-3'} value={selectedReforgeStat ? fromStat : ''} onChange={e => { setFromStat(e.target.value); setToStat(''); }}><option value="">Выберите</option>{Object.entries(availableReforgeStats).map(([key, s]) => <option key={key} value={key}>{s.label}: +{s.value}</option>)}</select><label className="text-xs">Новая характеристика</label><select className={inputClass} value={selectedReforgeTarget ? toStat : ''} onChange={e => setToStat(e.target.value)}><option value="">Выберите</option>{Object.entries(targetStats).filter(([k]) => k !== fromStat).map(([k, label]) => <option key={k} value={k}>{label}</option>)}</select>{selectedReforgeStat && selectedReforgeTarget && <div className="rounded-lg bg-[var(--color-bg-input)] p-3 text-xs mt-3"><p>Было: {selectedReforgeStat.label} +{selectedReforgeStat.value}</p><p className="text-[var(--color-accent-success)]">Станет: {selectedReforgeTarget} +{selectedReforgeStat.value}</p><p className="mt-2">Стоимость: {reforgeInfo ? formatMoney(reforgeInfo.cost) : 'расчёт...'}</p><p>Предыдущих перековок: {reforgeInfo?.reforgeCount || 0}</p></div>}<Button size="md" fullWidth className="mt-3" disabled={busy || !selectedReforgeStat || !selectedReforgeTarget || !reforgeInfo || character.money < reforgeInfo.cost} onClick={runReforge}>{busy ? 'Перековка...' : 'Перековать'}</Button></Card>}</div>}
 
     {tab === 'salvage' && <div className="space-y-4"><Card><h2 className="font-bold">Разборка</h2><p className="text-xs text-[var(--color-text-muted)]">Предмет превращается в материал своей редкости. Камни улучшения разбирать нельзя.</p></Card><Card><h3 className="font-bold text-sm mb-2">Выберите предметы</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={salvageSelected} multi onSelect={item => setSalvageSelected(prev => { const next = new Set(prev); const id = String(item.id); if (next.has(id)) next.delete(id); else next.add(id); return next; })} /></Card><Button variant="danger" size="md" fullWidth disabled={busy || !salvageSelected.size} onClick={runSalvage}>{busy ? 'Разборка...' : `Разобрать${salvageSelected.size ? ` (${salvageSelected.size})` : ''}`}</Button></div>}
 
