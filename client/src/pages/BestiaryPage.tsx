@@ -48,6 +48,8 @@ export default function BestiaryPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
   const [showPremiumHint, setShowPremiumHint] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<number | null>(null);
+  const [previewFloor, setPreviewFloor] = useState('');
   const [tooltipData, _setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
 
   const hasPremium = Number((character as any)?.premium?.until || 0) > (serverTime || Math.floor(Date.now()/1000));
@@ -125,6 +127,21 @@ export default function BestiaryPage() {
     }
   }
   const floors = mobFloorNames;
+
+  const visibleDiffGroups = (diffGroups || []).map((diff: any) => ({
+    ...diff,
+    floors: floors.filter(f => floorsData.some(fd => fd.name === f && (fd.difficulty || 0) === diff.difficulty)),
+  })).filter((diff: any) => diff.floors.length > 0 || user?.username === 'TODD');
+
+  useEffect(() => {
+    if (selectedDifficulty !== null && visibleDiffGroups.some((d: any) => d.difficulty === selectedDifficulty)) return;
+    if (visibleDiffGroups.length > 0) setSelectedDifficulty(visibleDiffGroups[0].difficulty);
+  }, [floorsData.length, mobs.length, diffGroups.length]);
+
+  useEffect(() => {
+    const group = visibleDiffGroups.find((d: any) => d.difficulty === selectedDifficulty);
+    if (group && !group.floors.includes(previewFloor)) setPreviewFloor(group.floors[0] || '');
+  }, [selectedDifficulty, floorsData.length, mobs.length, diffGroups.length]);
 
   const getFloorInfo = (floor: string) => {
     const fm = mobs.filter((m: any) => m.location === floor).sort((a: any, b: any) => a.level - b.level);
@@ -437,13 +454,17 @@ export default function BestiaryPage() {
             </div>
           )}
           {error && <p className="text-[var(--color-accent-danger)] mb-4">{error}</p>}
-          <div className="space-y-4" data-tutorial="bestiary-attack">
-            {(diffGroups || []).map((diff, idx) => {
-              const groupFloors = floors.filter(f => floorsData.some(fd => fd.name === f && (fd.difficulty||0) === diff.difficulty));
-              if (groupFloors.length === 0 && user?.username !== 'TODD') return null;
-              return <FloorGroup key={diff.label} diff={diff} floors={groupFloors} getFloorInfo={getFloorInfo} floorBgMap={floorBgMap} cooldownRemaining={cooldownRemaining} selectFloor={selectFloor} defaultOpen={idx === 0 && (character as any)?.tutorialStep < 2} />;
-            })}
-          </div>
+          <HuntMap
+            groups={visibleDiffGroups}
+            selectedDifficulty={selectedDifficulty}
+            setSelectedDifficulty={setSelectedDifficulty}
+            previewFloor={previewFloor}
+            setPreviewFloor={setPreviewFloor}
+            getFloorInfo={getFloorInfo}
+            floorBgMap={floorBgMap}
+            cooldownRemaining={cooldownRemaining}
+            selectFloor={selectFloor}
+          />
         </>
       ) : (
         /* Battle Phase — like Arena */
@@ -579,48 +600,36 @@ export default function BestiaryPage() {
   );
 }
 
-function FloorGroup({ diff, floors, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor, defaultOpen }: any) {
-  const key = `floor_${diff.label}`;
-  const [open, setOpen] = useState(() => {
-    const saved = localStorage.getItem(key);
-    return saved !== null ? saved === '1' : (defaultOpen || false);
-  });
-  const toggle = () => { const v = !open; setOpen(v); localStorage.setItem(key, v ? '1' : '0'); };
+function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFloor, setPreviewFloor, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor }: any) {
+  const selected = groups.find((group: any) => group.difficulty === selectedDifficulty) || groups[0];
+  const selectedInfo = selected && previewFloor ? getFloorInfo(previewFloor) : null;
+  const selectedBg = previewFloor ? floorBgMap.get(previewFloor) : '';
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-2 cursor-pointer" onClick={toggle}>
-        <span className="text-xs mr-1">{open ? '▼' : '▶'}</span>
-        <h2 className="font-bold text-sm">{diff.icon} {diff.label}</h2>
-        <span className="text-xs text-[var(--color-text-muted)]">({floors.length})</span>
+    <div className="space-y-4" data-tutorial="bestiary-attack">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {groups.map((diff: any) => {
+          const active = diff.difficulty === selectedDifficulty;
+          return <button key={diff.label} type="button" onClick={() => setSelectedDifficulty(diff.difficulty)} className={`relative text-left rounded-xl border p-3 transition-all ${active ? 'border-[var(--color-accent-info)] bg-[var(--color-bg-card)] ring-2 ring-[var(--color-accent-info)]/25 shadow-lg -translate-y-0.5' : 'border-[var(--color-border-default)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-card-hover)]'}`}>
+            {active && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-accent-info)] text-white text-[0.65rem] font-bold flex items-center justify-center shadow">✓</span>}
+            <div className="flex items-center justify-between gap-2"><span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${diff.difficulty >= 3 ? 'bg-red-500/15 text-red-500' : 'bg-[var(--color-bg-input)]'}`}>{diff.difficulty >= 3 ? diff.difficulty - 2 : diff.icon}</span><span className="text-[0.65rem] text-[var(--color-text-secondary)]">{diff.floors.length} этаж.</span></div>
+            <p className="font-bold text-sm mt-1">{diff.label}</p>
+            <p className="text-[0.65rem] text-[var(--color-text-secondary)] mt-1">{diff.difficulty < 3 ? 'Опыт и трофеи' : 'Высокий риск и награды'}</p>
+          </button>;
+        })}
       </div>
-      {open && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {(floors || []).map((floor: string) => {
-            const info = getFloorInfo(floor);
-            const disabled = cooldownRemaining > 0;
-            const bg = floorBgMap.get(floor);
-            return (
-              <Card key={floor} className={`cursor-pointer hover:border-[var(--color-accent-info)] transition-colors relative overflow-hidden min-w-0 ${disabled ? "opacity-50" : ""}`}
-                onClick={() => !disabled && selectFloor(floor)}
-                style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}>
-                <div className="relative z-10 bg-[var(--color-overlay-text)] rounded-lg p-2 -m-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icon icon="game-icons:castle-ruins" width="20" height="20" className="text-[var(--color-text-muted)]" />
-                    <h3 className="font-bold text-sm">{floor}</h3>
-                  </div>
-                  <div className="text-xs text-[var(--color-text-muted)] space-y-1">
-                    <p>Уровни: {info.minLevel}–{info.maxLevel}</p>
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                      <span className="text-[var(--color-text-accent)]">◆ {info.goldMin}–{info.goldMax} сер.</span>
-                      <span className="text-[var(--color-accent-success)]">◆ ~{info.avgXp} XP</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
+      {selected && <>
+        <div className="flex items-center justify-between gap-3"><div><h2 className="font-bold text-base">Маршрут охоты</h2><p className="text-xs text-[var(--color-text-muted)]">Выберите локацию, чтобы увидеть подробности</p></div><span className="text-xs text-[var(--color-text-muted)]">{selected.label}</span></div>
+        <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {selected.floors.map((floor: string, index: number) => <button key={floor} type="button" onClick={() => setPreviewFloor(floor)} className={`relative min-h-24 overflow-hidden rounded-xl border text-left transition-all ${previewFloor === floor ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]/30' : 'border-[var(--color-border-light)] opacity-80 hover:opacity-100'}`} style={floorBgMap.get(floor) ? { backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.12) 75%), url(${floorBgMap.get(floor)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}><span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-black/60 text-white text-[0.65rem] flex items-center justify-center">{index + 1}</span><span className="absolute inset-x-2 bottom-2 text-xs font-bold text-white drop-shadow">{floor}</span></button>)}
         </div>
-      )}
+        {previewFloor && selectedInfo && <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-light)] min-h-52" style={selectedBg ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88), rgba(0,0,0,.4)), url(${selectedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+          <div className="relative z-10 p-4 sm:p-5 text-white"><div className="flex items-start justify-between gap-3"><div><p className="text-xs text-white/70">Выбранная локация</p><h3 className="text-xl font-bold mt-1">{previewFloor}</h3></div><Icon icon="game-icons:castle-ruins" width="30" height="30" className="text-white/80" /></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5"><Stat label="Уровни" value={`${selectedInfo.minLevel}–${selectedInfo.maxLevel}`} /><Stat label="Противники" value={selectedInfo.count} /><Stat label="Серебро" value={`${selectedInfo.goldMin}–${selectedInfo.goldMax}`} /><Stat label="Средний опыт" value={`~${selectedInfo.avgXp}`} /></div><div className="flex flex-wrap items-center justify-between gap-3 mt-5"><p className="text-xs text-white/75">Трофеи: {selectedInfo.lootImages?.length || 0} редкостей · снаряжение до {selectedInfo.itemDropTable?.length ? Math.max(...selectedInfo.itemDropTable.map((item: any) => item.rarity)) : 0} редкости</p><Button size="md" disabled={cooldownRemaining > 0} onClick={() => selectFloor(previewFloor)} data-tutorial="bestiary-attack">{cooldownRemaining > 0 ? `Доступно через ${Math.ceil(cooldownRemaining / 60)} мин.` : 'Начать охоту'}</Button></div></div>
+        </div>}
+      </>}
     </div>
   );
+}
+
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
+  return <div className="rounded-lg bg-black/30 border border-white/10 px-2 py-2"><p className="text-[0.6rem] text-white/60">{label}</p><p className="text-sm font-bold mt-0.5">{value}</p></div>;
 }
