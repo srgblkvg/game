@@ -114,6 +114,7 @@ test('вероятность целевого проклятия учитыва�
   assert.equal(oneAttempt, 2);
   assert.ok(tenAttempts > oneAttempt);
   assert.ok(tenAttempts < 100);
+  assert.throws(() => getTargetCurseChance('s', 3, 101), /не более 100/i);
 });
 
 test('поиск проклятия сначала улучшает характеристику, затем приближает ранг', () => {

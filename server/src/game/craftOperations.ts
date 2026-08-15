@@ -71,7 +71,7 @@ export function getTargetCurseChance(targetStat: string, minimumRank: number, at
   const rank = Number(minimumRank);
   const limit = Number(attempts);
   if (!Number.isInteger(rank) || rank < 1 || rank > 5) throw new Error('Ранг проклятия должен быть от I до V');
-  if (!Number.isInteger(limit) || limit < 1) throw new Error('Лимит попыток должен быть положительным');
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error('Лимит попыток должен быть от 1 до 100, не более 100');
   const totalWeight = CURSE_RANK_WEIGHTS.reduce((sum, weight) => sum + weight, 0);
   const acceptableWeight = CURSE_RANK_WEIGHTS.slice(rank - 1).reduce((sum, weight) => sum + weight, 0);
   const oneAttempt = acceptableWeight / totalWeight / 4;
