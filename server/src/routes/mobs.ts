@@ -103,7 +103,7 @@ router.get('/mobs', async (req, res) => {
 
     // Собираем изображения и названия материалов по редкостям (первое попавшееся для каждой)
     const craftInfo: Record<number, { image: string; name: string }> = {};
-    const allCraft = await db.query('SELECT rarity_id, image, name FROM craft_items WHERE image IS NOT NULL', []) as any[];
+    const allCraft = await db.query("SELECT rarity_id, image, name FROM craft_items WHERE type = 'craft' AND image IS NOT NULL", []) as any[];
     for (const c of allCraft) {
         if (!craftInfo[c.rarity_id] && c.image) {
             craftInfo[c.rarity_id] = { image: c.image, name: c.name };
@@ -116,6 +116,19 @@ router.get('/mobs', async (req, res) => {
     const allStones = await db.query(
         "SELECT name, image FROM craft_items WHERE type = 'upgrade' ORDER BY rarity_id", []
     ) as any[];
+
+    const specialMaterials = await db.query(
+        "SELECT name, image FROM craft_items WHERE type IN ('material', 'soul_crystal')", []
+    ) as any[];
+    const specialMaterialMap = new Map(specialMaterials.map((item: any) => [item.name, item]));
+
+    const equipmentInfo = await db.query(`
+        SELECT rarity_id, MIN(image) FILTER (WHERE image IS NOT NULL) AS image,
+               COUNT(*) AS total_count,
+               COUNT(*) FILTER (WHERE extra::text LIKE '%"set"%') AS set_count
+        FROM items GROUP BY rarity_id ORDER BY rarity_id
+    `, []) as any[];
+    const equipmentMap = new Map(equipmentInfo.map((item: any) => [Number(item.rarity_id), item]));
 
     const enriched = mobs.map((m) => {
         const lootImages: { rarity: number; name: string; image: string; chance: number }[] = [];
@@ -141,7 +154,25 @@ router.get('/mobs', async (req, res) => {
             }
         }
         const itemTable = getItemDropTable(m.level);
-        return { ...m, hp: (m.hp || 50) * 2, lootImages, itemDropTable: itemTable };
+        const equipmentDrops = itemTable.map(entry => {
+            const info = equipmentMap.get(entry.rarity);
+            const totalCount = Number(info?.total_count || 0);
+            const setCount = m.level >= 100 ? Number(info?.set_count || 0) : 0;
+            return {
+                ...entry,
+                image: info?.image || null,
+                setChance: totalCount > 0 ? entry.chance * setCount / totalCount : 0,
+            };
+        });
+        const mythicName = MYTHIC_RESOURCE_DROPS[m.id];
+        const specialMaterial = mythicName ? specialMaterialMap.get(mythicName) : null;
+        const artifactMaterialDrop = specialMaterial ? {
+            name: mythicName,
+            image: specialMaterial.image || null,
+            chance: MYTHIC_RESOURCE_DROP_CHANCE,
+        } : null;
+        return { ...m, hp: (m.hp || 50) * 2, lootImages, itemDropTable: itemTable,
+            equipmentDrops, artifactMaterialDrop };
     });
 
     res.json(enriched);

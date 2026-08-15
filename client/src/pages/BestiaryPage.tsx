@@ -21,6 +21,27 @@ const rarityTextColors: Record<number, string> = {
   0: 'text-[#6b6b6b]', 1: 'text-[#a0a0a0]', 2: 'text-[#4a9b4a]', 3: 'text-[#4a7ac0]', 4: 'text-[#a040c0]', 5: 'text-[#d4a020]', 6: 'text-[#e03030]',
 };
 
+const RARITY_NAMES: Record<number, string> = {
+  0: 'Хлам', 1: 'Обычная', 2: 'Необычная', 3: 'Редкая', 4: 'Эпическая', 5: 'Легендарная', 6: 'Мифическая',
+};
+
+const difficultyTextColor = (difficulty: number) => difficulty === 0
+  ? 'text-emerald-600 dark:text-emerald-400'
+  : difficulty === 1
+    ? 'text-amber-600 dark:text-amber-300'
+    : difficulty === 2
+      ? 'text-orange-600 dark:text-orange-400'
+      : 'text-red-600 dark:text-red-400';
+
+const floorCountLabel = (count: number) => {
+  const mod100 = count % 100;
+  const mod10 = count % 10;
+  if (mod100 >= 11 && mod100 <= 14) return `${count} этажей`;
+  if (mod10 === 1) return `${count} этаж`;
+  if (mod10 >= 2 && mod10 <= 4) return `${count} этажа`;
+  return `${count} этажей`;
+};
+
 export default function BestiaryPage() {
   const [actionCard, setActionCard] = useState<any>(null);
   useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/bestiary'); if (c) setActionCard(c); }).catch(() => {}); }, []);
@@ -48,8 +69,11 @@ export default function BestiaryPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [isVerySmall, setIsVerySmall] = useState(window.innerWidth < 420);
   const [showPremiumHint, setShowPremiumHint] = useState(false);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<number | null>(null);
-  const [previewFloor, setPreviewFloor] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<number | null>(() => {
+    const saved = localStorage.getItem('hunt_selected_difficulty');
+    return saved === null ? null : Number(saved);
+  });
+  const [previewFloor, setPreviewFloor] = useState(() => localStorage.getItem('hunt_selected_floor') || '');
   const [tooltipData, _setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
 
   const hasPremium = Number((character as any)?.premium?.until || 0) > (serverTime || Math.floor(Date.now()/1000));
@@ -143,6 +167,14 @@ export default function BestiaryPage() {
     if (group && !group.floors.includes(previewFloor)) setPreviewFloor(group.floors[0] || '');
   }, [selectedDifficulty, floorsData.length, mobs.length, diffGroups.length]);
 
+  useEffect(() => {
+    if (selectedDifficulty !== null) localStorage.setItem('hunt_selected_difficulty', String(selectedDifficulty));
+  }, [selectedDifficulty]);
+
+  useEffect(() => {
+    if (previewFloor) localStorage.setItem('hunt_selected_floor', previewFloor);
+  }, [previewFloor]);
+
   const getFloorInfo = (floor: string) => {
     const fm = mobs.filter((m: any) => m.location === floor).sort((a: any, b: any) => a.level - b.level);
     const goldMin = fm.reduce((min, m) => Math.min(min, m.gold_min), Infinity);
@@ -174,7 +206,29 @@ export default function BestiaryPage() {
         }
     }
     const itemDropTable = Array.from(itemDropMap.entries()).map(([rarity, chance]) => ({ rarity, chance }));
-    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0, goldMin, goldMax, avgXp, lootImages, itemDropTable };
+    const equipmentDropMap = new Map<number, any>();
+    const artifactMaterialMap = new Map<string, any>();
+    for (const m of fm) {
+      for (const drop of m.equipmentDrops || []) {
+        const current = equipmentDropMap.get(Number(drop.rarity));
+        if (!current || Number(drop.chance) > Number(current.chance)) equipmentDropMap.set(Number(drop.rarity), drop);
+      }
+      const material = m.artifactMaterialDrop;
+      if (material) {
+        const current = artifactMaterialMap.get(material.name);
+        if (!current || Number(material.chance) > Number(current.chance)) artifactMaterialMap.set(material.name, material);
+      }
+    }
+    const equipmentDrops = Array.from(equipmentDropMap.values()).sort((a, b) => a.rarity - b.rarity);
+    const craftMaterials = lootImages.filter(item => item.rarity >= 0);
+    const upgradeStones = lootImages.filter(item => item.rarity === -1);
+    const artifactMaterials = Array.from(artifactMaterialMap.values());
+    const setChance = fm.length > 0
+      ? fm.reduce((sum, mob) => sum + (mob.equipmentDrops || []).reduce((mobSum: number, item: any) => mobSum + Number(item.setChance || 0), 0), 0) / fm.length
+      : 0;
+    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0,
+      goldMin, goldMax, avgXp, lootImages, itemDropTable, equipmentDrops, craftMaterials, upgradeStones,
+      artifactMaterials, setChance };
   };
 
   // --- Animation helpers (same as useBattleLogic) ---
@@ -606,24 +660,23 @@ function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFlo
   const selectedBg = previewFloor ? floorBgMap.get(previewFloor) : '';
   return (
     <div className="space-y-4" data-tutorial="bestiary-attack">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 sm:grid sm:grid-cols-7 sm:overflow-visible">
         {groups.map((diff: any) => {
           const active = diff.difficulty === selectedDifficulty;
-          return <button key={diff.label} type="button" onClick={() => setSelectedDifficulty(diff.difficulty)} className={`relative text-left rounded-xl border p-3 transition-all ${active ? 'border-[var(--color-accent-info)] bg-[var(--color-bg-card)] ring-2 ring-[var(--color-accent-info)]/25 shadow-lg -translate-y-0.5' : 'border-[var(--color-border-default)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-card-hover)]'}`}>
-            {active && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-accent-info)] text-white text-[0.65rem] font-bold flex items-center justify-center shadow">✓</span>}
-            <div className="flex items-center justify-between gap-2"><span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${diff.difficulty >= 3 ? 'bg-red-500/15 text-red-500' : 'bg-[var(--color-bg-input)]'}`}>{diff.difficulty >= 3 ? diff.difficulty - 2 : diff.icon}</span><span className="text-[0.65rem] text-[var(--color-text-secondary)]">{diff.floors.length} этаж.</span></div>
-            <p className="font-bold text-sm mt-1">{diff.label}</p>
-            <p className="text-[0.65rem] text-[var(--color-text-secondary)] mt-1">{diff.difficulty < 3 ? 'Опыт и трофеи' : 'Высокий риск и награды'}</p>
+          return <button key={diff.label} type="button" onClick={() => setSelectedDifficulty(diff.difficulty)} className={`relative cursor-pointer shrink-0 min-w-28 sm:min-w-0 min-h-11 rounded-lg border px-3 py-2 transition-all ${active ? 'border-[var(--color-accent-info)] bg-[var(--color-bg-card)] ring-2 ring-[var(--color-accent-info)]/25 shadow' : 'border-[var(--color-border-default)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-card-hover)]'}`}>
+            {active && <span className="absolute top-1 right-1 text-[0.6rem] font-bold text-[var(--color-accent-info)]">✓</span>}
+            <p className={`font-bold text-xs pr-2 ${difficultyTextColor(diff.difficulty)}`}>{diff.label}</p>
+            <p className="text-[0.6rem] text-[var(--color-text-secondary)] mt-0.5 whitespace-nowrap">{floorCountLabel(diff.floors.length)}</p>
           </button>;
         })}
       </div>
       {selected && <>
         <div className="flex items-center justify-between gap-3"><div><h2 className="font-bold text-base">Маршрут охоты</h2><p className="text-xs text-[var(--color-text-muted)]">Выберите локацию, чтобы увидеть подробности</p></div><span className="text-xs text-[var(--color-text-muted)]">{selected.label}</span></div>
         <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {selected.floors.map((floor: string, index: number) => <button key={floor} type="button" onClick={() => setPreviewFloor(floor)} className={`relative min-h-24 overflow-hidden rounded-xl border text-left transition-all ${previewFloor === floor ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]/30' : 'border-[var(--color-border-light)] opacity-80 hover:opacity-100'}`} style={floorBgMap.get(floor) ? { backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.12) 75%), url(${floorBgMap.get(floor)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}><span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-black/60 text-white text-[0.65rem] flex items-center justify-center">{index + 1}</span><span className="absolute inset-x-2 bottom-2 text-xs font-bold text-white drop-shadow">{floor}</span></button>)}
+          {selected.floors.map((floor: string, index: number) => <button key={floor} type="button" onClick={() => setPreviewFloor(floor)} className={`relative cursor-pointer min-h-24 overflow-hidden rounded-xl border text-left transition-all ${previewFloor === floor ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]/30' : 'border-[var(--color-border-light)] opacity-80 hover:opacity-100'}`} style={floorBgMap.get(floor) ? { backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.12) 75%), url(${floorBgMap.get(floor)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}><span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-black/60 text-white text-[0.65rem] flex items-center justify-center">{index + 1}</span><span className="absolute inset-x-2 bottom-2 text-xs font-bold text-white drop-shadow">{floor}</span></button>)}
         </div>
         {previewFloor && selectedInfo && <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-light)] min-h-52" style={selectedBg ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88), rgba(0,0,0,.4)), url(${selectedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-          <div className="relative z-10 p-4 sm:p-5 text-white"><div className="flex items-start justify-between gap-3"><div><p className="text-xs text-white/70">Выбранная локация</p><h3 className="text-xl font-bold mt-1">{previewFloor}</h3></div><Icon icon="game-icons:castle-ruins" width="30" height="30" className="text-white/80" /></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5"><Stat label="Уровни" value={`${selectedInfo.minLevel}–${selectedInfo.maxLevel}`} /><Stat label="Противники" value={selectedInfo.count} /><Stat label="Серебро" value={`${selectedInfo.goldMin}–${selectedInfo.goldMax}`} /><Stat label="Средний опыт" value={`~${selectedInfo.avgXp}`} /></div><div className="flex flex-wrap items-center justify-between gap-3 mt-5"><p className="text-xs text-white/75">Трофеи: {selectedInfo.lootImages?.length || 0} редкостей · снаряжение до {selectedInfo.itemDropTable?.length ? Math.max(...selectedInfo.itemDropTable.map((item: any) => item.rarity)) : 0} редкости</p><Button size="md" disabled={cooldownRemaining > 0} onClick={() => selectFloor(previewFloor)} data-tutorial="bestiary-attack">{cooldownRemaining > 0 ? `Доступно через ${Math.ceil(cooldownRemaining / 60)} мин.` : 'Начать охоту'}</Button></div></div>
+          <div className="relative z-10 p-4 sm:p-5 text-white"><div className="flex items-start justify-between gap-3"><div><p className="text-xs text-white/70">Выбранная локация</p><h3 className="text-xl font-bold mt-1">{previewFloor}</h3></div><Icon icon="game-icons:castle-ruins" width="30" height="30" className="text-white/80" /></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5"><Stat label="Уровни" value={`${selectedInfo.minLevel}–${selectedInfo.maxLevel}`} /><Stat label="Противники" value={selectedInfo.count} /><Stat label="Серебро" value={`${selectedInfo.goldMin}–${selectedInfo.goldMax}`} /><Stat label="Средний опыт" value={`~${selectedInfo.avgXp}`} /></div><LootPreview info={selectedInfo} /><div className="flex justify-end mt-4"><Button className="cursor-pointer" size="md" disabled={cooldownRemaining > 0} onClick={() => selectFloor(previewFloor)} data-tutorial="bestiary-attack">{cooldownRemaining > 0 ? `Доступно через ${Math.ceil(cooldownRemaining / 60)} мин.` : 'Начать охоту'}</Button></div></div>
         </div>}
       </>}
     </div>
@@ -632,4 +685,23 @@ function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFlo
 
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return <div className="rounded-lg bg-black/30 border border-white/10 px-2 py-2"><p className="text-[0.6rem] text-white/60">{label}</p><p className="text-sm font-bold mt-0.5">{value}</p></div>;
+}
+
+const chanceLabel = (chance: number) => `${(Number(chance || 0) * 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })}%`;
+
+function LootIcon({ item, label, upTo = false }: { item: any; label?: string; upTo?: boolean }) {
+  return <div className="flex items-center gap-2 rounded-lg bg-black/25 border border-white/10 p-1.5 min-w-0"><div className="w-9 h-9 rounded-md bg-black/25 flex items-center justify-center shrink-0 overflow-hidden">{item.image ? <img src={item.image} alt="" className="w-8 h-8 object-contain" /> : <Icon icon="game-icons:locked-chest" width="24" height="24" className="text-white/70" />}</div><div className="min-w-0"><p className="text-[0.65rem] font-bold truncate">{label || item.name}</p><p className="text-[0.6rem] text-white/65">{upTo ? 'до ' : ''}{chanceLabel(item.chance)}</p></div></div>;
+}
+
+function LootPreview({ info }: { info: any }) {
+  const equipment = info.equipmentDrops || [];
+  const minRarity = equipment.length ? equipment[0].rarity : null;
+  const maxRarity = equipment.length ? equipment[equipment.length - 1].rarity : null;
+  return <div className="mt-5 rounded-xl bg-black/30 border border-white/10 p-3"><h4 className="text-sm font-bold mb-3">Возможные трофеи</h4><div className="space-y-3">
+    {!!equipment.length && <div><p className="text-xs mb-1.5">Снаряжение: {RARITY_NAMES[minRarity]} — {RARITY_NAMES[maxRarity]}</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">{equipment.map((item: any) => <LootIcon key={`equipment-${item.rarity}`} item={item} label={RARITY_NAMES[item.rarity]} upTo />)}</div></div>}
+    {Number(info.setChance || 0) > 0 && <div className="flex items-center gap-2 rounded-lg bg-red-950/35 border border-red-400/20 p-2"><Icon icon="game-icons:armor-upgrade" width="28" height="28" className="text-red-300 shrink-0" /><div><p className="text-xs font-bold">Сетовый предмет</p><p className="text-[0.65rem] text-white/70">Шанс получить: {chanceLabel(info.setChance)}</p></div></div>}
+    {!!info.craftMaterials?.length && <div><p className="text-xs mb-1.5">Материалы для ремесла</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">{info.craftMaterials.map((item: any) => <LootIcon key={`craft-${item.name}`} item={item} />)}</div></div>}
+    {!!info.upgradeStones?.length && <div><p className="text-xs mb-1.5">Камни улучшения</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">{info.upgradeStones.map((item: any) => <LootIcon key={`stone-${item.name}`} item={item} />)}</div></div>}
+    {!!info.artifactMaterials?.length && <div><p className="text-xs mb-1.5">Материалы для создания артефактов</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">{info.artifactMaterials.map((item: any) => <LootIcon key={`artifact-${item.name}`} item={item} />)}</div></div>}
+  </div></div>;
 }
