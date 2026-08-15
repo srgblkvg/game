@@ -8,6 +8,7 @@ import BackButton from '../components/BackButton';
 import CharacterCard from '../components/CharacterCard';
 import { useGame } from '../contexts/GameContext';
 import { toCharCardData } from '../utils/character';
+import { groupLoot } from '../utils/dungeonLoot';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
@@ -112,6 +113,7 @@ export default function DungeonPage() {
     const [lootProgress, setLootProgress] = useState(0);
 
     const [skillList, setSkillList] = useState<SkillInfo[]>([]);
+    const groupedTotalLoot = groupLoot(totalLoot.items, totalLoot.pages);
 
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const logRef = useRef<HTMLDivElement>(null);
@@ -851,8 +853,8 @@ export default function DungeonPage() {
                                 <h4 className="text-xs font-bold mb-1">📦 Вся добыча за поход:</h4>
                                 <p className="text-xs">💰 {totalLoot.silver.toLocaleString()} серебра</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                                    {totalLoot.items.map((it: any, i: number) => <LootCard key={`item-${i}`} reward={it} fallback="🔮" />)}
-                                    {totalLoot.pages.map((p: any, i: number) => <LootCard key={`page-${i}`} reward={p} fallback="📜" />)}
+                                    {groupedTotalLoot.items.map((it: any, i: number) => <LootCard key={`item-${i}`} reward={it} fallback="🔮" />)}
+                                    {groupedTotalLoot.pages.map((p: any, i: number) => <LootCard key={`page-${i}`} reward={p} fallback="📜" />)}
                                 </div>
                             </div>
                             <p className="text-[0.6rem] text-[var(--color-accent-danger)] text-center mb-2">⚠ При смерти вся накопленная добыча будет потеряна</p>
@@ -878,8 +880,8 @@ export default function DungeonPage() {
                         <h4 className="text-xs font-bold mb-1">📦 Добыча за поход:</h4>
                         <p className="text-xs">💰 {totalLoot.silver.toLocaleString()} серебра</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                            {totalLoot.items.map((it: any, i: number) => <LootCard key={`item-${i}`} reward={it} fallback="🔮" />)}
-                            {totalLoot.pages.map((p: any, i: number) => <LootCard key={`page-${i}`} reward={p} fallback="📜" />)}
+                            {groupedTotalLoot.items.map((it: any, i: number) => <LootCard key={`item-${i}`} reward={it} fallback="🔮" />)}
+                            {groupedTotalLoot.pages.map((p: any, i: number) => <LootCard key={`page-${i}`} reward={p} fallback="📜" />)}
                         </div>
                         {totalLoot.silver === 0 && totalLoot.items.length === 0 && totalLoot.pages.length === 0 && (
                             <p className="text-xs text-[var(--color-text-muted)]">Ничего не собрано</p>
