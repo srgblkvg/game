@@ -151,3 +151,9 @@ test('автосоздание решает совпадение цели и н�
   assert.deepEqual(decideAutoCraftResult(42, 7), { targetMatched: false, salvaged: true });
   assert.deepEqual(decideAutoCraftResult(null, 7), { targetMatched: undefined, salvaged: false });
 });
+
+test('автосоздание завершает поиск при совпадении одной из нескольких целей', () => {
+  assert.deepEqual(decideAutoCraftResult([42, 77], 77), { targetMatched: true, salvaged: false });
+  assert.deepEqual(decideAutoCraftResult([42, 77], 7), { targetMatched: false, salvaged: true });
+  assert.deepEqual(decideAutoCraftResult([], 7), { targetMatched: undefined, salvaged: false });
+});

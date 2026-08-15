@@ -248,11 +248,15 @@ router.post('/craft/execute', async (req, res) => {
 // Одна атомарная попытка создания (авторежим зацикливается на клиенте)
 router.post('/craft/auto-attempt', async (req, res) => {
     const recipeId = Number(req.body.recipeId);
-    const targetItemTemplateId = req.body.targetItemTemplateId == null || req.body.targetItemTemplateId === ''
-        ? null
-        : Number(req.body.targetItemTemplateId);
+    const rawTargetIds = Array.isArray(req.body.targetItemTemplateIds)
+        ? req.body.targetItemTemplateIds
+        : req.body.targetItemTemplateId == null || req.body.targetItemTemplateId === ''
+            ? []
+            : [req.body.targetItemTemplateId];
+    const targetItemTemplateIds: number[] = [...new Set<number>(rawTargetIds.map((id: any) => Number(id)))];
     if (!Number.isInteger(recipeId) || recipeId <= 0) return res.status(400).json({ error: 'recipeId required' });
-    if (targetItemTemplateId !== null && (!Number.isInteger(targetItemTemplateId) || targetItemTemplateId <= 0)) {
+    if (targetItemTemplateIds.length > 100) return res.status(400).json({ error: 'Выбрано слишком много целей' });
+    if (targetItemTemplateIds.some(id => !Number.isInteger(id) || id <= 0)) {
         return res.status(400).json({ error: 'Некорректная цель создания' });
     }
 
@@ -266,7 +270,7 @@ router.post('/craft/auto-attempt', async (req, res) => {
             const recipe = recipeResult.rows[0] as any;
             if (!recipe) throw new Error('Рецепт не найден');
             if (!['item', 'random_item', 'craft_item'].includes(recipe.result_type)) throw new Error('Неподдерживаемый результат рецепта');
-            if (targetItemTemplateId !== null && recipe.result_type !== 'random_item') {
+            if (targetItemTemplateIds.length && recipe.result_type !== 'random_item') {
                 throw new Error('Цель доступна только для случайного предмета');
             }
 
@@ -281,14 +285,16 @@ router.post('/craft/auto-attempt', async (req, res) => {
                 ingredientMap.set(id, (ingredientMap.get(id) || 0) + Number(ingredient.quantity));
             }
 
-            if (targetItemTemplateId !== null) {
+            if (targetItemTemplateIds.length) {
                 const targetResult = await client.query(`
                     SELECT i.id
                     FROM items i
-                    WHERE i.id = $1 AND i.rarity_id = $2
+                    WHERE i.id = ANY($1::int[]) AND i.rarity_id = $2
                       AND (i.extra IS NULL OR i.extra::text NOT LIKE '%"set"%')
-                `, [targetItemTemplateId, recipe.result_id]);
-                if (!targetResult.rows[0]) throw new Error('Выбранный предмет недоступен для этого рецепта');
+                `, [targetItemTemplateIds, recipe.result_id]);
+                if (targetResult.rows.length !== targetItemTemplateIds.length) {
+                    throw new Error('Один из выбранных предметов недоступен для этого рецепта');
+                }
             }
 
             const inventory: any[] = typeof user.inventory === 'string' ? JSON.parse(user.inventory || '[]') : (user.inventory || []);
@@ -366,7 +372,7 @@ router.post('/craft/auto-attempt', async (req, res) => {
                     image: template.image || null, upgradeLevel: 0,
                 };
                 const decision = recipe.result_type === 'random_item'
-                    ? decideAutoCraftResult(targetItemTemplateId, template.id)
+                    ? decideAutoCraftResult(targetItemTemplateIds, template.id)
                     : { targetMatched: undefined, salvaged: false };
                 targetMatched = decision.targetMatched;
                 salvaged = decision.salvaged;

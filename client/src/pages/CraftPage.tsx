@@ -162,7 +162,7 @@ export default function CraftPage() {
   const stopRequestedRef = useRef(false);
   const [createQuantity, setCreateQuantity] = useState(1);
   const [createMaximum, setCreateMaximum] = useState(false);
-  const [targetItemTemplateId, setTargetItemTemplateId] = useState<string | null>(null);
+  const [targetItemTemplateIds, setTargetItemTemplateIds] = useState<string[]>([]);
   const [targetSearch, setTargetSearch] = useState('');
   const [targetSlot, setTargetSlot] = useState('');
 
@@ -230,7 +230,8 @@ export default function CraftPage() {
     return materials.filter((item: any) => ingredientIds.has(String(item.id)) || ingredientNames.has(String(item.name || '').toLowerCase()));
   }, [activeRecipe, materials]);
   const resultOptions: any[] = useMemo(() => activeRecipe?.resultOptions || [], [activeRecipe]);
-  const selectedResultOption = useMemo(() => resultOptions.find((option: any) => String(option.id ?? option.templateId ?? option.item_template_id) === targetItemTemplateId) || null, [resultOptions, targetItemTemplateId]);
+  const selectedTargetIds = useMemo(() => new Set(targetItemTemplateIds), [targetItemTemplateIds]);
+  const selectedResultOptions = useMemo(() => resultOptions.filter((option: any) => selectedTargetIds.has(String(option.id ?? option.templateId ?? option.item_template_id))), [resultOptions, selectedTargetIds]);
   const targetSlots = useMemo(() => [...new Set(resultOptions.map((option: any) => String(option.slot || '')).filter(Boolean))]
     .sort((left, right) => itemSlotLabel(left).localeCompare(itemSlotLabel(right), 'ru')), [resultOptions]);
   const filteredResultOptions = useMemo(() => {
@@ -270,7 +271,7 @@ export default function CraftPage() {
   useEffect(() => {
     setCreateQuantity(1);
     setCreateMaximum(false);
-    setTargetItemTemplateId(null);
+    setTargetItemTemplateIds([]);
     setTargetSearch('');
     setTargetSlot('');
   }, [activeRecipe?.id]);
@@ -310,7 +311,7 @@ export default function CraftPage() {
 
   const runAutoCreate = async () => {
     if (!activeRecipe) return;
-    const isTargetSearch = activeRecipe.result_type === 'random_item' && !!selectedResultOption;
+    const isTargetSearch = activeRecipe.result_type === 'random_item' && selectedResultOptions.length > 0;
     const isMaterialBatch = activeRecipe.result_type === 'craft_item';
     if (!isTargetSearch && !isMaterialBatch) return create();
 
@@ -328,14 +329,14 @@ export default function CraftPage() {
         const nextAttempt = attempts + 1;
         entry.status = 'active';
         entry.detail = isTargetSearch
-          ? `Подготовка попытки ${nextAttempt} · ищем ${selectedResultOption.name}`
+          ? `Подготовка попытки ${nextAttempt} · целей: ${selectedResultOptions.length}`
           : createMaximum ? `Создано ${created} · максимум по ресурсам` : `Создано ${created} из ${createQuantity}`;
         entry.result = undefined;
         setProgressState(prev => prev && ({ ...prev, entries: [{ ...entry }], stepResults: null }));
 
         const response = await fetch('/api/craft/auto-attempt', {
           method: 'POST', headers: getHeaders(),
-          body: JSON.stringify({ recipeId: activeRecipe.id, ...(isTargetSearch ? { targetItemTemplateId: selectedResultOption.id ?? selectedResultOption.templateId ?? selectedResultOption.item_template_id } : {}) }),
+          body: JSON.stringify({ recipeId: activeRecipe.id, ...(isTargetSearch ? { targetItemTemplateIds } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -349,7 +350,7 @@ export default function CraftPage() {
         }
         attempts = nextAttempt;
         entry.detail = isTargetSearch
-          ? `Попытка ${attempts} · ищем ${selectedResultOption.name}`
+          ? `Попытка ${attempts} · целей: ${selectedResultOptions.length}`
           : createMaximum ? `Создано ${created} · максимум по ресурсам` : `Создано ${created} из ${createQuantity}`;
 
         if (Array.isArray(data.inventory)) {
@@ -362,7 +363,7 @@ export default function CraftPage() {
           : data.message || (data.success ? `Создан ${rolledName}` : 'Создание не удалось');
         if (Number.isFinite(Number(data.effectiveChance))) {
           const successChance = Math.min(100, Number(data.effectiveChance));
-          const targetChance = isTargetSearch && resultOptions.length > 0 ? successChance / resultOptions.length : null;
+          const targetChance = isTargetSearch && resultOptions.length > 0 ? successChance * selectedResultOptions.length / resultOptions.length : null;
           entry.detail = `${entry.detail} · шанс создания ${successChance}%${targetChance !== null ? ` · шанс цели ${targetChance.toFixed(2)}%` : ''}`;
         }
         entry.result = message;
@@ -640,8 +641,12 @@ export default function CraftPage() {
         </div>}
         {activeRecipe.result_type === 'random_item' && resultOptions.length > 0 && <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-secondary)] p-3 mb-3">
           <p className="text-xs font-bold mb-1">Целевой предмет</p>
-          <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">Выберите предмет для автоматического поиска или оставьте создание без цели.</p>
-          <button type="button" onClick={() => setTargetItemTemplateId(null)} className={`w-full rounded-lg border p-2 mb-2 text-xs font-bold cursor-pointer ${!targetItemTemplateId ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>Без цели — одна попытка</button>
+          <p className="text-[0.65rem] text-[var(--color-text-muted)] mb-2">Выберите одну или несколько целей. Поиск завершится, когда будет создан любой выбранный предмет.</p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <button type="button" disabled={busy} onClick={() => setTargetItemTemplateIds([])} className={`rounded-lg border p-2 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${!targetItemTemplateIds.length ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>Без цели — одна попытка</button>
+            <button type="button" disabled={busy || !targetItemTemplateIds.length} onClick={() => setTargetItemTemplateIds([])} className="rounded-lg border border-[var(--color-border-light)] p-2 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Снять выбор целей</button>
+          </div>
+          {!!targetItemTemplateIds.length && <p className="text-xs font-bold text-[var(--color-accent-warning)] mb-2">Выбрано целей: {targetItemTemplateIds.length}</p>}
           <div className="grid sm:grid-cols-[minmax(0,1fr)_170px] gap-2 mb-2">
             <label className="text-[0.65rem] text-[var(--color-text-muted)]">Поиск по названию
               <input className={inputClass + ' mt-1'} type="search" value={targetSearch} onChange={event => setTargetSearch(event.target.value)} placeholder="Введите хотя бы 1 символ" />
@@ -657,8 +662,8 @@ export default function CraftPage() {
             <div data-target-list className="max-h-[280px] overflow-y-auto overscroll-contain divide-y divide-[var(--color-border-light)]">
               {filteredResultOptions.map((option: any) => {
                 const optionId = String(option.id ?? option.templateId ?? option.item_template_id);
-                const selected = optionId === targetItemTemplateId;
-                return <button data-target-option key={optionId} type="button" onClick={() => setTargetItemTemplateId(optionId)} {...tooltipEvents(option, showItemTooltip, hideItemTooltip)} className={`w-full min-h-14 px-3 py-2 text-left cursor-pointer flex items-center gap-3 transition-colors ${selected ? 'bg-[#f59e0b] text-black' : 'bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)]'}`}>
+                const selected = selectedTargetIds.has(optionId);
+                return <button data-target-option key={optionId} type="button" disabled={busy} onClick={() => setTargetItemTemplateIds(previous => previous.includes(optionId) ? previous.filter(id => id !== optionId) : [...previous, optionId])} {...tooltipEvents(option, showItemTooltip, hideItemTooltip)} className={`w-full min-h-14 px-3 py-2 text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-3 transition-colors ${selected ? 'bg-[#f59e0b] text-black' : 'bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)]'}`}>
                   <ItemIcon color={option.rarity_color || activeRecipe.result?.rarity_color || '#777'} image={option.image} name={option.name || '?'} size="md" />
                   <span className="min-w-0 flex-1"><span className="block text-xs font-bold truncate">{option.name}</span><span className={`block text-[0.65rem] ${selected ? 'text-[#3f2b00]' : 'text-[var(--color-text-muted)]'}`}>{itemSlotLabel(String(option.slot || ''))}</span></span>
                   <span className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 ${selected ? 'border-black bg-black text-white' : 'border-[var(--color-border-default)] text-transparent'}`}>✓</span>
@@ -669,10 +674,10 @@ export default function CraftPage() {
           </div>
           <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Показано: {filteredResultOptions.length} из {resultOptions.length}. В списке одновременно видно не более пяти предметов.</p>
           <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-2">Каждая попытка расходует ресурсы, даже если создание не удалось. Успешно созданные неподходящие предметы автоматически разбираются.</p>
-          {selectedResultOption && <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-1">Шанс получить цель за попытку зависит от шанса создания и равномерного выбора среди {resultOptions.length} предметов. Точное значение показывается в процессе.</p>}
-          {selectedResultOption && createMaxAttempts < 1 && <p className="text-xs text-[var(--color-accent-danger)] mt-2">Недостаточно ресурсов или серебра даже для одной попытки.</p>}
+          {!!selectedResultOptions.length && <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-1">Шанс получить любую выбранную цель зависит от шанса создания и количества выбранных предметов среди {resultOptions.length}. Точное значение показывается в процессе.</p>}
+          {!!selectedResultOptions.length && createMaxAttempts < 1 && <p className="text-xs text-[var(--color-accent-danger)] mt-2">Недостаточно ресурсов или серебра даже для одной попытки.</p>}
         </div>}
-        <Button size="md" fullWidth disabled={busy || ((activeRecipe.result_type === 'craft_item' || !!selectedResultOption) && createMaxAttempts < 1)} onClick={activeRecipe.result_type === 'craft_item' || !!selectedResultOption ? runAutoCreate : create}>{busy ? 'Создание...' : selectedResultOption ? `Искать: ${selectedResultOption.name}` : activeRecipe.result_type === 'craft_item' ? 'Начать создание' : 'Создать'}</Button>
+        <Button size="md" fullWidth disabled={busy || ((activeRecipe.result_type === 'craft_item' || selectedResultOptions.length > 0) && createMaxAttempts < 1)} onClick={activeRecipe.result_type === 'craft_item' || selectedResultOptions.length > 0 ? runAutoCreate : create}>{busy ? 'Создание...' : selectedResultOptions.length > 0 ? `Искать выбранные цели (${selectedResultOptions.length})` : activeRecipe.result_type === 'craft_item' ? 'Начать создание' : 'Создать'}</Button>
       </> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
       <Card><h3 className="font-bold text-sm mb-2">Используемые материалы</h3>{activeRecipe ? <ResourceGrid {...gridTooltipProps} items={relevantMaterials} onSelect={() => {}} /> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
     </div>}

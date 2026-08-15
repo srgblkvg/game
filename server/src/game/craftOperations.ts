@@ -59,11 +59,15 @@ export function calculateMaxCraftAttempts(
 }
 
 export function decideAutoCraftResult(
-  targetItemTemplateId: string | number | null | undefined,
+  targetItemTemplateId: string | number | Array<string | number> | null | undefined,
   rolledItemTemplateId: string | number,
 ): { targetMatched: boolean | undefined; salvaged: boolean } {
-  if (targetItemTemplateId == null) return { targetMatched: undefined, salvaged: false };
-  const targetMatched = String(targetItemTemplateId) === String(rolledItemTemplateId);
+  const targets = Array.isArray(targetItemTemplateId)
+    ? targetItemTemplateId
+    : targetItemTemplateId == null ? [] : [targetItemTemplateId];
+  if (!targets.length) return { targetMatched: undefined, salvaged: false };
+  const rolledId = String(rolledItemTemplateId);
+  const targetMatched = targets.some(targetId => String(targetId) === rolledId);
   return { targetMatched, salvaged: !targetMatched };
 }
 
