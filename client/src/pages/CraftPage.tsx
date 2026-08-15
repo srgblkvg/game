@@ -137,7 +137,9 @@ function ResourceGrid({ items, selectedId, onSelect, showTooltip, hideTooltip }:
     {items.map(item => <button key={item.id} type="button" onClick={() => onSelect(item)} {...tooltipEvents(item, showTooltip, hideTooltip)}
       className={`rounded-lg border p-2 text-left cursor-pointer bg-[var(--color-bg-card)] ${selectedId === String(item.id) ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>
       <div className="flex items-center gap-2"><ItemIcon color={item.rarity_color || '#777'} image={item.image} name={item.name || '?'} size="md" />
-        <div className="min-w-0"><p className="text-xs font-bold truncate">{item.name}</p><p className="text-[0.65rem] text-[var(--color-text-muted)]">Количество: {item.count || 0}</p></div>
+        <div className="min-w-0"><p className="text-xs font-bold truncate">{item.name}</p>{item.requiredCount != null
+          ? <p className={`text-[0.65rem] ${Number(item.count || 0) >= Number(item.requiredCount) ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-accent-danger)]'}`}>Есть: {item.count || 0} / Нужно: {item.requiredCount}</p>
+          : <p className="text-[0.65rem] text-[var(--color-text-muted)]">Количество: {item.count || 0}</p>}</div>
       </div>
     </button>)}
   </div>;
@@ -206,7 +208,7 @@ export default function CraftPage() {
 
   const inventory: any[] = (character?.inventory || []) as any[];
   const equipment: any[] = useMemo(() => inventory.filter((i: any) => !isCraftItem(i) && !i.locked), [inventory]);
-  const materials: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && (i.itemType === 'craft' || i.type === 'material')), [inventory]);
+  const materials: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && (i.itemType === 'craft' || i.itemType === 'material' || i.type === 'material')), [inventory]);
   const stones: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && i.itemType === 'upgrade'), [inventory]);
   const crystals: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && i.itemType === 'soul_crystal'), [inventory]);
   useEffect(() => {
@@ -226,9 +228,24 @@ export default function CraftPage() {
   }, [inventory, randomCurseRoll]);
   const relevantMaterials: any[] = useMemo(() => {
     if (!activeRecipe) return [];
-    const ingredientIds = new Set((activeRecipe.ingredients || []).map((i: any) => String(i.id ?? i.item_id ?? i.itemId ?? '')));
-    const ingredientNames = new Set((activeRecipe.ingredients || []).map((i: any) => String(i.name || '').toLowerCase()));
-    return materials.filter((item: any) => ingredientIds.has(String(item.id)) || ingredientNames.has(String(item.name || '').toLowerCase()));
+    return (activeRecipe.ingredients || []).map((ingredient: any) => {
+      const ingredientId = String(ingredient.id ?? ingredient.craft_item_id ?? ingredient.item_id ?? ingredient.itemId ?? '');
+      const ingredientName = String(ingredient.name || '').toLocaleLowerCase('ru');
+      const ownedStacks = materials.filter((item: any) =>
+        (ingredientId && String(item.id) === ingredientId)
+        || (!!ingredientName && String(item.name || '').toLocaleLowerCase('ru') === ingredientName)
+      );
+      const ownedCount = ownedStacks.reduce((sum: number, item: any) => sum + Number(item.count || 0), 0);
+      return {
+        ...ingredient,
+        ...(ownedStacks[0] || {}),
+        id: ingredientId || ingredient.name,
+        name: ingredient.name,
+        image: ownedStacks[0]?.image || ingredient.image,
+        count: ownedCount,
+        requiredCount: Number(ingredient.quantity || 0),
+      };
+    });
   }, [activeRecipe, materials]);
   const resultOptions: any[] = useMemo(() => activeRecipe?.resultOptions || [], [activeRecipe]);
   const selectedTargetIds = useMemo(() => new Set(targetItemTemplateIds), [targetItemTemplateIds]);
