@@ -209,7 +209,7 @@ function PriceChart({ item }: { item: any }) {
         plugins: {
             tooltip: {
                 callbacks: {
-                    label: (ctx: any) => `${ctx.dataset.label}: ${formatMoney(ctx.raw)}`,
+                    label: (ctx: any) => `${ctx.dataset.label}: ${formatMoney(ctx.raw)} / шт`,
                 },
             },
         },
@@ -220,8 +220,9 @@ function PriceChart({ item }: { item: any }) {
     };
 
     return (
-        <div className="mt-2" style={{ height: 120 }}>
-            <Line data={data} options={options as any} />
+        <div className="mt-2">
+            <div className="text-[0.6rem] text-[var(--color-text-muted)] mb-1">Цена за 1 предмет</div>
+            <div style={{ height: 120 }}><Line data={data} options={options as any} /></div>
         </div>
     );
 }
@@ -244,7 +245,9 @@ export default function AuctionPage() {
     const [groupFilter, setGroupFilter] = useState<string | null>(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const [tab, setTab] = useState<'buy' | 'sell' | 'history'>('buy');
+    const [tab, setTab] = useState<'buy' | 'sell' | 'my' | 'history'>('buy');
+    const [myLots, setMyLots] = useState<any[]>([]);
+    const [myLotsLoading, setMyLotsLoading] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
     const [historyPage, setHistoryPage] = useState(1);
     const [historyTotalPages, setHistoryTotalPages] = useState(1);
@@ -376,6 +379,23 @@ export default function AuctionPage() {
         catch { setHistory([]); }
     };
 
+    const loadMyLots = async () => {
+        setMyLotsLoading(true);
+        try {
+            const res = await fetch(`${BASE_URL}/auction/my-lots`, { headers: getHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Не удалось загрузить лоты');
+            const ownLots = Array.isArray(data.lots) ? data.lots : [];
+            setMyLots(ownLots);
+            setUserLotCount(ownLots.length);
+        } catch (e: any) {
+            setMyLots([]);
+            setError(e.message || 'Не удалось загрузить лоты');
+        } finally {
+            setMyLotsLoading(false);
+        }
+    };
+
     const api = async (url: string, body?: any) => {
         const res = await fetch(`${BASE_URL}${url}`, { method: 'POST', headers: getHeaders(), body: body ? JSON.stringify(body) : undefined });
         const data = await res.json();
@@ -475,7 +495,7 @@ export default function AuctionPage() {
     const handleCancel = async (lotId: number) => {
         setConfirmPopup({ message: 'Снять лот с аукциона? Предмет вернётся в инвентарь.', onConfirm: async () => {
             setConfirmPopup(null);
-            try { await api('/auction/cancel', { lotId }); setMessage('Лот снят с аукциона'); load(page); const fresh = await fetchCharacter(); setCharacter(fresh); }
+            try { await api('/auction/cancel', { lotId }); setMessage('Лот снят с аукциона'); load(page); loadMyLots(); const fresh = await fetchCharacter(); setCharacter(fresh); }
             catch (e: any) { setError(e.message); }
         }});
     };
@@ -553,9 +573,10 @@ export default function AuctionPage() {
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Аукцион" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
                 <Button variant={tab === 'buy' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('buy'); clearMessages(); }}>Покупка</Button>
                 <Button variant={tab === 'sell' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('sell'); clearMessages(); }}>Продажа</Button>
+                <Button variant={tab === 'my' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('my'); loadMyLots(); clearMessages(); }}>Мои лоты{userLotCount > 0 ? ` (${userLotCount})` : ''}</Button>
                 <Button variant={tab === 'history' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('history'); loadHistory(1); clearMessages(); }}>История</Button>
             </div>
 
@@ -649,6 +670,53 @@ export default function AuctionPage() {
                     <p className="text-xs text-[var(--color-text-muted)] mb-2">Комиссия 5% от стартовой цены</p>
                     <Button variant="danger" size="md" onClick={handleSell}>Выставить (5% комиссия)</Button>
                 </Card>
+            )}
+
+            {/* Own active lots */}
+            {tab === 'my' && (
+                <div>
+                    <div className="text-xs text-[var(--color-text-muted)] mb-3">Активных лотов: {myLots.length} из {maxSlots}</div>
+                    {myLotsLoading ? (
+                        <p className="text-sm text-[var(--color-text-muted)] text-center py-8">Загрузка...</p>
+                    ) : myLots.length === 0 ? (
+                        <Card><p className="text-sm text-[var(--color-text-muted)]">У вас нет выставленных лотов</p></Card>
+                    ) : (
+                        <div className="space-y-3">
+                            {myLots.map((lot: any) => {
+                                const item = lot.itemData || {};
+                                const count = Math.max(1, item.count || 1);
+                                const isStack = count > 1;
+                                const currentBid = lot.currentBid ?? lot.currentbid;
+                                const currentBidderName = lot.currentBidderName || lot.currentbiddername;
+                                const endsAt = lot.endsAt ?? lot.endsat;
+                                const secondsLeft = Math.max(0, endsAt - Math.floor(Date.now() / 1000));
+                                const hours = Math.floor(secondsLeft / 3600);
+                                const minutes = Math.floor((secondsLeft % 3600) / 60);
+                                return (
+                                    <Card key={lot.id}>
+                                        <div className="flex items-start gap-3">
+                                            <div className="relative shrink-0">
+                                                <img src={getItemImage(item) || '/items/default.webp'} alt={item.name} className="w-11 h-11 object-contain rounded" onError={e => { (e.target as HTMLImageElement).src = '/items/default.webp'; }} />
+                                                {isStack && <span className="absolute -right-1 -bottom-1 rounded bg-[var(--color-accent-info)] text-white text-[0.6rem] font-bold px-1">×{count}</span>}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className="font-bold text-sm truncate">{item.name}{(item.upgradeLevel ?? 0) > 0 && <span className="text-[var(--color-text-accent)] ml-1">+{item.upgradeLevel}</span>}</h3>
+                                                <div className="text-xs text-[var(--color-text-muted)]">Осталось: {hours}ч {minutes}м</div>
+                                                <div className="text-xs mt-1">Старт: {formatMoney(lot.startPrice)}{isStack && <span className="text-[var(--color-accent-info)]"> · {formatMoney(Math.ceil(lot.startPrice / count))} / шт</span>}</div>
+                                                {lot.buyoutPrice && <div className="text-xs">Выкуп: {formatMoney(lot.buyoutPrice)}{isStack && <span className="text-[var(--color-accent-info)]"> · {formatMoney(Math.ceil(lot.buyoutPrice / count))} / шт</span>}</div>}
+                                                {currentBid && <div className="text-xs text-[var(--color-text-accent)]">Ставка: {formatMoney(currentBid)}{currentBidderName ? ` · ${currentBidderName}` : ''}</div>}
+                                            </div>
+                                            <div className="shrink-0">
+                                                {currentBid ? <span className="text-[0.65rem] text-[var(--color-text-muted)]">Есть ставка</span> : <Button size="md" variant="danger" onClick={() => handleCancel(lot.id)}>Снять</Button>}
+                                            </div>
+                                        </div>
+                                        <PriceChart item={item} />
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* History tab */}

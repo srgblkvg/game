@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { compareAuctionLots } from '../game/auctionSort';
 import { db } from '../db/index';
 import { checkAchievement } from './achievements';
 import { markDirty, pushNotification, broadcast, sendToUser } from '../events';
@@ -195,9 +196,8 @@ router.get('/auction', async (req, res) => {
       }
     }
 
-    // Sort
-    if (sort === 'price_asc') filtered.sort((a: any, b: any) => (a.currentBid || a.startPrice) - (b.currentBid || b.startPrice));
-    else if (sort === 'price_desc') filtered.sort((a: any, b: any) => (b.currentBid || b.startPrice) - (a.currentBid || a.startPrice));
+    // Все режимы сортировки сравнивают стековые товары по цене одной единицы.
+    filtered.sort(compareAuctionLots(sort));
 
     // Группировка ДО group-фильтра
     const groupsMap = new Map<string, { item: any; count: number; minBid: number; minBuyout: number | null; isStack: boolean; lastBidder: string | null }>();
@@ -269,6 +269,28 @@ router.get('/auction', async (req, res) => {
     const paged = filtered.slice((actualPage - 1) * limit, actualPage * limit);
 
     res.json({ lots: paged, groups: pagedGroups, totalCount, totalPages, page, myLotCount, groupTotalCount, groupTotalPages, groupPage: groupActualPage });
+});
+
+// Собственные активные лоты — отдельно от фильтров и пагинации покупки.
+router.get('/auction/my-lots', async (req, res) => {
+    const now = Math.floor(Date.now() / 1000);
+    const lots = await db.query(`
+        SELECT l.*, u.username as sellerName, g.name as sellerGuild,
+               b.username as currentBidderName
+        FROM auction_lots l
+        JOIN users u ON l.sellerId = u.id
+        LEFT JOIN guilds g ON u.guildId = g.id
+        LEFT JOIN users b ON l.currentBidderId = b.id
+        WHERE l.sellerId = ? AND l.endsAt > ?
+        ORDER BY l.endsAt ASC
+    `, [req.userId, now]) as any[];
+
+    res.json({
+        lots: lots.map(lot => {
+            try { return { ...lot, itemData: JSON.parse(lot.itemData) }; }
+            catch { return { ...lot, itemData: lot.itemData }; }
+        }),
+    });
 });
 
 // Создать лот
@@ -671,9 +693,9 @@ router.get('/auction/price-history', async (req, res) => {
         SELECT
             DATE(createdAt::timestamp) as day,
             COUNT(*) as count,
-            AVG(price)::int as avg_price,
-            MIN(price) as min_price,
-            MAX(price) as max_price
+            ROUND(AVG(price::numeric / GREATEST(COALESCE((itemData::jsonb->>'count')::numeric, 1), 1)))::int as avg_price,
+            ROUND(MIN(price::numeric / GREATEST(COALESCE((itemData::jsonb->>'count')::numeric, 1), 1)))::int as min_price,
+            ROUND(MAX(price::numeric / GREATEST(COALESCE((itemData::jsonb->>'count')::numeric, 1), 1)))::int as max_price
         FROM auction_history
         WHERE itemName = ?
           AND COALESCE(itemData::jsonb->>'slot', '') = ?
