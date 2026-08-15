@@ -184,6 +184,21 @@ export default function CraftPage() {
   const materials: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && (i.itemType === 'craft' || i.type === 'material')), [inventory]);
   const stones: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && i.itemType === 'upgrade'), [inventory]);
   const crystals: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && i.itemType === 'soul_crystal'), [inventory]);
+  useEffect(() => {
+    if (randomCurseRoll) return;
+    const pendingItem = inventory.find((item: any) => !isCraftItem(item) && item.pendingCurse);
+    if (!pendingItem) return;
+    const pending = pendingItem.pendingCurse;
+    setRandomCurseRoll({
+      itemId: pendingItem.id,
+      oldCurse: pendingItem.curseStat ? {
+        stat: pendingItem.curseStat, value: pendingItem.curseValue, rank: pendingItem.curseRank,
+        name: pendingItem.curseName, color: pendingItem.curseColor,
+        statName: PRIMARY[pendingItem.curseStat] || pendingItem.curseStat,
+      } : null,
+      newCurse: { ...pending, statName: PRIMARY[pending.stat] || pending.stat },
+    });
+  }, [inventory, randomCurseRoll]);
   const relevantMaterials: any[] = useMemo(() => {
     if (!activeRecipe) return [];
     const ingredientIds = new Set((activeRecipe.ingredients || []).map((i: any) => String(i.id ?? i.item_id ?? i.itemId ?? '')));
@@ -366,7 +381,7 @@ export default function CraftPage() {
     try {
       const response = await fetch('/api/craft/curse/apply', {
         method: 'POST', headers: getHeaders(),
-        body: JSON.stringify({ itemId: randomCurseRoll.itemId, curse: randomCurseRoll.newCurse, keepOld }),
+        body: JSON.stringify({ itemId: randomCurseRoll.itemId, keepOld }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Ошибка применения проклятия');
