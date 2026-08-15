@@ -1,969 +1,270 @@
-import PageHeader from '../components/ui/PageHeader';
-// client/src/pages/CraftPage.tsx
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../components/ui/PageHeader';
 import BackButton from '../components/BackButton';
-import { useGame } from '../contexts/GameContext';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import ItemIcon from '../components/ui/ItemIcon';
 import { useAuth } from '../contexts/AuthContext';
-import { useGlobalChat } from '../contexts/ChatContext';
-import { useAcquire } from '../contexts/AcquireContext';
+import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import { salvageItems } from '../api';
 import { fetchCharacter } from '../api/character';
 import { getHeaders } from '../api/helpers';
-import { fetchRecipes, upgradeItem, fetchUpgradeInfo } from '../api/craft';
-import Inventory from '../components/Inventory';
-import LongPressItemSlot from '../components/LongPressItemSlot';
-import LongPressResourceSlot from '../components/LongPressResourceSlot';
-import ItemTooltip from '../components/ItemTooltip';
+import {
+  batchForge,
+  disassembleStone,
+  fetchRecipes,
+  fetchReforgeInfo,
+  fetchUpgradeInfo,
+  previewBatchForge,
+  reforgeItem,
+  upgradeItem,
+} from '../api/craft';
 import { isCraftItem } from '../utils/itemUtils';
 import { formatMoney } from '../utils/money';
-import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
 import RecipeList from './CraftPage/RecipeList';
-import CraftPopup from './CraftPage/CraftPopup';
+import CraftPacks from './CraftPage/CraftPacks';
 
-const PACKS = [
-  {
-    item: 'craft_rare', title: 'Рунный набор', vkPrice: 14, rubPrice: 99,
-    material: 'Сердцевина бездны ×5', materialImg: '/fragment/fragment_purple.webp',
-    stones: 'Рунный булыжник ×6', stoneImg: '/stone/stoneUpgrade_gray.webp',
-    silver: 10000,
-    desc: 'Материалы для крафта случайного эпического предмета (шанс 70%). +10 000 в банк',
-  },
-  {
-    item: 'craft_epic', title: 'Большой рунный набор', vkPrice: 28, rubPrice: 199,
-    material: 'Искра погибели ×5', materialImg: '/fragment/fragment_yellow.webp',
-    stones: 'Рунный булыжник ×10', stoneImg: '/stone/stoneUpgrade_gray.webp',
-    silver: 30000,
-    desc: 'Материалы для крафта случайного легендарного предмета (шанс 65%). +30 000 в банк',
-  },
-  {
-    item: 'craft_rare_200', title: 'Рунный набор ×200', vkPrice: 2800, rubPrice: 19999,
-    craft: true, silver: 2000000,
-    material: 'Сердцевина бездны ×1000', materialImg: '/fragment/fragment_purple.webp',
-    stones: 'Рунный булыжник ×1200', stoneImg: '/stone/stoneUpgrade_gray.webp',
-    desc: '1000 сердцевин + 1200 булыжников + 2M в банк',
-  },
-  {
-    item: 'ruby_rune_1', title: 'Набор рун', vkPrice: 57, rubPrice: 399,
-    rune: true, count: 1, runeImgs: [
-      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
-      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
-      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
-    ],
-    desc: 'Руны для улучшения предметов',
-  },
-  {
-    item: 'ruby_rune_3', title: 'Набор рун ×3', vkPrice: 144, rubPrice: 999,
-    rune: true, count: 3, runeImgs: [
-      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
-      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
-      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
-    ],
-    desc: 'Руны для улучшения предметов',
-  },
-  {
-    item: 'ruby_rune_5', title: 'Набор рун ×5', vkPrice: 214, rubPrice: 1499,
-    rune: true, count: 5, runeImgs: [
-      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина +50%' },
-      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза +30%' },
-      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста +20%' },
-    ],
-    desc: 'Руны для улучшения предметов',
-  },
-  {
-    item: 'curse_small', title: 'Сундук «Проклятый»', vkPrice: 144, rubPrice: 999,
-    curse: true, crystals: 5, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
-    silver: 500000,
-    desc: '5 Кристаллов душ для проклятия предметов. +500 000 в банк',
-  },
-  {
-    item: 'curse_large', title: 'Сундук «Проклятый II»', vkPrice: 258, rubPrice: 1799,
-    curse: true, crystals: 10, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
-    silver: 1000000,
-    desc: '10 Кристаллов душ для проклятия предметов. +1 000 000 в банк',
-  },
-  {
-    item: 'curse_x50', title: 'Сундук «Проклятый III»', vkPrice: 1149, rubPrice: 7999,
-    curse: true, crystals: 50, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
-    silver: 5000000,
-    desc: '50 Кристаллов душ для проклятия предметов. +5 000 000 в банк',
-  },
-  {
-    item: 'curse_x100', title: 'Сундук «Проклятый IV»', vkPrice: 2149, rubPrice: 14999,
-    curse: true, crystals: 100, crystalImg: '/uploads/admin/craft/1785150034070_yyqrol.webp',
-    silver: 10000000,
-    desc: '100 Кристаллов душ для проклятия предметов. +10 000 000 в банк',
-  },
-  {
-    item: 'large_craft', title: 'Большой набор ремесленника', vkPrice: 7500, rubPrice: 52999,
-    mega: true, silver: 10000000, count: 100,
-    runeImgs: [
-      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
-      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
-      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста' },
-    ],
-    extraItems: 'Сапфира, Изумруда, Рунный булыжник, Рунный белокамень',
-    materials: [
-      { img: '/fragment/fragment_purple.webp', label: 'Сердцевина' },
-      { img: '/fragment/fragment_yellow.webp', label: 'Искра' },
-      { img: '/fragment/fragment_red.webp', label: 'Слеза' },
-    ],
-    extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
-    desc: '7 рун ×100 + 7 материалов ×100 + 10M в банк',
-  },
-  {
-    item: 'mega_craft', title: 'Мега набор ремесленника', vkPrice: 11000, rubPrice: 79999,
-    mega: true, silver: 20000000, count: 200,
-    runeImgs: [
-      { img: '/stone/stoneUpgrade_red.webp', label: 'Рубина' },
-      { img: '/stone/stoneUpgrade_yellow.webp', label: 'Топаза' },
-      { img: '/stone/stoneUpgrade_purple.webp', label: 'Аметиста' },
-    ],
-    extraItems: 'Сапфира, Изумруда, Рунный булыжник, Рунный белокамень',
-    materials: [
-      { img: '/fragment/fragment_purple.webp', label: 'Сердцевина' },
-      { img: '/fragment/fragment_yellow.webp', label: 'Искра' },
-      { img: '/fragment/fragment_red.webp', label: 'Слеза' },
-    ],
-    extraMaterials: 'Пыль забвения, Осколок скорби, Фрагмент ужаса, Эссенция мрака',
-    desc: '7 рун ×200 + 7 материалов ×200 + 20M в банк',
-  },
+type Tab = 'create' | 'forge' | 'curse' | 'reforge' | 'salvage';
+const TABS: Array<{ id: Tab; label: string; icon: string }> = [
+  { id: 'create', label: 'Создание', icon: '⚗️' },
+  { id: 'forge', label: 'Ковка', icon: '🔨' },
+  { id: 'curse', label: 'Проклятие', icon: '☠️' },
+  { id: 'reforge', label: 'Перековка', icon: '♻️' },
+  { id: 'salvage', label: 'Разборка', icon: '🧰' },
 ];
+const PRIMARY: Record<string, string> = { s: 'Сила', a: 'Ловкость', d: 'Защита', m: 'Мастерство' };
+const EXTRA: Record<string, string> = { crit: 'Критический удар', dodge: 'Уклонение', counter: 'Контратака', fullBlock: 'Полный блок' };
+const inputClass = 'w-full bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)]';
 
-function CraftPacks({ isVK }: { isVK: boolean }) {
-  const [packMsg, setPackMsg] = useState('');
-  const [packBuying, setPackBuying] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (dir: 'left' | 'right') => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir === 'left' ? -240 : 240, behavior: 'smooth' });
-  };
-
-  const buyPack = (pack: typeof PACKS[number]) => {
-    if (isVK) {
-      setPackBuying(true);
-      (window as any).vkBridge?.send('VKWebAppShowOrderBox', { type: 'item', item: pack.item })
-      .then((data: any) => {
-        if (data?.status === 'cancelled') { setPackBuying(false); return; }
-        setPackMsg('Оплата открыта. Материалы поступят в инвентарь, серебро — в банк.');
-      })
-      .catch(() => setPackBuying(false));
-    } else {
-      setPackBuying(true);
-      fetch('/api/yukassa/create-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ item: pack.item }),
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.confirmation_url) {
-          window.open(data.confirmation_url, '_blank');
-          setPackMsg('Оплата открыта. Материалы поступят в инвентарь, серебро — в банк.');
-        } else {
-          setPackMsg('❌ ' + (data.error || 'Ошибка'));
-        }
-      })
-      .catch(() => setPackMsg('❌ Ошибка сети'))
-      .finally(() => setPackBuying(false));
-    }
-  };
-
-  useEffect(() => {
-    const handler = () => {
-      setPackMsg('✅ Материалы добавлены в инвентарь!');
-      setPackBuying(false);
-    };
-    window.addEventListener('paymentStatus', handler);
-    return () => window.removeEventListener('paymentStatus', handler);
-  }, []);
-
-  return (
-    <div className="mb-4">
-      <div className="relative">
-        <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">◀</button>
-        <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 px-4 snap-x snap-mandatory scrollbar-none">
-      {PACKS.map(p => {
-        const borderColor = p.curse ? '#e74c3c' : p.mega ? '#f39c12' : p.rune ? '#c0392b' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
-        return (
-        <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col flex-shrink-0 w-[220px] snap-start"
-          style={{ borderColor }}>
-          <h3 className="font-bold text-sm mb-1 truncate">{p.title}</h3>
-          <div className="text-xs text-[var(--color-text-muted)] space-y-1 mb-2 flex-1">
-            {'curse' in p ? (
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                  <img src={`https://mmoarena.ru${p.crystalImg}`} alt="" className="w-4 h-4 object-contain" />
-                </div>
-                Кристалл душ ×{p.crystals}
-              </div>
-            ) : 'mega' in p ? (
-              <div className="space-y-1">
-                <p className="font-semibold text-[0.65rem]">Руны ×{p.count}:</p>
-                <div className="flex flex-wrap gap-1">
-                  {p.runeImgs?.map((r: { img: string; label: string }, i: number) => (
-                    <div key={i} className="w-5 h-5 bg-[var(--color-bg-input)] rounded flex items-center justify-center" title={r.label}>
-                      <img src={`https://mmoarena.ru${r.img}`} alt="" className="w-3.5 h-3.5 object-contain" />
-                    </div>
-                  ))}
-                  <span className="text-[0.6rem] text-[var(--color-text-muted)]">+4</span>
-                </div>
-                <p className="font-semibold text-[0.65rem]">Материалы ×{p.count}:</p>
-                <div className="flex flex-wrap gap-1">
-                  {p.materials?.map((m: { img: string; label: string }, i: number) => (
-                    <div key={i} className="w-5 h-5 bg-[var(--color-bg-input)] rounded flex items-center justify-center" title={m.label}>
-                      <img src={`https://mmoarena.ru${m.img}`} alt="" className="w-3.5 h-3.5 object-contain" />
-                    </div>
-                  ))}
-                  <span className="text-[0.6rem] text-[var(--color-text-muted)]">+4</span>
-                </div>
-              </div>
-            ) : 'rune' in p ? (
-              <div className="space-y-1">
-                {p.runeImgs?.map((r: { img: string; label: string }, i: number) => (
-                  <div key={i} className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                      <img src={`https://mmoarena.ru${r.img}`} alt="" className="w-4 h-4 object-contain" />
-                    </div>
-                    <span>{r.label} ×{p.count}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                    <img src={`https://mmoarena.ru${p.materialImg}`} alt="" className="w-4 h-4 object-contain" />
-                  </div>
-                  {p.material}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 flex-shrink-0 bg-[var(--color-bg-input)] rounded flex items-center justify-center">
-                    <img src={`https://mmoarena.ru${p.stoneImg}`} alt="" className="w-4 h-4 object-contain" />
-                  </div>
-                  {p.stones}
-                </div>
-              </>
-            )}
-            {'silver' in p && <p>💰 {formatMoney(p.silver)}</p>}
-            <p className="text-[0.6rem] italic">{p.desc}</p>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-[var(--color-accent-gold)]">
-              {isVK ? `${p.vkPrice} голосов` : `${p.rubPrice} ₽`}
-            </span>
-            <Button variant="danger" size="md" disabled={packBuying}
-              onClick={() => buyPack(p)}>
-              {isVK ? '🛒' : '💳'} Купить
-            </Button>
+function EquipmentGrid({ items, selected, multi = false, onSelect }: { items: any[]; selected: Set<string>; multi?: boolean; onSelect: (item: any) => void }) {
+  if (!items.length) return <p className="text-xs text-[var(--color-text-muted)] py-4 text-center">Подходящих предметов нет.</p>;
+  return <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    {items.map(item => {
+      const active = selected.has(String(item.id));
+      return <button key={item.id} type="button" onClick={() => onSelect(item)}
+        className={`min-w-0 text-left rounded-lg border p-2 cursor-pointer bg-[var(--color-bg-card)] ${active ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <ItemIcon color={item.rarity_color || '#777'} image={item.image} name={item.name || '?'} size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold truncate">{multi && <span>{active ? '✓ ' : ''}</span>}{item.name}</p>
+            <p className="text-[0.65rem] text-[var(--color-text-muted)]">{item.rarity_display || ''}{item.upgradeLevel ? ` · +${item.upgradeLevel}` : ''}</p>
           </div>
         </div>
-      );
-      })}
+      </button>;
+    })}
+  </div>;
+}
+
+function ResourceGrid({ items, selectedId, onSelect }: { items: any[]; selectedId?: string; onSelect: (item: any) => void }) {
+  if (!items.length) return <p className="text-xs text-[var(--color-text-muted)] py-4 text-center">Необходимых ресурсов нет.</p>;
+  return <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+    {items.map(item => <button key={item.id} type="button" onClick={() => onSelect(item)}
+      className={`rounded-lg border p-2 text-left cursor-pointer bg-[var(--color-bg-card)] ${selectedId === String(item.id) ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>
+      <div className="flex items-center gap-2"><ItemIcon color={item.rarity_color || '#777'} image={item.image} name={item.name || '?'} size="md" />
+        <div className="min-w-0"><p className="text-xs font-bold truncate">{item.name}</p><p className="text-[0.65rem] text-[var(--color-text-muted)]">Количество: {item.count || 0}</p></div>
       </div>
-        <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">▶</button>
-      </div>
-      {packMsg && (
-        <div className="w-full text-center text-sm font-bold mt-2"
-          style={{ color: packMsg.startsWith('✅') ? 'var(--color-accent-success)' : packMsg.startsWith('❌') ? 'var(--color-accent-danger)' : 'var(--color-accent-info)' }}>
-          {packMsg}
-        </div>
-      )}
-    </div>
-  );
+    </button>)}
+  </div>;
 }
 
 export default function CraftPage() {
+  const { user } = useAuth();
+  const { character, setCharacter } = useGame();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>('create');
   const [actionCard, setActionCard] = useState<any>(null);
-  useEffect(() => { fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => { const c = cards.find((x: any) => x.path === '/craft'); if (c) setActionCard(c); }).catch(() => {}); }, []);
-    const { user } = useAuth();
-    const { character, setCharacter } = useGame();
-    const navigate = useNavigate();
-    const [craftSlots, setCraftSlots] = useState<(any | null)[]>(Array(9).fill(null));
-    const [materialUsage, setMaterialUsage] = useState<Record<string, number>>({});
-    const [tooltipData, setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
-    const [recipes, setRecipes] = useState<any[]>([]);
-    const [crafting, setCrafting] = useState(false);
-    const craftingRef = useRef(false);
-    const [craftAnim, setCraftAnim] = useState<{ success: boolean; label: string; acquire?: { item: any; count: number; msg: string }; pendingData?: any } | null>(null);
-    const [errorPopup, setErrorPopup] = useState<string | null>(null);
-    const { showAcquire } = useAcquire();
-    const [upgradeInfo, setUpgradeInfo] = useState<{
-        item: any; stone: any; nextLevel: number; chance: number; cost: number;
-    } | null>(null);
-    const { sendItemLink } = useGlobalChat();
+  const [recipes, setRecipes] = useState<any[]>([]);
+  const [activeRecipe, setActiveRecipe] = useState<any>(null);
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState(false);
 
-    const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [forgeItems, setForgeItems] = useState<Record<string, number>>({});
+  const [forgeStone, setForgeStone] = useState<any>(null);
+  const [forgePreview, setForgePreview] = useState<any>(null);
+  const [singleForge, setSingleForge] = useState(true);
+  const [singleInfo, setSingleInfo] = useState<any>(null);
 
-    // Инструкция по улучшению
-    const [showUpgradeInfo, setShowUpgradeInfo] = useState(false);
+  const [curseItem, setCurseItem] = useState<any>(null);
+  const [curseCrystal, setCurseCrystal] = useState<any>(null);
+  const [curseConfirm, setCurseConfirm] = useState<any>(null);
 
-    useEffect(() => {
-        const handleGlobalClick = () => setTooltipData(null);
-        document.addEventListener('click', handleGlobalClick);
-        return () => document.removeEventListener('click', handleGlobalClick);
-    }, []);
+  const [reforgeItemState, setReforgeItemState] = useState<any>(null);
+  const [fromStat, setFromStat] = useState('');
+  const [toStat, setToStat] = useState('');
+  const [reforgeInfo, setReforgeInfo] = useState<any>(null);
 
-    useEffect(() => {
-        if (!user || !character) { navigate('/login'); }
-    }, [user, character, navigate]);
+  const [salvageSelected, setSalvageSelected] = useState<Set<string>>(new Set());
+  const [salvageStone, setSalvageStone] = useState<any>(null);
 
-    const getRecipeCategoryFallback = (recipe: any): string => {
-        if (recipe.result_type === 'craft_item' && recipe.result?.itemType === 'upgrade') return 'Улучшения';
-        return 'Материалы';
-    };
+  useEffect(() => {
+    if (!user || !character) navigate('/login');
+  }, [user, character, navigate]);
+  useEffect(() => {
+    fetchRecipes().then(setRecipes).catch(e => showToast(e.message));
+    fetch('/api/actions', { headers: getHeaders() }).then(r => r.json()).then((cards: any[]) => setActionCard(cards.find(c => c.path === '/craft'))).catch(() => {});
+  }, []);
 
-    useEffect(() => {
-        fetchRecipes()
-            .then(data => {
-                setRecipes(data);
-            })
-            .catch(console.error);
-    }, []);
+  const inventory: any[] = (character?.inventory || []) as any[];
+  const equipment: any[] = useMemo(() => inventory.filter((i: any) => !isCraftItem(i) && !i.locked), [inventory]);
+  const materials: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && (i.itemType === 'craft' || i.type === 'material')), [inventory]);
+  const stones: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && i.itemType === 'upgrade'), [inventory]);
+  const crystals: any[] = useMemo(() => inventory.filter((i: any) => isCraftItem(i) && i.itemType === 'soul_crystal'), [inventory]);
+  const groupedRecipes = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    recipes.forEach(r => { const key = r.category?.name || 'Материалы'; (groups[key] ||= []).push(r); });
+    return groups;
+  }, [recipes]);
+  const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
 
-    if (!user || !character) return null;
+  useEffect(() => {
+    setForgePreview(null);
+    const selections = Object.entries(forgeItems).map(([itemId, targetLevel]) => ({ itemId, targetLevel }));
+    if (!selections.length) return;
+    const timer = setTimeout(() => previewBatchForge(selections).then(setForgePreview).catch(() => setForgePreview(null)), 250);
+    return () => clearTimeout(timer);
+  }, [forgeItems]);
 
-    const getOriginalCraftItemCount = (itemId: string | number): number => {
-        const original = character.inventory.find((i: any) => isCraftItem(i) && i.id == itemId);
-        return original && isCraftItem(original) ? original.count : 0;
-    };
+  useEffect(() => {
+    setSingleInfo(null);
+    if (!singleForge || Object.keys(forgeItems).length !== 1 || !forgeStone) return;
+    const [id] = Object.keys(forgeItems);
+    const item = equipment.find((i: any) => String(i.id) === id);
+    if (!item) return;
+    fetchUpgradeInfo((item.upgradeLevel || 0) + 1, item.rarity_id).then(d => setSingleInfo(d)).catch(() => {});
+  }, [singleForge, forgeItems, forgeStone, equipment]);
 
-    const displayInventory = useMemo(() => {
-        const slotIds = new Set(craftSlots.filter(s => s !== null && !isCraftItem(s)).map(s => s.id));
-        return character.inventory
-            .filter(item => !slotIds.has(item.id))
-            .map(item => {
-                if (isCraftItem(item)) {
-                    const used = materialUsage[item.id] || 0;
-                    const remaining = item.count - used;
-                    return remaining > 0 ? { ...item, count: remaining } : null;
-                }
-                return item;
-            })
-            .filter(Boolean);
-    }, [character.inventory, craftSlots, materialUsage]);
+  useEffect(() => {
+    setReforgeInfo(null); setFromStat(''); setToStat('');
+    if (reforgeItemState) fetchReforgeInfo(reforgeItemState.id).then(setReforgeInfo).catch(e => showToast(e.message));
+  }, [reforgeItemState]);
 
-    useEffect(() => {
-        const nonEmptySlots = craftSlots.filter(s => s !== null);
-        if (nonEmptySlots.length !== 2) { setUpgradeInfo(null); return; }
-        const items = nonEmptySlots.filter(s => !isCraftItem(s));
-        const stones = nonEmptySlots.filter(s => isCraftItem(s) && s.itemType === 'upgrade');
-        if (items.length !== 1 || stones.length !== 1) { setUpgradeInfo(null); return; }
-        const item = items[0];
-        const stone = stones[0];
-        // Камень любой редкости улучшает предмет
-        const nextLevel = (item.upgradeLevel || 0) + 1;
-        fetchUpgradeInfo(nextLevel, item.rarity_id)
-            .then((data: any) => {
-                const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
-                const bonus = STONE_BONUS[stone.rarity_id] || 0;
-                const factionBonus = data.factionBonus || 0;
-                const totalChance = Math.min(100, data.chance + bonus + factionBonus);
-                setUpgradeInfo({ item, stone, nextLevel, chance: totalChance, cost: data.money_cost });
-            })
-            .catch(() => setUpgradeInfo(null));
-    }, [craftSlots]);
+  const create = async () => {
+    if (!activeRecipe) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/craft/execute', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ recipe_id: activeRecipe.id }) });
+      const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Ошибка создания');
+      updateCharacter(data); showToast(data.message || (data.success ? 'Предмет создан' : 'Создание не удалось'), data.success ? 'success' : 'warning');
+    } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
+  };
 
-    // Curse info
-    const [curseInfo, setCurseInfo] = useState<{ item: any; crystal: any } | null>(null);
-    useEffect(() => {
-        const nonEmptySlots = craftSlots.filter(s => s !== null);
-        if (nonEmptySlots.length !== 2) { setCurseInfo(null); return; }
-        const items = nonEmptySlots.filter(s => !isCraftItem(s));
-        const crystals = nonEmptySlots.filter(s => isCraftItem(s) && s.itemType === 'soul_crystal');
-        if (items.length !== 1 || crystals.length !== 1) { setCurseInfo(null); return; }
-        setCurseInfo({ item: items[0], crystal: crystals[0] });
-    }, [craftSlots]);
+  const toggleForge = (item: any) => {
+    const id = String(item.id);
+    setForgeItems(prev => {
+      if (prev[id]) { const copy = { ...prev }; delete copy[id]; return copy; }
+      if (singleForge) return { [id]: Math.min(10, (item.upgradeLevel || 0) + 1) };
+      if (Object.keys(prev).length >= 20) { showToast('Можно выбрать не более 20 предметов'); return prev; }
+      return { ...prev, [id]: Math.min(10, (item.upgradeLevel || 0) + 1) };
+    });
+  };
 
-    const [curseResult, setCurseResult] = useState<string | null>(null);
-    const [curseConfirm, setCurseConfirm] = useState<{ oldCurse: any; newCurse: any } | null>(null);
+  const runForge = async () => {
+    if (!forgeStone || !Object.keys(forgeItems).length) return;
+    setBusy(true);
+    try {
+      if (singleForge) {
+        const id = Object.keys(forgeItems)[0];
+        const item = equipment.find((i: any) => String(i.id) === id);
+        const data = await upgradeItem([item, { ...forgeStone, count: 1 }]);
+        updateCharacter(data); showToast(data.message, data.success ? 'success' : 'warning');
+      } else {
+        if (!forgePreview) throw new Error('Не удалось рассчитать ковку');
+        const selections = Object.entries(forgeItems).map(([itemId, targetLevel]) => ({ itemId, targetLevel }));
+        const data = await batchForge(selections, forgeStone.id);
+        updateCharacter(data);
+        const destroyed = data.results.filter((r: any) => r.destroyed).length;
+        showToast(`Ковка завершена. Камней использовано: ${data.stonesUsed}${destroyed ? `. Разрушено предметов: ${destroyed}` : ''}`, destroyed ? 'warning' : 'success');
+      }
+      setForgeItems({}); setForgePreview(null);
+    } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
+  };
 
-    const handleCurse = async () => {
-        if (!curseInfo || craftingRef.current) return;
-        craftingRef.current = true;
-        setCrafting(true);
-        try {
-            const token = localStorage.getItem('token');
-            // Шаг 1: списание + превью
-            const previewRes = await fetch('/api/craft/curse', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ itemId: curseInfo.item.id, crystalId: curseInfo.crystal.id }),
-            });
-            const preview = await previewRes.json();
-            if (!previewRes.ok) throw new Error(preview.error);
+  const cursePreview = async () => {
+    if (!curseItem || !curseCrystal) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/craft/curse', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ itemId: curseItem.id, crystalId: curseCrystal.id }) });
+      const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Ошибка проклятия');
+      if (data.needsConfirm) setCurseConfirm(data);
+      else await applyCurse(data.newCurse, false);
+    } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
+  };
+  const applyCurse = async (curse: any, keepOld: boolean) => {
+    const res = await fetch('/api/craft/curse/apply', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ itemId: curseItem.id, curse, keepOld }) });
+    const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Ошибка применения проклятия');
+    updateCharacter(data); setCurseConfirm(null); setCurseItem(null); setCurseCrystal(null); showToast(data.message, 'success');
+  };
 
-            if (preview.needsConfirm) {
-                setCurseConfirm({ oldCurse: preview.oldCurse, newCurse: preview.newCurse });
-            } else {
-                // Нет старого проклятия — сразу применяем
-                await applyCurse(preview.newCurse);
-            }
-        } catch (e: any) {
-            setErrorPopup(e.message);
-        } finally {
-            craftingRef.current = false;
-            setCrafting(false);
-        }
-    };
+  const availableReforgeStats = useMemo(() => {
+    if (!reforgeItemState) return {};
+    const base = typeof reforgeItemState.bonuses === 'string' ? JSON.parse(reforgeItemState.bonuses || '{}') : (reforgeItemState.bonuses || {});
+    const extra = typeof reforgeItemState.extra === 'string' ? JSON.parse(reforgeItemState.extra || '{}') : (reforgeItemState.extra || {});
+    const out: Record<string, { label: string; value: number; group: string }> = {};
+    Object.entries(PRIMARY).forEach(([k, label]) => { if (Number(base[k]) > 0) out[k] = { label, value: Number(base[k]), group: 'base' }; });
+    if (Number(reforgeItemState.rarity_id) !== 7 && !extra.effect) Object.entries(EXTRA).forEach(([k, label]) => { if (Number(extra[k]) > 0) out[k] = { label, value: Number(extra[k]), group: 'extra' }; });
+    return out;
+  }, [reforgeItemState]);
+  const targetStats = fromStat && availableReforgeStats[fromStat]?.group === 'extra' ? EXTRA : PRIMARY;
 
-    const applyCurse = async (curseData: any, keepOld = false) => {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/craft/curse/apply', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ itemId: curseInfo!.item.id, curse: curseData, keepOld }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        setCurseResult(data.message);
+  if (!user || !character) return null;
+
+  const refresh = async () => setCharacter(await fetchCharacter());
+  const updateCharacter = (data: any) => setCharacter({ ...character, inventory: data.inventory, money: data.moneyAfter ?? character.money });
+
+  const runReforge = async () => {
+    if (!reforgeItemState || !fromStat || !toStat) return;
+    setBusy(true);
+    try { const data = await reforgeItem(reforgeItemState.id, fromStat, toStat); updateCharacter(data); showToast(data.message, 'success'); setReforgeItemState(null); }
+    catch (e: any) { showToast(e.message); } finally { setBusy(false); }
+  };
+
+  const runSalvage = async () => {
+    setBusy(true);
+    try {
+      if (salvageSelected.size) {
+        const data = await salvageItems([...salvageSelected]);
         setCharacter({ ...character, inventory: data.inventory });
-        setCraftSlots(Array(9).fill(null));
-        setMaterialUsage({});
-        setCurseConfirm(null);
-        setTimeout(() => setCurseResult(null), 4000);
-    };
+        showToast(`Разобрано предметов: ${salvageSelected.size}`, 'success');
+      }
+      if (salvageStone) { await disassembleStone(salvageStone.id); await refresh(); showToast('Камень разобран', 'success'); }
+      setSalvageSelected(new Set()); setSalvageStone(null);
+    } catch (e: any) { showToast(e.message); } finally { setBusy(false); }
+  };
 
-    const handleLongPress = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
-        if (item) {
-            const touch = (e as React.TouchEvent).touches?.[0] ?? e;
-            setTooltipData({ item, x: touch.clientX, y: touch.clientY });
-        }
-    }, []);
+  return <div className="px-3 sm:px-4 py-4 min-h-screen max-w-3xl mx-auto">
+    <BackButton />
+    {actionCard && <PageHeader title="Ремесло" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
+    <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Каждый вид ремесла вынесен в отдельную мастерскую. На вкладке показываются только подходящие предметы и необходимые ресурсы.</p>
+    <CraftPacks isVK={isVK} />
 
-    const handleItemClick = useCallback((item: any) => {
-        if (isCraftItem(item) && item.itemType !== 'upgrade' && item.itemType !== 'soul_crystal') return;
-        setTooltipData(null);
-        const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
-        if (freeSlotIndex === -1) { setErrorPopup('Все слоты заняты'); return; }
-        if (isCraftItem(item)) {
-            const used = materialUsage[item.id] || 0;
-            if (used >= getOriginalCraftItemCount(item.id)) { setErrorPopup('Нет доступных ресурсов этого типа'); return; }
-            setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
-            setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = { ...item, count: 1 }; return n; });
-        } else {
-            if (item.locked) { setErrorPopup('Предмет заблокирован. Разблокируйте в инвентаре.'); return; }
-            setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = item; return n; });
-        }
-    }, [craftSlots, materialUsage, character.inventory]);
+    <div className="flex overflow-x-auto gap-1 mb-4 pb-1 sm:grid sm:grid-cols-5">
+      {TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`flex-shrink-0 min-h-10 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer border ${tab === t.id ? 'bg-[#7c3aed] text-white border-[#7c3aed]' : 'bg-[var(--color-bg-secondary)] border-[var(--color-border-light)] text-[var(--color-text-secondary)]'}`}><span className="mr-1">{t.icon}</span>{t.label}</button>)}
+    </div>
 
-    const handleMaterialClick = useCallback((mat: any) => {
-        if (!isCraftItem(mat)) return;
-        setTooltipData(null);
-        const freeSlotIndex = craftSlots.findIndex(slot => slot === null);
-        if (freeSlotIndex === -1) { setErrorPopup('Все слоты заняты'); return; }
-        const used = materialUsage[mat.id] || 0;
-        const totalAvailable = getOriginalCraftItemCount(mat.id);
-        if (used >= totalAvailable) { setErrorPopup('Нет доступных ресурсов этого типа'); return; }
-        setMaterialUsage(prev => ({ ...prev, [mat.id]: (prev[mat.id] || 0) + 1 }));
-        setCraftSlots(prev => { const n = [...prev]; n[freeSlotIndex] = { ...mat, count: 1 }; return n; });
-    }, [craftSlots, materialUsage, character.inventory]);
+    {tab === 'create' && <div className="grid md:grid-cols-[1fr_260px] gap-4">
+      <div><RecipeList groupedRecipes={groupedRecipes} openCategories={openCategories} activeRecipe={activeRecipe} onToggleCategory={cat => setOpenCategories(p => ({ ...p, [cat]: !p[cat] }))} onRecipeClick={setActiveRecipe} /></div>
+      <Card><h2 className="font-bold mb-2">Создание</h2>{activeRecipe ? <><p className="text-sm font-bold">{activeRecipe.name}</p><p className="text-xs text-[var(--color-text-muted)] my-2">{activeRecipe.ingredients.map((i: any) => `${i.name} ×${i.quantity}`).join(', ')}</p><p className="text-xs">Шанс: {activeRecipe.success_chance ?? 100}%</p><p className="text-xs mb-3">Стоимость: {formatMoney(activeRecipe.money_cost)}</p><Button size="md" fullWidth disabled={busy} onClick={create}>{busy ? 'Создание...' : 'Создать'}</Button></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
+      <Card className="md:col-span-2"><h3 className="font-bold text-sm mb-2">Используемые материалы</h3><ResourceGrid items={materials} onSelect={() => {}} /></Card>
+    </div>}
 
-    const handleSlotClick = (index: number, e: React.MouseEvent) => {
-        const item = craftSlots[index];
-        if (!item) return;
-        setTooltipData(null);
-        if (e.shiftKey) { e.stopPropagation(); sendItemLink(item.id, item); return; }
-        if (isCraftItem(item)) {
-            setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
-        }
-        setCraftSlots(prev => { const n = [...prev]; n[index] = null; return n; });
-    };
+    {tab === 'forge' && <div className="space-y-4">
+      <Card><div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Ковка</h2><p className="text-xs text-[var(--color-text-muted)]">Усиливайте один предмет или несколько предметов до выбранного уровня.</p></div><div className="flex gap-1"><Button size="sm" variant={singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(true); setForgeItems({}); }}>Один предмет</Button><Button size="sm" variant={!singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(false); setForgeItems({}); }}>Массовая ковка</Button></div></div></Card>
+      <Card><h3 className="font-bold text-sm mb-2">1. Выберите {singleForge ? 'предмет' : 'предметы'}</h3><EquipmentGrid items={equipment.filter((i: any) => (i.upgradeLevel || 0) < 10)} selected={new Set(Object.keys(forgeItems))} multi={!singleForge} onSelect={toggleForge} />
+        {!singleForge && Object.entries(forgeItems).map(([id, target]) => { const item = equipment.find((i: any) => String(i.id) === id); return item && <div key={id} className="mt-2 flex items-center gap-2 text-xs"><span className="flex-1 truncate">{item.name} (+{item.upgradeLevel || 0})</span><label>До уровня</label><select className={inputClass + ' !w-20'} value={target} onChange={e => setForgeItems(p => ({ ...p, [id]: Number(e.target.value) }))}>{Array.from({ length: 10 - (item.upgradeLevel || 0) }, (_, n) => n + (item.upgradeLevel || 0) + 1).map(v => <option key={v} value={v}>+{v}</option>)}</select></div>; })}
+      </Card>
+      <Card><h3 className="font-bold text-sm mb-2">2. Выберите камень</h3><ResourceGrid items={stones} selectedId={forgeStone && String(forgeStone.id)} onSelect={setForgeStone} /></Card>
+      <Card><h3 className="font-bold text-sm mb-2">Расчёт</h3>{singleForge && singleInfo ? <p className="text-xs">Следующий уровень: шанс {singleInfo.chance}% · стоимость {formatMoney(singleInfo.money_cost)}</p> : !singleForge && forgePreview ? <><p className="text-xs">Максимально потребуется камней: {forgePreview.requiredStones}</p><p className="text-xs">Максимальная стоимость: {formatMoney(forgePreview.totalCost)}</p><p className="text-xs text-[var(--color-accent-warning)] mt-1">Для каждого предмета ковка прекращается после первой неудачи. При попытке +7 и выше предмет может разрушиться.</p></> : <p className="text-xs text-[var(--color-text-muted)]">Выберите предметы и целевые уровни.</p>}<Button className="mt-3" size="md" fullWidth disabled={busy || !forgeStone || !Object.keys(forgeItems).length || (!singleForge && !forgePreview)} onClick={runForge}>{busy ? 'Ковка...' : 'Начать ковку'}</Button></Card>
+    </div>}
 
-    const handleDropOnSlot = (index: number, e: React.DragEvent) => {
-        e.preventDefault(); setTooltipData(null);
-        const itemId = e.dataTransfer.getData('text/plain');
-        if (!itemId) return;
-        const numericItemId = parseFloat(itemId);
-        let item = displayInventory.find((i: any) => i.id === numericItemId);
-        if (!item) item = character.inventory.find((i: any) => i.id == numericItemId && isCraftItem(i));
-        if (!item) return;
-        if (isCraftItem(item)) {
-            const used = materialUsage[item.id] || 0;
-            if (used >= getOriginalCraftItemCount(item.id)) return;
-            setMaterialUsage(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
-            setCraftSlots(prev => { const n = [...prev]; n[index] = { ...item, count: 1 }; return n; });
-        } else {
-            if (item.locked) { setErrorPopup('Предмет заблокирован. Разблокируйте в инвентаре.'); return; }
-            setCraftSlots(prev => { const n = [...prev]; n[index] = item; return n; });
-        }
-    };
+    {tab === 'curse' && <div className="space-y-4"><Card><h2 className="font-bold">Проклятие</h2><p className="text-xs text-[var(--color-text-muted)]">Добавляет случайную базовую характеристику. Текущее проклятие можно оставить после просмотра результата.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid items={equipment} selected={new Set(curseItem ? [String(curseItem.id)] : [])} onSelect={setCurseItem} /></Card><Card><h3 className="font-bold text-sm mb-2">2. Выберите Кристалл душ</h3><ResourceGrid items={crystals} selectedId={curseCrystal && String(curseCrystal.id)} onSelect={setCurseCrystal} /></Card><Card><p className="text-xs mb-3">Стоимость: {formatMoney(100000)} + 1 Кристалл душ</p><Button size="md" fullWidth className="!bg-[#7c3aed] !text-white" disabled={busy || !curseItem || !curseCrystal || character.money < 100000} onClick={cursePreview}>{busy ? 'Проклятие...' : 'Проклясть'}</Button></Card></div>}
 
-    const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
-    const handleDragStartFromSlot = (e: React.DragEvent, item: any) => {
-        e.dataTransfer.setData('text/plain', item.id);
-        e.dataTransfer.effectAllowed = 'move';
-        setTooltipData(null);
-    };
+    {tab === 'reforge' && <div className="space-y-4"><Card><h2 className="font-bold">Перековка</h2><p className="text-xs text-[var(--color-text-muted)]">Переносит всё значение одной характеристики в другую характеристику той же группы. Проклятие, комплект и эффект артефакта не меняются.</p></Card><Card><h3 className="font-bold text-sm mb-2">1. Выберите предмет</h3><EquipmentGrid items={equipment} selected={new Set(reforgeItemState ? [String(reforgeItemState.id)] : [])} onSelect={setReforgeItemState} /></Card>{reforgeItemState && <Card><h3 className="font-bold text-sm mb-2">2. Выберите изменение</h3><label className="text-xs">Исходная характеристика</label><select className={inputClass + ' mb-3'} value={fromStat} onChange={e => { setFromStat(e.target.value); setToStat(''); }}><option value="">Выберите</option>{Object.entries(availableReforgeStats).map(([key, s]) => <option key={key} value={key}>{s.label}: +{s.value}</option>)}</select><label className="text-xs">Новая характеристика</label><select className={inputClass} value={toStat} onChange={e => setToStat(e.target.value)}><option value="">Выберите</option>{Object.entries(targetStats).filter(([k]) => k !== fromStat).map(([k, label]) => <option key={k} value={k}>{label}</option>)}</select>{fromStat && toStat && <div className="rounded-lg bg-[var(--color-bg-input)] p-3 text-xs mt-3"><p>Было: {availableReforgeStats[fromStat].label} +{availableReforgeStats[fromStat].value}</p><p className="text-[var(--color-accent-success)]">Станет: {targetStats[toStat]} +{availableReforgeStats[fromStat].value}</p><p className="mt-2">Стоимость: {reforgeInfo ? formatMoney(reforgeInfo.cost) : 'расчёт...'}</p><p>Предыдущих перековок: {reforgeInfo?.reforgeCount || 0}</p></div>}<Button size="md" fullWidth className="mt-3" disabled={busy || !fromStat || !toStat || !reforgeInfo || character.money < reforgeInfo.cost} onClick={runReforge}>{busy ? 'Перековка...' : 'Перековать'}</Button></Card>}</div>}
 
-    const handleDropOnInventory = (e: React.DragEvent) => {
-        e.preventDefault();
-        const itemId = e.dataTransfer.getData('text/plain');
-        if (!itemId) return;
-        const numericItemId = parseFloat(itemId);
-        const slotIndex = craftSlots.findIndex(slot => slot && slot.id == numericItemId);
-        if (slotIndex === -1) return;
-        const item = craftSlots[slotIndex];
-        if (!item) return;
-        if (isCraftItem(item)) {
-            setMaterialUsage(prev => { const n = { ...prev }; n[item.id] = (n[item.id] || 0) - 1; if (n[item.id] <= 0) delete n[item.id]; return n; });
-        }
-        setCraftSlots(prev => { const n = [...prev]; n[slotIndex] = null; return n; });
-    };
+    {tab === 'salvage' && <div className="space-y-4"><Card><h2 className="font-bold">Разборка</h2><p className="text-xs text-[var(--color-text-muted)]">Предмет превращается в материал своей редкости. Камень улучшения разбирается отдельно.</p></Card><Card><h3 className="font-bold text-sm mb-2">Предметы</h3><EquipmentGrid items={equipment} selected={salvageSelected} multi onSelect={item => setSalvageSelected(prev => { const next = new Set(prev); const id = String(item.id); if (next.has(id)) next.delete(id); else next.add(id); return next; })} /></Card><Card><h3 className="font-bold text-sm mb-2">Камень улучшения</h3><ResourceGrid items={stones} selectedId={salvageStone && String(salvageStone.id)} onSelect={setSalvageStone} /></Card><Button variant="danger" size="md" fullWidth disabled={busy || (!salvageSelected.size && !salvageStone)} onClick={runSalvage}>{busy ? 'Разборка...' : `Разобрать${salvageSelected.size ? ` (${salvageSelected.size})` : ''}`}</Button></div>}
 
-    const handleRecipeClick = (recipe: any) => {
-        setCraftSlots(Array(9).fill(null));
-        setMaterialUsage({});
-        const canCraft = recipe.ingredients.every((ing: any) => getOriginalCraftItemCount(ing.craft_item_id) >= ing.quantity);
-        if (!canCraft) { setErrorPopup('Недостаточно необходимых ресурсов'); return; }
-        const newSlots: (any | null)[] = [];
-        const newUsage: Record<string, number> = {};
-        recipe.ingredients.forEach((ing: any) => {
-            for (let i = 0; i < ing.quantity; i++) {
-                newSlots.push({ type: 'craft_item', id: ing.craft_item_id, name: ing.name, rarity_id: ing.rarity_id, rarity_display: ing.rarity_display, rarity_color: ing.rarity_color, count: 1, itemType: ing.itemType || 'craft', image: ing.image || null });
-            }
-        });
-        while (newSlots.length < 9) newSlots.push(null);
-        setCraftSlots(newSlots);
-        recipe.ingredients.forEach((ing: any) => { newUsage[ing.craft_item_id] = ing.quantity; });
-        setMaterialUsage(newUsage);
-    };
-
-    const activeRecipe = useMemo(() => {
-        if (craftSlots.every(s => s === null)) return null;
-        for (const recipe of recipes) {
-            const recipeMap = new Map<number, number>();
-            recipe.ingredients.forEach((ing: any) => recipeMap.set(ing.craft_item_id, ing.quantity));
-            const slotMap = new Map<number, number>();
-            for (const slot of craftSlots) {
-                if (slot && isCraftItem(slot)) {
-                    const id = Number(slot.id);
-                    slotMap.set(id, (slotMap.get(id) || 0) + 1);
-                }
-            }
-            let match = true;
-            for (const [id, qty] of slotMap) {
-                if ((recipeMap.get(id) || 0) !== qty) { match = false; break; }
-            }
-            if (match && recipeMap.size === slotMap.size) return recipe;
-        }
-        return null;
-    }, [craftSlots, recipes]);
-
-    const handleCreate = async () => {
-        if (!activeRecipe || craftingRef.current) return;
-        craftingRef.current = true;
-        setCrafting(true);
-        try {
-            const res = await fetch('/api/craft/execute', {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify({ recipe_id: activeRecipe.id, slots: craftSlots.filter(Boolean) }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
-            setCraftSlots(Array(9).fill(null));
-            setMaterialUsage({});
-            const itemName = data.item?.name || activeRecipe.result?.name || 'Предмет';
-            if (data.success) {
-                setCraftAnim({ success: true, label: itemName, acquire: { item: data.item || activeRecipe.result, count: 1, msg: 'Создано' }, pendingData: data });
-            } else {
-                setCraftAnim({ success: false, label: itemName, pendingData: data });
-            }
-        } catch (err: any) {
-            setErrorPopup(err.message);
-        } finally {
-            craftingRef.current = false;
-            setCrafting(false);
-        }
-    };
-
-    const handleUpgrade = async () => {
-        if (!upgradeInfo || craftingRef.current) return;
-        craftingRef.current = true;
-        setCrafting(true);
-        try {
-            const slots = craftSlots.filter(Boolean);
-            const data = await upgradeItem(slots);
-            setCraftSlots(Array(9).fill(null));
-            setMaterialUsage({});
-            const itemName = upgradeInfo.item?.name || 'Предмет';
-            if (data.success) {
-                setCraftAnim({ success: true, label: `+${upgradeInfo.nextLevel} ${itemName}`, acquire: { item: upgradeInfo.item, count: 1, msg: `Улучшено до +${upgradeInfo.nextLevel}` }, pendingData: data });
-            } else {
-                setCraftAnim({ success: false, label: itemName, pendingData: data });
-            }
-        } catch (err: any) {
-            setErrorPopup(err.message);
-        } finally {
-            craftingRef.current = false;
-            setCrafting(false);
-        }
-    };
-
-    const hasItemsInSlots = craftSlots.some(s => s !== null);
-
-    const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
-
-    const getRecipeCategory = (recipe: any): string => recipe.category?.name || getRecipeCategoryFallback(recipe);
-
-    const groupedRecipes = useMemo(() => {
-        const groups: Record<string, any[]> = {};
-        recipes.forEach(r => {
-            const cat = getRecipeCategory(r);
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push(r);
-        });
-        for (const key of Object.keys(groups)) {
-            groups[key].sort((a: any, b: any) => (a.result?.rarity_id ?? 0) - (b.result?.rarity_id ?? 0));
-        }
-        return groups;
-    }, [recipes]);
-
-    const handleMouseEnterSlot = (e: React.MouseEvent, item: any) => setTooltipData({ item, x: e.clientX, y: e.clientY });
-    const handleMouseMoveSlot = (e: React.MouseEvent) => {
-        if (tooltipData) setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
-    };
-    const handleMouseLeaveSlot = () => setTooltipData(null);
-
-    return (
-        <div className="px-4 py-4 min-h-screen">
-            <div data-tutorial="craft-back"><BackButton /></div>
-          {actionCard && <PageHeader title="Ремесло" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
-            <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">
-                Создавайте материалы и улучшайте предметы в верстаке. Добывайте ресурсы в PvE, крафтите материалы из трёх предыдущей редкости. Улучшайте снаряжение камнями — с шансом на успех.
-            </p>
-
-            {/* Сундуки с материалами */}
-            <CraftPacks isVK={isVK} />
-
-            {/* Инструкция */}
-            <Card className="mb-4">
-                <div
-                    className="flex items-center justify-between cursor-pointer select-none"
-                    onClick={() => setShowUpgradeInfo(!showUpgradeInfo)}
-                >
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm">{showUpgradeInfo ? '▼' : '▶'}</span>
-                        <h3 className="font-bold text-sm">🔨 Как работает ремесло</h3>
-                    </div>
-                </div>
-                {showUpgradeInfo && (
-                    <div className="mt-3 text-xs text-[var(--color-text-muted)] space-y-3">
-                        <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">📦 Материалы</h4>
-                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>Материалы добываются с монстров в PvE</li>
-                                <li>Для создания материала нужно <b>3 материала предыдущей редкости</b></li>
-                                <li>Из одного материала и серебра в верстаке можно создать случайный предмет редкости материала</li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">💎 Камни улучшения</h4>
-                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>Камни <b>не создаются</b> в верстаке — только добываются с монстров (5% шанс)</li>
-                                <li><span className="text-[var(--color-accent-success)]">Камень любой редкости</span> может улучшить предмет <span className="text-[var(--color-accent-success)]">любой редкости</span></li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">📋 Как улучшить в верстаке:</h4>
-                            <ol className="list-decimal pl-4 mt-1 space-y-0.5">
-                                <li>Поместите <b>предмет</b> и <b>камень улучшения</b> в верстак</li>
-                                <li>Нажмите <b>«Улучшить»</b></li>
-                                <li>+1 уровень предмета даёт <b>+10% к характеристикам</b> предмета</li>
-                                <li><b>+1:</b> 100% успех</li>
-                                <li><b>+2 до +6:</b> при неудаче разрушается <b>только камень</b></li>
-                                <li><b>+7 до +10:</b> <span className="text-[var(--color-accent-danger)]">при неудаче предмет разрушается!</span></li>
-                            </ol>
-                        </div>
-
-                        <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">📊 Шансы улучшения:</h4>
-                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>+1: 100%</li>
-                                <li>+2: 90%</li>
-                                <li>+3: 75%</li>
-                                <li>+4: 60%</li>
-                                <li>+5: 40%</li>
-                                <li>+6: 20%</li>
-                                <li>+7: 10%</li>
-                                <li>+8: 5%</li>
-                                <li>+9: 3%</li>
-                                <li>+10: 1%</li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">💍 Бижутерия</h4>
-                            <p className="mt-1">В бижутерии (амулет, кольца, пояс) <b>1 ед. характеристики не даёт +1% к второстепенным характеристикам</b> (крит, уклонение, блок).</p>
-                        </div>
-
-                        <div>
-                            <h4 className="font-bold text-[var(--color-accent-purple)]">☠ Проклятие (Кристалл душ)</h4>
-                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                                <li>Кристалл душ добывается с боссов Ада I-III</li>
-                                <li>Поместите <b>предмет</b> и <b>Кристалл душ</b> в верстак, нажмите <b>«Проклясть»</b></li>
-                                <li>Стоимость: <b>100 000 серебра</b> + Кристалл душ</li>
-                                <li>Добавляет случайный основной стат (Сила/Ловкость/Защита/Мастерство)</li>
-                                <li>5 рангов: <span style={{color:'#22c55e'}}>I (10-20)</span> → <span style={{color:'#3b82f6'}}>II (20-30)</span> → <span style={{color:'#a855f7'}}>III (30-40)</span> → <span style={{color:'#f97316'}}>IV (40-50)</span> → <span style={{color:'#ef4444'}}>V (50-60)</span></li>
-                                <li>Ранг I — часто, ранг V — очень редко</li>
-                                <li>Не скалируется от уровня улучшения предмета</li>
-                                <li>При повторном проклятии можно выбрать: заменить или оставить старое</li>
-                            </ul>
-                        </div>
-                    </div>
-                )}
-            </Card>
-
-            {/* Список рецептов */}
-            <RecipeList
-                groupedRecipes={groupedRecipes}
-                openCategories={openCategories}
-                activeRecipe={activeRecipe}
-                onToggleCategory={(cat) => setOpenCategories(prev => ({ ...prev, [cat]: !prev[cat] }))}
-                onRecipeClick={handleRecipeClick}
-            />
-
-            <div className="flex gap-8 flex-wrap mt-4">
-                {/* Верстак */}
-                <div className="flex-shrink-0 w-full max-w-[256px] mx-auto bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border-light)] rounded-xl p-4 flex flex-col gap-2">
-                    <h3 className="text-center text-sm font-bold text-[var(--color-text-primary)]">🔨 Верстак</h3>
-                    {/* Сетка слотов */}
-                    <div className="grid grid-cols-[repeat(3,44px)] grid-rows-[repeat(3,44px)] gap-1 justify-center">
-                        {craftSlots.map((item, index) => (
-                            <div key={index}>
-                                {item && isCraftItem(item) ? (
-                                    <LongPressResourceSlot
-                                        item={item} draggable
-                                        onDragStart={(e) => handleDragStartFromSlot(e, item)}
-                                        onClick={(e) => handleSlotClick(index, e)}
-                                        onDrop={(e) => handleDropOnSlot(index, e)}
-                                        onDragOver={handleDragOver}
-                                        onMouseEnter={(e) => item && handleMouseEnterSlot(e, item)}
-                                        onMouseMove={handleMouseMoveSlot}
-                                        onMouseLeave={handleMouseLeaveSlot}
-                                        onLongPress={handleLongPress}
-                                    />
-                                ) : (
-                                    <LongPressItemSlot
-                                        item={item} draggable={!!item}
-                                        onDragStart={(e) => item && handleDragStartFromSlot(e, item)}
-                                        onClick={(e) => handleSlotClick(index, e)}
-                                        onDrop={(e) => handleDropOnSlot(index, e)}
-                                        onDragOver={handleDragOver}
-                                        onMouseEnter={(e) => item && handleMouseEnterSlot(e, item)}
-                                        onMouseMove={handleMouseMoveSlot}
-                                        onMouseLeave={handleMouseLeaveSlot}
-                                        onLongPress={handleLongPress}
-                                    />
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Инфо о рецепте */}
-                    {activeRecipe && (
-                        <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
-                            <div>Вы можете создать: <strong className="text-white">{activeRecipe.result?.name}</strong></div>
-                            <div>Шанс создания: {character?.faction === 'crafter' ? Math.min(100, (activeRecipe.success_chance ?? 100) + 10 + Math.floor((character.factionCraftCount || 0) / 100)) : (activeRecipe.success_chance ?? 100)}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 100)}% фракция)</span>}
-                                {character?.faction === 'crafter' && (
-                                    (() => { const craftChance = Math.min(100, (activeRecipe.success_chance ?? 100) + 10 + Math.floor((character.factionCraftCount || 0) / 100)); return craftChance >= 80 ? <span className="text-[var(--color-text-muted)] ml-1">(без опыта)</span> : <span className="text-green-400 ml-1">+1 опыт</span>; })()
-                                )}
-                            </div>
-                            <div>Стоимость: {formatMoney(activeRecipe.money_cost)}</div>
-                        </div>
-                    )}
-
-                    {/* Инфо об улучшении */}
-                    {upgradeInfo && (() => {
-                        const item = upgradeInfo.item;
-                        const curLvl = item.upgradeLevel || 0;
-                        const nextLvl = upgradeInfo.nextLevel;
-                        const scaleStat = (base: number, lvl: number) => Math.round(base * (1 + lvl * 0.1));
-                        const statNames: Record<string, string> = { s: 'Сила', a: 'Ловк', d: 'Защ', m: 'Маг', crit: 'Крит', dodge: 'Уклон', counter: 'Контр', fullBlock: 'Блок' };
-                        const bonuses = item.bonuses || {};
-                        const extra = item.extra || {};
-                        const allStats: [string, number][] = [];
-                        for (const k of ['s','a','d','m']) if (bonuses[k]) allStats.push([k, bonuses[k]]);
-                        for (const k of ['crit','dodge','counter','fullBlock']) if (extra[k]) allStats.push([k, extra[k]]);
-
-                        return (
-                        <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
-                            <div>Улучшение до уровня +{nextLvl}</div>
-                            <div>Шанс: {upgradeInfo.chance}%{character?.faction === 'crafter' && <span className="text-blue-300 ml-1">(+{10 + Math.floor((character.factionCraftCount || 0) / 100)}% фракция)</span>}
-                                {character?.faction === 'crafter' && (
-                                    upgradeInfo.chance >= 80 ? <span className="text-[var(--color-text-muted)] ml-1">(без опыта)</span> : <span className="text-green-400 ml-1">+1 опыт</span>
-                                )}
-                            </div>
-                            <div>Стоимость: {formatMoney(upgradeInfo.cost)}</div>
-                            {allStats.length > 0 && (
-                                <div className="mt-1 text-[var(--color-text-muted)]">
-                                    {allStats.map(([k, base]) => {
-                                        const cur = scaleStat(base, curLvl);
-                                        const next = scaleStat(base, nextLvl);
-                                        const same = cur === next;
-                                        return (
-                                            <div key={k}>
-                                                {statNames[k] || k}: {cur} → <span className={same ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-accent-success)]'}>{next}</span>
-                                                {same && <span className="text-[0.6rem] text-[var(--color-text-muted)] ml-1">(без изменений)</span>}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                            {nextLvl <= 6 ? (
-                                <div className="text-[var(--color-accent-warning)] mt-1">При неудаче разрушится только камень</div>
-                            ) : (
-                                <div className="text-[var(--color-accent-danger)] font-bold mt-1">ВНИМАНИЕ!!! При неудаче предмет будет разрушен!!!</div>
-                            )}
-                        </div>
-                        );
-                    })()}
-
-                    {/* Инфо о проклятии */}
-                    {curseInfo && (() => {
-                        const item = curseInfo.item;
-                        const hasCurse = !!(item.curseStat && item.curseValue);
-                        return (
-                        <div className="mt-2 p-2 bg-[var(--color-bg-card)] rounded-lg text-xs">
-                            <div className="font-bold text-[var(--color-accent-purple)]">☠ Проклятие предмета</div>
-                            <div>Предмет: <strong className="text-white">{item.name}{item.upgradeLevel > 0 ? ` +${item.upgradeLevel}` : ''}</strong></div>
-                            {hasCurse && (() => {
-                                const statLabels: Record<string, string> = { s: 'Силе', a: 'Ловкости', d: 'Защите', m: 'Мастерству' };
-                                return (
-                                <div className="text-[var(--color-accent-warning)]">
-                                    Текущее: +{item.curseValue} к {statLabels[item.curseStat] || item.curseStat} (ранг {item.curseName})
-                                </div>
-                                );
-                            })()}
-                            <div className="text-[var(--color-text-muted)] mt-1">Ранги: <span style={{color:'#22c55e'}}>I</span> 10-20 • <span style={{color:'#3b82f6'}}>II</span> 20-30 • <span style={{color:'#a855f7'}}>III</span> 30-40 • <span style={{color:'#f97316'}}>IV</span> 40-50 • <span style={{color:'#ef4444'}}>V</span> 50-60</div>
-                            <div>Стоимость: {formatMoney(100000)} + Кристалл душ</div>
-                        </div>
-                        );
-                    })()}
-
-                    {/* Кнопки */}
-                    <div className="flex flex-col gap-2 items-center mt-2">
-                        <Button variant={activeRecipe ? 'success' : 'secondary'} size="md" fullWidth disabled={!activeRecipe || crafting} onClick={handleCreate} data-tutorial="craft-create">
-                            {crafting ? 'Создание...' : 'Создать'}
-                        </Button>
-                        <Button variant={upgradeInfo ? 'primary' : 'secondary'} size="md" fullWidth disabled={!upgradeInfo || crafting} onClick={handleUpgrade}
-                            className={upgradeInfo ? 'bg-[#f39c12]' : ''}>
-                            {crafting ? 'Улучшение...' : 'Улучшить'}
-                        </Button>
-                        <Button variant="secondary" size="md" fullWidth disabled={!curseInfo || crafting || (character?.money || 0) < 100000} onClick={handleCurse}
-                            className={curseInfo && (character?.money || 0) >= 100000 ? '!bg-[#7c3aed] !text-white' : ''}>
-                            {crafting ? 'Проклятие...' : '☠ Проклясть'}
-                        </Button>
-                        {curseResult && (
-                            <div className="text-xs text-[var(--color-accent-success)] text-center font-bold">{curseResult}</div>
-                        )}
-                        <Button variant="danger" size="md" fullWidth disabled={!hasItemsInSlots} onClick={async () => {
-                            const itemsToSalvage = craftSlots.filter(s => s && !isCraftItem(s));
-                            const stonesToDisassemble = craftSlots.filter(s => s && isCraftItem(s) && s.itemType === 'upgrade');
-                            if (itemsToSalvage.length === 0 && stonesToDisassemble.length === 0) return;
-
-                            try {
-                                // Разбор предметов
-                                if (itemsToSalvage.length > 0) {
-                                    const result = await salvageItems(itemsToSalvage.map(s => s.id));
-                                    setCharacter({ ...character, inventory: result.inventory });
-                                    showAcquire({ name: 'Разбор', rarity_id: 0 }, itemsToSalvage.length, 'Предметы разобраны');
-                                }
-                                // Разбор камней
-                                for (const stone of stonesToDisassemble) {
-                                    const res = await fetch('/api/craft/disassemble', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-                                        body: JSON.stringify({ itemId: stone.id }),
-                                    });
-                                    const data = await res.json();
-                                    if (res.ok) {
-                                        const fresh = await fetchCharacter();
-                                        setCharacter(fresh);
-                                    } else {
-                                        setErrorPopup(data.error || 'Ошибка');
-                                    }
-                                }
-                                setCraftSlots(prev => prev.map(s => {
-                                    if (!s) return null;
-                                    if (!isCraftItem(s) && itemsToSalvage.some(i => i.id === s.id)) return null;
-                                    if (isCraftItem(s) && s.itemType === 'upgrade' && stonesToDisassemble.some(i => i.id === s.id)) return null;
-                                    return s;
-                                }));
-                                setMaterialUsage({});
-                            } catch (err: any) { setErrorPopup(err.message); }
-                        }}>
-                            Разобрать
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Инвентарь */}
-                <div className="flex-1 min-w-[300px]" onDragOver={handleDragOver} onDrop={handleDropOnInventory}>
-                    <Inventory
-                        collapsible={false}
-                        clickToEquip={false}
-                        onItemClick={handleItemClick}
-                        onMaterialClick={handleMaterialClick}
-                        inventoryOverride={displayInventory}
-                        onDragStartItem={() => setTooltipData(null)}
-                    />
-                </div>
-            </div>
-
-            {tooltipData && <ItemTooltip item={tooltipData.item} position={{ x: tooltipData.x, y: tooltipData.y }} />}
-
-            {/* Попап крафта с анимацией */}
-            {craftAnim && (
-                <CraftPopup result={craftAnim} onDone={() => {
-                    if (craftAnim.pendingData) {
-                        setCharacter({ ...character, inventory: craftAnim.pendingData.inventory, money: craftAnim.pendingData.moneyAfter });
-                    }
-                    if (craftAnim.acquire) showAcquire(craftAnim.acquire.item, craftAnim.acquire.count, craftAnim.acquire.msg);
-                    setCraftAnim(null);
-                }} />
-            )}
-
-            {/* Диалог замены проклятия */}
-            {curseConfirm && (
-                <div className="fixed inset-0 z-[1100] flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/50" />
-                    <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-accent-purple)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center">
-                        <p className="text-sm font-bold text-[var(--color-accent-purple)] mb-3">☠ Замена проклятия</p>
-                        <div className="text-xs space-y-2 mb-4">
-                            <div>
-                                <span className="text-[var(--color-text-muted)]">Текущее: </span>
-                                <span style={{color: curseConfirm.oldCurse.color}}>+{curseConfirm.oldCurse.value} к {curseConfirm.oldCurse.statName} (ранг {curseConfirm.oldCurse.name})</span>
-                            </div>
-                            <div>
-                                <span className="text-[var(--color-text-muted)]">Новое: </span>
-                                <span style={{color: curseConfirm.newCurse.color}}>+{curseConfirm.newCurse.value} к {curseConfirm.newCurse.statName} (ранг {curseConfirm.newCurse.name})</span>
-                            </div>
-                        </div>
-                        <div className="flex gap-2 justify-center">
-                            <Button variant="secondary" size="md" onClick={() => applyCurse(curseConfirm.newCurse, true)}>Оставить</Button>
-                            <Button variant="danger" size="md" onClick={() => applyCurse(curseConfirm.newCurse)}>Заменить</Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Попап ошибки */}
-            {errorPopup && (
-                <div className="fixed inset-0 z-[1100] flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/50" onClick={() => setErrorPopup(null)} />
-                    <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-accent-danger)] rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center">
-                        <p className="text-sm text-[var(--color-accent-danger)] mb-4">{errorPopup}</p>
-                        <Button variant="secondary" size="md" onClick={() => setErrorPopup(null)}>OK</Button>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+    {curseConfirm && <div className="fixed inset-0 z-[1100] flex items-center justify-center"><div className="absolute inset-0 bg-black/60" /><Card className="relative max-w-sm w-full mx-4 text-center"><h3 className="font-bold mb-3">Выберите проклятие</h3><p className="text-xs mb-2">Текущее: +{curseConfirm.oldCurse.value} {curseConfirm.oldCurse.statName} ({curseConfirm.oldCurse.name})</p><p className="text-xs mb-4 text-[var(--color-accent-purple)]">Новое: +{curseConfirm.newCurse.value} {curseConfirm.newCurse.statName} ({curseConfirm.newCurse.name})</p><div className="flex gap-2 justify-center"><Button size="md" variant="secondary" onClick={() => applyCurse(curseConfirm.newCurse, true).catch(e => showToast(e.message))}>Оставить текущее</Button><Button size="md" variant="danger" onClick={() => applyCurse(curseConfirm.newCurse, false).catch(e => showToast(e.message))}>Применить новое</Button></div></Card></div>}
+  </div>;
 }

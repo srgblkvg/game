@@ -1,10 +1,12 @@
 import { Router } from 'express';
+import type { PoolClient } from 'pg';
 import { db } from '../db/index';
 import { checkAchievement } from './achievements';
 import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty, broadcast } from '../events';
 import { addToTreasury } from '../game/treasury';
+import { applyReforge, getReforgeCost, planBatchForge, type UpgradeRule } from '../game/craftOperations';
 
 const router = Router();
 
@@ -597,6 +599,219 @@ router.post('/craft/curse/apply', async (req, res) => {
         curse: keepOld ? null : curseData,
         message,
     });
+});
+
+// Предпросмотр стоимости перековки
+router.get('/craft/reforge-info/:itemId', async (req, res) => {
+    try {
+        const user = await db.one('SELECT inventory FROM users WHERE id = ?', [req.userId]) as any;
+        if (!user) return res.status(404).json({ error: 'Игрок не найден' });
+        const inventory: any[] = JSON.parse(user.inventory || '[]');
+        const item = inventory.find(i => !isCraftItem(i) && String(i.id) === String(req.params.itemId));
+        if (!item) return res.status(404).json({ error: 'Предмет не найден в инвентаре' });
+        return res.json({ cost: getReforgeCost(item), reforgeCount: Number(item.reforgeCount || 0) });
+    } catch (error: any) {
+        return res.status(400).json({ error: error.message });
+    }
+});
+
+// Перековка одной базовой или дополнительной характеристики
+router.post('/craft/reforge', async (req, res) => {
+    const { itemId, fromStat, toStat } = req.body;
+    if (!['string', 'number'].includes(typeof itemId) || String(itemId).length > 64
+        || typeof fromStat !== 'string' || typeof toStat !== 'string') {
+        return res.status(400).json({ error: 'Укажите предмет и характеристики перековки' });
+    }
+    try {
+        const result = await db.tx(async client => {
+            const locked = await client.query('SELECT inventory, money FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
+            const user = locked.rows[0];
+            if (!user) throw new Error('Игрок не найден');
+            const inventory: any[] = JSON.parse(user.inventory || '[]');
+            const itemIndex = inventory.findIndex(i => !isCraftItem(i) && String(i.id) === String(itemId));
+            if (itemIndex === -1) throw new Error('Предмет не найден в инвентаре');
+            if (inventory[itemIndex].locked) throw new Error('Предмет заблокирован. Разблокируйте его в инвентаре.');
+            const cost = getReforgeCost(inventory[itemIndex]);
+            if (Number(user.money) < cost) throw new Error(`Недостаточно серебра. Требуется ${cost}`);
+            inventory[itemIndex] = applyReforge(inventory[itemIndex], fromStat, toStat);
+            await client.query(
+                'UPDATE users SET inventory = $1, money = money - $2, craftcount = craftcount + 1 WHERE id = $3',
+                [JSON.stringify(inventory), cost, req.userId]
+            );
+            return { inventory, moneyAfter: Number(user.money) - cost, item: inventory[itemIndex], cost };
+        });
+        addToTreasury(Math.floor(result.cost * 0.22), 'craft_reforge').catch(() => {});
+        checkAchievement(req.userId!, 'craft').catch(() => {});
+        markDirty(req.userId!, 'quests');
+        const guildUser = await db.one('SELECT guildId FROM users WHERE id = ?', [req.userId]) as any;
+        if (guildUser?.guildId) updateGuildQuestProgress(guildUser.guildId, 'craft').catch(() => {});
+        return res.json({ success: true, ...result, message: 'Характеристика перекована' });
+    } catch (error: any) {
+        return res.status(400).json({ error: error.message || 'Ошибка перековки' });
+    }
+});
+
+async function loadBatchForgePlan(inventory: any[], selections: any[], client?: PoolClient) {
+    if (!Array.isArray(selections) || selections.length === 0 || selections.length > 20) {
+        throw new Error('Выберите от 1 до 20 предметов');
+    }
+    const selected = selections.map(selection => {
+        const item = inventory.find(i => !isCraftItem(i) && String(i.id) === String(selection.itemId));
+        if (!item) throw new Error('Один из предметов не найден в инвентаре');
+        if (item.locked) throw new Error(`${item.name || 'Предмет'} заблокирован`);
+        return { item, targetLevel: Number(selection.targetLevel) };
+    });
+    const rows = client
+        ? (await client.query('SELECT level, rarity_id, chance, money_cost FROM upgrade_chances')).rows
+        : await db.query('SELECT level, rarity_id, chance, money_cost FROM upgrade_chances', []) as any[];
+    const rules: UpgradeRule[] = rows.map(row => ({
+        level: Number(row.level), rarityId: Number(row.rarity_id ?? row.rarityId),
+        chance: Number(row.chance), moneyCost: Math.max(1, Math.floor(Number(row.money_cost ?? row.moneyCost) / 4)),
+    }));
+    return planBatchForge(selected, rules);
+}
+
+// Максимальная цена массовой ковки: если все попытки дойдут до цели
+router.post('/craft/batch-forge/preview', async (req, res) => {
+    const user = await db.one('SELECT inventory FROM users WHERE id = ?', [req.userId]) as any;
+    if (!user) return res.status(404).json({ error: 'Игрок не найден' });
+    try {
+        const plan = await loadBatchForgePlan(JSON.parse(user.inventory || '[]'), req.body.selections);
+        return res.json(plan);
+    } catch (error: any) {
+        return res.status(400).json({ error: error.message });
+    }
+});
+
+// Массовая ковка. Для каждого предмета попытки прекращаются при первой неудаче.
+router.post('/craft/batch-forge', async (req, res) => {
+    const { selections, stoneId } = req.body;
+    if (!stoneId) return res.status(400).json({ error: 'Выберите камень улучшения' });
+    try {
+        const result = await db.tx(async client => {
+            const locked = await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
+            const user = locked.rows[0];
+            if (!user) throw new Error('Игрок не найден');
+            let inventory: any[] = JSON.parse(user.inventory || '[]');
+            const plan = await loadBatchForgePlan(inventory, selections, client);
+            const stone = inventory.find(i => isCraftItem(i) && String(i.id) === String(stoneId) && i.itemType === 'upgrade');
+            if (!stone || Number(stone.count) < plan.requiredStones) {
+                throw new Error(`Недостаточно камней. Требуется ${plan.requiredStones}`);
+            }
+            if (Number(user.money) < plan.totalCost) {
+                throw new Error(`Недостаточно серебра. Максимальная стоимость ${plan.totalCost}`);
+            }
+
+            const stoneBonus: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
+            const factionBonus = user.faction === 'crafter' ? 10 + Math.floor(Number(user.faction_craft_count || 0) / 100) : 0;
+            const results: any[] = [];
+            let spent = 0;
+            let stonesUsed = 0;
+            let successfulLevels = 0;
+            let brokenCount = 0;
+            let ratingBonus = 0;
+            let factionProgress = 0;
+            const announcements: Array<{ kind: 'upgrade' | 'broken'; itemName: string; level: number }> = [];
+
+            for (const entry of plan.entries) {
+                const selectionResult: any = { itemId: entry.itemId, attempts: [], reachedLevel: entry.currentLevel, destroyed: false };
+                for (const rule of entry.rules) {
+                    spent += rule.moneyCost;
+                    stonesUsed += 1;
+                    const chance = Math.min(100, rule.chance + (stoneBonus[Number(stone.rarity_id)] || 0) + factionBonus);
+                    const success = Math.random() * 100 < chance;
+                    if (user.faction === 'crafter' && chance < 80) factionProgress += 1;
+                    selectionResult.attempts.push({ level: rule.level, chance, success });
+                    if (success) {
+                        const index = inventory.findIndex(i => !isCraftItem(i) && String(i.id) === entry.itemId);
+                        if (index === -1) throw new Error('Предмет пропал во время ковки');
+                        const itemName = inventory[index].name || 'Предмет';
+                        inventory[index] = { ...inventory[index], upgradeLevel: rule.level };
+                        selectionResult.reachedLevel = rule.level;
+                        successfulLevels += 1;
+                        if (rule.level === 7) ratingBonus += 5;
+                        else if (rule.level === 10) ratingBonus += 50;
+                        if (rule.level >= 7) announcements.push({ kind: 'upgrade', itemName, level: rule.level });
+                        continue;
+                    }
+                    if (rule.level >= 7) {
+                        const index = inventory.findIndex(i => !isCraftItem(i) && String(i.id) === entry.itemId);
+                        if (index !== -1) {
+                            const destroyed = inventory[index];
+                            const materialResult = await client.query(
+                                `SELECT c.id, c.name, c.rarity_id, c.type, c.image,
+                                        r.display_name AS rarity_display, r.color AS rarity_color
+                                 FROM craft_items c JOIN rarities r ON c.rarity_id = r.id
+                                 WHERE c.rarity_id = $1 AND c.type = 'craft' LIMIT 1`,
+                                [Number(destroyed.rarity_id || 0)]
+                            );
+                            inventory.splice(index, 1);
+                            const material = materialResult.rows[0];
+                            if (material) {
+                                const existing = inventory.find(i => isCraftItem(i) && String(i.id) === String(material.id));
+                                if (existing) existing.count = Number(existing.count || 0) + 1;
+                                else inventory.push({
+                                    type: 'craft_item', id: material.id, name: material.name,
+                                    rarity_id: material.rarity_id, rarity_display: material.rarity_display,
+                                    rarity_color: material.rarity_color, count: 1,
+                                    itemType: material.type || 'craft', image: material.image || null,
+                                });
+                            }
+                            announcements.push({ kind: 'broken', itemName: destroyed.name || 'Предмет', level: rule.level - 1 });
+                        }
+                        selectionResult.destroyed = true;
+                        brokenCount += 1;
+                    }
+                    break;
+                }
+                results.push(selectionResult);
+            }
+
+            const stoneIndex = inventory.findIndex(i => isCraftItem(i) && String(i.id) === String(stoneId) && i.itemType === 'upgrade');
+            if (stoneIndex === -1) throw new Error('Камни не найдены после ковки');
+            const remaining = Number(inventory[stoneIndex].count) - stonesUsed;
+            if (remaining > 0) inventory[stoneIndex] = { ...inventory[stoneIndex], count: remaining };
+            else inventory.splice(stoneIndex, 1);
+
+            for (const announcement of announcements) {
+                const msgId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+                const content = announcement.kind === 'upgrade'
+                    ? `⚒️ ${user.username || 'Игрок'} улучшил ${announcement.itemName} до +${announcement.level}!`
+                    : `💥 ${user.username || 'Игрок'} сломал ${announcement.itemName} (+${announcement.level}) при улучшении!`;
+                await client.query(
+                    'INSERT INTO chat_messages (id, senderid, targetid, content) VALUES ($1, 0, NULL, $2)',
+                    [msgId, content]
+                );
+                (announcement as any).message = {
+                    id: msgId, senderId: 0, senderName: 'Глашатай', targetId: null,
+                    content, createdAt: new Date().toISOString(),
+                };
+            }
+
+            await client.query(
+                `UPDATE users SET inventory = $1, money = money - $2,
+                 craftcount = craftcount + $3, craftupgraded = craftupgraded + $4,
+                 craftbroken = craftbroken + $5, faction_craft_count = faction_craft_count + $6,
+                 elo = GREATEST(100, elo + $7), pverating = pverating + $7 WHERE id = $8`,
+                [JSON.stringify(inventory), spent, successfulLevels, successfulLevels, brokenCount,
+                    factionProgress, ratingBonus, req.userId]
+            );
+            return { inventory, moneyAfter: Number(user.money) - spent, results, spent, stonesUsed, ratingBonus, announcements };
+        });
+        addToTreasury(Math.floor(result.spent * 0.22), 'craft_batch_forge').catch(() => {});
+        checkAchievement(req.userId!, 'craft').catch(() => {});
+        markDirty(req.userId!, 'quests');
+        const guildUser = await db.one('SELECT guildId FROM users WHERE id = ?', [req.userId]) as any;
+        if (guildUser?.guildId) updateGuildQuestProgress(guildUser.guildId, 'craft').catch(() => {});
+        for (const announcement of result.announcements) {
+            if ((announcement as any).message) {
+                broadcast('message', { message: (announcement as any).message });
+            }
+        }
+        return res.json({ success: true, ...result });
+    } catch (error: any) {
+        return res.status(400).json({ error: error.message || 'Ошибка массовой ковки' });
+    }
 });
 
 export default router;
