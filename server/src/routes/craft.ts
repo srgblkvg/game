@@ -560,7 +560,9 @@ router.post('/craft/curse', async (req, res) => {
         item.curseName = curse.name;
         item.curseColor = curse.color;
     }
-    inventory[itemIdx] = item;
+    const updatedItemIdx = inventory.findIndex((i: any) => String(i.id) === String(itemId) && !isCraftItem(i));
+    if (updatedItemIdx === -1) return res.status(400).json({ error: 'Предмет потерян при обработке инвентаря' });
+    inventory[updatedItemIdx] = item;
 
     await db.run('UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1 WHERE id = ?',
         [JSON.stringify(inventory), newMoney, userId]);

@@ -326,7 +326,7 @@ export default function CraftPage() {
         const rolled = await response.json();
         if (!response.ok) throw new Error(rolled.error || 'Ошибка проклятия');
         updateCharacter(rolled);
-        setRandomCurseRoll({ ...rolled, itemId });
+        setRandomCurseRoll(rolled.oldCurse ? { ...rolled, itemId } : null);
         setCraftResult({ success: true, label: 'Наложение проклятия', message: `Выпало: +${rolled.newCurse.value} ${rolled.newCurse.statName}, ранг ${rolled.newCurse.name}` });
       } catch (error: any) { showToast(error.message); }
       finally { setBusy(false); }
@@ -471,7 +471,7 @@ export default function CraftPage() {
 
     {tab === 'salvage' && <div className="space-y-4"><Card><h2 className="font-bold">Разборка</h2><p className="text-xs text-[var(--color-text-muted)]">Предмет превращается в материал своей редкости. Камни улучшения разбирать нельзя.</p></Card><Card><h3 className="font-bold text-sm mb-2">Выберите предметы</h3><EquipmentGrid {...gridTooltipProps} items={equipment} selected={salvageSelected} multi onSelect={item => setSalvageSelected(prev => { const next = new Set(prev); const id = String(item.id); if (next.has(id)) next.delete(id); else next.add(id); return next; })} /></Card><Button variant="danger" size="md" fullWidth disabled={busy || !salvageSelected.size} onClick={runSalvage}>{busy ? 'Разборка...' : `Разобрать${salvageSelected.size ? ` (${salvageSelected.size})` : ''}`}</Button></div>}
 
-    {craftResult && <CraftPopup result={craftResult} onDone={() => { if (!randomCurseRoll) showToast(craftResult.message, craftResult.success ? 'success' : 'warning'); setCraftResult(null); }} />}
+    {craftResult && <CraftPopup result={craftResult} onDone={() => { if (!randomCurseRoll) { showToast(craftResult.message, craftResult.success ? 'success' : 'warning'); setCurseItems(new Set()); setCurseCrystal(null); } setCraftResult(null); }} />}
     {randomCurseRoll && !craftResult && <div className="fixed inset-0 z-[1100] flex items-center justify-center"><div className="absolute inset-0 bg-black/60" /><Card className="relative max-w-sm w-full mx-4 text-center"><h3 className="font-bold mb-3">Результат проклятия</h3>{randomCurseRoll.oldCurse && <p className="text-xs mb-2">Текущее: +{randomCurseRoll.oldCurse.value} {randomCurseRoll.oldCurse.statName}, ранг {randomCurseRoll.oldCurse.name}</p>}<p className="text-xs mb-4" style={{ color: randomCurseRoll.newCurse.color }}>Новое: +{randomCurseRoll.newCurse.value} {randomCurseRoll.newCurse.statName}, ранг {randomCurseRoll.newCurse.name}</p>{randomCurseRoll.oldCurse ? <div className="flex gap-2 justify-center"><Button size="md" variant="secondary" disabled={busy} onClick={() => resolveRandomCurse(true)}>Оставить старое</Button><Button size="md" variant="danger" disabled={busy} onClick={() => resolveRandomCurse(false)}>Заменить</Button></div> : <Button size="md" disabled={busy} onClick={() => resolveRandomCurse(false)}>Применить</Button>}</Card></div>}
     {progressState && <OperationProgressModal {...progressState} stopping={stopRequestedRef.current} onStepDone={() => operationContinueRef.current?.()} onStop={() => { stopRequestedRef.current = true; setProgressState(prev => prev && ({ ...prev })); }} />}
     {tooltip && <ItemTooltip item={tooltip.item} position={{ x: tooltip.x, y: tooltip.y }} />}
