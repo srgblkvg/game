@@ -106,7 +106,14 @@ function EquipmentGrid({ items, selected, multi = false, onSelect, showTooltip, 
         <div className="flex items-center gap-2 min-w-0">
           <div className="relative flex-shrink-0">
             <ItemIcon color={item.rarity_color || '#777'} image={item.image} name={item.name || '?'} size="md" />
-            {upgradeLevel > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-text-accent)] text-black text-[9px] leading-none font-bold shadow border border-black/30 flex items-center justify-center">+{upgradeLevel}</span>}
+            {upgradeLevel > 0 && <span style={{
+              position: 'absolute', top: -4, right: -4,
+              background: 'var(--color-text-accent)', color: '#000',
+              borderRadius: '50%', width: 16, height: 16,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 9, fontWeight: 'bold', lineHeight: 1,
+              boxSizing: 'border-box',
+            }}>+{upgradeLevel}</span>}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold truncate">{multi && <span>{active ? '✓ ' : ''}</span>}{item.name}</p>
@@ -298,8 +305,9 @@ export default function CraftPage() {
           latestInventory = data.inventory; latestMoney = data.moneyAfter ?? latestMoney;
           setCharacter(prev => prev ? ({ ...prev, inventory: latestInventory, money: latestMoney }) : prev);
           const nextItem = latestInventory.find((entry: any) => !isCraftItem(entry) && String(entry.id) === plan.id);
-          active.result = data.message;
-          active.detail = nextItem ? `Текущий уровень: +${nextItem.upgradeLevel || 0}` : 'Предмет разрушен';
+          active.result = nextItem
+            ? `${data.message} Текущий уровень: +${nextItem.upgradeLevel ?? nextItem.upgradelevel ?? 0}`
+            : `${data.message} Предмет разрушен`;
           setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepKey: prev.stepKey + 1, stepResult: { success: !!data.success, message: data.message } }));
           await new Promise<void>(resolve => { operationContinueRef.current = resolve; });
           operationContinueRef.current = null;
