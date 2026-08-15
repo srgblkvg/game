@@ -619,7 +619,7 @@ export default function CraftPage() {
       {TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`flex-shrink-0 min-h-10 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer border ${tab === t.id ? 'bg-[#7c3aed] text-white border-[#7c3aed]' : 'bg-[var(--color-bg-secondary)] border-[var(--color-border-light)] text-[var(--color-text-secondary)]'}`}><span className="mr-1">{t.icon}</span>{t.label}</button>)}
     </div>
 
-    {tab === 'create' && <div className={`grid gap-4 ${activeRecipe?.result_type === 'random_item' ? 'md:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)]' : 'md:grid-cols-[1fr_260px]'}`}>
+    {tab === 'create' && <div className="space-y-4">
       <div><RecipeList groupedRecipes={groupedRecipes} openCategories={openCategories} activeRecipe={activeRecipe} onToggleCategory={cat => setOpenCategories(p => ({ ...p, [cat]: !p[cat] }))} onRecipeClick={setActiveRecipe} /></div>
       <Card><h2 className="font-bold mb-2">Создание</h2>{activeRecipe ? <>
         <p className="text-sm font-bold">{activeRecipe.name}</p>
@@ -674,7 +674,7 @@ export default function CraftPage() {
         </div>}
         <Button size="md" fullWidth disabled={busy || ((activeRecipe.result_type === 'craft_item' || !!selectedResultOption) && createMaxAttempts < 1)} onClick={activeRecipe.result_type === 'craft_item' || !!selectedResultOption ? runAutoCreate : create}>{busy ? 'Создание...' : selectedResultOption ? `Искать: ${selectedResultOption.name}` : activeRecipe.result_type === 'craft_item' ? 'Начать создание' : 'Создать'}</Button>
       </> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
-      <Card className="md:col-span-2"><h3 className="font-bold text-sm mb-2">Используемые материалы</h3>{activeRecipe ? <ResourceGrid {...gridTooltipProps} items={relevantMaterials} onSelect={() => {}} /> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
+      <Card><h3 className="font-bold text-sm mb-2">Используемые материалы</h3>{activeRecipe ? <ResourceGrid {...gridTooltipProps} items={relevantMaterials} onSelect={() => {}} /> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
     </div>}
 
     {tab === 'forge' && <div className="space-y-4">
