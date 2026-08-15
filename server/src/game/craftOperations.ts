@@ -32,6 +32,22 @@ export interface CraftIngredientRequirement {
   quantity: number;
 }
 
+export function getCraftFactionBonus(faction: unknown, factionCraftCount: unknown): number {
+  if (faction !== 'crafter') return 0;
+  return 10 + Math.floor(Math.max(0, Number(factionCraftCount) || 0) / 1000);
+}
+
+export function getAdjustedCurseRankWeights(baseWeights: number[], factionBonus: number): number[] {
+  if (baseWeights.length < 2) return [...baseWeights];
+  const normalized = baseWeights.map(weight => Math.max(0, Number(weight) || 0));
+  const total = normalized.reduce((sum, weight) => sum + weight, 0);
+  if (total <= 0) return normalized;
+  const multiplier = 1 + Math.max(0, Number(factionBonus) || 0) / 100;
+  const higherWeights = normalized.slice(1).map(weight => weight * multiplier);
+  const higherTotal = higherWeights.reduce((sum, weight) => sum + weight, 0);
+  return [Math.max(0, total - higherTotal), ...higherWeights];
+}
+
 export function calculateMaxCraftAttempts(
   inventory: CraftResourceCount[],
   ingredients: CraftIngredientRequirement[],

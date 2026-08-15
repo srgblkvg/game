@@ -6,7 +6,7 @@ import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty, broadcast } from '../events';
 import { addToTreasury } from '../game/treasury';
-import { applyReforge, curseMeetsTarget, decideAutoCraftResult, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, type UpgradeRule } from '../game/craftOperations';
+import { applyReforge, curseMeetsTarget, decideAutoCraftResult, getAdjustedCurseRankWeights, getCraftFactionBonus, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, type UpgradeRule } from '../game/craftOperations';
 
 const router = Router();
 
@@ -19,8 +19,12 @@ function isCraftItem(item: any): boolean {
 
 // Получить все рецепты (для игрока)
 router.get('/craft/recipes', async (req, res) => {
+    const user = await db.one('SELECT faction, faction_craft_count FROM users WHERE id = ?', [req.userId]) as any;
+    const factionBonus = getCraftFactionBonus(user?.faction, user?.faction_craft_count);
     const recipes = await db.query('SELECT * FROM craft_recipes ORDER BY id', []) as any[];
     for (const recipe of recipes) {
+        recipe.factionBonus = factionBonus;
+        recipe.effectiveChance = Math.min(100, Number(recipe.success_chance ?? 100) + factionBonus);
         recipe.ingredients = await db.query(`
       SELECT ci.id as craft_item_id, ci.name, ci.rarity_id, ci.type as itemType, ci.image, cri.quantity,
              r.display_name as rarity_display, r.color as rarity_color
@@ -147,7 +151,7 @@ router.post('/craft/execute', async (req, res) => {
     }).filter(Boolean);
 
     const newMoney = user.money - recipe.money_cost;
-    const craftBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 1000) : 0;
+    const craftBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
     const chance = (recipe.success_chance ?? 100) + craftBonus;
     const success = Math.random() * 100 < chance;
 
@@ -329,7 +333,7 @@ router.post('/craft/auto-attempt', async (req, res) => {
             // Фиксируем списание в транзакции до броска; последующие ошибки откатят его целиком.
             await client.query('UPDATE users SET inventory = $1, money = $2 WHERE id = $3',
                 [JSON.stringify(newInventory), moneyAfter, req.userId]);
-            const craftBonus = user.faction === 'crafter' ? 10 + Math.floor(Number(user.faction_craft_count || 0) / 1000) : 0;
+            const craftBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
             const effectiveChance = Number(recipe.success_chance ?? 100) + craftBonus;
             const success = Math.random() * 100 < effectiveChance;
             let item: any;
@@ -436,7 +440,7 @@ router.get('/craft/upgrade-info/:level/:rarity', async (req, res) => {
     if (!data) return res.status(404).json({ error: 'Данные об уровне не найдены' });
     // Бонус фракции Ремесленник: +10% +1% за каждые 1000 крафтов
     const user = await db.one('SELECT faction, faction_craft_count FROM users WHERE id = ?', [userId]) as any;
-    const factionBonus = user?.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 100) : 0;
+    const factionBonus = getCraftFactionBonus(user?.faction, user?.faction_craft_count);
     res.json({ chance: data.chance, factionBonus, money_cost: Math.max(1, Math.floor(data.money_cost / 4)) });
 });
 
@@ -488,7 +492,7 @@ router.post('/craft/upgrade', async (req, res) => {
     const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
     const stoneBonus = STONE_BONUS[stone.rarity_id] || 0;
     // Бонус фракции Ремесленник: +10% +1% за каждые 1000 крафтов
-    const factionBonus = user.faction === 'crafter' ? 10 + Math.floor((user.faction_craft_count || 0) / 100) : 0;
+    const factionBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
     const finalChance = Math.min(100, chance + stoneBonus + factionBonus);
     const actualCost = Math.max(1, Math.floor(money_cost / 4));
 
@@ -637,12 +641,23 @@ const CURSE_RANKS = [
 const CURSE_STATS: Record<string, string> = { s: 'Сила', a: 'Ловкость', d: 'Защита', m: 'Мастерство' };
 const CURSE_COST = 100000;
 
-function rollCurse() {
-    const totalWeight = CURSE_RANKS.reduce((s, r) => s + r.weight, 0);
+function getCurseRankChances(factionBonus: number) {
+    const weights = getAdjustedCurseRankWeights(CURSE_RANKS.map(rank => rank.weight), factionBonus);
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    return CURSE_RANKS.map((rank, index) => ({
+        rank: rank.rank, name: rank.name, color: rank.color,
+        chance: totalWeight > 0 ? weights[index]! / totalWeight * 100 : 0,
+    }));
+}
+
+function rollCurse(factionBonus = 0) {
+    const weights = getAdjustedCurseRankWeights(CURSE_RANKS.map(rank => rank.weight), factionBonus);
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
     let roll = Math.random() * totalWeight;
     let rank = CURSE_RANKS[0]!;
-    for (const r of CURSE_RANKS) {
-        roll -= r.weight;
+    for (let index = 0; index < CURSE_RANKS.length; index += 1) {
+        const r = CURSE_RANKS[index]!;
+        roll -= weights[index]!;
         if (roll <= 0) { rank = r; break; }
     }
     const stats = ['s', 'a', 'd', 'm'] as const;
@@ -650,6 +665,12 @@ function rollCurse() {
     const value = Math.floor(Math.random() * (rank.max - rank.min + 1)) + rank.min;
     return { rank: rank.rank, name: rank.name, color: rank.color, stat, value };
 }
+
+router.get('/craft/curse-info', async (req, res) => {
+    const user = await db.one('SELECT faction, faction_craft_count FROM users WHERE id = ?', [req.userId]) as any;
+    const factionBonus = getCraftFactionBonus(user?.faction, user?.faction_craft_count);
+    res.json({ factionBonus, ranks: getCurseRankChances(factionBonus) });
+});
 
 // Одна атомарная попытка целевого проклятия: списание и сохранение результата в одной транзакции.
 router.post('/craft/curse-target-attempt', async (req, res) => {
@@ -662,7 +683,7 @@ router.post('/craft/curse-target-attempt', async (req, res) => {
     }
     try {
         const result = await db.tx(async client => {
-            const locked = await client.query('SELECT inventory, money FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
+            const locked = await client.query('SELECT inventory, money, faction, faction_craft_count FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
             const user = locked.rows[0];
             if (!user) throw new Error('Игрок не найден');
             if (Number(user.money) < CURSE_COST) throw new Error(`Недостаточно серебра. Нужно ${CURSE_COST.toLocaleString()}`);
@@ -674,7 +695,8 @@ router.post('/craft/curse-target-attempt', async (req, res) => {
                 && String(item.id) === String(crystalId) && item.itemType === 'soul_crystal');
             if (crystalIndex === -1) throw new Error('Кристалл душ не найден в инвентаре');
 
-            const curse = rollCurse();
+            const factionBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
+            const curse = rollCurse(factionBonus);
             const matched = random || curseMeetsTarget(curse, normalizedStat, normalizedRank);
             const item = { ...inventory[itemIndex] };
             const currentCurse = item.curseStat
@@ -718,7 +740,7 @@ router.post('/craft/curse', async (req, res) => {
     if (!itemId || !crystalId) return res.status(400).json({ error: 'Укажите itemId и crystalId' });
     try {
         const result = await db.tx(async client => {
-            const locked = await client.query('SELECT inventory, money FROM users WHERE id = $1 FOR UPDATE', [userId]);
+            const locked = await client.query('SELECT inventory, money, faction, faction_craft_count FROM users WHERE id = $1 FOR UPDATE', [userId]);
             const user = locked.rows[0];
             if (!user) throw new Error('Игрок не найден');
             if (Number(user.money) < CURSE_COST) throw new Error(`Недостаточно серебра. Нужно ${CURSE_COST.toLocaleString()}`);
@@ -738,7 +760,8 @@ router.post('/craft/curse', async (req, res) => {
                 name: item.curseName, color: item.curseColor,
                 statName: (CURSE_STATS as Record<string, string>)[item.curseStat] || item.curseStat,
             } : null;
-            const curse = rollCurse();
+            const factionBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
+            const curse = rollCurse(factionBonus);
             const statName = (CURSE_STATS as Record<string, string>)[curse.stat] || curse.stat;
             if (oldCurse) item.pendingCurse = curse;
             else {
@@ -846,7 +869,7 @@ router.post('/craft/reforge', async (req, res) => {
     }
     try {
         const result = await db.tx(async client => {
-            const locked = await client.query('SELECT inventory, money FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
+            const locked = await client.query('SELECT inventory, money, faction, faction_craft_count FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
             const user = locked.rows[0];
             if (!user) throw new Error('Игрок не найден');
             const inventory: any[] = JSON.parse(user.inventory || '[]');
@@ -904,9 +927,7 @@ router.post('/craft/batch-forge/preview', async (req, res) => {
         if (!stone) throw new Error('Выберите камень улучшения');
         const plan = await loadBatchForgePlan(inventory, req.body.selections);
         const stoneBonus: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
-        const factionBonus = user.faction === 'crafter'
-            ? 10 + Math.floor(Number(user.faction_craft_count || 0) / 100)
-            : 0;
+        const factionBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
         const entries = plan.entries.map(entry => {
             const rules = entry.rules.map(rule => ({
                 ...rule,
@@ -941,7 +962,7 @@ router.post('/craft/batch-forge', async (req, res) => {
             }
 
             const stoneBonus: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
-            const factionBonus = user.faction === 'crafter' ? 10 + Math.floor(Number(user.faction_craft_count || 0) / 100) : 0;
+            const factionBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
             const results: any[] = [];
             let spent = 0;
             let stonesUsed = 0;

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   applyReforge,
+  getAdjustedCurseRankWeights,
+  getCraftFactionBonus,
   calculateMaxCraftAttempts,
   curseMeetsTarget,
   decideAutoCraftResult,
@@ -12,6 +14,20 @@ import {
   planBatchForge,
   type UpgradeRule,
 } from './craftOperations';
+
+test('бонус Ремесленника растёт на 1% за каждые 1000 очков опыта', () => {
+  assert.equal(getCraftFactionBonus('guard', 5000), 0);
+  assert.equal(getCraftFactionBonus('crafter', 0), 10);
+  assert.equal(getCraftFactionBonus('crafter', 999), 10);
+  assert.equal(getCraftFactionBonus('crafter', 1000), 11);
+  assert.equal(getCraftFactionBonus('crafter', 2000), 12);
+});
+
+test('бонус Ремесленника повышает ранги II-V за счёт ранга I', () => {
+  const weights = getAdjustedCurseRankWeights([160, 24, 12, 3, 1], 10);
+  assert.deepEqual(weights.map(value => Math.round(value * 10) / 10), [156, 26.4, 13.2, 3.3, 1.1]);
+  assert.equal(weights.reduce((sum, value) => sum + value, 0), 200);
+});
 
 test('перековка переносит базовую характеристику и объединяет её с существующей', () => {
   const item = {

@@ -29,6 +29,12 @@ export async function fetchUpgradeInfo(level: number, rarity: number) {
     return res.json();
 }
 
+export async function fetchCurseInfo() {
+    const res = await fetch(`${BASE_URL}/craft/curse-info`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Ошибка загрузки шансов проклятия');
+    return res.json();
+}
+
 async function readJson(res: Response, fallback: string) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || fallback);
