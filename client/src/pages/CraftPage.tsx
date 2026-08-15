@@ -654,6 +654,10 @@ export default function CraftPage() {
             <div className="flex items-center justify-between gap-3 text-xs mb-2"><span>Нужно успешно создать</span><strong className="text-[var(--color-accent-warning)]">{createMaxAttempts > 0 ? createQuantity : 0}</strong></div>
             <input className="w-full accent-[#f59e0b] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50" type="range" min={1} max={Math.max(1, createMaxAttempts)} step={1} value={Math.min(createQuantity, Math.max(1, createMaxAttempts))} disabled={createMaxAttempts < 1} onChange={event => setCreateQuantity(Number(event.target.value))} />
             <div className="flex justify-between text-[0.65rem] text-[var(--color-text-muted)] mt-1"><span>{createMaxAttempts > 0 ? '1' : 'Нет доступных попыток'}</span>{createMaxAttempts > 0 && <span>{createMaxAttempts}</span>}</div>
+            {createMaxAttempts > 0 && <div className="rounded-lg bg-[var(--color-bg-input)] px-3 py-2 mt-2">
+              <p className="text-xs">Минимальная стоимость: <strong>{formatMoney(createQuantity * Number(activeRecipe.money_cost || 0))}</strong></p>
+              <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Расчёт предполагает успех каждой попытки. При неудачах фактический расход серебра будет выше.</p>
+            </div>}
           </div>}
           <p className="text-xs mt-2">Максимум попыток сейчас: <strong>{createMaxAttempts}</strong></p>
           <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Это число доступных попыток, а не гарантированных успехов. Неудачные попытки тоже расходуют материалы и серебро.</p>

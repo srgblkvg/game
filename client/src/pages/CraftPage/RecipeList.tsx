@@ -13,6 +13,8 @@ interface Props {
 export default function RecipeList({ groupedRecipes, openCategories, activeRecipe, onToggleCategory, onRecipeClick }: Props) {
   const [tooltip, setTooltip] = useState<{ item: any; x: number; y: number } | null>(null);
   const touchTimer = useRef<number | null>(null);
+  const longPressTriggered = useRef(false);
+  const canHover = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   // Туториал: раскрыть случайный Хлам-рецепт
   useEffect(() => {
@@ -34,25 +36,39 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
   if (Object.keys(groupedRecipes).length === 0) return null;
 
   const handleMouseEnter = (e: React.MouseEvent, recipe: any) => {
+    if (!canHover()) return;
     const rtype = recipe.result_type;
     if (recipe.result && rtype !== 'random_item') {
       setTooltip({ item: recipe.result, x: e.clientX, y: e.clientY });
     }
   };
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (tooltip) setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+    if (canHover() && tooltip) setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
   };
-  const handleMouseLeave = () => setTooltip(null);
+  const handleMouseLeave = () => { if (canHover()) setTooltip(null); };
   const handleTouchStart = (e: React.TouchEvent, recipe: any) => {
     const rtype = recipe.result_type;
     if (!recipe.result || rtype === 'random_item') return;
     const touch = e.touches[0];
     if (!touch) return;
-    touchTimer.current = window.setTimeout(() => setTooltip({ item: recipe.result, x: touch.clientX, y: touch.clientY }), 500);
+    longPressTriggered.current = false;
+    touchTimer.current = window.setTimeout(() => {
+      longPressTriggered.current = true;
+      setTooltip({ item: recipe.result, x: touch.clientX, y: touch.clientY });
+    }, 500);
   };
   const cancelTouch = () => {
     if (touchTimer.current !== null) window.clearTimeout(touchTimer.current);
     touchTimer.current = null;
+  };
+  const handleRecipeClick = (e: React.MouseEvent, recipe: any) => {
+    if (longPressTriggered.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      longPressTriggered.current = false;
+      return;
+    }
+    onRecipeClick(recipe);
   };
 
   return (
@@ -73,13 +89,14 @@ export default function RecipeList({ groupedRecipes, openCategories, activeRecip
                 <div
                   key={recipe.id}
                   data-tutorial="craft-recipe"
-                  onClick={() => onRecipeClick(recipe)}
+                  onClick={(e) => handleRecipeClick(e, recipe)}
                   onMouseEnter={(e) => handleMouseEnter(e, recipe)}
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                   onTouchStart={(e) => handleTouchStart(e, recipe)}
                   onTouchMove={cancelTouch}
                   onTouchEnd={cancelTouch}
+                  onTouchCancel={cancelTouch}
                   className={`flex items-center justify-between py-1 px-2 border-b border-[var(--color-border-light)] text-xs cursor-pointer ${
                     activeRecipe?.id === recipe.id ? 'bg-[var(--color-bg-card-hover)]' : 'bg-transparent'
                   }`}
