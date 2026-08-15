@@ -98,13 +98,17 @@ function EquipmentGrid({ items, selected, multi = false, onSelect, showTooltip, 
   return <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
     {items.map(item => {
       const active = selected.has(String(item.id));
+      const upgradeLevel = Number(item.upgradeLevel ?? item.upgradelevel ?? 0);
       return <button key={item.id} type="button" onClick={() => onSelect(item)} {...tooltipEvents(item, showTooltip, hideTooltip)}
         className={`min-w-0 text-left rounded-lg border p-2 cursor-pointer bg-[var(--color-bg-card)] ${active ? '!border-2 !border-[#f59e0b]' : 'border-[var(--color-border-light)]'}`}>
         <div className="flex items-center gap-2 min-w-0">
-          <ItemIcon color={item.rarity_color || '#777'} image={item.image} name={item.name || '?'} size="md" />
+          <div className="relative flex-shrink-0">
+            <ItemIcon color={item.rarity_color || '#777'} image={item.image} name={item.name || '?'} size="md" />
+            {upgradeLevel > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-[var(--color-text-accent)] text-black text-[9px] leading-4 font-bold text-center shadow border border-black/30">+{upgradeLevel}</span>}
+          </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold truncate">{multi && <span>{active ? '✓ ' : ''}</span>}{item.name}</p>
-            <p className="text-[0.65rem] text-[var(--color-text-muted)]">{item.rarity_display || ''}{item.upgradeLevel ? ` · +${item.upgradeLevel}` : ''}</p>
+            <p className="text-[0.65rem] text-[var(--color-text-muted)]">{item.rarity_display || ''}{upgradeLevel > 0 ? ` · +${upgradeLevel}` : ''}</p>
           </div>
         </div>
       </button>;
