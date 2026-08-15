@@ -238,7 +238,9 @@ export default function CraftPage() {
     <BackButton />
     {actionCard && <PageHeader title="Ремесло" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
     <p className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded p-2 mb-3">Каждый вид ремесла вынесен в отдельную мастерскую. На вкладке показываются только подходящие предметы и необходимые ресурсы.</p>
-    <CraftPacks isVK={isVK} />
+    {tab === 'create' && <CraftPacks isVK={isVK} mode="create" />}
+    {tab === 'forge' && <CraftPacks isVK={isVK} mode="forge" />}
+    {tab === 'curse' && <CraftPacks isVK={isVK} mode="curse" />}
 
     <div className="flex overflow-x-auto gap-1 mb-4 pb-1 sm:grid sm:grid-cols-5">
       {TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`flex-shrink-0 min-h-10 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer border ${tab === t.id ? 'bg-[#7c3aed] text-white border-[#7c3aed]' : 'bg-[var(--color-bg-secondary)] border-[var(--color-border-light)] text-[var(--color-text-secondary)]'}`}><span className="mr-1">{t.icon}</span>{t.label}</button>)}

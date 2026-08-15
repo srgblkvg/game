@@ -111,7 +111,9 @@ const PACKS = [
   },
 ];
 
-export default function CraftPacks({ isVK }: { isVK: boolean }) {
+type PackMode = 'create' | 'forge' | 'curse';
+
+export default function CraftPacks({ isVK, mode }: { isVK: boolean; mode: PackMode }) {
   const [packMsg, setPackMsg] = useState('');
   const [packBuying, setPackBuying] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -161,12 +163,18 @@ export default function CraftPacks({ isVK }: { isVK: boolean }) {
     return () => window.removeEventListener('paymentStatus', handler);
   }, []);
 
+  const visiblePacks = PACKS.filter(pack => {
+    if (mode === 'curse') return 'curse' in pack;
+    if (mode === 'forge') return 'rune' in pack || 'mega' in pack;
+    return !('curse' in pack) && !('rune' in pack);
+  });
+
   return (
     <div className="mb-4">
       <div className="relative">
         <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[var(--color-bg-secondary)]/90 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs cursor-pointer shadow-md">◀</button>
         <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 px-4 snap-x snap-mandatory scrollbar-none">
-      {PACKS.map(p => {
+      {visiblePacks.map(p => {
         const borderColor = p.curse ? '#e74c3c' : p.mega ? '#f39c12' : p.rune ? '#c0392b' : p.item === 'craft_rare' ? '#3498db' : '#9b59b6';
         return (
         <div key={p.item} className="rounded-xl p-3 border-2 bg-[var(--color-bg-card)] flex flex-col flex-shrink-0 w-[220px] snap-start"
