@@ -13,13 +13,13 @@ type Props = {
   title: string;
   entries: OperationEntry[];
   stepKey: number;
-  stepResult: { success: boolean; message: string } | null;
+  stepResults: Record<string, { success: boolean; message: string }> | null;
   stopping: boolean;
   onStepDone: () => void;
   onStop: () => void;
 };
 
-export default function OperationProgressModal({ title, entries, stepKey, stepResult, stopping, onStepDone, onStop }: Props) {
+export default function OperationProgressModal({ title, entries, stepKey, stepResults, stopping, onStepDone, onStop }: Props) {
   const [progress, setProgress] = useState(4);
   const [showResult, setShowResult] = useState(false);
   const finishedRef = useRef(false);
@@ -30,9 +30,9 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
 
   useEffect(() => {
     finishedRef.current = false;
-    setProgress(stepResult ? 0 : 4);
+    setProgress(stepResults ? 0 : 4);
     setShowResult(false);
-    if (!stepResult) return;
+    if (!stepResults) return;
 
     const startedAt = performance.now();
     const tick = (now: number) => {
@@ -54,10 +54,10 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
       cancelAnimationFrame(frameRef.current);
       window.clearTimeout(resultTimerRef.current);
     };
-  }, [stepKey, stepResult]);
+  }, [stepKey, stepResults]);
 
   const skip = () => {
-    if (!stepResult || finishedRef.current) return;
+    if (!stepResults || finishedRef.current) return;
     finishedRef.current = true;
     cancelAnimationFrame(frameRef.current);
     window.clearTimeout(resultTimerRef.current);
@@ -74,6 +74,7 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
       <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
         {entries.map(entry => {
           const active = entry.status === 'active';
+          const stepResult = stepResults?.[entry.id];
           const color = entry.status === 'success' ? 'text-[var(--color-accent-success)]' : entry.status === 'failure' ? 'text-[var(--color-accent-danger)]' : entry.status === 'stopped' ? 'text-[var(--color-text-muted)]' : '';
           return <div key={entry.id} className={`rounded-lg border p-3 ${active ? 'border-[#f59e0b]' : 'border-[var(--color-border-light)]'} bg-[var(--color-bg-secondary)]`}>
             <div className="flex justify-between gap-2 text-xs"><span className="font-bold truncate">{entry.name}</span><span className={color}>{entry.detail || (entry.status === 'pending' ? 'Ожидание' : '')}</span></div>
@@ -90,7 +91,7 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
         })}
       </div>
       <div className="grid grid-cols-2 gap-2 mt-4">
-        <Button size="md" variant="secondary" disabled={!stepResult} onClick={skip}>Пропустить анимацию</Button>
+        <Button size="md" variant="secondary" disabled={!stepResults} onClick={skip}>Пропустить анимацию</Button>
         <Button size="md" variant="danger" disabled={stopping} onClick={onStop}>{stopping ? 'Останавливаем…' : 'Остановить процесс'}</Button>
       </div>
     </div>

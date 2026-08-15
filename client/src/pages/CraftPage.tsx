@@ -51,7 +51,7 @@ type ProgressState = {
   title: string;
   entries: OperationEntry[];
   stepKey: number;
-  stepResult: { success: boolean; message: string } | null;
+  stepResults: Record<string, { success: boolean; message: string }> | null;
 };
 
 function objectField(value: unknown): Record<string, any> {
@@ -280,11 +280,18 @@ export default function CraftPage() {
     let latestInventory = inventory;
     let latestMoney = character!.money;
     const entries: OperationEntry[] = plans.map(plan => ({ id: plan.id, name: plan.item.name, detail: `+${plan.item.upgradeLevel || 0} → +${plan.target}`, status: 'pending' }));
-    setProgressState({ title: 'Пошаговое улучшение', entries, stepKey: 0, stepResult: null });
+    const currentItems = new Map(plans.map(plan => [plan.id, plan.item]));
+    setProgressState({ title: 'Пошаговое улучшение', entries, stepKey: 0, stepResults: null });
     try {
-      for (const plan of plans) {
-        let current = plan.item;
-        while (Number(current.upgradeLevel || 0) < plan.target && !stopRequestedRef.current) {
+      while (!stopRequestedRef.current) {
+        const roundPlans = plans.filter(plan => {
+          const current = currentItems.get(plan.id);
+          return current && Number(current.upgradeLevel ?? current.upgradelevel ?? 0) < plan.target;
+        });
+        if (!roundPlans.length) break;
+        const roundResults: Record<string, { success: boolean; message: string }> = {};
+        for (const plan of roundPlans) {
+          const current = currentItems.get(plan.id)!;
           const liveStone = latestInventory.find((entry: any) => isCraftItem(entry) && String(entry.id) === String(forgeStone.id) && entry.itemType === 'upgrade');
           if (!liveStone || Number(liveStone.count || 0) < 1) {
             entries.find(entry => entry.id === plan.id)!.result = 'Недостаточно камней';
@@ -300,7 +307,6 @@ export default function CraftPage() {
             + (STONE_BONUS[Number(liveStone.rarity_id)] || 0)
           );
           active.status = 'active'; active.detail = `Попытка +${nextLevel} · шанс ${currentChance}%`;
-          setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepResult: null }));
           const data = await upgradeItem([current, { ...liveStone, count: 1 }]);
           latestInventory = data.inventory; latestMoney = data.moneyAfter ?? latestMoney;
           setCharacter(prev => prev ? ({ ...prev, inventory: latestInventory, money: latestMoney }) : prev);
@@ -308,16 +314,20 @@ export default function CraftPage() {
           active.result = nextItem
             ? `${data.message} Текущий уровень: +${nextItem.upgradeLevel ?? nextItem.upgradelevel ?? 0}`
             : `${data.message} Предмет разрушен`;
-          setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepKey: prev.stepKey + 1, stepResult: { success: !!data.success, message: data.message } }));
-          await new Promise<void>(resolve => { operationContinueRef.current = resolve; });
-          operationContinueRef.current = null;
-          if (!nextItem) { active.status = 'failure'; break; }
-          current = nextItem;
-          if (Number(current.upgradeLevel || 0) >= plan.target) active.status = 'success';
-          else active.status = 'pending';
+          roundResults[plan.id] = { success: !!data.success, message: active.result };
+          if (!nextItem) { active.status = 'failure'; currentItems.delete(plan.id); }
+          else currentItems.set(plan.id, nextItem);
         }
-        const entry = entries.find(row => row.id === plan.id)!;
-        if (entry.status === 'pending' && stopRequestedRef.current) entry.status = 'stopped';
+        if (!Object.keys(roundResults).length) break;
+        setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepKey: prev.stepKey + 1, stepResults: roundResults }));
+        await new Promise<void>(resolve => { operationContinueRef.current = resolve; });
+        operationContinueRef.current = null;
+        for (const plan of roundPlans) {
+          const entry = entries.find(row => row.id === plan.id)!;
+          const current = currentItems.get(plan.id);
+          if (entry.status === 'failure') continue;
+          entry.status = current && Number(current.upgradeLevel ?? current.upgradelevel ?? 0) >= plan.target ? 'success' : 'pending';
+        }
       }
       entries.forEach(entry => { if (entry.status === 'pending') entry.status = stopRequestedRef.current ? 'stopped' : 'success'; });
       showToast(stopRequestedRef.current ? 'Улучшение остановлено' : 'Улучшение завершено', stopRequestedRef.current ? 'warning' : 'success');
@@ -358,18 +368,23 @@ export default function CraftPage() {
     const selected = [...curseItems].map(id => equipment.find((item: any) => String(item.id) === id)).filter(Boolean);
     const targetDescription = [curseStat ? PRIMARY[curseStat] : '', curseRank ? `ранг ${CURSE_RANKS[curseRank - 1].name}+` : ''].filter(Boolean).join(', ');
     const entries: OperationEntry[] = selected.map(item => ({ id: String(item.id), name: item.name, detail: `Цель: ${targetDescription}`, status: 'pending' }));
-    setProgressState({ title: 'Пошаговое проклятие', entries, stepKey: 0, stepResult: null });
+    const attemptsByItem = new Map(selected.map(item => [String(item.id), 0]));
+    const completedItems = new Set<string>();
+    setProgressState({ title: 'Пошаговое проклятие', entries, stepKey: 0, stepResults: null });
     let latestInventory = inventory;
     let latestMoney = character!.money;
     try {
-      for (const item of selected) {
-        const entry = entries.find(row => row.id === String(item.id))!;
-        const attemptLimit = curseAttempts;
-        for (let attempt = 1; attempt <= attemptLimit && !stopRequestedRef.current; attempt++) {
+      while (!stopRequestedRef.current) {
+        const roundItems = selected.filter(item => !completedItems.has(String(item.id)) && (attemptsByItem.get(String(item.id)) || 0) < curseAttempts);
+        if (!roundItems.length) break;
+        const roundResults: Record<string, { success: boolean; message: string }> = {};
+        for (const item of roundItems) {
+          const itemId = String(item.id);
+          const entry = entries.find(row => row.id === itemId)!;
+          const attempt = (attemptsByItem.get(itemId) || 0) + 1;
           const crystal = latestInventory.find((row: any) => isCraftItem(row) && row.itemType === 'soul_crystal' && String(row.id) === String(curseCrystal.id));
           if (!crystal || Number(crystal.count || 0) < 1 || latestMoney < 100000) { entry.result = 'Недостаточно ресурсов'; stopRequestedRef.current = true; break; }
-          entry.status = 'active'; entry.detail = `Попытка ${attempt} из ${attemptLimit}`;
-          setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepResult: null }));
+          entry.status = 'active'; entry.detail = `Попытка ${attempt} из ${curseAttempts}`;
           const attemptRes = await fetch('/api/craft/curse-target-attempt', {
             method: 'POST', headers: getHeaders(),
             body: JSON.stringify({ itemId: item.id, crystalId: crystal.id, targetStat: curseStat || null, minimumRank: curseRank || null, random: false }),
@@ -383,12 +398,20 @@ export default function CraftPage() {
           setCharacter(prev => prev ? ({ ...prev, inventory: latestInventory, money: latestMoney }) : prev);
           const rolled = `Ранг ${preview.newCurse.name}: +${preview.newCurse.value} ${preview.newCurse.statName}`;
           entry.result = meets ? `${rolled} — цель достигнута` : appliedCandidate ? `${rolled} — применено как ближайшее к цели` : `${rolled} — оставлено более близкое текущее проклятие`;
-          setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepKey: prev.stepKey + 1, stepResult: { success: meets, message: entry.result! } }));
-          await new Promise<void>(resolve => { operationContinueRef.current = resolve; }); operationContinueRef.current = null;
-          if (meets) { entry.status = 'success'; break; }
-          entry.status = attempt === attemptLimit ? 'failure' : 'pending';
+          attemptsByItem.set(itemId, attempt);
+          roundResults[itemId] = { success: meets, message: entry.result };
+          if (meets) completedItems.add(itemId);
         }
-        if (entry.status === 'pending' && stopRequestedRef.current) entry.status = 'stopped';
+        if (!Object.keys(roundResults).length) break;
+        setProgressState(prev => prev && ({ ...prev, entries: [...entries], stepKey: prev.stepKey + 1, stepResults: roundResults }));
+        await new Promise<void>(resolve => { operationContinueRef.current = resolve; });
+        operationContinueRef.current = null;
+        for (const item of roundItems) {
+          const itemId = String(item.id);
+          const entry = entries.find(row => row.id === itemId)!;
+          if (completedItems.has(itemId)) entry.status = 'success';
+          else entry.status = (attemptsByItem.get(itemId) || 0) >= curseAttempts ? 'failure' : 'pending';
+        }
       }
       entries.forEach(entry => { if (entry.status === 'pending') entry.status = 'stopped'; });
       showToast(stopRequestedRef.current ? 'Проклятие остановлено' : 'Проклятие завершено', stopRequestedRef.current ? 'warning' : 'success');
