@@ -165,6 +165,7 @@ export default function CraftPage() {
   const [targetItemTemplateIds, setTargetItemTemplateIds] = useState<string[]>([]);
   const [targetSearch, setTargetSearch] = useState('');
   const [targetSlot, setTargetSlot] = useState('');
+  const [isMobileTargetPicker, setIsMobileTargetPicker] = useState(false);
 
   const [forgeItems, setForgeItems] = useState<Record<string, number>>({});
   const [forgeStone, setForgeStone] = useState<any>(null);
@@ -235,12 +236,12 @@ export default function CraftPage() {
   const targetSlots = useMemo(() => [...new Set(resultOptions.map((option: any) => String(option.slot || '')).filter(Boolean))]
     .sort((left, right) => itemSlotLabel(left).localeCompare(itemSlotLabel(right), 'ru')), [resultOptions]);
   const filteredResultOptions = useMemo(() => {
-    const search = targetSearch.trim().toLocaleLowerCase('ru');
+    const search = isMobileTargetPicker ? '' : targetSearch.trim().toLocaleLowerCase('ru');
     return resultOptions.filter((option: any) => {
       if (targetSlot && String(option.slot || '') !== targetSlot) return false;
       return !search || String(option.name || '').toLocaleLowerCase('ru').includes(search);
     });
-  }, [resultOptions, targetSearch, targetSlot]);
+  }, [resultOptions, targetSearch, targetSlot, isMobileTargetPicker]);
   const createMaxAttempts = useMemo(() => {
     if (!activeRecipe) return 0;
     const required = new Map<string, number>();
@@ -275,6 +276,22 @@ export default function CraftPage() {
     setTargetSearch('');
     setTargetSlot('');
   }, [activeRecipe?.id]);
+
+  useEffect(() => {
+    if (createMaxAttempts > 0) {
+      setCreateQuantity(previous => Math.max(1, Math.min(previous, createMaxAttempts)));
+    } else {
+      setCreateQuantity(1);
+    }
+  }, [createMaxAttempts]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 639px)');
+    const update = () => setIsMobileTargetPicker(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     setForgePreview(null);
@@ -633,9 +650,11 @@ export default function CraftPage() {
             <Button size="sm" variant={!createMaximum ? 'primary' : 'secondary'} onClick={() => setCreateMaximum(false)}>Указать количество</Button>
             <Button size="sm" variant={createMaximum ? 'primary' : 'secondary'} onClick={() => setCreateMaximum(true)}>Максимум по ресурсам</Button>
           </div>
-          {!createMaximum && <label className="text-xs">Нужно успешно создать
-            <input className={inputClass + ' mt-1'} type="number" min={1} max={999} value={createQuantity} onChange={e => setCreateQuantity(Math.max(1, Math.min(999, Number(e.target.value) || 1)))} />
-          </label>}
+          {!createMaximum && <div>
+            <div className="flex items-center justify-between gap-3 text-xs mb-2"><span>Нужно успешно создать</span><strong className="text-[var(--color-accent-warning)]">{createMaxAttempts > 0 ? createQuantity : 0}</strong></div>
+            <input className="w-full accent-[#f59e0b] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50" type="range" min={1} max={Math.max(1, createMaxAttempts)} step={1} value={Math.min(createQuantity, Math.max(1, createMaxAttempts))} disabled={createMaxAttempts < 1} onChange={event => setCreateQuantity(Number(event.target.value))} />
+            <div className="flex justify-between text-[0.65rem] text-[var(--color-text-muted)] mt-1"><span>{createMaxAttempts > 0 ? '1' : 'Нет доступных попыток'}</span>{createMaxAttempts > 0 && <span>{createMaxAttempts}</span>}</div>
+          </div>}
           <p className="text-xs mt-2">Максимум попыток сейчас: <strong>{createMaxAttempts}</strong></p>
           <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-1">Это число доступных попыток, а не гарантированных успехов. Неудачные попытки тоже расходуют материалы и серебро.</p>
         </div>}
@@ -648,7 +667,7 @@ export default function CraftPage() {
           </div>
           {!!targetItemTemplateIds.length && <p className="text-xs font-bold text-[var(--color-accent-warning)] mb-2">Выбрано целей: {targetItemTemplateIds.length}</p>}
           <div className="grid sm:grid-cols-[minmax(0,1fr)_170px] gap-2 mb-2">
-            <label className="text-[0.65rem] text-[var(--color-text-muted)]">Поиск по названию
+            <label className="hidden sm:block text-[0.65rem] text-[var(--color-text-muted)]">Поиск по названию
               <input className={inputClass + ' mt-1'} type="search" value={targetSearch} onChange={event => setTargetSearch(event.target.value)} placeholder="Введите хотя бы 1 символ" />
             </label>
             <label className="text-[0.65rem] text-[var(--color-text-muted)]">Тип предмета
