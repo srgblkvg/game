@@ -20,38 +20,28 @@ type Props = {
 };
 
 export default function OperationProgressModal({ title, entries, stepKey, stepResults, stopping, onStepDone, onStop }: Props) {
-  const [progress, setProgress] = useState(4);
   const [showResult, setShowResult] = useState(false);
   const finishedRef = useRef(false);
-  const frameRef = useRef(0);
+  const revealTimerRef = useRef(0);
   const resultTimerRef = useRef(0);
   const onStepDoneRef = useRef(onStepDone);
   onStepDoneRef.current = onStepDone;
 
   useEffect(() => {
     finishedRef.current = false;
-    setProgress(stepResults ? 0 : 4);
     setShowResult(false);
     if (!stepResults) return;
-
-    const startedAt = performance.now();
-    const tick = (now: number) => {
-      const value = Math.min(100, ((now - startedAt) / 1500) * 100);
-      setProgress(value);
-      if (value < 100) frameRef.current = requestAnimationFrame(tick);
-      else {
-        setShowResult(true);
-        resultTimerRef.current = window.setTimeout(() => {
-          if (!finishedRef.current) {
-            finishedRef.current = true;
-            onStepDoneRef.current();
-          }
-        }, 900);
-      }
-    };
-    frameRef.current = requestAnimationFrame(tick);
+    revealTimerRef.current = window.setTimeout(() => {
+      setShowResult(true);
+      resultTimerRef.current = window.setTimeout(() => {
+        if (!finishedRef.current) {
+          finishedRef.current = true;
+          onStepDoneRef.current();
+        }
+      }, 900);
+    }, 1500);
     return () => {
-      cancelAnimationFrame(frameRef.current);
+      window.clearTimeout(revealTimerRef.current);
       window.clearTimeout(resultTimerRef.current);
     };
   }, [stepKey, stepResults]);
@@ -59,14 +49,14 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
   const skip = () => {
     if (!stepResults || finishedRef.current) return;
     finishedRef.current = true;
-    cancelAnimationFrame(frameRef.current);
+    window.clearTimeout(revealTimerRef.current);
     window.clearTimeout(resultTimerRef.current);
-    setProgress(100);
     setShowResult(true);
     onStepDoneRef.current();
   };
 
   return <div className="fixed inset-0 z-[1100] flex items-center justify-center">
+    <style>{`@keyframes craft-round-progress { from { width: 0%; } to { width: 100%; } }`}</style>
     <div className="absolute inset-0 bg-black/65" />
     <div className="relative bg-[var(--color-bg-card)] border border-[var(--color-border-default)] rounded-xl p-4 sm:p-5 max-w-lg w-full mx-3 shadow-2xl">
       <h3 className="font-bold text-center mb-1">{title}</h3>
@@ -80,9 +70,10 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
             <div className="flex justify-between gap-2 text-xs"><span className="font-bold truncate">{entry.name}</span><span className={color}>{entry.detail || (entry.status === 'pending' ? 'Ожидание' : '')}</span></div>
             {active && <>
               <div className="h-3 mt-2 rounded-full overflow-hidden bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
-                <div className={`h-full ${showResult && stepResult
+                <div key={`${entry.id}-${stepKey}`} className={`h-full ${showResult && stepResult
                   ? stepResult.success ? 'bg-[var(--color-accent-success)]' : 'bg-[var(--color-accent-danger)]'
-                  : 'bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f59e0b]'} ${!stepResult ? 'animate-pulse' : ''}`} style={{ width: `${progress}%` }} />
+                  : 'bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f59e0b]'} ${!stepResult ? 'animate-pulse' : ''}`}
+                  style={stepResult && !showResult ? { animation: 'craft-round-progress 1500ms linear forwards' } : { width: showResult ? '100%' : '4%' }} />
               </div>
               {showResult && stepResult && <p className={`text-xs font-bold mt-2 ${stepResult.success ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{stepResult.message}</p>}
             </>}
