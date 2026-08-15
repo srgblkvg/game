@@ -3,6 +3,7 @@ import { db } from '../db/index';
 import { buildPlayerStats, getBaseStats } from '../db/helpers';
 import { dodgeChance, critChance, critMult, blockChance, blockReduction, counterChance, rollDamage } from '../game/battle';
 import { currentStats } from '../game/stats';
+import { advanceEnemyAttack, cancelEnemyWindup, ENEMY_WINDUP_MS } from '../game/dungeonWindup';
 
 const router = Router();
 
@@ -69,6 +70,7 @@ interface EnemyData {
     isBoss: boolean; stunTimer?: number; debuffs?: Record<string, any>;
     _lastAttack?: number; image?: string; _attackInterval?: number;
     _lastAttackTime?: number;
+    _windupStartedAtMs?: number | null;
 }
 
 interface Skill {
@@ -126,6 +128,19 @@ interface DungeonRun {
 
 function getTarget(run: DungeonRun): EnemyData | undefined {
     return run.enemies[run.targetIndex];
+}
+
+function interruptEnemyAttack(enemy: EnemyData): boolean {
+    const interrupted = enemy._windupStartedAtMs != null;
+    const reset = cancelEnemyWindup({
+        attackElapsedMs: (enemy._lastAttack || 0) * 1000,
+        attackIntervalMs: (enemy._attackInterval || 2.5) * 1000,
+        windupStartedAtMs: enemy._windupStartedAtMs ?? null,
+    });
+    enemy._lastAttack = reset.attackElapsedMs / 1000;
+    enemy._windupStartedAtMs = reset.windupStartedAtMs;
+    enemy._lastAttackTime = Date.now() / 1000;
+    return interrupted;
 }
 
 const activeRuns = new Map<number, DungeonRun>();
@@ -474,6 +489,8 @@ router.get('/dungeon/state', async (req, res) => {
         run.targetIndex = aliveIdx >= 0 ? aliveIdx : 0;
     }
 
+    const dead = run.playerHp <= 0;
+    const combatLog = run.log.splice(0);
     res.json({
         active: true,
         currentFloor: run.currentFloor,
@@ -486,6 +503,10 @@ router.get('/dungeon/state', async (req, res) => {
             attackInterval: (e._attackInterval || 2.5),
             stunned: !!(e.stunTimer && e.stunTimer > 0),
             stunLeft: (e.stunTimer && e.stunTimer > 0) ? e.stunTimer : 0,
+            windingUp: e._windupStartedAtMs != null,
+            windupRemainingMs: e._windupStartedAtMs != null
+                ? Math.max(0, ENEMY_WINDUP_MS - (Date.now() - e._windupStartedAtMs))
+                : 0,
         })),
         playerAttackInterval: (1 / attackSpeed) / COMBAT_SPEED,
         lastPlayerAttackAt: run.lastPlayerAttackAt,
@@ -495,11 +516,12 @@ router.get('/dungeon/state', async (req, res) => {
         regenRate: run.regenRate,
         buffs: Object.entries(run.buffs).map(([k, v]) => ({ id: k, endsAt: v.endsAt })),
         skillCooldowns: run.skillCooldowns,
-        log: run.log.splice(0),
+        log: combatLog,
         cleared: run.cleared,
-        dead: run.playerHp <= 0,
+        dead,
         targetIndex: run.targetIndex,
     });
+    if (dead) activeRuns.delete(userId);
 });
 
 // Использовать скилл
@@ -540,8 +562,9 @@ router.post('/dungeon/skill', async (req, res) => {
             const stun = 1.5 + skillBonus(lvl, 0.2);
             target.hp -= bashDmg;
             target.stunTimer = stun;
-            target['_lastAttack'] = 0; target._lastAttackTime = Date.now() / 1000; // сброс автоатаки
+            const interrupted = interruptEnemyAttack(target);
             run.log.push(`⚡ Удар щитом: ${bashDmg} урона, оглушение ${stun.toFixed(1)}с`);
+            if (interrupted) run.log.push(`🛑 Замах ${target.name} прерван`);
             break;
         }
         case 'sweep': {
@@ -594,7 +617,11 @@ router.post('/dungeon/skill', async (req, res) => {
             const stun = 1 + skillBonus(lvl, 0.2);
             run.rage = Math.min(100, run.rage + rageGain);
             const target = getTarget(run);
-            if (target) { target.stunTimer = stun; target['_lastAttack'] = 0; target._lastAttackTime = Date.now() / 1000; }
+            if (target) {
+                const interrupted = interruptEnemyAttack(target);
+                target.stunTimer = stun;
+                if (interrupted) run.log.push(`🛑 Замах ${target.name} прерван`);
+            }
             run.log.push(`🏃 Рывок: +${rageGain} ярости, оглушение ${stun.toFixed(1)}с`);
             break;
         }
@@ -941,7 +968,6 @@ function tickCombat(run: DungeonRun) {
         run.playerHp = 0;
         run.cleared = false;
         if (run.tickTimer) clearInterval(run.tickTimer);
-        activeRuns.delete(run.userId);
         // Сохраняем смерть в БД — кулдаун 6 часов
         db.run('UPDATE dungeon_runs SET currentFloor = ?, startedAt = ? WHERE userId = ?',
             [run.currentFloor, Math.floor(Date.now() / 1000), run.userId]).catch(() => {});
@@ -991,15 +1017,24 @@ function tickCombat(run: DungeonRun) {
             // Когда оглушение только что закончилось — сбрасываем таймер атаки на полный интервал
             if (enemy.stunTimer <= 0) {
                 enemy['_lastAttack'] = 0;
+                enemy._windupStartedAtMs = null;
                 enemy._lastAttackTime = Date.now() / 1000;
             }
             continue;
         }
         const interval = enemy._attackInterval || 2.5;
         if (!enemy['_lastAttack']) enemy['_lastAttack'] = 0;
-        enemy['_lastAttack'] += (TICK_MS / 1000); // реальное время
-        if (enemy['_lastAttack'] >= interval) {
-            enemy['_lastAttack'] -= interval;
+        if (enemy._windupStartedAtMs == null) enemy['_lastAttack'] += (TICK_MS / 1000); // реальное время
+        const attackState = advanceEnemyAttack({
+            attackElapsedMs: enemy['_lastAttack'] * 1000,
+            attackIntervalMs: interval * 1000,
+            windupStartedAtMs: enemy._windupStartedAtMs ?? null,
+        }, Date.now());
+        const startedWindup = enemy._windupStartedAtMs == null && attackState.state.windupStartedAtMs != null;
+        enemy['_lastAttack'] = attackState.state.attackElapsedMs / 1000;
+        enemy._windupStartedAtMs = attackState.state.windupStartedAtMs;
+        if (startedWindup) run.log.push(`⚠ ${enemy.name} готовит удар`);
+        if (attackState.shouldAttack) {
             enemy._lastAttackTime = Date.now() / 1000;
             const result = calcEnemyDamage(enemy, playerStats, run.currentFloor);
             const reduced = result.damage;

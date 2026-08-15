@@ -12,6 +12,15 @@ import { toCharCardData } from '../utils/character';
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
     image?: string; attackInterval?: number; stunned?: boolean; lastAttackAt?: number; stunLeft?: number;
+    windingUp?: boolean; windupRemainingMs?: number; windupEndsAt?: number;
+}
+
+function withWindupDeadline(enemies: EnemyView[]): EnemyView[] {
+    const now = Date.now();
+    return enemies.map(enemy => ({
+        ...enemy,
+        windupEndsAt: enemy.windingUp ? now + (enemy.windupRemainingMs || 0) : undefined,
+    }));
 }
 
 interface SkillInfo {
@@ -36,6 +45,33 @@ function CooldownTimer({ seconds: initial }: { seconds: number }) {
     }, [initial]);
     if (left <= 0) return null;
     return <span className="text-[var(--color-text-muted)]">Кулдаун: {Math.floor(left / 60)}м {left % 60}с</span>;
+}
+
+function combatLogStyle(line: string): string {
+    if (line.startsWith('⚠') || line.startsWith('🛑')) return 'border-[var(--color-accent-warning)]/40 bg-[var(--color-accent-warning)]/10 text-[var(--color-accent-warning)]';
+    if (line.startsWith('👊') || line.includes('Вы уклоняетесь') || line.startsWith('🛡 Блок')) return 'border-[var(--color-accent-danger)]/40 bg-[var(--color-accent-danger)]/10 text-[var(--color-accent-danger)]';
+    if (/^[⚔️💥⚡↔🌀💀🩸🏃📢😨]/u.test(line)) return 'border-[var(--color-accent-info)]/40 bg-[var(--color-accent-info)]/10 text-[var(--color-accent-info)]';
+    return 'border-[var(--color-border-light)] bg-[var(--color-bg-input)] text-[var(--color-text-muted)]';
+}
+
+function CombatLog({ lines, logRef }: { lines: string[]; logRef?: React.RefObject<HTMLDivElement | null> }) {
+    return <div ref={logRef} className="max-h-44 overflow-y-auto space-y-1">
+        {lines.map((line, i) => <div key={i} className={`text-xs border-l-2 rounded-r px-2 py-1 ${combatLogStyle(line)}`}>{line}</div>)}
+        {lines.length === 0 && <div className="text-xs text-[var(--color-text-muted)]">Бой начинается...</div>}
+    </div>;
+}
+
+function LootCard({ reward, fallback }: { reward: any; fallback: string }) {
+    if (!reward) return null;
+    return <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-card)] p-2 min-w-0">
+        <div className="w-11 h-11 rounded-md border bg-[var(--color-bg-input)] flex items-center justify-center shrink-0 overflow-hidden" style={{ borderColor: reward.rarity_color || 'var(--color-border-light)' }}>
+            {reward.image ? <img src={reward.image} alt="" className="w-10 h-10 object-contain" /> : <span className="text-lg">{reward.icon || fallback}</span>}
+        </div>
+        <div className="min-w-0">
+            <p className="text-xs font-bold truncate">{reward.name || 'Предмет'}</p>
+            <p className="text-[0.65rem] text-[var(--color-text-muted)]">{reward.rarity || reward.rarity_display || reward.typeLabel || ''}{reward.count > 1 ? ` ×${reward.count}` : ''}</p>
+        </div>
+    </div>;
 }
 
 export default function DungeonPage() {
@@ -71,7 +107,7 @@ export default function DungeonPage() {
     const [claimed, setClaimed] = useState(false);
     const [claimResult, setClaimResult] = useState<any>(null);
     const [pages, setPages] = useState<any[]>([]);
-    const [totalLoot, setTotalLoot] = useState<{ silver: number; items: string[]; pages: string[] }>({ silver: 0, items: [], pages: [] });
+    const [totalLoot, setTotalLoot] = useState<{ silver: number; items: any[]; pages: any[] }>({ silver: 0, items: [], pages: [] });
     const [looting, setLooting] = useState(false);
     const [lootProgress, setLootProgress] = useState(0);
 
@@ -167,7 +203,7 @@ export default function DungeonPage() {
                 setFloor(data.currentFloor);
                 setPlayerHp(data.playerHp);
                 setPlayerMaxHp(data.playerMaxHp);
-                setEnemies(data.enemies || []);
+                setEnemies(withWindupDeadline(data.enemies || []));
                 setRage(Math.round(data.rage || 0));
                 setRegenRate(data.regenRate || 1);
                 if (data.cleared) setCleared(true);
@@ -197,7 +233,7 @@ export default function DungeonPage() {
                 const data = await res.json();
                 if (!data.active) { stopPolling(); setInCombat(false); if (data.dead) setDead(true); loadStatus(); return; }
                 setPlayerHp(data.playerHp);
-                setEnemies(data.enemies || []);
+                setEnemies(withWindupDeadline(data.enemies || []));
                 setRage(Math.round(data.rage || 0));
                 setRegenRate(data.regenRate || 1);
                 setBuffs(data.buffs || []);
@@ -302,8 +338,8 @@ export default function DungeonPage() {
             setClaimed(true); setClaimResult(data); setPlayerHp(data.playerHp);
             setTotalLoot(prev => ({
                 silver: prev.silver + (data.silver || 0),
-                items: data.item ? [...prev.items, `${data.item.name} (${data.item.rarity})`] : prev.items,
-                pages: data.page ? [...prev.pages, data.page.name] : prev.pages,
+                items: [...prev.items, ...[data.item, data.equip].filter(Boolean)],
+                pages: data.page ? [...prev.pages, { ...data.page, icon: skillList.find(s => s.id === data.page.skillId)?.icon, typeLabel: 'Страница умения' }] : prev.pages,
             }));
             if (data.isBoss) setMessage('⭐ Чекпоинт сохранён!');
         } catch (e: any) { setMessage(e.message); }
@@ -322,7 +358,11 @@ export default function DungeonPage() {
             const res = await fetch('/api/dungeon/flee', { method: 'POST', headers: getHeaders() });
             const data = await res.json();
             if (data.loot) {
-                setTotalLoot({ silver: data.loot.silver, items: data.loot.items.map((it: any) => `${it.name} (${it.rarity})`), pages: data.loot.pages.map((p: any) => p.name) });
+                setTotalLoot({
+                    silver: data.loot.silver,
+                    items: data.loot.items || [],
+                    pages: (data.loot.pages || []).map((p: any) => ({ ...p, icon: skillList.find(s => s.id === p.skillId)?.icon, typeLabel: 'Страница умения' })),
+                });
             }
             setInCombat(false); stopPolling(); loadStatus();
         } catch (e: any) { setMessage(e.message); }
@@ -580,6 +620,10 @@ export default function DungeonPage() {
                 <Card>
                     <h3 className="font-bold text-lg mb-2 text-center text-[var(--color-accent-danger)]">💀 Вы погибли</h3>
                     <p className="text-sm text-center mb-3">Награда потеряна.</p>
+                    <div className="mb-3">
+                        <p className="text-xs font-bold mb-2">Последние события боя</p>
+                        <CombatLog lines={combatLog} />
+                    </div>
                     <Button variant="secondary" size="md" fullWidth onClick={() => { setDead(false); setInCombat(false); stopPolling(); loadStatus(); }}>
                         Вернуться
                     </Button>
@@ -652,13 +696,16 @@ export default function DungeonPage() {
                             const onCd = cooldowns[s.id] && cooldowns[s.id] > Date.now() / 1000;
                             const cdLeft = onCd ? Math.ceil(cooldowns[s.id] - Date.now() / 1000) : 0;
                             const canUse = !onCd && rage >= s.rageCost;
+                            const canInterrupt = enemies[targetIndex]?.windingUp && (s.name === 'charge' || s.name === 'shield_bash');
                             return (
                                 <button key={s.id} onClick={() => handleSkill(s.id)} disabled={!canUse}
-                                    className={`relative p-2 rounded-lg text-center transition-colors cursor-pointer ${canUse
+                                    className={`relative p-2 rounded-lg text-center transition-colors cursor-pointer ${canInterrupt && canUse ? 'ring-2 ring-amber-400 animate-pulse ' : ''}${canUse
                                         ? 'bg-[var(--color-accent-info)]/20 border border-[var(--color-accent-info)] hover:bg-[var(--color-accent-info)]/30'
                                         : 'bg-[var(--color-bg-input)] border border-[var(--color-border-light)] opacity-60'}`}>
                                     <span className="text-xl">{s.icon || '❓'}</span>
                                     {onCd && <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white bg-black/40 rounded-lg">{cdLeft}</span>}
+                                    {!onCd && rage < s.rageCost && <span className="absolute inset-x-0 top-0 text-[0.5rem] font-bold text-[var(--color-accent-danger)]">{Math.floor(rage)}/{s.rageCost}</span>}
+                                    {canInterrupt && canUse && <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded bg-amber-500 px-1 text-[0.5rem] font-bold text-black">ПРЕРВАТЬ</span>}
                                     <div className="text-[0.55rem] text-[var(--color-text-muted)] mt-0.5 truncate">{s.nameRu}</div>
                                 </button>
                             );
@@ -676,7 +723,7 @@ export default function DungeonPage() {
                             const isDead = e.hp <= 0;
                             return (
                                 <div key={e.id} onClick={() => !isDead && handleTarget(e.id)}
-                                    className={`p-2 rounded-lg border transition-colors relative ${isDead ? 'opacity-40 grayscale border-[var(--color-border-light)] bg-[var(--color-bg-card)]' : isTarget ? 'border-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10 cursor-pointer' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer'}`}>
+                                    className={`p-2 rounded-lg border transition-all relative ${isDead ? 'opacity-40 grayscale border-[var(--color-border-light)] bg-[var(--color-bg-card)]' : e.windingUp ? 'border-red-500 bg-red-500/15 shadow-[0_0_18px_rgba(239,68,68,0.45)] animate-pulse cursor-pointer' : isTarget ? 'border-[var(--color-accent-danger)] bg-[var(--color-accent-danger)]/10 cursor-pointer' : 'border-[var(--color-border-light)] bg-[var(--color-bg-card)] cursor-pointer'}`}>
                                     {/* Плавающий текст по этому врагу */}
                                     {floatTexts.filter(ft => ft.enemyIndex === i).map(ft => (
                                         <span key={ft.id} className="absolute pointer-events-none font-bold text-sm z-20 left-1/2 -translate-x-1/2"
@@ -700,7 +747,7 @@ export default function DungeonPage() {
                                                 <div className="h-full rounded-full transition-all duration-300 ease-linear"
                                                     style={{ width: `${Math.max(0, eHpPct)}%`, backgroundColor: eHpPct > 30 ? '#ef4444' : '#991b1b' }} />
                                             </div>
-                                            {!isDead && !e.stunned && (
+                                            {!isDead && !e.stunned && !e.windingUp && (
                                             <div className="flex items-center gap-1 mt-1">
                                                 {(() => { void frameTick; const cdLeft = Math.max(0, ((e.lastAttackAt || 0) + (e.attackInterval || 2.5) - Date.now() / 1000)); return (
                                                     <div className={`relative w-6 h-6 rounded-full bg-[var(--color-bg-input)] flex items-center justify-center text-xs shrink-0 ${cdLeft < 1 ? 'border border-[var(--color-accent-warning)]' : ''}`}>
@@ -711,6 +758,19 @@ export default function DungeonPage() {
                                                 <span className="text-[0.55rem] text-[var(--color-text-muted)]">Атака</span>
                                             </div>
                                             )}
+                                            {!isDead && !e.stunned && e.windingUp && (() => {
+                                                void frameTick;
+                                                const leftMs = Math.max(0, (e.windupEndsAt || Date.now()) - Date.now());
+                                                const progress = Math.max(0, Math.min(100, (leftMs / 800) * 100));
+                                                return <div className="mt-1.5 rounded-md border border-red-500/60 bg-red-950/30 px-2 py-1">
+                                                    <div className="flex items-center justify-between gap-2 text-[0.6rem] font-bold text-red-500">
+                                                        <span>❗ ГОТОВИТ УДАР</span><span>{(leftMs / 1000).toFixed(1)}с</span>
+                                                    </div>
+                                                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/30">
+                                                        <div className="h-full bg-red-500 transition-[width] duration-75" style={{ width: `${progress}%` }} />
+                                                    </div>
+                                                </div>;
+                                            })()}
                                             {!isDead && e.stunned && (
                                             <div className="flex items-center gap-1 mt-1">
                                                 <div className="relative w-6 h-6 rounded-full bg-[var(--color-bg-input)] border border-[var(--color-border-light)] flex items-center justify-center text-xs shrink-0">
@@ -732,10 +792,11 @@ export default function DungeonPage() {
 
                     {/* Лог боя */}
                     <Card>
-                        <div ref={logRef} className="text-xs text-[var(--color-text-muted)] max-h-32 overflow-y-auto space-y-0.5">
-                            {combatLog.map((l, i) => <div key={i}>{l}</div>)}
-                            {combatLog.length === 0 && <div>Бой начинается...</div>}
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold">Журнал боя</span>
+                            <span className="text-[0.6rem] text-[var(--color-text-muted)]">Вы · Монстры</span>
                         </div>
+                        <CombatLog lines={combatLog} logRef={logRef} />
                     </Card>
 
                     <Button variant="secondary" size="md" fullWidth onClick={handleFlee} disabled={loading}>🏃 Сбежать (награда потеряна)</Button>
@@ -778,16 +839,21 @@ export default function DungeonPage() {
                             <div className="bg-[var(--color-bg-input)] rounded-lg p-3 mb-1">
                                 <p className="text-xs font-bold mb-1">🔍 Собрано с этажа {floor}:</p>
                                 <p className="text-xs">💰 Серебро: +{claimResult.silver.toLocaleString()}</p>
-                                {claimResult.item && <p className="text-xs">🔮 {claimResult.item.name} ({claimResult.item.rarity})</p>}
-                                {claimResult.page && <p className="text-xs">📜 Страница: {claimResult.page.name}</p>}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                    <LootCard reward={claimResult.item} fallback="🔮" />
+                                    <LootCard reward={claimResult.equip} fallback="🛡️" />
+                                    <LootCard reward={claimResult.page ? { ...claimResult.page, icon: skillList.find(s => s.id === claimResult.page.skillId)?.icon, typeLabel: 'Страница умения' } : null} fallback="📜" />
+                                </div>
                                 {claimResult.isBoss && <p className="text-xs text-[var(--color-accent-gold)]">⭐ Чекпоинт сохранён!</p>}
                             </div>
                             {/* Весь лут за поход */}
                             <div className="bg-[var(--color-bg-card)] rounded-lg p-3 mb-3">
                                 <h4 className="text-xs font-bold mb-1">📦 Вся добыча за поход:</h4>
                                 <p className="text-xs">💰 {totalLoot.silver.toLocaleString()} серебра</p>
-                                {totalLoot.items.map((it: any, i: number) => <p key={i} className="text-xs">🔮 {typeof it === 'string' ? it : (it.name || it.rarity_display || 'Предмет')}{it.count > 1 ? ` ×${it.count}` : ''}</p>)}
-                                {totalLoot.pages.map((p, i) => <p key={i} className="text-xs">📜 {p}</p>)}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                    {totalLoot.items.map((it: any, i: number) => <LootCard key={`item-${i}`} reward={it} fallback="🔮" />)}
+                                    {totalLoot.pages.map((p: any, i: number) => <LootCard key={`page-${i}`} reward={p} fallback="📜" />)}
+                                </div>
                             </div>
                             <p className="text-[0.6rem] text-[var(--color-accent-danger)] text-center mb-2">⚠ При смерти вся накопленная добыча будет потеряна</p>
                         </>
@@ -811,8 +877,10 @@ export default function DungeonPage() {
                     <div className="bg-[var(--color-bg-card)] rounded-lg p-3 mb-3">
                         <h4 className="text-xs font-bold mb-1">📦 Добыча за поход:</h4>
                         <p className="text-xs">💰 {totalLoot.silver.toLocaleString()} серебра</p>
-                        {totalLoot.items.map((it, i) => <p key={i} className="text-xs">🔮 {it}</p>)}
-                        {totalLoot.pages.map((p, i) => <p key={i} className="text-xs">📜 {p}</p>)}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            {totalLoot.items.map((it: any, i: number) => <LootCard key={`item-${i}`} reward={it} fallback="🔮" />)}
+                            {totalLoot.pages.map((p: any, i: number) => <LootCard key={`page-${i}`} reward={p} fallback="📜" />)}
+                        </div>
                         {totalLoot.silver === 0 && totalLoot.items.length === 0 && totalLoot.pages.length === 0 && (
                             <p className="text-xs text-[var(--color-text-muted)]">Ничего не собрано</p>
                         )}
