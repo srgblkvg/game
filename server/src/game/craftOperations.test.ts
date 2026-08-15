@@ -89,9 +89,23 @@ test('перековка поддерживает характеристики, 
   assert.equal(result.bonuses!.a, 8);
 });
 
-test('нельзя перековывать бонус артефакта, менять группу или пустую характеристику', () => {
+test('перековка extra артефакта сохраняет уникальный эффект и служебные поля', () => {
+  const artifact = {
+    rarity_id: 7,
+    bonuses: { s: 10 },
+    extra: { crit: 20, dodge: 5, effect: 'luck', effectValue: 5, description: '+5% ко всем шансам' },
+  };
+  const result = applyReforge(artifact, 'crit', 'dodge');
+  assert.deepEqual(result.extra, {
+    crit: 0, dodge: 25, effect: 'luck', effectValue: 5, description: '+5% ко всем шансам',
+  });
+  assert.equal(result.bonuses!.s, 10);
+  assert.equal(result.reforgeCount, 1);
+});
+
+test('нельзя перековывать эффект, менять группу или пустую характеристику', () => {
   const artifact = { rarity_id: 7, bonuses: { s: 10 }, extra: { crit: 20, effect: 'luck' } };
-  assert.throws(() => applyReforge(artifact, 'crit', 'dodge'), /артефакт/i);
+  assert.throws(() => applyReforge(artifact, 'effect', 'dodge'), /групп/i);
   assert.equal(applyReforge(artifact, 's', 'a').bonuses!.a, 10);
   assert.throws(() => applyReforge({ rarity_id: 6, bonuses: { s: 10 }, extra: {} }, 's', 'crit'), /групп/i);
   assert.throws(() => applyReforge({ rarity_id: 6, bonuses: { s: 0 }, extra: {} }, 's', 'a'), /положительн/i);

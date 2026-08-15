@@ -188,10 +188,6 @@ export function applyReforge(item: ReforgeItem, fromStat: string, toStat: string
   const fromGroup = statGroup(fromStat);
   const toGroup = statGroup(toStat);
   if (!fromGroup || fromGroup !== toGroup) throw new Error('Характеристики должны относиться к одной группе');
-  const extra = objectField(item.extra);
-  if (fromGroup === 'extra' && (Number(item.rarity_id) === 7 || extra.effect)) {
-    throw new Error('Бонусы артефакта нельзя перековывать');
-  }
   if (fromStat === toStat) throw new Error('Выберите другую характеристику');
 
   const field = fromGroup === 'primary' ? 'bonuses' : 'extra';

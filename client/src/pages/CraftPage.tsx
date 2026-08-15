@@ -78,7 +78,7 @@ function canReforge(item: any) {
   const base = objectField(item.bonuses);
   if (Object.keys(PRIMARY).some(stat => Number(base[stat]) > 0)) return true;
   const extra = objectField(item.extra);
-  return rarity !== 7 && !extra.effect && Object.keys(EXTRA).some(stat => Number(extra[stat]) > 0);
+  return Object.keys(EXTRA).some(stat => Number(extra[stat]) > 0);
 }
 
 type TooltipHandler = (item: any, x: number, y: number) => void;
@@ -616,7 +616,7 @@ export default function CraftPage() {
     const extra = typeof reforgeItemState.extra === 'string' ? JSON.parse(reforgeItemState.extra || '{}') : (reforgeItemState.extra || {});
     const out: Record<string, { label: string; value: number; group: string }> = {};
     Object.entries(PRIMARY).forEach(([k, label]) => { if (Number(base[k]) > 0) out[k] = { label, value: Number(base[k]), group: 'base' }; });
-    if (Number(reforgeItemState.rarity_id) !== 7 && !extra.effect) Object.entries(EXTRA).forEach(([k, label]) => { if (Number(extra[k]) > 0) out[k] = { label, value: Number(extra[k]), group: 'extra' }; });
+    Object.entries(EXTRA).forEach(([k, label]) => { if (Number(extra[k]) > 0) out[k] = { label, value: Number(extra[k]), group: 'extra' }; });
     return out;
   }, [reforgeItemState]);
   const selectedReforgeStat = fromStat ? availableReforgeStats[fromStat] : undefined;
