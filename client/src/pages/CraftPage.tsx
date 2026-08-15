@@ -360,8 +360,8 @@ export default function CraftPage() {
       const completed = isTargetSearch ? targetMatched : (!createMaximum && created >= createQuantity);
       entry.status = completed ? 'success' : stopped || resourcesExhausted ? 'stopped' : 'success';
       const summary = isTargetSearch
-        ? stopped ? 'Поиск предмета остановлен' : resourcesExhausted ? 'Поиск остановлен: недостаточно ресурсов' : 'Целевой предмет создан'
-        : stopped ? `Создание остановлено. Успешно создано: ${created}` : resourcesExhausted ? `Ресурсы закончились. Успешно создано: ${created}` : `Успешно создано: ${created}`;
+        ? completed ? 'Целевой предмет создан' : stopped ? 'Поиск предмета остановлен' : 'Поиск остановлен: недостаточно ресурсов'
+        : completed ? `Успешно создано: ${created}` : stopped ? `Создание остановлено. Успешно создано: ${created}` : resourcesExhausted ? `Ресурсы закончились. Успешно создано: ${created}` : `Успешно создано: ${created}`;
       showToast(summary, completed ? 'success' : 'warning');
     } catch (error: any) {
       showToast(error.message);
@@ -633,8 +633,9 @@ export default function CraftPage() {
           })}</div>
           <p className="text-[0.65rem] text-[var(--color-text-muted)] mt-2">Каждая попытка расходует ресурсы, даже если создание не удалось. Успешно созданные неподходящие предметы автоматически разбираются.</p>
           {selectedResultOption && <p className="text-[0.65rem] text-[var(--color-accent-warning)] mt-1">Шанс получить цель за попытку зависит от шанса создания и равномерного выбора среди {resultOptions.length} предметов. Точное значение показывается в процессе.</p>}
+          {selectedResultOption && createMaxAttempts < 1 && <p className="text-xs text-[var(--color-accent-danger)] mt-2">Недостаточно ресурсов или серебра даже для одной попытки.</p>}
         </div>}
-        <Button size="md" fullWidth disabled={busy || (activeRecipe.result_type === 'craft_item' && createMaxAttempts < 1)} onClick={activeRecipe.result_type === 'craft_item' || !!selectedResultOption ? runAutoCreate : create}>{busy ? 'Создание...' : selectedResultOption ? `Искать: ${selectedResultOption.name}` : activeRecipe.result_type === 'craft_item' ? 'Начать создание' : 'Создать'}</Button>
+        <Button size="md" fullWidth disabled={busy || ((activeRecipe.result_type === 'craft_item' || !!selectedResultOption) && createMaxAttempts < 1)} onClick={activeRecipe.result_type === 'craft_item' || !!selectedResultOption ? runAutoCreate : create}>{busy ? 'Создание...' : selectedResultOption ? `Искать: ${selectedResultOption.name}` : activeRecipe.result_type === 'craft_item' ? 'Начать создание' : 'Создать'}</Button>
       </> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
       <Card className="md:col-span-2"><h3 className="font-bold text-sm mb-2">Используемые материалы</h3>{activeRecipe ? <ResourceGrid {...gridTooltipProps} items={relevantMaterials} onSelect={() => {}} /> : <p className="text-xs text-[var(--color-text-muted)]">Выберите рецепт.</p>}</Card>
     </div>}
