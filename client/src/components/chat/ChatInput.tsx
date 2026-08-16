@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import Autocomplete from './Autocomplete';
 import type { OnlineUser } from './types';
 import { fmtSafeDate } from '../../utils/date';
@@ -20,6 +20,7 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
     const [input, setInput] = useState('');
     const [autocomplete, setAutocomplete] = useState<{ items: { id: number; name: string }[]; selectedIndex: number } | null>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const scrollToEndRef = useRef(false);
 
     const resizeInput = useCallback(() => {
         const el = inputRef.current;
@@ -32,8 +33,13 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
     const isDisabled = isBanned;
     const disabledPlaceholder = isGuest ? 'Чат недоступен для гостей' : 'Чат заблокирован';
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         resizeInput();
+        const el = inputRef.current;
+        if (el && scrollToEndRef.current) {
+            el.scrollTop = el.scrollHeight;
+            scrollToEndRef.current = false;
+        }
     }, [input, resizeInput]);
 
     // При ошибке валидации — восстанавливаем последний отправленный текст
@@ -78,9 +84,9 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
     const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         if (isDisabled) return;
         const value = e.target.value;
+        scrollToEndRef.current = (e.target.selectionStart ?? value.length) >= value.length;
         setInput(value);
         buildAutocomplete(value, e.target.selectionStart || 0);
-        resizeInput();
     };
 
     const handleAutocompleteSelect = (name: string) => {
