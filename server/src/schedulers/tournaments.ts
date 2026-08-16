@@ -8,6 +8,7 @@ export function startTournamentScheduler(): void {
     running = true;
     try {
       const mod = await import('../routes/tournament');
+      await mod.reconcileOfficialQueueParticipants();
       await mod.rebalanceOfficialQueuePools();
       await mod.mergeExpiredOfficialQueues();
       await mod.rebalanceOfficialQueuePools();

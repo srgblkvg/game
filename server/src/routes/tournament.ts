@@ -623,6 +623,69 @@ export async function rebalanceOfficialQueuePools(): Promise<void> {
     await db.tx(rebalanceOfficialQueuePoolsTx);
 }
 
+/** Переносит старые ошибочные записи в техническую группу их snapshot-БМ. */
+export async function reconcileOfficialQueueParticipants(): Promise<void> {
+    await db.tx(reconcileOfficialQueueParticipantsTx);
+}
+
+export async function reconcileOfficialQueueParticipantsTx(client: any): Promise<void> {
+    const lock = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [987654323]);
+    if (!lock.rows[0]?.locked) return;
+    const rows = (await client.query(
+        `SELECT t.id tournamentid, t.division, t.registrationstart, t.registrationend,
+                tp.userid, tp.snapshotstats
+         FROM tournaments t JOIN tournament_participants tp ON tp.tournamentid = t.id
+         WHERE t.type = 'official' AND t.status = 'registration'
+         ORDER BY t.id, tp.id FOR UPDATE OF t, tp`
+    )).rows;
+
+    for (const row of rows) {
+        const snapshot = parseTournamentSnapshot(row.snapshotstats);
+        if (!snapshot) continue;
+        const expected = getPowerDivision(snapshot.combatPower);
+        if (row.division === expected.key) continue;
+
+        let target = (await client.query(
+            `SELECT t.id FROM tournaments t
+             WHERE t.type = 'official' AND t.status = 'registration' AND t.division = $1
+               AND (SELECT COUNT(*) FROM tournament_participants tp WHERE tp.tournamentid = t.id) < $2
+             ORDER BY t.id DESC LIMIT 1 FOR UPDATE`,
+            [expected.key, MAX_PLAYERS]
+        )).rows[0];
+        if (!target) {
+            target = (await client.query(
+                `INSERT INTO tournaments
+                 (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers, name)
+                 VALUES ($1, 'registration', $2, $3, 0, 0, NOW(), 'official', $4, $5) RETURNING id`,
+                [expected.key, Number(row.registrationstart), Number(row.registrationend), MAX_PLAYERS, expected.label]
+            )).rows[0];
+        }
+        await client.query(
+            'UPDATE tournament_participants SET tournamentid = $1 WHERE tournamentid = $2 AND userid = $3',
+            [target.id, row.tournamentid, row.userid]
+        );
+    }
+
+    const emptied = (await client.query(
+        `SELECT t.id, COALESCE(t.basepool, 0) basepool FROM tournaments t
+         WHERE t.type = 'official' AND t.status = 'registration'
+           AND NOT EXISTS (SELECT 1 FROM tournament_participants tp WHERE tp.tournamentid = t.id)
+         FOR UPDATE`
+    )).rows;
+    const refund = emptied.reduce((sum: number, row: any) => sum + Number(row.basepool || 0), 0);
+    if (emptied.length > 0) {
+        await client.query(
+            `UPDATE tournaments SET status = 'cancelled', completedat = NOW(), prizepool = 0, basepool = 0
+             WHERE id = ANY($1::int[])`,
+            [emptied.map((row: any) => Number(row.id))]
+        );
+    }
+    if (refund > 0) {
+        await client.query('UPDATE castle_treasury SET amount = amount + $1, updated_at = NOW() WHERE id = 1', [refund]);
+        await client.query('INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())', [refund, 'tournament_reconcile_return']);
+    }
+}
+
 export async function rebalanceOfficialQueuePoolsTx(client: any): Promise<void> {
         const lock = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [987654322]);
         if (!lock.rows[0]?.locked) return;
