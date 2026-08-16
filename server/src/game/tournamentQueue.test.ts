@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { allocateMergedPrizePools, buildQueueMergePlan, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, getVisiblePowerDivision, mergeTournamentQueues, selectReadyQueueWindow } from './tournamentQueue';
+import { allocateMergedPrizePools, buildQueueMergePlan, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, getVisiblePowerDivision, mergeAllTournamentQueues, mergeTournamentQueues, selectReadyQueueWindow } from './tournamentQueue';
 
 const queue = (id: number, powers: number[]) => ({
   id,
@@ -77,6 +77,24 @@ test('разные сроки старта объединяются через �
   assert.deepEqual(selectReadyQueueWindow(queues, 1_599, 600), []);
   assert.deepEqual(selectReadyQueueWindow(queues, 1_600, 600), [1, 2]);
   assert.deepEqual(selectReadyQueueWindow(queues, 1_700, 600), [1, 2, 3]);
+});
+
+test('при двух и более записавшихся участвуют все без одиночного остатка', () => {
+  for (const count of [2, 3, 8, 9, 16, 17, 23]) {
+    const powers = Array.from({ length: count }, (_, index) => 10 ** (index / 3));
+    const result = mergeAllTournamentQueues([queue(1, powers)], 8);
+    const participants = result.groups.flatMap(group => group.participants);
+    assert.equal(participants.length, count);
+    assert.equal(new Set(participants.map(player => player.userId)).size, count);
+    assert.ok(result.groups.every(group => group.participants.length >= 2 && group.participants.length <= 8));
+    assert.equal(result.waitingParticipants.length, 0);
+  }
+});
+
+test('единственный записавшийся переносится в следующий набор', () => {
+  const result = mergeAllTournamentQueues([queue(1, [1_000_000])], 8);
+  assert.equal(result.groups.length, 0);
+  assert.deepEqual(result.waitingParticipants.map(player => player.combatPower), [1_000_000]);
 });
 
 test('ступень восстанавливается по номеру без подмены номера значением БМ', () => {

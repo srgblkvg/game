@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   createTournamentSnapshot,
+  formatTournamentNormalizationLog,
   mergeTournamentResult,
+  normalizeTournamentGroup,
+  normalizeTournamentSnapshot,
   playerFromTournamentSnapshot,
 } from './tournamentSnapshot';
 
@@ -62,4 +65,46 @@ test('старый результат без боевого snapshot остаё�
   const result = mergeTournamentResult({ place: 2, prize: 100 } as any, 1, 500);
   assert.equal(result.result?.place, 1);
   assert.equal(result.result?.prize, 500);
+});
+
+test('выравнивание меняет только турнирные статы и сохраняет исходную БМ', () => {
+  const snapshot = createTournamentSnapshot(player as any, 1234);
+  const normalized = normalizeTournamentSnapshot(snapshot, 5000);
+  assert.equal(normalized.combatPower, 1234);
+  assert.equal(normalized.normalization?.originalPower, 1234);
+  assert.equal(normalized.normalization?.targetPower, 5000);
+  assert.ok(Math.abs((normalized.normalization?.appliedPower || 0) - 5000) / 5000 < 0.05);
+  assert.notDeepEqual(normalized.player.stats, snapshot.player.stats);
+  assert.deepEqual(snapshot.player.stats, player.stats);
+});
+
+test('лог объясняет автоматическое выравнивание и исходную БМ', () => {
+  const first = normalizeTournamentSnapshot(createTournamentSnapshot(player as any, 1234), 5000);
+  const second = normalizeTournamentSnapshot(createTournamentSnapshot({ ...player, id: 660, name: 'Другой' } as any, 9000), 5000);
+  const message = formatTournamentNormalizationLog(first, second);
+  assert.match(message, /Сила участников временно выровнена/);
+  assert.match(message, /исходная БМ/i);
+  assert.match(message, /1\.23K/);
+  assert.match(message, /9K/);
+  assert.match(message, /реальные характеристики не изменены/i);
+});
+
+test('групповое выравнивание даёт всем одинаковые боевые данные', () => {
+  const weak = createTournamentSnapshot(player as any, 1234);
+  const strong = createTournamentSnapshot({
+    ...player,
+    id: 660,
+    name: 'Другой',
+    level: 20,
+    stats: { ...player.stats, s: 500, a: 400, d: 300, m: 350, hp: 2500, execute: true },
+    antiStats: { antiDodge: 20, antiCrit: 15, antiBlock: 10, antiCounter: 5, antiVampiric: 4 },
+  } as any, 9000);
+  const normalized = normalizeTournamentGroup([weak, strong]);
+  assert.equal(normalized.length, 2);
+  assert.deepEqual(normalized[0]!.player.stats, normalized[1]!.player.stats);
+  assert.deepEqual(normalized[0]!.player.antiStats, normalized[1]!.player.antiStats);
+  assert.equal(normalized[0]!.player.level, normalized[1]!.player.level);
+  assert.equal(normalized[0]!.combatPower, 1234);
+  assert.equal(normalized[1]!.combatPower, 9000);
+  assert.notDeepEqual(weak.player.stats, strong.player.stats);
 });

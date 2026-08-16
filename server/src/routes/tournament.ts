@@ -3,9 +3,9 @@ import { db, pool } from '../db/index';
 import { runBattle } from '../game/battle';
 import { getBaseStats, enrichEquipment, addMoney, getCollectionBonus, buildPlayerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
-import { createTournamentSnapshot, mergeTournamentResult, parseTournamentSnapshot, playerFromTournamentSnapshot } from '../game/tournamentSnapshot';
+import { createTournamentSnapshot, formatTournamentNormalizationLog, mergeTournamentResult, normalizeTournamentGroup, parseTournamentSnapshot, playerFromTournamentSnapshot } from '../game/tournamentSnapshot';
 import { calculateCombatPower } from '../game/combatPower';
-import { allocateMergedPrizePools, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, mergeTournamentQueues, selectReadyQueueWindow } from '../game/tournamentQueue';
+import { allocateMergedPrizePools, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, mergeAllTournamentQueues, selectReadyQueueWindow } from '../game/tournamentQueue';
 import { broadcast } from '../events';
 import { getDrinkBonuses } from '../game/drinks';
 import { checkAchievement } from './achievements';
@@ -13,8 +13,8 @@ import { checkAchievement } from './achievements';
 const router = Router();
 
 const MAX_PLAYERS = 8;
-const REGISTRATION_WINDOW = 60 * 60; // 1 час
-const OFFICIAL_MERGE_WAIT = 10 * 60; // до 10 минут ждём соседние группы
+const REGISTRATION_WINDOW = 15 * 60; // 15 минут
+const OFFICIAL_MERGE_WAIT = 5 * 60; // до 5 минут ждём соседние группы
 
 const divisions: Array<{ name: string; label: string; tier: number; minPower: number; maxPower: number; icon: string }> = [];
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
@@ -279,7 +279,7 @@ async function loadTournamentPlayer(tournamentId: number, userId: number) {
         [tournamentId, userId]
     ) as any;
     const snapshot = parseTournamentSnapshot(participant?.snapshotStats);
-    return snapshot ? playerFromTournamentSnapshot(snapshot) : loadPlayerForBattle(userId);
+    return snapshot ? { ...playerFromTournamentSnapshot(snapshot), _tournamentSnapshot: snapshot } : loadPlayerForBattle(userId);
 }
 
 async function loadTournamentPlayerTx(client: any, tournamentId: number, userId: number) {
@@ -288,7 +288,14 @@ async function loadTournamentPlayerTx(client: any, tournamentId: number, userId:
         [tournamentId, userId]
     );
     const snapshot = parseTournamentSnapshot(result.rows[0]?.snapshotstats);
-    return snapshot ? playerFromTournamentSnapshot(snapshot) : loadPlayerForBattleTx(client, userId);
+    return snapshot ? { ...playerFromTournamentSnapshot(snapshot), _tournamentSnapshot: snapshot } : loadPlayerForBattleTx(client, userId);
+}
+
+function tournamentNormalizationStep(first: any, second: any) {
+    const firstSnapshot = first?._tournamentSnapshot;
+    const secondSnapshot = second?._tournamentSnapshot;
+    if (!firstSnapshot?.normalization || !secondSnapshot?.normalization) return null;
+    return { type: 'info', message: formatTournamentNormalizationLog(firstSnapshot, secondSnapshot) };
 }
 
 /**
@@ -321,6 +328,8 @@ export async function resolveCurrentRound(tournamentId: number): Promise<number>
         const result = runBattle(p1, p2);
         // В турнирах серебро не воруем — убираем money-шаги из лога
         const tourSteps = result.steps.filter((s: any) => s.type !== 'money');
+        const normalizationStep = tournamentNormalizationStep(p1, p2);
+        if (normalizationStep) tourSteps.unshift(normalizationStep as any);
         await db.run('UPDATE tournament_matches SET winnerId = ?, log = ? WHERE id = ?', [result.winnerId, JSON.stringify(tourSteps), match.id]);
     }
 
@@ -766,13 +775,19 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
             byQueue.set(queueId, participants);
         }
 
-        const merged = mergeTournamentQueues(
-            queueRows.map((row: any) => ({
+        const sourceQueues = queueRows.map((row: any) => ({
                 id: Number(row.id),
                 participants: (byQueue.get(Number(row.id)) || []).map(p => ({ userId: p.userId, combatPower: p.combatPower })),
-            })),
-            { maxPlayers: MAX_PLAYERS, maxPowerGap: 0.10 },
-        );
+            }));
+        const merged = mergeAllTournamentQueues(sourceQueues, MAX_PLAYERS);
+        if (merged.waitingParticipants.length === 1) {
+            await client.query(
+                `UPDATE tournaments SET registrationend = $1
+                 WHERE id = ANY($2::int[]) AND status = 'registration'`,
+                [now + REGISTRATION_WINDOW, queueIds]
+            );
+            return createdIds;
+        }
 
         const fundedQueues = queueRows.map((row: any) => ({
             id: Number(row.id),
@@ -794,11 +809,19 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
             );
             const tournamentId = Number(created.rows[0].id);
             createdIds.push(tournamentId);
-            for (const participant of group.participants) {
+            const groupSources = group.participants.map(participant => {
                 const source = participantRows.find((row: any) => Number(row.userid) === participant.userId && group.sourceQueueIds.includes(Number(row.tournamentid)));
+                const snapshot = parseTournamentSnapshot(source?.snapshotstats);
+                return { participant, snapshot };
+            });
+            const needsNormalization = Math.max(...powers) > 0 && (Math.max(...powers) - Math.min(...powers)) / Math.max(...powers) > 0.10;
+            const validSnapshots = groupSources.map(source => source.snapshot).filter((snapshot): snapshot is NonNullable<typeof snapshot> => Boolean(snapshot));
+            const normalizedSnapshots = needsNormalization ? normalizeTournamentGroup(validSnapshots) : validSnapshots;
+            const snapshotByUser = new Map(normalizedSnapshots.map(snapshot => [snapshot.player.id, snapshot]));
+            for (const { participant, snapshot } of groupSources) {
                 await client.query(
                     'INSERT INTO tournament_participants (tournamentid, userid, snapshotstats) VALUES ($1, $2, $3)',
-                    [tournamentId, participant.userId, source?.snapshotstats]
+                    [tournamentId, participant.userId, JSON.stringify(snapshotByUser.get(participant.userId) || snapshot)]
                 );
             }
         }
@@ -890,10 +913,17 @@ async function generateBracketTx(client: any, tournamentId: number) {
     }
 
     const partRows = await client.query(
-        `SELECT tp.userid, u.tournamentelo FROM tournament_participants tp JOIN users u ON tp.userid = u.id WHERE tp.tournamentid = $1 ORDER BY u.tournamentelo DESC`,
+        `SELECT tp.userid, tp.snapshotstats, u.tournamentelo FROM tournament_participants tp JOIN users u ON tp.userid = u.id WHERE tp.tournamentid = $1 ORDER BY u.tournamentelo DESC`,
         [tournamentId]
     );
     const participants = partRows.rows;
+    const normalized = participants.some((participant: any) => parseTournamentSnapshot(participant.snapshotstats)?.normalization);
+    if (normalized) {
+        for (let index = participants.length - 1; index > 0; index--) {
+            const swapIndex = Math.floor(Math.random() * (index + 1));
+            [participants[index], participants[swapIndex]] = [participants[swapIndex], participants[index]];
+        }
+    }
 
     console.log(`[bracket] tid=${tournamentId} participants=${participants.length}`);
     if (participants.length < 2) {
@@ -962,7 +992,7 @@ async function generateBracketTx(client: any, tournamentId: number) {
 /**
  * Разрешить все раунды турнира последовательно внутри одной транзакции.
  */
-async function advanceAllRoundsTx(client: any, tournamentId: number) {
+export async function advanceAllRoundsTx(client: any, tournamentId: number) {
     let safety = 0;
     const MAX_ROUNDS = 32;
     while (safety < MAX_ROUNDS) {
@@ -996,6 +1026,8 @@ async function advanceAllRoundsTx(client: any, tournamentId: number) {
 
             const result = runBattle(p1, p2);
             const tourSteps = result.steps.filter((s: any) => s.type !== 'money');
+            const normalizationStep = tournamentNormalizationStep(p1, p2);
+            if (normalizationStep) tourSteps.unshift(normalizationStep as any);
             await client.query(
                 'UPDATE tournament_matches SET winnerid = $1, log = $2 WHERE id = $3',
                 [result.winnerId, JSON.stringify(tourSteps), match.id]
@@ -1258,6 +1290,7 @@ router.get('/tournament', async (req, res) => {
             .map((participant: any) => parseTournamentSnapshot(participant.snapshotStats)?.combatPower)
             .filter((power: any): power is number => Number.isFinite(Number(power)))
             .map(Number);
+        const normalized = participants.some((participant: any) => Boolean(parseTournamentSnapshot(participant.snapshotStats)?.normalization));
         const technicalDivisionNumber = Number(String(t.division || '').match(/-(\d+)$/)?.[1])
             || Number(t.name?.match(/\d+$/)?.[0]) || 1;
         const powerDivision = officialPowers.length > 0
@@ -1271,6 +1304,7 @@ router.get('/tournament', async (req, res) => {
             divisionLabel: t.type === 'official' ? powerDivision.label : t.division,
             minPower: t.type === 'official' ? visibleMinPower : undefined,
             maxPower: t.type === 'official' ? visibleMaxPower : undefined,
+            normalized,
             minLevel: t.type === 'official' ? undefined : t.minLevel,
             maxLevel: t.type === 'official' ? undefined : t.maxLevel,
             participantCount: participants.length,

@@ -24,6 +24,40 @@ export interface TournamentQueueMergeResult {
   cancelledQueueIds: number[];
 }
 
+export interface TournamentQueueAllResult {
+  groups: TournamentQueueGroup[];
+  waitingParticipants: TournamentQueueParticipant[];
+}
+
+/** Раскладывает всех записавшихся по близким БМ, не оставляя группу из одного. */
+export function mergeAllTournamentQueues(
+  queues: TournamentQueue[],
+  maxPlayers: number,
+): TournamentQueueAllResult {
+  const entries = queues
+    .flatMap(queue => queue.participants.map(participant => ({ ...participant, queueId: queue.id })))
+    .sort((a, b) => a.combatPower - b.combatPower || a.userId - b.userId);
+  if (entries.length < 2) {
+    return { groups: [], waitingParticipants: entries.map(({ queueId: _queueId, ...participant }) => participant) };
+  }
+
+  const groupCount = Math.ceil(entries.length / Math.max(2, Math.floor(maxPlayers)));
+  const baseSize = Math.floor(entries.length / groupCount);
+  const remainder = entries.length % groupCount;
+  const groups: TournamentQueueGroup[] = [];
+  let offset = 0;
+  for (let index = 0; index < groupCount; index++) {
+    const size = baseSize + (index < remainder ? 1 : 0);
+    const chunk = entries.slice(offset, offset + size);
+    offset += size;
+    groups.push({
+      sourceQueueIds: [...new Set(chunk.map(entry => entry.queueId))],
+      participants: chunk.map(({ queueId: _queueId, ...participant }) => participant),
+    });
+  }
+  return { groups, waitingParticipants: [] };
+}
+
 export interface TimedTournamentQueue {
   id: number;
   registrationEnd: number;
