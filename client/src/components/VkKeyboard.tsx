@@ -4,6 +4,7 @@
  * CSS-правила в theme.css (VK keyboard + chat panel bottom + light theme overrides).
  */
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { deleteAtSelection, insertAtSelection } from '../utils/vkTextEditing';
 
 type Layout = 'ru' | 'en' | 'num';
 
@@ -51,22 +52,41 @@ function isTextInput(el: HTMLElement): boolean {
   return el.isContentEditable;
 }
 
-function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string, cursorRef: { current: number }) {
-  el.focus();
-  const start = cursorRef.current;
-  el.setRangeText(char, start, start, 'end');
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  cursorRef.current = start + 1;
+type SelectionRef = { current: { start: number; end: number } };
+
+type ActiveRef = { current: HTMLInputElement | HTMLTextAreaElement | null };
+
+function restoreSelection(activeRef: ActiveRef, selectionRef: SelectionRef) {
+  requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+    const fresh = activeRef.current;
+    if (!fresh || !fresh.isConnected) return;
+    const { start, end } = selectionRef.current;
+    fresh.setSelectionRange(start, end);
+  })));
 }
 
-function deleteChar(el: HTMLInputElement | HTMLTextAreaElement, cursorRef: { current: number }) {
+function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string, selectionRef: SelectionRef, activeRef: ActiveRef) {
   el.focus();
-  const start = cursorRef.current;
-  if (start > 0) {
-    el.setRangeText('', start - 1, start, 'start');
-    cursorRef.current = start - 1;
-  }
+  const start = el.selectionStart ?? selectionRef.current.start;
+  const end = el.selectionEnd ?? selectionRef.current.end;
+  const next = insertAtSelection(el.value, start, end, char);
+  el.setRangeText(char, start, end, 'end');
+  selectionRef.current = { start: next.start, end: next.end };
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  restoreSelection(activeRef, selectionRef);
+}
+
+function deleteChar(el: HTMLInputElement | HTMLTextAreaElement, selectionRef: SelectionRef, activeRef: ActiveRef) {
+  el.focus();
+  const start = el.selectionStart ?? selectionRef.current.start;
+  const end = el.selectionEnd ?? selectionRef.current.end;
+  const next = deleteAtSelection(el.value, start, end);
+  if (next.value === el.value) return;
+  const deleteStart = start === end ? Math.max(0, start - 1) : start;
+  el.setRangeText('', deleteStart, end, 'start');
+  selectionRef.current = { start: next.start, end: next.end };
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  restoreSelection(activeRef, selectionRef);
 }
 
 export default function VkKeyboard() {
@@ -75,7 +95,7 @@ export default function VkKeyboard() {
   const [capsLock, setCapsLock] = useState(false);
   const [active, setActive] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const activeRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
-  const cursorRef = useRef(0);
+  const selectionRef = useRef({ start: 0, end: 0 });
   const kbRef = useRef<HTMLDivElement>(null);
   const repeatInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,8 +132,9 @@ export default function VkKeyboard() {
     const id = setInterval(() => {
       const el = activeRef.current;
       if (!el) return;
-      // Если элемент потерял фокус (программный blur или удалён из DOM) — скрываем клавиатуру
-      if (document.activeElement !== el) {
+      // Краткая потеря focus в Android WebView не должна скрывать клавиатуру.
+      // Закрываем её только когда поле удалено из DOM или пользователь нажал «Скрыть».
+      if (!el.isConnected) {
         setActive(null);
         setShift(false);
         setCapsLock(false);
@@ -122,7 +143,8 @@ export default function VkKeyboard() {
       // Сохраняем позицию курсора перед focus (Android сбрасывает)
       const s = el.selectionStart;
       const e = el.selectionEnd;
-      el.focus();
+      if (s !== null && e !== null) selectionRef.current = { start: s, end: e };
+      if (document.activeElement !== el) el.focus({ preventScroll: true });
       // Восстанавливаем если сбросилось
       if (s !== null && (el.selectionStart !== s || el.selectionEnd !== e)) {
         el.setSelectionRange(s, e);
@@ -138,7 +160,9 @@ export default function VkKeyboard() {
       if (isTextInput(el)) {
         const input = el as HTMLInputElement | HTMLTextAreaElement;
         setActive(input);
-        cursorRef.current = input.value.length;
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? start;
+        selectionRef.current = { start, end };
         // Авто-переключение на цифровую клавиатуру для числовых полей
         if (el.hasAttribute('data-vk-num')) {
           setLayout('num');
@@ -169,7 +193,7 @@ export default function VkKeyboard() {
   const doDelete = useCallback(() => {
     const el = activeRef.current;
     if (!el) return;
-    deleteChar(el, cursorRef);
+    deleteChar(el, selectionRef, activeRef);
   }, []);
 
   const doInsert = useCallback((char: string) => {
@@ -177,7 +201,7 @@ export default function VkKeyboard() {
     if (!el) return;
     // Для числовых полей — только цифры
     if (el.hasAttribute('data-vk-num') && !/^\d$/.test(char)) return;
-    insertChar(el, char, cursorRef);
+    insertChar(el, char, selectionRef, activeRef);
   }, []);
 
   const startCharRepeat = useCallback((char: string) => {
@@ -196,7 +220,7 @@ export default function VkKeyboard() {
         const s = el.selectionStart ?? 0;
         const e = el.selectionEnd ?? 0;
         if (s === 0 && e === 0) { stopRepeat(); return; }
-        deleteChar(el, cursorRef);
+        deleteChar(el, selectionRef, activeRef);
       }, 50);
     }, 600);
   }, [doDelete, stopRepeat]);
@@ -221,8 +245,9 @@ export default function VkKeyboard() {
       const el = activeRef.current;
       if (el) {
         el.value = '';
-        cursorRef.current = 0;
+        selectionRef.current = { start: 0, end: 0 };
         el.dispatchEvent(new Event('input', { bubbles: true }));
+        restoreSelection(activeRef, selectionRef);
       }
     } else if (key === '␣') {
       doInsert(' ');
@@ -235,7 +260,7 @@ export default function VkKeyboard() {
         // Скрываем клавиатуру после Enter на INPUT (не textarea) — с задержкой чтобы input успел обработать
         setTimeout(() => { setActive(null); setShift(false); setCapsLock(false); }, 50);
       } else {
-        insertChar(el, '\n', cursorRef);
+        insertChar(el, '\n', selectionRef, activeRef);
       }
     } else if (key === '⇧') {
       handleShift();
@@ -268,7 +293,7 @@ export default function VkKeyboard() {
   const effectiveShift = shift || capsLock;
 
   return (
-    <div ref={kbRef} className="vk-keyboard fixed bottom-0 left-0 right-0 z-[10000] select-none bg-[var(--vk-kb-bg,#1a1a2e)] border-t border-[var(--vk-kb-border,#333)] px-1 py-1.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
+    <div ref={kbRef} className="vk-keyboard fixed bottom-0 left-0 right-0 z-[10000] select-none bg-[var(--vk-kb-bg,#1a1a2e)] border-t border-[var(--vk-kb-border,#333)] px-1 py-1.5 max-h-[58vh] overflow-y-auto overscroll-contain" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
       {/* Кнопка скрытия клавиатуры */}
       <div className="flex justify-end mb-1">
         <div
@@ -280,7 +305,7 @@ export default function VkKeyboard() {
         >▼ Скрыть</div>
       </div>
       {keys.map((row, ri) => (
-        <div key={ri} className="flex justify-center gap-1 mb-1">
+        <div key={ri} className="flex justify-center gap-0.5 sm:gap-1 mb-1 min-w-0">
           {row.map((key, ki) => {
             const isSpace = key === '␣';
             const isEnter = key === '↩';
@@ -292,7 +317,7 @@ export default function VkKeyboard() {
             // Enter shows text, not symbol
             const display = isEnter ? 'Enter' : char;
 
-            let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 select-none cursor-pointer h-10';
+            let cls = 'flex items-center justify-center rounded text-sm font-medium active:opacity-60 select-none cursor-pointer h-10 min-w-0';
             if (isSpace) cls += ' flex-[3] bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)]';
             else if (isEnter) cls += ' flex-[1.5] bg-[var(--color-accent-info)] text-white text-xs font-bold';
             else if (isShiftKey) cls += ` flex-1 ${capsLock ? 'bg-[var(--color-accent-success)] text-white' : effectiveShift ? 'bg-[var(--color-accent-info)] text-white' : 'bg-[var(--vk-kb-special,#3a3a5e)] text-[var(--vk-kb-text,#ccc)]'}`;

@@ -19,11 +19,22 @@ interface ChatInputProps {
 export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUserId, onSend, bannedUntil, chatError, pendingMention, onClearPending, isGuest }: ChatInputProps) {
     const [input, setInput] = useState('');
     const [autocomplete, setAutocomplete] = useState<{ items: { id: number; name: string }[]; selectedIndex: number } | null>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    const resizeInput = useCallback(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${Math.min(el.scrollHeight, 112)}px`;
+    }, []);
 
     const isBanned = bannedUntil !== null && bannedUntil > Date.now() / 1000;
     const isDisabled = isBanned;
     const disabledPlaceholder = isGuest ? 'Чат недоступен для гостей' : 'Чат заблокирован';
+
+    useEffect(() => {
+        resizeInput();
+    }, [input, resizeInput]);
 
     // При ошибке валидации — восстанавливаем последний отправленный текст
     useEffect(() => {
@@ -64,11 +75,12 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
         setAutocomplete(null);
     }, [onlineUsers, currentUserId]);
 
-    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         if (isDisabled) return;
         const value = e.target.value;
         setInput(value);
         buildAutocomplete(value, e.target.selectionStart || 0);
+        resizeInput();
     };
 
     const handleAutocompleteSelect = (name: string) => {
@@ -82,14 +94,24 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
             : wMatch ? textBefore.slice(0, wMatch.index! + 3) : textBefore;
 
         const after = input.slice(cursorPos);
-        setInput(before + name + ' ' + after);
+        const nextValue = before + name + ' ' + after;
+        const nextCursor = before.length + name.length + 1;
+        setInput(nextValue);
         setAutocomplete(null);
-        inputRef.current?.focus();
+        requestAnimationFrame(() => {
+            const el = inputRef.current;
+            if (!el) return;
+            el.focus({ preventScroll: true });
+            el.setSelectionRange(nextCursor, nextCursor);
+            resizeInput();
+        });
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (isBanned) { e.preventDefault(); return; }
         if (e.key === 'Enter') {
+            if (e.shiftKey) return;
+            e.preventDefault();
             if (autocomplete && autocomplete.items.length > 0) {
                 e.preventDefault();
                 handleAutocompleteSelect(autocomplete.items[autocomplete.selectedIndex].name);
@@ -141,15 +163,17 @@ export default function ChatInput({ isPrivate, isGuild, onlineUsers, currentUser
                 </div>
             )}
             <div className="flex gap-2 relative">
-                <input
+                <textarea
                     ref={inputRef}
-                    type="text"
                     value={input}
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
+                    onFocus={resizeInput}
+                    rows={1}
+                    spellCheck={false}
                     disabled={isDisabled}
                     placeholder={isDisabled ? disabledPlaceholder : (isGuild ? 'Гильдия...' : isPrivate ? 'Личное сообщение...' : 'Сообщение (или /w ник текст для ЛС)')}
-                    className={`flex-1 p-1 border border-[var(--color-border-light)] rounded ${isDisabled ? 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-bg-input)] text-[var(--color-text-primary)] cursor-text'}`}
+                    className={`flex-1 min-h-[30px] max-h-28 overflow-y-auto resize-none p-1 border border-[var(--color-border-light)] rounded leading-5 ${isDisabled ? 'bg-[var(--color-bg-input)] text-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-bg-input)] text-[var(--color-text-primary)] cursor-text'}`}
                 />
                 <button onClick={handleSendClick} disabled={isDisabled} className={`border-none rounded py-1 px-3 ${isDisabled ? 'bg-[var(--color-border-light)] text-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-accent-danger)] text-white cursor-pointer'}`}>➤</button>
                 {autocomplete && (
