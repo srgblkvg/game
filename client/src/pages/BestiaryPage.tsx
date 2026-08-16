@@ -76,6 +76,7 @@ export default function BestiaryPage() {
     return saved === null ? null : Number(saved);
   });
   const [previewFloor, setPreviewFloor] = useState(() => localStorage.getItem('hunt_selected_floor') || '');
+  const [showLootDetails, setShowLootDetails] = useState(() => localStorage.getItem('hunt_loot_details_expanded') !== '0');
   const [tooltipData, _setTooltipData] = useState<{ item: any; x: number; y: number } | null>(null);
 
   const hasPremium = Number((character as any)?.premium?.until || 0) > (serverTime || Math.floor(Date.now()/1000));
@@ -176,6 +177,10 @@ export default function BestiaryPage() {
   useEffect(() => {
     if (previewFloor) localStorage.setItem('hunt_selected_floor', previewFloor);
   }, [previewFloor]);
+
+  useEffect(() => {
+    localStorage.setItem('hunt_loot_details_expanded', showLootDetails ? '1' : '0');
+  }, [showLootDetails]);
 
   const getFloorInfo = (floor: string) => {
     const fm = mobs.filter((m: any) => m.location === floor).sort((a: any, b: any) => a.level - b.level);
@@ -520,6 +525,8 @@ export default function BestiaryPage() {
             cooldownRemaining={cooldownRemaining}
             selectFloor={selectFloor}
             theme={theme}
+            showLootDetails={showLootDetails}
+            setShowLootDetails={setShowLootDetails}
           />
         </>
       ) : (
@@ -656,7 +663,7 @@ export default function BestiaryPage() {
   );
 }
 
-function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFloor, setPreviewFloor, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor, theme }: any) {
+function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFloor, setPreviewFloor, getFloorInfo, floorBgMap, cooldownRemaining, selectFloor, theme, showLootDetails, setShowLootDetails }: any) {
   const selected = groups.find((group: any) => group.difficulty === selectedDifficulty) || groups[0];
   const selectedInfo = selected && previewFloor ? getFloorInfo(previewFloor) : null;
   const selectedBg = previewFloor ? floorBgMap.get(previewFloor) : '';
@@ -678,7 +685,7 @@ function HuntMap({ groups, selectedDifficulty, setSelectedDifficulty, previewFlo
           {selected.floors.map((floor: string, index: number) => <button key={floor} type="button" onClick={() => setPreviewFloor(floor)} className={`relative cursor-pointer min-h-24 overflow-hidden rounded-xl border text-left transition-all ${previewFloor === floor ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]/30' : 'border-[var(--color-border-light)] opacity-80 hover:opacity-100'}`} style={floorBgMap.get(floor) ? { backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.12) 75%), url(${floorBgMap.get(floor)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}><span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-black/60 text-white text-[0.65rem] flex items-center justify-center">{index + 1}</span><span className="absolute inset-x-2 bottom-2 text-xs font-bold text-white drop-shadow">{floor}</span></button>)}
         </div>
         {previewFloor && selectedInfo && <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-light)] min-h-52" style={selectedBg ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88), rgba(0,0,0,.4)), url(${selectedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-          <div className="relative z-10 p-4 sm:p-5 text-white"><div className="flex items-start justify-between gap-3"><div><p className="text-xs text-white/70">Выбранная локация</p><h3 className="text-xl font-bold mt-1">{previewFloor}</h3></div><Icon icon="game-icons:castle-ruins" width="30" height="30" className="text-white/80" /></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5"><Stat label="Уровни" value={`${selectedInfo.minLevel}–${selectedInfo.maxLevel}`} /><Stat label="Противники" value={selectedInfo.count} /><Stat label="Серебро" value={`${selectedInfo.goldMin}–${selectedInfo.goldMax}`} /><Stat label="Средний опыт" value={`~${selectedInfo.avgXp}`} /></div><LootPreview info={selectedInfo} /><div className="flex justify-end mt-4"><Button variant="primary" className="cursor-pointer !bg-[#2563eb] hover:!bg-[#1d4ed8] !text-white shadow-md" size="md" disabled={cooldownRemaining > 0} onClick={() => selectFloor(previewFloor)} data-tutorial="bestiary-attack">{cooldownRemaining > 0 ? `Доступно через ${Math.ceil(cooldownRemaining / 60)} мин.` : 'Начать охоту'}</Button></div></div>
+          <div className="relative z-10 p-4 sm:p-5 text-white"><div className="flex items-start justify-between gap-3"><div><p className="text-xs text-white/70">Выбранная локация</p><h3 className="text-xl font-bold mt-1">{previewFloor}</h3></div><Icon icon="game-icons:castle-ruins" width="30" height="30" className="text-white/80" /></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5"><Stat label="Уровни" value={`${selectedInfo.minLevel}–${selectedInfo.maxLevel}`} /><Stat label="Противники" value={selectedInfo.count} /><Stat label="Серебро" value={`${selectedInfo.goldMin}–${selectedInfo.goldMax}`} /><Stat label="Средний опыт" value={`~${selectedInfo.avgXp}`} /></div><div className="mt-4 rounded-xl border border-blue-300/40 bg-[#1d4ed8] p-2 shadow-lg"><Button variant="primary" className="w-full cursor-pointer !bg-transparent hover:!bg-transparent !text-white" size="md" disabled={cooldownRemaining > 0} onClick={() => selectFloor(previewFloor)} data-tutorial="bestiary-attack">{cooldownRemaining > 0 ? `Доступно через ${Math.ceil(cooldownRemaining / 60)} мин.` : 'Начать охоту'}</Button></div><LootPreview info={selectedInfo} expanded={showLootDetails} onToggle={() => setShowLootDetails((value: boolean) => !value)} /></div>
         </div>}
       </>}
     </div>
@@ -695,11 +702,12 @@ function LootIcon({ item, label, upTo = false }: { item: any; label?: string; up
   return <div className="flex items-center gap-2 rounded-lg bg-black/25 border border-white/10 p-1.5 min-w-0"><div className="w-9 h-9 rounded-md bg-black/25 border flex items-center justify-center shrink-0 overflow-hidden" style={{ borderColor: item.rarityColor || 'rgba(255,255,255,.12)' }}>{item.image ? <img src={item.image} alt="" className="w-8 h-8 object-contain" /> : <Icon icon="game-icons:locked-chest" width="24" height="24" className="text-white/70" />}</div><div className="min-w-0"><p className="text-[0.65rem] font-bold truncate">{label || item.name}</p><p className="text-[0.6rem] text-white/65">{upTo ? 'до ' : ''}{chanceLabel(item.chance)}</p></div></div>;
 }
 
-function LootPreview({ info }: { info: any }) {
+function LootPreview({ info, expanded, onToggle }: { info: any; expanded: boolean; onToggle: () => void }) {
   const equipment = info.equipmentDrops || [];
   const minRarity = equipment.length ? equipment[0].rarity : null;
   const maxRarity = equipment.length ? equipment[equipment.length - 1].rarity : null;
-  return <div className="mt-5 rounded-xl bg-black/30 border border-white/10 p-3"><h4 className="text-sm font-bold mb-3">Возможные трофеи</h4><div className="space-y-3">
+  if (!expanded) return <button type="button" onClick={onToggle} className="mt-3 w-full flex items-center justify-between rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-left"><span className="text-sm font-bold">▶ Возможные трофеи</span><span className="text-[0.65rem] text-white/65">Показать подробности</span></button>;
+  return <div className="mt-5 rounded-xl bg-black/30 border border-white/10 p-3"><button type="button" onClick={onToggle} className="w-full flex items-center justify-between text-left mb-3"><h4 className="text-sm font-bold">▼ Возможные трофеи</h4><span className="text-[0.65rem] text-white/65">Скрыть</span></button><div className="space-y-3">
     {!!equipment.length && <div><p className="text-xs mb-1.5">Снаряжение: {RARITY_NAMES[minRarity]} — {RARITY_NAMES[maxRarity]}</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">{equipment.map((item: any) => <LootIcon key={`equipment-${item.rarity}`} item={item} label={RARITY_NAMES[item.rarity]} upTo />)}</div></div>}
     {Number(info.setChance || 0) > 0 && <div className="flex items-center gap-2 rounded-lg bg-red-950/35 border border-red-400/20 p-2"><Icon icon="game-icons:armor-upgrade" width="28" height="28" className="text-red-300 shrink-0" /><div><p className="text-xs font-bold">Сетовый предмет</p><p className="text-[0.65rem] text-white/70">Шанс получить: {chanceLabel(info.setChance)}</p></div></div>}
     {!!info.craftMaterials?.length && <div><p className="text-xs mb-1.5">Материалы для ремесла</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">{info.craftMaterials.map((item: any) => <LootIcon key={`craft-${item.name}`} item={item} />)}</div></div>}
