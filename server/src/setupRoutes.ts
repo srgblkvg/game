@@ -56,6 +56,7 @@ import achievementsRoutes from './routes/achievements';
 import debugRoutes from './routes/debug';
 import factionRoutes from './routes/faction';
 import dungeonRoutes from './routes/dungeon';
+import adminActivityRoutes from './routes/adminActivity';
 
 export function setupRoutes(app: Express) {
   // Публичные маршруты
@@ -118,6 +119,7 @@ export function setupRoutes(app: Express) {
 
   // Админские маршруты
   app.use('/api/admin', authMiddleware, requireAdmin, adminRoutes);
+  app.use('/api/admin', authMiddleware, requireAdmin, adminActivityRoutes);
 
   // VK Bridge Auth (публичный, проверка токена внутри)
   app.use('/api/auth', vkBridgeAuthRoutes);

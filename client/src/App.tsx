@@ -20,6 +20,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import NoMoneyModal from './components/NoMoneyModal';
 import ScrollToTop from './components/ScrollToTop';
 import MetrikaTracker from './components/MetrikaTracker';
+import ActivityRouteTracker from './components/ActivityRouteTracker';
 // TODO: удалить после ответа поддержки VK ↓
 import VkKeyboard from './components/VkKeyboard';
 // TODO: удалить после ответа поддержки VK ↑
@@ -135,6 +136,7 @@ function AppContent() {
       <ToastProvider>
       <ScrollToTop />
       <MetrikaTracker />
+      <ActivityRouteTracker />
       {/* Скрываем UI для игроков в туториале */}
       {!tutorialActive && <Header />}
       {!tutorialActive && user?.role === 'player' && <RightSidebar />}

@@ -6,6 +6,14 @@ import { wsPublicMessageSchema, wsPrivateMessageSchema, wsItemLinkSchema } from 
 import { isGuestRestrictionsDisabled } from './middleware/auth';
 import { auditWsConnect, auditWsDisconnect } from './audit';
 import { on } from './events';
+import {
+  ActivityState,
+  closeActivity,
+  initOnlineActivity,
+  normalizeBrowserSessionId,
+  recordActivity,
+  startOrResumeActivity,
+} from './game/onlineActivity';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -179,6 +187,7 @@ async function computeRatingData(userId: number) {
 
 export async function setupWebSocket(server: any) {
   const wss = new WebSocketServer({ server });
+  await initOnlineActivity();
 
   // ── Подписка на EventBus ──
   on('markDirty', (e) => {
@@ -385,6 +394,13 @@ export async function setupWebSocket(server: any) {
     }
 
     clients.set(userId, ws);
+    const browserSessionId = normalizeBrowserSessionId(url.searchParams.get('browserSessionId'));
+    const activity: ActivityState = await startOrResumeActivity(
+      userId,
+      browserSessionId,
+      String(url.searchParams.get('platform') || 'web'),
+      Math.floor(Date.now() / 1000),
+    );
     const onlineUser: OnlineUser = { id: user.id, username: user.username, level: user.level, faction: user.faction || null, guildName: user.guildname || user.guildName || null, guildId: user.guildid || user.guildId || null };
     onlineUsers.set(userId, onlineUser);
     auditWsConnect(user.username, user.id);
@@ -414,6 +430,21 @@ export async function setupWebSocket(server: any) {
       try {
       let data: any;
       try { data = JSON.parse(raw.toString()); } catch { return; }
+
+      if (data.type === 'activity') {
+        try {
+          await recordActivity(
+            activity,
+            userId,
+            typeof data.path === 'string' ? data.path : '/',
+            data.visible === true,
+            Math.floor(Date.now() / 1000),
+          );
+        } catch (e: any) {
+          console.error('WS activity err:', e?.message || e);
+        }
+        return;
+      }
 
       const currentUser = await db.one('SELECT chatBannedUntil FROM users WHERE id = ?', [userId]);
       if (currentUser && currentUser.chatBannedUntil && currentUser.chatBannedUntil > Math.floor(Date.now() / 1000)) {
@@ -561,6 +592,11 @@ export async function setupWebSocket(server: any) {
 
     // ---------- Отключение ----------
     ws.on("close", async () => {
+      // Старое соединение не должно закрывать или удалять новую сессию игрока.
+      if (clients.get(userId) !== ws) return;
+      try { await closeActivity(activity, 'disconnect', Math.floor(Date.now() / 1000)); } catch (e: any) {
+        console.error('WS activity close err:', e?.message || e);
+      }
       clients.delete(userId);
       onlineUsers.delete(userId);
       userDirtyFlags.delete(userId);

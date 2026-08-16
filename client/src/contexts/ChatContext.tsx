@@ -13,6 +13,15 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | null>(null);
 export function useGlobalChat() { const ctx = useContext(ChatContext); if (!ctx) throw new Error('useGlobalChat'); return ctx; }
 
+function getBrowserSessionId(): string {
+  const key = 'game_browser_session_id';
+  const current = sessionStorage.getItem(key);
+  if (current) return current;
+  const created = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  sessionStorage.setItem(key, created);
+  return created;
+}
+
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -30,19 +39,52 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [chatError, setChatError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const activityPathRef = useRef(window.location.pathname);
+  const browserSessionIdRef = useRef<string>(getBrowserSessionId());
 
   // Подключение WebSocket
   useEffect(() => {
     if (!token) return;
 
+    const sendActivity = () => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({
+        type: 'activity',
+        path: activityPathRef.current,
+        visible: document.visibilityState === 'visible',
+      }));
+    };
+    const onVisibilityChange = () => sendActivity();
+    const onRouteChange = () => {
+      activityPathRef.current = window.location.pathname;
+      sendActivity();
+    };
+    const onGameRouteChange = (event: Event) => {
+      activityPathRef.current = (event as CustomEvent<string>).detail || window.location.pathname;
+      sendActivity();
+    };
+    const heartbeatTimer = window.setInterval(sendActivity, 30_000);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('popstate', onRouteChange);
+    window.addEventListener('gameRouteChange', onGameRouteChange as EventListener);
+
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
+      const platform = document.documentElement.classList.contains('vk-iframe') ? 'vk' : 'web';
+      const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`
+        + `&browserSessionId=${encodeURIComponent(browserSessionIdRef.current)}`
+        + `&platform=${platform}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
         console.log('[WS] connected');
+        ws.send(JSON.stringify({
+          type: 'activity',
+          path: activityPathRef.current,
+          visible: document.visibilityState === 'visible',
+        }));
       };
 
       ws.onmessage = (event) => {
@@ -214,6 +256,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     connect();
 
     return () => {
+      window.clearInterval(heartbeatTimer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('popstate', onRouteChange);
+      window.removeEventListener('gameRouteChange', onGameRouteChange as EventListener);
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       if (wsRef.current) {
         wsRef.current.onclose = null; // prevent reconnect
