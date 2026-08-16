@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { buildPlayerStats } from '../db/helpers';
-import { runTurn, TurnContext, BattleStep } from '../game/battle';
+import { runTurn, TurnContext, BattleStep, createBattleRngState } from '../game/battle';
 import { currentStats } from '../game/stats';
 import { markDirty } from '../events';
 import { updateGuildQuestProgress } from './guild';
@@ -133,6 +133,8 @@ router.post('/guild/boss/attack', async (req, res) => {
   let playerWon = false;
   let stunnedUser = false;
   let stunnedBoss = false;
+  const userRng = createBattleRngState();
+  const bossRng = createBattleRngState();
 
   for (let turn = 0; turn < 50 && userHp > 0 && bossCurrentHp > 0; turn++) {
     // Ход игрока
@@ -147,6 +149,7 @@ router.post('/guild/boss/attack', async (req, res) => {
         hpActor: userHp, hpTarget: bossCurrentHp,
         maxHpActor: userStats.hp, maxHpTarget: boss.maxHp,
         actor: 'attacker', target: 'defender',
+        actorRngState: userRng, targetRngState: bossRng,
         antiDodge: antiStats.antiDodge,
         antiCrit: antiStats.antiCrit,
         antiBlock: antiStats.antiBlock,
@@ -171,6 +174,7 @@ router.post('/guild/boss/attack', async (req, res) => {
         hpActor: bossCurrentHp, hpTarget: userHp,
         maxHpActor: boss.maxHp, maxHpTarget: userStats.hp,
         actor: 'defender', target: 'attacker',
+        actorRngState: bossRng, targetRngState: userRng,
         // Игрок снижает вампиризм босса через targetAntiVampiric
         targetAntiVampiric: antiStats.antiVampiric,
       };

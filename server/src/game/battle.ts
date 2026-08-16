@@ -16,6 +16,32 @@ export interface BattleStep {
   stats2?: any;
 }
 
+export type BattleRngEvent = 'dodge' | 'stun' | 'crit' | 'block' | 'fullBlock' | 'counter';
+
+export interface BattleRngState {
+  streaks: Record<BattleRngEvent, number>;
+}
+
+export function createBattleRngState(): BattleRngState {
+  return { streaks: { dodge: 0, stun: 0, crit: 0, block: 0, fullBlock: 0, counter: 0 } };
+}
+
+export function adjustedStreakChance(baseChance: number, streak: number): number {
+  return baseChance * Math.max(0.25, Math.pow(0.8, streak));
+}
+
+export function resolveStreakRoll(baseChance: number, streak: number, roll: number) {
+  const chance = adjustedStreakChance(baseChance, streak);
+  const success = roll < chance;
+  return { success, nextStreak: success ? streak + 1 : 0, chance };
+}
+
+function streakRoll(state: BattleRngState, event: BattleRngEvent, baseChance: number): boolean {
+  const result = resolveStreakRoll(baseChance, state.streaks[event], Math.random());
+  state.streaks[event] = result.nextStreak;
+  return result.success;
+}
+
 interface BattleResult {
   winnerId: number;
   log: string[];
@@ -93,6 +119,15 @@ export function rollDamage(stats: CharStats, level: number): number {
   return Math.round(level + factor * (S - level));
 }
 
+// Крит всегда использует верхнюю половину базового диапазона урона.
+// Блок и полный блок применяются после критического множителя как раньше.
+export function rollCriticalBaseDamage(stats: CharStats, level: number, random = Math.random): number {
+  const min = level;
+  const max = stats.s;
+  const factor = 0.5 + random() * 0.5;
+  return Math.round(min + factor * (max - min));
+}
+
 // ── Один ход боя (symmetrical — работает для обеих сторон) ──
 
 export interface TurnContext {
@@ -115,22 +150,26 @@ export interface TurnContext {
   antiVampiric?: number;
   // Антивампиризм цели (снижает вампиризм атакующего)
   targetAntiVampiric?: number;
+  actorRngState?: BattleRngState;
+  targetRngState?: BattleRngState;
 }
 
 export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { hpActor: number; hpTarget: number; stunnedTarget: boolean; poisonApplied: { damage: number; turns: number } | undefined } {
   let hpActor = ctx.hpActor;
   let hpTarget = ctx.hpTarget;
   let stunnedTarget = false;
+  const actorRngState = ctx.actorRngState || createBattleRngState();
+  const targetRngState = ctx.targetRngState || createBattleRngState();
   let poisonApplied: { damage: number; turns: number } | undefined;
 
   addStep({ type: 'attack', actor: ctx.actor, message: `${ctx.actorName} атакует!` });
 
-  if (Math.random() < Math.max(0, dodgeChance(ctx.targetStats, ctx.actorStats) - (ctx.antiDodge || 0) / 100)) {
+  if (streakRoll(targetRngState, 'dodge', Math.max(0, dodgeChance(ctx.targetStats, ctx.actorStats) - (ctx.antiDodge || 0) / 100))) {
     addStep({ type: 'dodge', actor: ctx.target, message: `${ctx.targetName} уклоняется!` });
-    if (Math.random() < Math.max(0, counterChance(ctx.targetStats, ctx.actorStats, ctx.targetStats.extra.counter || 0) - (ctx.antiCounter || 0) / 100)) {
+    if (streakRoll(targetRngState, 'counter', Math.max(0, counterChance(ctx.targetStats, ctx.actorStats, ctx.targetStats.extra.counter || 0) - (ctx.antiCounter || 0) / 100))) {
       addStep({ type: 'counter', actor: ctx.target, message: `${ctx.targetName} контратакует!` });
       let cdmg = ctx.targetStats.s;
-      if (Math.random() < Math.max(0, critChance(ctx.targetStats) - (ctx.antiCrit || 0) / 100)) {
+      if (streakRoll(targetRngState, 'crit', Math.max(0, critChance(ctx.targetStats) - (ctx.antiCrit || 0) / 100))) {
         cdmg *= critMult(ctx.targetStats);
         addStep({ type: 'crit', actor: ctx.target, message: `Крит!` });
       }
@@ -146,6 +185,10 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
   // Попадание
   addStep({ type: 'info', message: `Попадание!` });
   let dmg = rollDamage(ctx.actorStats, ctx.actorLevel);
+  if (streakRoll(actorRngState, 'crit', critChance(ctx.actorStats))) {
+    dmg = rollCriticalBaseDamage(ctx.actorStats, ctx.actorLevel) * critMult(ctx.actorStats);
+    addStep({ type: 'crit', actor: ctx.actor, message: `Крит!` });
+  }
   // Rage bonus: +% урон при низком HP
   const rageDmg = ctx.actorStats.rageDmg || 0;
   const rageThreshold = ctx.actorStats.rageThreshold || 0.5;
@@ -153,16 +196,12 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
     dmg = Math.round(dmg * (1 + rageDmg / 100));
     addStep({ type: 'info', message: `Ярость! +${rageDmg}% урона` });
   }
-  if (Math.random() < critChance(ctx.actorStats)) {
-    dmg *= critMult(ctx.actorStats);
-    addStep({ type: 'crit', actor: ctx.actor, message: `Крит!` });
-  }
   const fb = (ctx.targetStats.extra.fullBlock || 0);
   const fullBlockChance = fb / (fb + 300);
-  if (Math.random() < fullBlockChance) {
+  if (streakRoll(targetRngState, 'fullBlock', fullBlockChance)) {
     dmg = 0;
     addStep({ type: 'fullBlock', actor: ctx.target, message: `ПОЛНЫЙ БЛОК!` });
-  } else if (Math.random() < blockChance(ctx.targetStats)) {
+  } else if (streakRoll(targetRngState, 'block', blockChance(ctx.targetStats))) {
     let blockReduce = blockReduction(ctx.targetStats, ctx.actorStats);
     // BlockPen: reduce block effectiveness
     const blockPen = ctx.actorStats.blockPen || 0;
@@ -215,7 +254,7 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
     addStep({ type: 'info', message: `Яд на ${poisonTurns} хода (-${poisonDmg}/ход)!` });
   }
 
-  if (dmg > 0 && Math.random() < stunChance(ctx.actorStats, ctx.targetStats) * (1 - (ctx.targetStats.resiliencePct || 0) / 100)) {
+  if (dmg > 0 && streakRoll(actorRngState, 'stun', stunChance(ctx.actorStats, ctx.targetStats) * (1 - (ctx.targetStats.resiliencePct || 0) / 100))) {
     stunnedTarget = true;
     addStep({ type: 'stun', actor: ctx.target, message: `${ctx.targetName} оглушён!` });
   }
@@ -235,6 +274,8 @@ export function runBattle(
   let hpD = (defender.currentHp != null) ? defender.currentHp : statsD.hp;
   let stunnedA = false;
   let stunnedD = false;
+  const rngA = createBattleRngState();
+  const rngD = createBattleRngState();
   let poisonOnA: { damage: number; turnsLeft: number } | null = null;
   let poisonOnD: { damage: number; turnsLeft: number } | null = null;
   const log: string[] = [];
@@ -301,6 +342,7 @@ export function runBattle(
         hpActor: hpA, hpTarget: hpD,
         maxHpActor: maxHpA, maxHpTarget: maxHpD,
         actor: 'attacker', target: 'defender',
+        actorRngState: rngA, targetRngState: rngD,
       }, addStep);
       hpA = result.hpActor;
       hpD = result.hpTarget;
@@ -327,6 +369,7 @@ export function runBattle(
         hpActor: hpD, hpTarget: hpA,
         maxHpActor: maxHpD, maxHpTarget: maxHpA,
         actor: 'defender', target: 'attacker',
+        actorRngState: rngD, targetRngState: rngA,
       }, addStep);
       hpD = result.hpActor;
       hpA = result.hpTarget;

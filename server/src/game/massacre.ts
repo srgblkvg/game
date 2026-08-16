@@ -6,7 +6,7 @@ import { checkAchievement } from '../routes/achievements';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import {
     dodgeChance, critChance, critMult, blockChance, blockReduction,
-    counterChance, stunChance, rollDamage, BattleStep, runTurn, TurnContext
+    counterChance, stunChance, rollDamage, BattleStep, runTurn, TurnContext, createBattleRngState, BattleRngState
 } from './battle';
 import { CharStats } from './stats';
 import { updateGuildQuestProgress } from '../routes/guild/guildQuests';
@@ -50,13 +50,13 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
     await db.run(`UPDATE massacre_events SET turn_order = ? WHERE id = ?`, [JSON.stringify(turnOrder), eventId]);
 
     // Карта участников: userId -> state
-    const state = new Map<number, { hp: number; maxHp: number; stunned: boolean; alive: boolean; name: string; level: number; stats: CharStats }>();
+    const state = new Map<number, { hp: number; maxHp: number; stunned: boolean; alive: boolean; name: string; level: number; stats: CharStats; rng: BattleRngState }>();
     for (const p of participants) {
         const stats: CharStats = JSON.parse(p.stats_json || '{}');
         state.set(p.user_id, {
             hp: p.hp_current, maxHp: p.hp_max, stunned: p.stunned, alive: p.alive,
             name: p.username, level: p.level,
-            stats,
+            stats, rng: createBattleRngState(),
         });
     }
 
@@ -107,6 +107,7 @@ export async function runMassacreBattle(eventId: number): Promise<void> {
             hpActor: s.hp, hpTarget: target.hp,
             maxHpActor: s.maxHp, maxHpTarget: target.maxHp,
             actor: 'attacker', target: 'defender',
+            actorRngState: s.rng, targetRngState: target.rng,
         };
         const steps: BattleStep[] = [];
         const result = runTurn(ctx, (step) => steps.push(step));

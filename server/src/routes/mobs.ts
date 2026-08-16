@@ -3,7 +3,7 @@ import { db } from '../db/index';
 import { collectGuildTax, applyExp, buildPlayerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { applyHpRegen } from '../game/hpRegen';
-import { runTurn, dodgeChance, critChance, critMult, blockChance, blockReduction, TurnContext, BattleStep } from '../game/battle';
+import { runTurn, dodgeChance, critChance, critMult, blockChance, blockReduction, TurnContext, BattleStep, createBattleRngState } from '../game/battle';
 import { markDirty, pushNotification } from '../events';
 import { checkAchievement, trackIncome } from './achievements';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
@@ -254,6 +254,8 @@ router.post('/mob/attack', async (req, res) => {
     let playerWon = false;
     let stunnedUser = false;
     let stunnedMob = false;
+    const userRng = createBattleRngState();
+    const mobRng = createBattleRngState();
 
     // Симуляция боя (как в PvP, но без воровства денег)
     for (let turn = 0; turn < 50 && userHp > 0 && mobCurrentHp > 0; turn++) {
@@ -269,6 +271,7 @@ router.post('/mob/attack', async (req, res) => {
                 hpActor: userHp, hpTarget: mobCurrentHp,
                 maxHpActor: userStats.hp, maxHpTarget: mobHp,
                 actor: 'attacker', target: 'defender',
+                actorRngState: userRng, targetRngState: mobRng,
             };
             const result1 = runTurn(ctx1, addStep);
             userHp = result1.hpActor;
@@ -289,6 +292,7 @@ router.post('/mob/attack', async (req, res) => {
                 hpActor: mobCurrentHp, hpTarget: userHp,
                 maxHpActor: mobHp, maxHpTarget: userStats.hp,
                 actor: 'defender', target: 'attacker',
+                actorRngState: mobRng, targetRngState: userRng,
             };
             const result2 = runTurn(ctx2, addStep);
             mobCurrentHp = result2.hpActor;
