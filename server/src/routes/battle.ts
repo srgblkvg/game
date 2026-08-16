@@ -12,6 +12,7 @@ import { applyHpRegen } from '../game/hpRegen';
 import { getGuildBonus } from '../game/guildBuildings';
 import { checkAchievement, trackIncome } from './achievements';
 import { battleSchema } from '../validation';
+import { loadBattleAntiStats } from '../game/guildBoss';
 
 const router = Router();
 
@@ -88,6 +89,8 @@ router.post('/battle', async (req, res) => {
         roomUntil: defender.roomUntil,
         premiumUntil: defender.premiumUntil,
     });
+    const attackerAntiStats = (await loadBattleAntiStats(attacker.id, attacker.guildId || attacker.guildid)).antiStats;
+    const defenderAntiStats = (await loadBattleAntiStats(defender.id, defender.guildId || defender.guildid)).antiStats;
 
     if (attackerCurrentHp < attackerMaxHp * 0.2) {
         return res.status(400).json({ error: 'Для участия в PvP необходимо не менее 20% здоровья' });
@@ -107,6 +110,7 @@ router.post('/battle', async (req, res) => {
         drinkBonuses: getDrinkBonuses(attacker),
         collectionBonus: await getCollectionBonus(attacker.id),
         guildBonus: aGuildBonus,
+        antiStats: attackerAntiStats,
         faction: attacker.faction || null,
     };
     const defenderData = {
@@ -120,6 +124,7 @@ router.post('/battle', async (req, res) => {
         drinkBonuses: getDrinkBonuses(defender),
         collectionBonus: defenderStats.collection || 0,
         guildBonus: dGuildBonus,
+        antiStats: defenderAntiStats,
         faction: defender.faction || null,
     };
 

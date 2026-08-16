@@ -6,6 +6,7 @@ import {
   createBattleRngState,
   resolveStreakRoll,
   rollCriticalBaseDamage,
+  runTurn,
 } from './battle';
 
 test('каждый последовательный успех снижает шанс события на 20 процентов', () => {
@@ -46,4 +47,30 @@ test('серии атакующего и защитника хранятся н�
   assert.equal(targetRng.streaks.crit, 0);
   assert.equal(actorRng.streaks.crit, 2);
   assert.equal(targetRng.streaks.dodge, 3);
+});
+
+test('anti-статы подавляют все соответствующие события цели', () => {
+  const steps: any[] = [];
+  const stats: any = {
+    s: 20, a: 20, d: 20, m: 20, hp: 120,
+    extra: { crit: 1000000, dodge: 1000000, counter: 1000000, fullBlock: 1000000 },
+  };
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    runTurn({
+      actorName: 'A', targetName: 'D', actorStats: stats, targetStats: stats,
+      actorLevel: 5, hpActor: 120, hpTarget: 120, maxHpActor: 120, maxHpTarget: 120,
+      actor: 'attacker', target: 'defender',
+      antiDodge: 100, antiBlock: 100, antiCounter: 100,
+      targetAntiCrit: 100,
+    } as any, step => steps.push(step));
+  } finally {
+    Math.random = originalRandom;
+  }
+  assert.equal(steps.some(step => step.type === 'dodge'), false);
+  assert.equal(steps.some(step => step.type === 'block'), false);
+  assert.equal(steps.some(step => step.type === 'fullBlock'), false);
+  assert.equal(steps.some(step => step.type === 'crit'), false);
+  assert.equal(steps.some(step => step.type === 'counter'), false);
 });

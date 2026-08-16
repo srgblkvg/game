@@ -153,10 +153,12 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     // Турниры для Замка
     const loadTournaments = useCallback((data: any) => {
         const myLevel = data.userLevel || 1;
-        const filterLevel = (t: any) => myLevel >= (t.minLevel || 0) && myLevel <= (t.maxLevel || 999);
+        const canJoin = (t: any) => t.type === 'official'
+            || (myLevel >= (t.minLevel || 0) && myLevel <= (t.maxLevel || 999));
 
         if (data.tournaments?.length > 0) {
-            const suitable = data.tournaments.filter(filterLevel);
+            const suitable = data.tournaments.filter(canJoin)
+                .sort((a: any, b: any) => Number(Boolean(b.myRegistration)) - Number(Boolean(a.myRegistration)));
             if (suitable.length > 0) {
                 const t = suitable[0];
                 setTournamentInfo(t);
@@ -167,7 +169,6 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         }
         if (data.upcomingOfficial?.length > 0) {
             const suitable = data.upcomingOfficial
-                .filter((u: any) => myLevel >= u.minLevel && myLevel <= u.maxLevel)
                 .sort((a: any, b: any) => a.registrationOpensAt - b.registrationOpensAt);
             if (suitable.length > 0) {
                 const next = suitable[0];
@@ -362,7 +363,9 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                                 const res = await fetch('/api/tournament/register', {
                                                                     method: 'POST',
                                                                     headers: getHeaders(),
-                                                                    body: JSON.stringify({ tournamentId: tournamentInfo.id }),
+                                                                    body: JSON.stringify(tournamentInfo.type === 'official'
+                                                                        ? { division: 'official' }
+                                                                        : { tournamentId: tournamentInfo.id }),
                                                                 });
                                                                 const d = await res.json();
                                                                 if (d.success) {
@@ -389,7 +392,22 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <div className="mt-1 text-xs text-[var(--color-text-muted)]">
                                             ⏳ Следующий турнир: {nextTournamentLabel} через {String(Math.floor(nextTournamentSec / 3600)).padStart(2, '0')}:{String(Math.floor((nextTournamentSec % 3600) / 60)).padStart(2, '0')}:{String(nextTournamentSec % 60).padStart(2, '0')}
                                         </div>
-                                    ) : null}
+                                    ) : (
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                    const res = await fetch('/api/tournament/register', {
+                                                        method: 'POST', headers: getHeaders(), body: JSON.stringify({ division: 'official' }),
+                                                    });
+                                                    const d = await res.json();
+                                                    if (d.success) setMyRegistration?.({ tournamentId: d.tournamentId });
+                                                    else setRegisterMsg?.(d.error || 'Ошибка');
+                                                } catch { setRegisterMsg?.('Ошибка'); }
+                                            }}
+                                            className="mt-1 text-xs text-[var(--color-accent-info)] underline cursor-pointer hover:text-[var(--color-accent-warning)]"
+                                        >Записаться в турнир по БМ</button>
+                                    )}
                                     {registerMsg && <p className="text-xs text-[var(--color-accent-success)] mt-0.5">{registerMsg}</p>}
                                 </div>
                                 <div className="relative shrink-0">

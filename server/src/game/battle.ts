@@ -130,6 +130,14 @@ export function rollCriticalBaseDamage(stats: CharStats, level: number, random =
 
 // ── Один ход боя (symmetrical — работает для обеих сторон) ──
 
+export interface BattleAntiStats {
+  antiDodge: number;
+  antiCrit: number;
+  antiBlock: number;
+  antiCounter: number;
+  antiVampiric: number;
+}
+
 export interface TurnContext {
   actorName: string;
   targetName: string;
@@ -150,6 +158,7 @@ export interface TurnContext {
   antiVampiric?: number;
   // Антивампиризм цели (снижает вампиризм атакующего)
   targetAntiVampiric?: number;
+  targetAntiCrit?: number;
   actorRngState?: BattleRngState;
   targetRngState?: BattleRngState;
 }
@@ -185,7 +194,7 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
   // Попадание
   addStep({ type: 'info', message: `Попадание!` });
   let dmg = rollDamage(ctx.actorStats, ctx.actorLevel);
-  if (streakRoll(actorRngState, 'crit', critChance(ctx.actorStats))) {
+  if (streakRoll(actorRngState, 'crit', Math.max(0, critChance(ctx.actorStats) - (ctx.targetAntiCrit || 0) / 100))) {
     dmg = rollCriticalBaseDamage(ctx.actorStats, ctx.actorLevel) * critMult(ctx.actorStats);
     addStep({ type: 'crit', actor: ctx.actor, message: `Крит!` });
   }
@@ -197,11 +206,11 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
     addStep({ type: 'info', message: `Ярость! +${rageDmg}% урона` });
   }
   const fb = (ctx.targetStats.extra.fullBlock || 0);
-  const fullBlockChance = fb / (fb + 300);
+  const fullBlockChance = Math.max(0, fb / (fb + 300) - (ctx.antiBlock || 0) / 100);
   if (streakRoll(targetRngState, 'fullBlock', fullBlockChance)) {
     dmg = 0;
     addStep({ type: 'fullBlock', actor: ctx.target, message: `ПОЛНЫЙ БЛОК!` });
-  } else if (streakRoll(targetRngState, 'block', blockChance(ctx.targetStats))) {
+  } else if (streakRoll(targetRngState, 'block', Math.max(0, blockChance(ctx.targetStats) - (ctx.antiBlock || 0) / 100))) {
     let blockReduce = blockReduction(ctx.targetStats, ctx.actorStats);
     // BlockPen: reduce block effectiveness
     const blockPen = ctx.actorStats.blockPen || 0;
@@ -235,7 +244,7 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
 
   // CounterOnHit (Страж 4pc): chance to counter when receiving damage
   const counterOnHit = ctx.targetStats.counterOnHit || 0;
-  if (counterOnHit > 0 && dmg > 0 && hpTarget > 0 && Math.random() < counterOnHit / 100) {
+  if (counterOnHit > 0 && dmg > 0 && hpTarget > 0 && streakRoll(targetRngState, 'counter', Math.max(0, counterOnHit / 100 - (ctx.antiCounter || 0) / 100))) {
     addStep({ type: 'counter', actor: ctx.target, message: `${ctx.targetName} отвечает ударом!` });
     let cdmg = Math.round(ctx.targetStats.s * 0.5);
     hpActor = Math.max(0, hpActor - cdmg);
@@ -265,11 +274,14 @@ export function runTurn(ctx: TurnContext, addStep: (s: BattleStep) => void): { h
 // ── Главная функция боя ──
 
 export function runBattle(
-  attacker: { id: number; name: string; base: any; equipment: Record<string, GameItem>; level: number; money: number; currentHp?: number; drinkBonuses?: any; collectionBonus?: number; guildBonus?: number; stats?: CharStats },
-  defender: { id: number; name: string; base: any; equipment: Record<string, GameItem>; level: number; money: number; currentHp?: number; drinkBonuses?: any; collectionBonus?: number; guildBonus?: number; stats?: CharStats }
+  attacker: { id: number; name: string; base: any; equipment: Record<string, GameItem>; level: number; money: number; currentHp?: number; drinkBonuses?: any; collectionBonus?: number; guildBonus?: number; stats?: CharStats; antiStats?: BattleAntiStats },
+  defender: { id: number; name: string; base: any; equipment: Record<string, GameItem>; level: number; money: number; currentHp?: number; drinkBonuses?: any; collectionBonus?: number; guildBonus?: number; stats?: CharStats; antiStats?: BattleAntiStats }
 ): BattleResult {
   const statsA = attacker.stats || currentStats(attacker.base, attacker.equipment, attacker.drinkBonuses, attacker.collectionBonus, attacker.guildBonus);
   const statsD = defender.stats || currentStats(defender.base, defender.equipment, defender.drinkBonuses, defender.collectionBonus, defender.guildBonus);
+  const noAntiStats: BattleAntiStats = { antiDodge: 0, antiCrit: 0, antiBlock: 0, antiCounter: 0, antiVampiric: 0 };
+  const antiA = attacker.antiStats || noAntiStats;
+  const antiD = defender.antiStats || noAntiStats;
   let hpA = (attacker.currentHp != null) ? attacker.currentHp : statsA.hp;
   let hpD = (defender.currentHp != null) ? defender.currentHp : statsD.hp;
   let stunnedA = false;
@@ -343,6 +355,12 @@ export function runBattle(
         maxHpActor: maxHpA, maxHpTarget: maxHpD,
         actor: 'attacker', target: 'defender',
         actorRngState: rngA, targetRngState: rngD,
+        antiDodge: antiA.antiDodge,
+        antiCrit: antiA.antiCrit,
+        antiBlock: antiA.antiBlock,
+        antiCounter: antiA.antiCounter,
+        targetAntiCrit: antiD.antiCrit,
+        targetAntiVampiric: antiD.antiVampiric,
       }, addStep);
       hpA = result.hpActor;
       hpD = result.hpTarget;
@@ -370,6 +388,12 @@ export function runBattle(
         maxHpActor: maxHpD, maxHpTarget: maxHpA,
         actor: 'defender', target: 'attacker',
         actorRngState: rngD, targetRngState: rngA,
+        antiDodge: antiD.antiDodge,
+        antiCrit: antiD.antiCrit,
+        antiBlock: antiD.antiBlock,
+        antiCounter: antiD.antiCounter,
+        targetAntiCrit: antiA.antiCrit,
+        targetAntiVampiric: antiA.antiVampiric,
       }, addStep);
       hpD = result.hpActor;
       hpA = result.hpTarget;

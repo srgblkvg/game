@@ -175,6 +175,7 @@ router.post('/guild/boss/attack', async (req, res) => {
         maxHpActor: boss.maxHp, maxHpTarget: userStats.hp,
         actor: 'defender', target: 'attacker',
         actorRngState: bossRng, targetRngState: userRng,
+        targetAntiCrit: antiStats.antiCrit,
         // Игрок снижает вампиризм босса через targetAntiVampiric
         targetAntiVampiric: antiStats.antiVampiric,
       };

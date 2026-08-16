@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { buildPlayerStats, getBaseStats } from '../db/helpers';
 import { dodgeChance, critChance, critMult, blockChance, blockReduction, counterChance, rollDamage } from '../game/battle';
+import type { BattleAntiStats } from '../game/battle';
 import { currentStats } from '../game/stats';
 import { advanceEnemyAttack, cancelEnemyWindup, ENEMY_WINDUP_MS } from '../game/dungeonWindup';
+import { loadBattleAntiStats } from '../game/guildBoss';
 
 const router = Router();
 
@@ -108,7 +110,7 @@ interface DungeonRun {
     userId: number; currentFloor: number; checkpointFloor: number;
     playerHp: number; playerMaxHp: number; playerStr: number; playerAgi: number;
     playerDef: number; playerMag: number; playerLevel: number;
-    playerExtra: any; playerVamp: number;
+    playerExtra: any; playerVamp: number; playerAntiStats: BattleAntiStats;
  equippedWeaponRarity: number;
  equippedWeaponStr: number;
  enemies: EnemyData[];
@@ -159,8 +161,8 @@ function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean; d
     // Статы врага для формул
     const mobStats = { s: target.dmg, a: target.dmg, d: Math.floor(target.dmg * 0.5), m: Math.floor(target.dmg * 0.3), hp: target.maxHp, extra: {}, bonuses: {} } as any;
     
-    // Проверка уклонения врага
-    const dodge = dodgeChance(mobStats, stats);
+    // Проверка уклонения врага — снижается меткостью игрока
+    const dodge = Math.max(0, dodgeChance(mobStats, stats) - run.playerAntiStats.antiDodge / 100);
     if (Math.random() < dodge) {
         run.log.push(`↗ ${target.name} уклоняется`);
         return { damage: 0, isCrit: false, dodged: true, blocked: false, counterDmg: 0, vampHeal: 0 };
@@ -171,9 +173,9 @@ function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean; d
     const isCrit = Math.random() < critChance(stats);
     let finalDmg = Math.floor(isCrit ? dmg * critMult(stats) : dmg);
     
-    // fullBlock врага
+    // fullBlock врага — снижается пробиванием игрока
     const fb = mobStats.extra?.fullBlock || 0;
-    const fullBlockChance = fb / (fb + 300);
+    const fullBlockChance = Math.max(0, fb / (fb + 300) - run.playerAntiStats.antiBlock / 100);
     if (Math.random() < fullBlockChance) {
         run.log.push(`🛡 ${target.name} — полный блок!`);
         return { damage: 0, isCrit: false, dodged: false, blocked: true, counterDmg: 0, vampHeal: 0 };
@@ -181,7 +183,7 @@ function calcPlayerDamage(run: DungeonRun): { damage: number; isCrit: boolean; d
     
     // Блок врага
     let blocked = false;
-    if (Math.random() < blockChance(mobStats)) {
+    if (Math.random() < Math.max(0, blockChance(mobStats) - run.playerAntiStats.antiBlock / 100)) {
         let blockRed = blockReduction(mobStats, stats);
         const blockPen = stats.blockPen || 0;
         if (blockPen > 0) blockRed = Math.max(0, blockRed * (1 - blockPen / 100));
@@ -383,7 +385,7 @@ router.post('/dungeon/start', async (req, res) => {
 
     // Данные игрока
     const user = await db.one(
-        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink, roomtype, roomuntil, premiumuntil FROM users WHERE id = ?',
+        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink, roomtype, roomuntil, premiumuntil, guildId FROM users WHERE id = ?',
         [userId]
     ) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -403,6 +405,7 @@ router.post('/dungeon/start', async (req, res) => {
 
     // Получаем реальные статы персонажа
     const stats = await buildPlayerStats(user, 'pve');
+    const playerAntiStats = (await loadBattleAntiStats(userId, user.guildId || user.guildid)).antiStats;
     const playerMaxHp = stats.hp;
     const playerHp = stats.hp; // всегда с полным HP в бой
 
@@ -432,6 +435,7 @@ router.post('/dungeon/start', async (req, res) => {
         playerStr: stats.s, playerAgi: stats.a,
         playerDef: stats.d, playerMag: stats.m,
         playerExtra: (stats as any).extra || {}, playerVamp: (stats as any).vampirism || 0,
+        playerAntiStats,
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         equippedWeaponStr: weapon?.bonuses?.s || 0,
@@ -777,7 +781,7 @@ router.post('/dungeon/continue', async (req, res) => {
     if (!saved) return res.status(400).json({ error: 'Нет сохранённого захода' });
 
     const user = await db.one(
-        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink, roomtype, roomuntil, premiumuntil FROM users WHERE id = ?',
+        'SELECT id, level, baseS, baseA, baseD, baseM, inventory, equipment, equipment_1, equipment_2, equipment_3, active_equip_slot, drinkuntil, activedrink, roomtype, roomuntil, premiumuntil, guildId FROM users WHERE id = ?',
         [userId]
     ) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -791,6 +795,7 @@ router.post('/dungeon/continue', async (req, res) => {
     const weaponRarity = equip.weapon1?.rarity_id ?? 0;
 
     const stats = await buildPlayerStats(user, 'pve');
+    const playerAntiStats = (await loadBattleAntiStats(userId, user.guildId || user.guildid)).antiStats;
 
     const skills = await getAvailableSkills(userId, equippedSkillIds || []);
     const floor = saved.currentfloor;
@@ -807,6 +812,7 @@ router.post('/dungeon/continue', async (req, res) => {
         playerStr: stats.s, playerAgi: stats.a,
         playerDef: stats.d, playerMag: stats.m,
         playerExtra: (stats as any).extra || {}, playerVamp: (stats as any).vampirism || 0,
+        playerAntiStats,
         playerLevel: user.level,
         equippedWeaponRarity: weaponRarity,
         equippedWeaponStr: equip.weapon1?.bonuses?.s || 0,

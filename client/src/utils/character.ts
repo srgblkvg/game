@@ -20,6 +20,7 @@ export function toCharCardData(
     equipmentBonuses: character.stats?.bonuses,
     extraStats: character.stats?.extra,
     collectionCount: character.collectionCount ?? undefined,
+    combatPower: character.combatPower,
     guildBonus: character.guildBonus,
     buildings: character.buildings ?? [],
     ...overrides,

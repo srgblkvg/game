@@ -94,6 +94,7 @@ export default function ProfilePage() {
                             level: profile.level,
                             equipment: profile.equipment,
                             stats: profile.stats,
+                            combatPower: profile.combatPower,
                             gender: profile.gender || 'male',
                             guildName: profile.guildName,
                             guildId: profile.guildId,

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS actions_config (
 CREATE TABLE IF NOT EXISTS items (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
+  english_name TEXT,
   slot TEXT NOT NULL,
   rarity_id INTEGER DEFAULT 0,
   bonuses TEXT DEFAULT '{}',

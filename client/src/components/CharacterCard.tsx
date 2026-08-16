@@ -10,6 +10,7 @@ import HealthBar from './CharacterCard/HealthBar';
 import EquipmentSlots from './CharacterCard/EquipmentSlots';
 import StatsOverlay from './CharacterCard/StatsOverlay';
 import type { CharacterCardData } from '../types/character';
+import { formatCombatPower } from '../utils/combatPower';
 
 interface CharacterCardProps {
   char: CharacterCardData;
@@ -272,6 +273,12 @@ const CharacterCard = memo(function CharacterCard({
       {/* Здоровье */}
       {showHealth && char.currentHp !== undefined && (
         <HealthBar currentHp={char.currentHp} maxHp={hp} compact={compact} showRegenHint={showRegenHint} regenRate={regenRate} showHealButton={showHealButton} />
+      )}
+
+      {!isMob && char.combatPower !== undefined && (
+        <div className="mt-1 text-xs text-[var(--color-text-muted)] tabular-nums">
+          Боевая мощь: {formatCombatPower(char.combatPower)}
+        </div>
       )}
 
       {/* Тултип */}

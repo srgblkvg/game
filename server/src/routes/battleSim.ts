@@ -4,6 +4,7 @@ import { runBattle } from '../game/battle';
 import { currentStats } from '../game/stats';
 import { authMiddleware } from '../middleware/auth';
 import { buildPlayerStats, getCollectionBonus } from '../db/helpers';
+import { loadBattleAntiStats } from '../game/guildBoss';
 
 const router = Router();
 
@@ -84,9 +85,11 @@ router.post('/battle-sim', authMiddleware, async (req, res) => {
 
         const s1 = await buildPlayerStats(u1, 'arena');
         const s2 = await buildPlayerStats(u2, 'arena');
+        const anti1 = (await loadBattleAntiStats(u1.id, u1.guildid)).antiStats;
+        const anti2 = (await loadBattleAntiStats(u2.id, u2.guildid)).antiStats;
 
-        const p1 = { id: u1.id, name: u1.username, base: { s: +u1.bases, a: +u1.basea, d: +u1.based, m: +u1.basem }, equipment: JSON.parse(u1.equipment || '{}'), level: +u1.level, money: 0, stats: s1 };
-        const p2 = { id: u2.id, name: u2.username, base: { s: +u2.bases, a: +u2.basea, d: +u2.based, m: +u2.basem }, equipment: JSON.parse(u2.equipment || '{}'), level: +u2.level, money: 0, stats: s2 };
+        const p1 = { id: u1.id, name: u1.username, base: { s: +u1.bases, a: +u1.basea, d: +u1.based, m: +u1.basem }, equipment: JSON.parse(u1.equipment || '{}'), level: +u1.level, money: 0, stats: s1, antiStats: anti1 };
+        const p2 = { id: u2.id, name: u2.username, base: { s: +u2.bases, a: +u2.basea, d: +u2.based, m: +u2.basem }, equipment: JSON.parse(u2.equipment || '{}'), level: +u2.level, money: 0, stats: s2, antiStats: anti2 };
 
         const results = [];
         let wins1 = 0, wins2 = 0;

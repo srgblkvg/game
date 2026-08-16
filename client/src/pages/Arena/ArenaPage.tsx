@@ -139,6 +139,7 @@ export default function ArenaPage() {
               level: opponent.level,
               equipment: opponent.equipment,
               stats: opponent.stats,
+              combatPower: opponent.combatPower,
               currentHp: hpRight, maxHp: maxHpRight,
               gender: opponent.gender || 'male',
               guildName: opponent.guildName,

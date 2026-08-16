@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { enrichEquipment, addMoney, buildPlayerStats } from '../db/helpers';
 import { getGuildBonus } from '../game/guildBuildings';
+import { calculateCombatPower } from '../game/combatPower';
+import { loadBattleAntiStats } from '../game/guildBoss';
 
 const router = Router();
 
@@ -22,7 +24,7 @@ router.get('/character/public/:userId', async (req, res) => {
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
 
     const user: any = await db.one(
-        'SELECT u.id, u.username, u.level, u.totalBattles, u.wins, u.equipment, u.currentHp, u.gender, u.avatar, u.baseS, u.baseA, u.baseD, u.baseM, u.pveTotalBattles, u.pveWins, u.tournamentCount, u.tournamentWins, u.totalJobMoney, u.totalPveMoneyWon, u.totalPvpMoneyWon, u.totalPveMoneyLost, u.totalPvpMoneyLost, u.totalJobSeconds, u.craftCreated, u.craftUpgraded, u.craftBroken, u.createdAt, u.casino_games_played, u.casino_won, u.casino_lost, g.name as guildName, u.guildId FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?',
+        'SELECT u.*, g.name as guildName FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id = ?',
         [userId]
     );
 
@@ -31,6 +33,8 @@ router.get('/character/public/:userId', async (req, res) => {
     const guildBonus = await getGuildBonus(userId, 'arena');
     const { enriched: enrichedEquipment } = await enrichEquipment(user.equipment ? JSON.parse(user.equipment) : {});
     const stats = await buildPlayerStats(user, 'arena');
+    const { antiStats } = await loadBattleAntiStats(userId, Number(user.guildId || user.guildid || 0));
+    const combatPower = calculateCombatPower(stats, antiStats, user.level);
 
     res.json({
         id: user.id,
@@ -57,6 +61,7 @@ router.get('/character/public/:userId', async (req, res) => {
         createdAt: user.createdAt,
         equipment: enrichedEquipment,
         stats,
+        combatPower,
         currentHp: user.currentHp,
         gender: user.gender || 'male',
         avatar: user.avatar || null,

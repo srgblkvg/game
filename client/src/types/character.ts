@@ -41,5 +41,6 @@ export interface CharacterCardData {
   guildBonus?: number;
   buildings?: { type: string; icon: string; label: string; level: number; bonus: number }[];
   collectionCount?: number;
+  combatPower?: number;
   faction?: string | null;
 }

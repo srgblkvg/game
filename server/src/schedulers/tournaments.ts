@@ -8,6 +8,7 @@ export function startTournamentScheduler(): void {
     running = true;
     try {
       const mod = await import('../routes/tournament');
+      await mod.mergeExpiredOfficialQueues();
       const all = await db.query(
         "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC", []
       ) as any[];

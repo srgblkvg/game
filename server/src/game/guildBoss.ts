@@ -245,3 +245,17 @@ export function getAntiStats(
     antiVampiric: getTalentAntiBonus(playerTalents, guildTalents, 'vampiric'),
   };
 }
+
+/** Загрузить итоговые anti-статы; игрок без гильдии получает нули без запросов талантов. */
+export async function loadBattleAntiStats(userId: number, guildId: number | null | undefined) {
+  if (!guildId || guildId <= 0) {
+    return {
+      playerTalents: {} as Record<string, { level: number; progress: number }>,
+      guildTalents: {} as Record<string, { level: number; progress: number }>,
+      antiStats: { antiDodge: 0, antiCrit: 0, antiBlock: 0, antiCounter: 0, antiVampiric: 0 },
+    };
+  }
+  const playerTalents = await getPlayerTalents(userId, guildId);
+  const guildTalents = await getGuildTalents(guildId);
+  return { playerTalents, guildTalents, antiStats: getAntiStats(playerTalents, guildTalents) };
+}

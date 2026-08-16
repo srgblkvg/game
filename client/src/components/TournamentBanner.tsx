@@ -18,7 +18,7 @@ interface TournamentInfo {
     minLevel?: number;
     maxLevel?: number;
     maxPlayers?: number;
-    myRegistration: { userId: number; goldenTicket: number; snapshotStats?: { place: number; prize: number } } | null;
+    myRegistration: { userId: number; snapshotStats?: { place: number; prize: number } } | null;
     participants?: { id: number; username: string; snapshotStats?: { place: number; prize: number } }[];
 }
 
@@ -32,10 +32,6 @@ const DIVISION_ICONS: Record<string, string> = {
     gold: '🥇', platinum: '🥇', mithril: '🥇', adamant: '👑', orichalcum: '💎',
 };
 
-const DIVISION_LEVELS: Record<string, [number, number]> = {
-    copper: [1, 3], bronze: [2, 4], iron: [3, 5], steel: [4, 6], silver: [5, 7],
-    gold: [6, 8], platinum: [7, 9], mithril: [8, 10], adamant: [9, 11], orichalcum: [10, 999],
-};
 
 function formatTimer(seconds: number): string {
     if (seconds <= 0) return '0 мин';
@@ -50,15 +46,13 @@ function formatTimer(seconds: number): string {
 }
 
 function canJoin(t: TournamentInfo, userLevel: number): boolean {
-    if (t.type === 'official') {
-        const [min, max] = DIVISION_LEVELS[t.division] || [0, 0];
-        return userLevel >= min && userLevel <= max;
-    }
+    if (t.type === 'official') return true;
     return userLevel >= (t.minLevel || 1) && userLevel <= (t.maxLevel || 999);
 }
 
 function tournamentLabel(t: TournamentInfo): string {
     if (t.type === 'custom') return t.name || 'Турнир';
+    if (t.name) return t.name;
     return DIVISION_LABELS[t.division] || t.division;
 }
 

@@ -8,6 +8,7 @@ import { markDirty, pushNotification } from '../events';
 import { checkAchievement, trackIncome } from './achievements';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { updateGuildQuestProgress } from './guild';
+import { loadBattleAntiStats } from '../game/guildBoss';
 
 const router = Router();
 const HUNT_DROP_MULTIPLIER = 1 / 3;
@@ -210,6 +211,7 @@ router.post('/mob/attack', async (req, res) => {
 
     // Бой
     const userStats = await buildPlayerStats(user, 'pve');
+    const userAntiStats = (await loadBattleAntiStats(user.id, user.guildId || user.guildid)).antiStats;
     // Бонус фракции Стражник: +10% против монстров
     if (user.faction === 'guard') {
         const mult = 1.10;
@@ -272,6 +274,12 @@ router.post('/mob/attack', async (req, res) => {
                 maxHpActor: userStats.hp, maxHpTarget: mobHp,
                 actor: 'attacker', target: 'defender',
                 actorRngState: userRng, targetRngState: mobRng,
+                antiDodge: userAntiStats.antiDodge,
+                antiCrit: userAntiStats.antiCrit,
+                antiBlock: userAntiStats.antiBlock,
+                antiCounter: userAntiStats.antiCounter,
+                targetAntiCrit: 0,
+                targetAntiVampiric: 0,
             };
             const result1 = runTurn(ctx1, addStep);
             userHp = result1.hpActor;
@@ -293,6 +301,12 @@ router.post('/mob/attack', async (req, res) => {
                 maxHpActor: mobHp, maxHpTarget: userStats.hp,
                 actor: 'defender', target: 'attacker',
                 actorRngState: mobRng, targetRngState: userRng,
+                antiDodge: 0,
+                antiCrit: 0,
+                antiBlock: 0,
+                antiCounter: 0,
+                targetAntiCrit: userAntiStats.antiCrit,
+                targetAntiVampiric: userAntiStats.antiVampiric,
             };
             const result2 = runTurn(ctx2, addStep);
             mobCurrentHp = result2.hpActor;

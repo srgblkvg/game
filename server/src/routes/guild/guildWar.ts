@@ -5,6 +5,7 @@ import { getDrinkBonuses } from "../../game/drinks";
 import { runBattle } from "../../game/battle";
 import { getBaseStats, enrichEquipment, getCollectionBonus } from "../../db/helpers";
 import { getGuildBonus } from "../../game/guildBuildings";
+import { loadBattleAntiStats } from "../../game/guildBoss";
 
 const router = Router();
 
@@ -335,8 +336,8 @@ router.post('/guild/war/attack', async (req, res) => {
     }
 
     // Симуляция боя (макс HP + все бонусы, full combat как в PvP)
-    const attacker = await db.one('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money, u.activeDrink, u.drinkUntil FROM users u WHERE u.id = ?', [userId]) as any;
-    const defender = await db.one('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money, u.activeDrink, u.drinkUntil FROM users u WHERE u.id = ?', [targetId]) as any;
+    const attacker = await db.one('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money, u.activeDrink, u.drinkUntil, u.guildId FROM users u WHERE u.id = ?', [userId]) as any;
+    const defender = await db.one('SELECT u.id, u.username, u.level, u.baseS, u.baseA, u.baseD, u.baseM, u.equipment, u.money, u.activeDrink, u.drinkUntil, u.guildId FROM users u WHERE u.id = ?', [targetId]) as any;
 
     const aCollCnt = await getCollectionBonus(userId);
     const dCollCnt = await getCollectionBonus(targetId);
@@ -346,6 +347,8 @@ router.post('/guild/war/attack', async (req, res) => {
     const defenderCtx = attackerCtx === 'war_attack' ? 'war_defense' : 'war_attack';
     const aGuildBonus = await getGuildBonus(userId, attackerCtx);
     const dGuildBonus = await getGuildBonus(targetId, defenderCtx);
+    const aAntiStats = (await loadBattleAntiStats(userId, attacker.guildId || attacker.guildid)).antiStats;
+    const dAntiStats = (await loadBattleAntiStats(targetId, defender.guildId || defender.guildid)).antiStats;
 
     const aEquip = JSON.parse(attacker.equipment || '{}');
     const dEquip = JSON.parse(defender.equipment || '{}');
@@ -362,6 +365,7 @@ router.post('/guild/war/attack', async (req, res) => {
         drinkBonuses: getDrinkBonuses(attacker),
         collectionBonus: aCollCnt,
         guildBonus: aGuildBonus,
+        antiStats: aAntiStats,
     };
     const defenderData = {
         id: defender.id,
@@ -373,6 +377,7 @@ router.post('/guild/war/attack', async (req, res) => {
         drinkBonuses: getDrinkBonuses(defender),
         collectionBonus: dCollCnt,
         guildBonus: dGuildBonus,
+        antiStats: dAntiStats,
     };
 
     const result = runBattle(attackerData, defenderData);

@@ -9,6 +9,7 @@ import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
 import Button from '../components/ui/Button';
 import { formatMoney } from '../utils/money';
+import { formatCombatPower, formatPowerRange } from '../utils/combatPower';
 import { inputClass } from '../utils/formStyles';
 import GuildTag from "../components/GuildTag";
 import BracketTree from "../components/BracketTree";
@@ -44,6 +45,7 @@ const statusTextClasses: Record<string, string> = {
 
 function tournamentLabel(t: any): string {
     if (t.type === 'custom') return t.name || 'Турнир';
+    if (t.name) return t.name;
     return divisionLabels[t.division] || t.division;
 }
 
@@ -84,16 +86,16 @@ export default function TournamentPage() {
             if (tab === 'completed') {
                 url = `${BASE_URL}/tournament?tab=completed&page=${completedPage}`;
             } else if (tab === 'all') {
-                url = `${BASE_URL}/tournament?tab=active`;
+                url = `${BASE_URL}/tournament?tab=active&includePower=1`;
             } else {
-                url = `${BASE_URL}/tournament?tab=active&type=${tab}`;
+                url = `${BASE_URL}/tournament?tab=active&type=${tab}&includePower=1`;
             }
             const res = await fetch(url, { headers: getHeaders() });
             setData(await res.json());
         } catch (e: any) { setError(e.message); }
     };
 
-    const handleRegister = async (tournamentId: number, division?: string) => {
+    const handleRegister = async (tournamentId?: number, division?: string) => {
         try {
             const body: any = division ? { division } : { tournamentId };
             const res = await fetch(`${BASE_URL}/tournament/register`, {
@@ -126,7 +128,7 @@ export default function TournamentPage() {
 
     const renderActiveCard = (t: any) => {
         const myReg = t.myRegistration;
-        const joinable = data.userLevel >= (t.minLevel || 1) && data.userLevel <= (t.maxLevel || 999);
+        const joinable = t.type === 'official' || (data.userLevel >= (t.minLevel || 1) && data.userLevel <= (t.maxLevel || 999));
 
         const matchesByRound: Record<number, any[]> = {};
         if (t.matches) {
@@ -158,21 +160,19 @@ export default function TournamentPage() {
                     <p>Призовой фонд: {formatMoney(t.prizePool)}</p>
                     {t.entryFee > 0 && <p>Стоимость входа: {formatMoney(t.entryFee)}</p>}
                     <p>Участников: {t.participantCount}/{t.maxPlayers || 8}</p>
+                    {t.type === 'official' && t.minPower && t.maxPower && <p>Боевая мощь: {formatPowerRange(t.minPower, t.maxPower)}</p>}
                     {t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}
                     {t.participants.slice(0, 5).map((p: any) => (
-                        <span key={p.id} className="mr-2">{p.username}{p.goldenTicket ? ' 🎫' : ''}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 2-е' : p.snapshotStats?.place === 3 ? ' 3-е' : ''} <GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
+                        <span key={p.id} className="mr-2">{p.username}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 2-е' : p.snapshotStats?.place === 3 ? ' 3-е' : ''} <GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                     ))}
                     {t.participantCount > 5 && <span>+ ещё {t.participantCount - 5}</span>}
                 </div>
 
-                {t.status === 'registration' && joinable && !myReg && (
+                {t.status === 'registration' && joinable && !myReg && t.type === 'custom' && (
                     <div className="flex gap-2">
                         <Button variant="danger" size="md" onClick={() => handleRegister(t.id, t.type === 'official' ? t.division : undefined)}>
                             {t.type === 'custom' && t.entryFee > 0 ? `Вступить (${formatMoney(t.entryFee)})` : 'Записаться'}
                         </Button>
-                        {t.type === 'official' && (
-                            <Button variant="secondary" size="md" onClick={() => handleRegister(t.id, t.division + '🎫')}>🎫 Золотой билет (1000)</Button>
-                        )}
                     </div>
                 )}
                 {t.status === 'registration' && !joinable && !myReg && (
@@ -184,7 +184,7 @@ export default function TournamentPage() {
                 )}
                 {myReg && (
                     <p className="text-xs text-[var(--color-accent-success)]">
-                        ✅ Вы записаны {myReg.goldenTicket ? '🎫' : ''}
+                        ✅ Вы записаны
                         {myReg.snapshotStats?.place && ` — ${myReg.snapshotStats.place}-е место, приз: ${formatMoney(myReg.snapshotStats.prize || 0)}`}
                     </p>
                 )}
@@ -248,29 +248,23 @@ export default function TournamentPage() {
                 {showInfo && (
                     <div className="mt-2 text-xs text-[var(--color-text-muted)] space-y-2">
                         <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">🏆 Призовой фонд</h4>
-                            <p>• <b>3+ участников:</b> 50% победителю, 30% второму месту, 20% третьему</p>
-                            <p>• <b>2 участника:</b> 70% победителю, 30% второму</p>
-                            <p>• Официальные турниры имеют базовый фонд: Медный 500 серебра, Стальной 2000 серебра, Мифриловый 8000 серебра, Адамантовый 25000 серебра</p>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">⚔️ Как проходит официальный турнир</h4>
+                            <p>• При записи сохраняются ваша боевая мощь, экипировка, напиток, коллекция, бонусы гильдии и таланты.</p>
+                            <p>• Смена экипировки, талантов или гильдии после записи не изменит вашу силу в этом турнире.</p>
+                            <p>• Сначала подбираются участники с разницей боевой мощи не более 5%.</p>
+                            <p>• Если игроков недостаточно, допустимая разница увеличивается, но не более чем до 10%.</p>
+                            <p>• Если подходящих соперников не нашлось, турнир не проводится. Это позволяет избежать заведомо неравных боёв.</p>
                         </div>
                         <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">🎫 Золотой билет</h4>
-                            <p>• Стоимость: 1000 серебра</p>
-                            <p>• Позволяет участвовать в турнире выше своего уровня</p>
-                            <p>• При регистрации вы получаете приоритетное место в сетке</p>
+                            <h4 className="font-bold text-[var(--color-text-primary)]">🏆 Бои и награды</h4>
+                            <p>• Участник покидает турнир после первого поражения.</p>
+                            <p>• В каждом бою используется максимальное здоровье и данные, сохранённые при записи.</p>
+                            <p>• При трёх и более участниках победитель получает 50% фонда, второе место — 30%, третье — 20%.</p>
+                            <p>• При двух участниках победитель получает 70% фонда, второй участник — 30%.</p>
                         </div>
                         <div>
                             <h4 className="font-bold text-[var(--color-text-primary)]">🎪 Самоорганизованные турниры</h4>
-                            <p>• Любой игрок может создать свой турнир (вкладка «Самоорганизованные» → «+ Создать турнир»)</p>
-                            <p>• Можно задать: название, призовой фонд, взнос за вход, уровни участников, время регистрации</p>
-                            <p>• Создатель указывает призовой фонд из своего серебра + опциональный взнос с участников</p>
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-[var(--color-text-primary)]">⚔️ Правила</h4>
-                            <p>• Турнир начинается после окончания регистрации (30 минут для официальных)</p>
-                            <p>• Бои проходят в формате турнирной сетки (single elimination)</p>
-                            <p>• В бою используется максимальное HP, учитывается полная экипировка и статы</p>
-                            <p>• Официальные турниры открывают регистрацию через 1 час после завершения предыдущего</p>
+                            <p>• Любой игрок может создать отдельный турнир со своим названием, фондом, взносом и ограничениями по уровню.</p>
                         </div>
                     </div>
                 )}
@@ -359,6 +353,17 @@ export default function TournamentPage() {
             )}
 
             {/* Активные / Официальные / Самоорганизованные */}
+            {(tab === 'all' || tab === 'official') && !data.tournaments.some((t: any) => t.type === 'official' && t.myRegistration) && (
+                <Card className="mb-3">
+                    <h3 className="font-bold text-sm">Официальный турнир по боевой мощи</h3>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                        Ваша БМ: {formatCombatPower(data.userCombatPower)}. Соперники подбираются с разницей до 5%, при недоборе — не более 10%.
+                    </p>
+                    <Button variant="danger" size="md" className="mt-3" onClick={() => handleRegister(undefined, 'official')}>
+                        Записаться
+                    </Button>
+                </Card>
+            )}
             {(tab === 'all' || tab === 'official' || tab === 'custom') && data.tournaments.map(renderActiveCard)}
 
             {['all', 'official', 'custom'].includes(tab) && data.tournaments.length === 0 && (
