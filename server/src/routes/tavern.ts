@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { refreshCharacter } from '../events';
 import { db } from '../db/index';
 import { buildPlayerStats } from '../db/helpers';
 import { getGuildBonus } from '../game/guildBuildings';
@@ -170,6 +171,7 @@ router.post('/tavern/drink', async (req, res) => {
 
     addToTreasury(Math.floor(drink.cost * 0.22), 'tavern').catch(() => {});
 
+    refreshCharacter(userId, 'drink');
     res.json({ success: true, drink: { type: drinkType, name: drink.name, bonuses: drink.bonuses, until } });
 });
 

@@ -54,3 +54,13 @@ export function sendToUser(userId: number, payload: object): void {
 export function sendToGuild(guildId: number, payload: object): void {
   emit({ type: 'sendToGuild', guildId, payload });
 }
+
+/** Обновить полный профиль клиента после изменения БМ. */
+export function refreshCharacter(userId: number, reason?: string): void {
+  sendToUser(userId, { type: 'characterRefresh', reason });
+}
+
+/** Обновить профили всех членов гильдии после изменения общего бонуса. */
+export function refreshGuildCharacters(guildId: number, reason?: string): void {
+  sendToGuild(guildId, { type: 'characterRefresh', reason });
+}

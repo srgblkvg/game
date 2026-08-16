@@ -4,7 +4,7 @@ import { collectGuildTax, applyExp, buildPlayerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { applyHpRegen } from '../game/hpRegen';
 import { runTurn, dodgeChance, critChance, critMult, blockChance, blockReduction, TurnContext, BattleStep, createBattleRngState } from '../game/battle';
-import { markDirty, pushNotification } from '../events';
+import { markDirty, refreshCharacter } from '../events';
 import { checkAchievement, trackIncome } from './achievements';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { updateGuildQuestProgress } from './guild';
@@ -530,6 +530,7 @@ router.post('/mob/attack', async (req, res) => {
 
     await db.run('UPDATE users SET level=?, exp=?, money=?, currentHp=?, lastPveAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, pveTotalBattles=pveTotalBattles+1, pveWins=pveWins+?, totalPveMoneyWon=totalPveMoneyWon+?, totalPveMoneyLost=totalPveMoneyLost+? WHERE id=?',
         [newLevel, newExp, finalMoneyAfterTax, finalHp, now, now, levelsGained * 5, playerWon ? 1 : 0, goldGained, goldLost, userId]);
+    if (levelsGained > 0) refreshCharacter(userId, 'level');
 
     // Достижения
     if (playerWon) {

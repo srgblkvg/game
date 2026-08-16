@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { BUILDINGS, getBuildingCost, getBuildingReqLevel } from '../game/guildBuildings';
 import type { BuildingType } from '../game/guildBuildings';
+import { refreshGuildCharacters } from '../events';
 
 const router = Router();
 
@@ -93,6 +94,7 @@ router.post('/guild/:guildId/buildings/upgrade', async (req, res) => {
         await db.run('INSERT INTO guild_buildings (guildId, buildingType, level) VALUES (?, ?, ?)', [guildId, buildingType, nextLevel]);
     }
 
+    refreshGuildCharacters(guildId, 'guild-building');
     res.json({ success: true, level: nextLevel, cost, treasury: guild.treasury - cost });
 });
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { updateGuildQuestProgress } from './guild';
-import { markDirty, sendToUser } from '../events';
+import { markDirty, refreshCharacter, sendToUser } from '../events';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getBaseStats, buildPlayerStats, USER_BATTLE_FIELDS_GUILD, applyExp, collectGuildTax, getCollectionBonus } from '../db/helpers';
 import { runBattle } from '../game/battle';
@@ -172,6 +172,7 @@ router.post('/battle', async (req, res) => {
             : 0;
         await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+1, lastAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, elo=?, seasonWins=seasonWins+1, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, arenaOpponentId=NULL WHERE id=?`,
             [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), now, moneyStolen, attacker.id]);
+        if (attExp.levelsGained > 0) refreshCharacter(attacker.id, 'level');
 
         // --- Обновление защитника ---
         const protUntil = now + 3600;
@@ -264,6 +265,7 @@ router.post('/battle', async (req, res) => {
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, lastAttackTime=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+?, arenaOpponentId=NULL WHERE id=?`,
         [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, attackerWins ? 1 : 0, result.attackerHpAfter, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), attackerWon ? 1 : 0, attackerWon ? 0 : 1, now,
             attackerWins ? moneyStolen : 0, attackerWins ? 0 : -attackerActualDelta, attacker.id]);
+    if (attExp.levelsGained > 0) refreshCharacter(attacker.id, 'level');
 
     // VK Leaderboard — атакующий
     if (attExp.levelsGained > 0 && attacker.oauthProvider === 'vk' && attacker.oauthId) {
@@ -287,6 +289,7 @@ router.post('/battle', async (req, res) => {
     await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+?, currentHp=?, protectionUntil=?, lastHpUpdate=?, statPoints = statPoints + ?, elo=?, seasonWins=seasonWins+?, seasonLosses=seasonLosses+?, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
         [defExp.newLevel, defExp.newExp, defenderActualDelta, !attackerWins ? 1 : 0, result.defenderHpAfter, now + 3600, now, defExp.levelsGained * 5, Math.max(100, newDefenderElo), attackerWon ? 0 : 1, attackerWon ? 1 : 0, now,
             !attackerWins ? moneyStolen : 0, !attackerWins ? 0 : -defenderActualDelta, defender.id]);
+    if (defExp.levelsGained > 0) refreshCharacter(defender.id, 'level');
     sendToUser(defender.id, { type: 'protection', protectionUntil: now + 3600 });
 
     // Достижения — защитник

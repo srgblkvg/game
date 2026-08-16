@@ -4,6 +4,7 @@ import { currentStats, isSlotCompatible } from '../game/stats';
 import { getUserById, getBaseStats, recalcHpOnEquip, getCollectionBonus } from '../db/helpers';
 import { getDrinkBonuses } from '../game/drinks';
 import { getGuildBonus } from '../game/guildBuildings';
+import { refreshCharacter } from '../events';
 
 const router = Router();
 
@@ -50,6 +51,7 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
         // Синхронизируем с активным equipment_N
         await db.run(`UPDATE users SET equipment_${activeSlot} = ?::jsonb WHERE id = ?`,
             [JSON.stringify(equipment), userId]);
+        refreshCharacter(userId, 'equipment');
         return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
     }
 
@@ -99,6 +101,7 @@ const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, gu
     await db.run(`UPDATE users SET equipment_${activeSlot} = ?::jsonb WHERE id = ?`,
         [JSON.stringify(equipment), userId]);
 
+    refreshCharacter(userId, 'equipment');
     res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
 });
 

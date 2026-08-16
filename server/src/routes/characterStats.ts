@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { refreshCharacter } from '../events';
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.post('/character/allocate-stats', async (req, res) => {
     await db.run('UPDATE users SET baseS = ?, baseA = ?, baseD = ?, baseM = ?, statPoints = ? WHERE id = ?',
         [newS, newA, newD, newM, newPoints, userId]);
 
+    refreshCharacter(userId, 'stats');
     res.json({ baseS: newS, baseA: newA, baseD: newD, baseM: newM, statPoints: newPoints });
 });
 

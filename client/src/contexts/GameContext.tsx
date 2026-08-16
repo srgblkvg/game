@@ -148,6 +148,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [character, setCharacter] = useState<Character | null>(null);
   const [serverTime, setServerTime] = useState(Math.floor(Date.now() / 1000));
   const [regenHp, setRegenHp] = useState(100);
+  const refreshTimer = useRef<number | null>(null);
+  const refreshRunning = useRef(false);
+
+  // Единое обновление БМ и характеристик после серверных игровых событий.
+  useEffect(() => {
+    const refresh = () => {
+      if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
+      refreshTimer.current = window.setTimeout(async () => {
+        if ((window as any).__battling || refreshRunning.current) {
+          refresh();
+          return;
+        }
+        refreshRunning.current = true;
+        try {
+          const { fetchCharacter } = await import('../api/character');
+          setCharacter(await fetchCharacter());
+        } catch {
+          // Периодическое обновление в Header остаётся резервным механизмом.
+        } finally {
+          refreshRunning.current = false;
+        }
+      }, 150);
+    };
+    window.addEventListener('characterRefresh', refresh);
+    return () => {
+      window.removeEventListener('characterRefresh', refresh);
+      if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
+    };
+  }, []);
 
   // serverTick — обновляем время и HP с регенерацией
   useEffect(() => {

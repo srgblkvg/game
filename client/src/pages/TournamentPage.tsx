@@ -157,11 +157,11 @@ export default function TournamentPage() {
                     </div>
                 </div>
                 <div className="text-sm text-[var(--color-text-muted)] mb-2 space-y-0.5">
-                    <p>Призовой фонд: {formatMoney(t.prizePool)}</p>
+                    <p>{t.type === 'official' ? 'Гарантированный призовой фонд' : 'Призовой фонд'}: {formatMoney(t.prizePool)}</p>
                     {t.entryFee > 0 && <p>Стоимость входа: {formatMoney(t.entryFee)}</p>}
                     <p>Участников: {t.participantCount}/{t.maxPlayers || 8}</p>
                     {t.type === 'official' && t.minPower && t.maxPower && <p>Боевая мощь: {formatPowerRange(t.minPower, t.maxPower)}</p>}
-                    {t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}
+                    {t.type === 'custom' && t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}
                     {t.participants.slice(0, 5).map((p: any) => (
                         <span key={p.id} className="mr-2">{p.username}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 2-е' : p.snapshotStats?.place === 3 ? ' 3-е' : ''} <GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                     ))}
@@ -260,6 +260,7 @@ export default function TournamentPage() {
                             <p>• Участник покидает турнир после первого поражения.</p>
                             <p>• В каждом бою используется максимальное здоровье и данные, сохранённые при записи.</p>
                             <p>• При трёх и более участниках победитель получает 50% фонда, второе место — 30%, третье — 20%.</p>
+                            <p>• Гарантированный фонд показывается до записи. До начала турнира он распределяется между собравшимися группами близкой силы.</p>
                             <p>• При двух участниках победитель получает 70% фонда, второй участник — 30%.</p>
                         </div>
                         <div>

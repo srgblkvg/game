@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { applyExp, collectGuildTax } from '../db/helpers';
-import { markDirty } from '../events';
+import { markDirty, refreshCharacter } from '../events';
 import { getToday, getSnapshot, getProgress, getMidnightTS, QUEST_INFO, DIFFICULTIES, BASE_REWARDS, QUEST_TYPES, type QuestType, type DiffKey } from '../game/questData';
 
 const router = Router();
@@ -157,6 +157,7 @@ router.post('/tavern/quests/claim', async (req, res) => {
     const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(userId, quest.rewardXp, user.exp, user.level, user.statPoints || 0);
     await db.run('UPDATE users SET exp = ?, level = ?, statPoints = ? WHERE id = ?',
         [newExp, newLevel, newStatPoints, userId]);
+    if (levelsGained > 0) refreshCharacter(userId, 'level');
 
     await db.run('INSERT INTO quest_history (userId, questType, difficulty, typeName, rewardXp, rewardMoney) VALUES (?, ?, ?, ?, ?, ?)',
         [userId, quest.questType, quest.difficulty, QUEST_INFO[quest.questType as QuestType]?.name || quest.questType, quest.rewardXp, quest.rewardMoney]);

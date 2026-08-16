@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildQueueMergePlan, getPowerDivision, getPowerDivisionByNumber, getVisiblePowerDivision, mergeTournamentQueues } from './tournamentQueue';
+import { allocateMergedPrizePools, buildQueueMergePlan, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, getVisiblePowerDivision, mergeTournamentQueues, selectReadyQueueWindow } from './tournamentQueue';
 
 const queue = (id: number, powers: number[]) => ({
   id,
@@ -46,6 +46,37 @@ test('ступени БМ покрывают диапазон без дыр и �
 test('видимый ранг не показывает технический номер диапазона', () => {
   assert.equal(getVisiblePowerDivision(1_020_179), 'Платиновый IV');
   assert.doesNotMatch(getPowerDivision(1_020_179).label, /\d/);
+});
+
+test('фонд растёт плавно по рангу и ступени', () => {
+  assert.equal(getPowerPrizeWeight(1), 1);
+  assert.equal(getPowerPrizeWeight(99), 1.8);
+  assert.equal(getPowerPrizeWeight(100), 2);
+  assert.equal(getPowerPrizeWeight(50_000), 6);
+  assert.equal(getPowerPrizeWeight(1_250_000), 8);
+});
+
+test('доля фонда отменённого игрока возвращается в казну', () => {
+  const queues = [
+    { ...queue(1, [100, 104]), prizePool: 1000 },
+    { ...queue(2, [200]), prizePool: 500 },
+  ];
+  const merged = mergeTournamentQueues(queues, { maxPlayers: 8, maxPowerGap: 0.10 });
+  const allocation = allocateMergedPrizePools(queues, merged.groups);
+  assert.deepEqual(allocation.groupPools, [1000]);
+  assert.equal(allocation.refund, 500);
+  assert.equal(allocation.groupPools.reduce((sum, value) => sum + value, 0) + allocation.refund, 1500);
+});
+
+test('разные сроки старта объединяются через общее окно ожидания', () => {
+  const queues = [
+    { id: 1, registrationEnd: 1_000 },
+    { id: 2, registrationEnd: 1_300 },
+    { id: 3, registrationEnd: 1_700 },
+  ];
+  assert.deepEqual(selectReadyQueueWindow(queues, 1_599, 600), []);
+  assert.deepEqual(selectReadyQueueWindow(queues, 1_600, 600), [1, 2]);
+  assert.deepEqual(selectReadyQueueWindow(queues, 1_700, 600), [1, 2, 3]);
 });
 
 test('ступень восстанавливается по номеру без подмены номера значением БМ', () => {

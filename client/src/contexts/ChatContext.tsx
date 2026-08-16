@@ -194,6 +194,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               window.dispatchEvent(new CustomEvent('paymentStatus', { detail: data }));
               break;
             }
+            case 'characterRefresh': {
+              window.dispatchEvent(new CustomEvent('characterRefresh', { detail: data }));
+              break;
+            }
             case 'auction_message_removed': {
               const lotId = data.lotId;
               if (lotId) {

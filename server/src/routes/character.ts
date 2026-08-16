@@ -7,7 +7,7 @@ import { applyHpRegen } from '../game/hpRegen';
 import { updateGuildQuestProgress } from './guild';
 import { getGuildBonus, getGuildBuildings } from '../game/guildBuildings';
 import { getTrackTier, TRACK_MAP } from '../game/achievements';
-import { markDirty } from '../events';
+import { markDirty, refreshCharacter } from '../events';
 import { loadBattleAntiStats } from '../game/guildBoss';
 import { calculateCombatPower } from '../game/combatPower';
 
@@ -360,6 +360,7 @@ router.post('/character/switch-equip', async (req, res) => {
         [currentEquip, targetEquip, slot, userId]
     );
 
+    refreshCharacter(userId, 'equipment-set');
     res.json({ success: true, activeEquipSlot: slot, equipment: parseEqObj(targetEquip) });
 });
 
@@ -378,6 +379,7 @@ router.post('/character/save-equip-set', async (req, res) => {
     const user = await db.one('SELECT active_equip_slot FROM users WHERE id = ?', [userId]) as any;
     if ((user.active_equip_slot || 1) === slot) {
         await db.run('UPDATE users SET equipment = ? WHERE id = ?', [JSON.stringify(equipment), userId]);
+        refreshCharacter(userId, 'equipment-set');
     }
 
     res.json({ success: true });

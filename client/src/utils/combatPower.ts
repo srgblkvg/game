@@ -10,5 +10,6 @@ export function formatCombatPower(value: number | null | undefined): string {
 }
 
 export function formatPowerRange(min: number, max: number): string {
+    if (Math.round(min) === Math.round(max)) return formatCombatPower(min);
     return `${formatCombatPower(min)}–${formatCombatPower(max)}`;
 }

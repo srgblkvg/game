@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { refreshCharacter } from '../events';
 import { db } from '../db/index';
 import { checkAchievement } from './achievements';
 
@@ -164,6 +165,7 @@ router.post('/collections/add', async (req, res) => {
     );
     checkAchievement(userId, 'collection').catch(() => {});
 
+    refreshCharacter(userId, 'collection');
     res.json({ success: true, removed });
 });
 

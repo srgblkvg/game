@@ -5,7 +5,7 @@ import { getBaseStats, enrichEquipment, addMoney, getCollectionBonus, buildPlaye
 import { currentStats } from '../game/stats';
 import { createTournamentSnapshot, mergeTournamentResult, parseTournamentSnapshot, playerFromTournamentSnapshot } from '../game/tournamentSnapshot';
 import { calculateCombatPower } from '../game/combatPower';
-import { getPowerDivision, getPowerDivisionByNumber, mergeTournamentQueues } from '../game/tournamentQueue';
+import { allocateMergedPrizePools, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, mergeTournamentQueues, selectReadyQueueWindow } from '../game/tournamentQueue';
 import { broadcast } from '../events';
 import { getDrinkBonuses } from '../game/drinks';
 import { checkAchievement } from './achievements';
@@ -14,6 +14,7 @@ const router = Router();
 
 const MAX_PLAYERS = 8;
 const REGISTRATION_WINDOW = 60 * 60; // 1 час
+const OFFICIAL_MERGE_WAIT = 10 * 60; // до 10 минут ждём соседние группы
 
 const divisions: Array<{ name: string; label: string; tier: number; minPower: number; maxPower: number; icon: string }> = [];
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
@@ -617,17 +618,73 @@ export async function mergeExpiredOfficialQueues(): Promise<number[]> {
     return db.tx(mergeExpiredOfficialQueuesTx);
 }
 
+/** Резервирует общий фонд official-регистраций и делит его между открытыми группами. */
+export async function rebalanceOfficialQueuePools(): Promise<void> {
+    await db.tx(rebalanceOfficialQueuePoolsTx);
+}
+
+export async function rebalanceOfficialQueuePoolsTx(client: any): Promise<void> {
+        const lock = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [987654322]);
+        if (!lock.rows[0]?.locked) return;
+        const queues = (await client.query(
+            `SELECT t.id, t.division, COALESCE(t.basepool, 0) basepool,
+                    (SELECT AVG((tp.snapshotstats::jsonb->>'combatPower')::numeric)
+                     FROM tournament_participants tp
+                     WHERE tp.tournamentid = t.id AND tp.snapshotstats LIKE '%"combatPower"%') avgpower
+             FROM tournaments t
+             WHERE t.type = 'official' AND t.status = 'registration'
+             ORDER BY t.id FOR UPDATE OF t`
+        )).rows;
+        if (queues.length === 0) return;
+
+        const treasuryResult = await client.query('SELECT amount FROM castle_treasury WHERE id = 1 FOR UPDATE');
+        const treasury = Number(treasuryResult.rows[0]?.amount) || 0;
+        const reserved = queues.reduce((sum: number, queue: any) => sum + Number(queue.basepool || 0), 0);
+        const target = Math.floor((treasury + reserved) * 0.10);
+        const additionalReserve = Math.max(0, target - reserved);
+        const totalReserve = reserved + additionalReserve;
+
+        if (additionalReserve > 0) {
+            await client.query('UPDATE castle_treasury SET amount = amount - $1, updated_at = NOW() WHERE id = 1', [additionalReserve]);
+            await client.query('INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())', [-additionalReserve, 'tournament_reserve']);
+        }
+
+        const weights = queues.map((queue: any) => {
+            const technicalNumber = Number(String(queue.division || '').match(/-(\d+)$/)?.[1]) || 1;
+            const fallback = getPowerDivisionByNumber(technicalNumber);
+            return getPowerPrizeWeight(Number(queue.avgpower) || Math.round((fallback.minPower + fallback.maxPower) / 2));
+        });
+        const totalWeight = weights.reduce((sum: number, weight: number) => sum + weight, 0) || 1;
+        let allocated = 0;
+        for (let index = 0; index < queues.length; index++) {
+            const share = index === queues.length - 1
+                ? totalReserve - allocated
+                : Math.floor(totalReserve * weights[index] / totalWeight);
+            allocated += share;
+            await client.query('UPDATE tournaments SET prizepool = $1, basepool = $1 WHERE id = $2', [share, queues[index].id]);
+        }
+}
+
 export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[]> {
     const createdIds: number[] = [];
-    const allocatedPools: number[] = [];
     const lock = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [987654321]);
         if (!lock.rows[0]?.locked) return createdIds;
 
         const now = Math.floor(Date.now() / 1000);
+        const allRegistrationRows = (await client.query(
+            `SELECT id, registrationend FROM tournaments
+             WHERE type = 'official' AND status = 'registration' ORDER BY registrationend, id`
+        )).rows;
+        const readyIds = selectReadyQueueWindow(
+            allRegistrationRows.map((row: any) => ({ id: Number(row.id), registrationEnd: Number(row.registrationend) })),
+            now,
+            OFFICIAL_MERGE_WAIT,
+        );
+        if (readyIds.length === 0) return createdIds;
         const queueRows = (await client.query(
-            `SELECT id, division, name FROM tournaments
-             WHERE type = 'official' AND status = 'registration' AND registrationend <= $1
-             ORDER BY id FOR UPDATE`, [now]
+            `SELECT id, division, name, COALESCE(basepool, 0) basepool FROM tournaments
+             WHERE id = ANY($1::int[]) AND type = 'official' AND status = 'registration'
+             ORDER BY id FOR UPDATE`, [readyIds]
         )).rows;
         if (queueRows.length === 0) return createdIds;
 
@@ -654,20 +711,18 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
             { maxPlayers: MAX_PLAYERS, maxPowerGap: 0.10 },
         );
 
-        const treasuryResult = await client.query('SELECT amount FROM castle_treasury WHERE id = 1 FOR UPDATE');
-        const treasury = Number(treasuryResult.rows[0]?.amount) || 0;
-        const totalBudget = merged.groups.length > 0 ? Math.floor(treasury * 0.10) : 0;
-        const weights = merged.groups.map(group => group.participants.reduce((sum, p) => sum + p.combatPower, 0));
-        const totalWeight = weights.reduce((sum, value) => sum + value, 0) || 1;
-
+        const fundedQueues = queueRows.map((row: any) => ({
+            id: Number(row.id),
+            prizePool: Number(row.basepool || 0),
+            participants: (byQueue.get(Number(row.id)) || []).map(p => ({ userId: p.userId, combatPower: p.combatPower })),
+        }));
+        const allocation = allocateMergedPrizePools(fundedQueues, merged.groups);
         for (let index = 0; index < merged.groups.length; index++) {
             const group = merged.groups[index]!;
             const powers = group.participants.map(p => p.combatPower);
             const avgPower = Math.round(powers.reduce((sum, value) => sum + value, 0) / powers.length);
             const division = getPowerDivision(avgPower);
-            const prizePool = index === merged.groups.length - 1
-                ? totalBudget - allocatedPools.reduce((sum, value) => sum + value, 0)
-                : Math.floor(totalBudget * weights[index]! / totalWeight);
+            const prizePool = allocation.groupPools[index] || 0;
             const created = await client.query(
                 `INSERT INTO tournaments
                  (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers, name)
@@ -675,7 +730,6 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
                 [division.key, now, prizePool, new Date().toISOString(), MAX_PLAYERS, division.label]
             );
             const tournamentId = Number(created.rows[0].id);
-            allocatedPools.push(prizePool);
             createdIds.push(tournamentId);
             for (const participant of group.participants) {
                 const source = participantRows.find((row: any) => Number(row.userid) === participant.userId && group.sourceQueueIds.includes(Number(row.tournamentid)));
@@ -686,9 +740,9 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
             }
         }
 
-        if (totalBudget > 0) {
-            await client.query('UPDATE castle_treasury SET amount = amount - $1, updated_at = NOW() WHERE id = 1', [totalBudget]);
-            await client.query('INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())', [-totalBudget, 'tournament_power_batch']);
+        if (allocation.refund > 0) {
+            await client.query('UPDATE castle_treasury SET amount = amount + $1, updated_at = NOW() WHERE id = 1', [allocation.refund]);
+            await client.query('INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())', [allocation.refund, 'tournament_reserve_return']);
         }
         const movedUserIds = merged.groups.flatMap(group => group.participants.map(participant => participant.userId));
         if (movedUserIds.length > 0) {
@@ -1137,15 +1191,25 @@ router.get('/tournament', async (req, res) => {
         const myReg = participants.find((p: any) => p.userId === userId);
         const matches = matchesByTournament.get(Number(t.id)) || [];
 
+        const officialPowers = participants
+            .map((participant: any) => parseTournamentSnapshot(participant.snapshotStats)?.combatPower)
+            .filter((power: any): power is number => Number.isFinite(Number(power)))
+            .map(Number);
         const technicalDivisionNumber = Number(String(t.division || '').match(/-(\d+)$/)?.[1])
             || Number(t.name?.match(/\d+$/)?.[0]) || 1;
-        const powerDivision = getPowerDivisionByNumber(technicalDivisionNumber);
+        const powerDivision = officialPowers.length > 0
+            ? getPowerDivision(Math.round(officialPowers.reduce((sum, power) => sum + power, 0) / officialPowers.length))
+            : getPowerDivisionByNumber(technicalDivisionNumber);
+        const visibleMinPower = officialPowers.length > 0 ? Math.min(...officialPowers) : powerDivision.minPower;
+        const visibleMaxPower = officialPowers.length > 0 ? Math.max(...officialPowers) : powerDivision.maxPower;
         return {
             ...t,
             name: t.type === 'official' ? powerDivision.label : t.name,
             divisionLabel: t.type === 'official' ? powerDivision.label : t.division,
-            minPower: t.type === 'official' ? powerDivision.minPower : undefined,
-            maxPower: t.type === 'official' ? powerDivision.maxPower : undefined,
+            minPower: t.type === 'official' ? visibleMinPower : undefined,
+            maxPower: t.type === 'official' ? visibleMaxPower : undefined,
+            minLevel: t.type === 'official' ? undefined : t.minLevel,
+            maxLevel: t.type === 'official' ? undefined : t.maxLevel,
             participantCount: participants.length,
             maxPlayers: t.maxPlayers || MAX_PLAYERS,
             participants: participants.map((p) => ({
@@ -1163,14 +1227,20 @@ router.get('/tournament', async (req, res) => {
         };
     });
 
-    // Сортировка: сначала доступные игроку, затем по registrationEnd
+    // Сортировка: своя запись, свой диапазон БМ, затем official по возрастанию БМ.
+    const userPowerDivision = userCombatPower !== undefined ? getPowerDivision(userCombatPower).key : null;
     result.sort((a: any, b: any) => {
-        const aCanJoin = a.type === 'official'
-            ? true
-            : (user.level >= (a.minLevel || 1) && user.level <= (a.maxLevel || 999));
-        const bCanJoin = b.type === 'official'
-            ? true
-            : (user.level >= (b.minLevel || 1) && user.level <= (b.maxLevel || 999));
+        if (Boolean(a.myRegistration) !== Boolean(b.myRegistration)) return a.myRegistration ? -1 : 1;
+        if (a.type === 'official' && b.type !== 'official') return -1;
+        if (a.type !== 'official' && b.type === 'official') return 1;
+        if (a.type === 'official' && b.type === 'official') {
+            const aOwnRange = userPowerDivision !== null && a.division === userPowerDivision;
+            const bOwnRange = userPowerDivision !== null && b.division === userPowerDivision;
+            if (aOwnRange !== bOwnRange) return aOwnRange ? -1 : 1;
+            return (a.minPower || 0) - (b.minPower || 0) || a.registrationEnd - b.registrationEnd;
+        }
+        const aCanJoin = user.level >= (a.minLevel || 1) && user.level <= (a.maxLevel || 999);
+        const bCanJoin = user.level >= (b.minLevel || 1) && user.level <= (b.maxLevel || 999);
         if (aCanJoin && !bCanJoin) return -1;
         if (!aCanJoin && bCanJoin) return 1;
         return a.registrationEnd - b.registrationEnd;
@@ -1255,6 +1325,8 @@ router.post('/tournament/register', async (req, res) => {
                  VALUES (?, 'registration', ?, ?, 0, 0, ?, 'official', ?, ?)`,
                 [powerDivision.key, now, now + REGISTRATION_WINDOW, new Date().toISOString(), MAX_PLAYERS, powerDivision.label]
             );
+            tournament = await db.one('SELECT * FROM tournaments WHERE id = ?', [created.lastInsertRowid]) as any;
+            await rebalanceOfficialQueuePools();
             tournament = await db.one('SELECT * FROM tournaments WHERE id = ?', [created.lastInsertRowid]) as any;
         }
     } else {

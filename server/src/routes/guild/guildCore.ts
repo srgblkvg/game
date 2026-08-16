@@ -3,6 +3,7 @@ import { db } from "../../db/index";
 import { isGuildAtWar } from "./guildWar";
 import { getGuildBuildings, buildBuilding } from "../../game/guildBuildings";
 import { isUserOnline } from "../../websocket";
+import { refreshCharacter, refreshGuildCharacters } from "../../events";
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.post('/guild/create', async (req, res) => {
     const guildId = info.lastInsertRowid;
     await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'leader']);
     await db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
+    refreshCharacter(userId, 'guild-membership');
 
     res.json({ success: true, guildId: Number(guildId), name: name.trim() });
 });
@@ -259,6 +261,7 @@ router.post('/guild/leave', async (req, res) => {
 
     await db.run('DELETE FROM guild_members WHERE guildId = ? AND userId = ?', [member.guildId, userId]);
     await db.run('UPDATE users SET guildId = NULL WHERE id = ?', [userId]);
+    refreshCharacter(userId, 'guild-membership');
 
     res.json({ success: true });
 });
@@ -270,6 +273,8 @@ router.post('/guild/leave', async (req, res) => {
 router.post('/guild/buildings/build', async (req, res) => {
     try {
         const result = await buildBuilding(req.userId, req.body.buildingType);
+        const member = await db.one('SELECT guildId FROM guild_members WHERE userId = ?', [req.userId]) as any;
+        if (member?.guildId) refreshGuildCharacters(member.guildId, 'guild-building');
         res.json(result);
     } catch (e: any) {
         res.status(400).json({ error: e.message });

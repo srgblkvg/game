@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../../db/index";
-import { broadcast } from "../../events";
+import { broadcast, refreshCharacter } from "../../events";
 import { isGuildAtWar } from "./guildWar";
 
 const router = Router();
@@ -83,6 +83,7 @@ router.post('/guild/join/:id', async (req, res) => {
 
     await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'member']);
     await db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
+    refreshCharacter(userId, 'guild-membership');
 
     res.json({ success: true });
 });
@@ -179,6 +180,7 @@ router.post('/guild/accept-invite', async (req, res) => {
 
         await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [guildId, userId, 'member']);
         await db.run('UPDATE users SET guildId = ? WHERE id = ?', [guildId, userId]);
+        refreshCharacter(userId, 'guild-membership');
         await db.run("UPDATE guild_invites SET status = 'accepted' WHERE guildId = ? AND userId = ? AND status = 'pending'", [guildId, userId]);
     } else {
         await db.run("UPDATE guild_invites SET status = 'declined' WHERE guildId = ? AND userId = ? AND status = 'pending'", [guildId, userId]);
@@ -204,6 +206,7 @@ router.post('/guild/invite/:id', async (req, res) => {
 
         await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [invite.guildId, userId, 'member']);
         await db.run('UPDATE users SET guildId = ? WHERE id = ?', [invite.guildId, userId]);
+        refreshCharacter(userId, 'guild-membership');
         await db.run('UPDATE guild_invites SET status = ? WHERE id = ?', ['accepted', inviteId]);
     } else {
         await db.run('UPDATE guild_invites SET status = ? WHERE id = ?', ['declined', inviteId]);
@@ -236,6 +239,7 @@ router.post('/guild/handle-request', async (req, res) => {
 
         await db.run('INSERT INTO guild_members (guildId, userId, rank) VALUES (?, ?, ?)', [member.guildId, invite.userId, 'member']);
         await db.run('UPDATE users SET guildId = ? WHERE id = ?', [member.guildId, invite.userId]);
+        refreshCharacter(invite.userId, 'guild-membership');
         await db.run('UPDATE guild_invites SET status = ? WHERE id = ?', ['accepted', requestId]);
     } else {
         await db.run('UPDATE guild_invites SET status = ? WHERE id = ?', ['declined', requestId]);
@@ -261,6 +265,7 @@ router.post('/guild/kick', async (req, res) => {
 
     await db.run('DELETE FROM guild_members WHERE guildId = ? AND userId = ?', [actor.guildId, targetId]);
     await db.run('UPDATE users SET guildId = NULL WHERE id = ?', [targetId]);
+    refreshCharacter(targetId, 'guild-membership');
 
     res.json({ success: true });
 });

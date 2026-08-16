@@ -24,6 +24,22 @@ export interface TournamentQueueMergeResult {
   cancelledQueueIds: number[];
 }
 
+export interface TimedTournamentQueue {
+  id: number;
+  registrationEnd: number;
+}
+
+/** Группы запускаются общим окном после ожидания самой ранней. */
+export function selectReadyQueueWindow(
+  queues: TimedTournamentQueue[],
+  now: number,
+  waitSeconds: number,
+): number[] {
+  const ended = queues.filter(queue => queue.registrationEnd <= now);
+  if (!ended.some(queue => queue.registrationEnd <= now - waitSeconds)) return [];
+  return ended.map(queue => queue.id);
+}
+
 export interface PowerDivision {
   key: string;
   label: string;
@@ -58,6 +74,18 @@ export function getVisiblePowerDivision(combatPower: number): string {
   return `${rank.name} ${ROMAN_TIERS[Math.floor(progress * ROMAN_TIERS.length)]}`;
 }
 
+/** Вес фонда: ранг даёт целую часть, ступень — по 0.2. */
+export function getPowerPrizeWeight(combatPower: number): number {
+  const power = Math.max(1, Math.round(combatPower));
+  const foundIndex = VISIBLE_POWER_RANKS.findIndex(candidate => power < candidate.max);
+  const rankIndex = foundIndex === -1 ? VISIBLE_POWER_RANKS.length - 1 : foundIndex;
+  const rank = VISIBLE_POWER_RANKS[rankIndex]!;
+  if (!Number.isFinite(rank.max)) return VISIBLE_POWER_RANKS.length + 0.8;
+  const progress = Math.max(0, Math.min(0.999999, (power - rank.min) / (rank.max - rank.min)));
+  const tierIndex = Math.floor(progress * ROMAN_TIERS.length);
+  return rankIndex + 1 + tierIndex * 0.2;
+}
+
 /** Узкая ступень БМ; соседние границы непрерывны, ширина не превышает 5%. */
 export function getPowerDivision(combatPower: number): PowerDivision {
   const power = Math.max(1, Math.round(combatPower));
@@ -75,6 +103,34 @@ export function getPowerDivision(combatPower: number): PowerDivision {
 
 export interface FundedTournamentQueue extends TournamentQueue {
   prizePool: number;
+}
+
+export interface MergedPrizePoolAllocation {
+  groupPools: number[];
+  refund: number;
+}
+
+/** Делит фонд исходных очередей по участникам и возвращает долю отменённых. */
+export function allocateMergedPrizePools(
+  queues: FundedTournamentQueue[],
+  groups: TournamentQueueGroup[],
+): MergedPrizePoolAllocation {
+  const queueByUser = new Map<number, FundedTournamentQueue>();
+  for (const queue of queues) {
+    for (const participant of queue.participants) queueByUser.set(participant.userId, queue);
+  }
+  const groupPools = groups.map(group => {
+    let pool = 0;
+    for (const participant of group.participants) {
+      const queue = queueByUser.get(participant.userId);
+      if (!queue || queue.participants.length === 0) continue;
+      pool += (queue.prizePool || 0) / queue.participants.length;
+    }
+    return Math.floor(pool);
+  });
+  const total = queues.reduce((sum, queue) => sum + (queue.prizePool || 0), 0);
+  const allocated = groupPools.reduce((sum, pool) => sum + pool, 0);
+  return { groupPools, refund: Math.max(0, total - allocated) };
 }
 
 export interface QueueMergePlanGroup {

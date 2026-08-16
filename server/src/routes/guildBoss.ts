@@ -3,7 +3,7 @@ import { db } from '../db/index';
 import { buildPlayerStats } from '../db/helpers';
 import { runTurn, TurnContext, BattleStep, createBattleRngState } from '../game/battle';
 import { currentStats } from '../game/stats';
-import { markDirty } from '../events';
+import { markDirty, refreshCharacter, refreshGuildCharacters } from '../events';
 import { updateGuildQuestProgress } from './guild';
 import {
   BOSS_COOLDOWN, BOSS_BASE_LEVEL, BOSS_LEVEL_PER_KILL, TALENT_TYPES, TALENT_LABELS, TALENT_DESCS,
@@ -486,6 +486,8 @@ router.post('/guild/talents/upgrade', async (req, res) => {
     const talents = await getPlayerTalents(userId, user.guildid);
     const updated = await db.one('SELECT talentPoints FROM guild_members WHERE userId = ? AND guildId = ?', [userId, user.guildid]) as any;
 
+    if (leveledUp) refreshCharacter(userId, 'personal-talent');
+
     return res.json({
       success: true,
       scope: 'personal',
@@ -541,6 +543,8 @@ router.post('/guild/talents/upgrade', async (req, res) => {
 
     const talents = await getGuildTalents(user.guildid);
     const updated = await db.one('SELECT talentPoints FROM guilds WHERE id = ?', [user.guildid]) as any;
+
+    if (leveledUp) refreshGuildCharacters(user.guildid, 'guild-talent');
 
     return res.json({
       success: true,
