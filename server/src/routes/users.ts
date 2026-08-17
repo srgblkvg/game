@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { enrichEquipment, addMoney, buildPlayerStats } from '../db/helpers';
+import { enrichEquipment, addMoney, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
 import { getGuildBonus } from '../game/guildBuildings';
 import { calculateCombatPower } from '../game/combatPower';
-import { loadBattleAntiStats } from '../game/guildBoss';
 
 const router = Router();
 
@@ -33,8 +32,7 @@ router.get('/character/public/:userId', async (req, res) => {
     const guildBonus = await getGuildBonus(userId, 'arena');
     const { enriched: enrichedEquipment } = await enrichEquipment(user.equipment ? JSON.parse(user.equipment) : {});
     const stats = await buildPlayerStats(user, 'arena');
-    const { antiStats } = await loadBattleAntiStats(userId, Number(user.guildId || user.guildid || 0));
-    const combatPower = calculateCombatPower(stats, antiStats, user.level);
+    const combatPower = calculateCombatPower(buildCombatPowerStats(user), undefined, user.level);
 
     res.json({
         id: user.id,

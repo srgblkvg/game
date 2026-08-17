@@ -163,7 +163,7 @@ export default function TournamentPage() {
                     {t.entryFee > 0 && <p>Стоимость входа: {formatMoney(t.entryFee)}</p>}
                     <p>Участников: {t.participantCount}/{t.maxPlayers || 8}</p>
                     {t.type === 'official' && t.minPower && t.maxPower && <p>Боевая мощь: {formatPowerRange(t.minPower, t.maxPower)}</p>}
-                    {t.normalized && <p className="text-[var(--color-accent-warning)]">⚖ С выравниванием силы</p>}
+                    {t.normalized && <p className="text-[var(--color-accent-warning)]">⚖ С подтягиванием силы слабых участников</p>}
                     {t.type === 'custom' && t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}
                     {t.participants.slice(0, 5).map((p: any) => (
                         <span key={p.id} className="mr-2">{p.username}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 2-е' : p.snapshotStats?.place === 3 ? ' 3-е' : ''} <GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
@@ -256,7 +256,9 @@ export default function TournamentPage() {
                             <p>• Смена экипировки, талантов или гильдии после записи не изменит вашу силу в этом турнире.</p>
                             <p>• Регистрация длится 15 минут, после неё система до 5 минут формирует сетки.</p>
                             <p>• Если записались два или более игрока, участвуют все.</p>
-                            <p>• При большой разнице боевой мощности сила автоматически выравнивается только на время турнирных боёв.</p>
+                            <p>• БМ учитывает только прокачку характеристик и экипировку — без коллекции, напитков и бонусов гильдии.</p>
+                            <p>• Слабым участникам временно повышаются их собственные характеристики до разницы 5–10% от сильнейшего.</p>
+                            <p>• Соотношение силы, ловкости, защиты и мастерства каждого игрока сохраняется.</p>
                             <p>• Реальные характеристики не меняются, подтверждение не требуется, а пояснение сохраняется в журнале боя.</p>
                             <p>• Если записался только один игрок, его запись переносится в следующий набор вместе с фондом.</p>
                         </div>
@@ -363,7 +365,7 @@ export default function TournamentPage() {
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm">Официальный турнир по боевой мощи</h3>
                     <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                        Ваша БМ: {formatCombatPower(data.userCombatPower)}. При большой разнице сила автоматически выравнивается только на время турнирных боёв.
+                        Ваша БМ: {formatCombatPower(data.userCombatPower)}. Учитываются прокачка и экипировка; слабые участники подтягиваются до разницы 5–10%.
                     </p>
                     <Button variant="danger" size="md" className="mt-3" onClick={() => handleRegister(undefined, 'official')}>
                         Записаться

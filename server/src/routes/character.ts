@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { collectGuildTax, getUserById, enrichEquipment, applyExp, buildPlayerStats } from '../db/helpers';
+import { collectGuildTax, getUserById, enrichEquipment, applyExp, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen } from '../game/hpRegen';
@@ -8,7 +8,6 @@ import { updateGuildQuestProgress } from './guild';
 import { getGuildBonus, getGuildBuildings } from '../game/guildBuildings';
 import { getTrackTier, TRACK_MAP } from '../game/achievements';
 import { markDirty, refreshCharacter } from '../events';
-import { loadBattleAntiStats } from '../game/guildBoss';
 import { calculateCombatPower } from '../game/combatPower';
 
 const router = Router();
@@ -124,8 +123,7 @@ router.get('/character/me', async (req, res) => {
     const guildBonus = await getGuildBonus(userId, 'arena');
     const buildings = await getGuildBuildings(userId);
     const stats = await buildPlayerStats(user, 'arena');
-    const antiStats = (await loadBattleAntiStats(userId, user.guildId || user.guildid)).antiStats;
-    const combatPower = calculateCombatPower(stats, antiStats, user.level);
+    const combatPower = calculateCombatPower(buildCombatPowerStats(user), undefined, user.level);
 
     const totalCollectionItems = ((await db.one('SELECT COUNT(*) as cnt FROM collection_set_items') as any).cnt || 225) * 2;
 

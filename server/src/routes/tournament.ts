@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db, pool } from '../db/index';
 import { runBattle } from '../game/battle';
-import { getBaseStats, enrichEquipment, addMoney, getCollectionBonus, buildPlayerStats } from '../db/helpers';
+import { getBaseStats, enrichEquipment, addMoney, getCollectionBonus, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
 import { createTournamentSnapshot, formatTournamentNormalizationLog, mergeTournamentResult, normalizeTournamentGroup, parseTournamentSnapshot, playerFromTournamentSnapshot } from '../game/tournamentSnapshot';
 import { calculateCombatPower } from '../game/combatPower';
@@ -15,6 +15,7 @@ const router = Router();
 const MAX_PLAYERS = 8;
 const REGISTRATION_WINDOW = 15 * 60; // 15 минут
 const OFFICIAL_MERGE_WAIT = 5 * 60; // до 5 минут ждём соседние группы
+const OFFICIAL_INTERVAL = 8 * 60 * 60; // общий набор раз в 8 часов
 
 const divisions: Array<{ name: string; label: string; tier: number; minPower: number; maxPower: number; icon: string }> = [];
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
@@ -241,6 +242,7 @@ async function buildTournamentSnapshotForUser(userId: number) {
     if (!fullUser) return null;
 
     const tournamentStats = await buildPlayerStats(fullUser, 'tournament');
+    const combatPowerStats = buildCombatPowerStats(fullUser);
     const activeSlot = fullUser.activeEquipSlot || fullUser.active_equip_slot || 1;
     const parseEquipment = (value: any) => typeof value === 'string' ? JSON.parse(value || '{}') : (value || {});
     const equipment = parseEquipment(fullUser[`equipment_${activeSlot}`]);
@@ -263,6 +265,7 @@ async function buildTournamentSnapshotForUser(userId: number) {
         base: getBaseStats(fullUser),
         equipment: finalEquipment,
         stats: tournamentStats,
+        combatPowerStats,
         drinkBonuses: getDrinkBonuses(fullUser),
         collectionBonus,
         guildBonus,
@@ -270,7 +273,7 @@ async function buildTournamentSnapshotForUser(userId: number) {
         playerTalents,
         guildTalents,
         antiStats,
-    } as any, calculateCombatPower(tournamentStats, antiStats, fullUser.level));
+    } as any, calculateCombatPower(combatPowerStats, undefined, fullUser.level));
 }
 
 async function loadTournamentPlayer(tournamentId: number, userId: number) {
@@ -294,7 +297,7 @@ async function loadTournamentPlayerTx(client: any, tournamentId: number, userId:
 function tournamentNormalizationStep(first: any, second: any) {
     const firstSnapshot = first?._tournamentSnapshot;
     const secondSnapshot = second?._tournamentSnapshot;
-    if (!firstSnapshot?.normalization || !secondSnapshot?.normalization) return null;
+    if (!firstSnapshot || !secondSnapshot || (!firstSnapshot.normalization && !secondSnapshot.normalization)) return null;
     return { type: 'info', message: formatTournamentNormalizationLog(firstSnapshot, secondSnapshot) };
 }
 
@@ -1097,6 +1100,22 @@ export async function getOrCreateTournament(type?: string) {
         []
     ) as any[];
 
+    // Пока жив хотя бы один турнир текущего общего набора, новый набор не открываем.
+    if (activeTournaments.length > 0) return activeTournaments;
+
+    // Технические очереди открываются одним общим набором, а не вслед за каждой завершённой.
+    const lastOfficial = await db.one(
+        `SELECT completedAt FROM tournaments
+         WHERE type = 'official' AND status IN ('completed', 'cancelled') AND completedAt IS NOT NULL
+         ORDER BY completedAt DESC LIMIT 1`, []
+    ) as any;
+    if (lastOfficial?.completedAt) {
+        const completedMs = typeof lastOfficial.completedAt === 'number'
+            ? lastOfficial.completedAt * 1000
+            : Number(lastOfficial.completedAt) || new Date(lastOfficial.completedAt).getTime();
+        if (Date.now() < completedMs + OFFICIAL_INTERVAL * 1000) return [];
+    }
+
     for (const t of activeTournaments) {
         if (!activeByDivision[t.division]) {
             activeByDivision[t.division] = t;
@@ -1107,17 +1126,6 @@ export async function getOrCreateTournament(type?: string) {
     // Каждый дивизион создаётся в ОТДЕЛЬНОЙ транзакции чтобы избежать гонки
     for (const div of divisions) {
         if (!activeByDivision[div.name]) {
-
-            // Проверяем: когда завершился последний турнир этого дивизиона
-            const lastCompleted = await db.one(
-                "SELECT completedAt FROM tournaments WHERE division = ? AND type = 'official' AND status IN ('completed', 'cancelled') ORDER BY id DESC LIMIT 1",
-                [div.name]
-            ) as any;
-            if (lastCompleted?.completedAt) {
-                const ts = typeof lastCompleted.completedAt === 'number' ? lastCompleted.completedAt * 1000
-                  : Number(lastCompleted.completedAt) || new Date(lastCompleted.completedAt).getTime();
-                if (Date.now() < ts + 14400 * 1000) continue;
-            }
 
             const pool = await calcDivisionPool(div.tier);
 
@@ -1165,9 +1173,7 @@ router.get('/tournament', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     let userCombatPower: number | undefined;
     if (req.query.includePower === '1') {
-        const userStats = await buildPlayerStats(user, 'tournament');
-        const userAntiStats = (await (await import('../game/guildBoss')).loadBattleAntiStats(userId, user.guildId || user.guildid)).antiStats;
-        userCombatPower = calculateCombatPower(userStats, userAntiStats, user.level);
+        userCombatPower = calculateCombatPower(buildCombatPowerStats(user), undefined, user.level);
     }
 
     const now = Math.floor(Date.now() / 1000);
@@ -1343,29 +1349,28 @@ router.get('/tournament', async (req, res) => {
         return a.registrationEnd - b.registrationEnd;
     });
 
-    // Предстоящие официальные турниры (ждём час после завершения)
+    // Предстоящие официальные турниры открываются общим набором раз в 8 часов.
     const upcomingOfficial: any[] = [];
     const activeOfficialRows = typeFilter === 'custom' ? await db.query(
         "SELECT division FROM tournaments WHERE status IN ('registration', 'in_progress') AND type = 'official'",
         []
     ) as any[] : updated.filter(t => t.type === 'official');
     const activeOfficialDivisions = new Set(activeOfficialRows.map(t => t.division));
-    const completedRows = await db.query(
-        `SELECT DISTINCT ON (division) division, completedAt
-         FROM tournaments
-         WHERE type = 'official' AND status IN ('completed', 'cancelled')
-         ORDER BY division, id DESC`, []
-    ) as any[];
-    const lastCompletedByDivision = new Map<string, any>(
-        completedRows.map(row => [row.division, row.completedAt])
-    );
+    const lastCompletedRow = await db.one(
+        `SELECT completedAt FROM tournaments
+         WHERE type = 'official' AND status IN ('completed', 'cancelled') AND completedAt IS NOT NULL
+         ORDER BY completedAt DESC LIMIT 1`, []
+    ) as any;
     for (const div of divisions) {
         if (activeOfficialDivisions.has(div.name)) continue;
-        const lastCompleted = lastCompletedByDivision.get(div.name);
+        // При частично активном наборе отсутствующие технические очереди не
+        // рекламируем как отдельный предстоящий турнир.
+        if (activeOfficialDivisions.size > 0) continue;
+        const lastCompleted = lastCompletedRow?.completedAt;
         if (lastCompleted) {
             const ts = typeof lastCompleted === 'number' ? lastCompleted * 1000
               : Number(lastCompleted) || new Date(lastCompleted).getTime();
-            const registrationOpensAt = ts + 14400 * 1000;
+            const registrationOpensAt = ts + OFFICIAL_INTERVAL * 1000;
             if (Date.now() < registrationOpensAt) {
                 upcomingOfficial.push({
                     division: div.name,
@@ -1415,6 +1420,27 @@ router.post('/tournament/register', async (req, res) => {
             [powerDivision.key, MAX_PLAYERS]
         ) as any;
         if (!tournament) {
+            const activeOfficial = await db.one(
+                `SELECT id FROM tournaments
+                 WHERE type = 'official' AND status IN ('registration', 'in_progress')
+                 LIMIT 1`, []
+            ) as any;
+            if (activeOfficial) {
+                return res.status(400).json({ error: 'Эта очередь ещё формируется. Дождитесь общего набора турниров' });
+            }
+            const lastOfficial = await db.one(
+                `SELECT completedAt FROM tournaments
+                 WHERE type = 'official' AND status IN ('completed', 'cancelled') AND completedAt IS NOT NULL
+                 ORDER BY completedAt DESC LIMIT 1`, []
+            ) as any;
+            if (lastOfficial?.completedAt) {
+                const completedMs = typeof lastOfficial.completedAt === 'number'
+                    ? lastOfficial.completedAt * 1000
+                    : Number(lastOfficial.completedAt) || new Date(lastOfficial.completedAt).getTime();
+                if (Date.now() < completedMs + OFFICIAL_INTERVAL * 1000) {
+                    return res.status(400).json({ error: 'Регистрация в следующий официальный турнир ещё не открыта' });
+                }
+            }
             const now = Math.floor(Date.now() / 1000);
             const created = await db.run(
                 `INSERT INTO tournaments

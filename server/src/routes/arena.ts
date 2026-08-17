@@ -2,10 +2,9 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { arenaEnterSchema } from '../validation';
-import { getBaseStats, enrichEquipment, spendMoney, USER_ARENA_FIELDS_GUILD, buildPlayerStats } from '../db/helpers';
+import { getBaseStats, enrichEquipment, spendMoney, USER_ARENA_FIELDS_GUILD, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
 import { applyHpRegen } from '../game/hpRegen';
 import { calculateCombatPower } from '../game/combatPower';
-import { loadBattleAntiStats } from '../game/guildBoss';
 
 const router = Router();
 const MIN_BATTLE_HP_RATIO = 0.2;
@@ -29,10 +28,8 @@ async function hasEnoughHpForBattle(user: any): Promise<boolean> {
     return hp.currentHp >= hp.maxHp * MIN_BATTLE_HP_RATIO;
 }
 
-async function getArenaCombatPower(user: any, stats: any): Promise<number> {
-    const guildId = Number(user.guildId || user.guildid || 0);
-    const { antiStats } = await loadBattleAntiStats(Number(user.id), guildId);
-    return calculateCombatPower(stats, antiStats, Number(user.level));
+async function getArenaCombatPower(user: any): Promise<number> {
+    return calculateCombatPower(buildCombatPowerStats(user), undefined, Number(user.level));
 }
 
 // Получить случайного соперника (без боя)
@@ -68,7 +65,7 @@ router.get('/arena/opponent', async (req, res) => {
                 const { enriched: savedEnriched } = await enrichEquipment(savedEquip);
                 const savedStats = await buildPlayerStats(saved, 'arena');
                 const savedHp = await getArenaHp(saved);
-                const savedCombatPower = await getArenaCombatPower(saved, savedStats);
+                const savedCombatPower = await getArenaCombatPower(saved);
                 return res.json({
                     id: saved.id, name: saved.username, level: saved.level,
                     equipment: savedEnriched, stats: savedStats,
@@ -141,7 +138,7 @@ router.get('/arena/opponent', async (req, res) => {
 
     const { enriched: enrichedEquipment } = await enrichEquipment(JSON.parse(opponent.equipment || '{}'));
     const stats = await buildPlayerStats(opponent, 'arena');
-    const combatPower = await getArenaCombatPower(opponent, stats);
+    const combatPower = await getArenaCombatPower(opponent);
 
     // Актуальное HP с офлайн-регеном
     const { currentHp: actualHp } = await getArenaHp(opponent);

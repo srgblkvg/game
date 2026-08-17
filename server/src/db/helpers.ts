@@ -190,6 +190,17 @@ export async function buildPlayerStats(userRow: any, context: BattleContext): Pr
   return currentStats(base, equip, drinks, totalCollBonus, gb);
 }
 
+/** Статы для общей БМ: только прокачка персонажа и активная экипировка. */
+export function buildCombatPowerStats(userRow: any): CharStats {
+  const parseEq = (value: any) => typeof value === 'string'
+    ? JSON.parse(value || '{}')
+    : (value && typeof value === 'object' ? value : {});
+  const activeSlot = userRow.activeEquipSlot || userRow.active_equip_slot || 1;
+  let equipment = parseEq(userRow[`equipment_${activeSlot}`]);
+  if (Object.keys(equipment).length === 0) equipment = parseEq(userRow.equipment);
+  return currentStats(getBaseStats(userRow), equipment);
+}
+
 /** Быстрый расчёт полного бонуса коллекции (предметы + сеты) для одного userId */
 export async function getCollectionBonus(userId: number): Promise<number> {
   const r = await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any;

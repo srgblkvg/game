@@ -17,6 +17,7 @@ const player = {
   base: { s: 10, a: 12, d: 8, m: 9 },
   equipment: { weapon1: { name: 'Меч', slot: 'weapon1', bonuses: { s: 13 } } },
   stats: { s: 49, a: 47, d: 21, m: 31, hp: 254, extra: { crit: 30, dodge: 40, counter: 0, fullBlock: 25 }, rageDmg: 20 },
+  combatPowerStats: { s: 45, a: 43, d: 19, m: 28, hp: 232, extra: { crit: 30, dodge: 40, counter: 0, fullBlock: 25 } },
   drinkBonuses: { s: 1, a: 0, d: 0, m: 0 },
   collectionBonus: 3,
   guildBonus: 5,
@@ -78,18 +79,18 @@ test('выравнивание меняет только турнирные ст
   assert.deepEqual(snapshot.player.stats, player.stats);
 });
 
-test('лог объясняет автоматическое выравнивание и исходную БМ', () => {
+test('лог объясняет временное повышение и состав БМ', () => {
   const first = normalizeTournamentSnapshot(createTournamentSnapshot(player as any, 1234), 5000);
   const second = normalizeTournamentSnapshot(createTournamentSnapshot({ ...player, id: 660, name: 'Другой' } as any, 9000), 5000);
   const message = formatTournamentNormalizationLog(first, second);
-  assert.match(message, /Сила участников временно выровнена/);
-  assert.match(message, /исходная БМ/i);
+  assert.match(message, /временно повышена сила/);
+  assert.match(message, /без коллекции, напитков и бонусов гильдии/i);
   assert.match(message, /1\.23K/);
   assert.match(message, /9K/);
   assert.match(message, /реальные характеристики не изменены/i);
 });
 
-test('групповое выравнивание даёт всем одинаковые боевые данные', () => {
+test('групповое повышение сохраняет профиль игрока и оставляет разницу 5–10%', () => {
   const weak = createTournamentSnapshot(player as any, 1234);
   const strong = createTournamentSnapshot({
     ...player,
@@ -101,10 +102,20 @@ test('групповое выравнивание даёт всем одинак
   } as any, 9000);
   const normalized = normalizeTournamentGroup([weak, strong]);
   assert.equal(normalized.length, 2);
-  assert.deepEqual(normalized[0]!.player.stats, normalized[1]!.player.stats);
-  assert.deepEqual(normalized[0]!.player.antiStats, normalized[1]!.player.antiStats);
-  assert.equal(normalized[0]!.player.level, normalized[1]!.player.level);
+  assert.notDeepEqual(normalized[0]!.player.stats, normalized[1]!.player.stats);
+  assert.deepEqual(normalized[0]!.player.antiStats, weak.player.antiStats);
+  assert.equal(normalized[0]!.player.level, weak.player.level);
   assert.equal(normalized[0]!.combatPower, 1234);
   assert.equal(normalized[1]!.combatPower, 9000);
   assert.notDeepEqual(weak.player.stats, strong.player.stats);
+  assert.ok(normalized[0]!.normalization);
+  const gap = 1 - normalized[0]!.normalization!.appliedPower / strong.combatPower;
+  assert.ok(gap >= 0.045 && gap <= 0.105);
+  assert.equal(normalized[1]!.normalization, undefined);
+  const beforeRatio = weak.player.combatPowerStats!.s / weak.player.combatPowerStats!.m;
+  const afterRatio = normalized[0]!.player.combatPowerStats!.s / normalized[0]!.player.combatPowerStats!.m;
+  assert.ok(Math.abs(beforeRatio - afterRatio) < 0.05);
+  const originalExternalStrength = weak.player.stats.s - weak.player.combatPowerStats!.s;
+  const normalizedExternalStrength = normalized[0]!.player.stats.s - normalized[0]!.player.combatPowerStats!.s;
+  assert.equal(normalizedExternalStrength, originalExternalStrength);
 });
