@@ -1,6 +1,7 @@
 import { db } from '../db/index';
 
 let schemaPromise: Promise<void> | null = null;
+let schemaReady = false;
 
 const REQUIRED_COLUMNS = [
   'tournament_matches.group_name',
@@ -32,6 +33,22 @@ export function initTournamentSchema(): Promise<void> {
     if (missing.length > 0) {
       throw new Error(`Не применена миграция турнирных дивизионов: ${missing.join(', ')}`);
     }
+    const indexRows = await db.raw(
+      `SELECT indexdef FROM pg_indexes
+       WHERE schemaname = 'public'
+         AND tablename = 'tournament_participants'
+         AND indexname = 'tournament_participants_tournament_user_uidx'`,
+    );
+    const indexDefinition = String(indexRows.rows[0]?.indexdef || '').toLowerCase();
+    if (!indexDefinition.includes('unique')
+      || !indexDefinition.includes('(tournamentid, userid)')) {
+      throw new Error('Не применён UNIQUE индекс tournament_participants(tournamentid, userid)');
+    }
+    schemaReady = true;
   })();
   return schemaPromise;
+}
+
+export function isTournamentSchemaReady(): boolean {
+  return schemaReady;
 }

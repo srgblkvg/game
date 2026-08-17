@@ -9,7 +9,7 @@ import { getRegistrationWindowForNewQueue } from '../game/tournamentCycle';
 import { calculateTournamentRewards } from '../game/tournamentRewards';
 import { applyDivisionChampionship, assignTournamentDivision, getTournamentDivision, getTournamentDivisionByIndex, TOURNAMENT_DIVISIONS } from '../game/tournamentDivision';
 import { allocateDivisionPrizePools, splitParticipantsByDivision } from '../game/tournamentDivisionQueue';
-import { initTournamentSchema } from '../game/tournamentSchema';
+import { initTournamentSchema, isTournamentSchemaReady } from '../game/tournamentSchema';
 import { runTournamentGroupStage, type GroupFightMetadata } from '../game/tournamentGroupRunner';
 import { createFixedPlayoffPairs, createRoundRobinMatches, drawTournamentGroups, getGroupQualificationState } from '../game/tournamentGroupStage';
 import { allocateMergedPrizePools, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, mergeAllTournamentQueues, selectReadyQueueWindow } from '../game/tournamentQueue';
@@ -18,6 +18,15 @@ import { getDrinkBonuses } from '../game/drinks';
 import { checkAchievement } from './achievements';
 
 const router = Router();
+
+router.use(async (_req, res, next) => {
+    try {
+        if (!isTournamentSchemaReady()) await initTournamentSchema();
+        next();
+    } catch {
+        res.status(503).json({ error: 'Турнирная система временно недоступна: не применена миграция базы данных' });
+    }
+});
 
 const MAX_PLAYERS = 8;
 const REGISTRATION_WINDOW = 15 * 60; // 15 минут
