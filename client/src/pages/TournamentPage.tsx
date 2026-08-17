@@ -45,8 +45,8 @@ const statusTextClasses: Record<string, string> = {
 
 function tournamentLabel(t: any): string {
     if (t.type === 'custom') return t.name || 'Турнир';
-    if (t.name) return t.name;
-    return divisionLabels[t.division] || t.division;
+    const division = t.divisionLabel || t.name || divisionLabels[t.division] || t.division;
+    return `Турнир: ${division}`;
 }
 
 function formatTimer(seconds: number): string {
@@ -363,7 +363,7 @@ export default function TournamentPage() {
             {/* Активные / Официальные / Самоорганизованные */}
             {(tab === 'all' || tab === 'official') && !data.tournaments.some((t: any) => t.type === 'official' && t.myRegistration) && (
                 <Card className="mb-3">
-                    <h3 className="font-bold text-sm">Официальный турнир по боевой мощи</h3>
+                    <h3 className="font-bold text-sm">Турнир</h3>
                     <p className="text-xs text-[var(--color-text-muted)] mt-1">
                         Ваша БМ: {formatCombatPower(data.userCombatPower)}. Учитываются прокачка и экипировка; слабые участники подтягиваются до разницы 5–10%.
                     </p>

@@ -385,7 +385,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                 )
                                             ) : null}
                                             <span className="text-[var(--color-text-muted)] ml-1">
-                                                {tournamentInfo.divisionLabel && `🏆 ${tournamentInfo.divisionLabel}`}
+                                                {tournamentInfo.divisionLabel && `🏆 Турнир: ${tournamentInfo.divisionLabel}`}
                                             </span>
                                         </div>
                                     ) : nextTournamentSec && nextTournamentSec > 0 ? (
@@ -406,7 +406,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                 } catch { setRegisterMsg?.('Ошибка'); }
                                             }}
                                             className="mt-1 text-xs text-[var(--color-accent-info)] underline cursor-pointer hover:text-[var(--color-accent-warning)]"
-                                        >Записаться в турнир по БМ</button>
+                                        >Записаться в турнир</button>
                                     )}
                                     {registerMsg && <p className="text-xs text-[var(--color-accent-success)] mt-0.5">{registerMsg}</p>}
                                 </div>
