@@ -1420,17 +1420,28 @@ router.post('/tournament/register', async (req, res) => {
             [powerDivision.key, MAX_PLAYERS]
         ) as any;
         if (!tournament) {
-            const lastOfficial = await db.one(
-                `SELECT completedAt FROM tournaments
-                 WHERE type = 'official' AND status IN ('completed', 'cancelled') AND completedAt IS NOT NULL
-                 ORDER BY completedAt DESC LIMIT 1`, []
+            const activeOfficial = await db.one(
+                `SELECT id FROM tournaments
+                 WHERE type = 'official' AND status IN ('registration', 'in_progress')
+                 LIMIT 1`, []
             ) as any;
-            if (lastOfficial?.completedAt) {
-                const completedMs = typeof lastOfficial.completedAt === 'number'
-                    ? lastOfficial.completedAt * 1000
-                    : Number(lastOfficial.completedAt) || new Date(lastOfficial.completedAt).getTime();
-                if (Date.now() < completedMs + OFFICIAL_INTERVAL * 1000) {
-                    return res.status(400).json({ error: 'Регистрация в следующий официальный турнир ещё не открыта' });
+            if (!activeOfficial) {
+                const lastOfficial = await db.one(
+                    `SELECT completedAt FROM tournaments
+                     WHERE type = 'official' AND status IN ('completed', 'cancelled') AND completedAt IS NOT NULL
+                     ORDER BY completedAt DESC LIMIT 1`, []
+                ) as any;
+                if (lastOfficial?.completedAt) {
+                    const completedMs = typeof lastOfficial.completedAt === 'number'
+                        ? lastOfficial.completedAt * 1000
+                        : Number(lastOfficial.completedAt) || new Date(lastOfficial.completedAt).getTime();
+                    const registrationOpensAt = Math.floor(completedMs / 1000) + OFFICIAL_INTERVAL;
+                    if (Math.floor(Date.now() / 1000) < registrationOpensAt) {
+                        return res.status(400).json({
+                            error: 'Регистрация в следующий официальный турнир ещё не открыта',
+                            registrationOpensAt,
+                        });
+                    }
                 }
             }
             const now = Math.floor(Date.now() / 1000);

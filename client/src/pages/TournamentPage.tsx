@@ -73,12 +73,17 @@ export default function TournamentPage() {
     const [expandedLog, setExpandedLog] = useState<number | null>(null);
     const [completedPage, setCompletedPage] = useState(1);
     const [showInfo, setShowInfo] = useState(false);
+    const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
 
     // Форма создания custom турнира
     const [showCreate, setShowCreate] = useState(false);
     const [cf, setCf] = useState({ name: '', prizePool: 500, entryFee: 0, registrationMinutes: 30, maxPlayers: 8, minLevel: 1, maxLevel: 999 });
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user, tab, completedPage]);
+    useEffect(() => {
+        const id = window.setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 1000);
+        return () => window.clearInterval(id);
+    }, []);
 
     const load = async () => {
         try {
@@ -289,12 +294,12 @@ export default function TournamentPage() {
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
             {/* Предстоящие официальные турниры */}
-            {data.upcomingOfficial?.length > 0 && (
+            {data.upcomingOfficial?.some((u: any) => u.registrationOpensAt > nowSec) && (
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">⏳ Скоро откроется запись</h3>
                     <div className="space-y-1">
-                        {data.upcomingOfficial.map((u: any) => {
-                            const secLeft = Math.max(0, u.registrationOpensAt - Math.floor(Date.now() / 1000));
+                        {data.upcomingOfficial.filter((u: any) => u.registrationOpensAt > nowSec).map((u: any) => {
+                            const secLeft = Math.max(0, u.registrationOpensAt - nowSec);
                             return (
                                 <div key={u.division} className="flex items-center gap-2 text-xs">
                                     <span>{u.icon}</span>
@@ -361,7 +366,9 @@ export default function TournamentPage() {
             )}
 
             {/* Активные / Официальные / Самоорганизованные */}
-            {(tab === 'all' || tab === 'official') && !data.tournaments.some((t: any) => t.type === 'official' && t.myRegistration) && (
+            {(tab === 'all' || tab === 'official')
+                && !data.tournaments.some((t: any) => t.type === 'official' && t.myRegistration)
+                && !data.upcomingOfficial?.some((u: any) => u.registrationOpensAt > nowSec) && (
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm">Турнир</h3>
                     <p className="text-xs text-[var(--color-text-muted)] mt-1">
