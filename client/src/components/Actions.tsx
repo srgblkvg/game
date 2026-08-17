@@ -167,6 +167,14 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                 return;
             }
         }
+        if (Number(data.nextOfficialRegistrationAt) > 0) {
+            const now = Math.floor(Date.now() / 1000);
+            setTournamentInfo(null);
+            setRegisterMsg('');
+            setNextTournamentSec(Math.max(0, Number(data.nextOfficialRegistrationAt) - now));
+            setNextTournamentLabel('официальный турнир');
+            return;
+        }
         if (data.upcomingOfficial?.length > 0) {
             const suitable = data.upcomingOfficial
                 .sort((a: any, b: any) => a.registrationOpensAt - b.registrationOpensAt);

@@ -20,6 +20,28 @@ const OFFICIAL_INTERVAL = 8 * 60 * 60; // общий набор раз в 8 ча
 const divisions: Array<{ name: string; label: string; tier: number; minPower: number; maxPower: number; icon: string }> = [];
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
 
+function timestampMs(value: any): number {
+    if (!value) return 0;
+    return typeof value === 'number' ? value * 1000 : Number(value) || new Date(value).getTime();
+}
+
+async function getNextOfficialRegistrationAt(): Promise<number | null> {
+    const active = await db.one(
+        `SELECT id FROM tournaments
+         WHERE type = 'official' AND status IN ('registration', 'in_progress') LIMIT 1`, []
+    ) as any;
+    if (active) return null;
+    const last = await db.one(
+        `SELECT completedAt FROM tournaments
+         WHERE type = 'official' AND status IN ('completed', 'cancelled') AND completedAt IS NOT NULL
+         ORDER BY completedAt DESC LIMIT 1`, []
+    ) as any;
+    const completedMs = timestampMs(last?.completedAt);
+    if (!completedMs) return null;
+    const opensAt = Math.floor(completedMs / 1000) + OFFICIAL_INTERVAL;
+    return opensAt > Math.floor(Date.now() / 1000) ? opensAt : null;
+}
+
 function parseJsonValue(value: unknown): any {
     if (!value) return null;
     if (typeof value === 'object') return value;
@@ -1384,8 +1406,9 @@ router.get('/tournament', async (req, res) => {
         }
     }
 
+    const nextOfficialRegistrationAt = await getNextOfficialRegistrationAt();
     res.json({ tournaments: result, userLevel: user.level, userCombatPower, tab: 'active', typeFilter,
-        upcomingOfficial
+        upcomingOfficial, nextOfficialRegistrationAt
     });
 });
 
@@ -1426,22 +1449,12 @@ router.post('/tournament/register', async (req, res) => {
                  LIMIT 1`, []
             ) as any;
             if (!activeOfficial) {
-                const lastOfficial = await db.one(
-                    `SELECT completedAt FROM tournaments
-                     WHERE type = 'official' AND status IN ('completed', 'cancelled') AND completedAt IS NOT NULL
-                     ORDER BY completedAt DESC LIMIT 1`, []
-                ) as any;
-                if (lastOfficial?.completedAt) {
-                    const completedMs = typeof lastOfficial.completedAt === 'number'
-                        ? lastOfficial.completedAt * 1000
-                        : Number(lastOfficial.completedAt) || new Date(lastOfficial.completedAt).getTime();
-                    const registrationOpensAt = Math.floor(completedMs / 1000) + OFFICIAL_INTERVAL;
-                    if (Math.floor(Date.now() / 1000) < registrationOpensAt) {
-                        return res.status(400).json({
-                            error: 'Регистрация в следующий официальный турнир ещё не открыта',
-                            registrationOpensAt,
-                        });
-                    }
+                const registrationOpensAt = await getNextOfficialRegistrationAt();
+                if (registrationOpensAt) {
+                    return res.status(400).json({
+                        error: 'Регистрация в следующий официальный турнир ещё не открыта',
+                        registrationOpensAt,
+                    });
                 }
             }
             const now = Math.floor(Date.now() / 1000);

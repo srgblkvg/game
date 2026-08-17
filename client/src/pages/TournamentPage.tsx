@@ -142,8 +142,9 @@ export default function TournamentPage() {
     if (!data) return <div className="p-4">Загрузка...</div>;
 
     const apiUpcoming = data.upcomingOfficial || [];
-    const fallbackUpcoming = fallbackRegistrationOpensAt > nowSec
-        ? [{ division: 'official', label: 'Следующий турнир', icon: '🏆', registrationOpensAt: fallbackRegistrationOpensAt }]
+    const globalRegistrationOpensAt = Number(data.nextOfficialRegistrationAt || fallbackRegistrationOpensAt || 0);
+    const fallbackUpcoming = globalRegistrationOpensAt > nowSec
+        ? [{ division: 'official', label: 'Следующий турнир', icon: '🏆', registrationOpensAt: globalRegistrationOpensAt }]
         : [];
     const upcomingOfficial = apiUpcoming.length > 0 ? apiUpcoming : fallbackUpcoming;
 
