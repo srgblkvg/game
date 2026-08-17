@@ -1420,14 +1420,6 @@ router.post('/tournament/register', async (req, res) => {
             [powerDivision.key, MAX_PLAYERS]
         ) as any;
         if (!tournament) {
-            const activeOfficial = await db.one(
-                `SELECT id FROM tournaments
-                 WHERE type = 'official' AND status IN ('registration', 'in_progress')
-                 LIMIT 1`, []
-            ) as any;
-            if (activeOfficial) {
-                return res.status(400).json({ error: 'Эта очередь ещё формируется. Дождитесь общего набора турниров' });
-            }
             const lastOfficial = await db.one(
                 `SELECT completedAt FROM tournaments
                  WHERE type = 'official' AND status IN ('completed', 'cancelled') AND completedAt IS NOT NULL
