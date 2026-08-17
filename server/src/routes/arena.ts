@@ -29,7 +29,7 @@ async function hasEnoughHpForBattle(user: any): Promise<boolean> {
 }
 
 async function getArenaCombatPower(user: any): Promise<number> {
-    return calculateCombatPower(buildCombatPowerStats(user), undefined, Number(user.level));
+    return calculateCombatPower(await buildCombatPowerStats(user), undefined, Number(user.level));
 }
 
 // Получить случайного соперника (без боя)

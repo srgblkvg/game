@@ -110,8 +110,6 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     const hasRoom = room && room.until > now;
     const hasDrink = drink && drink.until > now;
     const hasPremium = premium && premium.until > now;
-    const activeCount = [hasRoom, hasDrink, hasPremium].filter(Boolean).length;
-
     const activeIcons = [
         hasRoom ? (roomIcons[room!.type] || 'game-icons:wooden-crate') : '',
         hasDrink ? 'game-icons:beer-bottle' : '',
@@ -119,12 +117,12 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
     ].filter(Boolean) as string[];
 
     return (
+        <>
         <Card className="mt-4 w-full overflow-hidden" data-tutorial="buffs-block">
             <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setCollapsed(!collapsed)}>
                 <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xs flex-shrink-0">{collapsed ? '▶' : '▼'}</span>
                     <h3 className="font-bold text-sm flex-shrink-0">Усиления</h3>
-                    {hasCollectionItems && <span className="w-2 h-2 rounded-full bg-[#2ecc71] flex-shrink-0" />}
                     {collapsed && activeIcons.length > 0 && (
                         <span className="flex items-center gap-0.5 flex-shrink-0">
                             {activeIcons.map((icon, i) => (
@@ -133,9 +131,7 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
                         </span>
                     )}
                 </div>
-                <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0 ml-2">
-                    {activeCount > 0 ? `${activeCount} акт.` : 'Нет'}
-                </span>
+                <span className="text-xs text-[var(--color-text-muted)]">{activeIcons.length > 0 ? `${activeIcons.length} активных` : 'Нет активных'}</span>
             </div>
 
             {!collapsed && (
@@ -179,32 +175,28 @@ export default function BuffsBlock({ room, drink, premium, inventory, equipment,
                         />
                     </div>
 
-                    {/* Разделитель */}
-                    <div className="border-t border-[var(--color-border-light)]" />
-
-                    {/* Постоянные */}
-                    <div>
-                        <div className="text-[0.65rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 flex items-center justify-center gap-1">
-                            <Icon icon="game-icons:infinity" width="10" height="10" /> Постоянные
-                        </div>
-                        <div data-tutorial-buff="collection" className="cursor-pointer hover:bg-[var(--color-bg-hover)] rounded px-1 -mx-1 py-0.5" onClick={() => navigate('/collections')}>
-                            <div className="flex justify-between items-center text-xs mb-0.5">
-                                <span className="flex items-center gap-1.5">
-                                    <Icon icon="game-icons:book-cover" width="12" height="12" className="text-[var(--color-text-muted)]" />
-                                    Коллекция
-                                    {hasCollectionItems && <span className="w-1.5 h-1.5 rounded-full bg-[#2ecc71]" />}
-                                </span>
-                                <span className="text-[var(--color-text-muted)]">{collectionPercent}%</span>
-                            </div>
-                            <div className="w-full h-1 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
-                                <div className="h-full bg-[var(--color-accent-gold)] rounded-full transition-all duration-500"
-                                    style={{ width: `${collectionPercent}%` }} />
-                            </div>
-                        </div>
-                    </div>
                 </div>
             )}
         </Card>
+        <Card
+            padding="sm"
+            className="mt-4 w-full cursor-pointer hover:bg-[var(--color-bg-card-hover)]"
+            data-tutorial-buff="collection"
+            onClick={() => navigate('/collections')}
+        >
+            <div className="flex items-center justify-between text-xs mb-1">
+                <span className="flex items-center gap-1.5 font-semibold">
+                    <Icon icon="game-icons:book-cover" width="13" height="13" className="text-[var(--color-accent-gold)]" />
+                    Коллекция
+                    {hasCollectionItems && <span className="w-1.5 h-1.5 rounded-full bg-[#2ecc71]" />}
+                </span>
+                <span className="font-bold text-[var(--color-text-primary)]">{collectionPercent}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-[var(--color-bg-input)] rounded-full overflow-hidden">
+                <div className="h-full bg-[var(--color-accent-gold)] rounded-full" style={{ width: `${collectionPercent}%` }} />
+            </div>
+        </Card>
+        </>
     );
 }
 

@@ -18,6 +18,7 @@ const player = {
   equipment: { weapon1: { name: 'Меч', slot: 'weapon1', bonuses: { s: 13 } } },
   stats: { s: 49, a: 47, d: 21, m: 31, hp: 254, extra: { crit: 30, dodge: 40, counter: 0, fullBlock: 25 }, rageDmg: 20 },
   combatPowerStats: { s: 45, a: 43, d: 19, m: 28, hp: 232, extra: { crit: 30, dodge: 40, counter: 0, fullBlock: 25 } },
+  scalablePowerStats: { s: 41, a: 39, d: 17, m: 25, hp: 211, extra: { crit: 30, dodge: 40, counter: 0, fullBlock: 25 } },
   drinkBonuses: { s: 1, a: 0, d: 0, m: 0 },
   collectionBonus: 3,
   guildBonus: 5,
@@ -84,7 +85,8 @@ test('лог объясняет временное повышение и сос�
   const second = normalizeTournamentSnapshot(createTournamentSnapshot({ ...player, id: 660, name: 'Другой' } as any, 9000), 5000);
   const message = formatTournamentNormalizationLog(first, second);
   assert.match(message, /временно повышена сила/);
-  assert.match(message, /без коллекции, напитков и бонусов гильдии/i);
+  assert.match(message, /прокачку, экипировку и коллекцию/i);
+  assert.match(message, /не напитки и бонусы гильдии/i);
   assert.match(message, /1\.23K/);
   assert.match(message, /9K/);
   assert.match(message, /реальные характеристики не изменены/i);
@@ -118,4 +120,21 @@ test('групповое повышение сохраняет профиль и
   const originalExternalStrength = weak.player.stats.s - weak.player.combatPowerStats!.s;
   const normalizedExternalStrength = normalized[0]!.player.stats.s - normalized[0]!.player.combatPowerStats!.s;
   assert.equal(normalizedExternalStrength, originalExternalStrength);
+  const collectionStrength = weak.player.combatPowerStats!.s - weak.player.scalablePowerStats!.s;
+  const normalizedCollectionStrength = normalized[0]!.player.combatPowerStats!.s - normalized[0]!.player.scalablePowerStats!.s;
+  assert.equal(normalizedCollectionStrength, collectionStrength);
+});
+
+test('экстремально слабый профиль также подтягивается до разницы 5–10%', () => {
+  const weak = createTournamentSnapshot({
+    ...player,
+    id: 1,
+    level: 1,
+    stats: { ...player.stats, s: 1, a: 1, d: 1, m: 1, hp: 4 },
+    combatPowerStats: { ...player.combatPowerStats, s: 1, a: 1, d: 1, m: 1, hp: 4 },
+  } as any, 1);
+  const strong = createTournamentSnapshot({ ...player, id: 2 } as any, 1_000_000);
+  const normalized = normalizeTournamentGroup([weak, strong]);
+  const gap = 1 - normalized[0]!.normalization!.appliedPower / strong.combatPower;
+  assert.ok(gap >= 0.045 && gap <= 0.105, `gap=${gap}`);
 });

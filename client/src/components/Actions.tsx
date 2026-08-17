@@ -190,35 +190,36 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         setNextTournamentSec(0);
     }, []);
 
-    useEffect(() => {
+    const refreshTournaments = useCallback(() => {
         fetch('/api/tournament?tab=active&type=official', { headers: getHeaders() })
             .then(r => r.json())
             .then(loadTournaments)
             .catch(() => {});
     }, [loadTournaments]);
 
-    // Периодически обновляем данные турнира
     useEffect(() => {
-        const id = setInterval(() => {
-            fetch('/api/tournament?tab=active&type=official', { headers: getHeaders() })
-                .then(r => r.json())
-                .then(loadTournaments)
-                .catch(() => {});
-        }, 30000);
+        refreshTournaments();
+        window.addEventListener('tournamentUpdated', refreshTournaments);
+        return () => window.removeEventListener('tournamentUpdated', refreshTournaments);
+    }, [refreshTournaments]);
+
+    // Резерв после потери/переподключения WebSocket; штатные обновления приходят событиями.
+    useEffect(() => {
+        const id = setInterval(refreshTournaments, 5 * 60 * 1000);
         return () => clearInterval(id);
-    }, []);
+    }, [refreshTournaments]);
 
     // Таймер до следующего турнира
     useEffect(() => {
         if (nextTournamentSec <= 0) return;
         const id = setInterval(() => {
             setNextTournamentSec(prev => {
-                if (prev <= 1) { setTournamentInfo(null); return 0; }
+                if (prev <= 1) { setTournamentInfo(null); window.setTimeout(refreshTournaments, 0); return 0; }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(id);
-    }, [nextTournamentSec > 0 ? 1 : 0]);
+    }, [nextTournamentSec > 0 ? 1 : 0, refreshTournaments]);
 
     // Туториал: переключение табов
     useEffect(() => {

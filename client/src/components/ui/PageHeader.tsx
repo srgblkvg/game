@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface PageHeaderProps {
     title: string;
@@ -8,7 +9,7 @@ interface PageHeaderProps {
 }
 
 export default function PageHeader({ title, icon, bgImage }: PageHeaderProps) {
-    const bgStyle = bgImage ? { backgroundImage: `url(${bgImage})` } : {};
+    const { theme } = useTheme();
 
     // Сброс скролла при переходе на страницу
     useEffect(() => {
@@ -28,12 +29,18 @@ export default function PageHeader({ title, icon, bgImage }: PageHeaderProps) {
     return (
         <div className="relative bg-[var(--color-bg-secondary)] rounded-xl mb-4 p-4 h-28 overflow-hidden border border-[var(--color-border-default)]">
             {bgImage && (
-                <div className="absolute inset-0 bg-cover bg-center opacity-25" style={bgStyle} />
+                <>
+                    <img src={bgImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+                    <div
+                        className="absolute inset-0"
+                        style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.65)' : 'rgba(245,240,232,0.30)' }}
+                    />
+                </>
             )}
             <div className="relative z-10 flex items-end h-full">
                 <div className="flex items-center gap-2">
                     {icon && <Icon icon={icon} width="24" height="24" className="text-[var(--color-text-primary)]" />}
-                    <h1 className="text-lg font-bold text-[var(--color-text-primary)]">{title}</h1>
+                    <h1 className="text-lg font-bold text-[var(--color-text-primary)]" style={theme === 'light' ? { textShadow: '0 1px 1px rgba(255,255,255,0.9)' } : undefined}>{title}</h1>
                 </div>
             </div>
         </div>

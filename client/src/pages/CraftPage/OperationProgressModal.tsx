@@ -73,7 +73,7 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
               <div className="h-3 mt-2 rounded-full overflow-hidden bg-[var(--color-bg-input)] border border-[var(--color-border-light)]">
                 <div key={`${entry.id}-${stepKey}`} className={`h-full ${showResult && stepResult
                   ? stepResult.success ? 'bg-[var(--color-accent-success)]' : 'bg-[var(--color-accent-danger)]'
-                  : 'bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f59e0b]'} ${!stepResult ? 'animate-pulse' : ''}`}
+                  : 'bg-[var(--color-accent-purple)]'} ${!stepResult ? 'animate-pulse' : ''}`}
                   style={stepResult && !showResult ? { animation: 'craft-round-progress 1500ms linear forwards' } : { width: showResult ? '100%' : '4%' }} />
               </div>
               {showResult && stepResult && <p className={`text-xs font-bold mt-2 ${stepResult.success ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{stepResult.message}</p>}

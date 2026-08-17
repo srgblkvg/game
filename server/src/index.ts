@@ -33,16 +33,19 @@ import { startJobCompletionScheduler } from './schedulers/jobs';
 import { startGuildBossWeeklyResetScheduler } from './schedulers/guildBossWeeklyReset';
 import { initTreasury, initTreasuryLog } from './game/treasury';
 import { initExchange } from './game/exchange';
+import { initTournamentSchema } from './game/tournamentSchema';
 
 // Турниры зависят от казны: первый тик запускаем только после инициализации.
-Promise.allSettled([initTreasury(), initTreasuryLog(), initExchange()]).then((results) => {
-  const labels = ['Treasury', 'Treasury log', 'Exchange'];
+Promise.allSettled([initTreasury(), initTreasuryLog(), initExchange(), initTournamentSchema()]).then((results) => {
+  const labels = ['Treasury', 'Treasury log', 'Exchange', 'Tournament schema'];
   results.forEach((result, index) => {
     if (result.status === 'rejected') {
       logger.error(`${labels[index]} init failed:`, result.reason?.message || result.reason);
     }
   });
-  startTournamentScheduler();
+  const tournamentSchemaReady = results[3]?.status === 'fulfilled';
+  if (tournamentSchemaReady) startTournamentScheduler();
+  else logger.error('Tournament scheduler disabled: schema initialization failed');
 });
 
 startSalaryScheduler();

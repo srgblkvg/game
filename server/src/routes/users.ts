@@ -32,7 +32,7 @@ router.get('/character/public/:userId', async (req, res) => {
     const guildBonus = await getGuildBonus(userId, 'arena');
     const { enriched: enrichedEquipment } = await enrichEquipment(user.equipment ? JSON.parse(user.equipment) : {});
     const stats = await buildPlayerStats(user, 'arena');
-    const combatPower = calculateCombatPower(buildCombatPowerStats(user), undefined, user.level);
+    const combatPower = calculateCombatPower(await buildCombatPowerStats(user), undefined, user.level);
 
     res.json({
         id: user.id,

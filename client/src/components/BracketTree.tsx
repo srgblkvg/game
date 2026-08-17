@@ -10,6 +10,7 @@ interface Match {
   player2Id: number | null;
   winnerId: number | null;
   log?: any;
+  stage?: 'group' | 'tiebreak' | 'playoff';
 }
 
 function roundLabel(r: number, totalRounds: number): string {
@@ -144,8 +145,9 @@ export default function BracketTree({ matches }: { matches: Match[] }) {
   
   if (!matches || matches.length === 0) return null;
 
+  const playoffMatches = matches.filter(m => !m.stage || m.stage === 'playoff');
   const byRound: Record<number, Match[]> = {};
-  for (const m of matches) {
+  for (const m of playoffMatches) {
     if (!byRound[m.round]) byRound[m.round] = [];
     byRound[m.round].push(m);
   }

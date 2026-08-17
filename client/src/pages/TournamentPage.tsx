@@ -82,6 +82,11 @@ export default function TournamentPage() {
 
     useEffect(() => { if (!user) navigate('/login'); else load(); }, [user, tab, completedPage]);
     useEffect(() => {
+        const refresh = () => { void load(); };
+        window.addEventListener('tournamentUpdated', refresh);
+        return () => window.removeEventListener('tournamentUpdated', refresh);
+    }, [user, tab, completedPage]);
+    useEffect(() => {
         const id = window.setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 1000);
         return () => window.clearInterval(id);
     }, []);
@@ -152,14 +157,27 @@ export default function TournamentPage() {
         const myReg = t.myRegistration;
         const joinable = t.type === 'official' || (data.userLevel >= (t.minLevel || 1) && data.userLevel <= (t.maxLevel || 999));
 
+        const allMatches = t.matches || [];
+        const groupMatches = allMatches.filter((m: any) => m.stage === 'group');
+        const tiebreakMatches = allMatches.filter((m: any) => m.stage === 'tiebreak');
+        const playoffMatches = allMatches.filter((m: any) => !m.stage || m.stage === 'playoff');
         const matchesByRound: Record<number, any[]> = {};
-        if (t.matches) {
-            for (const m of t.matches) {
+        if (playoffMatches.length > 0) {
+            for (const m of playoffMatches) {
                 if (!matchesByRound[m.round]) matchesByRound[m.round] = [];
                 matchesByRound[m.round].push(m);
             }
         }
         const rounds = Object.keys(matchesByRound).map(Number).sort((a, b) => a - b);
+
+        const renderStageMatch = (m: any) => (
+            <div key={m.id} className={`text-xs flex items-center gap-1 py-0.5 px-2 rounded ${m.winnerId ? 'bg-[var(--color-bg-primary)]' : 'bg-[var(--color-bg-card)]'}`}>
+                <span className={m.winnerId === m.player1Id ? 'font-bold text-[var(--color-accent-success)]' : ''}>{m.player1Name || '—'}</span>
+                <span className="text-[var(--color-text-muted)]">vs</span>
+                <span className={m.winnerId === m.player2Id ? 'font-bold text-[var(--color-accent-success)]' : ''}>{m.player2Name || '—'}</span>
+                {m.winnerId && <span className="ml-auto text-[0.6rem] text-[var(--color-accent-info)]">{m.winnerName || 'победитель'}</span>}
+            </div>
+        );
 
         return (
             <Card key={t.id} className={`mb-3 ${joinable ? (t.type === 'custom' ? 'border-[#a0a0ff]' : divisionBorderClasses[t.division] || '') : ''}`}>
@@ -212,6 +230,30 @@ export default function TournamentPage() {
                         ✅ Вы записаны
                         {myReg.snapshotStats?.place && ` — ${myReg.snapshotStats.place}-е место, приз: ${formatMoney(myReg.snapshotStats.prize || 0)}`}
                     </p>
+                )}
+
+                {groupMatches.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                        <h4 className="text-xs font-bold text-[var(--color-text-primary)]">Групповой этап</h4>
+                        {[...new Set(groupMatches.map((m: any) => m.groupName || '—'))].map(groupName => (
+                            <div key={String(groupName)}>
+                                <p className="text-[0.6rem] font-bold text-[var(--color-text-muted)] uppercase mb-1">Группа {String(groupName)}</p>
+                                <div className="space-y-1">{groupMatches.filter((m: any) => (m.groupName || '—') === groupName).map(renderStageMatch)}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {tiebreakMatches.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                        <h4 className="text-xs font-bold text-[var(--color-text-primary)]">Тай-брейки до трёх побед</h4>
+                        {tiebreakMatches.map((m: any) => (
+                            <div key={m.id}>
+                                <p className="text-[0.55rem] text-[var(--color-text-muted)]">Группа {m.groupName || '—'} · бой серии {m.seriesIndex || 1}</p>
+                                {renderStageMatch(m)}
+                            </div>
+                        ))}
+                    </div>
                 )}
 
                 {rounds.length > 0 && (
@@ -277,19 +319,21 @@ export default function TournamentPage() {
                             <p>• При записи сохраняются ваша боевая мощь, экипировка, напиток, коллекция, бонусы гильдии и таланты.</p>
                             <p>• Смена экипировки, талантов или гильдии после записи не изменит вашу силу в этом турнире.</p>
                             <p>• Регистрация длится 15 минут, после неё система до 5 минут формирует сетки.</p>
-                            <p>• Если записались два или более игрока, участвуют все.</p>
-                            <p>• БМ учитывает только прокачку характеристик и экипировку — без коллекции, напитков и бонусов гильдии.</p>
-                            <p>• Слабым участникам временно повышаются их собственные характеристики до разницы 5–10% от сильнейшего.</p>
+                            <p>• После регистрации игроки разделяются по сохранённым динамическим дивизионам.</p>
+                            <p>• Боевая мощь учитывает прокачку характеристик, экипировку и коллекцию — без напитков и бонусов гильдии.</p>
+                            <p>• Внутри дивизиона слабым участникам временно повышаются их собственные характеристики до разницы 5–10% от лидера.</p>
                             <p>• Соотношение силы, ловкости, защиты и мастерства каждого игрока сохраняется.</p>
                             <p>• Реальные характеристики не меняются, подтверждение не требуется, а пояснение сохраняется в журнале боя.</p>
-                            <p>• Если записался только один игрок, его запись переносится в следующий набор вместе с фондом.</p>
+                            <p>• Если в дивизионе записался один игрок, турнир не запускается, а его доля фонда возвращается в казну.</p>
+                            <p>• За три чемпионства игрок переходит на один дивизион выше, а счётчик чемпионств сбрасывается.</p>
                         </div>
                         <div>
                             <h4 className="font-bold text-[var(--color-text-primary)]">🏆 Бои и награды</h4>
-                            <p>• Участник покидает турнир после первого поражения.</p>
+                            <p>• До 8 участников проводится плей-офф. При большей явке сначала формируются группы до 4 игроков, из каждой выходят двое.</p>
+                            <p>• При равенстве на проходном месте проводится серия до трёх побед, затем начинается фиксированный плей-офф.</p>
                             <p>• В каждом бою используется максимальное здоровье и данные, сохранённые при записи.</p>
                             <p>• При трёх и более участниках победитель получает 50% фонда, второе место — 30%, третье — 20%.</p>
-                            <p>• Гарантированный фонд показывается до записи. До начала турнира он распределяется между собравшимися группами близкой силы.</p>
+                            <p>• Общий резерв до начала турниров распределяется между собравшимися дивизионами по их участникам.</p>
                             <p>• При двух участниках победитель получает 70% фонда, второй участник — 30%.</p>
                         </div>
                         <div>
@@ -306,6 +350,13 @@ export default function TournamentPage() {
                 <Button variant={tab === 'custom' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('custom'); setCompletedPage(1); }}>Самоорганизованные</Button>
                 <Button variant={tab === 'completed' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('completed'); setCompletedPage(1); }}>Завершённые</Button>
             </div>
+
+            {data.userDivision && (
+                <p className="text-xs text-[var(--color-text-secondary)] mb-3">
+                    Дивизион: <span className="font-bold text-[var(--color-text-primary)]">{data.userDivision.label}</span>
+                    {' · '}Чемпионства: {data.userDivision.championships}/{data.userDivision.championshipsRequired}
+                </p>
+            )}
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
@@ -389,7 +440,7 @@ export default function TournamentPage() {
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm">Турнир</h3>
                     <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                        Ваша БМ: {formatCombatPower(data.userCombatPower)}. Учитываются прокачка и экипировка; слабые участники подтягиваются до разницы 5–10%.
+                        Ваша боевая мощь: {formatCombatPower(data.userCombatPower)}. Учитываются прокачка, экипировка и коллекция; слабые участники подтягиваются до разницы 5–10%.
                     </p>
                     <Button variant="danger" size="md" className="mt-3" onClick={() => handleRegister(undefined, 'official')}>
                         Записаться

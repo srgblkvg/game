@@ -123,7 +123,7 @@ router.get('/character/me', async (req, res) => {
     const guildBonus = await getGuildBonus(userId, 'arena');
     const buildings = await getGuildBuildings(userId);
     const stats = await buildPlayerStats(user, 'arena');
-    const combatPower = calculateCombatPower(buildCombatPowerStats(user), undefined, user.level);
+    const combatPower = calculateCombatPower(await buildCombatPowerStats(user), undefined, user.level);
 
     const totalCollectionItems = ((await db.one('SELECT COUNT(*) as cnt FROM collection_set_items') as any).cnt || 225) * 2;
 

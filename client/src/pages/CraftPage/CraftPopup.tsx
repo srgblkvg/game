@@ -41,7 +41,7 @@ export default function CraftPopup({ result, onDone }: Props) {
   if (phase === 'done') return null;
   const barColor = phase === 'result'
     ? result.success ? 'bg-[var(--color-accent-success)]' : 'bg-[var(--color-accent-danger)]'
-    : 'bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f59e0b]';
+    : 'bg-[var(--color-accent-purple)]';
 
   return <div className="fixed inset-0 z-[1100] flex items-center justify-center">
     <style>{`@keyframes craft-single-progress { from { width: 0%; } to { width: 100%; } }`}</style>

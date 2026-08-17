@@ -230,8 +230,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               window.dispatchEvent(new CustomEvent('guildBossKill', { detail: data }));
               break;
             }
-            case 'tournamentCreated': {
-              window.dispatchEvent(new CustomEvent('tournamentUpdated'));
+            case 'tournamentCreated':
+            case 'tournamentUpdated': {
+              window.dispatchEvent(new CustomEvent('tournamentUpdated', { detail: data }));
               break;
             }
             case 'protection': {

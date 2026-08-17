@@ -17,7 +17,9 @@ export function startTournamentScheduler(): void {
       ) as any[];
       for (const t of all) await mod.autoAdvance(t.id);
       await mod.getOrCreateTournament();
-    } catch {} finally {
+    } catch (error) {
+      console.error('[tournamentScheduler] tick failed:', error);
+    } finally {
       running = false;
     }
   };
