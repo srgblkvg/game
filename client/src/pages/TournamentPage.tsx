@@ -74,6 +74,7 @@ export default function TournamentPage() {
     const [completedPage, setCompletedPage] = useState(1);
     const [showInfo, setShowInfo] = useState(false);
     const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+    const [fallbackRegistrationOpensAt, setFallbackRegistrationOpensAt] = useState(0);
 
     // Форма создания custom турнира
     const [showCreate, setShowCreate] = useState(false);
@@ -107,7 +108,16 @@ export default function TournamentPage() {
                 method: 'POST', headers: getHeaders(), body: JSON.stringify(body),
             });
             const d = await res.json();
-            if (!res.ok) { setError(d.error); return; }
+            if (!res.ok) {
+                if (d.registrationOpensAt) {
+                    setFallbackRegistrationOpensAt(Number(d.registrationOpensAt));
+                    setError('');
+                    await load();
+                } else {
+                    setError(d.error);
+                }
+                return;
+            }
             setMessage('Зарегистрирован!');
             const fresh = await fetchCharacter(); setCharacter(fresh);
             load();
@@ -130,6 +140,12 @@ export default function TournamentPage() {
     };
 
     if (!data) return <div className="p-4">Загрузка...</div>;
+
+    const apiUpcoming = data.upcomingOfficial || [];
+    const fallbackUpcoming = fallbackRegistrationOpensAt > nowSec
+        ? [{ division: 'official', label: 'Следующий турнир', icon: '🏆', registrationOpensAt: fallbackRegistrationOpensAt }]
+        : [];
+    const upcomingOfficial = apiUpcoming.length > 0 ? apiUpcoming : fallbackUpcoming;
 
     const renderActiveCard = (t: any) => {
         const myReg = t.myRegistration;
@@ -294,17 +310,17 @@ export default function TournamentPage() {
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
 
             {/* Предстоящие официальные турниры */}
-            {data.upcomingOfficial?.some((u: any) => u.registrationOpensAt > nowSec) && (
+            {upcomingOfficial.some((u: any) => u.registrationOpensAt > nowSec) && (
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">⏳ Скоро откроется запись</h3>
                     <div className="space-y-1">
-                        {data.upcomingOfficial.filter((u: any) => u.registrationOpensAt > nowSec).map((u: any) => {
+                        {upcomingOfficial.filter((u: any) => u.registrationOpensAt > nowSec).map((u: any) => {
                             const secLeft = Math.max(0, u.registrationOpensAt - nowSec);
                             return (
                                 <div key={u.division} className="flex items-center gap-2 text-xs">
                                     <span>{u.icon}</span>
                                     <span className="font-medium">{u.label}</span>
-                                    <span className="text-[var(--color-text-muted)]">ур.{u.minLevel}–{u.maxLevel}</span>
+                                    {u.minLevel && u.maxLevel && <span className="text-[var(--color-text-muted)]">ур.{u.minLevel}–{u.maxLevel}</span>}
                                     <span className="text-[var(--color-accent-info)] ml-auto tabular-nums">
                                         через {formatTimer(secLeft)}
                                     </span>
@@ -368,7 +384,7 @@ export default function TournamentPage() {
             {/* Активные / Официальные / Самоорганизованные */}
             {(tab === 'all' || tab === 'official')
                 && !data.tournaments.some((t: any) => t.type === 'official' && t.myRegistration)
-                && !data.upcomingOfficial?.some((u: any) => u.registrationOpensAt > nowSec) && (
+                && !upcomingOfficial.some((u: any) => u.registrationOpensAt > nowSec) && (
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm">Турнир</h3>
                     <p className="text-xs text-[var(--color-text-muted)] mt-1">

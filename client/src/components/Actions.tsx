@@ -239,7 +239,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
             {heroCards.length > 0 && (
                 <div>
-                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} trainingCD={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} isGuest={isGuest} tournamentInfo={tournamentInfo} setTournamentInfo={setTournamentInfo} myRegistration={myRegistration} setMyRegistration={setMyRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} nextTournamentLabel={nextTournamentLabel} />
+                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} trainingCD={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} isGuest={isGuest} tournamentInfo={tournamentInfo} setTournamentInfo={setTournamentInfo} myRegistration={myRegistration} setMyRegistration={setMyRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} setNextTournamentSec={setNextTournamentSec} nextTournamentLabel={nextTournamentLabel} setNextTournamentLabel={setNextTournamentLabel} />
                 </div>
             )}
             {/* Категории */}
@@ -277,16 +277,16 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
                     </div>
                 </Card>
             ) : (
-            <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} trainingCD={activeTab === 'world' ? trainingCD : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} isGuest={isGuest} />
+            <CardGrid cards={activeCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={activeTab === 'world' ? massacreCount : 0} massacreTimeLeft={activeTab === 'world' ? massacreTimeLeft : 0} trainingCD={activeTab === 'world' ? trainingCD : 0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} tournamentInfo={activeTab === 'world' ? null : tournamentInfo} setTournamentInfo={setTournamentInfo} myRegistration={activeTab === 'world' ? null : myRegistration} setMyRegistration={setMyRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={activeTab === 'world' ? 0 : nextTournamentSec} setNextTournamentSec={setNextTournamentSec} nextTournamentLabel={nextTournamentLabel} setNextTournamentLabel={setNextTournamentLabel} isGuest={isGuest} />
             )}
         </div>
     );
 }
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, trainingCD, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, setTournamentInfo, myRegistration, setMyRegistration, registerMsg, setRegisterMsg, nextTournamentSec, nextTournamentLabel, isGuest }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, trainingCD, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, setTournamentInfo, myRegistration, setMyRegistration, registerMsg, setRegisterMsg, nextTournamentSec, setNextTournamentSec, nextTournamentLabel, setNextTournamentLabel, isGuest }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
     navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; treasury: number; massacreCount: number; massacreTimeLeft: number; trainingCD: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
-    tournamentInfo?: any; setTournamentInfo?: (info: any) => void; myRegistration?: any; setMyRegistration?: (r: any) => void; registerMsg?: string; setRegisterMsg?: (msg: string) => void; nextTournamentSec?: number; nextTournamentLabel?: string;
+    tournamentInfo?: any; setTournamentInfo?: (info: any) => void; myRegistration?: any; setMyRegistration?: (r: any) => void; registerMsg?: string; setRegisterMsg?: (msg: string) => void; nextTournamentSec?: number; setNextTournamentSec: (seconds: number) => void; nextTournamentLabel?: string; setNextTournamentLabel: (label: string) => void;
     isGuest?: boolean;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
@@ -370,9 +370,14 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                                 const d = await res.json();
                                                                 if (d.success) {
                                                                     setMyRegistration?.({ tournamentId: tournamentInfo.id });
+                                                                } else if (d.registrationOpensAt) {
+                                                                    const now = Math.floor(Date.now() / 1000);
+                                                                    setTournamentInfo?.(null);
+                                                                    setRegisterMsg?.('');
+                                                                    setNextTournamentSec(Math.max(0, Number(d.registrationOpensAt) - now));
+                                                                    setNextTournamentLabel('официальный турнир');
                                                                 } else {
                                                                     setRegisterMsg?.(d.error || 'Ошибка');
-                                                                    // Если турнир уже закрыт — обновляем данные
                                                                     if (d.error?.includes('закрыта') || d.error?.includes('не найден')) {
                                                                         setTournamentInfo?.(null);
                                                                         setRegisterMsg?.('');
@@ -401,8 +406,16 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                         method: 'POST', headers: getHeaders(), body: JSON.stringify({ division: 'official' }),
                                                     });
                                                     const d = await res.json();
-                                                    if (d.success) setMyRegistration?.({ tournamentId: d.tournamentId });
-                                                    else setRegisterMsg?.(d.error || 'Ошибка');
+                                                    if (d.success) {
+                                                        setMyRegistration?.({ tournamentId: d.tournamentId });
+                                                    } else if (d.registrationOpensAt) {
+                                                        const now = Math.floor(Date.now() / 1000);
+                                                        setRegisterMsg?.('');
+                                                        setNextTournamentSec(Math.max(0, Number(d.registrationOpensAt) - now));
+                                                        setNextTournamentLabel('официальный турнир');
+                                                    } else {
+                                                        setRegisterMsg?.(d.error || 'Ошибка');
+                                                    }
                                                 } catch { setRegisterMsg?.('Ошибка'); }
                                             }}
                                             className="mt-1 text-xs text-[var(--color-accent-info)] underline cursor-pointer hover:text-[var(--color-accent-warning)]"
