@@ -201,7 +201,7 @@ export default function TournamentPage() {
                 <div className="text-sm text-[var(--color-text-muted)] mb-2 space-y-0.5">
                     <p>{t.type === 'official' ? 'Гарантированный призовой фонд' : 'Призовой фонд'}: {formatMoney(t.prizePool)}</p>
                     {t.entryFee > 0 && <p>Стоимость входа: {formatMoney(t.entryFee)}</p>}
-                    <p>Участников: {t.participantCount}/{t.maxPlayers || 8}</p>
+                    <p>Участников: {t.participantCount}{t.type === 'custom' ? `/${t.maxPlayers || 8}` : ''}</p>
                     {t.type === 'official' && t.minPower && t.maxPower && <p>Боевая мощь: {formatPowerRange(t.minPower, t.maxPower)}</p>}
                     {t.normalized && <p className="text-[var(--color-accent-warning)]">⚖ С подтягиванием силы слабых участников</p>}
                     {t.type === 'custom' && t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}

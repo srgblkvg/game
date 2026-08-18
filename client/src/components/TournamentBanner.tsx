@@ -145,7 +145,7 @@ export default function TournamentBanner() {
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] mt-0.5">
-                                <span>{t.participantCount}/{t.maxPlayers || 8} уч.</span>
+                                <span>{t.participantCount}{t.type === 'custom' ? `/${t.maxPlayers || 8}` : ''} уч.</span>
                                 <span>Призовой фонд: {formatMoney(t.prizePool)}</span>
                                 {t.entryFee ? <span>вход {t.entryFee}</span> : null}
                                 {t.myRegistration && <span className="text-[var(--color-accent-success)]">✓</span>}
