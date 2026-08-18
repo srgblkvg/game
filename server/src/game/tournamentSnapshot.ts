@@ -59,7 +59,11 @@ export function playerFromTournamentSnapshot(snapshot: TournamentSnapshot) {
 }
 
 /** Временно приводит основные статы snapshot к общей турнирной БМ. */
-export function normalizeTournamentSnapshot(snapshot: TournamentSnapshot, targetPower: number): TournamentSnapshot {
+export function normalizeTournamentSnapshot(
+  snapshot: TournamentSnapshot,
+  targetPower: number,
+  statLimits?: Pick<CharStats, 's' | 'a' | 'd' | 'm' | 'hp'>,
+): TournamentSnapshot {
   const source = clone(snapshot);
   const originalStats = clone(source.player.stats);
   // Старые snapshot не содержат combatPowerStats: восстанавливаем их из
@@ -71,12 +75,13 @@ export function normalizeTournamentSnapshot(snapshot: TournamentSnapshot, target
   const target = Math.max(1, Math.round(targetPower));
   let low = 0.02;
   let high = 1;
-  let bestMultiplier = 1;
-  let bestPower = calculateCombatPower(originalPowerStats, undefined, source.player.level);
+  let bestMultiplier = low;
+  let bestPower = 0;
+  let upperPower = calculateCombatPower(originalPowerStats, undefined, source.player.level);
 
   // Разрыв между участниками может быть на несколько порядков. Подбираем
   // верхнюю границу по фактической формуле БМ вместо искусственного cap=50.
-  for (let expansion = 0; expansion < 32 && bestPower < target; expansion++) {
+  for (let expansion = 0; expansion < 32 && upperPower < target; expansion++) {
     high *= 2;
     const expandedStats = {
       ...originalPowerStats,
@@ -86,7 +91,7 @@ export function normalizeTournamentSnapshot(snapshot: TournamentSnapshot, target
       m: Math.max(1, Math.round(originalPowerStats.m * high)),
       hp: Math.max(1, Math.round(originalPowerStats.hp * high)),
     };
-    bestPower = calculateCombatPower(expandedStats, undefined, source.player.level);
+    upperPower = calculateCombatPower(expandedStats, undefined, source.player.level);
   }
 
   for (let attempt = 0; attempt < 32; attempt++) {
@@ -107,22 +112,29 @@ export function normalizeTournamentSnapshot(snapshot: TournamentSnapshot, target
       m: Math.max(1, originalPowerStats.m + scalableStats.m - originalScalableStats.m),
       hp: Math.max(1, originalPowerStats.hp + scalableStats.hp - originalScalableStats.hp),
     };
+    const candidateStats = {
+      ...originalStats,
+      s: Math.max(1, originalStats.s + powerStats.s - originalPowerStats.s),
+      a: Math.max(1, originalStats.a + powerStats.a - originalPowerStats.a),
+      d: Math.max(1, originalStats.d + powerStats.d - originalPowerStats.d),
+      m: Math.max(1, originalStats.m + powerStats.m - originalPowerStats.m),
+      hp: Math.max(1, originalStats.hp + powerStats.hp - originalPowerStats.hp),
+    };
+    const exceedsLimit = statLimits && (['s', 'a', 'd', 'm', 'hp'] as const)
+      .some(stat => candidateStats[stat] > statLimits[stat]);
     const power = calculateCombatPower(powerStats, undefined, source.player.level);
-    if (Math.abs(power - target) < Math.abs(bestPower - target)) {
+    if (exceedsLimit) {
+      high = multiplier;
+      continue;
+    }
+    if (power <= target && power >= bestPower) {
       bestMultiplier = multiplier;
       bestPower = power;
       source.player.combatPowerStats = powerStats;
       source.player.scalablePowerStats = scalableStats;
-      source.player.stats = {
-        ...originalStats,
-        // Повышаем только вклад прокачки и экипировки. Напитки, коллекция и
-        // бонусы гильдии уже находятся в full stats и повторно не масштабируются.
-        s: Math.max(1, originalStats.s + powerStats.s - originalPowerStats.s),
-        a: Math.max(1, originalStats.a + powerStats.a - originalPowerStats.a),
-        d: Math.max(1, originalStats.d + powerStats.d - originalPowerStats.d),
-        m: Math.max(1, originalStats.m + powerStats.m - originalPowerStats.m),
-        hp: Math.max(1, originalStats.hp + powerStats.hp - originalPowerStats.hp),
-      };
+      // Повышаем только вклад прокачки и экипировки. Напитки, коллекция и
+      // бонусы гильдии уже находятся в full stats и повторно не масштабируются.
+      source.player.stats = candidateStats;
     }
     if (power < target) low = multiplier;
     else high = multiplier;
@@ -146,10 +158,11 @@ function targetGap(snapshot: TournamentSnapshot): number {
 export function normalizeTournamentGroup(snapshots: TournamentSnapshot[]): TournamentSnapshot[] {
   if (snapshots.length < 2) return snapshots.map(clone);
   const strongestPower = Math.max(...snapshots.map(snapshot => snapshot.combatPower));
+  const leader = snapshots.find(snapshot => snapshot.combatPower === strongestPower)!;
   return snapshots.map(snapshot => {
     const targetPower = Math.round(strongestPower * (1 - targetGap(snapshot)));
     if (snapshot.combatPower >= targetPower) return clone(snapshot);
-    return normalizeTournamentSnapshot(snapshot, targetPower);
+    return normalizeTournamentSnapshot(snapshot, targetPower, leader.player.stats);
   });
 }
 

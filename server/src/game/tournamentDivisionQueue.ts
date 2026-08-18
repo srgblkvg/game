@@ -19,6 +19,37 @@ export interface DivisionPrizeAllocation {
   refund: number;
 }
 
+const MAX_GROUP_POWER_GAP = 0.15;
+
+function isCompatible(participants: DivisionQueueParticipant[]): boolean {
+  const powers = participants.map(participant => participant.combatPower);
+  const minPower = Math.min(...powers);
+  const maxPower = Math.max(...powers);
+  return maxPower <= 0 || (maxPower - minPower) / maxPower <= MAX_GROUP_POWER_GAP;
+}
+
+function groupCompatibleSingletons(
+  sorted: DivisionQueueParticipant[],
+): { groups: DivisionParticipantGroup[]; waiting: DivisionQueueParticipant[] } {
+  const groups: DivisionParticipantGroup[] = [];
+  const waiting: DivisionQueueParticipant[] = [];
+  let current: DivisionQueueParticipant[] = [];
+  const flush = () => {
+    if (current.length >= 2) groups.push({ division: current[0]!.division, participants: current });
+    else waiting.push(...current);
+    current = [];
+  };
+  for (const singleton of sorted) {
+    if (current.length === 0 || isCompatible([...current, singleton])) current.push(singleton);
+    else {
+      flush();
+      current = [singleton];
+    }
+  }
+  flush();
+  return { groups, waiting };
+}
+
 export function splitParticipantsByDivision(
   participants: DivisionQueueParticipant[],
 ): DivisionQueueSplit {
@@ -45,26 +76,31 @@ export function splitParticipantsByDivision(
   if (singletons.length > 0) {
     const sorted = singletons.slice().sort((a, b) => a.combatPower - b.combatPower || a.userId - b.userId);
     if (divisions.length > 0) {
-      // Даже один игрок из редкого дивизиона присоединяется к ближайшей
-      // группе. Одиночная регистрация не является причиной отмены участия.
+      // Одиночник присоединяется только к совместимой по БМ группе.
       for (const singleton of sorted) {
-        let target = divisions[0]!;
+        let target: DivisionParticipantGroup | null = null;
         let targetDistance = Number.POSITIVE_INFINITY;
         for (const group of divisions) {
+          if (!isCompatible([...group.participants, singleton])) continue;
           const groupPower = group.participants.reduce((sum, entry) => sum + entry.combatPower, 0) / group.participants.length;
           const distance = Math.abs(groupPower - singleton.combatPower);
-          if (distance < targetDistance || (distance === targetDistance && group.division < target.division)) {
+          if (distance < targetDistance || (distance === targetDistance && group.division < (target?.division ?? Number.POSITIVE_INFINITY))) {
             target = group;
             targetDistance = distance;
           }
         }
-        target.participants.push(singleton);
+        if (target) target.participants.push(singleton);
       }
-      return { divisions, singletons: [] };
+      const movedIds = new Set(divisions.flatMap(group => group.participants.map(entry => entry.userId)));
+      const remaining = sorted.filter(entry => !movedIds.has(entry.userId));
+      const grouped = groupCompatibleSingletons(remaining);
+      divisions.push(...grouped.groups);
+      return { divisions, singletons: grouped.waiting };
     }
     if (sorted.length >= 2) {
-      divisions.push({ division: sorted[0]!.division, participants: sorted });
-      return { divisions, singletons: [] };
+      const grouped = groupCompatibleSingletons(sorted);
+      divisions.push(...grouped.groups);
+      return { divisions, singletons: grouped.waiting };
     }
   }
   return { divisions, singletons };

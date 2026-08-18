@@ -9,6 +9,8 @@ import {
   normalizeTournamentSnapshot,
   playerFromTournamentSnapshot,
 } from './tournamentSnapshot';
+import { calculateCombatPower } from './combatPower';
+
 
 const player = {
   id: 659,
@@ -80,6 +82,37 @@ test('выравнивание меняет только турнирные ст
   assert.deepEqual(snapshot.player.stats, player.stats);
 });
 
+test('нормализация не превышает target и appliedPower считается из сохранённых combatPowerStats', () => {
+  const snapshot = createTournamentSnapshot({
+    ...player,
+    combatPowerStats: {
+      ...player.combatPowerStats,
+      s: 3,
+      a: 3,
+      d: 3,
+      m: 3,
+      hp: 10,
+    },
+    scalablePowerStats: {
+      ...player.scalablePowerStats,
+      s: 3,
+      a: 3,
+      d: 3,
+      m: 3,
+      hp: 10,
+    },
+  } as any, 77);
+  const targetPower = 66;
+  const normalized = normalizeTournamentSnapshot(snapshot, targetPower);
+  const savedPower = calculateCombatPower(normalized.player.combatPowerStats!, undefined, normalized.player.level);
+
+  assert.equal(normalized.normalization?.appliedPower, savedPower);
+  assert.ok(savedPower <= targetPower, `appliedPower=${savedPower}, targetPower=${targetPower}`);
+  assert.equal(normalized.combatPower, 77);
+  assert.equal(normalized.player.stats.s - normalized.player.combatPowerStats!.s,
+    snapshot.player.stats.s - snapshot.player.combatPowerStats!.s);
+});
+
 test('лог объясняет временное повышение и состав БМ', () => {
   const first = normalizeTournamentSnapshot(createTournamentSnapshot(player as any, 1234), 5000);
   const second = normalizeTournamentSnapshot(createTournamentSnapshot({ ...player, id: 660, name: 'Другой' } as any, 9000), 5000);
@@ -92,7 +125,7 @@ test('лог объясняет временное повышение и сос�
   assert.match(message, /реальные характеристики не изменены/i);
 });
 
-test('групповое повышение сохраняет профиль игрока и оставляет разницу 5–10%', () => {
+test('групповое повышение сохраняет профиль игрока и не превышает индивидуальную цель', () => {
   const weak = createTournamentSnapshot(player as any, 1234);
   const strong = createTournamentSnapshot({
     ...player,
@@ -111,8 +144,8 @@ test('групповое повышение сохраняет профиль и
   assert.equal(normalized[1]!.combatPower, 9000);
   assert.notDeepEqual(weak.player.stats, strong.player.stats);
   assert.ok(normalized[0]!.normalization);
-  const gap = 1 - normalized[0]!.normalization!.appliedPower / strong.combatPower;
-  assert.ok(gap >= 0.045 && gap <= 0.105);
+  assert.ok(normalized[0]!.normalization!.appliedPower <= normalized[0]!.normalization!.targetPower);
+  assert.ok(normalized[0]!.normalization!.appliedPower < strong.combatPower);
   assert.equal(normalized[1]!.normalization, undefined);
   const beforeRatio = weak.player.combatPowerStats!.s / weak.player.combatPowerStats!.m;
   const afterRatio = normalized[0]!.player.combatPowerStats!.s / normalized[0]!.player.combatPowerStats!.m;
@@ -125,7 +158,7 @@ test('групповое повышение сохраняет профиль и
   assert.equal(normalizedCollectionStrength, collectionStrength);
 });
 
-test('экстремально слабый профиль также подтягивается до разницы 5–10%', () => {
+test('экстремально слабый профиль подтягивается без превышения цели', () => {
   const weak = createTournamentSnapshot({
     ...player,
     id: 1,
@@ -135,6 +168,27 @@ test('экстремально слабый профиль также подтя
   } as any, 1);
   const strong = createTournamentSnapshot({ ...player, id: 2 } as any, 1_000_000);
   const normalized = normalizeTournamentGroup([weak, strong]);
-  const gap = 1 - normalized[0]!.normalization!.appliedPower / strong.combatPower;
-  assert.ok(gap >= 0.045 && gap <= 0.105, `gap=${gap}`);
+  assert.ok(normalized[0]!.normalization!.appliedPower <= normalized[0]!.normalization!.targetPower);
+  assert.ok(normalized[0]!.normalization!.appliedPower < strong.combatPower);
+});
+
+test('нормализация не поднимает основные характеристики выше лидера группы', () => {
+  const weak = createTournamentSnapshot({
+    ...player,
+    id: 1,
+    stats: { ...player.stats, s: 100, a: 100, d: 400, m: 100, hp: 900 },
+    combatPowerStats: { ...player.combatPowerStats, s: 80, a: 80, d: 350, m: 80, hp: 800 },
+    scalablePowerStats: { ...player.scalablePowerStats, s: 40, a: 40, d: 200, m: 40, hp: 400 },
+  } as any, 1_000);
+  const strong = createTournamentSnapshot({
+    ...player,
+    id: 2,
+    stats: { ...player.stats, s: 600, a: 300, d: 500, m: 300, hp: 1_000 },
+    combatPowerStats: { ...player.combatPowerStats, s: 550, a: 270, d: 450, m: 270, hp: 900 },
+  } as any, 10_000);
+
+  const normalized = normalizeTournamentGroup([weak, strong])[0]!.player.stats;
+  for (const stat of ['s', 'a', 'd', 'm', 'hp'] as const) {
+    assert.ok(normalized[stat] <= strong.player.stats[stat], `${stat}: ${normalized[stat]} > ${strong.player.stats[stat]}`);
+  }
 });
