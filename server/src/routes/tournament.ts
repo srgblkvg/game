@@ -6,7 +6,8 @@ import { currentStats } from '../game/stats';
 import { createTournamentSnapshot, formatTournamentNormalizationLog, mergeTournamentResult, normalizeTournamentGroup, parseTournamentSnapshot, playerFromTournamentSnapshot } from '../game/tournamentSnapshot';
 import { calculateCombatPower } from '../game/combatPower';
 import { getRegistrationWindowForNewQueue } from '../game/tournamentCycle';
-import { calculateTournamentRewards } from '../game/tournamentRewards';
+import { calculateTournamentRewards, getThirdPlacePair } from '../game/tournamentRewards';
+import { presentCompletedTournamentTop3 } from '../game/tournamentPresentation';
 import { applyDivisionChampionship, assignTournamentDivision, getTournamentDivision, getTournamentDivisionByIndex, TOURNAMENT_DIVISIONS } from '../game/tournamentDivision';
 import { allocateDivisionPrizePools, splitParticipantsByDivision } from '../game/tournamentDivisionQueue';
 import { initTournamentSchema, isTournamentSchemaReady } from '../game/tournamentSchema';
@@ -31,7 +32,7 @@ router.use(async (_req, res, next) => {
 const MAX_PLAYERS = 8;
 const REGISTRATION_WINDOW = 60 * 60; // 1 час
 const OFFICIAL_MERGE_WAIT = 5 * 60; // до 5 минут ждём соседние группы
-const OFFICIAL_INTERVAL = 60 * 60; // следующий общий набор через 1 час после завершения
+const OFFICIAL_INTERVAL = 7 * 60 * 60; // следующий общий набор через 7 часов после завершения
 
 const divisions: Array<{ name: string; label: string; tier: number; minPower: number; maxPower: number; icon: string }> = [];
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
@@ -42,9 +43,18 @@ function timestampMs(value: any): number {
 }
 
 async function getNextOfficialRegistrationAt(): Promise<number | null> {
+    const now = Math.floor(Date.now() / 1000);
+    const future = await db.one(
+        `SELECT registrationStart FROM tournaments
+         WHERE type = 'official' AND status = 'registration' AND registrationStart > ?
+         ORDER BY registrationStart LIMIT 1`, [now]
+    ) as any;
+    if (future?.registrationStart) return Number(future.registrationStart);
     const active = await db.one(
         `SELECT id FROM tournaments
-         WHERE type = 'official' AND status IN ('registration', 'in_progress') LIMIT 1`, []
+         WHERE type = 'official' AND status IN ('registration', 'in_progress')
+           AND (status = 'in_progress' OR registrationStart <= ?)
+         LIMIT 1`, [now]
     ) as any;
     if (active) return null;
     const last = await db.one(
@@ -55,7 +65,7 @@ async function getNextOfficialRegistrationAt(): Promise<number | null> {
     const completedMs = timestampMs(last?.completedAt);
     if (!completedMs) return null;
     const opensAt = Math.floor(completedMs / 1000) + OFFICIAL_INTERVAL;
-    return opensAt > Math.floor(Date.now() / 1000) ? opensAt : null;
+    return opensAt > now ? opensAt : null;
 }
 
 function parseJsonValue(value: unknown): any {
@@ -449,7 +459,7 @@ async function finishTournament(tournamentId: number) {
     const prizePool = t.prizePool || 0;
 
     const matches = await db.query(
-        'SELECT round, player1Id, player2Id, winnerId FROM tournament_matches WHERE tournamentId = ?',
+        'SELECT round, player1Id, player2Id, winnerId, stage FROM tournament_matches WHERE tournamentId = ?',
         [tournamentId],
     ) as any[];
     const participants = await db.query(
@@ -464,6 +474,7 @@ async function finishTournament(tournamentId: number) {
             player1Id: row.player1Id == null ? null : Number(row.player1Id),
             player2Id: row.player2Id == null ? null : Number(row.player2Id),
             winnerId: row.winnerId == null ? null : Number(row.winnerId),
+            stage: row.stage || undefined,
         })),
     });
     if (rewards.length === 0) return;
@@ -518,8 +529,8 @@ async function finishTournamentTx(client: any, tournamentId: number) {
     const prizePool = t.prizepool || 0;
 
     const matchRows = (await client.query(
-        `SELECT round, player1id, player2id, winnerid FROM tournament_matches
-         WHERE tournamentid = $1 AND stage = 'playoff'`, [tournamentId]
+        `SELECT round, player1id, player2id, winnerid, stage FROM tournament_matches
+         WHERE tournamentid = $1 AND stage IN ('playoff', 'third_place')`, [tournamentId]
     )).rows;
     const participantRows = (await client.query(
         'SELECT userid FROM tournament_participants WHERE tournamentid = $1', [tournamentId]
@@ -532,6 +543,7 @@ async function finishTournamentTx(client: any, tournamentId: number) {
             player1Id: row.player1id == null ? null : Number(row.player1id),
             player2Id: row.player2id == null ? null : Number(row.player2id),
             winnerId: row.winnerid == null ? null : Number(row.winnerid),
+            stage: row.stage || undefined,
         })),
     });
     if (rewards.length === 0) return;
@@ -650,6 +662,7 @@ export async function reconcileOfficialQueueParticipantsTx(client: any): Promise
 export async function rebalanceOfficialQueuePoolsTx(client: any): Promise<void> {
         const lock = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [987654322]);
         if (!lock.rows[0]?.locked) return;
+        const now = Math.floor(Date.now() / 1000);
         const queues = (await client.query(
             `SELECT t.id, t.division, COALESCE(t.basepool, 0) basepool,
                     (SELECT AVG((tp.snapshotstats::jsonb->>'combatPower')::numeric)
@@ -657,7 +670,9 @@ export async function rebalanceOfficialQueuePoolsTx(client: any): Promise<void> 
                      WHERE tp.tournamentid = t.id AND tp.snapshotstats LIKE '%"combatPower"%') avgpower
              FROM tournaments t
              WHERE t.type = 'official' AND t.status = 'registration'
-             ORDER BY t.id FOR UPDATE OF t`
+               AND t.registrationstart <= $1 AND t.registrationend > $1
+             ORDER BY t.id FOR UPDATE OF t`,
+            [now]
         )).rows;
         if (queues.length === 0) return;
 
@@ -786,11 +801,41 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
             }
         }
 
-        if (allocation.refund > 0) {
-            await client.query('UPDATE castle_treasury SET amount = amount + $1, updated_at = NOW() WHERE id = 1', [allocation.refund]);
-            await client.query('INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())', [allocation.refund, 'tournament_reserve_return']);
+        const waitingUserIds = split.singletons.map(participant => participant.userId);
+        let carriedReserve = 0;
+        if (waitingUserIds.length > 0) {
+            carriedReserve = allocation.refund;
+            const registrationStart = now + OFFICIAL_INTERVAL;
+            const registrationEnd = registrationStart + REGISTRATION_WINDOW;
+            const waitingQueue = await client.query(
+                `INSERT INTO tournaments
+                 (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers, name)
+                 VALUES ('official-cycle', 'registration', $1, $2, $3, $3, $4, 'official', 1000000, 'Общий набор')
+                 RETURNING id`,
+                [registrationStart, registrationEnd, carriedReserve, new Date().toISOString()]
+            );
+            const waitingTournamentId = Number(waitingQueue.rows[0].id);
+            for (const participant of split.singletons) {
+                const sourceQueueId = sourceQueueByUser.get(participant.userId);
+                if (sourceQueueId === undefined) throw new Error(`Source queue not found for waiting user ${participant.userId}`);
+                const snapshotStats = snapshotByQueueAndUser.get(`${sourceQueueId}:${participant.userId}`);
+                if (!snapshotStats) throw new Error(`Snapshot not found for waiting user ${participant.userId}`);
+                await client.query(
+                    'INSERT INTO tournament_participants (tournamentid, userid, snapshotstats) VALUES ($1, $2, $3)',
+                    [waitingTournamentId, participant.userId, snapshotStats]
+                );
+            }
         }
-        const movedUserIds = split.divisions.flatMap(group => group.participants.map(participant => participant.userId));
+
+        const treasuryRefund = allocation.refund - carriedReserve;
+        if (treasuryRefund > 0) {
+            await client.query('UPDATE castle_treasury SET amount = amount + $1, updated_at = NOW() WHERE id = 1', [treasuryRefund]);
+            await client.query('INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())', [treasuryRefund, 'tournament_reserve_return']);
+        }
+        const movedUserIds = [
+            ...split.divisions.flatMap(group => group.participants.map(participant => participant.userId)),
+            ...waitingUserIds,
+        ];
         if (movedUserIds.length > 0) {
             await client.query(
                 'DELETE FROM tournament_participants WHERE tournamentid = ANY($1::int[]) AND userid = ANY($2::int[])',
@@ -1004,7 +1049,7 @@ export async function advanceAllRoundsTx(client: any, tournamentId: number) {
         // Находим минимальный раунд с незавершёнными матчами
         const pendingResult = await client.query(
             `SELECT round FROM tournament_matches
-             WHERE tournamentid = $1 AND stage = 'playoff' AND winnerid IS NULL
+             WHERE tournamentid = $1 AND stage IN ('playoff', 'third_place') AND winnerid IS NULL
              ORDER BY round LIMIT 1`,
             [tournamentId]
         );
@@ -1020,7 +1065,7 @@ export async function advanceAllRoundsTx(client: any, tournamentId: number) {
         const round = pendingResult.rows[0].round;
         const matches = await client.query(
             `SELECT * FROM tournament_matches
-             WHERE tournamentid = $1 AND stage = 'playoff' AND round = $2 AND winnerid IS NULL`,
+             WHERE tournamentid = $1 AND stage IN ('playoff', 'third_place') AND round = $2 AND winnerid IS NULL`,
             [tournamentId, round]
         );
 
@@ -1068,6 +1113,42 @@ export async function advanceAllRoundsTx(client: any, tournamentId: number) {
         );
 
         if (winners.rows.length < 2) {
+            // Legacy-safe path: если финал уже существовал до новой логики,
+            // создаём бронзовый матч из проигравших полуфиналов до завершения.
+            if (round >= 2) {
+                const thirdExists = await client.query(
+                    `SELECT 1 FROM tournament_matches
+                     WHERE tournamentid = $1 AND stage = 'third_place'`,
+                    [tournamentId]
+                );
+                if (thirdExists.rows.length === 0) {
+                    const previousRound = (await client.query(
+                        `SELECT round, player1id, player2id, winnerid
+                         FROM tournament_matches
+                         WHERE tournamentid = $1 AND stage = 'playoff'
+                           AND round = $2 AND winnerid IS NOT NULL
+                           AND player1id IS NOT NULL AND player2id IS NOT NULL
+                         ORDER BY id`,
+                        [tournamentId, round - 1]
+                    )).rows;
+                    const thirdPlacePair = getThirdPlacePair(previousRound.map((match: any) => ({
+                        round: Number(match.round),
+                        stage: 'playoff',
+                        player1Id: Number(match.player1id),
+                        player2Id: Number(match.player2id),
+                        winnerId: Number(match.winnerid),
+                    })));
+                    if (thirdPlacePair) {
+                        await client.query(
+                            `INSERT INTO tournament_matches
+                             (tournamentid, round, player1id, player2id, stage)
+                             VALUES ($1, $2, $3, $4, 'third_place')`,
+                            [tournamentId, round + 1, thirdPlacePair[0], thirdPlacePair[1]]
+                        );
+                        continue;
+                    }
+                }
+            }
             await finishTournamentTx(client, tournamentId);
             return;
         }
@@ -1082,6 +1163,29 @@ export async function advanceAllRoundsTx(client: any, tournamentId: number) {
                  VALUES ($1, $2, $3, $4, 'playoff')`,
                 [tournamentId, nextRound, w[i * 2].winnerid, w[i * 2 + 1].winnerid]
             );
+        }
+        if (n === 2) {
+            const semifinalRows = (await client.query(
+                `SELECT round, stage, player1id, player2id, winnerid
+                 FROM tournament_matches
+                 WHERE tournamentid = $1 AND stage = 'playoff' AND round = $2`,
+                [tournamentId, round]
+            )).rows;
+            const thirdPlacePair = getThirdPlacePair(semifinalRows.map((match: any) => ({
+                round: Number(match.round),
+                stage: match.stage,
+                player1Id: match.player1id == null ? null : Number(match.player1id),
+                player2Id: match.player2id == null ? null : Number(match.player2id),
+                winnerId: match.winnerid == null ? null : Number(match.winnerid),
+            })));
+            if (thirdPlacePair) {
+                await client.query(
+                    `INSERT INTO tournament_matches
+                     (tournamentid, round, player1id, player2id, stage)
+                     VALUES ($1, $2, $3, $4, 'third_place')`,
+                    [tournamentId, nextRound, thirdPlacePair[0], thirdPlacePair[1]]
+                );
+            }
         }
         if (n % 2 === 1) {
             await client.query(
@@ -1239,10 +1343,7 @@ router.get('/tournament', async (req, res) => {
                     guildName: p.guildName, guildId: p.guildId,
                     snapshotStats: parseJsonValue(p.snapshotStats),
                 })),
-                top3: participants
-                    .filter((p: any) => p.snapshotStats)
-                    .map((p) => ({ ...parseJsonValue(p.snapshotStats), username: p.username }))
-                    .sort((a: any, b: any) => a.place - b.place),
+                top3: presentCompletedTournamentTop3(participants),
             };
         }));
 
@@ -1257,8 +1358,11 @@ router.get('/tournament', async (req, res) => {
     else if (typeFilter === 'custom') { typeCondition = "AND type = 'custom'"; }
 
     const updated = await db.query(
-        `SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ${typeCondition} ORDER BY id DESC`,
-        typeParams
+        `SELECT * FROM tournaments
+         WHERE status IN ('registration', 'in_progress') ${typeCondition}
+           AND (status = 'in_progress' OR registrationStart <= ?)
+         ORDER BY id DESC`,
+        [...typeParams, Math.floor(Date.now() / 1000)]
     ) as any[];
 
     const allTournaments = [...updated];
@@ -1430,16 +1534,18 @@ router.post('/tournament/register', async (req, res) => {
         tournament = await db.one(
             `SELECT t.* FROM tournaments t
              WHERE t.division = ? AND t.status = 'registration' AND t.type = 'official'
-               AND t.registrationEnd > ?
+               AND t.registrationStart <= ? AND t.registrationEnd > ?
              ORDER BY t.id DESC LIMIT 1`,
-            ['official-cycle', Math.floor(Date.now() / 1000)]
+            ['official-cycle', Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000)]
         ) as any;
         if (!tournament) {
             const now = Math.floor(Date.now() / 1000);
             const activeQueues = await db.query(
                 `SELECT registrationStart, registrationEnd FROM tournaments
                  WHERE type = 'official' AND status = 'registration'
-                 ORDER BY registrationEnd`, []
+                   AND registrationStart <= ? AND registrationEnd > ?
+                 ORDER BY registrationEnd`,
+                [now, now]
             ) as any[];
             const registrationWindow = getRegistrationWindowForNewQueue({
                 now,
@@ -1471,8 +1577,9 @@ router.post('/tournament/register', async (req, res) => {
             tournament = await db.one(
                 `SELECT * FROM tournaments
                  WHERE division = 'official-cycle' AND type = 'official' AND status = 'registration'
+                   AND registrationStart <= ? AND registrationEnd > ?
                  ORDER BY id DESC LIMIT 1`,
-                []
+                [now, now]
             ) as any;
             if (!tournament) return res.status(400).json({ error: 'Регистрация текущего набора завершена' });
         }
@@ -1503,6 +1610,12 @@ router.post('/tournament/register', async (req, res) => {
         )).rows[0];
         if (!lockedTournament || lockedTournament.status !== 'registration') {
             throw new Error('Турнир не найден или регистрация закрыта');
+        }
+        const transactionNow = Math.floor(Date.now() / 1000);
+        if (lockedTournament.type === 'official'
+            && (Number(lockedTournament.registrationstart) > transactionNow
+                || Number(lockedTournament.registrationend) <= transactionNow)) {
+            throw new Error('Регистрация в официальный турнир ещё не открыта или уже завершена');
         }
         const lockedUser = (await client.query(
             'SELECT money FROM users WHERE id = $1 FOR UPDATE', [userId]

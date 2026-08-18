@@ -26,14 +26,23 @@ test('дивизион с числом участников больше вос�
   assert.equal(result.divisions[0]!.participants.length, 17);
 });
 
-test('одиночный дивизион присоединяется к ближайшей группе и не исключается', () => {
+test('одиночный дивизион с чрезмерным разрывом остаётся ждать следующий набор', () => {
   const result = splitParticipantsByDivision([
     participant(1, 0, 50),
     participant(2, 0, 60),
     participant(3, 5, 100_000),
   ]);
   assert.deepEqual(result.divisions.map(group => group.division), [0]);
-  assert.deepEqual(result.divisions[0]!.participants.map(entry => entry.userId), [1, 2, 3]);
+  assert.deepEqual(result.divisions[0]!.participants.map(entry => entry.userId), [1, 2]);
+  assert.deepEqual(result.singletons.map(entry => entry.userId), [3]);
+});
+
+test('совместимые одиночные дивизионы объединяются', () => {
+  const result = splitParticipantsByDivision([
+    participant(1, 0, 100),
+    participant(2, 1, 114),
+  ]);
+  assert.deepEqual(result.divisions.map(group => group.participants.map(entry => entry.userId)), [[1, 2]]);
   assert.deepEqual(result.singletons, []);
 });
 
@@ -64,7 +73,7 @@ test('порядок дивизионов и участников детерми
   ]);
 });
 
-test('общий резерв делится по весам всех участников без возврата за одиночника', () => {
+test('доля несовместимого одиночника сохраняется отдельно от фондов созданных дивизионов', () => {
   const split = splitParticipantsByDivision([
     participant(1, 0, 50),
     participant(2, 0, 60),
@@ -75,8 +84,8 @@ test('общий резерв делится по весам всех участ
   const allocation = allocateDivisionPrizePools(10_000, split, entry => entry.division + 1);
   assert.deepEqual(allocation.divisionPools, [
     { division: 0, prizePool: 1666 },
-    { division: 1, prizePool: 8333 },
+    { division: 1, prizePool: 3333 },
   ]);
-  assert.equal(allocation.refund, 1);
+  assert.equal(allocation.refund, 5001);
   assert.equal(allocation.divisionPools.reduce((sum, row) => sum + row.prizePool, 0) + allocation.refund, 10_000);
 });
