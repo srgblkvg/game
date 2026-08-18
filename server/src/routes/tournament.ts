@@ -29,9 +29,9 @@ router.use(async (_req, res, next) => {
 });
 
 const MAX_PLAYERS = 8;
-const REGISTRATION_WINDOW = 15 * 60; // 15 минут
+const REGISTRATION_WINDOW = 60 * 60; // 1 час
 const OFFICIAL_MERGE_WAIT = 5 * 60; // до 5 минут ждём соседние группы
-const OFFICIAL_INTERVAL = 8 * 60 * 60; // общий набор раз в 8 часов
+const OFFICIAL_INTERVAL = 60 * 60; // следующий общий набор через 1 час после завершения
 
 const divisions: Array<{ name: string; label: string; tier: number; minPower: number; maxPower: number; icon: string }> = [];
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10

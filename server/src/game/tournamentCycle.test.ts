@@ -9,18 +9,18 @@ import {
   getRegistrationWindowForNewQueue,
 } from './tournamentCycle';
 
-test('после завершения общего набора регистрация закрыта ровно на 8 часов', () => {
+test('после завершения общего набора регистрация закрыта ровно на 1 час', () => {
   const completedAt = 1_000_000;
   const before = getOfficialCycleState({ now: completedAt + OFFICIAL_CYCLE_INTERVAL - 1, lastCompletedAt: completedAt });
   assert.equal(before.registrationOpen, false);
-  assert.equal(before.registrationOpensAt, completedAt + 8 * 60 * 60);
+  assert.equal(before.registrationOpensAt, completedAt + 60 * 60);
 
   const atOpening = getOfficialCycleState({ now: completedAt + OFFICIAL_CYCLE_INTERVAL, lastCompletedAt: completedAt });
   assert.equal(atOpening.registrationOpen, true);
   assert.equal(atOpening.registrationOpensAt, null);
 });
 
-test('первая очередь открывает общее окно регистрации на 15 минут', () => {
+test('первая очередь открывает общее окно регистрации на 1 час', () => {
   const window = getRegistrationWindowForNewQueue({ now: 2_000_000, activeQueues: [] });
   assert.deepEqual(window, {
     registrationStart: 2_000_000,

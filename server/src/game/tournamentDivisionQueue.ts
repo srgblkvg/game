@@ -38,6 +38,35 @@ export function splitParticipantsByDivision(
     if (entries.length === 1) singletons.push(entries[0]!);
     else divisions.push({ division, participants: entries });
   }
+  // Игроки из одиночных технических дивизионов не должны пропадать:
+  // раньше они оставались в `singletons`, а mergeExpiredOfficialQueues
+  // создавал турниры только из `divisions`. Поэтому часть регистраций
+  // завершалась возвратом фонда без участия в турнире.
+  if (singletons.length > 0) {
+    const sorted = singletons.slice().sort((a, b) => a.combatPower - b.combatPower || a.userId - b.userId);
+    if (divisions.length > 0) {
+      // Даже один игрок из редкого дивизиона присоединяется к ближайшей
+      // группе. Одиночная регистрация не является причиной отмены участия.
+      for (const singleton of sorted) {
+        let target = divisions[0]!;
+        let targetDistance = Number.POSITIVE_INFINITY;
+        for (const group of divisions) {
+          const groupPower = group.participants.reduce((sum, entry) => sum + entry.combatPower, 0) / group.participants.length;
+          const distance = Math.abs(groupPower - singleton.combatPower);
+          if (distance < targetDistance || (distance === targetDistance && group.division < target.division)) {
+            target = group;
+            targetDistance = distance;
+          }
+        }
+        target.participants.push(singleton);
+      }
+      return { divisions, singletons: [] };
+    }
+    if (sorted.length >= 2) {
+      divisions.push({ division: sorted[0]!.division, participants: sorted });
+      return { divisions, singletons: [] };
+    }
+  }
   return { divisions, singletons };
 }
 

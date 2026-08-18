@@ -26,14 +26,29 @@ test('дивизион с числом участников больше вос�
   assert.equal(result.divisions[0]!.participants.length, 17);
 });
 
-test('одиночный дивизион отделяется для отмены и возврата его доли фонда', () => {
+test('одиночный дивизион присоединяется к ближайшей группе и не исключается', () => {
   const result = splitParticipantsByDivision([
     participant(1, 0, 50),
     participant(2, 0, 60),
     participant(3, 5, 100_000),
   ]);
   assert.deepEqual(result.divisions.map(group => group.division), [0]);
-  assert.deepEqual(result.singletons.map(entry => entry.userId), [3]);
+  assert.deepEqual(result.divisions[0]!.participants.map(entry => entry.userId), [1, 2, 3]);
+  assert.deepEqual(result.singletons, []);
+});
+
+test('несколько одиночных дивизионов объединяются, чтобы зарегистрированные игроки не пропадали', () => {
+  const result = splitParticipantsByDivision([
+    participant(1, 0, 50),
+    participant(2, 0, 60),
+    participant(3, 1, 100),
+    participant(4, 2, 110),
+    participant(5, 3, 120),
+    participant(6, 4, 130),
+  ]);
+  const ids = result.divisions.flatMap(group => group.participants.map(entry => entry.userId));
+  assert.deepEqual(ids.sort((a, b) => a - b), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(result.singletons, []);
 });
 
 test('порядок дивизионов и участников детерминирован для воспроизводимого фонда', () => {
@@ -49,7 +64,7 @@ test('порядок дивизионов и участников детерми
   ]);
 });
 
-test('общий резерв делится по весам участников, а доля одиночника возвращается', () => {
+test('общий резерв делится по весам всех участников без возврата за одиночника', () => {
   const split = splitParticipantsByDivision([
     participant(1, 0, 50),
     participant(2, 0, 60),
@@ -60,8 +75,8 @@ test('общий резерв делится по весам участнико�
   const allocation = allocateDivisionPrizePools(10_000, split, entry => entry.division + 1);
   assert.deepEqual(allocation.divisionPools, [
     { division: 0, prizePool: 1666 },
-    { division: 1, prizePool: 3333 },
+    { division: 1, prizePool: 8333 },
   ]);
-  assert.equal(allocation.refund, 5001);
+  assert.equal(allocation.refund, 1);
   assert.equal(allocation.divisionPools.reduce((sum, row) => sum + row.prizePool, 0) + allocation.refund, 10_000);
 });

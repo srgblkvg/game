@@ -11,7 +11,9 @@ import { updateGuildQuestProgress } from './guild';
 import { loadBattleAntiStats } from '../game/guildBoss';
 
 const router = Router();
-const HUNT_DROP_MULTIPLIER = 1 / 3;
+// Все охотничьи шансы сейчас вдвое выше прежнего значения (1/3 -> 2/3).
+// Предпросмотр /mobs и фактические роллы используют этот общий множитель.
+const HUNT_DROP_MULTIPLIER = 2 / 3;
 const MATERIAL_DROP_CHANCE = 0.35 * HUNT_DROP_MULTIPLIER;
 const STONE_DROP_CHANCE = 0.05 * HUNT_DROP_MULTIPLIER;
 const MYTHIC_RESOURCE_DROP_CHANCE = 0.01 * HUNT_DROP_MULTIPLIER;

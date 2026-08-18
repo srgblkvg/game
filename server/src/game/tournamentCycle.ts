@@ -1,5 +1,7 @@
-export const OFFICIAL_CYCLE_INTERVAL = 8 * 60 * 60;
-export const OFFICIAL_REGISTRATION_DURATION = 15 * 60;
+// Один час между завершением цикла и следующим набором.
+export const OFFICIAL_CYCLE_INTERVAL = 60 * 60;
+// Один час на сбор участников общего официального турнира.
+export const OFFICIAL_REGISTRATION_DURATION = 60 * 60;
 
 export interface OfficialCycleStateInput {
   now: number;
