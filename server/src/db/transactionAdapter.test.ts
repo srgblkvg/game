@@ -160,4 +160,21 @@ test('release failure does not hide the original callback failure', async () => 
   }), originalFailure);
 });
 
+test('release failure does not hide an undefined callback failure', async () => {
+  const releaseFailure = new Error('release failed');
+  const client = {
+    async query() {},
+    release() {
+      throw releaseFailure;
+    },
+  };
+
+  await assert.rejects(
+    executeWithPoolClient(client, async () => {
+      throw undefined;
+    }),
+    error => error === undefined,
+  );
+});
+
 export {};
