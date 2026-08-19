@@ -3,7 +3,7 @@ import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useGlobalChat } from '../contexts/ChatContext';
-import { slotNames, slotCategories, getItemImage, getRarityColor } from '../utils/itemUtils';
+import { slotNames, slotCategories } from '../utils/itemUtils';
 import ItemTooltip from './ItemTooltip';
 import GuildTag from './GuildTag';
 import HealthBar from './CharacterCard/HealthBar';
@@ -11,6 +11,7 @@ import EquipmentSlots from './CharacterCard/EquipmentSlots';
 import StatsOverlay from './CharacterCard/StatsOverlay';
 import type { CharacterCardData } from '../types/character';
 import { formatCombatPower } from '../utils/combatPower';
+import EquipmentChoiceRow from './ui/EquipmentChoiceRow';
 
 interface CharacterCardProps {
   char: CharacterCardData;
@@ -293,24 +294,9 @@ const CharacterCard = memo(function CharacterCard({
           {getFilteredItems().length === 0 ? (
             <p className="text-xs text-[var(--color-text-muted)]">Нет подходящих предметов</p>
           ) : (
-            getFilteredItems().map((item: any) => {
-              const img = getItemImage(item);
-              const color = getRarityColor(item);
-              return (
-                <div key={item.id} onClick={() => handleEquipSelect(item.id)}
-                  className="flex items-center gap-2 p-2 bg-[var(--color-bg-input)] mb-1 cursor-pointer rounded hover:bg-[var(--color-bg-hover)] text-sm">
-                  {img ? (
-                    <div className="w-8 h-8 rounded flex-shrink-0 border-2" style={{ borderColor: color, background: `url(${img}) center / contain no-repeat` }} />
-                  ) : (
-                    <div className="w-8 h-8 rounded flex-shrink-0 border-2 flex items-center justify-center text-xs" style={{ borderColor: color, color }}>?</div>
-                  )}
-                  <span className="text-[var(--color-text-primary)]">{item.name}</span>
-                  {item.upgradeLevel > 0 && (
-                    <span className="text-[var(--color-text-accent)] text-xs ml-auto">+{item.upgradeLevel}</span>
-                  )}
-                </div>
-              );
-            })
+            getFilteredItems().map((item: any) => (
+              <EquipmentChoiceRow key={item.id} item={item} onSelect={handleEquipSelect} />
+            ))
           )}
           <button onClick={() => setSelectedSlot(null)}
             className="mt-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-3 py-1 text-xs cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">

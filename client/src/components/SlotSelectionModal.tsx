@@ -1,7 +1,8 @@
 import { useGame } from '../contexts/GameContext';
 import { equipItem } from '../api';
-import { slotNames, slotCategories, getItemImage, getRarityColor } from '../utils/itemUtils';
+import { slotNames, slotCategories } from '../utils/itemUtils';
 import { useToast } from '../contexts/ToastContext';
+import EquipmentChoiceRow from './ui/EquipmentChoiceRow';
 
 interface SlotSelectionModalProps {
     slotId: string;
@@ -45,27 +46,9 @@ export default function SlotSelectionModal({ slotId, onClose, onEquip }: SlotSel
             {availableItems.length === 0 ? (
                 <p className="text-xs text-[var(--color-text-muted)]">Нет подходящих предметов</p>
             ) : (
-                availableItems.map((item: any) => {
-                    const img = getItemImage(item);
-                    const color = getRarityColor(item);
-                    return (
-                        <div
-                            key={item.id}
-                            onClick={() => handleEquip(item.id)}
-                            className="flex items-center gap-2 p-2 bg-[var(--color-bg-input)] mb-1 cursor-pointer rounded hover:bg-[var(--color-bg-hover)] text-sm"
-                        >
-                            {img ? (
-                                <div className="w-8 h-8 rounded flex-shrink-0 border-2" style={{ borderColor: color, background: `url(${img}) center / contain no-repeat` }} />
-                            ) : (
-                                <div className="w-8 h-8 rounded flex-shrink-0 border-2 flex items-center justify-center text-xs" style={{ borderColor: color, color }}>?</div>
-                            )}
-                            <span className="text-[var(--color-text-primary)]">{item.name}</span>
-                            {item.upgradeLevel > 0 && (
-                                <span className="text-[var(--color-text-accent)] text-xs ml-auto">+{item.upgradeLevel}</span>
-                            )}
-                        </div>
-                    );
-                })
+                availableItems.map((item: any) => (
+                    <EquipmentChoiceRow key={item.id} item={item} onSelect={handleEquip} />
+                ))
             )}
             <button onClick={onClose} className="mt-2 bg-[var(--color-bg-input)] border border-[var(--color-border-light)] rounded px-3 py-1 text-xs cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                 Закрыть
