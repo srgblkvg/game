@@ -27,6 +27,7 @@ import VkKeyboard from './components/VkKeyboard';
 import TutorialOverlay from './components/TutorialOverlay';
 import tutorialSteps from './data/tutorialSteps';
 import { BASE_URL, getHeaders } from './api/helpers';
+import LoadingState from './components/ui/LoadingState';
 
 // Ленивая загрузка тяжёлых страниц
 const ArenaPage = lazy(() => import('./pages/Arena/ArenaPage'));
@@ -63,14 +64,6 @@ const TrainingPage = lazy(() => import('./pages/TrainingPage'));
 const StarterPackPage = lazy(() => import('./pages/StarterPackPage'));
 const DebugStatsPage = lazy(() => import('./pages/DebugStatsPage'));
 const DungeonPage = lazy(() => import('./pages/DungeonPage'));
-
-function Loading() {
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-[var(--color-text-muted)] text-sm">Загрузка...</div>
-    </div>
-  );
-}
 
 function AppContent() {
   const { user } = useAuth();
@@ -148,7 +141,7 @@ function AppContent() {
         boxSizing: 'border-box',
         width: '100%',
       }}>
-        <Suspense fallback={<Loading />}>
+        <Suspense fallback={<LoadingState />}>
           <Routes>
             <Route path="/login" element={user ? (user.role === 'admin' ? <Navigate to="/adminpanel" /> : <Navigate to="/" />) : (isVkLaunch ? <VkLoginPage /> : <LoginPage />)} />
             <Route path="/vk-login" element={<VkLoginPage />} />

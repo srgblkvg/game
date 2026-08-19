@@ -7,6 +7,7 @@ import ItemStats from '../components/ItemStats';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
+import LoadingState from '../components/ui/LoadingState';
 
 const SLOT_LABELS: Record<string, string> = {
   weapon1: 'Оружие', shield: 'Щит', helmet: 'Шлем', chest: 'Нагрудник',
@@ -130,7 +131,7 @@ export default function StarterPackPage() {
     return () => window.removeEventListener('paymentStatus', handler);
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="text-[var(--color-text-muted)] text-sm">Загрузка...</div></div>;
+  if (loading) return <LoadingState />;
 
   const imageUrl = (img: string | null) => {
     if (!img) return '';
