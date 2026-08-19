@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getHeaders } from '../../api/helpers';
 import { fmtSafeDate } from '../../utils/date';
+import { selectDataState } from '../../utils/dataState';
 
 interface Payment {
   id: number;
@@ -56,7 +57,8 @@ export default function AdminDonate() {
     ? payments
     : payments.filter(p => p.platform === filter);
 
-  if (loading) return <p className="text-[var(--color-text-muted)] text-sm">Загрузка...</p>;
+  const dataState = selectDataState(loading, payments);
+  if (dataState.status === 'loading') return <p className="text-[var(--color-text-muted)] text-sm">Загрузка...</p>;
 
   return (
     <div>
