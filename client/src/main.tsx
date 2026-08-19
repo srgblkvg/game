@@ -9,6 +9,7 @@ import { AcquireProvider } from './contexts/AcquireContext';
 import { ServerTimeProvider } from './contexts/ServerTimeContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { addCollection } from '@iconify/react';
+import vkBridge from '@vkontakte/vk-bridge';
 import gameIcons from './icons-filtered.json';
 // TODO: удалить после ответа поддержки VK ↓
 import { initVkInputMode } from './utils/vkInputMode';
@@ -16,21 +17,17 @@ import { initVkInputMode } from './utils/vkInputMode';
 import './styles/theme.css';
 import { getPlatformAdapter } from './platforms/adapter';
 
-// VK Bridge (для игр ВКонтакте)
-declare global {
-  interface Window {
-    vkBridge?: any;
-  }
-}
+// Bridge собирается вместе с клиентом: загрузка приложения больше не зависит
+// от доступности внешнего CDN. Глобальный alias сохраняется для существующих
+// экранов рекламы и платежей.
+window.vkBridge = vkBridge;
 
 // Определяем платформу
 const platform = getPlatformAdapter();
 platform.init();
 
 // VK Bridge init
-if (window.vkBridge) {
-  window.vkBridge.send('VKWebAppInit').catch(() => { /* ignore */ });
-}
+vkBridge.send('VKWebAppInit').catch(() => { /* вне VK инициализация не требуется */ });
 
 // Применяем платформо-специфичные настройки
 if (platform.bodyClass) {
