@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { selectLoadingText } from './loadingState.ts';
+import { selectLoadingText } from './loadingStateModel.ts';
 
 test('selects the preserved default loading text while loading', () => {
   assert.equal(selectLoadingText(true), 'Загрузка...');
