@@ -1055,7 +1055,48 @@ export async function advanceAllRoundsTx(client: any, tournamentId: number) {
             [tournamentId]
         );
         if (pendingResult.rows.length === 0) {
-            // Все раунды завершены
+            // Legacy-safe path: у турниров, чей финал был создан старой версией,
+            // матч за третье место мог отсутствовать. Создаём его до выплат.
+            const participantCount = Number((await client.query(
+                'SELECT COUNT(*) AS cnt FROM tournament_participants WHERE tournamentid = $1',
+                [tournamentId]
+            )).rows[0]?.cnt || 0);
+            if (participantCount >= 4) {
+                const thirdExists = await client.query(
+                    `SELECT 1 FROM tournament_matches
+                     WHERE tournamentid = $1 AND stage = 'third_place'`,
+                    [tournamentId]
+                );
+                if (thirdExists.rows.length === 0) {
+                    const completedPlayoff = (await client.query(
+                        `SELECT round, player1id, player2id, winnerid
+                         FROM tournament_matches
+                         WHERE tournamentid = $1 AND stage = 'playoff'
+                           AND winnerid IS NOT NULL
+                           AND player1id IS NOT NULL AND player2id IS NOT NULL
+                         ORDER BY round, id`,
+                        [tournamentId]
+                    )).rows;
+                    const thirdPlacePair = getThirdPlacePair(completedPlayoff.map((match: any) => ({
+                        round: Number(match.round),
+                        stage: 'playoff',
+                        player1Id: Number(match.player1id),
+                        player2Id: Number(match.player2id),
+                        winnerId: Number(match.winnerid),
+                    })));
+                    if (thirdPlacePair) {
+                        const finalRound = Math.max(...completedPlayoff.map((match: any) => Number(match.round)));
+                        await client.query(
+                            `INSERT INTO tournament_matches
+                             (tournamentid, round, player1id, player2id, stage)
+                             VALUES ($1, $2, $3, $4, 'third_place')`,
+                            [tournamentId, finalRound + 1, thirdPlacePair[0], thirdPlacePair[1]]
+                        );
+                        continue;
+                    }
+                }
+            }
+            // Все раунды завершены и обязательная бронза определена.
             const tCheck = await client.query('SELECT status FROM tournaments WHERE id = $1', [tournamentId]);
             if (tCheck.rows[0]?.status === 'in_progress') {
                 await finishTournamentTx(client, tournamentId);
