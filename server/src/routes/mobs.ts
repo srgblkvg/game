@@ -9,14 +9,16 @@ import { checkAchievement, trackIncome } from './achievements';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { updateGuildQuestProgress } from './guild';
 import { loadBattleAntiStats } from '../game/guildBoss';
+import {
+    MATERIAL_DROP_CHANCE,
+    MYTHIC_RESOURCE_DROP_CHANCE,
+    STONE_DROP_CHANCE,
+    getCraftMaterialChance,
+    getStoneChance,
+    scaleItemDropTable,
+} from '../game/huntDrops';
 
 const router = Router();
-// Все охотничьи шансы сейчас вдвое выше прежнего значения (1/3 -> 2/3).
-// Предпросмотр /mobs и фактические роллы используют этот общий множитель.
-const HUNT_DROP_MULTIPLIER = 2 / 3;
-const MATERIAL_DROP_CHANCE = 0.35 * HUNT_DROP_MULTIPLIER;
-const STONE_DROP_CHANCE = 0.05 * HUNT_DROP_MULTIPLIER;
-const MYTHIC_RESOURCE_DROP_CHANCE = 0.01 * HUNT_DROP_MULTIPLIER;
 
 // Шансы дропа камней улучшения (независимые роллы на каждого моба)
 const STONE_DROP_CHANCES: Record<string, number> = {
@@ -29,7 +31,7 @@ const STONE_DROP_CHANCES: Record<string, number> = {
     'Руна Рубина': 0.001,
 };
 
-// Редкие мифические ресурсы — 5% с конкретных монстров (начиная со Смерти)
+// Редкие мифические ресурсы с конкретных монстров; шанс задан в huntDrops.ts.
 const MYTHIC_RESOURCE_DROPS: Record<number, string> = {
     30: 'Кровь демона',       // Смерть (100)
     47: 'Эссенция гнева',     // Бес-кровопускатель (110)
@@ -97,7 +99,7 @@ function getItemDropTable(level: number): { rarity: number; chance: number }[] {
         table.push({ rarity: 5, chance: 0.20 }); // Легендарный 20%
         table.push({ rarity: 6, chance: 0.15 }); // Мифический 15%
     }
-    return table.map(entry => ({ ...entry, chance: entry.chance * HUNT_DROP_MULTIPLIER }));
+    return scaleItemDropTable(table);
 }
 
 // Получить список мобов
@@ -147,7 +149,7 @@ router.get('/mobs', async (req, res) => {
             [6, 'loot_mythic', 'Мифический'],
         ];
         for (const [r, key, rarityName] of rarityMap) {
-            const chance = (m[key] || 0) * MATERIAL_DROP_CHANCE;
+            const chance = getCraftMaterialChance(m[key] || 0);
             if (chance > 0 && craftInfo[r]) {
                 lootImages.push({ rarity: r, name: craftInfo[r].name, image: craftInfo[r].image, chance });
             }
@@ -157,7 +159,7 @@ router.get('/mobs', async (req, res) => {
         for (const stone of allStones) {
             const weight = STONE_DROP_CHANCES[stone.name] || 0;
             if (weight > 0) {
-                const realChance = (weight / totalStoneWeight) * STONE_DROP_CHANCE;
+                const realChance = getStoneChance(weight, totalStoneWeight);
                 lootImages.push({ rarity: -1, name: stone.name, image: stone.image, chance: realChance });
             }
         }
