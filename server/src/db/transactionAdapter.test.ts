@@ -133,4 +133,31 @@ test('PoolClient transaction releases when begin fails', async () => {
   assert.deepEqual(events, ['BEGIN', 'RELEASE']);
 });
 
+test('release failure is returned when it is the only failure', async () => {
+  const releaseFailure = new Error('release failed');
+  const client = {
+    async query() {},
+    release() {
+      throw releaseFailure;
+    },
+  };
+
+  await assert.rejects(executeWithPoolClient(client, async () => 42), releaseFailure);
+});
+
+test('release failure does not hide the original callback failure', async () => {
+  const originalFailure = new Error('callback failed');
+  const releaseFailure = new Error('release failed');
+  const client = {
+    async query() {},
+    release() {
+      throw releaseFailure;
+    },
+  };
+
+  await assert.rejects(executeWithPoolClient(client, async () => {
+    throw originalFailure;
+  }), originalFailure);
+});
+
 export {};
