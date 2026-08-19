@@ -5,7 +5,7 @@ import BackButton from '../components/BackButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { getHeaders, BASE_URL } from '../api/helpers';
-import { formatMoney } from '../utils/money';
+import { PriceAmount } from '../components/MoneyDisplay';
 import { getRarityColor } from '../utils/itemUtils';
 import { showNoMoney } from '../components/NoMoneyModal';
 import ItemStats from '../components/ItemStats';
@@ -139,7 +139,7 @@ export default function ShopPage() {
 
                 <div className="mt-2">
                   <div className="text-center text-[0.7rem] sm:text-xs text-[var(--color-text-secondary)] mb-1">
-                    Цена: {formatMoney(price)}
+                    Цена: <PriceAmount amount={price} />
                   </div>
                   {offer.bought ? (
                     <div className="text-center text-xs text-[var(--color-text-muted)] py-1">✓ Куплено</div>
