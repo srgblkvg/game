@@ -37,7 +37,7 @@ test('бронзу получает только победитель завер
   ]);
 });
 
-test('без завершённого матча за третье место бронза не назначается', () => {
+test('без завершённого матча за третье место награды не выплачиваются частично', () => {
   const matches = [
     { round: 1, stage: 'playoff', player1Id: 1, player2Id: 4, winnerId: 1 },
     { round: 1, stage: 'playoff', player1Id: 2, player2Id: 3, winnerId: 2 },
@@ -50,10 +50,21 @@ test('без завершённого матча за третье место б
     matches,
   });
 
-  assert.deepEqual(rewards, [
-    { userId: 1, place: 1, prize: 500 },
-    { userId: 2, place: 2, prize: 300 },
-  ]);
+  assert.deepEqual(rewards, []);
+});
+
+test('для четырёх участников без матча за третье место награды fail-closed', () => {
+  const rewards = calculateTournamentRewards({
+    prizePool: 1000,
+    participantIds: [1, 2, 3, 4],
+    matches: [
+      { round: 1, stage: 'playoff', player1Id: 1, player2Id: 4, winnerId: 1 },
+      { round: 1, stage: 'playoff', player1Id: 2, player2Id: 3, winnerId: 2 },
+      { round: 2, stage: 'playoff', player1Id: 1, player2Id: 2, winnerId: 1 },
+    ],
+  });
+
+  assert.deepEqual(rewards, []);
 });
 
 test('финал определяется только среди матчей stage playoff', () => {

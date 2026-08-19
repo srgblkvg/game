@@ -1588,9 +1588,12 @@ router.post('/tournament/register', async (req, res) => {
         // Кастомный турнир по ID
         const tournamentId = req.body.tournamentId;
         if (!tournamentId) return res.status(400).json({ error: 'Укажите tournamentId или division' });
+        const now = Math.floor(Date.now() / 1000);
         tournament = await db.one(
-            "SELECT * FROM tournaments WHERE id = ? AND status = 'registration'",
-            [tournamentId]
+            `SELECT * FROM tournaments
+             WHERE id = ? AND status = 'registration'
+               AND registrationStart <= ? AND registrationEnd > ?`,
+            [tournamentId, now, now]
         ) as any;
         if (!tournament) return res.status(400).json({ error: 'Турнир не найден или регистрация закрыта' });
 
@@ -1665,7 +1668,7 @@ router.post('/tournament/register', async (req, res) => {
         });
     } catch (error: any) {
         const message = error?.message || 'Ошибка регистрации';
-        const expected = /уже зарегистрированы|заполнен|Недостаточно серебра|регистрация закрыта|не найден/i.test(message);
+        const expected = /уже зарегистрированы|заполнен|Недостаточно серебра|регистрация закрыта|не найден|ещё не открыта|уже завершена/i.test(message);
         return res.status(expected ? 400 : 500).json({ error: message });
     }
     broadcast('tournamentUpdated', { reason: 'participant_registered', tournamentId: tournament.id, userId });
