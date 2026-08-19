@@ -14,6 +14,7 @@ import { inputClass } from '../utils/formStyles';
 import GuildTag from "../components/GuildTag";
 import BracketTree from "../components/BracketTree";
 import Card from '../components/ui/Card';
+import Countdown from '../components/ui/Countdown';
 
 const isVK = typeof document !== 'undefined' && document.documentElement.classList.contains('vk-iframe');
 const numType = isVK ? 'text' : 'number';
@@ -47,18 +48,6 @@ function tournamentLabel(t: any): string {
     if (t.type === 'custom') return t.name || 'Турнир';
     const division = t.divisionLabel || t.name || divisionLabels[t.division] || t.division;
     return `Турнир: ${division}`;
-}
-
-function formatTimer(seconds: number): string {
-    if (seconds <= 0) return '0 мин';
-    const d = Math.floor(seconds / 86400);
-    const h = Math.floor((seconds % 86400) / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const parts: string[] = [];
-    if (d > 0) parts.push(d + ' дн');
-    if (h > 0) parts.push(h + ' ч');
-    if (m > 0) parts.push(m + ' мин');
-    return parts.join(' ') || '0 мин';
 }
 
 export default function TournamentPage() {
@@ -192,7 +181,7 @@ export default function TournamentPage() {
                         {t.status === 'registration' && (
                             <p className="text-[0.65rem] text-[var(--color-accent-info)]">
                                 {t.registrationEnd > Math.floor(Date.now() / 1000)
-                                    ? `до старта: ${formatTimer(t.registrationEnd - Math.floor(Date.now() / 1000))}`
+                                    ? <Countdown seconds={t.registrationEnd - Math.floor(Date.now() / 1000)} prefix="до старта: " precision="minutes" />
                                     : 'Формирование сетки'}
                             </p>
                         )}
@@ -374,7 +363,7 @@ export default function TournamentPage() {
                                     <span className="font-medium">{u.label}</span>
                                     {u.minLevel && u.maxLevel && <span className="text-[var(--color-text-muted)]">ур.{u.minLevel}–{u.maxLevel}</span>}
                                     <span className="text-[var(--color-accent-info)] ml-auto tabular-nums">
-                                        через {formatTimer(secLeft)}
+                                        <Countdown seconds={secLeft} prefix="через " precision="minutes" />
                                     </span>
                                 </div>
                             );
