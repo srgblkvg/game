@@ -6,6 +6,7 @@ import Button from './ui/Button';
 import Card from './ui/Card';
 import Modal from './ui/Modal';
 import { getHeaders } from '../api/helpers';
+import { getTournamentCallToAction, type TournamentCallToAction } from '../utils/tournamentUi';
 
 interface ActionsProps {
     canAttack: boolean;
@@ -33,6 +34,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     const [registerMsg, setRegisterMsg] = useState('');
     const [nextTournamentSec, setNextTournamentSec] = useState(0);
     const [nextTournamentLabel, setNextTournamentLabel] = useState('');
+    const [tournamentLoaded, setTournamentLoaded] = useState(false);
     const [auctionBadge, setAuctionBadge] = useState(parseInt(localStorage.getItem('auctionBadge') || '0'));
     const [guildBadge, setGuildBadge] = useState(parseInt(localStorage.getItem('guildBadge') || '0'));
     const [bankBadge, setBankBadge] = useState(parseInt(localStorage.getItem('bankBadge') || '0'));
@@ -194,7 +196,8 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         fetch('/api/tournament?tab=active&type=official', { headers: getHeaders() })
             .then(r => r.json())
             .then(loadTournaments)
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => setTournamentLoaded(true));
     }, [loadTournaments]);
 
     useEffect(() => {
@@ -248,7 +251,7 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
         <div className="mt-6 w-full max-w-2xl mx-auto space-y-4" data-tutorial="actions">
             {heroCards.length > 0 && (
                 <div>
-                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} trainingCD={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} isGuest={isGuest} tournamentInfo={tournamentInfo} setTournamentInfo={setTournamentInfo} myRegistration={myRegistration} setMyRegistration={setMyRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} setNextTournamentSec={setNextTournamentSec} nextTournamentLabel={nextTournamentLabel} setNextTournamentLabel={setNextTournamentLabel} />
+                    <CardGrid cards={heroCards} canAttack={canAttack} attackCooldownSec={attackCooldownSec} pveCooldownSec={pveCooldownSec} bankCooldownSec={bankCooldownSec} navigate={navigate} hasActiveJob={hasActiveJob} auctionBadge={auctionBadge} guildBadge={guildBadge} bankBadge={bankBadge} treasury={treasury} massacreCount={0} massacreTimeLeft={0} trainingCD={0} onAuctionClick={() => { localStorage.setItem('auctionBadge', '0'); setAuctionBadge(0); }} onGuildClick={() => { localStorage.setItem('guildBadgeSeen', String(guildBadge)); localStorage.setItem('guildBadge', '0'); setGuildBadge(0); }} onBankClick={() => { localStorage.setItem('bankBadge', '0'); setBankBadge(0); }} isGuest={isGuest} tournamentInfo={tournamentInfo} setTournamentInfo={setTournamentInfo} myRegistration={myRegistration} setMyRegistration={setMyRegistration} registerMsg={registerMsg} setRegisterMsg={setRegisterMsg} nextTournamentSec={nextTournamentSec} setNextTournamentSec={setNextTournamentSec} nextTournamentLabel={nextTournamentLabel} setNextTournamentLabel={setNextTournamentLabel} tournamentCallToAction={getTournamentCallToAction({ loaded: tournamentLoaded, tournament: tournamentInfo, nextSeconds: nextTournamentSec })} />
                 </div>
             )}
             {/* Категории */}
@@ -292,10 +295,10 @@ export default function Actions({ canAttack, attackCooldownSec, pveCooldownSec, 
     );
 }
 
-function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, trainingCD, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, setTournamentInfo, myRegistration, setMyRegistration, registerMsg, setRegisterMsg, nextTournamentSec, setNextTournamentSec, nextTournamentLabel, setNextTournamentLabel, isGuest }: {
+function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCooldownSec, navigate, hasActiveJob, auctionBadge, guildBadge, bankBadge, treasury, massacreCount, massacreTimeLeft, trainingCD, onAuctionClick, onGuildClick, onBankClick, tournamentInfo, setTournamentInfo, myRegistration, setMyRegistration, registerMsg, setRegisterMsg, nextTournamentSec, setNextTournamentSec, nextTournamentLabel, setNextTournamentLabel, tournamentCallToAction = 'joinable', isGuest }: {
     cards: ActionCard[]; canAttack: boolean; attackCooldownSec: number; pveCooldownSec: number; bankCooldownSec: number;
     navigate: (path: string) => void; hasActiveJob?: boolean; auctionBadge?: number; guildBadge?: number; bankBadge?: number; treasury: number; massacreCount: number; massacreTimeLeft: number; trainingCD: number; onAuctionClick?: () => void; onGuildClick?: () => void; onBankClick?: () => void;
-    tournamentInfo?: any; setTournamentInfo?: (info: any) => void; myRegistration?: any; setMyRegistration?: (r: any) => void; registerMsg?: string; setRegisterMsg?: (msg: string) => void; nextTournamentSec?: number; setNextTournamentSec: (seconds: number) => void; nextTournamentLabel?: string; setNextTournamentLabel: (label: string) => void;
+    tournamentInfo?: any; setTournamentInfo?: (info: any) => void; myRegistration?: any; setMyRegistration?: (r: any) => void; registerMsg?: string; setRegisterMsg?: (msg: string) => void; nextTournamentSec?: number; setNextTournamentSec: (seconds: number) => void; nextTournamentLabel?: string; setNextTournamentLabel: (label: string) => void; tournamentCallToAction?: TournamentCallToAction;
     isGuest?: boolean;
 }) {
     const [arenaDifficulty, setArenaDifficulty] = useState<string>('equal');
@@ -402,6 +405,8 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                 {tournamentInfo.divisionLabel && `🏆 Турнир: ${tournamentInfo.divisionLabel}`}
                                             </span>
                                         </div>
+                                    ) : tournamentCallToAction === 'loading' ? (
+                                        <div className="mt-1 text-xs text-[var(--color-text-muted)]">Загрузка турнира…</div>
                                     ) : nextTournamentSec && nextTournamentSec > 0 ? (
                                         <div className="mt-1 text-xs text-[var(--color-text-muted)]">
                                             ⏳ Следующий турнир: {nextTournamentLabel} через {String(Math.floor(nextTournamentSec / 3600)).padStart(2, '0')}:{String(Math.floor((nextTournamentSec % 3600) / 60)).padStart(2, '0')}:{String(nextTournamentSec % 60).padStart(2, '0')}
