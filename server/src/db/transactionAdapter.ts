@@ -24,12 +24,20 @@ export async function executeWithPoolClient<C extends TransactionClient, T>(
   client: C,
   callback: (client: C) => Promise<T>,
 ): Promise<T> {
+  let originalError: unknown;
   try {
     return await executeInTransaction(
       poolClientTransactionExecutor(client),
       () => callback(client),
     );
+  } catch (error) {
+    originalError = error;
+    throw error;
   } finally {
-    client.release();
+    try {
+      client.release();
+    } catch (releaseError) {
+      if (originalError === undefined) throw releaseError;
+    }
   }
 }
