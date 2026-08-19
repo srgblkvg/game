@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { selectLoadingText } from './loadingState';
+import { selectLoadingText } from './loadingStateModel';
 
 export interface LoadingStateProps {
   isLoading?: boolean;
