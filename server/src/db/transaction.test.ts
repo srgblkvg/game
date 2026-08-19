@@ -42,3 +42,54 @@ test('ошибка callback концептуально откатывается 
 
   assert.deepEqual(events, ['BEGIN', 'CALLBACK', 'ROLLBACK']);
 });
+
+test('ошибка begin пробрасывается без callback и rollback', async () => {
+  const events: string[] = [];
+  const failure = new Error('begin failed');
+  const executor = recordingExecutor(events);
+  executor.begin = async () => {
+    events.push('BEGIN');
+    throw failure;
+  };
+
+  await assert.rejects(executeInTransaction(executor, async () => {
+    events.push('CALLBACK');
+    return 1;
+  }), failure);
+
+  assert.deepEqual(events, ['BEGIN']);
+});
+
+test('ошибка commit вызывает rollback и пробрасывается', async () => {
+  const events: string[] = [];
+  const failure = new Error('commit failed');
+  const executor = recordingExecutor(events);
+  executor.commit = async () => {
+    events.push('COMMIT');
+    throw failure;
+  };
+
+  await assert.rejects(executeInTransaction(executor, async () => {
+    events.push('CALLBACK');
+    return 1;
+  }), failure);
+
+  assert.deepEqual(events, ['BEGIN', 'CALLBACK', 'COMMIT', 'ROLLBACK']);
+});
+
+test('ошибка rollback не скрывает исходную ошибку callback', async () => {
+  const events: string[] = [];
+  const originalFailure = new Error('callback failed');
+  const executor = recordingExecutor(events);
+  executor.rollback = async () => {
+    events.push('ROLLBACK');
+    throw new Error('rollback failed');
+  };
+
+  await assert.rejects(executeInTransaction(executor, async () => {
+    events.push('CALLBACK');
+    throw originalFailure;
+  }), originalFailure);
+
+  assert.deepEqual(events, ['BEGIN', 'CALLBACK', 'ROLLBACK']);
+});

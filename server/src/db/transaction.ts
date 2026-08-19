@@ -15,7 +15,11 @@ export async function executeInTransaction<T>(
     await executor.commit();
     return result;
   } catch (error) {
-    await executor.rollback();
+    try {
+      await executor.rollback();
+    } catch {
+      // Preserve the original callback/commit failure; rollback is best effort.
+    }
     throw error;
   }
 }
