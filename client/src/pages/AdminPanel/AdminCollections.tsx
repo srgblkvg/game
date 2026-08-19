@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getHeaders } from '../../api/helpers';
 import Button from '../../components/ui/Button';
 import { inputClass } from '../../utils/formStyles';
+import { selectDataState } from '../../utils/dataState';
 
 interface CollectionSet {
     id: number;
@@ -74,7 +75,8 @@ export default function AdminCollections() {
         setForm({ name: set.name, description: set.description, bonus_percent: set.bonus_percent, sort_order: set.sort_order });
     };
 
-    if (loading) return <p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p>;
+    const dataState = selectDataState(loading, sets);
+    if (dataState.status === 'loading') return <p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p>;
 
     return (
         <div>
@@ -122,7 +124,7 @@ export default function AdminCollections() {
                         </div>
                     </div>
                 ))}
-                {sets.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">Нет сетов</p>}
+                {dataState.status === 'empty' && <p className="text-sm text-[var(--color-text-muted)]">Нет сетов</p>}
             </div>
             {totalPages > 1 && (
                 <div className="flex justify-center gap-2 mt-3">
