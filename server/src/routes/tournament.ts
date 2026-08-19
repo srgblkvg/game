@@ -8,6 +8,7 @@ import { calculateCombatPower } from '../game/combatPower';
 import { getRegistrationWindowForNewQueue } from '../game/tournamentCycle';
 import { calculateTournamentRewards, getThirdPlacePair } from '../game/tournamentRewards';
 import { presentCompletedTournamentTop3 } from '../game/tournamentPresentation';
+import { isTournamentRegistrationOpen } from '../game/tournamentRegistration';
 import { applyDivisionChampionship, assignTournamentDivision, getTournamentDivision, getTournamentDivisionByIndex, TOURNAMENT_DIVISIONS } from '../game/tournamentDivision';
 import { allocateDivisionPrizePools, splitParticipantsByDivision } from '../game/tournamentDivisionQueue';
 import { initTournamentSchema, isTournamentSchemaReady } from '../game/tournamentSchema';
@@ -1612,10 +1613,11 @@ router.post('/tournament/register', async (req, res) => {
             throw new Error('Турнир не найден или регистрация закрыта');
         }
         const transactionNow = Math.floor(Date.now() / 1000);
-        if (lockedTournament.type === 'official'
-            && (Number(lockedTournament.registrationstart) > transactionNow
-                || Number(lockedTournament.registrationend) <= transactionNow)) {
-            throw new Error('Регистрация в официальный турнир ещё не открыта или уже завершена');
+        if (!isTournamentRegistrationOpen({
+            registrationStart: Number(lockedTournament.registrationstart),
+            registrationEnd: Number(lockedTournament.registrationend),
+        }, transactionNow)) {
+            throw new Error('Регистрация в турнир ещё не открыта или уже завершена');
         }
         const lockedUser = (await client.query(
             'SELECT money FROM users WHERE id = $1 FOR UPDATE', [userId]
