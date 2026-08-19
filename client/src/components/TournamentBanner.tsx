@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { getHeaders } from '../api/helpers';
 import { formatMoney } from '../utils/money';
+import Countdown from './ui/Countdown';
 
 interface TournamentInfo {
     id: number;
@@ -32,18 +33,6 @@ const DIVISION_ICONS: Record<string, string> = {
     gold: '🥇', platinum: '🥇', mithril: '🥇', adamant: '👑', orichalcum: '💎',
 };
 
-
-function formatTimer(seconds: number): string {
-    if (seconds <= 0) return '0 мин';
-    const d = Math.floor(seconds / 86400);
-    const h = Math.floor((seconds % 86400) / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const parts: string[] = [];
-    if (d > 0) parts.push(d + ' дн');
-    if (h > 0) parts.push(h + ' ч');
-    if (m > 0) parts.push(m + ' мин');
-    return parts.join(' ') || '0 мин';
-}
 
 function canJoin(t: TournamentInfo, userLevel: number): boolean {
     if (t.type === 'official') return true;
@@ -141,7 +130,7 @@ export default function TournamentBanner() {
                                     {t.type === 'custom' && <span className="text-xs ml-0.5 text-[var(--color-accent-purple)]">игр.</span>}
                                 </span>
                                 <span className="text-xs text-[var(--color-text-muted)] ml-auto">
-                                    {t.status === 'registration' ? `⌛ ${formatTimer(Math.max(0, untilEnd))}` : '⚔️ идёт'}
+                                    {t.status === 'registration' ? <Countdown seconds={untilEnd} prefix="⌛ " precision="minutes" /> : '⚔️ идёт'}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] mt-0.5">
