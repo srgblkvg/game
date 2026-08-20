@@ -1,14 +1,17 @@
+import { normalizeItem } from '../domain/items/normalizeItem';
+
 export function lootGroupKey(reward: any, kind: 'item' | 'page'): string {
     if (kind === 'page') return `page:${reward.skillId}`;
-    if (reward.type === 'craft_item' || reward.itemType === 'upgrade') return `stack:${reward.id}`;
+    const item = normalizeItem(reward);
+    if (item.type === 'craft_item' || item.itemType === 'upgrade') return `stack:${item.id}`;
     return `equipment:${JSON.stringify({
-        name: reward.name,
-        slot: reward.slot,
-        rarity_id: reward.rarity_id,
-        upgradeLevel: reward.upgradeLevel ?? reward.upgradelevel ?? 0,
-        bonuses: reward.bonuses || {},
-        extra: reward.extra || {},
-        image: reward.image || '',
+        name: item.name,
+        slot: item.slot,
+        rarity_id: item.rarity_id,
+        upgradeLevel: item.upgradeLevel ?? 0,
+        bonuses: item.bonuses || {},
+        extra: item.extra || {},
+        image: item.image || '',
     })}`;
 }
 
@@ -20,7 +23,7 @@ export function groupLoot(items: any[], pages: any[]): { items: any[]; pages: an
             const key = lootGroupKey(reward, kind);
             const existing = grouped.get(key);
             if (existing) existing.count = (existing.count || 1) + (reward.count || 1);
-            else grouped.set(key, { ...reward, count: reward.count || 1 });
+            else grouped.set(key, { ...normalizeItem(reward), count: reward.count || 1 });
         }
         return Array.from(grouped.values());
     };

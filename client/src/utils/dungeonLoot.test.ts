@@ -26,6 +26,15 @@ test('полностью одинаковая экипировка объеди�
     assert.equal(grouped.items[0].count, 2);
 });
 
+test('legacy и canonical поля предмета группируются одинаково', () => {
+    const grouped = groupLoot([
+        { name: 'Меч', slot: 'weapon1', rarityId: '3', upgradelevel: '7', bonuses: '{"s":5}', extra: '{"crit":1}', image: '/sword.webp' },
+        { name: 'Меч', slot: 'weapon1', rarity_id: 3, upgradeLevel: 7, bonuses: { s: 5 }, extra: { crit: 1 }, image: '/sword.webp' },
+    ], []);
+    assert.equal(grouped.items.length, 1);
+    assert.equal(grouped.items[0].count, 2);
+});
+
 test('экипировка с разными бонусами остаётся отдельной', () => {
     const base = { name: 'Меч', slot: 'weapon1', rarity_id: 3, extra: {}, image: '/sword.webp' };
     const grouped = groupLoot([
