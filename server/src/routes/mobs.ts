@@ -9,14 +9,11 @@ import { checkAchievement, trackIncome } from './achievements';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { updateGuildQuestProgress } from './guild';
 import { loadBattleAntiStats } from '../game/guildBoss';
+import { HUNT_DROP_MULTIPLIER, MYTHIC_RESOURCE_DROP_CHANCE, MYTHIC_RESOURCE_DROPS } from '../game/huntResourceDrops';
 
 const router = Router();
-// Все охотничьи шансы сейчас вдвое выше прежнего значения (1/3 -> 2/3).
-// Предпросмотр /mobs и фактические роллы используют этот общий множитель.
-const HUNT_DROP_MULTIPLIER = 2 / 3;
 const MATERIAL_DROP_CHANCE = 0.35 * HUNT_DROP_MULTIPLIER;
 const STONE_DROP_CHANCE = 0.05 * HUNT_DROP_MULTIPLIER;
-const MYTHIC_RESOURCE_DROP_CHANCE = 0.01 * HUNT_DROP_MULTIPLIER;
 
 // Шансы дропа камней улучшения (независимые роллы на каждого моба)
 const STONE_DROP_CHANCES: Record<string, number> = {
@@ -29,24 +26,7 @@ const STONE_DROP_CHANCES: Record<string, number> = {
     'Руна Рубина': 0.001,
 };
 
-// Редкие мифические ресурсы — 5% с конкретных монстров (начиная со Смерти)
-const MYTHIC_RESOURCE_DROPS: Record<number, string> = {
-    30: 'Кровь демона',       // Смерть (100)
-    47: 'Эссенция гнева',     // Бес-кровопускатель (110)
-    48: 'Пыльца фей',         // Одержимый рыцарь (115)
-    49: 'Кристалл душ',       // Инкуб-искуситель (118)
-    50: 'Чешуя василиска',    // Архидемон (122)
-    51: 'Кровь демона',       // Василиск адский (125)
-    52: 'Эссенция гнева',     // Лорд пламени (130)
-    53: 'Пыльца фей',         // Костяной дракон (135)
-    54: 'Кристалл душ',       // Падший серафим (140)
-    55: 'Кристалл душ',       // Рыцарь крови (145)
-    56: 'Кристалл душ',       // Палач предела (155)
-    57: 'Кристалл душ',       // Кровавый лорд (165)
-    58: 'Кристалл душ',       // Проклятый страж (180)
-    59: 'Кристалл душ',       // Архилич проклятых (195)
-    60: 'Кристалл душ',       // Король проклятых (210)
-};
+
 
 // Шансы дропа предметов по редкостям в зависимости от уровня моба
 function getItemDropTable(level: number): { rarity: number; chance: number }[] {
