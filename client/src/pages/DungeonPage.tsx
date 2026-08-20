@@ -9,6 +9,7 @@ import CharacterCard from '../components/CharacterCard';
 import { useGame } from '../contexts/GameContext';
 import { toCharCardData } from '../utils/character';
 import { groupLoot } from '../utils/dungeonLoot';
+import { readJsonResponse } from '../utils/http';
 import PageHeader from '../components/ui/PageHeader';
 
 interface EnemyView {
@@ -180,7 +181,7 @@ export default function DungeonPage() {
     useEffect(() => {
         loadStatus(); loadPages(); loadSkills();
         fetch('/api/actions', { headers: getHeaders() })
-            .then(r => r.json())
+            .then(r => readJsonResponse<any[]>(r))
             .then((data: any[]) => setActionCard(data.find(card => card.path === '/dungeon') || null))
             .catch(() => {});
     }, []);
@@ -198,7 +199,7 @@ export default function DungeonPage() {
     const loadSkills = async () => {
         try {
             const res = await fetch('/api/dungeon/skills', { headers: getHeaders() });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             setSkillList(data.skills || []);
         } catch { /* */ }
     };
@@ -206,7 +207,7 @@ export default function DungeonPage() {
     const loadStatus = async () => {
         try {
             const res = await fetch('/api/dungeon/status', { headers: getHeaders() });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             setStatus(data);
             if (data.active) {
                 setInCombat(true);
@@ -222,7 +223,7 @@ export default function DungeonPage() {
             // Рейтинг
             try {
                 const lb = await fetch('/api/dungeon/leaderboard', { headers: getHeaders() });
-                setLeaderboard(await lb.json());
+                setLeaderboard(await readJsonResponse(lb));
             } catch { /* */ }
         } catch { /* */ }
     };
@@ -230,7 +231,7 @@ export default function DungeonPage() {
     const loadPages = async () => {
         try {
             const res = await fetch('/api/dungeon/pages', { headers: getHeaders() });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             setPages(data.pages || []);
         } catch { /* */ }
     };
@@ -240,7 +241,7 @@ export default function DungeonPage() {
         pollRef.current = setInterval(async () => {
             try {
                 const res = await fetch('/api/dungeon/state', { headers: getHeaders() });
-                const data = await res.json();
+                const data = await readJsonResponse(res);
                 if (!data.active) { stopPolling(); setInCombat(false); if (data.dead) setDead(true); loadStatus(); return; }
                 setPlayerHp(data.playerHp);
                 setEnemies(withWindupDeadline(data.enemies || []));
@@ -282,7 +283,7 @@ export default function DungeonPage() {
                 method: 'POST', headers: getHeaders(),
                 body: JSON.stringify({ skills: selectedSkills, startFloor }),
             });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             if (!res.ok) throw new Error(data.error);
             setInCombat(true); setDead(false); setCleared(false); setClaimed(false); setClaimResult(null);
             setFloor(data.floor); setPlayerHp(data.playerHp); setPlayerMaxHp(data.playerMaxHp);
@@ -299,7 +300,7 @@ export default function DungeonPage() {
                 method: 'POST', headers: getHeaders(),
                 body: JSON.stringify({ skills: selectedSkills }),
             });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             if (!res.ok) throw new Error(data.error);
             setCleared(false); setClaimed(false); setClaimResult(null); setLooting(false); setLootProgress(0);
             setFloor(data.floor); setPlayerHp(data.playerHp); setPlayerMaxHp(data.playerMaxHp);
@@ -312,7 +313,7 @@ export default function DungeonPage() {
     const handleSkill = async (skillId: number) => {
         try {
             const res = await fetch('/api/dungeon/skill', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ skillId }) });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             if (!res.ok) throw new Error(data.error);
             if (data.enemies) setEnemies(data.enemies);
             setPlayerHp(data.playerHp); setRage(data.rage); setBuffs(data.buffs || []); setCooldowns(data.skillCooldowns || {});
@@ -343,7 +344,7 @@ export default function DungeonPage() {
         setLoading(true);
         try {
             const res = await fetch('/api/dungeon/claim', { method: 'POST', headers: getHeaders() });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             if (!res.ok) throw new Error(data.error);
             setClaimed(true); setClaimResult(data); setPlayerHp(data.playerHp);
             setTotalLoot(prev => ({
@@ -366,7 +367,7 @@ export default function DungeonPage() {
         setLoading(true);
         try {
             const res = await fetch('/api/dungeon/flee', { method: 'POST', headers: getHeaders() });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             if (data.loot) {
                 setTotalLoot({
                     silver: data.loot.silver,
@@ -382,7 +383,7 @@ export default function DungeonPage() {
     const handleUpgradeSkill = async (skillId: number) => {
         try {
             const res = await fetch('/api/dungeon/upgrade-skill', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ skillId }) });
-            const data = await res.json();
+            const data = await readJsonResponse(res);
             if (!res.ok) throw new Error(data.error);
             loadPages(); loadStatus();
             setMessage(`Скилл улучшен до уровня ${data.newLevel}!`);
