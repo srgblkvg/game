@@ -63,5 +63,6 @@ fi
 
 sshpass -e rsync -avz server/dist/ "$HOST:/opt/game/server/dist/"
 sshpass -e ssh "$HOST" 'pm2 flush && pm2 restart game-server'
-sshpass -e ssh "$HOST" 'curl -fsS http://127.0.0.1:3002/api/time >/dev/null && pm2 show game-server >/dev/null'
+curl -fsS https://mmoarena.ru/api/time >/dev/null
+sshpass -e ssh "$HOST" 'pm2 show game-server >/dev/null'
 echo 'Безопасный server deploy завершён.'
