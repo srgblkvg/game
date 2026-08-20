@@ -427,6 +427,9 @@ router.post('/dungeon/start', async (req, res) => {
     const userId = req.userId;
     const { skills: equippedSkillIds } = req.body; // [1,2,3,4]
 
+    if (finishingRuns.has(userId)) {
+        return res.status(409).json({ error: 'Предыдущий поход завершается перед перезагрузкой' });
+    }
     if (activeRuns.has(userId)) {
         return res.status(400).json({ error: 'Данж уже активен' });
     }
