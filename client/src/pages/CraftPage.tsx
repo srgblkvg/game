@@ -23,6 +23,7 @@ import {
 } from '../api/craft';
 import { isCraftItem, slotNames } from '../utils/itemUtils';
 import { formatMoney } from '../utils/money';
+import { applyCommonForgeTarget, getCommonForgeTargetOptions } from '../utils/forgeTargets';
 import RecipeList from './CraftPage/RecipeList';
 import CraftPacks from './CraftPage/CraftPacks';
 import CraftPopup from './CraftPage/CraftPopup';
@@ -174,6 +175,7 @@ export default function CraftPage() {
   const [forgeStone, setForgeStone] = useState<any>(null);
   const [forgePreview, setForgePreview] = useState<any>(null);
   const [singleForge, setSingleForge] = useState(true);
+  const [commonForgeTarget, setCommonForgeTarget] = useState(1);
   const [singleInfo, setSingleInfo] = useState<any>(null);
 
   const [curseItems, setCurseItems] = useState<Set<string>>(new Set());
@@ -441,6 +443,15 @@ export default function CraftPage() {
       if (Object.keys(prev).length >= 20) { showToast('Можно выбрать не более 20 предметов'); return prev; }
       return { ...prev, [id]: Math.min(10, (item.upgradeLevel || 0) + 1) };
     });
+  };
+
+  const forgeCurrentLevels = Object.fromEntries(equipment.map((item: any) => [String(item.id), Number(item.upgradeLevel ?? item.upgradelevel ?? 0)]));
+  const selectedForgeIds = Object.keys(forgeItems);
+  const commonForgeOptions = getCommonForgeTargetOptions(forgeCurrentLevels, selectedForgeIds);
+  const displayedCommonForgeTarget = commonForgeOptions.includes(commonForgeTarget) ? commonForgeTarget : (commonForgeOptions[0] || 1);
+  const applyForgeTargetToAll = (target: number) => {
+    setCommonForgeTarget(target);
+    setForgeItems(prev => applyCommonForgeTarget(prev, Object.keys(prev), target, forgeCurrentLevels));
   };
 
   const runForge = async () => {
@@ -743,6 +754,7 @@ export default function CraftPage() {
     {tab === 'forge' && <div className="space-y-4">
       <Card><div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Улучшение</h2><p className="text-xs text-[var(--color-text-muted)]">Усиливайте один предмет или несколько предметов до выбранного уровня.</p></div><div className="flex gap-1"><Button size="sm" variant={singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(true); setForgeItems({}); }}>Один предмет</Button><Button size="sm" variant={!singleForge ? 'primary' : 'secondary'} onClick={() => { setSingleForge(false); setForgeItems({}); }}>Массовое улучшение</Button></div></div></Card>
       <Card><h3 className="font-bold text-sm mb-2">1. Выберите {singleForge ? 'предмет' : 'предметы'}</h3><EquipmentGrid {...gridTooltipProps} items={equipment.filter((i: any) => (i.upgradeLevel || 0) < 10)} selected={new Set(Object.keys(forgeItems))} multi={!singleForge} onSelect={toggleForge} />
+        {!singleForge && selectedForgeIds.length > 0 && <div className="mt-3 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-secondary)] p-3"><label className="text-xs font-bold block mb-1">Общий уровень для всех выбранных предметов</label><select className={inputClass} value={displayedCommonForgeTarget} onChange={e => applyForgeTargetToAll(Number(e.target.value))}>{commonForgeOptions.map(level => <option key={level} value={level}>Улучшать все до +{level}</option>)}</select><Button size="sm" variant="secondary" className="mt-2" onClick={() => applyForgeTargetToAll(displayedCommonForgeTarget)}>Применить ко всем</Button></div>}
         {Object.entries(forgeItems).map(([id, target]) => { const item = equipment.find((i: any) => String(i.id) === id); return item && <div key={id} className="mt-2 flex items-center gap-2 text-xs"><span className="flex-1 truncate">{item.name} (+{item.upgradeLevel || 0})</span><label>Улучшать до</label><select className={inputClass + ' !w-20'} value={target} onChange={e => setForgeItems(p => ({ ...p, [id]: Number(e.target.value) }))}>{Array.from({ length: 10 - (item.upgradeLevel || 0) }, (_, n) => n + (item.upgradeLevel || 0) + 1).map(v => <option key={v} value={v}>+{v}</option>)}</select></div>; })}
       </Card>
       <Card><h3 className="font-bold text-sm mb-2">2. Выберите камень</h3><ResourceGrid {...gridTooltipProps} items={stones} selectedId={forgeStone && String(forgeStone.id)} onSelect={setForgeStone} /></Card>

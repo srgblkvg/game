@@ -5,6 +5,7 @@ import { arenaEnterSchema } from '../validation';
 import { getBaseStats, enrichEquipment, spendMoney, USER_ARENA_FIELDS_GUILD, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
 import { applyHpRegen } from '../game/hpRegen';
 import { calculateCombatPower } from '../game/combatPower';
+import { parseActiveEquipment } from '../game/activeEquipment';
 
 const router = Router();
 const MIN_BATTLE_HP_RATIO = 0.2;
@@ -60,9 +61,7 @@ router.get('/arena/opponent', async (req, res) => {
 
             if (matchesDifficulty) {
                 // Возвращаем того же соперника — бесплатно
-                const savedBase = { s: saved.baseS ?? 5, a: saved.baseA ?? 5, d: saved.baseD ?? 5, m: saved.baseM ?? 5 };
-                const savedEquip = JSON.parse(saved.equipment || '{}');
-                const { enriched: savedEnriched } = await enrichEquipment(savedEquip);
+                const { enriched: savedEnriched } = await enrichEquipment(parseActiveEquipment(saved));
                 const savedStats = await buildPlayerStats(saved, 'arena');
                 const savedHp = await getArenaHp(saved);
                 const savedCombatPower = await getArenaCombatPower(saved);
@@ -136,7 +135,7 @@ router.get('/arena/opponent', async (req, res) => {
     // Запоминаем выбранного соперника
     await db.run('UPDATE users SET arenaOpponentId = ? WHERE id = ?', [opponent.id, userId]);
 
-    const { enriched: enrichedEquipment } = await enrichEquipment(JSON.parse(opponent.equipment || '{}'));
+    const { enriched: enrichedEquipment } = await enrichEquipment(parseActiveEquipment(opponent));
     const stats = await buildPlayerStats(opponent, 'arena');
     const combatPower = await getArenaCombatPower(opponent);
 

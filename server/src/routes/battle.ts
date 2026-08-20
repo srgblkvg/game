@@ -13,6 +13,7 @@ import { getGuildBonus } from '../game/guildBuildings';
 import { checkAchievement, trackIncome } from './achievements';
 import { battleSchema } from '../validation';
 import { loadBattleAntiStats } from '../game/guildBoss';
+import { parseActiveEquipment } from '../game/activeEquipment';
 
 const router = Router();
 
@@ -103,7 +104,7 @@ router.post('/battle', async (req, res) => {
         id: attacker.id,
         name: attacker.username,
         base: getBaseStats(attacker),
-        equipment: JSON.parse(attacker.equipment || '{}'),
+        equipment: parseActiveEquipment(attacker),
         level: attacker.level,
         money: attacker.money,
         currentHp: attackerCurrentHp,
@@ -117,7 +118,7 @@ router.post('/battle', async (req, res) => {
         id: defender.id,
         name: defender.username,
         base: getBaseStats(defender),
-        equipment: JSON.parse(defender.equipment || '{}'),
+        equipment: parseActiveEquipment(defender),
         level: defender.level,
         money: defender.money,
         currentHp: defenderCurrentHp,

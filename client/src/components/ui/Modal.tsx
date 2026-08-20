@@ -33,12 +33,13 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+      style={{ backgroundColor: '#111111', padding: 'max(0.75rem, env(safe-area-inset-top, 0px)) 0.75rem max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
       onClick={onClose}
     >
       <div
-        className="bg-[var(--color-bg-modal)] rounded-xl text-[var(--color-text-primary)] shadow-lg mx-4 relative border-2 border-[var(--modal-border)] p-6"
-        style={dynamicStyle}
+        className="bg-[var(--color-bg-modal)] rounded-xl text-[var(--color-text-primary)] shadow-lg relative border-2 border-[var(--modal-border)] p-6 overflow-y-auto"
+        style={{ ...dynamicStyle, width: dynamicStyle.width || 'min(100%, 32rem)', maxHeight: 'calc(100vh - 1.5rem)' }}
         onClick={e => e.stopPropagation()}
       >
         <button

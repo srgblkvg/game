@@ -79,7 +79,7 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
               {showResult && stepResult && <p className={`text-xs font-bold mt-2 ${stepResult.success ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{stepResult.message}</p>}
             </>}
             {active && !stepResult && <p className="text-[0.7rem] mt-2 text-[var(--color-text-muted)]">Проверка ресурсов и подготовка попытки…</p>}
-            {!active && entry.result && <p className={`text-[0.7rem] mt-1 ${color}`}>{entry.result}</p>}
+            {!active && showResult && entry.result && <p className={`text-[0.7rem] mt-1 ${color}`}>{entry.result}</p>}
           </div>;
         })}
       </div>
