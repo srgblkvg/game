@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { deleteAtSelection, insertAtSelection } from '../utils/vkTextEditing';
-import { shouldReleaseVkKeyboardFocus } from '../utils/vkKeyboardFocus';
+import { shouldReleaseVkKeyboardFocus, shouldRestoreVkSelection } from '../utils/vkKeyboardFocus';
 
 type Layout = 'ru' | 'en' | 'num';
 
@@ -141,14 +141,12 @@ export default function VkKeyboard() {
         setCapsLock(false);
         return;
       }
-      // Сохраняем позицию курсора перед focus (Android сбрасывает)
-      const s = el.selectionStart;
-      const e = el.selectionEnd;
-      if (s !== null && e !== null) selectionRef.current = { start: s, end: e };
+      // React/WebView может после controlled onChange сдвинуть каретку в конец.
+      // Не перезаписываем сохранённую позицию текущим уже испорченным значением.
+      const { start, end } = selectionRef.current;
       if (document.activeElement !== el) el.focus({ preventScroll: true });
-      // Восстанавливаем если сбросилось
-      if (s !== null && (el.selectionStart !== s || el.selectionEnd !== e)) {
-        el.setSelectionRange(s, e);
+      if (shouldRestoreVkSelection(el.selectionStart, el.selectionEnd, start, end)) {
+        el.setSelectionRange(start, end);
       }
     }, 80);
     return () => clearInterval(id);
@@ -193,7 +191,18 @@ export default function VkKeyboard() {
       }
     };
     document.addEventListener('focusin', onFocus);
-    return () => document.removeEventListener('focusin', onFocus);
+    const onSelectionChange = () => {
+      const el = activeRef.current;
+      if (!el || document.activeElement !== el) return;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      if (start !== null && end !== null) selectionRef.current = { start, end };
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => {
+      document.removeEventListener('focusin', onFocus);
+      document.removeEventListener('selectionchange', onSelectionChange);
+    };
   }, []);
 
   const doDelete = useCallback(() => {
