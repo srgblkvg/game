@@ -5,6 +5,7 @@
  */
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { deleteAtSelection, insertAtSelection } from '../utils/vkTextEditing';
+import { shouldReleaseVkKeyboardFocus } from '../utils/vkKeyboardFocus';
 
 type Layout = 'ru' | 'en' | 'num';
 
@@ -157,6 +158,11 @@ export default function VkKeyboard() {
   useEffect(() => {
     const onFocus = (e: FocusEvent) => {
       const el = e.target as HTMLElement;
+      if (shouldReleaseVkKeyboardFocus(el.tagName, isTextInput(el))) {
+        activeRef.current = null;
+        setActive(null);
+        return;
+      }
       if (isTextInput(el)) {
         const input = el as HTMLInputElement | HTMLTextAreaElement;
         setActive(input);
