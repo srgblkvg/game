@@ -1,4 +1,5 @@
 import { BASE_URL, getHeaders } from './helpers';
+import { normalizeItems } from '../domain/items/normalizeItem';
 
 export async function fetchCharacter() {
     const res = await fetch(`${BASE_URL}/character/me`, { headers: getHeaders() });
@@ -9,7 +10,11 @@ export async function fetchCharacter() {
         throw new Error('Сессия истекла');
     }
     if (!res.ok) throw new Error('Failed to load character');
-    return res.json();
+    const character = await res.json();
+    return {
+        ...character,
+        inventory: normalizeItems(character.inventory),
+    };
 }
 
 export async function saveCharacter(character: any) {
