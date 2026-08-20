@@ -834,6 +834,7 @@ router.post('/dungeon/claim', async (req, res) => {
 // Продолжить на следующий этаж
 router.post('/dungeon/continue', async (req, res) => {
     const userId = req.userId;
+    if (finishingRuns.has(userId)) return res.status(409).json({ error: 'Поход завершается перед перезагрузкой' });
     const { skills: equippedSkillIds } = req.body;
 
     const saved = await db.one(
