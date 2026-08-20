@@ -60,13 +60,15 @@ router.get('/character/me', async (req, res) => {
         if ((item.type === 'craft_item' || item.type === 'material')) {
             const craftRow = craftDataMap[Number(item.id)];
             if (craftRow) {
-                const needsUpdate = item.rarity_id === undefined || !item.image
+                const needsUpdate = item.count === undefined || Number(item.count) < 1
+                    || item.rarity_id === undefined || !item.image
                     || item.rarity_display !== craftRow.rarity_display
                     || item.rarity_color !== craftRow.rarity_color;
                 if (needsUpdate) {
                     changed = true;
                     return {
                         ...item,
+                        count: Math.max(1, Number(item.count) || 0),
                         rarity_id: item.rarity_id ?? craftRow.rarity_id,
                         rarity_display: craftRow.rarity_display,
                         rarity_color: craftRow.rarity_color,

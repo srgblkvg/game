@@ -1,4 +1,5 @@
 export interface CompletedTournamentParticipantRow {
+  userId?: number;
   username: string;
   guildName?: string | null;
   guildId?: number | null;
@@ -50,14 +51,22 @@ export function presentCompletedTournamentTop3(
       place: rawPlace,
       ...(prize === undefined ? {} : { prize }),
       username: participant.username,
+      ...(participant.userId === undefined ? {} : { _participantUserId: participant.userId }),
       guildName: participant.guildName ?? null,
       guildId: participant.guildId ?? null,
     } as CompletedTournamentPrizePresenter];
   }).sort((left, right) => left.place - right.place);
   const seenPlaces = new Set<number>();
+  const seenUsers = new Set<number>();
   return presented.filter(entry => {
     if (seenPlaces.has(entry.place)) return false;
+    const userId = entry._participantUserId;
+    if (typeof userId === 'number' && seenUsers.has(userId)) return false;
     seenPlaces.add(entry.place);
+    if (typeof userId === 'number') seenUsers.add(userId);
     return true;
+  }).map(entry => {
+    const { _participantUserId: _ignored, ...publicEntry } = entry;
+    return publicEntry as CompletedTournamentPrizePresenter;
   });
 }

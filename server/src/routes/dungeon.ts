@@ -697,7 +697,7 @@ router.post('/dungeon/claim', async (req, res) => {
         ).catch(() => null) as any;
 
         if (craftItem) {
-            itemReward = { id: craftItem.id, name: craftItem.name, rarity: craftItem.display_name, rarity_id: craftItem.rarity_id, image: craftItem.image, type: 'craft_item', itemType: 'upgrade', rarity_color: craftItem.color };
+            itemReward = { id: craftItem.id, name: craftItem.name, rarity: craftItem.display_name, rarity_id: craftItem.rarity_id, count: 1, image: craftItem.image, type: 'craft_item', itemType: 'upgrade', rarity_color: craftItem.color };
         }
     }
 
@@ -859,9 +859,9 @@ router.post('/dungeon/flee', async (req, res) => {
             // Камень улучшения — стакаем
             const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === item.id);
             if (existing) {
-                existing.count = (existing.count || 0) + 1;
+                existing.count = Math.max(1, Number(existing.count) || 0) + Math.max(1, Number(item.count) || 0);
             } else {
-                inventory.push(item);
+                inventory.push({ ...item, count: Math.max(1, Number(item.count) || 0) });
             }
         } else {
             // Экипировка — добавляем как новый предмет
