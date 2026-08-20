@@ -1,8 +1,19 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { broadcast } from '../events';
+import { forceFinishActiveDungeonRuns, getActiveDungeonRunsCount } from './dungeon';
 
 const router = Router();
+
+// Deploy guard: the deploy runner checks this before and after the warning window.
+router.get('/deploy-status', (_req, res) => {
+    res.json({ activeDungeonRuns: getActiveDungeonRunsCount() });
+});
+
+router.post('/deploy-finish-dungeons', async (_req, res) => {
+    const result = await forceFinishActiveDungeonRuns();
+    res.json({ ...result, activeDungeonRuns: getActiveDungeonRunsCount() });
+});
 
 // Все сообщения (для админки)
 router.get('/messages', async (req, res) => {

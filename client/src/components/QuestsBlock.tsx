@@ -46,6 +46,9 @@ export default function QuestsBlock({ onHighlight }: { onHighlight?: (type: stri
         const handler = (e: Event) => {
             const msg = (e as CustomEvent).detail;
             const d = msg.data || msg;
+            if (d.cooldownRemaining !== undefined) {
+                setBossCd(Math.max(0, Number(d.cooldownRemaining) || 0));
+            }
             if (d.bossHp !== undefined) {
                 setGuildBoss((p: any) => {
                     if (!p) return { currentHp: d.bossHp, maxHp: d.bossMaxHp || 100000 };

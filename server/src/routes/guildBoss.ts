@@ -200,8 +200,11 @@ router.post('/guild/boss/attack', async (req, res) => {
   // Сохраняем урон боссу
   const { killed, newKillCount, respawnAt } = await damageBoss(user.guildid, damageDealt);
 
-  // Обновляем кулдаун игрока
-  await db.run('UPDATE guild_members SET lastBossAttackAt = ? WHERE userId = ? AND guildId = ?', [now, userId, user.guildid]);
+  // КД начинается после завершения боя, а не в момент открытия запроса.
+  // Иначе длинный боевой журнал съедает часть часа на сервере, тогда как
+  // клиент запускает свой таймер только после получения результата.
+  const attackCompletedAt = Math.floor(Date.now() / 1000);
+  await db.run('UPDATE guild_members SET lastBossAttackAt = ? WHERE userId = ? AND guildId = ?', [attackCompletedAt, userId, user.guildid]);
 
   // +1 личное очко талантов за атаку
   await db.run('UPDATE guild_members SET talentPoints = talentPoints + 1 WHERE userId = ? AND guildId = ?', [userId, user.guildid]);
@@ -239,11 +242,13 @@ router.post('/guild/boss/attack', async (req, res) => {
   });
 
   // Персональный кулдаун атакующему — чтобы правая панель обновилась сразу
-  const remainingCd = Math.max(0, BOSS_COOLDOWN - (now - (member.lastbossattackat || 0)));
+  // Используем единый срок от момента завершения боя.
+  const remainingCd = BOSS_COOLDOWN;
   sendToUserEvent(userId, {
     type: 'guild_boss_update',
     data: {
       cooldownRemaining: remainingCd,
+      cooldownUntil: attackCompletedAt + BOSS_COOLDOWN,
       bossHp: updatedBoss.currentHp,
       bossMaxHp: updatedBoss.maxHp,
     },
@@ -285,6 +290,8 @@ router.post('/guild/boss/attack', async (req, res) => {
     currentHp: user.currentHp,
     hpAfter: user.currentHp,
     bossHpAfter: Math.max(0, bossCurrentHp),
+    cooldownRemaining: remainingCd,
+    cooldownUntil: attackCompletedAt + BOSS_COOLDOWN,
     personalPointsGained: 1,
     guildPointsGained: killed ? 1 : 0,
   });
