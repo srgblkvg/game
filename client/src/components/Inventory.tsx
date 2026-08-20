@@ -11,6 +11,7 @@ import ItemTooltip from './ItemTooltip';
 import { useGlobalChat } from '../contexts/ChatContext';
 import { useToast } from '../contexts/ToastContext';
 import { getHeaders, BASE_URL } from '../api/helpers';
+import { normalizeItems } from '../domain/items/normalizeItem';
 
 interface InventoryProps {
     onItemClick?: (item: any) => void;
@@ -206,7 +207,7 @@ export default function Inventory({
     if (!character || !user) return null;
 
     const maxSlots = character.inventorySlots || 10;
-    const allItems = inventoryOverride ?? character.inventory;
+    const allItems = normalizeItems(inventoryOverride ?? character.inventory);
 
     const equipmentItems = allItems.filter((item: any) => !isCraftItem(item));
     const craftItems = allItems.filter((item: any) => isCraftItem(item));
