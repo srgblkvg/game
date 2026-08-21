@@ -4,7 +4,12 @@ import { requireFullAccess } from '../middleware/auth';
 import { addToTreasury } from '../game/treasury';
 import { sendToUser } from '../events';
 
+
 const router = Router();
+
+function getOperationId(value: unknown): string | null {
+    return typeof value === 'string' && /^[a-zA-Z0-9_-]{8,64}$/.test(value) ? value : null;
+}
 
 // router.use('/bank', requireFullAccess); // отключено для гостей
 
@@ -59,20 +64,33 @@ router.post('/bank/withdraw', async (req, res) => {
     const userId = req.userId;
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
+    const operationId = getOperationId(req.body.operationId);
+    if (!operationId) return res.status(400).json({ error: 'Обновите страницу банка и повторите операцию' });
 
     try {
         const updated = await db.tx(async (client) => {
-            const user = (await client.query('SELECT bank FROM users WHERE id = $1', [userId])).rows[0] as any;
+            const user = (await client.query('SELECT money, bank FROM users WHERE id = $1 FOR UPDATE', [userId])).rows[0] as any;
             if (!user) throw new Error('User not found');
+
+            const previous = (await client.query(
+                `SELECT id, amount FROM bank_operations
+                 WHERE userid = $1 AND type = 'withdraw' AND operationid = $2`,
+                [userId, operationId],
+            )).rows[0];
+            if (previous) return { ...user, withdrawn: previous.amount, duplicate: true };
+
             if (user.bank < amount) throw new Error(`Недостаточно серебра в банке. Нужно ${amount}, есть ${user.bank}`);
 
             await client.query('UPDATE users SET money = money + $1, bank = bank - $2 WHERE id = $3', [amount, amount, userId]);
-            await client.query('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES ($1, $2, $3, $4, $5)', [userId, 'withdraw', amount, 0, amount]);
+            await client.query(
+                'INSERT INTO bank_operations (userId, type, amount, commission, result, operationId) VALUES ($1, $2, $3, $4, $5, $6)',
+                [userId, 'withdraw', amount, 0, amount, operationId],
+            );
 
             return (await client.query('SELECT money, bank FROM users WHERE id = $1', [userId])).rows[0] as any;
         });
-        res.json({ success: true, pocket: updated.money, bank: updated.bank, withdrawn: amount });
-        sendToUser(userId, { type: 'balance', money: updated.money, bank: updated.bank });
+        res.json({ success: true, pocket: updated.money, bank: updated.bank, withdrawn: updated.withdrawn ?? amount, duplicate: updated.duplicate === true });
+        if (!updated.duplicate) sendToUser(userId, { type: 'balance', money: updated.money, bank: updated.bank });
     } catch (e: any) {
         res.status(400).json({ error: e.message });
     }

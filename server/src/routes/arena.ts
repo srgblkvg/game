@@ -87,14 +87,33 @@ router.get('/arena/opponent', async (req, res) => {
         // Соперник исчез (удалён/защита) — сбрасываем и подбираем нового ниже
     }
 
-    // Подбор соперников по сложности
-    let opponents = await db.query(
-        `SELECT ${USER_ARENA_FIELDS_GUILD} FROM users u LEFT JOIN guilds g ON u.guildId = g.id WHERE u.id != ? AND u.id > 0 AND (u.protectionUntil IS NULL OR u.protectionUntil < ?) AND (u.guildId IS NULL OR u.guildId != ?)`,
-        [userId, now, user.guildId || 0]
-    ) as any[];
-
     const range = user.faction === 'bandit' ? 4 : 2;
     const diffLabel = difficulty === 'easy' ? `на −${range}..−1 уровня` : difficulty === 'hard' ? `на +1..+${range} уровня` : 'равным вашему';
+    const levelCondition = difficulty === 'easy'
+        ? 'AND u.level >= ? AND u.level < ?'
+        : difficulty === 'hard'
+            ? 'AND u.level > ? AND u.level <= ?'
+            : 'AND u.level = ?';
+    const levelParams = difficulty === 'easy'
+        ? [user.level - range, user.level]
+        : difficulty === 'hard'
+            ? [user.level, user.level + range]
+            : [user.level];
+
+    // Полные статы требуют дополнительных запросов к коллекции и гильдии.
+    // Сначала ограничиваем кандидатов на уровне SQL, а не рассчитываем всех игроков.
+    let opponents = await db.query(
+        `SELECT ${USER_ARENA_FIELDS_GUILD}
+         FROM users u LEFT JOIN guilds g ON u.guildId = g.id
+         WHERE u.id != ? AND u.id > 0
+           AND (u.protectionUntil IS NULL OR u.protectionUntil < ?)
+           AND (u.guildId IS NULL OR u.guildId != ?)
+           ${levelCondition}
+         ORDER BY RANDOM()
+         LIMIT 20`,
+        [userId, now, user.guildId || 0, ...levelParams]
+    ) as any[];
+
     if (difficulty === 'easy') {
         opponents = opponents.filter((o: any) => o.level >= user.level - range && o.level < user.level);
     } else if (difficulty === 'hard') {
