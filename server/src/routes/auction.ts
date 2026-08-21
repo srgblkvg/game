@@ -5,6 +5,9 @@ import { checkAchievement } from './achievements';
 import { markDirty, pushNotification, broadcast, sendToUser } from '../events';
 import { addToOverflow, isInventoryFull } from './overflow';
 import { addToTreasury } from '../game/treasury';
+import { buyoutAuctionLot } from '../game/auctionBuyout';
+import { createPgAuctionBuyoutRepository } from '../game/auctionBuyoutRepository';
+import { systemClock } from '../clock';
 
 const router = Router();
 
@@ -434,81 +437,39 @@ router.post('/auction/bid', async (req, res) => {
 router.post('/auction/buyout', async (req, res) => {
     const userId = req.userId;
     const { lotId } = req.body;
-
-    const now = Math.floor(Date.now() / 1000);
-    const lot = await db.one('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?', [lotId, now]) as any;
-    if (!lot) return res.status(404).json({ error: 'Лот не найден' });
-    if (!lot.buyoutPrice) return res.status(400).json({ error: 'У лота нет выкупа' });
-    if (lot.sellerId === userId) return res.status(400).json({ error: 'Нельзя купить свой лот' });
-
-    const user = await db.one('SELECT money, inventory FROM users WHERE id = ?', [userId]) as any;
-    if (user.money < lot.buyoutPrice) return res.status(400).json({ error: 'Недостаточно монет' });
-
-    const commission = Math.floor(lot.buyoutPrice * 0.1);
-    const payout = lot.buyoutPrice - commission;
-
-    // Возврат предыдущему лидеру — на склад
-    if (lot.currentBidderId) {
-        await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
+    if (!lotId) return res.status(400).json({ error: 'Нет данных' });
+    try {
+        await buyoutAuctionLot(createPgAuctionBuyoutRepository(), {
+            committed: (result) => {
+                checkAchievement(result.sellerId, 'auction').catch(() => {});
+                markDirty(result.buyerId, 'quests');
+                markDirty(result.sellerId, 'quests');
+                pushNotification(result.sellerId, {
+                    type: 'auction_sold',
+                    message: `${result.buyerName} выкупил «${result.itemName}» за ${result.price} серебра`,
+                });
+                sendToUser(result.sellerId, { type: 'auction_badge', count: 1 });
+                broadcast('auction_message_removed', { lotId: result.lotId });
+                broadcast('auction_changed', {});
+                broadcast('message', { message: {
+                    id: result.chatMessageId,
+                    senderId: 0,
+                    senderName: 'Глашатай',
+                    targetId: null,
+                    content: `✅ ${result.buyerName} выкупил лот за ${result.price} серебра`,
+                    createdAt: result.createdAt,
+                    item: {
+                        type: 'auction_buyout', lotId: result.lotId, itemData: result.item,
+                        price: result.price, buyerName: result.buyerName,
+                    },
+                } });
+            },
+        }, { lotId: Number(lotId), buyerId: userId, now: systemClock.nowSec() });
+        res.json({ success: true });
+    } catch (error: any) {
+        const message = error?.message || 'Ошибка выкупа';
+        res.status(message === 'Лот не найден' ? 404 : 400).json({ error: message });
     }
-
-    const itemData = JSON.parse(lot.itemData);
-
-    // Добавляем предмет покупателю — всегда на склад
-    await addToOverflow(userId, itemData);
-
-    await db.run('UPDATE users SET money = money - ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [lot.buyoutPrice, userId]);
-    // Продавец получает на склад (нельзя ограбить)
-    await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
-    checkAchievement(lot.sellerId, 'auction').catch(() => {});
-    await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
-    await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
-    broadcast('auction_message_removed', { lotId });
-
-    // Daily quests — track auction trades
-    markDirty(userId, 'quests');
-    markDirty(lot.sellerId, 'quests');
-
-    // Запись в историю
-    const buyItemData = JSON.parse(lot.itemData);
-    await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [lot.sellerId, userId, buyItemData.name || 'Предмет', lot.itemData, lot.buyoutPrice, commission, new Date().toISOString()]);
-    addToTreasury(commission, 'auction_buyout').catch(() => {});
-
-    // Уведомление продавцу — прямой WS + toast
-    const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
-    pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} выкупил «${buyItemData.name || 'Предмет'}» за ${lot.buyoutPrice} серебра` });
-    sendToUser(lot.sellerId, { type: 'auction_badge', count: 1 });
-    await db.run('UPDATE users SET auction_sales = COALESCE(auction_sales, 0) + 1 WHERE id = ?', [lot.sellerId]);
-
-    broadcast('auction_changed', {});
-
-    // Системное сообщение о выкупе лота
-    const buyoutItemData = JSON.stringify({
-      type: 'auction_buyout',
-      lotId,
-      itemData: buyItemData,
-      price: lot.buyoutPrice,
-      buyerName,
-      sellerName: (await db.one('SELECT username FROM users WHERE id = ?', [lot.sellerId]) as any)?.username || 'Кто-то',
-    });
-    const buyoutChatInfo = await db.run(
-      'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderguild, senderguildid) VALUES (?, NULL, ?, ?, NULL, NULL)',
-      [0, `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice} серебра`, buyoutItemData]
-    );
-    const buyoutChatMsg = {
-      id: buyoutChatInfo.lastInsertRowid,
-      senderId: 0,
-      senderName: 'Глашатай',
-      targetId: null,
-      content: `✅ ${buyerName} выкупил лот за ${lot.buyoutPrice} серебра`,
-      createdAt: new Date().toISOString(),
-      item: { type: 'auction_buyout', lotId, itemData: buyItemData, price: lot.buyoutPrice, buyerName },
-    };
-    broadcast('message', { message: buyoutChatMsg });
-
-    res.json({ success: true });
 });
 
 // Купить часть стека (Buy N from stack)
