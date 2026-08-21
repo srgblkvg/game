@@ -108,43 +108,6 @@ router.get('/auction/similar', async (req, res) => {
 // Все лоты
 router.get('/auction', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
-    // Закрываем просроченные лоты со ставками
-    const expired = await db.query('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NOT NULL', [now]) as any[];
-    for (const lot of expired) {
-        const commission = Math.floor(lot.currentBid * 0.1);
-        const payout = lot.currentBid - commission;
-        // Заплатить продавцу — на склад (нельзя ограбить)
-        await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
-        checkAchievement(lot.sellerId, 'auction').catch(() => {});
-        // Отдать предмет покупателю — всегда на склад
-        const buyItemData = JSON.parse(lot.itemData);
-        await addToOverflow(lot.currentBidderId, buyItemData);
-        // Запись в историю
-        await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [lot.sellerId, lot.currentBidderId, JSON.parse(lot.itemData).name || 'Предмет', lot.itemData, lot.currentBid, commission, new Date().toISOString()]);
-        addToTreasury(commission, 'auction_expired').catch(() => {});
-        // Уведомления
-        const buyerName = (await db.one('SELECT username FROM users WHERE id = ?', [lot.currentBidderId]) as any)?.username || 'Кто-то';
-        pushNotification(lot.sellerId, { type: 'auction_sold', message: `${buyerName} купил «${JSON.parse(lot.itemData).name || 'Предмет'}» за ${lot.currentBid} серебра` });
-        sendToUser(lot.sellerId, { type: 'auction_badge', count: 1 });
-        await db.run('UPDATE users SET auction_sales = COALESCE(auction_sales, 0) + 1 WHERE id = ?', [lot.sellerId]);
-        pushNotification(lot.currentBidderId, { type: 'system', message: `Вы выиграли «${JSON.parse(lot.itemData).name || 'Предмет'}» на аукционе!` });
-        await db.run('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
-        await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lot.id}%`]);
-        broadcast('auction_message_removed', { lotId: lot.id });
-    }
-    // Возвращаем непроданные лоты продавцам — на склад
-    const unsold = await db.query('SELECT * FROM auction_lots WHERE endsAt <= ? AND currentBidderId IS NULL', [now]) as any[];
-    for (const lot of unsold) {
-        const itemData = JSON.parse(lot.itemData);
-        await addToOverflow(lot.sellerId, itemData);
-        pushNotification(lot.sellerId, { type: 'system', message: `Лот «${JSON.parse(lot.itemData).name || 'Предмет'}» не был продан и возвращён на склад` });
-        await db.run('DELETE FROM auction_lots WHERE id = ?', [lot.id]);
-        await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lot.id}%`]);
-        broadcast('auction_message_removed', { lotId: lot.id });
-    }
-
     const lots = await db.query(`
         SELECT l.*, u.username as sellerName, g.name as sellerGuild, u.guildId as sellerGuildId,
                b.username as currentBidderName
