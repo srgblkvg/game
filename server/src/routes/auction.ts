@@ -12,6 +12,8 @@ import { purchasePartialAuctionLot } from '../game/auctionPartial';
 import { createPgAuctionPartialRepository } from '../game/auctionPartialRepository';
 import { cancelAuctionLot } from '../game/auctionCancel';
 import { createPgAuctionCancelRepository } from '../game/auctionCancelRepository';
+import { placeAuctionBid } from '../game/auctionBid';
+import { createPgAuctionBidRepository } from '../game/auctionBidRepository';
 
 const router = Router();
 
@@ -368,72 +370,30 @@ router.post('/auction/bid', async (req, res) => {
     const userId = req.userId;
     const { lotId, amount } = req.body;
     if (!lotId || !amount) return res.status(400).json({ error: 'Нет данных' });
-
     try {
-        await db.tx(async (client) => {
-            const now = Math.floor(Date.now() / 1000);
-            const lot = (await client.query('SELECT * FROM auction_lots WHERE id = $1 AND endsAt > $2 FOR UPDATE', [lotId, now])).rows[0] as any;
-            if (!lot) throw new Error('Лот не найден или истёк');
-            if (lot.sellerid === userId) throw new Error('Нельзя ставить на свой лот');
-
-            const currentBid = lot.currentbid ? parseInt(lot.currentbid) : null;
-            const minBid = currentBid ? currentBid + Math.max(1, Math.floor(currentBid * 0.05)) : parseInt(lot.startprice);
-            if (amount < minBid) throw new Error(`Мин. ставка: ${minBid} серебра`);
-
-            const user = (await client.query('SELECT money FROM users WHERE id = $1', [userId])).rows[0] as any;
-            if (!user || user.money < amount) throw new Error('Недостаточно монет');
-
-            // Возврат денег предыдущему лидеру — на склад
-            if (lot.currentbidderid) {
-                await client.query('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + $1 WHERE id = $2', [currentBid, lot.currentbidderid]);
-            }
-
-            await client.query('UPDATE users SET money = money - $1 WHERE id = $2', [amount, userId]);
-            await client.query('UPDATE auction_lots SET currentBid = $1, currentBidderId = $2 WHERE id = $3', [amount, userId, lotId]);
+        const result = await placeAuctionBid(createPgAuctionBidRepository(), {
+            lotId: Number(lotId), bidderId: userId, amount: Number(amount), now: systemClock.nowSec(),
         });
-
-        broadcast('auction_changed', { lotId });
-
-        // Системное сообщение о перебивке ставки
-        const lot = await db.one('SELECT * FROM auction_lots WHERE id = ?', [lotId]) as any;
-        if (lot) {
-          const itemData = JSON.parse(lot.itemdata || lot.itemData || '{}');
-          const bidderName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
-          const prevBidderId = lot.currentbidderid;
-          const previousBidderName = (prevBidderId && prevBidderId !== userId)
-            ? ((await db.one('SELECT username FROM users WHERE id = ?', [prevBidderId]) as any)?.username || 'Кто-то')
-            : null;
-          const auctionItemData = JSON.stringify({
-            type: 'auction_bid',
-            lotId,
-            itemData,
-            startPrice: parseInt(lot.startprice) || 0,
-            currentBid: amount,
-            buyoutPrice: lot.buyoutprice || null,
-            currentBidderName: bidderName,
-            previousBidderName,
-            sellerName: (await db.one('SELECT username FROM users WHERE id = ?', [lot.sellerid || lot.sellerId]) as any)?.username || 'Кто-то',
-            endsAt: lot.endsat || lot.endsAt,
-            createdAt: Math.floor(Date.now() / 1000),
-          });
-          const chatInfo = await db.run(
-            'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderguild, senderguildid) VALUES (?, NULL, ?, ?, NULL, NULL)',
-            [0, `💰 ${bidderName} перебил ставку`, auctionItemData]
-          );
-          const chatMsg = {
-            id: chatInfo.lastInsertRowid,
+        broadcast('auction_changed', { lotId: result.lotId });
+        broadcast('message', { message: {
+            id: result.chatMessageId,
             senderId: 0,
             senderName: 'Глашатай',
             targetId: null,
-            content: `💰 ${bidderName} перебил ставку`,
-            createdAt: new Date().toISOString(),
-            item: { type: 'auction_bid', lotId, itemData, startPrice: parseInt(lot.startprice) || 0, currentBid: amount, buyoutPrice: lot.buyoutprice || null, currentBidderName: bidderName, previousBidderName, sellerName: (await db.one('SELECT username FROM users WHERE id = ?', [lot.sellerid || lot.sellerId]) as any)?.username || 'Кто-то', endsAt: lot.endsat || lot.endsAt },
-          };
-          broadcast('message', { message: chatMsg });
-        }
+            content: `💰 ${result.bidderName} перебил ставку`,
+            createdAt: result.createdAt,
+            item: {
+                type: 'auction_bid', lotId: result.lotId, itemData: result.item,
+                startPrice: result.startPrice, currentBid: result.currentBid,
+                buyoutPrice: result.buyoutPrice, currentBidderName: result.bidderName,
+                previousBidderName: result.previousBidderName,
+                sellerName: result.sellerName, endsAt: result.endsAt,
+            },
+        } });
         res.json({ success: true });
     } catch (e: any) {
-        res.status(400).json({ error: e.message });
+        const message = e?.message || 'Ошибка ставки';
+        res.status(message === 'Лот не найден или истёк' ? 404 : 400).json({ error: message });
     }
 });
 
