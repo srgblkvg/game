@@ -44,7 +44,12 @@ export function initYandexMetrika(): void {
     });
 }
 
-export function reachYandexGoal(goal: 'guest_battle_click' | 'registration_success'): void {
+export type YandexGoal =
+    | 'guest_battle_click'
+    | 'guest_login_success'
+    | 'registration_success';
+
+export function reachYandexGoal(goal: YandexGoal): void {
     initYandexMetrika();
     window.ym?.(YANDEX_METRIKA_ID, 'reachGoal', goal);
 }
