@@ -105,10 +105,12 @@ export default function VkKeyboard() {
 
   useEffect(() => { activeRef.current = active; }, [active]);
 
-  // Показываем только в VK iframe И на тач-устройствах (на десктопе не нужна)
+  // Enable custom editing only on a mobile-style primary pointer. A desktop
+  // or laptop may report maxTouchPoints > 0, but its hardware keyboard and
+  // native input selection must remain completely untouched.
   const isVKWebView = typeof document !== 'undefined'
     && document.documentElement.classList.contains('vk-iframe')
-    && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    && window.matchMedia('(pointer: coarse)').matches;
 
   const stopRepeat = useCallback(() => {
     if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
@@ -155,6 +157,10 @@ export default function VkKeyboard() {
 
   // Track active input — show on focus, DON'T hide on tap outside (only via hide button)
   useEffect(() => {
+    if (!isVKWebView) {
+      setActive(null);
+      return;
+    }
     const onFocus = (e: FocusEvent) => {
       const el = e.target as HTMLElement;
       if (shouldReleaseVkKeyboardFocus(el.tagName, isTextInput(el))) {
@@ -204,12 +210,13 @@ export default function VkKeyboard() {
       document.removeEventListener('focusin', onFocus);
       document.removeEventListener('selectionchange', onSelectionChange);
     };
-  }, []);
+  }, [isVKWebView]);
 
   // A real tap/drag/arrow-key selection made inside the field must replace
   // the keyboard's stored selection. Programmatic React cursor resets do not
   // emit these events, so they cannot overwrite a newer keyboard position.
   useEffect(() => {
+    if (!isVKWebView) return;
     const syncSelection = (event: Event) => {
       const el = activeRef.current;
       if (!el || event.target !== el) return;
@@ -217,17 +224,23 @@ export default function VkKeyboard() {
       const end = el.selectionEnd;
       if (start !== null && end !== null) selectionRef.current = { start, end };
     };
+    // `input` fires immediately after a physical-keyboard edit, before the
+    // focus keeper can restore an outdated position. This is essential on
+    // touchscreen PCs, where maxTouchPoints enables the VK keyboard logic
+    // even though the user is typing on a hardware keyboard.
+    document.addEventListener('input', syncSelection, true);
     document.addEventListener('select', syncSelection, true);
     document.addEventListener('click', syncSelection, true);
     document.addEventListener('touchend', syncSelection, true);
     document.addEventListener('keyup', syncSelection, true);
     return () => {
+      document.removeEventListener('input', syncSelection, true);
       document.removeEventListener('select', syncSelection, true);
       document.removeEventListener('click', syncSelection, true);
       document.removeEventListener('touchend', syncSelection, true);
       document.removeEventListener('keyup', syncSelection, true);
     };
-  }, []);
+  }, [isVKWebView]);
 
   const doDelete = useCallback(() => {
     const el = activeRef.current;
