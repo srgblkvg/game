@@ -10,6 +10,8 @@ import { createPgAuctionBuyoutRepository } from '../game/auctionBuyoutRepository
 import { systemClock } from '../clock';
 import { purchasePartialAuctionLot } from '../game/auctionPartial';
 import { createPgAuctionPartialRepository } from '../game/auctionPartialRepository';
+import { cancelAuctionLot } from '../game/auctionCancel';
+import { createPgAuctionCancelRepository } from '../game/auctionCancelRepository';
 
 const router = Router();
 
@@ -500,28 +502,18 @@ router.post('/auction/cancel', async (req, res) => {
     const userId = req.userId;
     const { lotId } = req.body;
     if (!lotId) return res.status(400).json({ error: 'Укажите lotId' });
-
-    const now = Math.floor(Date.now() / 1000);
-    const lot = await db.one('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?', [lotId, now]) as any;
-    if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
-    if (lot.sellerId !== userId) return res.status(400).json({ error: 'Это не ваш лот' });
-
-    const itemData = JSON.parse(lot.itemData);
-
-    // Возвращаем предмет на склад
-    await addToOverflow(userId, itemData);
-
-    // Возвращаем деньги текущему лидеру ставок — на склад
-    if (lot.currentBidderId && lot.currentBid) {
-        await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ? WHERE id = ?', [lot.currentBid, lot.currentBidderId]);
+    try {
+        await cancelAuctionLot(createPgAuctionCancelRepository(), {
+            committed: (result) => {
+                broadcast('auction_message_removed', { lotId: result.lotId });
+                broadcast('auction_changed', { lotId: result.lotId });
+            },
+        }, { lotId: Number(lotId), sellerId: userId, now: systemClock.nowSec() });
+        res.json({ success: true, message: 'Лот снят с аукциона' });
+    } catch (error: any) {
+        const message = error?.message || 'Ошибка отмены лота';
+        res.status(message === 'Лот не найден или истёк' ? 404 : 400).json({ error: message });
     }
-
-    // Удаляем лот
-    await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
-    await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
-    broadcast('auction_message_removed', { lotId });
-
-    res.json({ success: true, message: 'Лот снят с аукциона' });
 });
 
 // Сброс бейджа при заходе на аукцион
