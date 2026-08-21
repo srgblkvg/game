@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { guestLogin } from '../api';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import { initYandexMetrika, reachYandexGoal } from '../utils/yandexMetrika';
 
 const BASE_URL = '/api/oauth';
 
@@ -14,11 +15,16 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    useEffect(() => {
+        initYandexMetrika();
+    }, []);
+
     const handlePlay = async () => {
         const name = nickname.trim();
         if (!name || name.length < 2) { setError('Минимум 2 символа'); return; }
         if (name.length > 16) { setError('Максимум 16 символов'); return; }
         if (!/^[a-zA-Zа-яА-ЯёЁ0-9_\- ]+$/.test(name)) { setError('Только буквы, цифры, _ и -'); return; }
+        reachYandexGoal('guest_battle_click');
         setLoading(true);
         try {
             const result = await guestLogin(name);
