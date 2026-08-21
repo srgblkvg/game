@@ -4,7 +4,6 @@ import { db } from '../db/index';
 import { checkAchievement } from './achievements';
 import { markDirty, pushNotification, broadcast, sendToUser } from '../events';
 import { addToOverflow, isInventoryFull } from './overflow';
-import { addToTreasury } from '../game/treasury';
 import { buyoutAuctionLot } from '../game/auctionBuyout';
 import { createPgAuctionBuyoutRepository } from '../game/auctionBuyoutRepository';
 import { systemClock } from '../clock';
@@ -14,6 +13,8 @@ import { cancelAuctionLot } from '../game/auctionCancel';
 import { createPgAuctionCancelRepository } from '../game/auctionCancelRepository';
 import { placeAuctionBid } from '../game/auctionBid';
 import { createPgAuctionBidRepository } from '../game/auctionBidRepository';
+import { AUCTION_PRICE_FLOOR, sellAuctionLot } from '../game/auctionSell';
+import { createPgAuctionSellRepository } from '../game/auctionSellRepository';
 
 const router = Router();
 
@@ -62,11 +63,9 @@ db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auction_sales INTEGER DEFAULT
 db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS overflowmoney INTEGER DEFAULT 0`).catch(() => {});
 
 // Мин. цены по редкости
-const priceFloor: Record<number, number> = { 0: 5, 1: 20, 2: 100, 3: 400, 4: 1500, 5: 6000, 6: 20000 };
-
 // API: получить минимальные цены (для клиента)
 router.get('/auction/price-floor', async (req, res) => {
-    res.json(priceFloor);
+    res.json(AUCTION_PRICE_FLOOR);
 });
 
 // Статистика похожих лотов (для подсказки при выставлении)
@@ -270,99 +269,41 @@ router.post('/auction/sell', async (req, res) => {
     const userId = req.userId;
     const { itemData, startPrice, buyoutPrice, duration, count } = req.body;
 
-    if (!itemData || !startPrice) return res.status(400).json({ error: 'Нет данных' });
-
-    const isMaterial = itemData.type === 'craft_item' || itemData.type === 'material';
-    const itemCount = isMaterial ? Math.max(1, count || (itemData.count || 1)) : 1;
-
-    const rarity = itemData.rarity_id ?? 0;
-    const isUpgrade = itemData.itemType === 'upgrade';
-    const floor = isUpgrade ? 2000 : (priceFloor[rarity] || 5);
-    // Цена указана за 1 шт — умножаем на количество
-    const totalStartPrice = startPrice * itemCount;
-    const totalBuyoutPrice = buyoutPrice ? buyoutPrice * itemCount : null;
-    if (startPrice < floor) return res.status(400).json({ error: `Мин. цена за 1 шт для этой редкости: ${floor} серебра` });
-    if (buyoutPrice && buyoutPrice <= startPrice) return res.status(400).json({ error: 'Цена выкупа должна быть выше стартовой' });
-
-    // Проверка лимита (10 лотов, 20 с премиумом)
-    const userLotCount = (await db.one('SELECT COUNT(*) as cnt FROM auction_lots WHERE sellerId = ? AND endsat > ?', [userId, Math.floor(Date.now() / 1000)]) as any).cnt;
-    const user = await db.one('SELECT money, inventory, premiumUntil FROM users WHERE id = ?', [userId]) as any;
-    const hasPremium = (user.premiumUntil || 0) > Math.floor(Date.now() / 1000);
-    const maxLots = hasPremium ? 20 : 10;
-    if (userLotCount >= maxLots) return res.status(400).json({ error: `Максимум ${maxLots} лотов` });
-
-    // Комиссия за листинг 5% (от общей стартовой цены)
-    const listingFee = Math.max(1, Math.floor(totalStartPrice * 0.05));
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.money < listingFee) return res.status(400).json({ error: `Недостаточно монет для листинга (${listingFee} серебра)` });
-
-    // Убираем предмет из инвентаря
-    const inventory = JSON.parse(user.inventory || '[]');
-    const idx = inventory.findIndex((i: any) => String(i.id) === String(itemData.id));
-    if (idx === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
-    const invItem = inventory[idx];
-    if (invItem.locked) return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
-
-    if (isMaterial) {
-        const availableCount = invItem.count || 0;
-        if (itemCount > availableCount) return res.status(400).json({ error: `Недостаточно: есть ${availableCount}, выбрано ${itemCount}` });
-        if (itemCount >= availableCount) {
-            // Продаём весь стек
-            inventory.splice(idx, 1);
-        } else {
-            // Продаём часть стека
-            invItem.count = availableCount - itemCount;
-        }
-    } else {
-        inventory.splice(idx, 1);
+    if (itemData?.id === undefined || itemData?.id === null || startPrice === undefined || startPrice === null) {
+        return res.status(400).json({ error: 'Нет данных' });
     }
-
-    // Обогащаем itemData количеством
-    const sellItemData = { ...itemData, count: itemCount, type: itemData.type || 'item' };
-
-    const now = Math.floor(Date.now() / 1000);
-    const dur = duration || 24;
-    const endsAt = now + dur * 3600;
-
-    await db.run('UPDATE users SET money = money - ?, inventory = ? WHERE id = ?', [listingFee, JSON.stringify(inventory), userId]);
-    const lotResult = await db.run(`INSERT INTO auction_lots (sellerId, itemData, startPrice, buyoutPrice, currentBid, duration, endsAt, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, JSON.stringify(sellItemData), totalStartPrice, totalBuyoutPrice, null, dur, endsAt, now]);
-    const lotId = lotResult.lastInsertRowid;
-
-    addToTreasury(listingFee, 'auction_listing').catch(() => {});
-
-    // Системное сообщение в чат (вкладка Аукцион)
-    const sellerName = (await db.one('SELECT username FROM users WHERE id = ?', [userId]) as any)?.username || 'Кто-то';
-    const auctionItemData = JSON.stringify({
-      type: 'auction_lot',
-      lotId,
-      itemData: sellItemData,
-      startPrice: totalStartPrice,
-      currentBid: null,
-      buyoutPrice: totalBuyoutPrice,
-      currentBidderName: null,
-      sellerName,
-      endsAt,
-      createdAt: now,
-    });
-    const chatInfo = await db.run(
-      'INSERT INTO chat_messages (senderId, targetId, content, item_data, senderguild, senderguildid) VALUES (?, NULL, ?, ?, NULL, NULL)',
-      [0, `📦 ${sellerName} выставил лот`, auctionItemData]
-    );
-    const chatMsg = {
-      id: chatInfo.lastInsertRowid,
-      senderId: 0,
-      senderName: 'Глашатай',
-      targetId: null,
-      content: `📦 ${sellerName} выставил лот`,
-      createdAt: new Date().toISOString(),
-      item: { type: 'auction_lot', lotId, itemData: sellItemData, startPrice: totalStartPrice, currentBid: null, buyoutPrice: totalBuyoutPrice, currentBidderName: null, sellerName, endsAt },
-    };
-    broadcast('message', { message: chatMsg });
-
-    broadcast('auction_changed', {});
-    res.json({ success: true, listingFee });
+    try {
+        const sellInput = {
+            sellerId: userId,
+            itemId: itemData.id,
+            startPrice: Number(startPrice),
+            buyoutPrice: buyoutPrice === undefined || buyoutPrice === null || buyoutPrice === ''
+                ? null : Number(buyoutPrice),
+            now: systemClock.nowSec(),
+            ...(duration === undefined || duration === null ? {} : { duration: Number(duration) }),
+            ...(count === undefined || count === null ? {} : { count: Number(count) }),
+        };
+        const result = await sellAuctionLot(createPgAuctionSellRepository(), sellInput);
+        try {
+            broadcast('message', { message: {
+                id: result.chatMessageId, senderId: 0, senderName: 'Глашатай', targetId: null,
+                content: `📦 ${result.sellerName} выставил лот`, createdAt: result.createdAt,
+                item: { type: 'auction_lot', lotId: result.lotId, itemData: result.item,
+                    startPrice: result.startPrice, currentBid: null, buyoutPrice: result.buyoutPrice,
+                    currentBidderName: null, sellerName: result.sellerName, endsAt: result.endsAt },
+            } });
+        } catch (effectError) {
+            console.error('[auction-sell] message broadcast failed:', effectError);
+        }
+        try {
+            broadcast('auction_changed', {});
+        } catch (effectError) {
+            console.error('[auction-sell] auction broadcast failed:', effectError);
+        }
+        res.json({ success: true, listingFee: result.listingFee });
+    } catch (e: any) {
+        res.status(400).json({ error: e?.message || 'Ошибка выставления лота' });
+    }
 });
 
 // Сделать ставку
