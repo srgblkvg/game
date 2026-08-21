@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { register, verifyEmail, resendCode } from '../api';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import { initYandexMetrika, reachYandexGoal } from '../utils/yandexMetrika';
 
 export default function RegisterPage() {
     const { loginUser } = useAuth();
@@ -21,6 +22,10 @@ export default function RegisterPage() {
     const [step, setStep] = useState<'form' | 'code'>('form');
     const [code, setCode] = useState('');
     const [resendMsg, setResendMsg] = useState('');
+
+    useEffect(() => {
+        initYandexMetrika();
+    }, []);
 
     const handleRegister = async () => {
         try {
@@ -56,6 +61,7 @@ export default function RegisterPage() {
             setError('');
             setLoading(true);
             const result = await verifyEmail(email, code);
+            reachYandexGoal('registration_success');
             loginUser(result.user, result.token);
             navigate('/');
         } catch (e: any) {
