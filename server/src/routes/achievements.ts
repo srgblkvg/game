@@ -14,7 +14,7 @@ export async function checkAchievement(userId: number, trackKey: string, increme
     if (!track) return null;
 
     // Upsert progress
-    await db.run(
+    await db.raw(
         `INSERT INTO user_achievements (user_id, track, progress, highest_tier, achieved_at)
          VALUES ($1, $2, $3, 0, '{}'::jsonb)
          ON CONFLICT (user_id, track) DO UPDATE SET progress = user_achievements.progress + $4`,
@@ -55,7 +55,7 @@ export async function setAchievementProgress(userId: number, trackKey: string, v
     if (!track) return;
 
     // Upsert with SET progress = value
-    await db.run(
+    await db.raw(
         `INSERT INTO user_achievements (user_id, track, progress, highest_tier, achieved_at)
          VALUES ($1, $2, $3, 0, '{}'::jsonb)
          ON CONFLICT (user_id, track) DO UPDATE SET progress = $3`,
