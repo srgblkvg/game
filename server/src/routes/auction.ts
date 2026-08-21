@@ -8,6 +8,8 @@ import { addToTreasury } from '../game/treasury';
 import { buyoutAuctionLot } from '../game/auctionBuyout';
 import { createPgAuctionBuyoutRepository } from '../game/auctionBuyoutRepository';
 import { systemClock } from '../clock';
+import { purchasePartialAuctionLot } from '../game/auctionPartial';
+import { createPgAuctionPartialRepository } from '../game/auctionPartialRepository';
 
 const router = Router();
 
@@ -476,75 +478,21 @@ router.post('/auction/buyout', async (req, res) => {
 router.post('/auction/buy-partial', async (req, res) => {
     const userId = req.userId;
     const { lotId, quantity } = req.body;
-
     if (!lotId || !quantity || quantity < 1) return res.status(400).json({ error: 'Нет данных' });
-
-    const now = Math.floor(Date.now() / 1000);
-    const lot = await db.one('SELECT * FROM auction_lots WHERE id = ? AND endsAt > ?', [lotId, now]) as any;
-    if (!lot) return res.status(404).json({ error: 'Лот не найден или истёк' });
-    if (lot.sellerId === userId) return res.status(400).json({ error: 'Нельзя купить свой лот' });
-
-    const itemData = JSON.parse(lot.itemData);
-    const stackCount = itemData.count || 1;
-    if (stackCount <= 1) return res.status(400).json({ error: 'Этот лот нельзя купить частично' });
-    if (quantity > stackCount) return res.status(400).json({ error: `В лоте только ${stackCount} шт.` });
-
-    // Цена за штуку: от выкупа (если есть), иначе от ставки/старта
-    const totalPrice = lot.buyoutPrice ?? lot.currentBid ?? lot.startPrice;
-    const pricePerItem = Math.ceil(totalPrice / stackCount);
-    const cost = pricePerItem * quantity;
-
-    const user = await db.one('SELECT money, inventory FROM users WHERE id = ?', [userId]) as any;
-    if (!user || user.money < cost) return res.status(400).json({ error: `Недостаточно серебра. Нужно ${cost}, есть ${user?.money || 0}` });
-
-    // Комиссия 10% пропорционально
-    const commission = Math.floor(cost * 0.1);
-    const payout = cost - commission;
-
-    const inventory = JSON.parse(user.inventory || '[]');
-
-    // Добавляем покупателю — всегда на склад
-    await addToOverflow(userId, { ...itemData, count: quantity });
-
-    // Обновляем лот: уменьшаем count
-    const remainingCount = stackCount - quantity;
-    if (remainingCount <= 0) {
-        // Полностью распродано
-        await db.run('DELETE FROM auction_lots WHERE id = ?', [lotId]);
-    await db.run('DELETE FROM chat_messages WHERE item_data LIKE ?', [`%"lotId":${lotId}%`]);
-    broadcast('auction_message_removed', { lotId });
-    } else {
-        const newItemData = { ...itemData, count: remainingCount };
-        const newStartPrice = Math.max(1, Math.floor(lot.startPrice * remainingCount / stackCount));
-        const newBuyoutPrice = lot.buyoutPrice ? Math.max(1, Math.floor(lot.buyoutPrice * remainingCount / stackCount)) : null;
-        // Пропорционально уменьшаем ставку, если есть
-        const newCurrentBid = lot.currentBid ? Math.max(newStartPrice, Math.floor(lot.currentBid * remainingCount / stackCount)) : null;
-        await db.run(`UPDATE auction_lots SET itemData = ?, startPrice = ?, buyoutPrice = ?, currentBid = ? WHERE id = ?`,
-            [JSON.stringify(newItemData), newStartPrice, newBuyoutPrice, newCurrentBid, lotId]);
-        // Вернуть разницу лидеру ставки
-        if (lot.currentBidderId && newCurrentBid && newCurrentBid < lot.currentBid) {
-            const refund = lot.currentBid - newCurrentBid;
-            await db.run('UPDATE users SET money = money + ? WHERE id = ?', [refund, lot.currentBidderId]);
-        }
+    try {
+        const result = await purchasePartialAuctionLot(createPgAuctionPartialRepository(), {
+            lotId: Number(lotId), buyerId: userId, quantity: Number(quantity), now: systemClock.nowSec(),
+        });
+        checkAchievement(result.sellerId, 'auction').catch(() => {});
+        markDirty(userId, 'quests');
+        markDirty(result.sellerId, 'quests');
+        broadcast('auction_changed', { lotId: result.lotId });
+        if (result.removeLot) broadcast('auction_message_removed', { lotId: result.lotId });
+        res.json({ success: true, cost: result.cost, remaining: result.remainingCount });
+    } catch (error: any) {
+        const message = error?.message || 'Ошибка покупки';
+        res.status(message === 'Лот не найден или истёк' ? 404 : 400).json({ error: message });
     }
-
-    // Списываем деньги покупателю и начисляем продавцу на склад
-    await db.run('UPDATE users SET money = money - ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [cost, userId]);
-    await db.run('UPDATE users SET overflowmoney = COALESCE(overflowmoney, 0) + ?, auctionTrades = auctionTrades + 1 WHERE id = ?', [payout, lot.sellerId]);
-    checkAchievement(lot.sellerId, 'auction').catch(() => {});
-
-    // Daily quests — track auction trades
-    markDirty(userId, 'quests');
-    markDirty(lot.sellerId, 'quests');
-
-    // Запись в историю
-    await db.run(`INSERT INTO auction_history (sellerId, buyerId, itemName, itemData, price, commission, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [lot.sellerId, userId, itemData.name || 'Предмет', JSON.stringify({ ...itemData, count: quantity }), cost, commission, new Date().toISOString()]);
-    addToTreasury(commission, 'auction_partial').catch(() => {});
-
-    broadcast('auction_changed', {});
-    res.json({ success: true, cost, remaining: remainingCount });
 });
 
 // Снять лот с аукциона
