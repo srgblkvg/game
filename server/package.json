@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "ts-node src/game/craftOperations.test.ts",
+    "test": "ts-node src/game/craftOperations.test.ts && ts-node src/game/huntResourceDrops.test.ts && ts-node src/game/activeEquipment.test.ts",
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"

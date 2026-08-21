@@ -5,6 +5,7 @@
  */
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { deleteAtSelection, insertAtSelection } from '../utils/vkTextEditing';
+import { shouldReleaseVkKeyboardFocus, shouldRestoreVkSelection } from '../utils/vkKeyboardFocus';
 
 type Layout = 'ru' | 'en' | 'num';
 
@@ -143,12 +144,11 @@ export default function VkKeyboard() {
         setCapsLock(false);
         return;
       }
-      // Не считываем selectionStart здесь: React мог ещё не восстановить
-      // курсор после предыдущего символа. Иначе интервал запоминает старую
-      // позицию и следующий символ вставляется на один знак назад.
+      // React/WebView может после controlled onChange сдвинуть каретку в конец.
+      // Не перезаписываем сохранённую позицию текущим уже испорченным значением.
       const { start, end } = selectionRef.current;
       if (document.activeElement !== el) el.focus({ preventScroll: true });
-      if (el.selectionStart !== start || el.selectionEnd !== end) {
+      if (shouldRestoreVkSelection(el.selectionStart, el.selectionEnd, start, end)) {
         el.setSelectionRange(start, end);
       }
     }, 80);
@@ -163,6 +163,11 @@ export default function VkKeyboard() {
     }
     const onFocus = (e: FocusEvent) => {
       const el = e.target as HTMLElement;
+      if (shouldReleaseVkKeyboardFocus(el.tagName, isTextInput(el))) {
+        activeRef.current = null;
+        setActive(null);
+        return;
+      }
       if (isTextInput(el)) {
         const input = el as HTMLInputElement | HTMLTextAreaElement;
         setActive(input);
@@ -193,7 +198,18 @@ export default function VkKeyboard() {
       }
     };
     document.addEventListener('focusin', onFocus);
-    return () => document.removeEventListener('focusin', onFocus);
+    const onSelectionChange = () => {
+      const el = activeRef.current;
+      if (!el || document.activeElement !== el) return;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      if (start !== null && end !== null) selectionRef.current = { start, end };
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => {
+      document.removeEventListener('focusin', onFocus);
+      document.removeEventListener('selectionchange', onSelectionChange);
+    };
   }, [isVKWebView]);
 
   // A real tap/drag/arrow-key selection made inside the field must replace

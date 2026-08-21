@@ -154,6 +154,7 @@ export default function GuildPage() {
             const msg = (e as CustomEvent).detail;
             const d = msg.data || msg;
             if (d.guildTalentPoints !== undefined) setGuildPoints(d.guildTalentPoints);
+            if (d.cooldownRemaining !== undefined) setBossCd(Math.max(0, Number(d.cooldownRemaining) || 0));
             if (d.ratingsChanged) loadBoss();
             if (d.bossKilled) {
                 setBoss((p: any) => p ? { ...p, currentHp: 0, respawnAt: d.respawnAt } : p);
@@ -180,7 +181,7 @@ export default function GuildPage() {
             } else {
                 setBoss((p: any) => p ? { ...p, currentHp: d.bossHpAfter } : p);
             }
-            setBossCd(3600);
+            setBossCd(Math.max(0, Number(d.cooldownRemaining) || 0));
         } catch (e: any) { setError(e.message); }
         setBossFighting(false);
     };

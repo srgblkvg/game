@@ -4,6 +4,7 @@ import { buildPlayerStats, getBaseStats } from '../db/helpers';
 import { dodgeChance, critChance, critMult, blockChance, blockReduction, counterChance, rollDamage } from '../game/battle';
 import type { BattleAntiStats } from '../game/battle';
 import { currentStats } from '../game/stats';
+import { sendToUser, markDirty } from '../events';
 import { advanceEnemyAttack, cancelEnemyWindup, ENEMY_WINDUP_MS } from '../game/dungeonWindup';
 import { loadBattleAntiStats } from '../game/guildBoss';
 
@@ -146,6 +147,67 @@ function interruptEnemyAttack(enemy: EnemyData): boolean {
 }
 
 const activeRuns = new Map<number, DungeonRun>();
+const finishingRuns = new Set<number>();
+
+/** Number of in-memory dungeon runs that would be interrupted by a restart. */
+export function getActiveDungeonRunsCount(): number {
+    return activeRuns.size;
+}
+
+/**
+ * Закрывает активные походы перед плановым рестартом и выдаёт накопленный лут.
+ * Использует тот же payout-путь, что и обычная кнопка «Выйти».
+ */
+export async function forceFinishActiveDungeonRuns(): Promise<{ finished: number; userIds: number[] }> {
+    const runs = Array.from(activeRuns.entries());
+    const userIds: number[] = [];
+    for (const [userId, run] of runs) {
+        if (finishingRuns.has(userId)) continue;
+        finishingRuns.add(userId);
+        if (run.tickTimer) clearInterval(run.tickTimer);
+        activeRuns.delete(userId);
+        const loot = run.accumulatedLoot || { silver: 0, items: [], pages: [] };
+        try {
+            await db.tx(async (client) => {
+                const row = (await client.query('SELECT inventory FROM users WHERE id = $1 FOR UPDATE', [userId])).rows[0] as any;
+                if (!row) throw new Error(`Пользователь ${userId} не найден`);
+                const inventory = typeof row.inventory === 'string' ? JSON.parse(row.inventory || '[]') : (row.inventory || []);
+                for (const item of loot.items) {
+                    if (item.type === 'craft_item') {
+                        const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === item.id);
+                        if (existing) existing.count = Math.max(1, Number(existing.count) || 0) + Math.max(1, Number(item.count) || 0);
+                        else inventory.push({ ...item, count: Math.max(1, Number(item.count) || 0) });
+                    } else inventory.push(item);
+                }
+                await client.query('UPDATE users SET money = money + $1, inventory = $2 WHERE id = $3', [loot.silver, JSON.stringify(inventory), userId]);
+                for (const page of loot.pages) {
+                    await client.query(
+                        'INSERT INTO skill_pages (userid, skillid, count) VALUES ($1, $2, 1) ON CONFLICT (userid, skillid) DO UPDATE SET count = skill_pages.count + 1',
+                        [userId, page.skillId]
+                    );
+                }
+                await client.query(
+                    'UPDATE dungeon_runs SET startedat = $1, maxfloor = GREATEST(maxfloor, $2), maxreward = GREATEST(maxreward, $3) WHERE userid = $4',
+                    [Math.floor(Date.now() / 1000), run.currentFloor, loot.silver, userId]
+                );
+            });
+            sendToUser(userId, {
+                type: 'dungeonForceFinished',
+                loot,
+                message: `Поход в подземелье завершён перед перезагрузкой. Награда выдана: ${loot.silver} серебра.`,
+            });
+            markDirty(userId, 'quests', 'notifications');
+            userIds.push(userId);
+        } catch (error) {
+            // Транзакция откатила выплату — возвращаем run, чтобы повторить безопасно.
+            activeRuns.set(userId, run);
+            throw error;
+        } finally {
+            finishingRuns.delete(userId);
+        }
+    }
+    return { finished: userIds.length, userIds };
+}
 
 function getAttackSpeed(rarity: number, weaponStrBonus: number): number {
     const base = WEAPON_SPEED[rarity] ?? 0.5;
@@ -365,6 +427,9 @@ router.post('/dungeon/start', async (req, res) => {
     const userId = req.userId;
     const { skills: equippedSkillIds } = req.body; // [1,2,3,4]
 
+    if (finishingRuns.has(userId)) {
+        return res.status(409).json({ error: 'Предыдущий поход завершается перед перезагрузкой' });
+    }
     if (activeRuns.has(userId)) {
         return res.status(400).json({ error: 'Данж уже активен' });
     }
@@ -697,7 +762,7 @@ router.post('/dungeon/claim', async (req, res) => {
         ).catch(() => null) as any;
 
         if (craftItem) {
-            itemReward = { id: craftItem.id, name: craftItem.name, rarity: craftItem.display_name, rarity_id: craftItem.rarity_id, image: craftItem.image, type: 'craft_item', itemType: 'upgrade', rarity_color: craftItem.color };
+            itemReward = { id: craftItem.id, name: craftItem.name, rarity: craftItem.display_name, rarity_id: craftItem.rarity_id, count: 1, image: craftItem.image, type: 'craft_item', itemType: 'upgrade', rarity_color: craftItem.color };
         }
     }
 
@@ -772,6 +837,7 @@ router.post('/dungeon/claim', async (req, res) => {
 // Продолжить на следующий этаж
 router.post('/dungeon/continue', async (req, res) => {
     const userId = req.userId;
+    if (finishingRuns.has(userId)) return res.status(409).json({ error: 'Поход завершается перед перезагрузкой' });
     const { skills: equippedSkillIds } = req.body;
 
     const saved = await db.one(
@@ -845,6 +911,7 @@ router.post('/dungeon/continue', async (req, res) => {
 // Сбежать (потеря лута) или Выйти (получить накопленный лут)
 router.post('/dungeon/flee', async (req, res) => {
     const userId = req.userId;
+    if (finishingRuns.has(userId)) return res.status(409).json({ error: 'Поход уже завершается перед перезагрузкой' });
     const run = activeRuns.get(userId);
     if (!run) return res.status(400).json({ error: 'Данж не активен' });
 
@@ -859,9 +926,9 @@ router.post('/dungeon/flee', async (req, res) => {
             // Камень улучшения — стакаем
             const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === item.id);
             if (existing) {
-                existing.count = (existing.count || 0) + 1;
+                existing.count = Math.max(1, Number(existing.count) || 0) + Math.max(1, Number(item.count) || 0);
             } else {
-                inventory.push(item);
+                inventory.push({ ...item, count: Math.max(1, Number(item.count) || 0) });
             }
         } else {
             // Экипировка — добавляем как новый предмет

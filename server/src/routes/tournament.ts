@@ -8,6 +8,7 @@ import { calculateCombatPower } from '../game/combatPower';
 import { getRegistrationWindowForNewQueue } from '../game/tournamentCycle';
 import { calculateTournamentRewards, getThirdPlacePair } from '../game/tournamentRewards';
 import { presentCompletedTournamentTop3 } from '../game/tournamentPresentation';
+import { isTournamentRegistrationOpen } from '../game/tournamentRegistration';
 import { applyDivisionChampionship, assignTournamentDivision, getTournamentDivision, getTournamentDivisionByIndex, TOURNAMENT_DIVISIONS } from '../game/tournamentDivision';
 import { allocateDivisionPrizePools, splitParticipantsByDivision } from '../game/tournamentDivisionQueue';
 import { initTournamentSchema, isTournamentSchemaReady } from '../game/tournamentSchema';
@@ -1054,7 +1055,48 @@ export async function advanceAllRoundsTx(client: any, tournamentId: number) {
             [tournamentId]
         );
         if (pendingResult.rows.length === 0) {
-            // Все раунды завершены
+            // Legacy-safe path: у турниров, чей финал был создан старой версией,
+            // матч за третье место мог отсутствовать. Создаём его до выплат.
+            const participantCount = Number((await client.query(
+                'SELECT COUNT(*) AS cnt FROM tournament_participants WHERE tournamentid = $1',
+                [tournamentId]
+            )).rows[0]?.cnt || 0);
+            if (participantCount >= 4) {
+                const thirdExists = await client.query(
+                    `SELECT 1 FROM tournament_matches
+                     WHERE tournamentid = $1 AND stage = 'third_place'`,
+                    [tournamentId]
+                );
+                if (thirdExists.rows.length === 0) {
+                    const completedPlayoff = (await client.query(
+                        `SELECT round, player1id, player2id, winnerid
+                         FROM tournament_matches
+                         WHERE tournamentid = $1 AND stage = 'playoff'
+                           AND winnerid IS NOT NULL
+                           AND player1id IS NOT NULL AND player2id IS NOT NULL
+                         ORDER BY round, id`,
+                        [tournamentId]
+                    )).rows;
+                    const thirdPlacePair = getThirdPlacePair(completedPlayoff.map((match: any) => ({
+                        round: Number(match.round),
+                        stage: 'playoff',
+                        player1Id: Number(match.player1id),
+                        player2Id: Number(match.player2id),
+                        winnerId: Number(match.winnerid),
+                    })));
+                    if (thirdPlacePair) {
+                        const finalRound = Math.max(...completedPlayoff.map((match: any) => Number(match.round)));
+                        await client.query(
+                            `INSERT INTO tournament_matches
+                             (tournamentid, round, player1id, player2id, stage)
+                             VALUES ($1, $2, $3, $4, 'third_place')`,
+                            [tournamentId, finalRound + 1, thirdPlacePair[0], thirdPlacePair[1]]
+                        );
+                        continue;
+                    }
+                }
+            }
+            // Все раунды завершены и обязательная бронза определена.
             const tCheck = await client.query('SELECT status FROM tournaments WHERE id = $1', [tournamentId]);
             if (tCheck.rows[0]?.status === 'in_progress') {
                 await finishTournamentTx(client, tournamentId);
@@ -1587,9 +1629,12 @@ router.post('/tournament/register', async (req, res) => {
         // Кастомный турнир по ID
         const tournamentId = req.body.tournamentId;
         if (!tournamentId) return res.status(400).json({ error: 'Укажите tournamentId или division' });
+        const now = Math.floor(Date.now() / 1000);
         tournament = await db.one(
-            "SELECT * FROM tournaments WHERE id = ? AND status = 'registration'",
-            [tournamentId]
+            `SELECT * FROM tournaments
+             WHERE id = ? AND status = 'registration'
+               AND registrationStart <= ? AND registrationEnd > ?`,
+            [tournamentId, now, now]
         ) as any;
         if (!tournament) return res.status(400).json({ error: 'Турнир не найден или регистрация закрыта' });
 
@@ -1612,10 +1657,11 @@ router.post('/tournament/register', async (req, res) => {
             throw new Error('Турнир не найден или регистрация закрыта');
         }
         const transactionNow = Math.floor(Date.now() / 1000);
-        if (lockedTournament.type === 'official'
-            && (Number(lockedTournament.registrationstart) > transactionNow
-                || Number(lockedTournament.registrationend) <= transactionNow)) {
-            throw new Error('Регистрация в официальный турнир ещё не открыта или уже завершена');
+        if (!isTournamentRegistrationOpen({
+            registrationStart: Number(lockedTournament.registrationstart),
+            registrationEnd: Number(lockedTournament.registrationend),
+        }, transactionNow)) {
+            throw new Error('Регистрация в турнир ещё не открыта или уже завершена');
         }
         const lockedUser = (await client.query(
             'SELECT money FROM users WHERE id = $1 FOR UPDATE', [userId]
@@ -1663,7 +1709,7 @@ router.post('/tournament/register', async (req, res) => {
         });
     } catch (error: any) {
         const message = error?.message || 'Ошибка регистрации';
-        const expected = /уже зарегистрированы|заполнен|Недостаточно серебра|регистрация закрыта|не найден/i.test(message);
+        const expected = /уже зарегистрированы|заполнен|Недостаточно серебра|регистрация закрыта|не найден|ещё не открыта|уже завершена/i.test(message);
         return res.status(expected ? 400 : 500).json({ error: message });
     }
     broadcast('tournamentUpdated', { reason: 'participant_registered', tournamentId: tournament.id, userId });

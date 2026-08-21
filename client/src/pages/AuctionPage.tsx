@@ -15,6 +15,7 @@ import { inputClass } from '../utils/formStyles';
 import { formatMoney } from '../utils/money';
 import { fmtSafeDate } from '../utils/date';
 import { getItemImage } from '../utils/itemUtils';
+import { calculateAuctionListingFee } from '../utils/auctionFees';
 import { showNoMoney } from '../components/NoMoneyModal';
 import { Line } from 'react-chartjs-2';
 import {
@@ -433,13 +434,13 @@ export default function AuctionPage() {
     const handleCountChange = (count: number) => { setSellCount(count); };
     const handleSell = async () => {
         const item = findItemById(character?.inventory, sellItemId);
-        if (!item) { setError('Выберите предмет'); return; }
+        if (!item) { setCenterModal('Выберите предмет'); return; }
         const isMaterial = item.type === 'craft_item' || item.type === 'material';
         const count = isMaterial ? sellCount : 1;
         const priceNum = parseInt(startPrice);
-        if (isNaN(priceNum) || priceNum <= 0) { setError('Укажите корректную стартовую цену'); return; }
+        if (isNaN(priceNum) || priceNum <= 0) { setCenterModal('Укажите корректную стартовую цену'); return; }
         const buyoutNum = buyoutPrice ? parseInt(buyoutPrice) : 0;
-        if (buyoutNum > 0 && buyoutNum <= priceNum) { setError('Цена выкупа должна быть выше стартовой'); return; }
+        if (buyoutNum > 0 && buyoutNum <= priceNum) { setCenterModal('Цена выкупа должна быть выше стартовой'); return; }
         try {
             await api('/auction/sell', { itemData: item, startPrice: priceNum, buyoutPrice: buyoutNum || null, duration, count });
             showAcquire(item, count, 'Выставлено на аукцион');
@@ -449,13 +450,7 @@ export default function AuctionPage() {
             load(1);
         } catch (e: any) {
             const msg = e.message || '';
-            if (msg.includes('Недостаточно')) {
-                showNoMoney(msg);
-            } else if (msg.includes('Максимум')) {
-                setCenterModal(msg);
-            } else {
-                setError(msg);
-            }
+            setCenterModal(msg || 'Не удалось выставить лот');
         }
     };
     const handleBid = async (lotId: number, amount: string, minBid: number) => {
@@ -504,6 +499,7 @@ export default function AuctionPage() {
     const autoMin = getAutoMinPrice();
     const isMaterial = selectedItem?.type === 'craft_item' || selectedItem?.type === 'material';
     const maxItemCount = isMaterial ? (selectedItem?.count || 1) : 1;
+    const listingCommission = calculateAuctionListingFee(parseInt(startPrice) || 0, isMaterial ? sellCount : 1);
 
     // Pagination render
     const renderPagination = () => {
@@ -667,7 +663,7 @@ export default function AuctionPage() {
                     <div className="mb-2"><label className="text-xs text-[var(--color-text-muted)] block mb-1">Стартовая цена за 1 шт (мин: {formatMoney(autoMin)})</label><input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} data-vk-num={isVk ? "true" : undefined} autoComplete="off" placeholder="Цена за 1 шт" value={startPrice} onChange={e => setStartPrice(e.target.value)} className={inputClass} min={autoMin} />{isMaterial && sellCount > 1 && <p className="text-xs text-[var(--color-accent-info)] mt-1">Итого за {sellCount} шт: {formatMoney(parseInt(startPrice || '0') * sellCount)}</p>}</div>
                     <div className="mb-2"><label className="text-xs text-[var(--color-text-muted)] block mb-1">Цена выкупа за 1 шт (необязательно)</label><input type={isVk ? "text" : "number"} inputMode={isVk ? "none" : undefined} data-vk-num={isVk ? "true" : undefined} autoComplete="off" placeholder="Выкуп за 1 шт" value={buyoutPrice} onChange={e => setBuyoutPrice(e.target.value)} className={inputClass} />{isMaterial && sellCount > 1 && buyoutPrice && <p className="text-xs text-[var(--color-accent-info)] mt-1">Итого выкуп за {sellCount} шт: {formatMoney(parseInt(buyoutPrice) * sellCount)}</p>}</div>
                     <select value={duration} onChange={e => setDuration(+e.target.value)} className={inputClass}><option value={6}>6 часов</option><option value={12}>12 часов</option><option value={24}>24 часа</option><option value={48}>48 часов</option></select>
-                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Комиссия 5% от стартовой цены</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Комиссия за выставление: 5% — {formatMoney(listingCommission)} серебра</p>
                     <Button variant="danger" size="md" onClick={handleSell}>Выставить (5% комиссия)</Button>
                 </Card>
             )}
@@ -925,7 +921,7 @@ export default function AuctionPage() {
                 </div>
             )}
             {confirmPopup && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setConfirmPopup(null)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" style={{ backgroundColor: '#111111', padding: 'max(0.75rem, env(safe-area-inset-top, 0px)) 0.75rem max(0.75rem, env(safe-area-inset-bottom, 0px))' }} onClick={() => setConfirmPopup(null)}>
                     <Card className="max-w-xs w-full" onClick={e => e.stopPropagation()}>
                         <p className="text-sm mb-3">{confirmPopup.message}</p>
                         <div className="flex gap-2 justify-end">
@@ -936,12 +932,12 @@ export default function AuctionPage() {
                 </div>
             )}
             {centerModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setCenterModal(null)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" style={{ backgroundColor: '#111111', padding: 'max(0.75rem, env(safe-area-inset-top, 0px)) 0.75rem max(0.75rem, env(safe-area-inset-bottom, 0px))' }} onClick={() => setCenterModal(null)}>
                     <Card className="max-w-xs w-full" onClick={e => e.stopPropagation()}>
                         <p className="text-sm mb-3">{centerModal}</p>
                         <div className="flex gap-2 justify-end">
                             <Button variant="secondary" size="md" onClick={() => setCenterModal(null)}>Закрыть</Button>
-                            {!character?.premium && (
+                            {!character?.premium && centerModal.includes('Максимум') && (
                                 <Button size="md" onClick={() => { setCenterModal(null); navigate('/premium'); }}>
                                     ⭐ Премиум (+10 слотов)
                                 </Button>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Button from '../../components/ui/Button';
+import { getOperationEntryColor } from '../../utils/operationProgressPresentation';
 
 export type OperationEntry = {
   id: string;
@@ -66,7 +67,7 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
         {entries.map(entry => {
           const active = entry.status === 'active';
           const stepResult = stepResults?.[entry.id];
-          const color = entry.status === 'success' ? 'text-[var(--color-accent-success)]' : entry.status === 'failure' ? 'text-[var(--color-accent-danger)]' : entry.status === 'stopped' ? 'text-[var(--color-text-muted)]' : '';
+          const color = getOperationEntryColor(entry.status, active, showResult);
           return <div key={entry.id} className={`rounded-lg border p-3 ${active ? 'border-[#f59e0b]' : 'border-[var(--color-border-light)]'} bg-[var(--color-bg-secondary)]`}>
             <div className="flex justify-between gap-2 text-xs"><span className="font-bold truncate">{entry.name}</span><span className={color}>{entry.detail || (entry.status === 'pending' ? 'Ожидание' : '')}</span></div>
             {active && stepResult && <>
@@ -79,7 +80,7 @@ export default function OperationProgressModal({ title, entries, stepKey, stepRe
               {showResult && stepResult && <p className={`text-xs font-bold mt-2 ${stepResult.success ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}`}>{stepResult.message}</p>}
             </>}
             {active && !stepResult && <p className="text-[0.7rem] mt-2 text-[var(--color-text-muted)]">Проверка ресурсов и подготовка попытки…</p>}
-            {!active && entry.result && <p className={`text-[0.7rem] mt-1 ${color}`}>{entry.result}</p>}
+            {!active && showResult && entry.result && <p className={`text-[0.7rem] mt-1 ${color}`}>{entry.result}</p>}
           </div>;
         })}
       </div>

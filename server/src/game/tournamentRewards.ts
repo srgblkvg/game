@@ -58,12 +58,15 @@ export function calculateTournamentRewards(input: {
     const finalists = new Set([winnerId, secondId]);
     thirdId = participants.find(userId => !finalists.has(userId)) || null;
   }
+  // Для сетки из четырёх и более игроков фонд 50/30/20 можно
+  // распределять только после завершения отдельного бронзового матча.
+  // Иначе fail-closed: не выплачиваем частичные 80% и не завершаем турнир.
+  if (!thirdId) return [];
   const first = Math.floor(pool * 0.5);
   const second = Math.floor(pool * 0.3);
-  const rewards: TournamentReward[] = [
+  return [
     { userId: winnerId, place: 1, prize: first },
     { userId: secondId, place: 2, prize: second },
+    { userId: thirdId, place: 3, prize: pool - first - second },
   ];
-  if (thirdId) rewards.push({ userId: thirdId, place: 3, prize: pool - first - second });
-  return rewards;
 }

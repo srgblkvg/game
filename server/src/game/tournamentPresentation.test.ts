@@ -79,6 +79,19 @@ test('возвращает не более одного участника на 
   ]);
 });
 
+test('не возвращает одного участника под разными призовыми местами', () => {
+  const top3 = presentCompletedTournamentTop3([
+    { userId: 10, username: 'Один игрок', snapshotStats: { result: { place: 1, prize: 500 } } },
+    { userId: 10, username: 'Один игрок', snapshotStats: { result: { place: 2, prize: 300 } } },
+    { userId: 30, username: 'Бронза', snapshotStats: { result: { place: 3, prize: 200 } } },
+  ]);
+
+  assert.deepEqual(top3.map(entry => [entry.place, entry.username]), [
+    [1, 'Один игрок'],
+    [3, 'Бронза'],
+  ]);
+});
+
 test('игнорирует некорректные JSON и места вне диапазона 1..3', () => {
   const top3 = presentCompletedTournamentTop3([
     { username: 'Сломан', snapshotStats: '{' },

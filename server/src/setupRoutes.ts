@@ -118,6 +118,8 @@ export function setupRoutes(app: Express) {
   app.use('/api/yukassa', yukassaRoutes);
 
   // Админские маршруты
+  // Конкретные chat/deploy endpoints должны быть раньше общего adminRoutes.
+  app.use('/api/admin/chat', authMiddleware, requireAdmin, adminChatRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminActivityRoutes);
 
@@ -125,7 +127,6 @@ export function setupRoutes(app: Express) {
   app.use('/api/auth', vkBridgeAuthRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminCraftRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminJobsRoutes);
-  app.use('/api/admin/chat', authMiddleware, requireAdmin, adminChatRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminBattleRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminTournamentRoutes);
   app.use('/api/admin', authMiddleware, requireAdmin, adminGameRoutes);
