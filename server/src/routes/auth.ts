@@ -11,6 +11,7 @@ import { applyDecay } from '../game/rating';
 import { currentStats } from '../game/stats';
 import { getStarterEquipment } from '../db/helpers';
 import logger from '../logger';
+import { grantRegistrationPremium } from '../game/registrationPremium';
 
 const router = Router();
 
@@ -64,7 +65,7 @@ router.post('/verify-email', async (req, res) => {
     const email = rawEmail.toLowerCase().trim();
     const now = Math.floor(Date.now() / 1000);
 
-    const user: any = await db.one('SELECT id, username, emailCode, emailCodeExpires, emailVerified FROM users WHERE email = ?', [email]);
+    const user: any = await db.one('SELECT id, username, emailCode, emailCodeExpires, emailVerified, premiumUntil FROM users WHERE email = ?', [email]);
     if (!user) return res.status(400).json({ error: 'Email не найден' });
     if (user.emailVerified) return res.status(400).json({ error: 'Email уже подтверждён' });
     if (!user.emailCode || user.emailCodeExpires < now) return res.status(400).json({ error: 'Код истёк. Запросите новый.' });
@@ -73,7 +74,8 @@ router.post('/verify-email', async (req, res) => {
         return res.status(400).json({ error: 'Неверный код' });
     }
 
-    await db.run('UPDATE users SET emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, lastLoginAt = ? WHERE id = ?', [now, user.id]);
+    const premiumUntil = grantRegistrationPremium(user.premiumUntil, now);
+    await db.run('UPDATE users SET emailVerified = 1, emailCode = NULL, emailCodeExpires = 0, lastLoginAt = ?, premiumUntil = ? WHERE id = ?', [now, premiumUntil, user.id]);
 
     const token = jwt.sign({ userId: user.id, role: 'player', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
     auditRegister(user.username, user.id, req.ip);
