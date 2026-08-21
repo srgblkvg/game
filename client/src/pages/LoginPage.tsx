@@ -28,6 +28,7 @@ export default function LoginPage() {
         setLoading(true);
         try {
             const result = await guestLogin(name);
+            reachYandexGoal('guest_login_success');
             loginUser(result.user, result.token);
             navigate('/');
         } catch (e: any) { setError(e.message); }
