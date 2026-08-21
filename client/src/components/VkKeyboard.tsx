@@ -67,8 +67,10 @@ function restoreSelection(activeRef: ActiveRef, selectionRef: SelectionRef) {
 
 function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string, selectionRef: SelectionRef, activeRef: ActiveRef) {
   el.focus();
-  const start = el.selectionStart ?? selectionRef.current.start;
-  const end = el.selectionEnd ?? selectionRef.current.end;
+  // selectionRef is the source of truth while React is committing the
+  // previous controlled-input update. Reading selectionStart here can return
+  // the previous cursor position during fast typing and insert one char back.
+  const { start, end } = selectionRef.current;
   const next = insertAtSelection(el.value, start, end, char);
   el.setRangeText(char, start, end, 'end');
   selectionRef.current = { start: next.start, end: next.end };
@@ -78,8 +80,7 @@ function insertChar(el: HTMLInputElement | HTMLTextAreaElement, char: string, se
 
 function deleteChar(el: HTMLInputElement | HTMLTextAreaElement, selectionRef: SelectionRef, activeRef: ActiveRef) {
   el.focus();
-  const start = el.selectionStart ?? selectionRef.current.start;
-  const end = el.selectionEnd ?? selectionRef.current.end;
+  const { start, end } = selectionRef.current;
   const next = deleteAtSelection(el.value, start, end);
   if (next.value === el.value) return;
   const deleteStart = start === end ? Math.max(0, start - 1) : start;
@@ -140,14 +141,13 @@ export default function VkKeyboard() {
         setCapsLock(false);
         return;
       }
-      // Сохраняем позицию курсора перед focus (Android сбрасывает)
-      const s = el.selectionStart;
-      const e = el.selectionEnd;
-      if (s !== null && e !== null) selectionRef.current = { start: s, end: e };
+      // Не считываем selectionStart здесь: React мог ещё не восстановить
+      // курсор после предыдущего символа. Иначе интервал запоминает старую
+      // позицию и следующий символ вставляется на один знак назад.
+      const { start, end } = selectionRef.current;
       if (document.activeElement !== el) el.focus({ preventScroll: true });
-      // Восстанавливаем если сбросилось
-      if (s !== null && (el.selectionStart !== s || el.selectionEnd !== e)) {
-        el.setSelectionRange(s, e);
+      if (el.selectionStart !== start || el.selectionEnd !== end) {
+        el.setSelectionRange(start, end);
       }
     }, 80);
     return () => clearInterval(id);
@@ -190,6 +190,29 @@ export default function VkKeyboard() {
     return () => document.removeEventListener('focusin', onFocus);
   }, []);
 
+  // A real tap/drag/arrow-key selection made inside the field must replace
+  // the keyboard's stored selection. Programmatic React cursor resets do not
+  // emit these events, so they cannot overwrite a newer keyboard position.
+  useEffect(() => {
+    const syncSelection = (event: Event) => {
+      const el = activeRef.current;
+      if (!el || event.target !== el) return;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      if (start !== null && end !== null) selectionRef.current = { start, end };
+    };
+    document.addEventListener('select', syncSelection, true);
+    document.addEventListener('click', syncSelection, true);
+    document.addEventListener('touchend', syncSelection, true);
+    document.addEventListener('keyup', syncSelection, true);
+    return () => {
+      document.removeEventListener('select', syncSelection, true);
+      document.removeEventListener('click', syncSelection, true);
+      document.removeEventListener('touchend', syncSelection, true);
+      document.removeEventListener('keyup', syncSelection, true);
+    };
+  }, []);
+
   const doDelete = useCallback(() => {
     const el = activeRef.current;
     if (!el) return;
@@ -217,9 +240,8 @@ export default function VkKeyboard() {
       repeatInterval.current = setInterval(() => {
         const el = activeRef.current;
         if (!el) { stopRepeat(); return; }
-        const s = el.selectionStart ?? 0;
-        const e = el.selectionEnd ?? 0;
-        if (s === 0 && e === 0) { stopRepeat(); return; }
+        const { start, end } = selectionRef.current;
+        if (start === 0 && end === 0) { stopRepeat(); return; }
         deleteChar(el, selectionRef, activeRef);
       }, 50);
     }, 600);
