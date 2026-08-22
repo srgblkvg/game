@@ -20,7 +20,8 @@ export function ensureVkPaymentDeliveryReady(): Promise<void> {
   const conflict = (await client.query(`SELECT order_id FROM vk_payments
     WHERE status = 'chargeable' AND order_id <> '' GROUP BY order_id
     HAVING COUNT(DISTINCT user_id) > 1 OR COUNT(DISTINCT item) > 1
-      OR COUNT(DISTINCT NULLIF(character_id, 0)) > 1 LIMIT 1`)).rows[0];
+      OR COUNT(DISTINCT NULLIF(character_id, 0)) > 1
+      OR BOOL_OR(character_id IS NULL OR character_id <= 0) LIMIT 1`)).rows[0];
   if (conflict) throw new Error('conflicting historical VK payment identities: ' + conflict.order_id);
   await client.query(`INSERT INTO payment_deliveries
     (provider, external_id, provider_user_id, character_id, item, status, processed_at)

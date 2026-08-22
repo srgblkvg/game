@@ -23,6 +23,7 @@ const vkPaymentsTableReady = db.run(`CREATE TABLE IF NOT EXISTS vk_payments (
   processed_at INTEGER NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 )`);
+export const vkPaymentsReady = vkPaymentsTableReady.then(() => ensureVkPaymentDeliveryReady());
 
 // Секретный ключ приложения VK (нужно задать в .env: VK_APP_SECRET)
 const APP_SECRET = process.env.VK_APP_SECRET || '';
@@ -128,8 +129,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const now = Math.floor(Date.now() / 1000);
-    await vkPaymentsTableReady;
-    await ensureVkPaymentDeliveryReady();
+    await vkPaymentsReady;
 
     if (status === 'chargeable') {
       try {

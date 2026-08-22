@@ -9,6 +9,7 @@ import { setupRoutes } from './setupRoutes';
 import { setupWebSocket } from './websocket';
 import { PORT } from './env';
 import logger from './logger';
+import { vkPaymentsReady } from './routes/vkPayments';
 
 const app = express();
 
@@ -21,7 +22,14 @@ setupRoutes(app);
 const server = http.createServer(app);
 setupWebSocket(server);
 
-server.listen(PORT, () => logger.info(`Server started on port ${PORT}`));
+async function startServer() {
+  await vkPaymentsReady;
+  server.listen(PORT, () => logger.info(`Server started on port ${PORT}`));
+}
+startServer().catch(error => {
+  logger.error('Server startup failed:', error?.message || error);
+  process.exit(1);
+});
 
 // ── Schedulers ──
 import { startSalaryScheduler } from './schedulers/salary';

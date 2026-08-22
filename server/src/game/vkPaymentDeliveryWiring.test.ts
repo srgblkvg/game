@@ -32,10 +32,18 @@ test('VK silver использует atomic ledger service и не вызыва�
 
 test('callback сначала создаёт vk table, затем ledger/backfill до chargeable', () => {
   const body = source();
-  const table = body.indexOf('await vkPaymentsTableReady');
-  const ledger = body.indexOf('await ensureVkPaymentDeliveryReady()');
+  const table = body.indexOf('vkPaymentsTableReady.then');
+  const ledger = body.indexOf('ensureVkPaymentDeliveryReady()');
   const chargeable = body.indexOf("if (status === 'chargeable')");
   assert.ok(table >= 0 && ledger > table && chargeable > ledger);
+  assert.match(body, /export const vkPaymentsReady/);
+  assert.match(body, /await vkPaymentsReady/);
+});
+
+test('server ждёт VK payment readiness до listen и завершает процесс при reject', () => {
+  const index = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
+  assert.ok(index.indexOf('await vkPaymentsReady') < index.indexOf('server.listen'));
+  assert.match(index, /startServer\(\)\.catch[\s\S]*process\.exit\(1\)/);
 });
 
 test('migration создаёт unique ledger и backfill chargeable до route activation', () => {
@@ -43,6 +51,7 @@ test('migration создаёт unique ledger и backfill chargeable до route a
   assert.match(migration, /UNIQUE\s*\(provider,\s*external_id\)/i);
   assert.match(migration, /INSERT INTO payment_deliveries[\s\S]*SELECT[\s\S]*FROM vk_payments[\s\S]*status = 'chargeable'/i);
   assert.match(migration, /COUNT\(DISTINCT user_id\)[\s\S]*COUNT\(DISTINCT item\)/i);
+  assert.match(migration, /character_id IS NULL OR character_id <= 0/i);
   assert.match(migration, /throw new Error\(['"]conflicting historical VK payment identities/i);
   assert.match(migration, /ON CONFLICT \(provider, external_id\) DO NOTHING/i);
   assert.match(migration, /GRANT ALL ON payment_deliveries TO game/i);
