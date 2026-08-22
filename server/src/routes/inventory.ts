@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { currentStats, isSlotCompatible } from '../game/stats';
-import { getUserById, getBaseStats, recalcHpOnEquip, getCollectionBonus } from '../db/helpers';
+import { getUserById, getCollectionBonus } from '../db/helpers';
 import { getDrinkBonuses } from '../game/drinks';
 import { getGuildBonus } from '../game/guildBuildings';
 import { refreshCharacter } from '../events';
+import { changeEquipment } from '../game/inventoryEquip';
+import { createPgEquipmentChangeRepository } from '../game/inventoryEquipRepository';
 
 const router = Router();
 
@@ -14,95 +15,38 @@ router.post('/character/equip', async (req, res) => {
     const { slotId, itemId } = req.body;
     if (!slotId) return res.status(400).json({ error: 'slotId required' });
 
-    const user = await getUserById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const bonusUser = await getUserById(userId);
+    if (!bonusUser) return res.status(404).json({ error: 'User not found' });
 
-    const inventory: any[] = JSON.parse(user.inventory || '[]');
-    // Читаем экипировку из АКТИВНОГО слота (как buildPlayerStats)
-    const activeSlot = user.active_equip_slot || 1;
-    const equipKey = `equipment_${activeSlot}`;
-    let equipment: Record<string, any> = typeof user[equipKey] === 'string' ? JSON.parse(user[equipKey] || '{}') : (user[equipKey] && typeof user[equipKey] === 'object' ? user[equipKey] : {});
-    if (Object.keys(equipment).length === 0) {
-        equipment = typeof user.equipment === 'string' ? JSON.parse(user.equipment || '{}') : (user.equipment && typeof user.equipment === 'object' ? user.equipment : {});
-    }
-    const currentEquipped = equipment[slotId];
-
-    const drinkBonuses = getDrinkBonuses(user);
-    const collectionCount = await getCollectionBonus(userId);
-    const guildBonus = await getGuildBonus(userId, 'arena');
-
-    if (itemId === undefined || itemId === null) {
-        if (!currentEquipped) return res.status(400).json({ error: 'Слот пуст' });
-
-        const base = getBaseStats(user);
-const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, guildBonus);
-        const oldMaxHp = oldStats.hp;
-
-        inventory.push(currentEquipped);
-        delete equipment[slotId];
-
-        const newStats = currentStats(base, equipment, drinkBonuses, collectionCount, guildBonus);
-        const newMaxHp = newStats.hp;
-        const newHp = recalcHpOnEquip(user.currentHp, oldMaxHp, newMaxHp);
-
-        const now = Math.floor(Date.now() / 1000);
-        await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
-            [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
-        // Синхронизируем с активным equipment_N
-        await db.run(`UPDATE users SET equipment_${activeSlot} = ?::jsonb WHERE id = ?`,
-            [JSON.stringify(equipment), userId]);
+    try {
+        const result = await changeEquipment(createPgEquipmentChangeRepository(), {
+            userId,
+            slotId,
+            itemId: itemId === undefined || itemId === null ? null : itemId,
+            now: Math.floor(Date.now() / 1000),
+            drinkBonuses: getDrinkBonuses(bonusUser),
+            collectionBonus: await getCollectionBonus(userId),
+            guildBonus: await getGuildBonus(userId, 'arena'),
+        });
         refreshCharacter(userId, 'equipment');
-        return res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
+        res.json(result);
+    } catch (error: any) {
+        const message = error?.message || 'Не удалось изменить экипировку';
+        if (message === 'User not found') return res.status(404).json({ error: message });
+        const expected = [
+            'Некорректный слот экипировки',
+            'Слот пуст',
+            'Предмет не найден в инвентаре',
+            'Предмет заблокирован. Разблокируйте в инвентаре.',
+            'Нельзя надеть материал или ресурс',
+            'Предмет не подходит к слоту',
+            'Двуручное оружие можно надеть только в первый слот',
+            'Нельзя надеть два одинаковых кольца',
+        ];
+        if (expected.includes(message)) return res.status(400).json({ error: message });
+        console.error('[character/equip]', error);
+        res.status(500).json({ error: 'Не удалось изменить экипировку' });
     }
-
-    const itemIndex = inventory.findIndex((i: any) => i.id == itemId);
-    if (itemIndex === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
-    const item = inventory[itemIndex];
-    if (item.locked) return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
-    if (!item || item.type === 'material' || item.type === 'craft_item') return res.status(400).json({ error: 'Нельзя надеть материал или ресурс' });
-
-    if (!isSlotCompatible(slotId, item)) return res.status(400).json({ error: 'Предмет не подходит к слоту' });
-
-    if (item.name?.includes('двуручн') && slotId !== 'weapon1') {
-        return res.status(400).json({ error: 'Двуручное оружие можно надеть только в первый слот' });
-    }
-
-    if ((slotId === 'ring1' || slotId === 'ring2') && item.slot?.startsWith('ring')) {
-        const otherSlot = slotId === 'ring1' ? 'ring2' : 'ring1';
-        const otherItem = equipment[otherSlot];
-        if (otherItem && otherItem.name === item.name) {
-            return res.status(400).json({ error: 'Нельзя надеть два одинаковых кольца' });
-        }
-    }
-
-    if (item.name?.includes('двуручн') && slotId === 'weapon1' && equipment['shield']) {
-        inventory.push(equipment['shield']);
-        delete equipment['shield'];
-    }
-
-    if (currentEquipped) {
-        inventory.push(currentEquipped);
-    }
-
-    const base = getBaseStats(user);
-    const oldStats = currentStats(base, equipment, drinkBonuses, collectionCount, guildBonus);
-
-    inventory.splice(itemIndex, 1);
-    equipment[slotId] = item;
-
-    const newStats = currentStats(base, equipment, drinkBonuses, collectionCount, guildBonus);
-    const newMaxHp = newStats.hp;
-    const newHp = recalcHpOnEquip(user.currentHp, oldStats.hp, newMaxHp);
-
-    const now = Math.floor(Date.now() / 1000);
-    await db.run('UPDATE users SET inventory = ?, equipment = ?, currentHp = ?, lastHpUpdate = ? WHERE id = ?',
-        [JSON.stringify(inventory), JSON.stringify(equipment), newHp, now, userId]);
-    // Синхронизируем с активным equipment_N
-    await db.run(`UPDATE users SET equipment_${activeSlot} = ?::jsonb WHERE id = ?`,
-        [JSON.stringify(equipment), userId]);
-
-    refreshCharacter(userId, 'equipment');
-    res.json({ inventory, equipment, currentHp: newHp, maxHp: newMaxHp, stats: newStats });
 });
 
 // Разобрать предмет(ы)

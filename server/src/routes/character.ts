@@ -4,6 +4,8 @@ import { collectGuildTax, getUserById, enrichEquipment, applyExp, buildPlayerSta
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen, calculateHpRegenRate } from '../game/hpRegen';
+import { switchEquipmentSet } from '../game/inventoryEquipSwitch';
+import { createPgEquipmentSwitchRepository } from '../game/inventoryEquipSwitchRepository';
 import { updateGuildQuestProgress } from './guild';
 import { getGuildBonus, getGuildBuildings } from '../game/guildBuildings';
 import { getTrackTier, TRACK_MAP } from '../game/achievements';
@@ -346,23 +348,15 @@ router.post('/character/switch-equip', async (req, res) => {
     const { slot } = req.body; // 1, 2 или 3
     if (![1, 2, 3].includes(slot)) return res.status(400).json({ error: 'Неверный слот' });
 
-    const user = await db.one('SELECT equipment, equipment_1, equipment_2, equipment_3, active_equip_slot FROM users WHERE id = ?', [userId]) as any;
-    const oldSlot = user.active_equip_slot || 1;
-    if (oldSlot === slot) return res.json({ success: true, activeEquipSlot: slot });
-
-    const parseEq = (v: any) => typeof v === 'string' ? v : JSON.stringify(v);
-    const parseEqObj = (v: any): Record<string, any> => typeof v === 'string' ? JSON.parse(v || '{}') : (v && typeof v === 'object' ? v : {});
-    const currentEquip = parseEq(user.equipment);
-    const targetEquip = parseEq((user as any)[`equipment_${slot}`]);
-
-    // Сохраняем текущий equipment в старый слот, загружаем новый в equipment
-    await db.run(
-        `UPDATE users SET equipment_${oldSlot} = ?::jsonb, equipment = ?, active_equip_slot = ? WHERE id = ?`,
-        [currentEquip, targetEquip, slot, userId]
-    );
-
-    refreshCharacter(userId, 'equipment-set');
-    res.json({ success: true, activeEquipSlot: slot, equipment: parseEqObj(targetEquip) });
+    try {
+        const result = await switchEquipmentSet(createPgEquipmentSwitchRepository(), { userId, slot });
+        refreshCharacter(userId, 'equipment-set');
+        res.json(result);
+    } catch (error: any) {
+        if (error?.message === 'User not found') return res.status(404).json({ error: 'User not found' });
+        console.error('[character/switch-equip]', error);
+        res.status(500).json({ error: 'Не удалось переключить комплект' });
+    }
 });
 
 // Сохранить экипировку в конкретный слот (без переключения)
