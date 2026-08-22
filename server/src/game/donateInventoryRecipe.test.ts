@@ -22,6 +22,16 @@ test('missing или duplicate catalog отклоняет весь recipe',()=>{
  assert.equal(applyInventoryRecipe('[]',[ruby,{...ruby,id:99},topaz,amethyst],recipe,1).ok,false);
 });
 
+test('разные обязательные имена не могут ссылаться на один catalog id',()=>{
+ assert.equal(applyInventoryRecipe('[]',[ruby,{...topaz,id:ruby.id},amethyst],recipe,1).ok,false);
+});
+
+test('malformed authoritative catalog record отклоняет recipe',()=>{
+ assert.equal(applyInventoryRecipe('[]',[{...ruby,id:0},topaz,amethyst],recipe,1).ok,false);
+ assert.equal(applyInventoryRecipe('[]',[ruby,{...topaz,rarityId:NaN},amethyst],recipe,1).ok,false);
+ assert.equal(applyInventoryRecipe('[]',[ruby,topaz,{...amethyst,type:''}],recipe,1).ok,false);
+});
+
 test('malformed или duplicate inventory stack отклоняет весь recipe',()=>{
  assert.equal(applyInventoryRecipe('{bad',[ruby,topaz,amethyst],recipe,1).ok,false);
  assert.equal(applyInventoryRecipe(JSON.stringify([{type:'craft_item',id:21,count:'bad'}]),[ruby,topaz,amethyst],recipe,1).ok,false);
