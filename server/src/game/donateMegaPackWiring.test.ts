@@ -1,0 +1,3 @@
+/// <reference types="node" />
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {resolve} from 'node:path';import test from 'node:test';const body=readFileSync(resolve(__dirname,'../routes/yukassa.ts'),'utf8');
+test('Yoo mega SKUs bypass all legacy mega delivery',()=>{const start=body.indexOf("String(existing.item) === 'mega_craft'");const end=body.indexOf("startsWith('curse_')",start);assert.ok(start>=0&&end>start);const branch=body.slice(start,end);assert.match(branch,/processYooKassaMegaPackPayment\(createPgDonateCraftPackRepository\(\)/);assert.doesNotMatch(branch,/deliverMegaCraftSet|deliverLargeCraftSet|deliverCraftRare200|processDelivery|db\.run/);});
