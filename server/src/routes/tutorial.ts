@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { grantTutorialPveReward, grantTutorialCraftReward, completeTutorial } from '../game/tutorialRewards';
 import { createPgTutorialRewardRepository } from '../game/tutorialRewardsRepository';
+import { advanceTutorialArenaStep, advanceTutorialEquipmentStep } from '../game/tutorialProgress';
+import { createPgTutorialProgressRepository } from '../game/tutorialProgressRepository';
 
 const router = Router();
 
@@ -93,18 +95,19 @@ router.post('/tutorial/pve', async (req, res) => {
 // Step 1→2: Equip sword (client sends equipment state after equipping)
 router.post('/tutorial/equip', async (req, res) => {
     const userId = req.userId;
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if ((user.tutorial_step || 0) !== 1) return res.status(400).json({ error: 'Неверный шаг обучения' });
-
-    // Check that user has sword equipped
-    const equipment = JSON.parse(user.equipment || '{}');
-    if (!equipment.weapon1) {
-        return res.status(400).json({ error: 'Сначала наденьте меч' });
+    try {
+        const result = await advanceTutorialEquipmentStep(createPgTutorialProgressRepository(), {
+            userId, expectedStep: 1, nextStep: 2, requiredSlot: 'weapon1',
+            missingMessage: 'Сначала наденьте меч',
+        });
+        res.json(result);
+    } catch (error: any) {
+        if (error?.message === 'User not found') return res.status(404).json({ error: error.message });
+        if (['Неверный шаг обучения', 'Сначала наденьте меч'].includes(error?.message)) {
+            return res.status(400).json({ error: error.message });
+        }
+        throw error;
     }
-
-    await db.run('UPDATE users SET tutorial_step = 2 WHERE id = ?', [userId]);
-    res.json({ success: true, nextStep: 2 });
 });
 
 // Step 2→3: Tutorial craft — 100% success, creates shield from Пыль забвения
@@ -144,17 +147,19 @@ router.post('/tutorial/craft', async (req, res) => {
 // Step 3→4: Equip shield
 router.post('/tutorial/equip-shield', async (req, res) => {
     const userId = req.userId;
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if ((user.tutorial_step || 0) !== 3) return res.status(400).json({ error: 'Неверный шаг обучения' });
-
-    const equipment = JSON.parse(user.equipment || '{}');
-    if (!equipment.shield) {
-        return res.status(400).json({ error: 'Сначала наденьте щит' });
+    try {
+        const result = await advanceTutorialEquipmentStep(createPgTutorialProgressRepository(), {
+            userId, expectedStep: 3, nextStep: 4, requiredSlot: 'shield',
+            missingMessage: 'Сначала наденьте щит',
+        });
+        res.json(result);
+    } catch (error: any) {
+        if (error?.message === 'User not found') return res.status(404).json({ error: error.message });
+        if (['Неверный шаг обучения', 'Сначала наденьте щит'].includes(error?.message)) {
+            return res.status(400).json({ error: error.message });
+        }
+        throw error;
     }
-
-    await db.run('UPDATE users SET tutorial_step = 4 WHERE id = ?', [userId]);
-    res.json({ success: true, nextStep: 4 });
 });
 
 // Step 4→5: Tutorial arena fight
@@ -180,8 +185,15 @@ router.post('/tutorial/arena', async (req, res) => {
     addStep({ type: 'damage', damage: 6, target: 'enemy', actor: 'attacker', message: 'Урон: 6' });
     addStep({ type: 'end', message: `${username} побеждает!` });
 
-    await db.run('UPDATE users SET tutorial_step = 5, lastpvptime = ? WHERE id = ?',
-        [Math.floor(Date.now() / 1000), userId]);
+    try {
+        await advanceTutorialArenaStep(createPgTutorialProgressRepository(), {
+            userId, now: Math.floor(Date.now() / 1000),
+        });
+    } catch (error: any) {
+        if (error?.message === 'User not found') return res.status(404).json({ error: error.message });
+        if (error?.message === 'Неверный шаг обучения') return res.status(400).json({ error: error.message });
+        throw error;
+    }
 
     res.json({ success: true, steps, nextStep: 5 });
 });
