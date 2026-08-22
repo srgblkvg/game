@@ -33,6 +33,21 @@ function resultFrom(snapshot: Record<string, unknown>): Record<string, unknown> 
     : null;
 }
 
+function snapshotPlayerName(snapshot: Record<string, unknown>): string | null {
+  const player = snapshot.player;
+  if (!player || typeof player !== 'object' || Array.isArray(player)) return null;
+  const name = (player as Record<string, unknown>).name;
+  return typeof name === 'string' && name.trim() ? name : null;
+}
+
+export function completedTournamentParticipantName(
+  participant: CompletedTournamentParticipantRow,
+): string {
+  if (participant.username?.trim()) return participant.username;
+  const snapshot = parseSnapshot(participant.snapshotStats);
+  return (snapshot && snapshotPlayerName(snapshot)) || 'Игрок удалён';
+}
+
 /** Presents persisted podium results for a completed tournament. */
 export function presentCompletedTournamentTop3(
   participants: CompletedTournamentParticipantRow[],
@@ -50,7 +65,7 @@ export function presentCompletedTournamentTop3(
       ...snapshot,
       place: rawPlace,
       ...(prize === undefined ? {} : { prize }),
-      username: participant.username,
+      username: completedTournamentParticipantName(participant),
       ...(participant.userId === undefined ? {} : { _participantUserId: participant.userId }),
       guildName: participant.guildName ?? null,
       guildId: participant.guildId ?? null,

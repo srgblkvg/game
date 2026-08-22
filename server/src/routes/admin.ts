@@ -145,20 +145,40 @@ router.post('/unban-user', async (req, res) => {
 // Удаление игрока
 router.delete('/users/:id', async (req, res) => {
     const userId = parseInt(req.params.id);
-    const user = await db.one('SELECT id, username FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'Игрок не найден' });
+    const result = await db.tx(async (client) => {
+        await client.query('SELECT pg_advisory_xact_lock($1, $2)', [932001, userId]);
+        const user = (await client.query('SELECT id, username FROM users WHERE id = $1 FOR UPDATE', [userId])).rows[0] as any;
+        if (!user) return { status: 'missing' as const };
+        const activeTournament = (await client.query(
+            `SELECT t.id FROM tournament_participants tp
+             JOIN tournaments t ON t.id = tp.tournamentid
+             WHERE tp.userid = $1 AND t.status IN ('registration', 'in_progress')
+             LIMIT 1 FOR UPDATE OF t, tp`,
+            [userId],
+        )).rows[0];
+        if (activeTournament) return { status: 'active-tournament' as const };
 
-    // Каскадное удаление
-    await db.run('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?', [userId, userId]);
-    await db.run('DELETE FROM job_history WHERE userId = ?', [userId]);
-    await db.run('DELETE FROM chat_messages WHERE senderId = ?', [userId]);
-    await db.run('DELETE FROM login_logs WHERE userId = ?', [userId]);
-    await db.run('DELETE FROM auction_lots WHERE sellerId = ?', [userId]);
-    await db.run('DELETE FROM tournament_participants WHERE userId = ?', [userId]);
-    await db.run('DELETE FROM order_members WHERE userId = ?', [userId]);
-    await db.run('DELETE FROM users WHERE id = ?', [userId]);
-
-    res.json({ success: true, message: `Игрок ${user.username} (ID ${userId}) удалён` });
+        await client.query('DELETE FROM battles WHERE attackerid = $1 OR defenderid = $1', [userId]);
+        await client.query('DELETE FROM job_history WHERE userid = $1', [userId]);
+        await client.query('DELETE FROM chat_messages WHERE senderid = $1', [userId]);
+        await client.query('DELETE FROM login_logs WHERE userid = $1', [userId]);
+        await client.query('DELETE FROM auction_lots WHERE sellerid = $1', [userId]);
+        await client.query(
+            `DELETE FROM tournament_participants tp
+             USING tournaments t
+             WHERE tp.tournamentid = t.id AND tp.userid = $1 AND t.status <> 'completed'`,
+            [userId],
+        );
+        // Completed tournament snapshots remain as immutable history.
+        await client.query('DELETE FROM order_members WHERE userid = $1', [userId]);
+        await client.query('DELETE FROM users WHERE id = $1', [userId]);
+        return { status: 'deleted' as const, username: user.username };
+    });
+    if (result.status === 'missing') return res.status(404).json({ error: 'Игрок не найден' });
+    if (result.status === 'active-tournament') {
+        return res.status(409).json({ error: 'Нельзя удалить игрока до завершения его турнира' });
+    }
+    res.json({ success: true, message: `Игрок ${result.username} (ID ${userId}) удалён` });
 });
 
 // IP-адреса игрока

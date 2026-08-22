@@ -87,48 +87,64 @@ router.post('/account/delete', async (req, res) => {
     const userId = req.userId;
     const { currentPassword } = req.body;
 
-    const user = await db.one('SELECT passwordHash, username, oauthProvider FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    const result = await db.tx(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1, $2)', [932001, userId]);
+      const user = (await client.query(
+        'SELECT passwordhash, username, oauthprovider FROM users WHERE id = $1 FOR UPDATE',
+        [userId],
+      )).rows[0] as any;
+      if (!user) return { status: 'missing' as const };
+      if (user.oauthprovider !== 'vk' && (!currentPassword || !bcrypt.compareSync(currentPassword, user.passwordhash))) {
+        return { status: 'bad-password' as const };
+      }
+      const activeTournament = (await client.query(
+        `SELECT t.id FROM tournament_participants tp
+         JOIN tournaments t ON t.id = tp.tournamentid
+         WHERE tp.userid = $1 AND t.status IN ('registration', 'in_progress') LIMIT 1`,
+        [userId],
+      )).rows[0];
+      if (activeTournament) return { status: 'active-tournament' as const };
 
-    // VK пользователи не имеют пароля — удаляем без проверки
-    if (user.oauthProvider !== 'vk') {
-        if (!currentPassword || !bcrypt.compareSync(currentPassword, user.passwordHash)) {
-            return res.status(400).json({ error: 'Неверный пароль' });
+      const leaderGuild = (await client.query(
+        "SELECT guildid FROM guild_members WHERE userid = $1 AND rank = 'leader'",
+        [userId],
+      )).rows[0] as any;
+      if (leaderGuild) {
+        const successor = (await client.query(
+          `SELECT gm.userid FROM guild_members gm JOIN users u ON gm.userid = u.id
+           WHERE gm.guildid = $1 AND gm.userid <> $2
+           ORDER BY CASE WHEN gm.rank = 'officer' THEN 0 ELSE 1 END,
+                    u.lastloginat DESC NULLS LAST LIMIT 1`,
+          [leaderGuild.guildid, userId],
+        )).rows[0] as any;
+        if (successor) {
+          await client.query(
+            "UPDATE guild_members SET rank = 'leader' WHERE guildid = $1 AND userid = $2",
+            [leaderGuild.guildid, successor.userid],
+          );
         }
-    }
-
-    // Передаём лидерство если лидер гильдии
-    const leaderGuild = await db.one('SELECT guildId FROM guild_members WHERE userId = ? AND rank = ?', [userId, 'leader']) as any;
-    if (leaderGuild) {
-      // Ищем преемника: офицер с max lastLoginAt, если нет — участник с max lastLoginAt
-      let successor = await db.one(`
-        SELECT gm.userId FROM guild_members gm
-        JOIN users u ON gm.userId = u.id
-        WHERE gm.guildId = ? AND gm.rank = 'officer' AND gm.userId != ?
-        ORDER BY u.lastLoginAt DESC NULLS LAST LIMIT 1
-      `, [leaderGuild.guildId, userId]) as any;
-
-      if (!successor) {
-        successor = await db.one(`
-          SELECT gm.userId FROM guild_members gm
-          JOIN users u ON gm.userId = u.id
-          WHERE gm.guildId = ? AND gm.userId != ?
-          ORDER BY u.lastLoginAt DESC NULLS LAST LIMIT 1
-        `, [leaderGuild.guildId, userId]) as any;
       }
 
-      if (successor) {
-        await db.run('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?', ['leader', leaderGuild.guildId, successor.userId]);
-        logger.info(`[Account Delete] Leadership of guild ${leaderGuild.guildId} transferred from ${userId} to ${successor.userId}`);
-      }
+      await client.query('DELETE FROM guild_members WHERE userid = $1', [userId]);
+      await client.query('DELETE FROM guild_invites WHERE userid = $1', [userId]);
+      await client.query('DELETE FROM battles WHERE attackerid = $1 OR defenderid = $1', [userId]);
+      await client.query('DELETE FROM job_history WHERE userid = $1', [userId]);
+      await client.query(
+        `DELETE FROM tournament_participants tp USING tournaments t
+         WHERE tp.tournamentid = t.id AND tp.userid = $1 AND t.status <> 'completed'`,
+        [userId],
+      );
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+      return { status: 'deleted' as const, username: user.username, leaderGuildId: leaderGuild?.guildid };
+    });
+    if (result.status === 'missing') return res.status(404).json({ error: 'Пользователь не найден' });
+    if (result.status === 'bad-password') return res.status(400).json({ error: 'Неверный пароль' });
+    if (result.status === 'active-tournament') {
+      return res.status(409).json({ error: 'Нельзя удалить аккаунт до завершения турнира' });
     }
-
-    // Удаляем связанные данные
-    await db.run('DELETE FROM guild_members WHERE userId = ?', [userId]);
-    await db.run('DELETE FROM guild_invites WHERE userId = ?', [userId]);
-    await db.run('DELETE FROM battles WHERE attackerId = ? OR defenderId = ?', [userId, userId]);
-    await db.run('DELETE FROM job_history WHERE userId = ?', [userId]);
-    await db.run('DELETE FROM users WHERE id = ?', [userId]);
+    if (result.leaderGuildId) {
+      logger.info(`[Account Delete] Leadership of guild ${result.leaderGuildId} transferred from ${userId}`);
+    }
 
     // Отзываем токен
     const authHeader = req.headers.authorization;

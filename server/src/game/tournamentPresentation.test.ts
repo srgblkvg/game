@@ -102,3 +102,12 @@ test('игнорирует некорректные JSON и места вне д
 
   assert.deepEqual(top3, []);
 });
+
+test('показывает имя из snapshot для удалённого игрока', () => {
+  const top3 = presentCompletedTournamentTop3([{
+    userId: 2674,
+    username: '',
+    snapshotStats: { player: { name: 'Арлекин' }, result: { place: 1, prize: 111297 } },
+  }]);
+  assert.equal(top3[0]?.username, 'Арлекин');
+});

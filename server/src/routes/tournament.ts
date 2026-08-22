@@ -7,7 +7,7 @@ import { createTournamentSnapshot, formatTournamentNormalizationLog, mergeTourna
 import { calculateCombatPower } from '../game/combatPower';
 import { getRegistrationWindowForNewQueue } from '../game/tournamentCycle';
 import { calculateTournamentRewards, getThirdPlacePair } from '../game/tournamentRewards';
-import { presentCompletedTournamentTop3 } from '../game/tournamentPresentation';
+import { completedTournamentParticipantName, presentCompletedTournamentTop3 } from '../game/tournamentPresentation';
 import { isTournamentRegistrationOpen } from '../game/tournamentRegistration';
 import { applyDivisionChampionship, assignTournamentDivision, getTournamentDivision, getTournamentDivisionByIndex, TOURNAMENT_DIVISIONS } from '../game/tournamentDivision';
 import { allocateDivisionPrizePools, splitParticipantsByDivision } from '../game/tournamentDivisionQueue';
@@ -1358,20 +1358,25 @@ router.get('/tournament', async (req, res) => {
 
         const result = await Promise.all(completed.map(async (t) => {
             const participants = await db.query(
-                'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?',
+                'SELECT u.username, g.name as guildName, u.guildId, tp.* FROM tournament_participants tp LEFT JOIN users u ON tp.userId = u.id LEFT JOIN guilds g ON u.guildId = g.id WHERE tp.tournamentId = ?',
                 [t.id]
             ) as any[];
             const matches = await db.query(
                     'SELECT * FROM tournament_matches WHERE tournamentId = ? ORDER BY round, id',
                     [t.id]
                 ) as any[];
-                const matchesWithNames = await Promise.all(matches.map(async (m: any) => ({
+                const participantName = (participantId: number | null | undefined) => {
+                    if (!participantId) return null;
+                    const participant = participants.find((p: any) => Number(p.userId) === Number(participantId));
+                    return participant ? completedTournamentParticipantName(participant) : 'Игрок удалён';
+                };
+                const matchesWithNames = matches.map((m: any) => ({
                     ...m,
-                    player1Name: m.player1Id ? (await db.one('SELECT username FROM users WHERE id = ?', [m.player1Id]) as any)?.username : null,
-                    player2Name: m.player2Id ? (await db.one('SELECT username FROM users WHERE id = ?', [m.player2Id]) as any)?.username : null,
-                    winnerName: m.winnerId ? (await db.one('SELECT username FROM users WHERE id = ?', [m.winnerId]) as any)?.username : null,
+                    player1Name: participantName(m.player1Id),
+                    player2Name: participantName(m.player2Id),
+                    winnerName: participantName(m.winnerId),
                     log: m.log ? (() => { try { return JSON.parse(m.log); } catch { return m.log; } })() : null,
-                })));
+                }));
                 return {
                 ...t,
                 createdAt: typeof t.createdAt === 'string' && /^\d+$/.test(t.createdAt) ? Number(t.createdAt) : (t.createdAt ? Math.floor(new Date(t.createdAt).getTime() / 1000) : 0),
@@ -1381,7 +1386,7 @@ router.get('/tournament', async (req, res) => {
                 matches: matchesWithNames,
             maxPlayers: t.maxPlayers || MAX_PLAYERS,
                 participants: participants.map((p) => ({
-                    id: p.userId, username: p.username,
+                    id: p.userId, username: completedTournamentParticipantName(p),
                     guildName: p.guildName, guildId: p.guildId,
                     snapshotStats: parseJsonValue(p.snapshotStats),
                 })),
@@ -1650,6 +1655,7 @@ router.post('/tournament/register', async (req, res) => {
     let registrationResult: { count: number; maxPlayers: number };
     try {
         registrationResult = await db.tx(async (client) => {
+        await client.query('SELECT pg_advisory_xact_lock($1, $2)', [932001, userId]);
         const lockedTournament = (await client.query(
             `SELECT * FROM tournaments WHERE id = $1 FOR UPDATE`, [tournament.id]
         )).rows[0];
@@ -1666,6 +1672,7 @@ router.post('/tournament/register', async (req, res) => {
         const lockedUser = (await client.query(
             'SELECT money FROM users WHERE id = $1 FOR UPDATE', [userId]
         )).rows[0];
+        if (!lockedUser) throw new Error('Пользователь не найден');
         const existing = (await client.query(
             'SELECT id FROM tournament_participants WHERE tournamentid = $1 AND userid = $2',
             [tournament.id, userId]
@@ -1770,8 +1777,10 @@ router.post('/tournament/create-custom', async (req, res) => {
     let tournamentId: number;
     try {
         tournamentId = await db.tx(async (client) => {
+        await client.query('SELECT pg_advisory_xact_lock($1, $2)', [932001, userId]);
         const lockedUser = (await client.query('SELECT money FROM users WHERE id = $1 FOR UPDATE', [userId])).rows[0];
-        if (Number(lockedUser?.money || 0) < totalCost) {
+        if (!lockedUser) throw new Error('Пользователь не найден');
+        if (Number(lockedUser.money || 0) < totalCost) {
             throw new Error('Недостаточно серебра для призового фонда и входного взноса');
         }
         await client.query('UPDATE users SET money = money - $1 WHERE id = $2', [totalCost, userId]);
@@ -1795,6 +1804,7 @@ router.post('/tournament/create-custom', async (req, res) => {
         });
     } catch (error: any) {
         const message = error?.message || 'Ошибка создания турнира';
+        if (/Пользователь не найден/i.test(message)) return res.status(404).json({ error: message });
         const expected = /Недостаточно серебра/i.test(message);
         return res.status(expected ? 400 : 500).json({ error: message });
     }

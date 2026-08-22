@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import logger from '../logger';
 import { authMiddleware } from '../middleware/auth';
+import { presentCompletedTournamentTop3 } from '../game/tournamentPresentation';
 
 const router = Router();
 
@@ -32,19 +33,13 @@ router.get('/tournament-history', authMiddleware, async (req, res) => {
     // Добавляем топ-3 победителей для каждого турнира
     const result = await Promise.all(tournaments.map(async (t: any) => {
         const top3 = await db.query(`
-            SELECT u.username, g.name as guildName, tp.snapshotStats
+            SELECT tp.userId, u.username, g.name as guildName, u.guildId, tp.snapshotStats
             FROM tournament_participants tp
-            JOIN users u ON tp.userId = u.id
+            LEFT JOIN users u ON tp.userId = u.id
             LEFT JOIN guilds g ON u.guildId = g.id
             WHERE tp.tournamentId = ? AND tp.snapshotStats IS NOT NULL
-            ORDER BY (tp.snapshotStats::jsonb->>'place')::int
-            LIMIT 3
         `, [t.id]);
-        return { ...t, top3: top3.map((p: any) => ({ 
-            username: p.username, 
-            guildName: p.guildName,
-            ...(p.snapshotStats ? JSON.parse(p.snapshotStats) : {})
-        })) };
+        return { ...t, top3: presentCompletedTournamentTop3(top3 as any[]) };
     }));
 
     res.json(result);
