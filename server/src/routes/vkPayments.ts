@@ -2,11 +2,13 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
+import { deliverStarterPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 import { processVkSilverPayment } from '../game/vkPaymentDelivery';
 import { createPgVkPaymentDeliveryRepository, ensureVkPaymentDeliveryReady } from '../game/vkPaymentDeliveryRepository';
+import { processVkCraftPackPayment } from '../game/vkCraftPackPayment';
+import { createPgVkCraftPackRepository } from '../game/vkCraftPackPaymentRepository';
 
 const router = Router();
 
@@ -179,12 +181,18 @@ router.post('/', async (req: Request, res: Response) => {
           }
           return res.json({ response: { order_id: orderId, app_order_id: 0 } });
         } else if (item.type === 'craft_pack') {
-          const packType = itemName === 'craft_rare' ? 'rare' : 'epic';
-          const result = await deliverCraftPack(character.id, packType);
-          if (!result.success) {
-            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          const result = await processVkCraftPackPayment(createPgVkCraftPackRepository(), {
+            orderId, vkUserId, item: itemName,
+            providerPrice: Number(params.item_price), processedAt: now,
+          });
+          if (result.status === 'rejected') {
+            return res.json({ error: { error_code: 1, error_msg: result.reason } });
           }
-          processed = true;
+          if (result.status === 'delivered') {
+            sendToUser(result.characterId, { type: 'paymentStatus', status: 'success', platform: 'vk' });
+            logger.info(`[VK Payments] craft pack delivered to char ${result.characterId} (VK user ${vkUserId})`);
+          }
+          return res.json({ response: { order_id: orderId, app_order_id: 0 } });
         } else if (item.type === 'curse_pack') {
           const packType = itemName === 'curse_small' ? 'small' : itemName === 'curse_large' ? 'large' : itemName === 'curse_x50' ? 'x50' : 'x100';
           const result = await deliverCursePack(character.id, packType);
