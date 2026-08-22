@@ -12,6 +12,8 @@ import { createPgDonatePaymentDeliveryRepository } from '../game/donatePaymentDe
 import { processYooKassaCraftPackPayment } from '../game/donateCraftPackDelivery';
 import { createPgDonateCraftPackRepository } from '../game/donateCraftPackDeliveryRepository';
 import { processYooKassaRunePackPayment } from '../game/donateRunePackDelivery';
+import { processYooKassaPremiumPayment } from '../game/donatePremiumDelivery';
+import { createPgDonatePremiumRepository } from '../game/donatePremiumDeliveryRepository';
 
 const router = Router();
 
@@ -113,6 +115,7 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
       return res.status(400).json({ error: 'Некорректный товар' });
     }
 
+    const canonicalItemKey = itemKey || `premium_${days}d`;
     const now = Math.floor(Date.now() / 1000);
     const price = item.price.toFixed(2);
 
@@ -122,7 +125,7 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
       description: item.title,
       metadata: {
         userId: String(userId),
-        item: itemKey || `premium_${days}d`,
+        item: canonicalItemKey,
         type: item.type,
         days: item.days || 0,
         silverAmount: item.silverAmount || 0,
@@ -149,7 +152,7 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
     await db.run(
       `INSERT INTO yukassa_payments (payment_id, user_id, item, days, amount, status, processed_at)
        VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
-      [payment.id, userId, itemKey || 'premium', item.days || 0, price, now],
+      [payment.id, userId, canonicalItemKey, item.days || 0, price, now],
     );
 
     const confirmationUrl = payment.confirmation && 'confirmation_url' in payment.confirmation
@@ -266,7 +269,19 @@ router.post('/webhook', async (req: Request, res: Response) => {
       const now = Math.floor(Date.now() / 1000);
 
       try {
-        if (localItem && localItem.type === 'silver' && isYooKassaSilverItem(String(existing.item))) {
+        if (localItem && localItem.type === 'premium') {
+          const result = await processYooKassaPremiumPayment(createPgDonatePremiumRepository(), {
+            paymentId,
+            providerUserId: String(metadata.userId || ''),
+            providerItem: String(metadata.item || ''),
+            verifiedAmount: String(verified.amount?.value || ''),
+            verifiedCurrency: String(verified.amount?.currency || ''),
+            processedAt: now,
+          });
+          if (result.status === 'rejected') return res.json({ ok: true });
+          if (result.status === 'already-processed') return res.json({ ok: true });
+          sendToUser(result.userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa', until: result.premiumUntil });
+        } else if (localItem && localItem.type === 'silver' && isYooKassaSilverItem(String(existing.item))) {
           const result = await processYooKassaSilverPayment(createPgDonatePaymentDeliveryRepository(), {
             paymentId,
             providerUserId: String(metadata.userId || ''),
