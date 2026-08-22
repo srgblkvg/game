@@ -359,25 +359,4 @@ router.post('/character/switch-equip', async (req, res) => {
     }
 });
 
-// Сохранить экипировку в конкретный слот (без переключения)
-router.post('/character/save-equip-set', async (req, res) => {
-    const userId = req.userId;
-    const { slot, equipment } = req.body;
-    if (![1, 2, 3].includes(slot)) return res.status(400).json({ error: 'Неверный слот' });
-
-    await db.run(
-        `UPDATE users SET equipment_${slot} = ?::jsonb WHERE id = ?`,
-        [JSON.stringify(equipment), userId]
-    );
-
-    // Если это активный слот — синхронизируем equipment
-    const user = await db.one('SELECT active_equip_slot FROM users WHERE id = ?', [userId]) as any;
-    if ((user.active_equip_slot || 1) === slot) {
-        await db.run('UPDATE users SET equipment = ? WHERE id = ?', [JSON.stringify(equipment), userId]);
-        refreshCharacter(userId, 'equipment-set');
-    }
-
-    res.json({ success: true });
-});
-
 export default router;
