@@ -1,5 +1,5 @@
 import PageHeader from '../components/ui/PageHeader';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { getHeaders, BASE_URL } from '../api/helpers';
@@ -35,6 +35,8 @@ export default function BankPage() {
     const [opsTab, setOpsTab] = useState<'all' | 'deposit' | 'withdraw'>('all');
     const [transfers, setTransfers] = useState<any[]>([]);
     const [operations, setOperations] = useState<any[]>([]);
+    const [bankOperation, setBankOperation] = useState<'deposit' | 'withdraw' | null>(null);
+    const bankOperationLock = useRef(false);
 
     useEffect(() => { if (!user) navigate('/login'); else { loadBank(); loadTransfers(); loadOperations(); } }, [user]);
 
@@ -63,12 +65,19 @@ export default function BankPage() {
     const transferCommission = Math.ceil((parseInt(transferAmount) || 0) * 0.02);
 
     const handleDeposit = async () => {
+        if (bankOperationLock.current) return;
         const amt = parseInt(amount); if (!amt||amt<=0) { setError('Укажите сумму'); return; }
-        try { const d = await api('/bank/deposit',{amount:amt}); setPocket(d.pocket); setBank(d.bank); setAmount(''); setMessage(`Положено ${formatMoney(d.deposited)}`); setError(''); loadOperations(); } catch(e:any){setError(e.message)}
+        bankOperationLock.current = true;
+        setBankOperation('deposit');
+        try { const d = await api('/bank/deposit',{amount:amt}); setPocket(d.pocket); setBank(d.bank); setAmount(''); setMessage(`Положено ${formatMoney(d.deposited)}`); setError(''); loadOperations(); } catch(e:any){setError(e.message)} finally { bankOperationLock.current = false; setBankOperation(null); }
     };
     const handleWithdraw = async () => {
+        if (bankOperationLock.current) return;
         const amt = parseInt(amount); if (!amt||amt<=0) { setError('Укажите сумму'); return; }
-        try { const d = await api('/bank/withdraw',{amount:amt}); setPocket(d.pocket); setBank(d.bank); setAmount(''); setMessage(`Снято ${formatMoney(d.withdrawn)}`); setError(''); loadOperations(); } catch(e:any){setError(e.message)}
+        bankOperationLock.current = true;
+        setBankOperation('withdraw');
+        const operationId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        try { const d = await api('/bank/withdraw',{amount:amt,operationId}); setPocket(d.pocket); setBank(d.bank); setAmount(''); setMessage(`Снято ${formatMoney(d.withdrawn)}`); setError(''); loadOperations(); } catch(e:any){setError(e.message)} finally { bankOperationLock.current = false; setBankOperation(null); }
     };
     const handleTransfer = async () => {
         const amt = parseInt(transferAmount); if (!transferAccount.trim()) { setError('Укажите номер счёта'); return; } if (!amt||amt<=0) { setError('Укажите сумму'); return; }
@@ -235,7 +244,7 @@ export default function BankPage() {
                     <h3 className="font-bold text-sm mb-2">Пополнение и снятие</h3>
                     <input type={inputType} placeholder="Сумма" value={amount} onChange={e=>{const v=e.target.value.replace(/\D/g,'');setAmount(v)}} className={inputClass} data-vk-num />
                     {depositCommission > 0 && <p className="text-xs text-[var(--color-text-muted)] mt-1">Комиссия: {formatMoney(depositCommission)} (зачислено: {formatMoney((parseInt(amount)||0) - depositCommission)})</p>}
-                    <div className="flex gap-3 mt-3"><Button variant="primary" fullWidth onClick={handleDeposit}>📥 Положить (2%)</Button><Button variant="secondary" fullWidth onClick={handleWithdraw}>📤 Снять (0%)</Button></div>
+                    <div className="flex gap-3 mt-3"><Button variant="primary" fullWidth onClick={handleDeposit} disabled={bankOperation !== null}>{bankOperation === 'deposit' ? '⏳ Кладём…' : '📥 Положить (2%)'}</Button><Button variant="secondary" fullWidth onClick={handleWithdraw} disabled={bankOperation !== null}>{bankOperation === 'withdraw' ? '⏳ Снимаем…' : '📤 Снять (0%)'}</Button></div>
                 </Card>
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm mb-2">История вкладов</h3>
