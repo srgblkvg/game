@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { startJobSchema, createJobSchema } from '../validation';
+import { cancelJob, jobIdentity } from '../game/jobCompletion';
+import { createPgJobCompletionRepository } from '../game/jobCompletionRepository';
 
 const router = Router();
 
@@ -79,9 +81,16 @@ router.get('/jobs/history', async (req, res) => {
 // Отменить работу без награды
 router.post('/jobs/cancel', async (req, res) => {
     const userId = req.userId;
-    const user = await db.one('SELECT activeJob FROM users WHERE id = ?', [userId]) as any;
-    if (!user || !user.activeJob) return res.status(400).json({ error: 'Нет активной работы' });
-    await db.run('UPDATE users SET activeJob = NULL WHERE id = ?', [userId]);
+    const snapshot = await db.one('SELECT activeJob FROM users WHERE id = ?', [userId]) as any;
+    if (!snapshot?.activeJob) return res.status(400).json({ error: 'Нет активной работы' });
+    let observedJob: any;
+    try { observedJob = JSON.parse(snapshot.activeJob); }
+    catch { return res.status(409).json({ error: 'Некорректные данные активной работы' }); }
+    const result = await cancelJob(createPgJobCompletionRepository(), {
+        userId,
+        expectedJobIdentity: jobIdentity(observedJob),
+    });
+    if (!result.cancelled) return res.status(400).json({ error: 'Нет активной работы' });
     res.json({ success: true });
 });
 

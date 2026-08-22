@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { completeJob, jobIdentity } from '../game/jobCompletion';
+import { createPgJobCompletionRepository } from '../game/jobCompletionRepository';
+import { runJobCompletionEffects } from '../game/jobCompletionEffects';
 
 const router = Router();
 
@@ -43,42 +46,35 @@ router.delete('/jobs/:id', async (req, res) => {
 
 // Принудительно завершить работу игрока
 router.post('/finish-job', async (req, res) => {
-    const { userId } = req.body;
+    const userId = Number(req.body.userId);
     if (!userId) return res.status(400).json({ error: 'userId required' });
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
+    const user = await db.one('SELECT activeJob FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (!user.activeJob) return res.status(400).json({ error: 'Игрок не в работе' });
-
-    let jobData: any;
-    try { jobData = JSON.parse(user.activeJob); } catch { return res.status(500).json({ error: 'Ошибка парсинга данных работы' }); }
-
-    const reward = jobData.reward || 0;
-    const newMoney = user.money + reward;
-    await db.run('UPDATE users SET money = ?, activeJob = NULL WHERE id = ?', [newMoney, userId]);
-    await db.run('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)',
-        [userId, jobData.jobId, jobData.name, jobData.duration, reward, new Date(jobData.startTime * 1000).toISOString()]);
-
-    res.json({ success: true, message: `Работа "${jobData.name}" завершена, начислено ${reward} монет.` });
+    let job: any;
+    try { job = JSON.parse(user.activeJob); } catch { return res.status(500).json({ error: 'Ошибка парсинга данных работы' }); }
+    const result = await completeJob(createPgJobCompletionRepository(), {
+        userId, now: Math.floor(Date.now() / 1000), mode: 'force', expectedJobIdentity: jobIdentity(job),
+    });
+    if (!result.completed) return res.status(409).json({ error: 'Работа уже изменена или завершена' });
+    await runJobCompletionEffects(result);
+    res.json({ success: true, message: `Работа "${result.job.name}" завершена, начислено ${result.rewardAfterTax} монет.` });
 });
 
 // Завершить все работы по ID работы
 router.post('/finish-jobs-by-jobid', async (req, res) => {
-    const { jobId } = req.body;
+    const jobId = Number(req.body.jobId);
     if (!jobId) return res.status(400).json({ error: 'jobId required' });
-    const users = await db.query('SELECT * FROM users WHERE activeJob IS NOT NULL', []) as any[];
+    const users = await db.query('SELECT id, activeJob FROM users WHERE activeJob IS NOT NULL', []) as any[];
     let count = 0;
     for (const user of users) {
-        try {
-            const jobData = JSON.parse(user.activeJob);
-            if (jobData.jobId == jobId) {
-                const reward = jobData.reward || 0;
-                const newMoney = user.money + reward;
-                await db.run('UPDATE users SET money = ?, activeJob = NULL WHERE id = ?', [newMoney, user.id]);
-                await db.run('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt) VALUES (?, ?, ?, ?, ?, ?)',
-                    [user.id, jobData.jobId, jobData.name, jobData.duration, reward, new Date(jobData.startTime * 1000).toISOString()]);
-                count++;
-            }
-        } catch { }
+        let job: any;
+        try { job = JSON.parse(user.activeJob); } catch { continue; }
+        if (Number(job.jobId) !== jobId) continue;
+        const result = await completeJob(createPgJobCompletionRepository(), {
+            userId: user.id, now: Math.floor(Date.now() / 1000), mode: 'force', expectedJobIdentity: jobIdentity(job),
+        });
+        if (result.completed) { count++; await runJobCompletionEffects(result); }
     }
     res.json({ success: true, count });
 });

@@ -53,7 +53,7 @@ export async function cleanupOldData() {
   results.push(`quest_history: ${qh.changes}`);
   
   // История работ
-  const jh = await db.run(`DELETE FROM job_history WHERE endTime < ?`, [weekAgoISO]);
+  const jh = await db.run(`DELETE FROM job_history WHERE finishedAt < ?`, [weekAgoISO]);
   results.push(`job_history: ${jh.changes}`);
   
   // Старые приглашения в гильдию (pending старше 14 дней)

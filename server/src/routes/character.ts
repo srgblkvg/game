@@ -1,12 +1,10 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { collectGuildTax, getUserById, enrichEquipment, applyExp, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
-import { sendLeaderboardLevel } from '../vkLeaderboard';
+import { getUserById, enrichEquipment, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
 import { getDrinkBonuses } from '../game/drinks';
 import { applyHpRegen, calculateHpRegenRate } from '../game/hpRegen';
 import { switchEquipmentSet } from '../game/inventoryEquipSwitch';
 import { createPgEquipmentSwitchRepository } from '../game/inventoryEquipSwitchRepository';
-import { updateGuildQuestProgress } from './guild';
 import { getGuildBonus, getGuildBuildings } from '../game/guildBuildings';
 import { getTrackTier, TRACK_MAP } from '../game/achievements';
 import { markDirty, refreshCharacter } from '../events';
@@ -124,34 +122,7 @@ router.get('/character/me', async (req, res) => {
 
     const totalCollectionItems = ((await db.one('SELECT COUNT(*) as cnt FROM collection_set_items') as any).cnt || 225) * 2;
 
-    let jobData = null;
-    if (user.activeJob) {
-        jobData = JSON.parse(user.activeJob);
-        const nowSec = Math.floor(Date.now() / 1000);
-        if (nowSec >= jobData.endTime) {
-            // Налог гильдии (работы)
-            const rewardAfterTax = await collectGuildTax(userId, jobData.reward, 'tax_job');
-            const newMoney = user.money + rewardAfterTax;
-            const expGain = jobData.expReward || 0;
-            const { newExp, newLevel, levelsGained, newStatPoints } = await applyExp(userId, expGain, user.exp, user.level, user.statPoints || 0);
-            await db.run('UPDATE users SET money = ?, exp = ?, level = ?, statPoints = ?, activeJob = NULL, totalJobMoney = totalJobMoney + ?, totalJobSeconds = totalJobSeconds + ? WHERE id = ?',
-                [newMoney, newExp, newLevel, newStatPoints, jobData.reward, jobData.duration, userId]);
-            await db.run('INSERT INTO job_history (userId, jobId, jobName, duration, reward, startedAt, premiumBonus, xpGained) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                [userId, jobData.jobId, jobData.name, jobData.duration, jobData.reward, new Date(jobData.startTime * 1000).toISOString(), jobData.premiumBonus || 0, expGain]);
-            if (levelsGained > 0 && user.oauthProvider === 'vk' && user.oauthId) {
-                sendLeaderboardLevel(userId, newLevel, String(user.oauthId)).catch(() => {});
-            }
-            // Guild quest progress — track job seconds
-            if (user.guildId) { updateGuildQuestProgress(user.guildId, 'jobs', jobData.duration).catch(e => console.error('guildQuest jobs:', e.message)); }
-            // Daily quests — track job seconds
-            markDirty(userId, 'quests');
-            user.money = newMoney;
-            user.level = newLevel;
-            user.statPoints = newStatPoints;
-            user.activeJob = null;
-            jobData = null;
-        }
-    }
+    const jobData = user.activeJob ? JSON.parse(user.activeJob) : null;
 
     const now = Math.floor(Date.now() / 1000);
     const maxHp = stats.hp;
