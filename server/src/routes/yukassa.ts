@@ -9,6 +9,8 @@ import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
 import { authMiddleware } from '../middleware/auth';
 import { isYooKassaSilverItem, processYooKassaSilverPayment } from '../game/donatePaymentDelivery';
 import { createPgDonatePaymentDeliveryRepository } from '../game/donatePaymentDeliveryRepository';
+import { processYooKassaCraftRarePayment } from '../game/donateCraftPackDelivery';
+import { createPgDonateCraftPackRepository } from '../game/donateCraftPackDeliveryRepository';
 
 const router = Router();
 
@@ -280,6 +282,18 @@ router.post('/webhook', async (req: Request, res: Response) => {
             logger.info(`[YooKassa] Payment ${paymentId} already processed`);
             return res.json({ ok: true });
           }
+          sendToUser(result.userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa' });
+        } else if (String(existing.item) === 'craft_rare') {
+          const result = await processYooKassaCraftRarePayment(createPgDonateCraftPackRepository(), {
+            paymentId,
+            providerUserId: String(metadata.userId || ''),
+            providerItem: String(metadata.item || ''),
+            verifiedAmount: String(verified.amount?.value || ''),
+            verifiedCurrency: String(verified.amount?.currency || ''),
+            processedAt: now,
+          });
+          if (result.status === 'rejected') return res.json({ ok: true });
+          if (result.status === 'already-processed') return res.json({ ok: true });
           sendToUser(result.userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa' });
         } else {
           await processDelivery(userId, itemType, days, silverAmount, metadata.item || '', runeCount);
