@@ -7,6 +7,8 @@ import { currentStats } from '../game/stats';
 import { sendToUser, markDirty } from '../events';
 import { advanceEnemyAttack, cancelEnemyWindup, ENEMY_WINDUP_MS } from '../game/dungeonWindup';
 import { loadBattleAntiStats } from '../game/guildBoss';
+import { payDungeonLoot, restartDungeonRunAfterFailedPayout } from '../game/dungeonPayout';
+import { createPgDungeonPayoutRepository } from '../game/dungeonPayoutRepository';
 
 const router = Router();
 
@@ -168,28 +170,11 @@ export async function forceFinishActiveDungeonRuns(): Promise<{ finished: number
         activeRuns.delete(userId);
         const loot = run.accumulatedLoot || { silver: 0, items: [], pages: [] };
         try {
-            await db.tx(async (client) => {
-                const row = (await client.query('SELECT inventory FROM users WHERE id = $1 FOR UPDATE', [userId])).rows[0] as any;
-                if (!row) throw new Error(`Пользователь ${userId} не найден`);
-                const inventory = typeof row.inventory === 'string' ? JSON.parse(row.inventory || '[]') : (row.inventory || []);
-                for (const item of loot.items) {
-                    if (item.type === 'craft_item') {
-                        const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === item.id);
-                        if (existing) existing.count = Math.max(1, Number(existing.count) || 0) + Math.max(1, Number(item.count) || 0);
-                        else inventory.push({ ...item, count: Math.max(1, Number(item.count) || 0) });
-                    } else inventory.push(item);
-                }
-                await client.query('UPDATE users SET money = money + $1, inventory = $2 WHERE id = $3', [loot.silver, JSON.stringify(inventory), userId]);
-                for (const page of loot.pages) {
-                    await client.query(
-                        'INSERT INTO skill_pages (userid, skillid, count) VALUES ($1, $2, 1) ON CONFLICT (userid, skillid) DO UPDATE SET count = skill_pages.count + 1',
-                        [userId, page.skillId]
-                    );
-                }
-                await client.query(
-                    'UPDATE dungeon_runs SET startedat = $1, maxfloor = GREATEST(maxfloor, $2), maxreward = GREATEST(maxreward, $3) WHERE userid = $4',
-                    [Math.floor(Date.now() / 1000), run.currentFloor, loot.silver, userId]
-                );
+            await payDungeonLoot(createPgDungeonPayoutRepository(), {
+                userId,
+                loot,
+                currentFloor: run.currentFloor,
+                startedAt: Math.floor(Date.now() / 1000),
             });
             sendToUser(userId, {
                 type: 'dungeonForceFinished',
@@ -200,6 +185,7 @@ export async function forceFinishActiveDungeonRuns(): Promise<{ finished: number
             userIds.push(userId);
         } catch (error) {
             // Транзакция откатила выплату — возвращаем run, чтобы повторить безопасно.
+            restartDungeonRunAfterFailedPayout(run, () => setInterval(() => tickCombat(run), TICK_MS));
             activeRuns.set(userId, run);
             throw error;
         } finally {
@@ -915,42 +901,25 @@ router.post('/dungeon/flee', async (req, res) => {
     const run = activeRuns.get(userId);
     if (!run) return res.status(400).json({ error: 'Данж не активен' });
 
-    // Выдаём накопленный лут
     const loot = run.accumulatedLoot || { silver: 0, items: [], pages: [] };
-    if (loot.silver > 0) {
-        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [loot.silver, userId]);
-    }
-    for (const item of loot.items) {
-        const inventory = JSON.parse((await db.one('SELECT inventory FROM users WHERE id = ?', [userId]) as any).inventory || '[]');
-        if (item.type === 'craft_item') {
-            // Камень улучшения — стакаем
-            const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === item.id);
-            if (existing) {
-                existing.count = Math.max(1, Number(existing.count) || 0) + Math.max(1, Number(item.count) || 0);
-            } else {
-                inventory.push({ ...item, count: Math.max(1, Number(item.count) || 0) });
-            }
-        } else {
-            // Экипировка — добавляем как новый предмет
-            inventory.push(item);
-        }
-        await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-    }
-    for (const page of loot.pages) {
-        await db.run(
-            'INSERT INTO skill_pages (userId, skillId, count) VALUES (?, ?, 1) ON CONFLICT (userId, skillId) DO UPDATE SET count = skill_pages.count + 1',
-            [userId, page.skillId]
-        );
-    }
-
+    finishingRuns.add(userId);
     if (run.tickTimer) clearInterval(run.tickTimer);
     activeRuns.delete(userId);
-
-    await db.run(
-        `UPDATE dungeon_runs SET startedAt = $1, maxfloor = GREATEST(maxfloor, $2), maxreward = GREATEST(maxreward, $3) WHERE userId = $4`,
-        [Math.floor(Date.now() / 1000), run.currentFloor, loot.silver, userId]
-    );
-    res.json({ success: true, loot });
+    try {
+        await payDungeonLoot(createPgDungeonPayoutRepository(), {
+            userId,
+            loot,
+            currentFloor: run.currentFloor,
+            startedAt: Math.floor(Date.now() / 1000),
+        });
+        res.json({ success: true, loot });
+    } catch (error) {
+        restartDungeonRunAfterFailedPayout(run, () => setInterval(() => tickCombat(run), TICK_MS));
+        activeRuns.set(userId, run);
+        throw error;
+    } finally {
+        finishingRuns.delete(userId);
+    }
 });
 
 // Список всех умений
