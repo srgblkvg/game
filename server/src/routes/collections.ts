@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { refreshCharacter } from '../events';
 import { db } from '../db/index';
 import { checkAchievement } from './achievements';
+import { addInventoryItemToCollection } from '../game/collectionAdd';
+import { createPgCollectionAddRepository } from '../game/collectionAddRepository';
 
 const router = Router();
 
@@ -105,68 +107,36 @@ router.post('/collections/add', async (req, res) => {
         return res.status(400).json({ error: 'itemName и slot обязательны' });
     }
 
-    // Проверяем что предмет ещё не в коллекции (имя+слот+редкость+таб)
-    const existing = await db.one(
-        `SELECT id FROM collections WHERE userId = ? AND itemName = ? AND slot = ? AND rarity_id = ? AND upgradelevel ${targetLevel >= 7 ? '>=' : '<'} 7`,
-        [userId, itemName, slot, rarityId || 0]
-    );
-
-    if (existing) {
-        return res.status(400).json({ error: 'Предмет уже в коллекции' });
+    try {
+        const result = await addInventoryItemToCollection(createPgCollectionAddRepository(), {
+            userId,
+            itemName,
+            slot,
+            itemId,
+            requestedRarityId: rarityId,
+            targetLevel,
+        });
+        checkAchievement(userId, 'collection').catch(() => {});
+        refreshCharacter(userId, 'collection');
+        res.json(result);
+    } catch (error: any) {
+        const message = error?.message || 'Не удалось добавить предмет в коллекцию';
+        if (message === 'Пользователь не найден') return res.status(404).json({ error: message });
+        const expected = [
+            'itemName и slot обязательны',
+            'Некорректная вкладка коллекции',
+            'Предмет не найден в инвентаре',
+            'Предмет заблокирован. Разблокируйте в инвентаре.',
+            'Предмет не соответствует выбранной коллекции',
+            'Предмет не входит в коллекцию',
+            'Предмет уже в коллекции',
+            'Предметы +7 и выше нельзя добавить в базовую коллекцию. Переключитесь на вкладку +7.',
+            'Предметы ниже +7 нельзя добавить в коллекцию +7. Переключитесь на базовую вкладку.',
+        ];
+        if (expected.includes(message)) return res.status(400).json({ error: message });
+        console.error('[collections/add]', error);
+        res.status(500).json({ error: 'Не удалось добавить предмет в коллекцию' });
     }
-
-    // Удаляем из инвентаря — prefer unlocked, prefer exact itemId
-    const user = await db.one('SELECT inventory FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-
-    const inventory = JSON.parse(user.inventory || '[]');
-    let itemIndex = -1;
-
-    // Ищем по точному itemId (если передан)
-    if (itemId !== undefined) {
-        itemIndex = inventory.findIndex((item: any) => String(item.id) === String(itemId));
-    }
-    // Fallback: по имени + слоту, prefer unlocked
-    if (itemIndex === -1) {
-        const candidates = inventory
-            .map((item: any, idx: number) => ({ item, idx }))
-            .filter(({ item }: { item: any; idx: number }) => item.name === itemName && item.slot === slot);
-        // Сначала unlocked, потом любой
-        const unlocked = candidates.find(({ item }: { item: any; idx: number }) => !item.locked);
-        const match = unlocked || candidates[0];
-        if (match) itemIndex = match.idx;
-    }
-
-    if (itemIndex === -1) {
-        return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
-    }
-
-    if (inventory[itemIndex].locked) {
-        return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
-    }
-
-    const removed = inventory.splice(itemIndex, 1)[0];
-
-    // Валидация: предмет должен подходить под выбранный таб
-    const actualUpgrade = removed.upgradeLevel || 0;
-    if (targetLevel === 0 && actualUpgrade >= 7) {
-        return res.status(400).json({ error: 'Предметы +7 и выше нельзя добавить в базовую коллекцию. Переключитесь на вкладку +7.' });
-    }
-    if (targetLevel === 7 && actualUpgrade < 7) {
-        return res.status(400).json({ error: 'Предметы ниже +7 нельзя добавить в коллекцию +7. Переключитесь на базовую вкладку.' });
-    }
-
-    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-
-    // Добавляем в коллекцию — используем реальный upgradeLevel предмета
-    await db.run(
-        'INSERT INTO collections (userId, itemName, slot, rarity_id, upgradelevel) VALUES (?, ?, ?, ?, ?)',
-        [userId, itemName, slot, removed.rarity_id || 0, actualUpgrade]
-    );
-    checkAchievement(userId, 'collection').catch(() => {});
-
-    refreshCharacter(userId, 'collection');
-    res.json({ success: true, removed });
 });
 
 export default router;
