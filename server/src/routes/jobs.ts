@@ -3,6 +3,8 @@ import { db } from '../db/index';
 import { startJobSchema, createJobSchema } from '../validation';
 import { cancelJob, jobIdentity } from '../game/jobCompletion';
 import { createPgJobCompletionRepository } from '../game/jobCompletionRepository';
+import { startJob } from '../game/jobStart';
+import { createPgJobStartRepository } from '../game/jobStartRepository';
 
 const router = Router();
 
@@ -16,61 +18,46 @@ router.post('/jobs/start', async (req, res) => {
     const parsed = startJobSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Некорректные данные' });
 
-    const userId = req.userId;
-    const { jobId } = parsed.data;
-
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.activeJob) return res.status(400).json({ error: 'Вы уже выполняете работу' });
-
-    const job = await db.one('SELECT * FROM jobs WHERE id = ?', [jobId]) as any;
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-
-    startJobForUser(user, job, res);
+    const result = await startJob(createPgJobStartRepository(), {
+        userId: req.userId,
+        jobId: parsed.data.jobId,
+        now: Math.floor(Date.now() / 1000),
+    });
+    if (!result.started) {
+        const status = result.reason === 'user-not-found' || result.reason === 'job-not-found' ? 404 : 400;
+        const error = result.reason === 'already-active' ? 'Вы уже выполняете работу' : result.reason === 'user-not-found' ? 'User not found' : 'Job not found';
+        return res.status(status).json({ error });
+    }
+    res.json({
+        success: true, endTime: result.job.endTime, reward: result.job.reward,
+        jobName: result.job.name, expReward: result.job.expReward,
+        rewardMin: result.rewardMin, rewardMax: result.rewardMax,
+        premiumBonus: result.job.premiumBonus, background: result.background,
+    });
 });
 
 // Случайная работа по длительности
 router.post('/jobs/start-random', async (req, res) => {
-    const userId = req.userId;
     const { duration } = req.body; // 600, 1800, 3600, 28800
-
     if (!duration) return res.status(400).json({ error: 'Укажите длительность' });
 
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.activeJob) return res.status(400).json({ error: 'Вы уже выполняете работу' });
-
-    const jobs = await db.query('SELECT * FROM jobs WHERE duration = ?', [duration]) as any[];
-    if (jobs.length === 0) return res.status(404).json({ error: 'Нет подходящих работ' });
-
-    const job = jobs[Math.floor(Math.random() * jobs.length)];
-    startJobForUser(user, job, res);
+    const result = await startJob(createPgJobStartRepository(), {
+        userId: req.userId,
+        duration: Number(duration),
+        now: Math.floor(Date.now() / 1000),
+    });
+    if (!result.started) {
+        const status = result.reason === 'user-not-found' || result.reason === 'job-not-found' ? 404 : 400;
+        const error = result.reason === 'already-active' ? 'Вы уже выполняете работу' : result.reason === 'user-not-found' ? 'User not found' : 'Нет подходящих работ';
+        return res.status(status).json({ error });
+    }
+    res.json({
+        success: true, endTime: result.job.endTime, reward: result.job.reward,
+        jobName: result.job.name, expReward: result.job.expReward,
+        rewardMin: result.rewardMin, rewardMax: result.rewardMax,
+        premiumBonus: result.job.premiumBonus, background: result.background,
+    });
 });
-
-async function startJobForUser(user: any, job: any, res: any) {
-    const now = Math.floor(Date.now() / 1000);
-    const endTime = now + job.duration;
-    let reward = Math.floor(Math.random() * (job.rewardMax * (user.level || 1) - job.rewardMin + 1)) + job.rewardMin;
-
-    // Бонус фракции Ремесленник: +100% награды за работы
-    if (user.faction === 'crafter') {
-        reward = reward * 2;
-    }
-    const expReward = Math.max(1, Math.floor(job.duration / 3600));
-
-    // Премиум: случайный бонус от 1 до 30% от базовой награды
-    let premiumBonus = 0;
-    if ((user.premiumUntil || 0) > now) {
-        premiumBonus = Math.max(1, Math.floor(Math.random() * Math.floor(reward * 0.3)) + 1);
-        reward = reward + premiumBonus;
-    }
-
-    const scaledMax = job.rewardMax * (user.level || 1);
-    const activeJob = JSON.stringify({ jobId: job.id, name: job.name, startTime: now, endTime, reward, duration: job.duration, expReward, rewardMin: job.rewardMin, rewardMax: scaledMax, premiumBonus, background: job.background || null });
-    await db.run('UPDATE users SET activeJob = ? WHERE id = ?', [activeJob, user.id]);
-
-    res.json({ success: true, endTime, reward, jobName: job.name, expReward, rewardMin: job.rewardMin, rewardMax: scaledMax, premiumBonus, background: job.background || null });
-}
 
 router.get('/jobs/history', async (req, res) => {
     const userId = req.userId;

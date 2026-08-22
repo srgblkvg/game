@@ -9,6 +9,9 @@ export interface ActiveJob {
   duration: number;
   expReward?: number;
   premiumBonus?: number;
+  rewardMin?: number;
+  rewardMax?: number;
+  background?: string | null;
 }
 
 export interface LockedJobUser {
