@@ -6,6 +6,8 @@ import { getGuildBonus } from '../game/guildBuildings';
 import { refreshCharacter } from '../events';
 import { changeEquipment } from '../game/inventoryEquip';
 import { createPgEquipmentChangeRepository } from '../game/inventoryEquipRepository';
+import { salvageInventory } from '../game/inventorySalvage';
+import { createPgInventorySalvageRepository } from '../game/inventorySalvageRepository';
 
 const router = Router();
 
@@ -53,59 +55,23 @@ router.post('/character/equip', async (req, res) => {
 router.post('/character/salvage', async (req, res) => {
     const userId = req.userId;
     const { itemIds } = req.body;
-    if (!itemIds) return res.status(400).json({ error: 'itemIds required' });
+    if (!Array.isArray(itemIds)) return res.status(400).json({ error: 'Некорректный список предметов' });
 
-    const user = await getUserById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    let inventory: any[] = JSON.parse(user.inventory || '[]');
-    const idsToDelete = new Set(itemIds.map((id: any) => String(id)));
-
-    const materialsToAdd: { rarity_id: number; count: number }[] = [];
-    inventory = inventory.filter((item: any) => {
-        const itemIdStr = String(item.id);
-        if (idsToDelete.has(itemIdStr) && item.type !== 'craft_item') {
-            const rarityId = item.rarity_id ?? 0;
-            const existing = materialsToAdd.find(m => m.rarity_id === rarityId);
-            if (existing) existing.count += 1;
-            else materialsToAdd.push({ rarity_id: rarityId, count: 1 });
-            return false;
-        }
-        return true;
-    });
-
-    for (const mat of materialsToAdd) {
-        const craftItem = await db.one(`
-            SELECT c.id, c.name, c.rarity_id, c.type, c.image,
-                   r.display_name as rarity_display, r.color as rarity_color
-            FROM craft_items c
-            JOIN rarities r ON c.rarity_id = r.id
-            WHERE c.rarity_id = ?
-        `, [mat.rarity_id]) as any;
-        if (!craftItem) continue;
-
-        const existingCraft = inventory.find(
-            (i: any) => i.type === 'craft_item' && i.id === craftItem.id
-        );
-        if (existingCraft) {
-            existingCraft.count += mat.count;
-        } else {
-            inventory.push({
-                type: 'craft_item',
-                id: craftItem.id,
-                name: craftItem.name,
-                rarity_id: craftItem.rarity_id,
-                rarity_display: craftItem.rarity_display,
-                rarity_color: craftItem.rarity_color,
-                count: mat.count,
-                itemType: craftItem.type || 'craft',
-                image: craftItem.image || null,
-            });
-        }
+    try {
+        const result = await salvageInventory(createPgInventorySalvageRepository(), { userId, itemIds });
+        res.json(result);
+    } catch (error: any) {
+        const message = error?.message || 'Не удалось разобрать предметы';
+        if (message === 'User not found') return res.status(404).json({ error: message });
+        const expected = [
+            'Некорректный список предметов',
+            'Предмет заблокирован. Разблокируйте в инвентаре.',
+            'Материал для редкости не найден',
+        ];
+        if (expected.includes(message)) return res.status(400).json({ error: message });
+        console.error('[character/salvage]', error);
+        res.status(500).json({ error: 'Не удалось разобрать предметы' });
     }
-
-    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-    res.json({ success: true, inventory });
 });
 
 // Расширить инвентарь
