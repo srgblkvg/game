@@ -1,0 +1,59 @@
+/// <reference types="node" />
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import test from 'node:test';
+
+const source = () => readFileSync(resolve(__dirname, '../routes/vkPayments.ts'), 'utf8');
+const branch = () => {
+  const body = source();
+  const start = body.indexOf("if (status === 'chargeable')");
+  const end = body.indexOf("if (status === 'refunded')", start);
+  assert.ok(start >= 0 && end > start);
+  return body.slice(start, end);
+};
+
+test('подпись проверяется fail-closed до payment callback', () => {
+  const body = source();
+  assert.match(body, /if \(!sig \|\| !APP_SECRET\) return false/);
+  assert.ok(body.indexOf('if (!verifySignature(params))') < body.indexOf("if (status === 'chargeable')"));
+});
+
+test('VK silver использует atomic ledger service и не вызывает deliverSilver', () => {
+  const body = branch();
+  const silverStart = body.indexOf("item.type === 'silver'");
+  const silverEnd = body.indexOf("} else if", silverStart);
+  assert.ok(silverStart >= 0 && silverEnd > silverStart);
+  const silver = body.slice(silverStart, silverEnd);
+  assert.match(silver, /processVkSilverPayment\(createPgVkPaymentDeliveryRepository\(\)/);
+  assert.match(silver, /providerPrice:\s*Number\(params\.item_price\)/);
+  assert.doesNotMatch(silver, /item_price \|\||deliverSilver|db\.run\(/);
+});
+
+test('callback сначала создаёт vk table, затем ledger/backfill до chargeable', () => {
+  const body = source();
+  const table = body.indexOf('await vkPaymentsTableReady');
+  const ledger = body.indexOf('await ensureVkPaymentDeliveryReady()');
+  const chargeable = body.indexOf("if (status === 'chargeable')");
+  assert.ok(table >= 0 && ledger > table && chargeable > ledger);
+});
+
+test('migration создаёт unique ledger и backfill chargeable до route activation', () => {
+  const migration = readFileSync(resolve(__dirname, '../scripts/migrate-vk-payment-deliveries.ts'), 'utf8');
+  assert.match(migration, /UNIQUE\s*\(provider,\s*external_id\)/i);
+  assert.match(migration, /INSERT INTO payment_deliveries[\s\S]*SELECT[\s\S]*FROM vk_payments[\s\S]*status = 'chargeable'/i);
+  assert.match(migration, /COUNT\(DISTINCT user_id\)[\s\S]*COUNT\(DISTINCT item\)/i);
+  assert.match(migration, /throw new Error\(['"]conflicting historical VK payment identities/i);
+  assert.match(migration, /ON CONFLICT \(provider, external_id\) DO NOTHING/i);
+  assert.match(migration, /GRANT ALL ON payment_deliveries TO game/i);
+  assert.match(migration, /const client = await pool\.connect\(\)/);
+  assert.match(migration, /await client\.query\(['"]BEGIN['"]\)/);
+  assert.match(migration, /client\.release\(\)/);
+});
+
+test('post-commit VK notification использует delivered characterId', () => {
+  const body = branch();
+  const delivery = body.indexOf('await processVkSilverPayment(');
+  assert.ok(delivery >= 0);
+  assert.ok(body.indexOf('sendToUser(result.characterId', delivery) > delivery);
+});

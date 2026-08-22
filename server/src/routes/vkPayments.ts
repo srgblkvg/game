@@ -2,14 +2,16 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
+import { deliverStarterPack, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
+import { processVkSilverPayment } from '../game/vkPaymentDelivery';
+import { createPgVkPaymentDeliveryRepository, ensureVkPaymentDeliveryReady } from '../game/vkPaymentDeliveryRepository';
 
 const router = Router();
 
 // Инициализация таблицы платежей
-db.run(`CREATE TABLE IF NOT EXISTS vk_payments (
+const vkPaymentsTableReady = db.run(`CREATE TABLE IF NOT EXISTS vk_payments (
   id SERIAL PRIMARY KEY,
   order_id TEXT NOT NULL,
   user_id INTEGER NOT NULL,
@@ -18,7 +20,7 @@ db.run(`CREATE TABLE IF NOT EXISTS vk_payments (
   status TEXT NOT NULL,
   processed_at INTEGER NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
-)`).catch(() => {});
+)`);
 
 // Секретный ключ приложения VK (нужно задать в .env: VK_APP_SECRET)
 const APP_SECRET = process.env.VK_APP_SECRET || '';
@@ -124,6 +126,8 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const now = Math.floor(Date.now() / 1000);
+    await vkPaymentsTableReady;
+    await ensureVkPaymentDeliveryReady();
 
     if (status === 'chargeable') {
       try {
@@ -159,11 +163,21 @@ router.post('/', async (req: Request, res: Response) => {
           }
           processed = true;
         } else if (item.type === 'silver') {
-          const result = await deliverSilver(character.id, item.amount || 0);
-          if (!result.success) {
-            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          const result = await processVkSilverPayment(createPgVkPaymentDeliveryRepository(), {
+            orderId,
+            vkUserId,
+            item: itemName,
+            providerPrice: Number(params.item_price),
+            processedAt: now,
+          });
+          if (result.status === 'rejected') {
+            return res.json({ error: { error_code: 1, error_msg: result.reason } });
           }
-          processed = true;
+          if (result.status === 'delivered') {
+            sendToUser(result.characterId, { type: 'paymentStatus', status: 'success', platform: 'vk' });
+            logger.info(`[VK Payments] silver delivered to char ${result.characterId} (VK user ${vkUserId})`);
+          }
+          return res.json({ response: { order_id: orderId, app_order_id: 0 } });
         } else if (item.type === 'craft_pack') {
           const packType = itemName === 'craft_rare' ? 'rare' : 'epic';
           const result = await deliverCraftPack(character.id, packType);
