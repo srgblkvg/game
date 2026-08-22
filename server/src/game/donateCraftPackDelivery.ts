@@ -30,21 +30,25 @@ interface Input {
 }
 
 type Result =
-  | { status: 'delivered'; userId: number; item: 'craft_rare' }
+  | { status: 'delivered'; userId: number; item: 'craft_rare' | 'craft_epic' }
   | { status: 'already-processed' }
   | { status: 'rejected'; reason: string };
 
-const REQUIRED = [
-  { name: 'Сердцевина бездны', count: 5 },
-  { name: 'Рунный булыжник', count: 6 },
-] as const;
+const RECIPES = {
+  craft_rare: { amount: '99.00', bank: 10000, required: [
+    { name: 'Сердцевина бездны', count: 5 }, { name: 'Рунный булыжник', count: 6 },
+  ] },
+  craft_epic: { amount: '199.00', bank: 30000, required: [
+    { name: 'Искра погибели', count: 5 }, { name: 'Рунный булыжник', count: 10 },
+  ] },
+} as const;
 
 const money = (value: string): string | null => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed.toFixed(2) : null;
 };
 
-export async function processYooKassaCraftRarePayment(
+export async function processYooKassaCraftPackPayment(
   repository: DonateCraftPackRepository,
   input: Input,
 ): Promise<Result> {
@@ -52,9 +56,10 @@ export async function processYooKassaCraftRarePayment(
     const payment = await tx.lockPayment(input.paymentId);
     if (!payment) return { status: 'rejected', reason: 'payment-not-found' };
     if (payment.status !== 'pending') return { status: 'already-processed' };
-    if (payment.item !== 'craft_rare' || input.providerItem !== payment.item
+    const recipe = RECIPES[payment.item as keyof typeof RECIPES];
+    if (!recipe || input.providerItem !== payment.item
       || String(payment.userId) !== input.providerUserId
-      || money(payment.amount) !== '99.00' || money(input.verifiedAmount) !== '99.00'
+      || money(payment.amount) !== recipe.amount || money(input.verifiedAmount) !== recipe.amount
       || input.verifiedCurrency !== 'RUB') {
       return { status: 'rejected', reason: 'payment-mismatch' };
     }
@@ -65,14 +70,14 @@ export async function processYooKassaCraftRarePayment(
     try { inventory = JSON.parse(user.inventory || '[]'); } catch { return { status: 'rejected', reason: 'invalid-inventory' }; }
     if (!Array.isArray(inventory)) return { status: 'rejected', reason: 'invalid-inventory' };
 
-    const catalog = await tx.findCraftItems(REQUIRED.map(required => required.name));
+    const catalog = await tx.findCraftItems(recipe.required.map(required => required.name));
     const byName = new Map(catalog.map(item => [item.name, item]));
-    if (catalog.length !== REQUIRED.length
-      || REQUIRED.some(required => catalog.filter(item => item.name === required.name).length !== 1)) {
+    if (catalog.length !== recipe.required.length
+      || recipe.required.some(required => catalog.filter(item => item.name === required.name).length !== 1)) {
       return { status: 'rejected', reason: 'catalog-item-missing' };
     }
 
-    for (const required of REQUIRED) {
+    for (const required of recipe.required) {
       const item = byName.get(required.name)!;
       const matches = inventory.filter((entry: any) =>
         (entry?.type === 'craft_item' || entry?.type === 'material') && Number(entry.id) === item.id);
@@ -89,8 +94,12 @@ export async function processYooKassaCraftRarePayment(
       });
     }
 
-    await tx.saveUser(user.id, JSON.stringify(inventory), 10000);
+    await tx.saveUser(user.id, JSON.stringify(inventory), recipe.bank);
     await tx.markSucceeded(payment.paymentId, input.processedAt);
-    return { status: 'delivered', userId: user.id, item: 'craft_rare' };
+    return { status: 'delivered', userId: user.id, item: payment.item as 'craft_rare' | 'craft_epic' };
   });
+}
+
+export function processYooKassaCraftRarePayment(repository: DonateCraftPackRepository, input: Input): Promise<Result> {
+  return processYooKassaCraftPackPayment(repository, input);
 }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   processYooKassaCraftRarePayment,
+  processYooKassaCraftPackPayment,
   type DonateCraftPackRepository,
   type DonateCraftPackTransaction,
   type CraftCatalogItem,
@@ -10,9 +11,10 @@ import {
 
 const core: CraftCatalogItem = { id: 10, name: 'Сердцевина бездны', rarityId: 4, type: 'craft', image: '/core.webp', rarityDisplay: 'Легендарный', rarityColor: '#f00' };
 const stone: CraftCatalogItem = { id: 11, name: 'Рунный булыжник', rarityId: 0, type: 'upgrade', image: '/stone.webp', rarityDisplay: 'Обычный', rarityColor: '#aaa' };
+const spark: CraftCatalogItem = { id: 12, name: 'Искра погибели', rarityId: 5, type: 'craft', image: '/spark.webp', rarityDisplay: 'Эпический', rarityColor: '#a0f' };
 
-function repository(options: { inventory?: string; bank?: number | null; items?: CraftCatalogItem[] } = {}) {
-  let payment = { paymentId: 'pay-craft', userId: 7, item: 'craft_rare', amount: '99.00', status: 'pending' };
+function repository(options: { inventory?: string; bank?: number | null; items?: CraftCatalogItem[]; paymentItem?: string; paymentAmount?: string } = {}) {
+  let payment = { paymentId: 'pay-craft', userId: 7, item: options.paymentItem ?? 'craft_rare', amount: options.paymentAmount ?? '99.00', status: 'pending' };
   let inventory = options.inventory ?? JSON.stringify([{ type: 'craft_item', id: 10, count: 2 }]);
   let bank = options.bank ?? null;
   const items = options.items ?? [core, stone];
@@ -101,4 +103,13 @@ test('provider mismatch отклоняется до user mutation', async () => 
   assert.equal(result.status, 'rejected');
   assert.equal(state.state().bank, 5);
   assert.deepEqual(state.state().writes, []);
+});
+
+test('craft_epic использует свой exact recipe и начисляет 30000 bank', async () => {
+  const state = repository({ paymentItem: 'craft_epic', paymentAmount: '199.00', items: [spark, stone], bank: 5 });
+  const result = await processYooKassaCraftPackPayment(state.repo, input({ providerItem: 'craft_epic', verifiedAmount: '199.00' }));
+  assert.deepEqual(result, { status: 'delivered', userId: 7, item: 'craft_epic' });
+  assert.equal(state.state().inventory.find((item: any) => item.id === 12).count, 5);
+  assert.equal(state.state().inventory.find((item: any) => item.id === 11).count, 10);
+  assert.equal(state.state().bank, 30005);
 });

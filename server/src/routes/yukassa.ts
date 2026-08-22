@@ -9,7 +9,7 @@ import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
 import { authMiddleware } from '../middleware/auth';
 import { isYooKassaSilverItem, processYooKassaSilverPayment } from '../game/donatePaymentDelivery';
 import { createPgDonatePaymentDeliveryRepository } from '../game/donatePaymentDeliveryRepository';
-import { processYooKassaCraftRarePayment } from '../game/donateCraftPackDelivery';
+import { processYooKassaCraftPackPayment } from '../game/donateCraftPackDelivery';
 import { createPgDonateCraftPackRepository } from '../game/donateCraftPackDeliveryRepository';
 
 const router = Router();
@@ -283,8 +283,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
             return res.json({ ok: true });
           }
           sendToUser(result.userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa' });
-        } else if (String(existing.item) === 'craft_rare') {
-          const result = await processYooKassaCraftRarePayment(createPgDonateCraftPackRepository(), {
+        } else if (String(existing.item) === 'craft_rare' || String(existing.item) === 'craft_epic') {
+          const result = await processYooKassaCraftPackPayment(createPgDonateCraftPackRepository(), {
             paymentId,
             providerUserId: String(metadata.userId || ''),
             providerItem: String(metadata.item || ''),
