@@ -39,6 +39,7 @@ export interface Character {
   baseStats: { s: number; a: number; d: number; m: number };
   currentHp: number;
   lastHpUpdate?: number;
+  hpRegenRate?: number;
   stats?: {
     s: number;
     a: number;
@@ -127,20 +128,11 @@ interface GameContextType {
 const GameContext = createContext<GameContextType | null>(null);
 
 /** Вычислить HP с учётом регенерации (1 HP / 5 сек, ×rate от комнаты) */
-function calcRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, serverTime: number, roomType?: string | null, roomUntil?: number, premiumUntil?: number): number {
+function calcRegenHp(currentHp: number, maxHp: number, lastHpUpdate: number, serverTime: number, hpRegenRate = 1): number {
   const elapsed = serverTime - lastHpUpdate;
   if (elapsed <= 0) return Math.min(currentHp, maxHp);
 
-  let regenRate = 1;
-  if (roomType && roomUntil && roomUntil > serverTime) {
-    if (roomType === 'closet') regenRate = 3;
-    else if (roomType === 'bed') regenRate = 10;
-    else if (roomType === 'chamber') regenRate = 50;
-    else if (roomType === 'lux') regenRate = 250;
-  }
-  if (premiumUntil && premiumUntil > serverTime) regenRate *= 3;
-
-  const regenAmount = Math.floor(elapsed * regenRate / 5);
+  const regenAmount = Math.floor(elapsed * hpRegenRate / 5);
   return Math.min(maxHp, currentHp + regenAmount);
 }
 
@@ -243,12 +235,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       maxHp,
       character.lastHpUpdate || serverTime,
       serverTime,
-      character.room?.type,
-      character.room?.until,
-      character.premium?.until
+      character.hpRegenRate ?? 1
     );
     setRegenHp(hp);
-  }, [character?.currentHp, character?.lastHpUpdate, character?.room?.until, character?.premium?.until, serverTime]);
+  }, [character?.currentHp, character?.lastHpUpdate, character?.hpRegenRate, serverTime]);
 
   return (
     <GameContext.Provider value={{ character, setCharacter, serverTime, regenHp }}>

@@ -218,6 +218,7 @@ router.post('/mob/attack', async (req, res) => {
         id: user.id, currentHp: user.currentHp, maxHp: userStats.hp,
         lastHpUpdate: user.lastHpUpdate || now, roomType: user.roomType, roomUntil: user.roomUntil,
         premiumUntil: user.premiumUntil,
+        hermitRegen: userStats.hermitRegen === true,
     });
     if (regeneratedHp < userStats.hp * 0.2) {
         return res.status(400).json({ error: 'Для участия в охоте необходимо не менее 20% здоровья' });

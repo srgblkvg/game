@@ -1,5 +1,26 @@
 import { db } from '../db/index';
 
+export interface HpRegenBonuses {
+    roomType?: string | null;
+    roomUntil?: number;
+    premiumUntil?: number;
+    hermitRegen?: boolean;
+}
+
+/** HP restored per base 5-second tick after all multiplicative bonuses. */
+export function calculateHpRegenRate(user: HpRegenBonuses, now = Math.floor(Date.now() / 1000)): number {
+    let regenRate = 1;
+    if (user.roomType && (user.roomUntil || 0) > now) {
+        if (user.roomType === 'closet') regenRate = 3;
+        else if (user.roomType === 'bed') regenRate = 10;
+        else if (user.roomType === 'chamber') regenRate = 50;
+        else if (user.roomType === 'lux') regenRate = 250;
+    }
+    if ((user.premiumUntil || 0) > now) regenRate *= 3;
+    if (user.hermitRegen) regenRate *= 2;
+    return regenRate;
+}
+
 /**
  * Применяет офлайн-регенерацию HP для игрока.
  * Возвращает актуальное currentHp и обновляет БД если изменилось.
@@ -22,20 +43,7 @@ export async function applyHpRegen(user: {
     let hp = user.currentHp;
     const maxHp = user.maxHp;
 
-    let regenRate = 1;
-    // Комната
-    if (user.roomType && (user.roomUntil || 0) > now) {
-        if (user.roomType === 'closet') regenRate = 3;
-        else if (user.roomType === 'bed') regenRate = 10;
-        else if (user.roomType === 'chamber') regenRate = 50;
-        else if (user.roomType === 'lux') regenRate = 250;
-    }
-    // Премиум: ×3 к регену (работает и без комнаты)
-    const hasPremium = (user.premiumUntil || 0) > now;
-    if (hasPremium) regenRate *= 3;
-
-    // Отшельник 2pc: +100% реген HP вне боя
-    if (user.hermitRegen) regenRate *= 2;
+    const regenRate = calculateHpRegenRate(user, now);
 
     const elapsed = now - (user.lastHpUpdate || now);
     if (elapsed > 0 && hp < maxHp) {

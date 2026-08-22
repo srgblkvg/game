@@ -75,6 +75,7 @@ router.post('/battle', async (req, res) => {
         roomType: attacker.roomType,
         roomUntil: attacker.roomUntil,
         premiumUntil: attacker.premiumUntil,
+        hermitRegen: attackerStats.hermitRegen === true,
     });
 
     // Актуализируем HP защитника (офлайн-реген)
@@ -89,6 +90,7 @@ router.post('/battle', async (req, res) => {
         roomType: defender.roomType,
         roomUntil: defender.roomUntil,
         premiumUntil: defender.premiumUntil,
+        hermitRegen: defenderStats.hermitRegen === true,
     });
     const attackerAntiStats = (await loadBattleAntiStats(attacker.id, attacker.guildId || attacker.guildid)).antiStats;
     const defenderAntiStats = (await loadBattleAntiStats(defender.id, defender.guildId || defender.guildid)).antiStats;
