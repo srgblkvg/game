@@ -2,13 +2,14 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
+import { deliverStarterPack, deliverCursePack, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 import { processVkSilverPayment } from '../game/vkPaymentDelivery';
 import { createPgVkPaymentDeliveryRepository, ensureVkPaymentDeliveryReady } from '../game/vkPaymentDeliveryRepository';
 import { processVkCraftPackPayment } from '../game/vkCraftPackPayment';
 import { createPgVkCraftPackRepository } from '../game/vkCraftPackPaymentRepository';
+import { processVkRunePackPayment } from '../game/vkRunePackPayment';
 
 const router = Router();
 
@@ -201,11 +202,17 @@ router.post('/', async (req: Request, res: Response) => {
           }
           processed = true;
         } else if (item.type === 'rune_pack') {
-          const result = await deliverRubyRune(character.id, item.count || 1);
-          if (!result.success) {
-            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          const result = await processVkRunePackPayment(createPgVkCraftPackRepository(), {
+            orderId, vkUserId, item: itemName,
+            providerPrice: Number(params.item_price), processedAt: now,
+          });
+          if (result.status === 'rejected') {
+            return res.json({ error: { error_code: 1, error_msg: result.reason } });
           }
-          processed = true;
+          if (result.status === 'delivered') {
+            sendToUser(result.characterId, { type: 'paymentStatus', status: 'success', platform: 'vk' });
+          }
+          return res.json({ response: { order_id: orderId, app_order_id: 0 } });
         } else if (item.type === 'mega_craft') {
           const result = itemName === 'large_craft'
             ? await deliverLargeCraftSet(character.id)
