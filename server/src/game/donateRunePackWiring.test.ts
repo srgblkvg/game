@@ -1,0 +1,4 @@
+/// <reference types="node" />
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {resolve} from 'node:path';import test from 'node:test';const body=readFileSync(resolve(__dirname,'../routes/yukassa.ts'),'utf8');
+test('Yoo rune SKUs bypass legacy deliverRubyRune/processDelivery',()=>{const start=body.indexOf("startsWith('ruby_rune_')");const end=body.indexOf('} else {',start);assert.ok(start>=0&&end>start);const branch=body.slice(start,end);assert.match(branch,/processYooKassaRunePackPayment\(createPgDonateCraftPackRepository\(\)/);assert.doesNotMatch(branch,/deliverRubyRune|processDelivery|db\.run/);});
+test('rune notification follows awaited atomic delivery',()=>{const call=body.indexOf('await processYooKassaRunePackPayment(');assert.ok(call>=0);assert.ok(body.indexOf('sendToUser(result.userId',call)>call);});
