@@ -10,6 +10,8 @@ import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { updateGuildQuestProgress } from './guild';
 import { loadBattleAntiStats } from '../game/guildBoss';
 import { HUNT_DROP_MULTIPLIER, MYTHIC_RESOURCE_DROP_CHANCE, MYTHIC_RESOURCE_DROPS } from '../game/huntResourceDrops';
+import { grantInventoryDrops } from '../game/inventoryDrops';
+import { createPgInventoryDropRepository } from '../game/inventoryDropsRepository';
 
 const router = Router();
 const MATERIAL_DROP_CHANCE = 0.35 * HUNT_DROP_MULTIPLIER;
@@ -328,6 +330,7 @@ router.post('/mob/attack', async (req, res) => {
     // Шанс дропа материала (обучение сохраняет гарантированный ролл)
     const materialsDropped: any[] = [];
     let itemsDropped: any[] = [];
+    const pendingDrops: any[] = [];
     if (playerWon) {
         const isTutorial = (user.tutorial_step || 0) === 0;
         const dropRoll: number = Math.random();
@@ -370,17 +373,7 @@ router.post('/mob/attack', async (req, res) => {
                     image: craftItem.image || null,
                 };
                 materialsDropped.push(matDrop);
-
-                // Добавляем в инвентарь
-                const inventory = JSON.parse(user.inventory || '[]');
-                const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === craftItem.id);
-                if (existing) {
-                    existing.count = (existing.count || 0) + 1;
-                } else {
-                    inventory.push(matDrop);
-                }
-                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-                user.inventory = JSON.stringify(inventory);
+                pendingDrops.push(matDrop);
 
                 addStep({ type: 'money', message: `Добыто: ${craftItem.display_name} материал` });
             }
@@ -403,7 +396,6 @@ router.post('/mob/attack', async (req, res) => {
                 [pickedName]
             ) as any;
             if (stone) {
-                const inventory = JSON.parse(user.inventory || '[]');
                 const stoneDrop = {
                     type: 'craft_item',
                     id: stone.id,
@@ -416,14 +408,7 @@ router.post('/mob/attack', async (req, res) => {
                     image: stone.image || null,
                 };
                 materialsDropped.push(stoneDrop);
-                const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === stone.id);
-                if (existing) {
-                    existing.count = (existing.count || 0) + 1;
-                } else {
-                    inventory.push(stoneDrop);
-                }
-                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-                user.inventory = JSON.stringify(inventory);
+                pendingDrops.push(stoneDrop);
                 addStep({ type: 'money', message: `Добыто: ${stone.name}` });
             }
         }
@@ -436,7 +421,6 @@ router.post('/mob/attack', async (req, res) => {
                 [mythicName]
             ) as any;
             if (mythicItem) {
-                const inventory = JSON.parse(user.inventory || '[]');
                 const mythicDrop = {
                     type: 'craft_item',
                     id: mythicItem.id,
@@ -449,14 +433,7 @@ router.post('/mob/attack', async (req, res) => {
                     image: mythicItem.image || null,
                 };
                 materialsDropped.push(mythicDrop);
-                const existing = inventory.find((i: any) => i.type === 'craft_item' && i.id === mythicItem.id);
-                if (existing) {
-                    existing.count = (existing.count || 0) + 1;
-                } else {
-                    inventory.push(mythicDrop);
-                }
-                await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-                user.inventory = JSON.stringify(inventory);
+                pendingDrops.push(mythicDrop);
                 addStep({ type: 'money', message: `Добыто: ${mythicItem.name}` });
             }
         }
@@ -473,7 +450,6 @@ router.post('/mob/attack', async (req, res) => {
                 itemQuery += ' ORDER BY RANDOM() LIMIT 1';
                 const randomItem = await db.one(itemQuery, [entry.rarity]) as any;
                 if (randomItem) {
-                    const inv = JSON.parse(user.inventory || '[]');
                     const drop = {
                         id: Date.now() + Math.random(),
                         name: randomItem.name,
@@ -485,14 +461,20 @@ router.post('/mob/attack', async (req, res) => {
                         extra: JSON.parse(randomItem.extra || '{}'),
                         image: randomItem.image || null,
                     };
-                    inv.push(drop);
-                    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inv), userId]);
+                    pendingDrops.push(drop);
                     itemsDropped.push(drop);
-                    user.inventory = JSON.stringify(inv);
                     addStep({ type: 'money', message: `Добыто: ${randomItem.display_name} предмет — ${randomItem.name}` });
                 }
             }
         }
+    }
+
+    if (pendingDrops.length > 0) {
+        const granted = await grantInventoryDrops(createPgInventoryDropRepository(), {
+            userId,
+            drops: pendingDrops,
+        });
+        user.inventory = JSON.stringify(granted.inventory);
     }
 
     // Обновление игрока
