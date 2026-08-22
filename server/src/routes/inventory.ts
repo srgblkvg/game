@@ -8,6 +8,8 @@ import { changeEquipment } from '../game/inventoryEquip';
 import { createPgEquipmentChangeRepository } from '../game/inventoryEquipRepository';
 import { salvageInventory } from '../game/inventorySalvage';
 import { createPgInventorySalvageRepository } from '../game/inventorySalvageRepository';
+import { reorderInventory, toggleInventoryLock } from '../game/inventoryArrange';
+import { createPgInventoryArrangeRepository } from '../game/inventoryArrangeRepository';
 
 const router = Router();
 
@@ -95,38 +97,19 @@ router.post('/character/expand-inventory', async (req, res) => {
 // Сохранить новый порядок предметов в инвентаре (drag & drop)
 router.post('/character/reorder-inventory', async (req, res) => {
     const userId = req.userId;
-    const { order } = req.body; // массив id предметов в новом порядке
+    const { order } = req.body;
     if (!Array.isArray(order)) return res.status(400).json({ error: 'Неверный формат' });
 
-    const user = await db.one('SELECT id, inventory FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const inventory = typeof user.inventory === 'string' ? JSON.parse(user.inventory) : (user.inventory || []);
-
-    // Удаляем дубликаты экипировки (один предмет не может быть в инвентаре дважды)
-    const seenEquip = new Set<string>();
-    const deduped: any[] = [];
-    for (const item of inventory) {
-        const isEquip = item.type !== 'craft_item';
-        const key = String(item.id);
-        if (isEquip && seenEquip.has(key)) continue;
-        if (isEquip) seenEquip.add(key);
-        deduped.push(item);
+    try {
+        const result = await reorderInventory(createPgInventoryArrangeRepository(), { userId, order });
+        res.json(result);
+    } catch (error: any) {
+        const message = error?.message || 'Не удалось сохранить порядок предметов';
+        if (message === 'User not found') return res.status(404).json({ error: message });
+        if (message === 'Неверный формат') return res.status(400).json({ error: message });
+        console.error('[character/reorder-inventory]', error);
+        res.status(500).json({ error: 'Не удалось сохранить порядок предметов' });
     }
-
-    // Дедуплицируем order и пересортировываем
-    const uniqueOrder = [...new Set(order.map(String))];
-    const idMap = new Map(deduped.map((item: any) => [String(item.id), item]));
-    const reordered = uniqueOrder.map(id => idMap.get(String(id))).filter(Boolean);
-    // Добавляем предметы, которых нет в order
-    for (const item of deduped) {
-        if (!uniqueOrder.includes(String(item.id))) {
-            reordered.push(item);
-        }
-    }
-
-    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(reordered), userId]);
-    res.json({ success: true });
 });
 
 // Заблокировать/разблокировать предмет в инвентаре
@@ -135,16 +118,16 @@ router.post('/character/toggle-lock', async (req, res) => {
     const { itemId } = req.body;
     if (!itemId) return res.status(400).json({ error: 'itemId обязателен' });
 
-    const user = await db.one('SELECT id, inventory FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const inventory = typeof user.inventory === 'string' ? JSON.parse(user.inventory) : (user.inventory || []);
-    const idx = inventory.findIndex((i: any) => String(i.id) === String(itemId));
-    if (idx === -1) return res.status(400).json({ error: 'Предмет не найден' });
-
-    inventory[idx] = { ...inventory[idx], locked: !inventory[idx].locked };
-    await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-    res.json({ success: true, locked: inventory[idx].locked });
+    try {
+        const result = await toggleInventoryLock(createPgInventoryArrangeRepository(), { userId, itemId });
+        res.json(result);
+    } catch (error: any) {
+        const message = error?.message || 'Не удалось изменить блокировку предмета';
+        if (message === 'User not found') return res.status(404).json({ error: message });
+        if (message === 'Предмет не найден') return res.status(400).json({ error: message });
+        console.error('[character/toggle-lock]', error);
+        res.status(500).json({ error: 'Не удалось изменить блокировку предмета' });
+    }
 });
 
 export default router;
