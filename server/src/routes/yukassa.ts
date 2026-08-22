@@ -7,10 +7,13 @@ import logger from '../logger';
 import { sendPaymentReceipt } from '../email';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
 import { authMiddleware } from '../middleware/auth';
+import { isYooKassaSilverItem, processYooKassaSilverPayment } from '../game/donatePaymentDelivery';
+import { createPgDonatePaymentDeliveryRepository } from '../game/donatePaymentDeliveryRepository';
 
 const router = Router();
 
-// Инициализация таблицы платежей
+// Инициализация таблицы платежей: DDL выполняется последовательно, чтобы индекс
+// не попытался создаться раньше таблицы/колонки.
 db.run(`CREATE TABLE IF NOT EXISTS yukassa_payments (
   id SERIAL PRIMARY KEY,
   payment_id TEXT NOT NULL,
@@ -21,10 +24,11 @@ db.run(`CREATE TABLE IF NOT EXISTS yukassa_payments (
   status TEXT NOT NULL DEFAULT 'pending',
   processed_at INTEGER NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
-)`).catch(() => {});
-
-// Добавляем колонку item если её нет
-db.run(`ALTER TABLE yukassa_payments ADD COLUMN IF NOT EXISTS item TEXT DEFAULT 'premium'`).catch(() => {});
+)`)
+  .then(() => db.run(`ALTER TABLE yukassa_payments ADD COLUMN IF NOT EXISTS item TEXT DEFAULT 'premium'`))
+  .then(() => db.run(`CREATE UNIQUE INDEX IF NOT EXISTS yukassa_payments_payment_id_uidx
+    ON yukassa_payments (payment_id)`))
+  .catch(() => {});
 
 // Товары
 interface ShopItem {
@@ -217,7 +221,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
     if (event === 'payment.succeeded') {
       const existing = await db.one(
-        'SELECT id, status, user_id, days FROM yukassa_payments WHERE payment_id = ?',
+        'SELECT id, status, user_id, item, days, amount FROM yukassa_payments WHERE payment_id = ?',
         [paymentId],
       );
 
@@ -245,7 +249,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
       const metadata = verified.metadata || {};
       const userId = parseInt(metadata.userId || String(existing.user_id) || '0', 10);
-      const itemType = metadata.type || 'premium';
+      const localItem = ITEMS[String(existing.item)] as ShopItem | undefined;
+      const itemType = localItem?.type || metadata.type || 'premium';
       const days = parseInt(metadata.days || String(existing.days) || '0', 10);
       const silverAmount = parseInt(metadata.silverAmount || '0', 10);
       const runeCount = parseInt(metadata.runeCount || '0', 10);
@@ -258,16 +263,35 @@ router.post('/webhook', async (req: Request, res: Response) => {
       const now = Math.floor(Date.now() / 1000);
 
       try {
-        await processDelivery(userId, itemType, days, silverAmount, metadata.item || '', runeCount);
+        if (localItem && localItem.type === 'silver' && isYooKassaSilverItem(String(existing.item))) {
+          const result = await processYooKassaSilverPayment(createPgDonatePaymentDeliveryRepository(), {
+            paymentId,
+            providerUserId: String(metadata.userId || ''),
+            providerItem: String(metadata.item || ''),
+            verifiedAmount: String(verified.amount?.value || ''),
+            verifiedCurrency: String(verified.amount?.currency || ''),
+            processedAt: now,
+          });
+          if (result.status === 'rejected') {
+            logger.warn(`[YooKassa] Silver payment ${paymentId} rejected: ${result.reason}`);
+            return res.json({ ok: true });
+          }
+          if (result.status === 'already-processed') {
+            logger.info(`[YooKassa] Payment ${paymentId} already processed`);
+            return res.json({ ok: true });
+          }
+          sendToUser(result.userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa' });
+        } else {
+          await processDelivery(userId, itemType, days, silverAmount, metadata.item || '', runeCount);
+          await db.run(
+            'UPDATE yukassa_payments SET status = ?, processed_at = ? WHERE payment_id = ?',
+            ['succeeded', now, paymentId],
+          );
+        }
       } catch (err: any) {
         logger.error(`[YooKassa] Delivery error for payment ${paymentId}: ${err.message}`);
         return res.status(500).json({ error: err.message });
       }
-
-      await db.run(
-        'UPDATE yukassa_payments SET status = ?, processed_at = ? WHERE payment_id = ?',
-        ['succeeded', now, paymentId],
-      );
 
       logger.info(`[YooKassa] ${itemType} delivered to user ${userId} (payment ${paymentId})`);
 
