@@ -1,0 +1,3 @@
+/// <reference types="node" />
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {resolve} from 'node:path';import test from 'node:test';const body=readFileSync(resolve(__dirname,'../routes/yukassa.ts'),'utf8');
+test('Yoo curse SKUs bypass legacy deliverCursePack/processDelivery',()=>{const start=body.indexOf("startsWith('curse_')");const end=body.indexOf("startsWith('ruby_rune_')",start);assert.ok(start>=0&&end>start);const branch=body.slice(start,end);assert.match(branch,/processYooKassaCursePackPayment\(createPgDonateCraftPackRepository\(\)/);assert.doesNotMatch(branch,/deliverCursePack|processDelivery|db\.run/);});
