@@ -1,7 +1,19 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { grantTutorialPveReward, grantTutorialCraftReward, completeTutorial } from '../game/tutorialRewards';
+import { createPgTutorialRewardRepository } from '../game/tutorialRewardsRepository';
 
 const router = Router();
+
+function tutorialRewardError(res: any, error: any): boolean {
+    const message = error?.message || '';
+    const expected = ['Неверный шаг обучения', 'Нет Пыли забвения в инвентаре'];
+    if (expected.includes(message)) {
+        res.status(400).json({ error: message });
+        return true;
+    }
+    return false;
+}
 
 // Get tutorial state
 router.get('/tutorial/state', async (req, res) => {
@@ -41,50 +53,29 @@ router.post('/tutorial/pve', async (req, res) => {
     addStep({ type: 'damage', damage: 5, target: 'mob', actor: 'attacker', message: 'Урон: 5' });
     addStep({ type: 'end', message: `${username} побеждает ${mob.name}!` });
 
-    // Loot: Пыль забвения (craft_item id=1) + Меч (item id=400) + 5 gold
-    const inventory = JSON.parse(user.inventory || '[]');
-
-    // Add Пыль забвения
-    const existingDust = inventory.find((i: any) => i.type === 'craft_item' && i.id === 1);
-    if (existingDust) {
-        existingDust.count = (existingDust.count || 0) + 1;
-    } else {
-        inventory.push({
-            type: 'craft_item',
-            id: 1,
-            name: 'Пыль забвения',
-            rarity_id: 0,
-            rarity_display: 'Хлам',
-            rarity_color: '#888888',
-            count: 1,
-            itemType: 'craft',
-            image: null,
-        });
-    }
-
-    // Add sword: Стон могильщика (id=400)
+    const dust = {
+        type: 'craft_item', id: 1, name: 'Пыль забвения', rarity_id: 0,
+        rarity_display: 'Хлам', rarity_color: '#888888', count: 1,
+        itemType: 'craft', image: null,
+    };
     const swordItem = {
-        id: Date.now() + Math.random(),
-        name: 'Стон могильщика',
-        slot: 'weapon1',
-        rarity_id: 0,
-        rarity_display: 'Хлам',
-        rarity_color: '#888888',
+        id: Date.now() + Math.random(), name: 'Стон могильщика', slot: 'weapon1',
+        rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888',
         bonuses: { s: 0, a: 0, d: 0, m: 0 },
         extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 0 },
-        upgradeLevel: 0,
-        image: 'weapon/weapon_gray.webp',
-        cost: 10,
+        upgradeLevel: 0, image: 'weapon/weapon_gray.webp', cost: 10,
     };
-    inventory.push(swordItem);
+    let reward;
+    try {
+        reward = await grantTutorialPveReward(createPgTutorialRewardRepository(), {
+            userId, sword: swordItem, dust, now: Math.floor(Date.now() / 1000),
+        });
+    } catch (error) {
+        if (tutorialRewardError(res, error)) return;
+        throw error;
+    }
+    const newMoney = reward.money;
     addStep({ type: 'loot', message: 'Добыто: Пыль забвения + Меч «Стон могильщика»' });
-
-    const newMoney = (user.money || 0) + 5;
-
-    await db.run(
-        'UPDATE users SET inventory = ?, money = ?, tutorial_step = 1, lastpveattacktime = ? WHERE id = ?',
-        [JSON.stringify(inventory), newMoney, Math.floor(Date.now() / 1000), userId]
-    );
 
     res.json({
         success: true,
@@ -123,41 +114,21 @@ router.post('/tutorial/craft', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     if ((user.tutorial_step || 0) !== 2) return res.status(400).json({ error: 'Неверный шаг обучения' });
 
-    const inventory = JSON.parse(user.inventory || '[]');
-
-    // Find Пыль забвения
-    const dustIdx = inventory.findIndex((i: any) => i.type === 'craft_item' && i.id === 1);
-    if (dustIdx === -1) {
-        return res.status(400).json({ error: 'Нет Пыли забвения в инвентаре' });
-    }
-
-    // Consume 1 dust
-    if (inventory[dustIdx].count > 1) {
-        inventory[dustIdx].count -= 1;
-    } else {
-        inventory.splice(dustIdx, 1);
-    }
-
-    // Create shield: Гробовая преграда (id=421)
     const shieldItem = {
-        id: Date.now() + Math.random(),
-        name: 'Гробовая преграда',
-        slot: 'shield',
-        rarity_id: 0,
-        rarity_display: 'Хлам',
-        rarity_color: '#888888',
+        id: Date.now() + Math.random(), name: 'Гробовая преграда', slot: 'shield',
+        rarity_id: 0, rarity_display: 'Хлам', rarity_color: '#888888',
         bonuses: { s: 0, a: 0, d: 0, m: 0 },
         extra: { crit: 0, dodge: 0, counter: 0, fullBlock: 1 },
-        upgradeLevel: 0,
-        image: 'shield/shield_gray.webp',
-        cost: 10,
+        upgradeLevel: 0, image: 'shield/shield_gray.webp', cost: 10,
     };
-    inventory.push(shieldItem);
-
-    await db.run(
-        'UPDATE users SET inventory = ?, tutorial_step = 3 WHERE id = ?',
-        [JSON.stringify(inventory), userId]
-    );
+    try {
+        await grantTutorialCraftReward(createPgTutorialRewardRepository(), {
+            userId, shield: shieldItem, dustId: 1,
+        });
+    } catch (error) {
+        if (tutorialRewardError(res, error)) return;
+        throw error;
+    }
 
     res.json({
         success: true,
@@ -223,10 +194,12 @@ router.post('/tutorial/complete', async (req, res) => {
     if ((user.tutorial_step || 0) !== 5) return res.status(400).json({ error: 'Неверный шаг обучения' });
 
     const reward = 1000;
-    await db.run(
-        'UPDATE users SET tutorial_step = 6, tutorial_completed = 1, money = money + ? WHERE id = ?',
-        [reward, userId]
-    );
+    try {
+        await completeTutorial(createPgTutorialRewardRepository(), { userId, reward });
+    } catch (error) {
+        if (tutorialRewardError(res, error)) return;
+        throw error;
+    }
 
     res.json({ success: true, reward, nextStep: 6, completed: true });
 });
