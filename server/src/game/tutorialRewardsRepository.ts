@@ -6,12 +6,14 @@ function adapter(client: PoolClient): TutorialRewardTransaction {
   return {
     async lockUser(userId) {
       const row = (await client.query(
-        'SELECT id, tutorial_step, money, inventory FROM users WHERE id = $1 FOR UPDATE',
+        `SELECT id, tutorial_step, tutorial_completed, money, inventory
+         FROM users WHERE id = $1 FOR UPDATE`,
         [userId],
       )).rows[0];
       return row ? {
         id: Number(row.id),
         tutorialStep: Number(row.tutorial_step || 0),
+        tutorialCompleted: Number(row.tutorial_completed || 0),
         money: Number(row.money || 0),
         inventory: row.inventory,
       } : null;

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense, useCallback, useEffect } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useGame } from './contexts/GameContext';
 import LoginPage from './pages/LoginPage';
@@ -78,22 +78,6 @@ function AppContent() {
     (character.level ?? 0) <= 1 &&
     (character.tutorialStep ?? 0) < tutorialSteps.length;
 
-  // Авто-завершение: если tutorialStep вышел за границы, а completed нет — чиним
-  useEffect(() => {
-    if (
-      character &&
-      (character.tutorialCompleted !== 1) &&
-      (character.tutorialStep ?? 0) >= tutorialSteps.length
-    ) {
-      fetch(`${BASE_URL}/character/tutorial-done`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({}),
-      }).catch(() => {});
-      setCharacter({ ...character, tutorialCompleted: 1, tutorialStep: tutorialSteps.length });
-    }
-  }, [character?.tutorialStep, character?.tutorialCompleted]);
-
   const handleTutorialNext = useCallback(async () => {
     try {
       const res = await fetch(`${BASE_URL}/character/tutorial-step`, {
@@ -110,11 +94,26 @@ function AppContent() {
 
   const handleTutorialComplete = useCallback(async () => {
     try {
-      await fetch(`${BASE_URL}/character/tutorial-done`, {
+      const res = await fetch(`${BASE_URL}/character/tutorial-done`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({}),
       });
+      if (!res.ok) return;
+      if (character) {
+        setCharacter({ ...character, tutorialCompleted: 1, tutorialStep: tutorialSteps.length });
+      }
+    } catch { /* ignore */ }
+  }, [character, setCharacter]);
+
+  const handleTutorialSkip = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/tutorial/skip`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) return;
       if (character) {
         setCharacter({ ...character, tutorialCompleted: 1, tutorialStep: tutorialSteps.length });
       }
@@ -202,6 +201,7 @@ function AppContent() {
           steps={tutorialSteps}
           stepIndex={character?.tutorialStep ?? 0}
           onComplete={handleTutorialComplete}
+          onSkip={handleTutorialSkip}
           onNextStep={handleTutorialNext}
         />
       )}

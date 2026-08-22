@@ -11,6 +11,8 @@ import { getGuildBonus, getGuildBuildings } from '../game/guildBuildings';
 import { getTrackTier, TRACK_MAP } from '../game/achievements';
 import { markDirty, refreshCharacter } from '../events';
 import { calculateCombatPower } from '../game/combatPower';
+import { completeTutorial } from '../game/tutorialRewards';
+import { createPgTutorialRewardRepository } from '../game/tutorialRewardsRepository';
 
 const router = Router();
 
@@ -236,11 +238,18 @@ router.post('/character/save-tabs', async (req, res) => {
 router.post('/character/tutorial-done', async (req, res) => {
     const reward = 1000;
     const userId = req.userId;
-    const result = await db.run(
-        'UPDATE users SET tutorial_completed = 1, tutorial_step = GREATEST(COALESCE(tutorial_step, 0), 4), money = money + ? WHERE id = ? AND COALESCE(tutorial_completed, 0) = 0',
-        [reward, userId],
-    );
-    res.json({ success: true, reward: result?.changes ? reward : 0 });
+    try {
+        const result = await completeTutorial(createPgTutorialRewardRepository(), {
+            userId,
+            reward,
+            requiredStep: 3,
+        });
+        return res.json({ success: true, ...result, nextStep: 6 });
+    } catch (error: any) {
+        if (error?.message === 'User not found') return res.status(404).json({ error: error.message });
+        if (error?.message === 'Неверный шаг обучения') return res.status(400).json({ error: error.message });
+        throw error;
+    }
 });
 
 // Продвинуть туториал на один шаг вперёд (клиентская кнопка «Далее»)

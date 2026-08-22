@@ -8,6 +8,8 @@ interface TutorialOverlayProps {
   stepIndex?: number;
   /** Вызывается при завершении туториала (пропуск или последний шаг) */
   onComplete: () => void;
+  /** Завершает обучение без награды. */
+  onSkip: () => void;
   /** Вызывается при нажатии «Далее» — продвигает на следующий шаг */
   onNextStep?: () => void;
 }
@@ -128,7 +130,7 @@ function clamp(val: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, val));
 }
 
-export default function TutorialOverlay({ steps, stepIndex, onComplete, onNextStep }: TutorialOverlayProps) {
+export default function TutorialOverlay({ steps, stepIndex, onComplete, onSkip, onNextStep }: TutorialOverlayProps) {
   const [current, setCurrent] = useState(stepIndex ?? 0);
 
   useEffect(() => {
@@ -261,7 +263,7 @@ export default function TutorialOverlay({ steps, stepIndex, onComplete, onNextSt
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  const handleSkip = () => { onComplete(); };
+  const handleSkip = () => { onSkip(); };
 
   const handleNext = () => {
     if (isLast) {

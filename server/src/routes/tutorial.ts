@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index';
-import { grantTutorialPveReward, grantTutorialCraftReward, completeTutorial } from '../game/tutorialRewards';
+import { grantTutorialPveReward, grantTutorialCraftReward, completeTutorial, skipTutorial } from '../game/tutorialRewards';
 import { createPgTutorialRewardRepository } from '../game/tutorialRewardsRepository';
 import { advanceTutorialArenaStep, advanceTutorialEquipmentStep } from '../game/tutorialProgress';
 import { createPgTutorialProgressRepository } from '../game/tutorialProgressRepository';
@@ -201,19 +201,25 @@ router.post('/tutorial/arena', async (req, res) => {
 // Step 5→complete: Finish tutorial, give 1000 silver
 router.post('/tutorial/complete', async (req, res) => {
     const userId = req.userId;
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if ((user.tutorial_step || 0) !== 5) return res.status(400).json({ error: 'Неверный шаг обучения' });
-
     const reward = 1000;
     try {
-        await completeTutorial(createPgTutorialRewardRepository(), { userId, reward });
+        const result = await completeTutorial(createPgTutorialRewardRepository(), { userId, reward });
+        return res.json({ success: true, ...result, nextStep: 6 });
     } catch (error) {
+        if ((error as any)?.message === 'User not found') return res.status(404).json({ error: 'User not found' });
         if (tutorialRewardError(res, error)) return;
         throw error;
     }
+});
 
-    res.json({ success: true, reward, nextStep: 6, completed: true });
+router.post('/tutorial/skip', async (req, res) => {
+    try {
+        const result = await skipTutorial(createPgTutorialRewardRepository(), { userId: req.userId });
+        return res.json({ success: true, ...result, nextStep: 6 });
+    } catch (error) {
+        if ((error as any)?.message === 'User not found') return res.status(404).json({ error: 'User not found' });
+        throw error;
+    }
 });
 
 export default router;
