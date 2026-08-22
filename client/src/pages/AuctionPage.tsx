@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { useAcquire } from '../contexts/AcquireContext';
 import { fetchCharacter } from '../api/character';
+import { fetchAuction, fetchAuctionHistory, fetchMyAuctionLots } from '../api/auction';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import ItemTooltip from '../components/ItemTooltip';
@@ -17,18 +18,7 @@ import { fmtSafeDate } from '../utils/date';
 import { getItemImage } from '../utils/itemUtils';
 import { calculateAuctionListingFee } from '../utils/auctionFees';
 import { showNoMoney } from '../components/NoMoneyModal';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Filler,
-} from 'chart.js';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
+import PriceChart from '../components/auction/PriceChart';
 
 const PRICE_FLOOR: Record<number, number> = { 0: 5, 1: 20, 2: 100, 3: 400, 4: 1500, 5: 6000, 6: 20000 };
 
@@ -118,114 +108,6 @@ function parseSearch(query: string): { text: string; stats: Record<string, numbe
     }
     
     return { text: textParts.join(' '), stats, category };
-}
-
-
-// Компонент графика цен
-function PriceChart({ item }: { item: any }) {
-    const [points, setPoints] = useState<any[] | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const itemKey = `${item.name}|${item.slot || ''}|${item.rarity_id ?? 0}|${item.upgradeLevel ?? 0}`;
-
-    // Сброс при смене предмета
-    useEffect(() => {
-        setPoints(null);
-        setLoading(false);
-        setError('');
-    }, [itemKey]);
-
-    const fetchHistory = useCallback(async () => {
-        if (points !== null) return;
-        setLoading(true);
-        setError('');
-        try {
-            const qs = new URLSearchParams({
-                name: item.name || '',
-                slot: item.slot || '',
-                rarity: String(item.rarity_id ?? 0),
-                upgradeLevel: String(item.upgradeLevel ?? 0),
-            });
-            const res = await fetch(`/api/auction/price-history?${qs}`, { headers: getHeaders() });
-            const data = await res.json();
-            setPoints(data.points || []);
-        } catch {
-            setError('Не удалось загрузить историю');
-        } finally {
-            setLoading(false);
-        }
-    }, [item.name, item.slot, item.rarity_id, points]);
-
-    if (loading) return <div className="text-xs text-[var(--color-text-muted)] py-2">Загрузка графика...</div>;
-    if (error) return <div className="text-xs text-red-400 py-2">{error}</div>;
-    if (!points) {
-        return (
-            <button onClick={fetchHistory}
-                className="text-xs text-[var(--color-accent-info)] hover:underline cursor-pointer py-1">
-                📈 История цен
-            </button>
-        );
-    }
-    if (points.length < 2) {
-        return <div className="text-xs text-[var(--color-text-muted)] py-2">Недостаточно данных для графика</div>;
-    }
-
-    const data = {
-        labels: points.map((p: any) => { const d = p.day.slice(0, 10).split('-'); return `${d[2]}.${d[1]}`; }),
-        datasets: [
-            {
-                label: 'Средняя',
-                data: points.map((p: any) => p.avg_price),
-                borderColor: '#f59e0b',
-                backgroundColor: 'rgba(245,158,11,0.1)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 2,
-                borderWidth: 2,
-            },
-            {
-                label: 'Мин',
-                data: points.map((p: any) => p.min_price),
-                borderColor: '#22c55e',
-                borderDash: [3, 3],
-                pointRadius: 0,
-                borderWidth: 1,
-                fill: false,
-            },
-            {
-                label: 'Макс',
-                data: points.map((p: any) => p.max_price),
-                borderColor: '#ef4444',
-                borderDash: [3, 3],
-                pointRadius: 0,
-                borderWidth: 1,
-                fill: false,
-            },
-        ],
-    };
-
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            tooltip: {
-                callbacks: {
-                    label: (ctx: any) => `${ctx.dataset.label}: ${formatMoney(ctx.raw)} / шт`,
-                },
-            },
-        },
-        scales: {
-            x: { ticks: { font: { size: 9 }, color: '#888' }, grid: { display: false } },
-            y: { ticks: { font: { size: 9 }, color: '#888', callback: (v: any) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(1)}k` : v }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        },
-    };
-
-    return (
-        <div className="mt-2">
-            <div className="text-[0.6rem] text-[var(--color-text-muted)] mb-1">Цена за 1 предмет</div>
-            <div style={{ height: 120 }}><Line data={data} options={options as any} /></div>
-        </div>
-    );
 }
 
 
@@ -360,10 +242,9 @@ export default function AuctionPage() {
             for (const [k, v] of Object.entries(stats)) {
                 if (v > 0) qs.set(k, String(v));
             }
-            const res = await fetch(`${BASE_URL}/auction?${qs}`, { headers: getHeaders() });
-            const data = await res.json();
-            setLots(Array.isArray(data.lots) ? data.lots : []);
-            setGroups(Array.isArray(data.groups) ? data.groups : []);
+            const data = await fetchAuction(qs);
+            setLots(data.lots);
+            setGroups(data.groups);
             setTotalCount(data.totalCount || 0);
             setTotalPages(data.totalPages || 1);
             setPage(data.page || 1);
@@ -376,17 +257,15 @@ export default function AuctionPage() {
     };
 
     const loadHistory = async (p = 1) => {
-        try { const res = await fetch(`${BASE_URL}/auction/history?page=${p}&limit=10`, { headers: getHeaders() }); const data = await res.json(); setHistory(Array.isArray(data.history) ? data.history : []); setHistoryPage(data.page || 1); setHistoryTotalPages(data.totalPages || 1); }
+        try { const data = await fetchAuctionHistory(p); setHistory(data.history); setHistoryPage(data.page || 1); setHistoryTotalPages(data.totalPages || 1); }
         catch { setHistory([]); }
     };
 
     const loadMyLots = async () => {
         setMyLotsLoading(true);
         try {
-            const res = await fetch(`${BASE_URL}/auction/my-lots`, { headers: getHeaders() });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Не удалось загрузить лоты');
-            const ownLots = Array.isArray(data.lots) ? data.lots : [];
+            const data = await fetchMyAuctionLots();
+            const ownLots = data.lots;
             setMyLots(ownLots);
             setUserLotCount(ownLots.length);
         } catch (e: any) {
@@ -717,7 +596,7 @@ export default function AuctionPage() {
 
             {/* History tab */}
             {tab === 'history' && (
-                <div>{history.length === 0 ? <p className="text-sm text-[var(--color-text-muted)]">Нет завершённых сделок</p> : <div className="space-y-2">{history.map((h: any) => { const isBuyer = h.buyerId === user?.id; const itemData = h.itemData ? (typeof h.itemData === 'string' ? JSON.parse(h.itemData) : h.itemData) : null; return <Card key={h.id} className="text-xs"><div className="flex items-center gap-1 flex-wrap"><span className={isBuyer ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}>{isBuyer ? '📥 Куплено' : '📤 Продано'}</span><span className="font-medium">{h.itemName}</span>{itemData?.count > 1 && <span className="text-[var(--color-text-muted)]">x{itemData.count}</span>}<span>за</span><span className="font-bold">{formatMoney(h.price)}</span><span className="text-[var(--color-text-muted)]">—</span><span className="text-[var(--color-text-muted)]">Продавец {h.sellerName}, покупатель {h.buyerName}</span></div><div className="text-[var(--color-text-muted)] mt-0.5">{h.commission > 0 && <>ком. {formatMoney(h.commission)} • </>}{fmtSafeDate(h.createdAt)}</div></Card>; })}
+                <div>{history.length === 0 ? <p className="text-sm text-[var(--color-text-muted)]">Нет завершённых сделок</p> : <div className="space-y-2">{history.map((h: any) => { const isBuyer = h.buyerId === user?.id; const itemData = h.itemData; return <Card key={h.id} className="text-xs"><div className="flex items-center gap-1 flex-wrap"><span className={isBuyer ? 'text-[var(--color-accent-success)]' : 'text-[var(--color-accent-danger)]'}>{isBuyer ? '📥 Куплено' : '📤 Продано'}</span><span className="font-medium">{h.itemName}</span>{itemData?.count > 1 && <span className="text-[var(--color-text-muted)]">x{itemData.count}</span>}<span>за</span><span className="font-bold">{formatMoney(h.price)}</span><span className="text-[var(--color-text-muted)]">—</span><span className="text-[var(--color-text-muted)]">Продавец {h.sellerName}, покупатель {h.buyerName}</span></div><div className="text-[var(--color-text-muted)] mt-0.5">{h.commission > 0 && <>ком. {formatMoney(h.commission)} • </>}{fmtSafeDate(h.createdAt)}</div></Card>; })}
                 {historyTotalPages > 1 && (
                     <div className="flex items-center justify-center gap-1 mt-3">
                         <button onClick={() => loadHistory(historyPage - 1)} disabled={historyPage <= 1} className="px-2 py-0.5 text-xs rounded bg-[var(--color-bg-secondary)] disabled:opacity-30 cursor-pointer">←</button>
