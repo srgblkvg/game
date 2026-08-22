@@ -3,7 +3,7 @@ import { db } from '../db/index';
 import { collectGuildTax, getUserById, enrichEquipment, applyExp, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
 import { sendLeaderboardLevel } from '../vkLeaderboard';
 import { getDrinkBonuses } from '../game/drinks';
-import { applyHpRegen } from '../game/hpRegen';
+import { applyHpRegen, calculateHpRegenRate } from '../game/hpRegen';
 import { updateGuildQuestProgress } from './guild';
 import { getGuildBonus, getGuildBuildings } from '../game/guildBuildings';
 import { getTrackTier, TRACK_MAP } from '../game/achievements';
@@ -171,6 +171,7 @@ router.get('/character/me', async (req, res) => {
     };
     if (stats.hermitRegen) hpRegenParams.hermitRegen = true;
     let currentHp = await applyHpRegen(hpRegenParams);
+    const hpRegenRate = calculateHpRegenRate(hpRegenParams, now);
 
     // Если currentHp > maxHp (например после изменения бонусов) — ограничиваем
     if (currentHp > maxHp) {
@@ -187,7 +188,7 @@ router.get('/character/me', async (req, res) => {
         exp: user.exp, money: user.money, totalBattles: user.totalBattles,
         wins: user.wins, inventory, equipment: enrichedEquipment,
         baseStats: { s: user.baseS ?? 5, a: user.baseA ?? 5, d: user.baseD ?? 5, m: user.baseM ?? 5 },
-        currentHp, stats, lastAttackTime: user.lastAttackTime || 0,
+        currentHp, stats, hpRegenRate, lastAttackTime: user.lastAttackTime || 0,
         protectionUntil: user.protectionUntil || 0,
         lastHpUpdate: now,  // регенерация уже применена сервером до now
         lastPveAttackTime: user.lastPveAttackTime || 0,

@@ -20,6 +20,7 @@ async function getArenaHp(user: any): Promise<{ currentHp: number; maxHp: number
         roomType: user.roomType ?? user.roomtype,
         roomUntil: user.roomUntil ?? user.roomuntil,
         premiumUntil: user.premiumUntil ?? user.premiumuntil,
+        hermitRegen: stats.hermitRegen === true,
     });
     return { currentHp, maxHp: stats.hp };
 }
