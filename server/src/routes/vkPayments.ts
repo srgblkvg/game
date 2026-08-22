@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack, deliverCursePack, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
+import { deliverStarterPack, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
 import crypto from 'crypto';
 import logger from '../logger';
 import { processVkSilverPayment } from '../game/vkPaymentDelivery';
@@ -10,6 +10,7 @@ import { createPgVkPaymentDeliveryRepository, ensureVkPaymentDeliveryReady } fro
 import { processVkCraftPackPayment } from '../game/vkCraftPackPayment';
 import { createPgVkCraftPackRepository } from '../game/vkCraftPackPaymentRepository';
 import { processVkRunePackPayment } from '../game/vkRunePackPayment';
+import { processVkCursePackPayment } from '../game/vkCursePackPayment';
 import { processVkPremiumPayment } from '../game/vkPremiumPayment';
 import { createPgVkPremiumRepository } from '../game/vkPremiumPaymentRepository';
 
@@ -197,12 +198,17 @@ router.post('/', async (req: Request, res: Response) => {
           }
           return res.json({ response: { order_id: orderId, app_order_id: 0 } });
         } else if (item.type === 'curse_pack') {
-          const packType = itemName === 'curse_small' ? 'small' : itemName === 'curse_large' ? 'large' : itemName === 'curse_x50' ? 'x50' : 'x100';
-          const result = await deliverCursePack(character.id, packType);
-          if (!result.success) {
-            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          const result = await processVkCursePackPayment(createPgVkCraftPackRepository(), {
+            orderId, vkUserId, item: itemName,
+            providerPrice: Number(params.item_price), processedAt: now,
+          });
+          if (result.status === 'rejected') {
+            return res.json({ error: { error_code: 1, error_msg: result.reason } });
           }
-          processed = true;
+          if (result.status === 'delivered') {
+            sendToUser(result.characterId, { type: 'paymentStatus', status: 'success', platform: 'vk' });
+          }
+          return res.json({ response: { order_id: orderId, app_order_id: 0 } });
         } else if (item.type === 'rune_pack') {
           const result = await processVkRunePackPayment(createPgVkCraftPackRepository(), {
             orderId, vkUserId, item: itemName,

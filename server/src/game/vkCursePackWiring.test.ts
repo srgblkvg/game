@@ -1,0 +1,3 @@
+/// <reference types="node" />
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {resolve} from 'node:path';import test from 'node:test';const body=readFileSync(resolve(__dirname,'../routes/vkPayments.ts'),'utf8');
+test('VK curse bypasses legacy and common log',()=>{const start=body.indexOf("item.type === 'curse_pack'");const end=body.indexOf("item.type === 'rune_pack'",start);assert.ok(start>=0&&end>start);const branch=body.slice(start,end);assert.match(branch,/processVkCursePackPayment\(createPgVkCraftPackRepository\(\)/);assert.match(branch,/providerPrice:\s*Number\(params\.item_price\)/);assert.doesNotMatch(branch,/deliverCursePack|processed\s*=|db\.run/);assert.match(branch,/return res\.json/);});
