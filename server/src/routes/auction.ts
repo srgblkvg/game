@@ -3,7 +3,6 @@ import { compareAuctionLots } from '../game/auctionSort';
 import { db } from '../db/index';
 import { checkAchievement } from './achievements';
 import { markDirty, pushNotification, broadcast, sendToUser } from '../events';
-import { addToOverflow, isInventoryFull } from './overflow';
 import { buyoutAuctionLot } from '../game/auctionBuyout';
 import { createPgAuctionBuyoutRepository } from '../game/auctionBuyoutRepository';
 import { systemClock } from '../clock';
@@ -18,33 +17,6 @@ import { createPgAuctionSellRepository } from '../game/auctionSellRepository';
 
 const router = Router();
 
-// Хелпер: добавить предмет в инвентарь или overflow при переполнении
-async function returnItemToInventory(userId: number, itemData: any) {
-    const user = await db.one('SELECT inventory, inventorySlots FROM users WHERE id = ?', [userId]) as any;
-    const inventory = JSON.parse(user.inventory || '[]');
-    const maxSlots = user.inventoryslots || user.inventorySlots || 10;
-    const isCraft = itemData.type === 'craft_item' || itemData.type === 'material';
-    const count = itemData.count || 1;
-
-    if (isCraft) {
-        const existingIdx = inventory.findIndex((i: any) =>
-            (i.type === 'craft_item' || i.type === 'material') && String(i.id) === String(itemData.id)
-        );
-        if (existingIdx !== -1) {
-            inventory[existingIdx].count = (inventory[existingIdx].count || 0) + count;
-            await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-            return;
-        }
-    }
-
-    const equipCount = inventory.filter((i: any) => !!(i.slot)).length;
-    if (!isCraft && equipCount >= maxSlots) {
-        await addToOverflow(userId, { ...itemData, count });
-    } else {
-        inventory.push({ ...itemData, count });
-        await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-    }
-}
 
 // Таблица истории сделок
 db.run(`CREATE TABLE IF NOT EXISTS auction_history (

@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import { db } from '../db/index';
+import { takeOverflowItem } from '../game/overflowTake';
+import { createPgOverflowTakeRepository } from '../game/overflowTakeRepository';
+import { addOverflowItem } from '../game/overflowAdd';
+import { createPgOverflowAddRepository } from '../game/overflowAddRepository';
 
 const router = Router();
 
@@ -22,63 +26,30 @@ router.get('/', async (req: any, res) => {
 router.post('/take/:id', async (req: any, res) => {
   const userId = req.userId;
   const id = parseInt(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Неверный ID предмета' });
 
-  const row = await db.one('SELECT * FROM overflow_storage WHERE id = ? AND userId = ?', [id, userId]) as any;
-  if (!row) return res.status(404).json({ error: 'Предмет не найден' });
-
-  const user = await db.one('SELECT inventory, inventorySlots FROM users WHERE id = ?', [userId]) as any;
-  const inventory = typeof user.inventory === 'string' ? JSON.parse(user.inventory) : (user.inventory || []);
-  const maxSlots = user.inventorySlots || 10;
-  const item = typeof row.item === 'string' ? JSON.parse(row.item) : row.item;
-  const isGear = !!item.slot;
-  const isCraft = item.type === 'craft_item' || item.type === 'material' || item.type === 'upgrade';
-  const equipCount = inventory.filter((i: any) => !!i.slot).length;
-
-  if (isGear && equipCount >= maxSlots) {
-    return res.status(400).json({ error: 'Инвентарь заполнен' });
-  }
-
-  // Стакаем ресурсы в инвентаре
-  if (isCraft) {
-    const existingIdx = inventory.findIndex((i: any) =>
-      (i.type === 'craft_item' || i.type === 'material' || i.type === 'upgrade') && String(i.id) === String(item.id)
-    );
-    if (existingIdx !== -1) {
-      inventory[existingIdx].count = (inventory[existingIdx].count || 0) + (item.count || 1);
-      await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-      await db.run('DELETE FROM overflow_storage WHERE id = ?', [id]);
-      return res.json({ success: true, inventory, remainingSlots: maxSlots - inventory.length, stacked: true });
+  try {
+    const result = await takeOverflowItem(createPgOverflowTakeRepository(), {
+      overflowId: id,
+      userId,
+    });
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    const message = error?.message || 'Не удалось забрать предмет';
+    if (message === 'Предмет не найден' || message === 'Пользователь не найден') {
+      return res.status(404).json({ error: message });
     }
+    if (message === 'Инвентарь заполнен') return res.status(400).json({ error: message });
+    console.error('[overflow/take]', error);
+    res.status(500).json({ error: 'Не удалось забрать предмет' });
   }
-
-  inventory.push(item);
-  await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-  await db.run('DELETE FROM overflow_storage WHERE id = ?', [id]);
-
-  res.json({ success: true, inventory, remainingSlots: maxSlots - inventory.length });
 });
 
 // Добавить предмет на склад (вызывается из аукциона)
 export async function addToOverflow(userId: number, item: any, auctionLotId?: number) {
-  // Стакаем ресурсы: если такой же уже на складе — увеличиваем count
-  const isCraft = item.type === 'craft_item' || item.type === 'material' || item.type === 'upgrade';
-  if (isCraft) {
-    const rows = await db.query(
-      "SELECT id, item FROM overflow_storage WHERE userId = ? AND item->>'id' = ? AND item->>'type' = ? LIMIT 1",
-      [userId, String(item.id), item.type]
-    ) as any[];
-    if (rows.length > 0) {
-      const existing = rows[0];
-      const existingItem = typeof existing.item === 'string' ? JSON.parse(existing.item) : existing.item;
-      existingItem.count = (existingItem.count || 0) + (item.count || 1);
-      await db.run('UPDATE overflow_storage SET item = ? WHERE id = ?', [JSON.stringify(existingItem), existing.id]);
-      return;
-    }
-  }
-  await db.run(
-    'INSERT INTO overflow_storage (userId, item, auctionLotId) VALUES (?, ?, ?)',
-    [userId, JSON.stringify(item), auctionLotId || null]
-  );
+  await addOverflowItem(createPgOverflowAddRepository(), auctionLotId === undefined
+    ? { userId, item }
+    : { userId, item, auctionLotId });
 }
 
 // Получить + вывести серебро со склада
