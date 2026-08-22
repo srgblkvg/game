@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { db } from '../db/index';
 import { getUserById, getCollectionBonus } from '../db/helpers';
 import { getDrinkBonuses } from '../game/drinks';
 import { getGuildBonus } from '../game/guildBuildings';
@@ -10,6 +9,8 @@ import { salvageInventory } from '../game/inventorySalvage';
 import { createPgInventorySalvageRepository } from '../game/inventorySalvageRepository';
 import { reorderInventory, toggleInventoryLock } from '../game/inventoryArrange';
 import { createPgInventoryArrangeRepository } from '../game/inventoryArrangeRepository';
+import { expandInventory } from '../game/inventoryExpand';
+import { createPgInventoryExpandRepository } from '../game/inventoryExpandRepository';
 
 const router = Router();
 
@@ -79,19 +80,18 @@ router.post('/character/salvage', async (req, res) => {
 // Расширить инвентарь
 router.post('/character/expand-inventory', async (req, res) => {
     const userId = req.userId;
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const currentSlots = user.inventorySlots || 10;
-    const MAX_SLOTS = 30;
-    if (currentSlots >= MAX_SLOTS) return res.status(400).json({ error: `Достигнут максимум слотов (${MAX_SLOTS})` });
-    const price = 100 * Math.pow(2, currentSlots - 10);
-    if (user.money < price) return res.status(400).json({ error: `Недостаточно серебра. Нужно ${price}, есть ${user.money}` });
-
-    await db.run('UPDATE users SET money = money - ?, inventorySlots = inventorySlots + 1 WHERE id = ?',
-        [price, userId]);
-
-    res.json({ inventorySlots: currentSlots + 1, moneyAfter: user.money - price });
+    try {
+        const result = await expandInventory(createPgInventoryExpandRepository(), { userId });
+        res.json(result);
+    } catch (error: any) {
+        const message = error?.message || 'Не удалось расширить инвентарь';
+        if (message === 'User not found') return res.status(404).json({ error: message });
+        if (message.startsWith('Достигнут максимум слотов') || message.startsWith('Недостаточно серебра')) {
+            return res.status(400).json({ error: message });
+        }
+        console.error('[character/expand-inventory]', error);
+        res.status(500).json({ error: 'Не удалось расширить инвентарь' });
+    }
 });
 
 // Сохранить новый порядок предметов в инвентаре (drag & drop)
