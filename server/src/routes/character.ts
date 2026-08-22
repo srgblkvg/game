@@ -40,7 +40,7 @@ router.get('/character/me', async (req, res) => {
     const equipment1 = parseEq(user.equipment_1);
     const equipment2 = parseEq(user.equipment_2);
     const equipment3 = parseEq(user.equipment_3);
-    let changed = false;
+
 
     // Собираем уникальные ID крафт-предметов и загружаем данные одним запросом
     const craftIds = [...new Set(
@@ -67,7 +67,6 @@ router.get('/character/me', async (req, res) => {
                     || item.rarity_display !== craftRow.rarity_display
                     || item.rarity_color !== craftRow.rarity_color;
                 if (needsUpdate) {
-                    changed = true;
                     return {
                         ...item,
                         count: Math.max(1, Number(item.count) || 0),
@@ -83,7 +82,6 @@ router.get('/character/me', async (req, res) => {
             if (item.rarity_id === undefined || !item.image) {
                 const itemRow = await db.one(ITEM_DATA_SQL, [item.name, item.slot]) as any;
                 if (itemRow) {
-                    changed = true;
                     return {
                         ...item,
                         rarity_id: itemRow.rarity_id,
@@ -98,14 +96,7 @@ router.get('/character/me', async (req, res) => {
     }));
 
     // Обогащаем экипировку
-    const { enriched: enrichedEquipment, changed: equipChanged } = await enrichEquipment(equipment);
-
-    if (changed) {
-        await db.run('UPDATE users SET inventory = ? WHERE id = ?', [JSON.stringify(inventory), userId]);
-    }
-    if (equipChanged) {
-        await db.run('UPDATE users SET equipment = ? WHERE id = ?', [JSON.stringify(enrichedEquipment), userId]);
-    }
+    const { enriched: enrichedEquipment } = await enrichEquipment(equipment);
 
     const drinkBonuses = getDrinkBonuses(user);
     const collectionCount = (await db.one('SELECT COUNT(*) as cnt FROM collections WHERE userId = ?', [userId]) as any).cnt;
@@ -230,15 +221,6 @@ router.get('/character/me', async (req, res) => {
         equipment1, equipment2, equipment3,
         activeEquipSlot: activeSlot,
     });
-});
-
-// Сохранить персонажа (полное обновление)
-router.post('/character/save', async (req, res) => {
-    const userId = req.userId;
-    const { inventory, equipment, level, exp, money, totalBattles, wins } = req.body;
-    await db.run('UPDATE users SET level=?, exp=?, money=?, totalBattles=?, wins=?, inventory=?, equipment=? WHERE id=?',
-        [level, exp, money, totalBattles, wins, JSON.stringify(inventory), JSON.stringify(equipment), userId]);
-    res.json({ success: true });
 });
 
 // Сохранение открытых вкладок приватного чата

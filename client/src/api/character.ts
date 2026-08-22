@@ -17,15 +17,6 @@ export async function fetchCharacter() {
     };
 }
 
-export async function saveCharacter(character: any) {
-    const res = await fetch(`${BASE_URL}/character/save`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(character),
-    });
-    return res.json();
-}
-
 export async function equipItem(slotId: string, itemId?: string) {
     const res = await fetch(`${BASE_URL}/character/equip`, {
         method: 'POST',
