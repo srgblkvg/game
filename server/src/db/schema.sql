@@ -781,3 +781,17 @@ CREATE TABLE IF NOT EXISTS exchange_history (
   gold INTEGER NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ====== treasury ======
+CREATE TABLE IF NOT EXISTS castle_treasury (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  amount INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS treasury_log (
+  id SERIAL PRIMARY KEY,
+  amount INTEGER NOT NULL,
+  source TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

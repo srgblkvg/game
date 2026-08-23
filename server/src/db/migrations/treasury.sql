@@ -1,0 +1,24 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS castle_treasury (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  amount INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS treasury_log (
+  id SERIAL PRIMARY KEY,
+  amount INTEGER NOT NULL,
+  source TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO castle_treasury (id, amount)
+VALUES (1, 0)
+ON CONFLICT (id) DO NOTHING;
+
+GRANT SELECT, UPDATE ON castle_treasury TO game;
+GRANT SELECT, INSERT ON treasury_log TO game;
+GRANT USAGE, SELECT ON SEQUENCE treasury_log_id_seq TO game;
+
+COMMIT;
