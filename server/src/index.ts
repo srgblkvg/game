@@ -11,6 +11,17 @@ import { PORT } from './env';
 import logger from './logger';
 import { vkPaymentsReady } from './routes/vkPayments';
 import { yooKassaPaymentsReady } from './routes/yukassa';
+import { startSalaryScheduler } from './schedulers/salary';
+import { startTournamentScheduler } from './schedulers/tournaments';
+import { startCleanupScheduler } from './schedulers/cleanup';
+import { startMassacreScheduler } from './schedulers/massacre';
+import { startInactiveLeaderCheck } from './schedulers/inactiveLeader';
+import { startJobCompletionScheduler } from './schedulers/jobs';
+import { startGuildBossWeeklyResetScheduler } from './schedulers/guildBossWeeklyReset';
+import { startAuctionSettlementScheduler } from './schedulers/auctionSettlement';
+import { initTreasury, initTreasuryLog } from './game/treasury';
+import { initExchange } from './game/exchange';
+import { initTournamentSchema } from './game/tournamentSchema';
 
 const app = express();
 
@@ -34,19 +45,6 @@ startServer().catch(error => {
   logger.error('Server startup failed:', error?.message || error);
   process.exit(1);
 });
-
-// ── Schedulers ──
-import { startSalaryScheduler } from './schedulers/salary';
-import { startTournamentScheduler } from './schedulers/tournaments';
-import { startCleanupScheduler } from './schedulers/cleanup';
-import { startMassacreScheduler } from './schedulers/massacre';
-import { startInactiveLeaderCheck } from './schedulers/inactiveLeader';
-import { startJobCompletionScheduler } from './schedulers/jobs';
-import { startGuildBossWeeklyResetScheduler } from './schedulers/guildBossWeeklyReset';
-import { startAuctionSettlementScheduler } from './schedulers/auctionSettlement';
-import { initTreasury, initTreasuryLog } from './game/treasury';
-import { initExchange } from './game/exchange';
-import { initTournamentSchema } from './game/tournamentSchema';
 
 // Турниры зависят от казны: первый тик запускаем только после инициализации.
 Promise.allSettled([treasuryReady, initTournamentSchema()]).then((results) => {
