@@ -14,26 +14,6 @@ const router = Router();
 
 // ═══════ ТАБЛИЦЫ ═══════
 
-db.run(`CREATE TABLE IF NOT EXISTS dungeon_runs (
-    id SERIAL PRIMARY KEY,
-    userId INTEGER NOT NULL UNIQUE,
-    currentFloor INTEGER DEFAULT 1,
-    checkpointFloor INTEGER DEFAULT 0,
-    enemyData TEXT NOT NULL DEFAULT '[]',
-    playerHp INTEGER NOT NULL,
-    playerMaxHp INTEGER NOT NULL,
-    role TEXT NOT NULL DEFAULT 'warrior',
-    skills TEXT NOT NULL DEFAULT '[]',
-    startedAt INTEGER NOT NULL,
-    dailyRuns INTEGER DEFAULT 0,
-    dailyRunDate TEXT DEFAULT '',
-    maxfloor INTEGER DEFAULT 0,
-    maxreward INTEGER DEFAULT 0
-)`).catch(() => {});
-
-db.run('ALTER TABLE dungeon_runs ADD COLUMN IF NOT EXISTS maxfloor INTEGER DEFAULT 0').catch(() => {});
-db.run('ALTER TABLE dungeon_runs ADD COLUMN IF NOT EXISTS maxreward INTEGER DEFAULT 0').catch(() => {});
-
 // ═══════ КОНСТАНТЫ ═══════
 
 const WEAPON_SPEED: Record<number, number> = { 0: 0.3, 1: 0.5, 2: 0.7, 3: 0.9, 4: 1.1, 5: 1.3, 6: 1.5 };
