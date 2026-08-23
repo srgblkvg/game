@@ -30,10 +30,6 @@ db.run(`CREATE TABLE IF NOT EXISTS auction_history (
     createdAt TEXT NOT NULL
 )`).catch(() => {});
 
-// Колонка непрочитанных продаж на аукционе
-db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auction_sales INTEGER DEFAULT 0`).catch(() => {});
-db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS overflowmoney INTEGER DEFAULT 0`).catch(() => {});
-
 // Мин. цены по редкости
 // API: получить минимальные цены (для клиента)
 router.get('/auction/price-floor', async (req, res) => {

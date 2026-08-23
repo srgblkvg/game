@@ -221,6 +221,8 @@ CREATE TABLE IF NOT EXISTS users (
   accountNumber TEXT,
   craftCount INTEGER DEFAULT 0,
   auctionTrades INTEGER DEFAULT 0,
+  auction_sales INTEGER DEFAULT 0,
+  overflowmoney INTEGER DEFAULT 0,
   totalJobSeconds INTEGER DEFAULT 0,
   craftCreated INTEGER DEFAULT 0,
   craftUpgraded INTEGER DEFAULT 0,
