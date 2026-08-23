@@ -10,6 +10,7 @@ import { setupWebSocket } from './websocket';
 import { PORT } from './env';
 import logger from './logger';
 import { vkPaymentsReady } from './routes/vkPayments';
+import { yooKassaPaymentsReady } from './routes/yukassa';
 
 const app = express();
 
@@ -23,7 +24,7 @@ const server = http.createServer(app);
 setupWebSocket(server);
 
 async function startServer() {
-  await vkPaymentsReady;
+  await Promise.all([vkPaymentsReady, yooKassaPaymentsReady]);
   server.listen(PORT, () => logger.info(`Server started on port ${PORT}`));
 }
 startServer().catch(error => {

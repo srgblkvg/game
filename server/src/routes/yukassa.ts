@@ -24,7 +24,7 @@ const router = Router();
 
 // Инициализация таблицы платежей: DDL выполняется последовательно, чтобы индекс
 // не попытался создаться раньше таблицы/колонки.
-db.run(`CREATE TABLE IF NOT EXISTS yukassa_payments (
+const yooKassaPaymentsTableReady = db.run(`CREATE TABLE IF NOT EXISTS yukassa_payments (
   id SERIAL PRIMARY KEY,
   payment_id TEXT NOT NULL,
   user_id INTEGER NOT NULL,
@@ -37,8 +37,9 @@ db.run(`CREATE TABLE IF NOT EXISTS yukassa_payments (
 )`)
   .then(() => db.run(`ALTER TABLE yukassa_payments ADD COLUMN IF NOT EXISTS item TEXT DEFAULT 'premium'`))
   .then(() => db.run(`CREATE UNIQUE INDEX IF NOT EXISTS yukassa_payments_payment_id_uidx
-    ON yukassa_payments (payment_id)`))
-  .catch(() => {});
+    ON yukassa_payments (payment_id)`));
+
+export const yooKassaPaymentsReady = yooKassaPaymentsTableReady;
 
 // Товары
 interface ShopItem {
@@ -179,6 +180,7 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
 // POST /api/yukassa/webhook — уведомления от ЮKassa
 router.post('/webhook', async (req: Request, res: Response) => {
   try {
+    await yooKassaPaymentsReady;
     const body = req.body as Record<string, any> | undefined;
     if (!body || body.type !== 'notification') {
       return res.status(400).json({ error: 'Invalid notification' });

@@ -49,3 +49,16 @@ test('runtime DDL и migration содержат unique payment_id index', () => 
   const migration = readFileSync(resolve(__dirname, '../scripts/migrate-yukassa-payment-id-unique.ts'), 'utf8');
   assert.match(migration, /CREATE UNIQUE INDEX IF NOT EXISTS yukassa_payments_payment_id_uidx[\s\S]*ON yukassa_payments \(payment_id\)/i);
 });
+
+test('YooKassa readiness ожидается callback и server startup fail-fast', () => {
+  const body = source();
+  assert.match(body, /export const yooKassaPaymentsReady/);
+  assert.match(body, /await yooKassaPaymentsReady/);
+  const readiness = body.slice(body.indexOf('const yooKassaPaymentsTableReady'), body.indexOf('// Товары'));
+  assert.doesNotMatch(readiness, /\.catch\(/);
+
+  const index = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
+  assert.match(index, /import \{ yooKassaPaymentsReady \} from '\.\/routes\/yukassa'/);
+  assert.ok(index.indexOf('await Promise.all([vkPaymentsReady, yooKassaPaymentsReady])') < index.indexOf('server.listen'));
+  assert.match(index, /startServer\(\)\.catch[\s\S]*process\.exit\(1\)/);
+});
