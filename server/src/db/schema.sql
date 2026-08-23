@@ -712,3 +712,21 @@ CREATE TABLE IF NOT EXISTS dungeon_runs (
   maxfloor INTEGER DEFAULT 0,
   maxreward INTEGER DEFAULT 0
 );
+
+-- ====== dungeon_logs ======
+CREATE TABLE IF NOT EXISTS dungeon_logs (
+  id SERIAL PRIMARY KEY,
+  userId INTEGER,
+  floor INTEGER,
+  playerHp INTEGER,
+  playerMaxHp INTEGER,
+  playerStr INTEGER,
+  playerAgi INTEGER,
+  playerDef INTEGER,
+  playerMag INTEGER,
+  enemies JSONB,
+  startedAt INTEGER,
+  endedAt INTEGER,
+  result TEXT,
+  combatLog JSONB
+);
