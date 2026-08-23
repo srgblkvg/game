@@ -1,9 +1,10 @@
 import type { PoolClient } from 'pg';
 import { db } from '../db/index';
 import type { VkCraftPackRepository, VkCraftPackTransaction } from './vkCraftPackPayment';
+import {serializeInventoryJson} from './donateInventoryRecipe';
 function adapter(client:PoolClient):VkCraftPackTransaction{return{
  async claim(input){await client.query("INSERT INTO payment_deliveries(provider,external_id,provider_user_id,item,status) VALUES($1,$2,$3,$4,'pending') ON CONFLICT(provider,external_id) DO NOTHING",[input.provider,input.externalId,input.providerUserId,input.item]);const r=(await client.query('SELECT provider,external_id,provider_user_id,item,status FROM payment_deliveries WHERE provider=$1 AND external_id=$2 FOR UPDATE',[input.provider,input.externalId])).rows[0];if(!r)throw new Error('payment delivery claim failed');return{provider:'vk',externalId:r.external_id,providerUserId:Number(r.provider_user_id),item:r.item,status:r.status};},
- async lockVkUser(vkUserId){const r=(await client.query("SELECT id,inventory,bank FROM users WHERE oauthprovider='vk' AND oauthid=$1 FOR UPDATE",[String(vkUserId)])).rows[0];return r?{id:Number(r.id),inventory:typeof r.inventory==='string'?r.inventory:JSON.stringify(r.inventory??[]),bank:r.bank===null?null:Number(r.bank)}:null;},
+ async lockVkUser(vkUserId){const r=(await client.query("SELECT id,inventory,bank FROM users WHERE oauthprovider='vk' AND oauthid=$1 FOR UPDATE",[String(vkUserId)])).rows[0];return r?{id:Number(r.id),inventory:serializeInventoryJson(r.inventory),bank:r.bank===null?null:Number(r.bank)}:null;},
  async findCraftItems(names){const rows=(await client.query('SELECT c.id,c.name,c.rarity_id,c.type,c.image,r.display_name,r.color FROM craft_items c JOIN rarities r ON c.rarity_id=r.id WHERE c.name=ANY($1::text[])',[names])).rows;return rows.map(r=>({id:Number(r.id),name:r.name,rarityId:Number(r.rarity_id),type:r.type,image:r.image,rarityDisplay:r.display_name,rarityColor:r.color}));},
  async saveUser(id,inventory,delta){await client.query('UPDATE users SET inventory=$1,bank=COALESCE(bank,0)+$2 WHERE id=$3',[inventory,delta,id]);},
  async logPayment(i){await client.query("INSERT INTO vk_payments(order_id,user_id,character_id,item,status,processed_at) VALUES($1,$2,$3,$4,'chargeable',$5)",[i.orderId,i.vkUserId,i.characterId,i.item,i.processedAt]);},

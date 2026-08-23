@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
 import { db } from '../db/index';
 import type { DonateCraftPackRepository, DonateCraftPackTransaction } from './donateCraftPackDelivery';
+import {serializeInventoryJson} from './donateInventoryRecipe';
 
 function adapter(client: PoolClient): DonateCraftPackTransaction {
   return {
@@ -10,7 +11,7 @@ function adapter(client: PoolClient): DonateCraftPackTransaction {
     },
     async lockUser(userId) {
       const r=(await client.query('SELECT id,inventory,bank FROM users WHERE id=$1 FOR UPDATE',[userId])).rows[0];
-      return r ? {id:Number(r.id),inventory:typeof r.inventory==='string'?r.inventory:JSON.stringify(r.inventory??[]),bank:r.bank===null?null:Number(r.bank)}:null;
+      return r ? {id:Number(r.id),inventory:serializeInventoryJson(r.inventory),bank:r.bank===null?null:Number(r.bank)}:null;
     },
     async findCraftItems(names) {
       const rows=(await client.query(`SELECT c.id,c.name,c.rarity_id,c.type,c.image,r.display_name,r.color FROM craft_items c JOIN rarities r ON c.rarity_id=r.id WHERE c.name=ANY($1::text[])`,[names])).rows;

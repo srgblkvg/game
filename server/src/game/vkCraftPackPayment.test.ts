@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { processVkCraftPackPayment, type VkCraftPackRepository, type VkCraftPackTransaction } from './vkCraftPackPayment';
 
-function repository(options:{item?:string;items?:any[]}={}) {
+function repository(options:{item?:string;items?:any[];inventory?:string}={}) {
   let claim:any={provider:'vk',externalId:'order-pack',providerUserId:77,item:options.item??'craft_rare',status:'pending'};
-  let inventory='[]'; let bank:number|null=null; const writes:string[]=[];
+  let inventory=options.inventory??'[]'; let bank:number|null=null; const writes:string[]=[];
   const tx:VkCraftPackTransaction={
     async claim(){return {...claim};},
     async lockVkUser(){return {id:7,inventory,bank};},
@@ -38,6 +38,12 @@ test('повторный VK callback не выдаёт pack снова',async()=
 test('неверная VK price отклоняется до transaction',async()=>{
  const s=repository(); const result=await processVkCraftPackPayment(s.repo,{...input,providerPrice:99});
  assert.equal(result.status,'rejected'); assert.deepEqual(s.state().writes,[]);
+});
+
+test('VK small craft отклоняет numeric string count через общий validator',async()=>{
+ const s=repository({inventory:JSON.stringify([{type:'craft_item',id:10,count:'2'}])});
+ const result=await processVkCraftPackPayment(s.repo,input);
+ assert.equal(result.status,'rejected');assert.deepEqual(s.state().writes,[]);assert.equal(s.state().bank,null);
 });
 
 test('VK craft_epic выдаёт exact recipe по цене 28 голосов',async()=>{

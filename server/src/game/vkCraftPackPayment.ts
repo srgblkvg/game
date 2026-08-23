@@ -1,4 +1,5 @@
 import type { CraftCatalogItem } from './donateCraftPackDelivery';
+import {applyInventoryRecipe} from './donateInventoryRecipe';
 
 export interface VkCraftPackTransaction {
   claim(input: { provider: 'vk'; externalId: string; providerUserId: number; item: string }): Promise<{ provider: 'vk'; externalId: string; providerUserId: number; item: string; status: string }>;
@@ -24,13 +25,9 @@ export async function processVkCraftPackPayment(repository:VkCraftPackRepository
   if(claim.status==='succeeded')return{status:'already-processed'};
   if(claim.status!=='pending')return{status:'rejected',reason:'claim-status'};
   const user=await tx.lockVkUser(input.vkUserId);if(!user)return{status:'rejected',reason:'character-not-found'};
-  let inventory:any;try{inventory=JSON.parse(user.inventory||'[]');}catch{return{status:'rejected',reason:'invalid-inventory'};}
-  if(!Array.isArray(inventory))return{status:'rejected',reason:'invalid-inventory'};
   const catalog=await tx.findCraftItems(recipe.required.map(x=>x.name));
-  if(catalog.length!==recipe.required.length||recipe.required.some(r=>catalog.filter(i=>i.name===r.name).length!==1))return{status:'rejected',reason:'catalog-item-missing'};
-  const byName=new Map(catalog.map(i=>[i.name,i]));
-  for(const required of recipe.required){const item=byName.get(required.name)!;const matches=inventory.filter((e:any)=>(e?.type==='craft_item'||e?.type==='material')&&Number(e.id)===item.id);if(matches.length>1)return{status:'rejected',reason:'invalid-inventory'};const existing=matches[0];if(existing){const count=Number(existing.count);if(!Number.isInteger(count)||count<0)return{status:'rejected',reason:'invalid-inventory'};existing.count=count+required.count;}else inventory.push({type:'craft_item',id:item.id,name:item.name,rarity_id:item.rarityId,rarity_display:item.rarityDisplay,rarity_color:item.rarityColor,count:required.count,itemType:item.type||'craft',image:item.image||null});}
-  await tx.saveUser(user.id,JSON.stringify(inventory),recipe.bank);
+  const applied=applyInventoryRecipe(user.inventory,catalog,{entries:recipe.required,bankDelta:recipe.bank});if(!applied.ok)return{status:'rejected',reason:applied.reason};
+  await tx.saveUser(user.id,applied.inventoryJson,applied.bankDelta);
   await tx.logPayment({orderId:input.orderId,vkUserId:input.vkUserId,characterId:user.id,item:input.item,processedAt:input.processedAt});
   await tx.markSucceeded(input.orderId,input.processedAt,user.id);
   return{status:'delivered',characterId:user.id,item:input.item};

@@ -3,6 +3,7 @@ export interface InventoryCatalogItem {
 }
 export interface InventoryRecipe { entries:ReadonlyArray<{name:string;count:number}>;bankDelta:number; }
 type Result={ok:true;inventory:any[];inventoryJson:string;bankDelta:number}|{ok:false;reason:string};
+export function serializeInventoryJson(value:unknown):string{if(typeof value==='string')return value;const encoded=JSON.stringify(value);return typeof encoded==='string'?encoded:'null';}
 export function applyInventoryRecipe(inventoryJson:string,catalog:InventoryCatalogItem[],recipe:InventoryRecipe,multiplier=1):Result{
  if(!Number.isInteger(multiplier)||multiplier<=0)return{ok:false,reason:'invalid-multiplier'};
  let inventory:any;try{inventory=JSON.parse(inventoryJson||'[]');}catch{return{ok:false,reason:'invalid-inventory'};}

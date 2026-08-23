@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { applyInventoryRecipe } from './donateInventoryRecipe';
+import { applyInventoryRecipe, serializeInventoryJson } from './donateInventoryRecipe';
 
 const ruby={id:21,name:'Руна Рубина',rarityId:6,type:'upgrade',image:'/ruby',rarityDisplay:'Мифический',rarityColor:'#f00'};
 const topaz={id:22,name:'Руна Топаза',rarityId:5,type:'upgrade',image:'/topaz',rarityDisplay:'Легендарный',rarityColor:'#fa0'};
@@ -50,4 +50,11 @@ test('malformed или duplicate inventory stack отклоняет весь rec
 test('multiplier обязан быть положительным целым',()=>{
  assert.equal(applyInventoryRecipe('[]',[ruby,topaz,amethyst],recipe,0).ok,false);
  assert.equal(applyInventoryRecipe('[]',[ruby,topaz,amethyst],recipe,1.5).ok,false);
+});
+
+test('serializer preserves SQL NULL as JSON null',()=>{
+ assert.equal(serializeInventoryJson(null),'null');
+ assert.equal(serializeInventoryJson(undefined),'null');
+ assert.equal(serializeInventoryJson([]),'[]');
+ assert.equal(serializeInventoryJson('[{"id":1}]'),'[{"id":1}]');
 });

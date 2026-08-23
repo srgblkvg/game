@@ -72,11 +72,13 @@ test('duplicate catalog name отклоняет всю выдачу как не�
 });
 
 test('невалидный count существующего стака отклоняет всю выдачу', async () => {
-  const state = repository({ inventory: JSON.stringify([{ type: 'craft_item', id: 10, count: 'broken' }]), bank: 5 });
-  const result = await processYooKassaCraftRarePayment(state.repo, input());
-  assert.equal(result.status, 'rejected');
-  assert.equal(state.state().bank, 5);
-  assert.deepEqual(state.state().writes, []);
+  for (const count of ['broken', '2']) {
+    const state = repository({ inventory: JSON.stringify([{ type: 'craft_item', id: 10, count }]), bank: 5 });
+    const result = await processYooKassaCraftRarePayment(state.repo, input());
+    assert.equal(result.status, 'rejected');
+    assert.equal(state.state().bank, 5);
+    assert.deepEqual(state.state().writes, []);
+  }
 });
 
 test('повторный callback не меняет inventory или bank', async () => {

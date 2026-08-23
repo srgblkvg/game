@@ -1,9 +1,9 @@
-import {applyInventoryRecipe,type InventoryCatalogItem} from './donateInventoryRecipe';
+import {applyInventoryRecipe,serializeInventoryJson,type InventoryCatalogItem} from './donateInventoryRecipe';
 export const STARTER_SLOTS=['weapon1','shield','helmet','chest','gloves','boots','amulet','ring','belt'] as const;
 export interface StarterEquipmentTemplate{id:number;name:string;slot:string;rarityId:number;bonuses:Record<string,unknown>;extra:Record<string,unknown>;image:string|null}
 type Result={ok:true;inventory:any[];inventoryJson:string}|{ok:false;reason:string};
 const plainObject=(value:unknown)=>!!value&&typeof value==='object'&&!Array.isArray(value);
-export function serializeStarterInventory(value:unknown):string{if(typeof value==='string')return value;const encoded=JSON.stringify(value);return typeof encoded==='string'?encoded:'null';}
+export const serializeStarterInventory=serializeInventoryJson;
 export function applyStarterPackRecipe(inventoryJson:string,templates:StarterEquipmentTemplate[],essenceCatalog:InventoryCatalogItem[],createId:()=>string|number):Result{
  if(templates.length!==STARTER_SLOTS.length)return{ok:false,reason:'equipment-template-missing'};
  if(new Set(templates.map(item=>item.id)).size!==templates.length)return{ok:false,reason:'invalid-equipment-template'};
