@@ -6,15 +6,6 @@ import { refreshGuildCharacters } from '../events';
 
 const router = Router();
 
-// Авто-создание таблицы
-db.run(`CREATE TABLE IF NOT EXISTS guild_buildings (
-    id SERIAL PRIMARY KEY,
-    guildId INTEGER NOT NULL,
-    buildingType TEXT NOT NULL,
-    level INTEGER DEFAULT 0,
-    UNIQUE(guildId, buildingType)
-)`).catch(() => {});
-
 // Получить сооружения гильдии
 router.get('/guild/:guildId/buildings', async (req, res) => {
     const guildId = parseInt(req.params.guildId);

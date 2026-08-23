@@ -268,6 +268,15 @@ CREATE TABLE IF NOT EXISTS guild_members (
   PRIMARY KEY (guildId, userId)
 );
 
+-- ====== guild_buildings ======
+CREATE TABLE IF NOT EXISTS guild_buildings (
+  id SERIAL PRIMARY KEY,
+  guildId INTEGER NOT NULL,
+  buildingType TEXT NOT NULL,
+  level INTEGER DEFAULT 0,
+  UNIQUE(guildId, buildingType)
+);
+
 -- ====== guild_invites ======
 CREATE TABLE IF NOT EXISTS guild_invites (
   id SERIAL PRIMARY KEY,
