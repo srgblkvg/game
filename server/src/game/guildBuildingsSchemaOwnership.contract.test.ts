@@ -12,8 +12,8 @@ test('guild buildings route не выполняет schema DDL при import', (
   assert.doesNotMatch(routeSource, /ALTER TABLE/i);
 });
 
-test('canonical schema сохраняет guild_buildings unique ownership constraint', () => {
-  assert.match(schemaSource, /CREATE TABLE IF NOT EXISTS guild_buildings[\s\S]*guildId INTEGER NOT NULL[\s\S]*buildingType TEXT NOT NULL[\s\S]*UNIQUE\(guildId, buildingType\)/i);
+test('canonical schema сохраняет guild_buildings defaults и unique ownership constraint', () => {
+  assert.match(schemaSource, /CREATE TABLE IF NOT EXISTS guild_buildings[\s\S]*guildId INTEGER NOT NULL[\s\S]*buildingType TEXT NOT NULL[\s\S]*level INTEGER DEFAULT 0[\s\S]*UNIQUE\(guildId, buildingType\)/i);
 });
 
 test('guild buildings read/upgrade routes сохраняются', () => {
