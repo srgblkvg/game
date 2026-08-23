@@ -767,6 +767,16 @@ CREATE INDEX IF NOT EXISTS idx_game_sessions_last_heartbeat ON game_sessions(las
 CREATE INDEX IF NOT EXISTS idx_game_page_visits_started ON game_page_visits(started_at);
 CREATE INDEX IF NOT EXISTS idx_game_page_visits_path ON game_page_visits(path);
 
+-- ====== bots ======
+CREATE TABLE IF NOT EXISTS bot_accounts (
+  id SERIAL PRIMARY KEY,
+  userId INTEGER NOT NULL UNIQUE,
+  username TEXT NOT NULL,
+  token TEXT NOT NULL,
+  active INTEGER DEFAULT 1,
+  createdAt TEXT NOT NULL
+);
+
 -- ====== exchange ======
 CREATE TABLE IF NOT EXISTS exchange_gold (
   id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),

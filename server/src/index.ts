@@ -22,6 +22,7 @@ import { startAuctionSettlementScheduler } from './schedulers/auctionSettlement'
 import { initTreasury, initTreasuryLog } from './game/treasury';
 import { initExchange } from './game/exchange';
 import { initTournamentSchema } from './game/tournamentSchema';
+import { initBotAccounts } from './bots/botManager';
 
 const app = express();
 
@@ -36,6 +37,7 @@ const treasuryReady = Promise.all([initTreasury(), initTreasuryLog()]);
 
 async function startServer() {
   await Promise.all([vkPaymentsReady, yooKassaPaymentsReady]);
+  await initBotAccounts();
   await treasuryReady;
   await initExchange();
   await setupWebSocket(server);

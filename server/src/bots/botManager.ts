@@ -20,10 +20,49 @@ const stopFlags = new Map<number, boolean>();
 
 const EQUIP_SLOTS = ['weapon1','shield','helmet','chest','gloves','boots','ring1','ring2','amulet','belt'];
 
-db.run(`CREATE TABLE IF NOT EXISTS bot_accounts (
-  id SERIAL PRIMARY KEY, userId INTEGER NOT NULL UNIQUE, username TEXT NOT NULL,
-  token TEXT NOT NULL, active INTEGER DEFAULT 1, createdAt TEXT NOT NULL
-)`).catch(() => {});
+export async function initBotAccounts(): Promise<void> {
+  const readiness = await db.raw(`
+    SELECT
+      (
+        SELECT jsonb_agg(
+          jsonb_build_array(column_name, data_type, is_nullable, COALESCE(column_default, ''))
+          ORDER BY ordinal_position
+        )
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'bot_accounts'
+      ) = '[
+        ["id", "integer", "NO", "nextval(''bot_accounts_id_seq''::regclass)"],
+        ["userid", "integer", "NO", ""],
+        ["username", "text", "NO", ""],
+        ["token", "text", "NO", ""],
+        ["active", "integer", "YES", "1"],
+        ["createdat", "text", "NO", ""]
+      ]'::jsonb
+      AND EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'bot_accounts'::regclass
+          AND contype = 'p'
+          AND convalidated = true
+          AND pg_get_constraintdef(oid) = 'PRIMARY KEY (id)'
+      )
+      AND EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'bot_accounts'::regclass
+          AND contype = 'u'
+          AND convalidated = true
+          AND pg_get_constraintdef(oid) = 'UNIQUE (userid)'
+      )
+      AND has_table_privilege(current_user, 'bot_accounts', 'SELECT')
+      AND has_table_privilege(current_user, 'bot_accounts', 'INSERT')
+      AND has_table_privilege(current_user, 'bot_accounts', 'UPDATE')
+      AND to_regclass('bot_accounts_id_seq') IS NOT NULL
+      AND has_sequence_privilege(current_user, to_regclass('bot_accounts_id_seq'), 'USAGE')
+      AS ready
+  `);
+  if (readiness.rows[0]?.ready !== true) {
+    throw new Error('bot_accounts schema readiness failed');
+  }
+}
 
 const ACTIONS: Record<string, { weight: number; cooldown: number }> = {
   manage_eq:   { weight: 15, cooldown: 120 },  // экипировка + аукцион-продажа

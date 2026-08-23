@@ -1,0 +1,15 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS bot_accounts (
+  id SERIAL PRIMARY KEY,
+  userId INTEGER NOT NULL UNIQUE,
+  username TEXT NOT NULL,
+  token TEXT NOT NULL,
+  active INTEGER DEFAULT 1,
+  createdAt TEXT NOT NULL
+);
+
+GRANT SELECT, INSERT, UPDATE ON bot_accounts TO game;
+GRANT USAGE, SELECT ON SEQUENCE bot_accounts_id_seq TO game;
+
+COMMIT;
