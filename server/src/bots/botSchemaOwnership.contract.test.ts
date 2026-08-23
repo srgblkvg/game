@@ -17,7 +17,9 @@ test('bot runtime uses read-only readiness, not import-time DDL', () => {
 
 test('bot readiness is awaited before server listen', () => {
   assert.match(indexSource, /import \{ initBotAccounts \} from ['"]\.\/bots\/botManager['"];/);
-  assert.match(indexSource, /await initBotAccounts\(\)[\s\S]*await treasuryReady[\s\S]*server\.listen/);
+  assert.match(indexSource, /const botAccountsReady = initBotAccounts\(\)/);
+  assert.match(indexSource, /const treasuryReady = botAccountsReady\.then\(\(\) => Promise\.all\(\[initTreasury\(\), initTreasuryLog\(\)\]\)\)/);
+  assert.match(indexSource, /await botAccountsReady[\s\S]*await treasuryReady[\s\S]*server\.listen/);
 });
 
 test('canonical bot schema preserves live shape and uniqueness', () => {

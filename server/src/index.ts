@@ -33,11 +33,12 @@ setupMiddleware(app);
 setupRoutes(app);
 
 const server = http.createServer(app);
-const treasuryReady = Promise.all([initTreasury(), initTreasuryLog()]);
+const botAccountsReady = initBotAccounts();
+const treasuryReady = botAccountsReady.then(() => Promise.all([initTreasury(), initTreasuryLog()]));
 
 async function startServer() {
   await Promise.all([vkPaymentsReady, yooKassaPaymentsReady]);
-  await initBotAccounts();
+  await botAccountsReady;
   await treasuryReady;
   await initExchange();
   await setupWebSocket(server);

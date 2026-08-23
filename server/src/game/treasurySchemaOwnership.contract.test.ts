@@ -20,7 +20,7 @@ test('treasury runtime uses read-only exact readiness, not DDL or seed writes', 
 
 test('treasury readiness is awaited before exchange, websocket and listen', () => {
   assert.ok(indexSource.indexOf("import { initTreasury, initTreasuryLog }") < indexSource.indexOf('const treasuryReady'));
-  assert.match(indexSource, /const treasuryReady = Promise\.all\(\[initTreasury\(\), initTreasuryLog\(\)\]\)/);
+  assert.match(indexSource, /const treasuryReady = botAccountsReady\.then\(\(\) => Promise\.all\(\[initTreasury\(\), initTreasuryLog\(\)\]\)\)/);
   assert.match(indexSource, /await treasuryReady[\s\S]*await initExchange\(\)[\s\S]*await setupWebSocket\(server\)[\s\S]*server\.listen/);
   assert.match(indexSource, /Promise\.allSettled\(\[treasuryReady, initTournamentSchema\(\)\]\)/);
   assert.match(indexSource, /results\.every\(result => result\.status === 'fulfilled'\)/);
