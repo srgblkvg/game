@@ -730,3 +730,9 @@ CREATE TABLE IF NOT EXISTS dungeon_logs (
   result TEXT,
   combatLog JSONB
 );
+
+-- ====== guild_boss_weekly_state ======
+CREATE TABLE IF NOT EXISTS guild_boss_weekly_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  week_start INTEGER NOT NULL
+);

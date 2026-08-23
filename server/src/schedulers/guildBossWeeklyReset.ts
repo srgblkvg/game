@@ -6,7 +6,6 @@ const CHECK_INTERVAL_MS = 30_000;
 const RESET_DAY_UTC = 5; // Friday
 const RESET_LOCK_ID = 734_260_001;
 const PLACE_REWARD_SQL = `CASE place WHEN 1 THEN 5 WHEN 2 THEN 3 WHEN 3 THEN 2 WHEN 4 THEN 1 WHEN 5 THEN 1 ELSE 0 END`;
-let initPromise: Promise<void> | null = null;
 
 export function getGuildBossWeekStart(now = new Date()): number {
   const midnightUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -18,19 +17,8 @@ export function getNextGuildBossResetAt(now = new Date()): number {
   return getGuildBossWeekStart(now) + 7 * 24 * 60 * 60;
 }
 
-async function initWeeklyResetState(): Promise<void> {
-  if (!initPromise) {
-    initPromise = db.raw(`
-      CREATE TABLE IF NOT EXISTS guild_boss_weekly_state (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        week_start INTEGER NOT NULL
-      )
-    `).then(() => undefined).catch(error => {
-      initPromise = null;
-      throw error;
-    });
-  }
-  await initPromise;
+async function assertWeeklyResetStateReady(): Promise<void> {
+  await db.raw('SELECT week_start FROM guild_boss_weekly_state LIMIT 0');
 }
 
 async function awardWeeklyRatingPoints(client: PoolClient): Promise<void> {
@@ -122,7 +110,6 @@ async function awardWeeklyRatingPoints(client: PoolClient): Promise<void> {
  * Talent points, talent levels and invested talent progress are untouched.
  */
 export async function ensureGuildBossWeeklyReset(now = new Date()): Promise<boolean> {
-  await initWeeklyResetState();
   const weekStart = getGuildBossWeekStart(now);
 
   return db.tx(async client => {
@@ -179,7 +166,7 @@ async function checkWeeklyReset(): Promise<void> {
 }
 
 export async function startGuildBossWeeklyResetScheduler(): Promise<void> {
-  await initWeeklyResetState();
+  await assertWeeklyResetStateReady();
   await checkWeeklyReset();
   setInterval(() => { void checkWeeklyReset(); }, CHECK_INTERVAL_MS);
 }
