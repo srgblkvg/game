@@ -2,6 +2,14 @@ import { YooKassa } from 'yookassa-sdk';
 import { db } from '../db/index';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
 
+interface PendingPaymentRow {
+  payment_id: string;
+  user_id: number;
+  item: string;
+  amount: string;
+  status: string;
+}
+
 async function main() {
   if (!YOOKASSA_SHOP_ID || !YOOKASSA_SECRET_KEY) {
     console.error('YOOKASSA_SHOP_ID or YOOKASSA_SECRET_KEY not set');
@@ -14,8 +22,10 @@ async function main() {
     debug: false,
   });
 
+  // Read-only audit. Reward delivery is allowed only through the verified
+  // webhook and its provider-specific atomic domain service.
   const pending = await db.raw(
-    "SELECT * FROM yukassa_payments WHERE status = 'pending' ORDER BY id",
+    "SELECT payment_id, user_id, item, amount, status FROM yukassa_payments WHERE status = 'pending' ORDER BY id",
   );
 
   if (pending.rows.length === 0) {
@@ -23,56 +33,38 @@ async function main() {
     return;
   }
 
-  console.log(`Found ${pending.rows.length} pending payment(s)`);
+  console.log(`Found ${pending.rows.length} pending payment(s); read-only audit`);
 
-  for (const row of pending.rows) {
-    console.log(`\nChecking payment ${row.payment_id}...`);
+  for (const row of pending.rows as PendingPaymentRow[]) {
     try {
-      const payment = await sdk.payments.load(row.payment_id);
-      console.log(`  Status: ${payment.status}`);
+      const provider = await sdk.payments.load(row.payment_id);
+      const metadata = provider.metadata || {};
+      const providerUserId = String(metadata.userId || '');
+      const providerItem = String(metadata.item || '');
+      const identityMatches = providerUserId === String(row.user_id)
+        && providerItem === String(row.item);
 
-      if (payment.status === 'succeeded') {
-        const metadata = payment.metadata || {};
-        const userId = parseInt(metadata.userId || String(row.user_id), 10);
-        const days = parseInt(metadata.days || String(row.days), 10);
-
-        const user = await db.one('SELECT premiumUntil FROM users WHERE id = ?', [userId]);
-        if (!user) {
-          console.log(`  User ${userId} not found, skipping`);
-          await db.run(
-            "UPDATE yukassa_payments SET status = 'failed' WHERE payment_id = ?",
-            [row.payment_id],
-          );
-          continue;
-        }
-
-        const now = Math.floor(Date.now() / 1000);
-        const currentUntil = Math.max(user.premiumUntil || 0, now);
-        const newUntil = currentUntil + days * 86400;
-
-        await db.run('UPDATE users SET premiumUntil = ? WHERE id = ?', [newUntil, userId]);
-        await db.run(
-          'UPDATE yukassa_payments SET status = ?, processed_at = ? WHERE payment_id = ?',
-          ['succeeded', now, row.payment_id],
-        );
-
-        console.log(`  Premium ${days}d granted to user ${userId}, until ${new Date(newUntil * 1000).toISOString()}`);
-      } else if (payment.status === 'canceled') {
-        await db.run(
-          "UPDATE yukassa_payments SET status = 'canceled' WHERE payment_id = ?",
-          [row.payment_id],
-        );
-        console.log('  Payment was canceled, marked as such');
-      } else {
-        console.log(`  Payment status is "${payment.status}", not processing`);
-      }
-    } catch (err: any) {
-      console.error(`  Error processing payment ${row.payment_id}: ${err.message}`);
+      console.log(JSON.stringify({
+        paymentId: row.payment_id,
+        localItem: row.item,
+        localStatus: row.status,
+        providerStatus: provider.status,
+        identityMatches,
+        action: provider.status === 'succeeded' && identityMatches
+          ? 'retry-verified-webhook'
+          : 'manual-review-no-delivery',
+      }));
+    } catch (error: any) {
+      console.error(JSON.stringify({
+        paymentId: row.payment_id,
+        error: error?.message || String(error),
+        action: 'manual-review-no-delivery',
+      }));
     }
   }
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err);
+main().catch((error) => {
+  console.error('Fatal audit error:', error);
   process.exit(1);
 });
