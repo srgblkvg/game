@@ -29,12 +29,21 @@ test('разные обязательные имена не могут ссыл�
 test('malformed authoritative catalog record отклоняет recipe',()=>{
  assert.equal(applyInventoryRecipe('[]',[{...ruby,id:0},topaz,amethyst],recipe,1).ok,false);
  assert.equal(applyInventoryRecipe('[]',[ruby,{...topaz,rarityId:NaN},amethyst],recipe,1).ok,false);
+ assert.equal(applyInventoryRecipe('[]',[ruby,{...topaz,rarityId:-1},amethyst],recipe,1).ok,false);
  assert.equal(applyInventoryRecipe('[]',[ruby,topaz,{...amethyst,type:''}],recipe,1).ok,false);
+});
+
+test('базовая редкость 0 является валидной authoritative catalog записью',()=>{
+ const stone={...ruby,id:11,name:'Рунный булыжник',rarityId:0,rarityDisplay:'Хлам'};
+ const result=applyInventoryRecipe('[]',[stone],{entries:[{name:stone.name,count:6}],bankDelta:10000});
+ assert.equal(result.ok,true);
+ if(result.ok){assert.equal(result.inventory[0].rarity_id,0);assert.equal(result.inventory[0].count,6);}
 });
 
 test('malformed или duplicate inventory stack отклоняет весь recipe',()=>{
  assert.equal(applyInventoryRecipe('{bad',[ruby,topaz,amethyst],recipe,1).ok,false);
  assert.equal(applyInventoryRecipe(JSON.stringify([{type:'craft_item',id:21,count:'bad'}]),[ruby,topaz,amethyst],recipe,1).ok,false);
+ assert.equal(applyInventoryRecipe(JSON.stringify([{type:'craft_item',id:21,count:'2'}]),[ruby,topaz,amethyst],recipe,1).ok,false);
  assert.equal(applyInventoryRecipe(JSON.stringify([{type:'craft_item',id:21,count:1},{type:'material',id:21,count:2}]),[ruby,topaz,amethyst],recipe,1).ok,false);
 });
 
