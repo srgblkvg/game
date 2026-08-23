@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import type { PoolClient } from 'pg';
 
 // Таблица казны замка — одна строка
 export async function initTreasury() {
@@ -39,16 +40,34 @@ export async function initTreasury() {
     }
 }
 
-export async function addToTreasury(amount: number, source: string) {
-    if (!amount || amount <= 0) return;
-    await db.run('UPDATE castle_treasury SET amount = amount + ?, updated_at = NOW() WHERE id = 1', [amount]);
-    await db.run('INSERT INTO treasury_log (amount, source, created_at) VALUES (?, ?, NOW())', [amount, source]);
+export async function changeTreasuryWithClient(client: PoolClient, delta: number, source: string): Promise<void> {
+    const update = await client.query(
+        'UPDATE castle_treasury SET amount = amount + $1, updated_at = NOW() WHERE id = 1 RETURNING amount',
+        [delta]
+    );
+    if (update.rowCount !== 1) {
+        throw new Error('treasury singleton row missing');
+    }
+    await client.query(
+        'INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())',
+        [delta, source]
+    );
 }
 
-export async function deductFromTreasury(amount: number, source: string) {
+async function changeTreasury(delta: number, source: string): Promise<void> {
+    return db.tx(async client => {
+        await changeTreasuryWithClient(client, delta, source);
+    });
+}
+
+export async function addToTreasury(amount: number, source: string): Promise<void> {
     if (!amount || amount <= 0) return;
-    await db.run('UPDATE castle_treasury SET amount = amount - ?, updated_at = NOW() WHERE id = 1', [amount]);
-    await db.run('INSERT INTO treasury_log (amount, source, created_at) VALUES (?, ?, NOW())', [-amount, source]);
+    return changeTreasury(amount, source);
+}
+
+export async function deductFromTreasury(amount: number, source: string): Promise<void> {
+    if (!amount || amount <= 0) return;
+    return changeTreasury(-amount, source);
 }
 
 export async function getTreasury(): Promise<number> {
