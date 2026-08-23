@@ -1,0 +1,3 @@
+/// <reference types="node" />
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {resolve} from 'node:path';import test from 'node:test';const body=readFileSync(resolve(__dirname,'../routes/vkPayments.ts'),'utf8');
+test('VK starter bypasses legacy delivery/common log and uses UUIDs',()=>{const start=body.indexOf("item.type === 'starter_pack'");const end=body.indexOf("item.type === 'silver'",start);assert.ok(start>=0&&end>start);const branch=body.slice(start,end);assert.match(branch,/processVkStarterPackPayment\(createPgVkStarterPackRepository\(\)/);assert.match(branch,/crypto\.randomUUID/);assert.doesNotMatch(branch,/deliverStarterPack|processed\s*=|db\.run/);assert.match(branch,/until:\s*result\.premiumUntil/);});

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
 import { authMiddleware } from '../middleware/auth';
-import { deliverStarterPack } from './donate';
+
 import crypto from 'crypto';
 import logger from '../logger';
 import { processVkSilverPayment } from '../game/vkPaymentDelivery';
@@ -14,6 +14,8 @@ import { processVkCursePackPayment } from '../game/vkCursePackPayment';
 import { processVkMegaPackPayment } from '../game/vkMegaPackPayment';
 import { processVkPremiumPayment } from '../game/vkPremiumPayment';
 import { createPgVkPremiumRepository } from '../game/vkPremiumPaymentRepository';
+import { processVkStarterPackPayment } from '../game/vkStarterPackPayment';
+import { createPgVkStarterPackRepository } from '../game/vkStarterPackPaymentRepository';
 
 const router = Router();
 
@@ -164,11 +166,17 @@ router.post('/', async (req: Request, res: Response) => {
           }
           return res.json({ response: { order_id: orderId, app_order_id: 0 } });
         } else if (item.type === 'starter_pack') {
-          const result = await deliverStarterPack(character.id);
-          if (!result.success) {
-            return res.json({ error: { error_code: 1, error_msg: result.error || 'Delivery failed' } });
+          const result = await processVkStarterPackPayment(createPgVkStarterPackRepository(), {
+            orderId, vkUserId, item: itemName,
+            providerPrice: Number(params.item_price), processedAt: now,
+          }, () => crypto.randomUUID());
+          if (result.status === 'rejected') {
+            return res.json({ error: { error_code: 1, error_msg: result.reason } });
           }
-          processed = true;
+          if (result.status === 'delivered') {
+            sendToUser(result.characterId, { type: 'paymentStatus', status: 'success', platform: 'vk', until: result.premiumUntil });
+          }
+          return res.json({ response: { order_id: orderId, app_order_id: 0 } });
         } else if (item.type === 'silver') {
           const result = await processVkSilverPayment(createPgVkPaymentDeliveryRepository(), {
             orderId,
