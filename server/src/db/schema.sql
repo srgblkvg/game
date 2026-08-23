@@ -436,6 +436,18 @@ CREATE TABLE IF NOT EXISTS auction_lots (
   createdAt INTEGER NOT NULL
 );
 
+-- ====== auction_history ======
+CREATE TABLE IF NOT EXISTS auction_history (
+  id SERIAL PRIMARY KEY,
+  sellerId INTEGER NOT NULL,
+  buyerId INTEGER,
+  itemName TEXT NOT NULL,
+  itemData TEXT,
+  price INTEGER NOT NULL,
+  commission INTEGER DEFAULT 0,
+  createdAt TEXT NOT NULL
+);
+
 -- ====== login_logs ======
 CREATE TABLE IF NOT EXISTS login_logs (
   id SERIAL PRIMARY KEY,

@@ -16,8 +16,9 @@ test('canonical users schema объявляет auction counters и overflow mon
   assert.match(schemaSource, /\boverflowmoney\s+INTEGER\s+DEFAULT\s+0\b/i);
 });
 
-test('auction route сохраняет history DDL отдельно от users ownership', () => {
-  assert.match(auctionSource, /CREATE TABLE IF NOT EXISTS auction_history/i);
+test('auction history lifecycle закреплён в canonical schema, а не route import', () => {
+  assert.doesNotMatch(auctionSource, /CREATE TABLE IF NOT EXISTS auction_history/i);
+  assert.match(schemaSource, /CREATE TABLE IF NOT EXISTS auction_history[\s\S]*sellerId INTEGER NOT NULL[\s\S]*createdAt TEXT NOT NULL/i);
   assert.match(auctionSource, /auction_sales = 0/);
 });
 

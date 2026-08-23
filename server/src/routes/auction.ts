@@ -18,18 +18,6 @@ import { createPgAuctionSellRepository } from '../game/auctionSellRepository';
 const router = Router();
 
 
-// Таблица истории сделок
-db.run(`CREATE TABLE IF NOT EXISTS auction_history (
-    id SERIAL PRIMARY KEY,
-    sellerId INTEGER NOT NULL,
-    buyerId INTEGER,
-    itemName TEXT NOT NULL,
-    itemData TEXT,
-    price INTEGER NOT NULL,
-    commission INTEGER DEFAULT 0,
-    createdAt TEXT NOT NULL
-)`).catch(() => {});
-
 // Мин. цены по редкости
 // API: получить минимальные цены (для клиента)
 router.get('/auction/price-floor', async (req, res) => {
