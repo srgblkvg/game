@@ -11,8 +11,6 @@ import { JWT_SECRET } from '../env';
 
 const router = Router();
 
-db.run('ALTER TABLE users ADD COLUMN IF NOT EXISTS expEnabled BOOLEAN DEFAULT TRUE').catch(() => {});
-
 router.get('/account/experience-setting', async (req, res) => {
     const user = await db.one('SELECT expEnabled FROM users WHERE id = ?', [req.userId]) as any;
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
