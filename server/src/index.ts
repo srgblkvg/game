@@ -21,10 +21,10 @@ setupMiddleware(app);
 setupRoutes(app);
 
 const server = http.createServer(app);
-setupWebSocket(server);
 
 async function startServer() {
   await Promise.all([vkPaymentsReady, yooKassaPaymentsReady]);
+  await setupWebSocket(server);
   server.listen(PORT, () => logger.info(`Server started on port ${PORT}`));
 }
 startServer().catch(error => {

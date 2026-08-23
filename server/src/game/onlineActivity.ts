@@ -36,36 +36,49 @@ export function normalizeBrowserSessionId(value: unknown): string {
 }
 
 export async function initOnlineActivity(): Promise<void> {
-    await db.raw(`
-        CREATE TABLE IF NOT EXISTS game_sessions (
-            id BIGSERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL,
-            browser_session_id TEXT NOT NULL,
-            platform TEXT NOT NULL DEFAULT 'web',
-            started_at BIGINT NOT NULL,
-            last_heartbeat_at BIGINT NOT NULL,
-            ended_at BIGINT,
-            active_seconds INTEGER NOT NULL DEFAULT 0,
-            end_reason TEXT,
-            UNIQUE (user_id, browser_session_id)
-        )
+    await db.raw('SELECT id, user_id, browser_session_id, platform, started_at, last_heartbeat_at, ended_at, active_seconds, end_reason FROM game_sessions LIMIT 0');
+    await db.raw('SELECT id, session_id, user_id, path, started_at, last_seen_at, ended_at, active_seconds FROM game_page_visits LIMIT 0');
+    const readiness = await db.raw(`
+        SELECT
+            EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conrelid = 'game_sessions'::regclass
+                  AND contype = 'u'
+                  AND pg_get_constraintdef(oid) = 'UNIQUE (user_id, browser_session_id)'
+            )
+            AND EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conrelid = 'game_page_visits'::regclass
+                  AND contype = 'f'
+                  AND pg_get_constraintdef(oid) = 'FOREIGN KEY (session_id) REFERENCES game_sessions(id) ON DELETE CASCADE'
+            )
+            AND EXISTS (
+                SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+                  AND indexname = 'idx_game_sessions_started' AND indexdef LIKE '%(started_at)'
+            )
+            AND EXISTS (
+                SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+                  AND indexname = 'idx_game_sessions_last_heartbeat' AND indexdef LIKE '%(last_heartbeat_at)'
+            )
+            AND EXISTS (
+                SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+                  AND indexname = 'idx_game_page_visits_started' AND indexdef LIKE '%(started_at)'
+            )
+            AND EXISTS (
+                SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+                  AND indexname = 'idx_game_page_visits_path' AND indexdef LIKE '%(path)'
+            )
+            AND has_table_privilege(current_user, 'game_sessions', 'INSERT')
+            AND has_table_privilege(current_user, 'game_sessions', 'UPDATE')
+            AND has_table_privilege(current_user, 'game_page_visits', 'INSERT')
+            AND has_table_privilege(current_user, 'game_page_visits', 'UPDATE')
+            AND has_sequence_privilege(current_user, 'game_sessions_id_seq', 'USAGE')
+            AND has_sequence_privilege(current_user, 'game_page_visits_id_seq', 'USAGE')
+            AS ready
     `);
-    await db.raw(`
-        CREATE TABLE IF NOT EXISTS game_page_visits (
-            id BIGSERIAL PRIMARY KEY,
-            session_id BIGINT NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL,
-            path TEXT NOT NULL,
-            started_at BIGINT NOT NULL,
-            last_seen_at BIGINT NOT NULL,
-            ended_at BIGINT,
-            active_seconds INTEGER NOT NULL DEFAULT 0
-        )
-    `);
-    await db.raw('CREATE INDEX IF NOT EXISTS idx_game_sessions_started ON game_sessions(started_at)');
-    await db.raw('CREATE INDEX IF NOT EXISTS idx_game_sessions_last_heartbeat ON game_sessions(last_heartbeat_at)');
-    await db.raw('CREATE INDEX IF NOT EXISTS idx_game_page_visits_started ON game_page_visits(started_at)');
-    await db.raw('CREATE INDEX IF NOT EXISTS idx_game_page_visits_path ON game_page_visits(path)');
+    if (readiness.rows[0]?.ready !== true) {
+        throw new Error('online activity schema readiness failed');
+    }
 }
 
 export async function startOrResumeActivity(

@@ -186,8 +186,8 @@ async function computeRatingData(userId: number) {
 }
 
 export async function setupWebSocket(server: any) {
-  const wss = new WebSocketServer({ server });
   await initOnlineActivity();
+  const wss = new WebSocketServer({ server });
 
   // ── Подписка на EventBus ──
   on('markDirty', (e) => {
