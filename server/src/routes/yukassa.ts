@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { YooKassa, CurrencyEnum } from 'yookassa-sdk';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
-import { deliverStarterPack, deliverSilver, deliverCraftPack, deliverCursePack, deliverRubyRune, deliverMegaCraftSet, deliverLargeCraftSet, deliverCraftRare200 } from './donate';
+
 import logger from '../logger';
 import { sendPaymentReceipt } from '../email';
 import { YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY } from '../env';
@@ -175,43 +175,6 @@ router.post('/create-payment', authMiddleware, async (req: Request, res: Respons
   }
 });
 
-async function processDelivery(userId: number, itemType: string, days: number, silverAmount: number, itemKey?: string, runeCount?: number): Promise<void> {
-  const now = Math.floor(Date.now() / 1000);
-
-  if (itemType === 'premium' || (!itemType && days > 0)) {
-    // Премиум
-    const user = await db.one('SELECT premiumUntil FROM users WHERE id = ?', [userId]);
-    if (!user) throw new Error('User not found');
-    const currentUntil = Math.max(user.premiumUntil || 0, now);
-    const newUntil = currentUntil + days * 86400;
-    await db.run('UPDATE users SET premiumUntil = ? WHERE id = ?', [newUntil, userId]);
-    sendToUser(userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa', until: newUntil });
-  } else if (itemType === 'starter_pack') {
-    const result = await deliverStarterPack(userId);
-    if (!result.success) throw new Error(result.error || 'Delivery failed');
-  } else if (itemType === 'silver') {
-    const result = await deliverSilver(userId, silverAmount);
-    if (!result.success) throw new Error(result.error || 'Delivery failed');
-  } else if (itemType === 'craft_pack') {
-    const packType = itemKey === 'craft_rare' ? 'rare' : 'epic';
-    const result = await deliverCraftPack(userId, packType);
-    if (!result.success) throw new Error(result.error || 'Delivery failed');
-  } else if (itemType === 'curse_pack') {
-    const packType = itemKey === 'curse_small' ? 'small' : itemKey === 'curse_large' ? 'large' : itemKey === 'curse_x50' ? 'x50' : 'x100';
-    const result = await deliverCursePack(userId, packType);
-    if (!result.success) throw new Error(result.error || 'Delivery failed');
-  } else if (itemType === 'rune_pack') {
-    const result = await deliverRubyRune(userId, runeCount || 1);
-    if (!result.success) throw new Error(result.error || 'Delivery failed');
-  } else if (itemType === 'mega_craft') {
-    const result = itemKey === 'large_craft'
-      ? await deliverLargeCraftSet(userId)
-      : itemKey === 'craft_rare_200'
-      ? await deliverCraftRare200(userId)
-      : await deliverMegaCraftSet(userId);
-    if (!result.success) throw new Error(result.error || 'Delivery failed');
-  }
-}
 
 // POST /api/yukassa/webhook — уведомления от ЮKassa
 router.post('/webhook', async (req: Request, res: Response) => {
@@ -263,8 +226,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
       const localItem = ITEMS[String(existing.item)] as ShopItem | undefined;
       const itemType = localItem?.type || metadata.type || 'premium';
       const days = parseInt(metadata.days || String(existing.days) || '0', 10);
-      const silverAmount = parseInt(metadata.silverAmount || '0', 10);
-      const runeCount = parseInt(metadata.runeCount || '0', 10);
+      const existingItemKey = String(existing.item);
 
       if (!userId) {
         logger.error(`[YooKassa] Missing userId for payment ${paymentId}`);
@@ -365,11 +327,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
           if (result.status === 'already-processed') return res.json({ ok: true });
           sendToUser(result.userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa' });
         } else {
-          await processDelivery(userId, itemType, days, silverAmount, metadata.item || '', runeCount);
-          await db.run(
-            'UPDATE yukassa_payments SET status = ?, processed_at = ? WHERE payment_id = ?',
-            ['succeeded', now, paymentId],
-          );
+          logger.error(`[YooKassa] Unsupported payment item ${existingItemKey} for payment ${paymentId}`);
+          return res.status(500).json({ error: 'Unsupported payment item' });
         }
       } catch (err: any) {
         logger.error(`[YooKassa] Delivery error for payment ${paymentId}: ${err.message}`);

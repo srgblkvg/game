@@ -31,9 +31,10 @@ test('silver branch исключает legacy processDelivery и legacy deliverS
   assert.doesNotMatch(silver, /processDelivery|deliverSilver/);
 });
 
-test('legacy non-silver branch сохраняет processDelivery', () => {
+test('unknown payment item fails closed instead of using legacy processDelivery', () => {
   const body = succeededBranch();
-  assert.match(body, /else\s*\{[\s\S]*processDelivery\(/);
+  assert.doesNotMatch(body, /processDelivery\(/);
+  assert.match(body, /Unsupported payment item/);
 });
 
 test('post-commit notification и email находятся после atomic delivery await', () => {
