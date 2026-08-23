@@ -3,28 +3,65 @@ import { getTreasury } from './treasury';
 
 // Золотой резерв биржи — одна строка
 export async function initExchange() {
-    await db.run(`
-        CREATE TABLE IF NOT EXISTS exchange_gold (
-            id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-            amount INTEGER NOT NULL DEFAULT 0,
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-        )
+    const reserve = await db.raw('SELECT id, amount, updated_at FROM exchange_gold ORDER BY id');
+    await db.raw('SELECT id, price, silver, gold, created_at FROM exchange_history LIMIT 0');
+    const readiness = await db.raw(`
+        SELECT
+            (
+                SELECT jsonb_agg(
+                    jsonb_build_array(column_name, data_type, is_nullable, COALESCE(column_default, ''))
+                    ORDER BY ordinal_position
+                )
+                FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'exchange_gold'
+            ) = '[
+                ["id", "integer", "NO", "1"],
+                ["amount", "integer", "NO", "0"],
+                ["updated_at", "timestamp with time zone", "YES", "now()"]
+            ]'::jsonb
+            AND (
+                SELECT jsonb_agg(
+                    jsonb_build_array(column_name, data_type, is_nullable, COALESCE(column_default, ''))
+                    ORDER BY ordinal_position
+                )
+                FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'exchange_history'
+            ) = '[
+                ["id", "integer", "NO", "nextval(''exchange_history_id_seq''::regclass)"],
+                ["price", "integer", "NO", ""],
+                ["silver", "integer", "NO", ""],
+                ["gold", "integer", "NO", ""],
+                ["created_at", "timestamp with time zone", "YES", "now()"]
+            ]'::jsonb
+            AND EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conrelid = 'exchange_gold'::regclass
+                  AND contype = 'p'
+                  AND pg_get_constraintdef(oid) = 'PRIMARY KEY (id)'
+            )
+            AND EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conrelid = 'exchange_gold'::regclass
+                  AND contype = 'c'
+                  AND convalidated = true
+                  AND pg_get_constraintdef(oid) = 'CHECK ((id = 1))'
+            )
+            AND EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conrelid = 'exchange_history'::regclass
+                  AND contype = 'p'
+                  AND pg_get_constraintdef(oid) = 'PRIMARY KEY (id)'
+            )
+            AND has_table_privilege(current_user, 'exchange_gold', 'SELECT')
+            AND has_table_privilege(current_user, 'exchange_gold', 'UPDATE')
+            AND has_table_privilege(current_user, 'exchange_history', 'SELECT')
+            AND has_table_privilege(current_user, 'exchange_history', 'INSERT')
+            AND has_sequence_privilege(current_user, 'exchange_history_id_seq', 'USAGE')
+            AS ready
     `);
-    const existing = await db.one('SELECT id FROM exchange_gold WHERE id = 1') as any;
-    if (!existing) {
-        await db.run('INSERT INTO exchange_gold (id, amount) VALUES (1, 28000)');
+    if (reserve.rowCount !== 1 || Number(reserve.rows[0]?.id) !== 1 || readiness.rows[0]?.ready !== true) {
+        throw new Error('exchange schema readiness failed');
     }
-
-    // Таблица истории курса (каждая сделка)
-    await db.run(`
-        CREATE TABLE IF NOT EXISTS exchange_history (
-            id SERIAL PRIMARY KEY,
-            price INTEGER NOT NULL,
-            silver INTEGER NOT NULL,
-            gold INTEGER NOT NULL,
-            created_at TIMESTAMPTZ DEFAULT NOW()
-        )
-    `);
 }
 
 // Записать сделку в историю

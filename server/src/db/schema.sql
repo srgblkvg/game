@@ -766,3 +766,18 @@ CREATE INDEX IF NOT EXISTS idx_game_sessions_started ON game_sessions(started_at
 CREATE INDEX IF NOT EXISTS idx_game_sessions_last_heartbeat ON game_sessions(last_heartbeat_at);
 CREATE INDEX IF NOT EXISTS idx_game_page_visits_started ON game_page_visits(started_at);
 CREATE INDEX IF NOT EXISTS idx_game_page_visits_path ON game_page_visits(path);
+
+-- ====== exchange ======
+CREATE TABLE IF NOT EXISTS exchange_gold (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  amount INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS exchange_history (
+  id SERIAL PRIMARY KEY,
+  price INTEGER NOT NULL,
+  silver INTEGER NOT NULL,
+  gold INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

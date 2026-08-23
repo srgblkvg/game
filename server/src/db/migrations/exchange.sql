@@ -1,0 +1,25 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS exchange_gold (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  amount INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS exchange_history (
+  id SERIAL PRIMARY KEY,
+  price INTEGER NOT NULL,
+  silver INTEGER NOT NULL,
+  gold INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO exchange_gold (id, amount)
+VALUES (1, 28000)
+ON CONFLICT (id) DO NOTHING;
+
+GRANT SELECT, UPDATE ON exchange_gold TO game;
+GRANT SELECT, INSERT ON exchange_history TO game;
+GRANT USAGE, SELECT ON SEQUENCE exchange_history_id_seq TO game;
+
+COMMIT;

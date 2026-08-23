@@ -24,6 +24,7 @@ const server = http.createServer(app);
 
 async function startServer() {
   await Promise.all([vkPaymentsReady, yooKassaPaymentsReady]);
+  await initExchange();
   await setupWebSocket(server);
   server.listen(PORT, () => logger.info(`Server started on port ${PORT}`));
 }
@@ -46,14 +47,14 @@ import { initExchange } from './game/exchange';
 import { initTournamentSchema } from './game/tournamentSchema';
 
 // Турниры зависят от казны: первый тик запускаем только после инициализации.
-Promise.allSettled([initTreasury(), initTreasuryLog(), initExchange(), initTournamentSchema()]).then((results) => {
-  const labels = ['Treasury', 'Treasury log', 'Exchange', 'Tournament schema'];
+Promise.allSettled([initTreasury(), initTreasuryLog(), initTournamentSchema()]).then((results) => {
+  const labels = ['Treasury', 'Treasury log', 'Tournament schema'];
   results.forEach((result, index) => {
     if (result.status === 'rejected') {
       logger.error(`${labels[index]} init failed:`, result.reason?.message || result.reason);
     }
   });
-  const tournamentSchemaReady = results[3]?.status === 'fulfilled';
+  const tournamentSchemaReady = results[2]?.status === 'fulfilled';
   if (tournamentSchemaReady) startTournamentScheduler();
   else logger.error('Tournament scheduler disabled: schema initialization failed');
 });
