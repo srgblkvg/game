@@ -677,3 +677,20 @@ CREATE TABLE IF NOT EXISTS dice_games (
   status TEXT NOT NULL DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ====== skill_pages ======
+CREATE TABLE IF NOT EXISTS skill_pages (
+  id SERIAL PRIMARY KEY,
+  userId INTEGER NOT NULL,
+  skillId INTEGER NOT NULL,
+  count INTEGER DEFAULT 1,
+  UNIQUE(userId, skillId)
+);
+
+-- ====== skill_levels ======
+CREATE TABLE IF NOT EXISTS skill_levels (
+  userId INTEGER NOT NULL,
+  skillId INTEGER NOT NULL,
+  level INTEGER DEFAULT 0,
+  UNIQUE(userId, skillId)
+);

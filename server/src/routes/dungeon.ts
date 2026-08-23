@@ -34,21 +34,6 @@ db.run(`CREATE TABLE IF NOT EXISTS dungeon_runs (
 db.run('ALTER TABLE dungeon_runs ADD COLUMN IF NOT EXISTS maxfloor INTEGER DEFAULT 0').catch(() => {});
 db.run('ALTER TABLE dungeon_runs ADD COLUMN IF NOT EXISTS maxreward INTEGER DEFAULT 0').catch(() => {});
 
-db.run(`CREATE TABLE IF NOT EXISTS skill_pages (
-    id SERIAL PRIMARY KEY,
-    userId INTEGER NOT NULL,
-    skillId INTEGER NOT NULL,
-    count INTEGER DEFAULT 1,
-    UNIQUE(userId, skillId)
-)`).catch(() => {});
-
-db.run(`CREATE TABLE IF NOT EXISTS skill_levels (
-    userId INTEGER NOT NULL,
-    skillId INTEGER NOT NULL,
-    level INTEGER DEFAULT 0,
-    UNIQUE(userId, skillId)
-)`).catch(() => {});
-
 // ═══════ КОНСТАНТЫ ═══════
 
 const WEAPON_SPEED: Record<number, number> = { 0: 0.3, 1: 0.5, 2: 0.7, 3: 0.9, 4: 1.1, 5: 1.3, 6: 1.5 };
