@@ -22,24 +22,54 @@ import { createPgStarterPackRepository } from '../game/donateStarterPackDelivery
 
 const router = Router();
 
-// Инициализация таблицы платежей: DDL выполняется последовательно, чтобы индекс
-// не попытался создаться раньше таблицы/колонки.
-const yooKassaPaymentsTableReady = db.run(`CREATE TABLE IF NOT EXISTS yukassa_payments (
-  id SERIAL PRIMARY KEY,
-  payment_id TEXT NOT NULL,
-  user_id INTEGER NOT NULL,
-  item TEXT NOT NULL DEFAULT 'premium',
-  days INTEGER NOT NULL DEFAULT 0,
-  amount TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending',
-  processed_at INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-)`)
-  .then(() => db.run(`ALTER TABLE yukassa_payments ADD COLUMN IF NOT EXISTS item TEXT DEFAULT 'premium'`))
-  .then(() => db.run(`CREATE UNIQUE INDEX IF NOT EXISTS yukassa_payments_payment_id_uidx
-    ON yukassa_payments (payment_id)`));
+async function initYooKassaPaymentsReadiness(): Promise<void> {
+  const readiness = await db.raw(`
+    SELECT
+      (
+        SELECT jsonb_agg(
+          jsonb_build_array(column_name, data_type, is_nullable, COALESCE(column_default, ''))
+          ORDER BY ordinal_position
+        )
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'yukassa_payments'
+      ) = '[
+        ["id", "integer", "NO", "nextval(''yukassa_payments_id_seq''::regclass)"],
+        ["payment_id", "text", "NO", ""],
+        ["user_id", "integer", "NO", ""],
+        ["days", "integer", "NO", ""],
+        ["amount", "text", "NO", ""],
+        ["status", "text", "NO", "''pending''::text"],
+        ["processed_at", "integer", "NO", ""],
+        ["created_at", "timestamp without time zone", "YES", "now()"],
+        ["item", "text", "YES", "''premium''::text"]
+      ]'::jsonb
+      AND EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'yukassa_payments'::regclass
+          AND contype = 'p'
+          AND convalidated = true
+          AND pg_get_constraintdef(oid) = 'PRIMARY KEY (id)'
+      )
+      AND EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename = 'yukassa_payments'
+          AND indexname = 'yukassa_payments_payment_id_uidx'
+          AND indexdef = 'CREATE UNIQUE INDEX yukassa_payments_payment_id_uidx ON public.yukassa_payments USING btree (payment_id)'
+      )
+      AND has_table_privilege(current_user, 'yukassa_payments', 'SELECT')
+      AND has_table_privilege(current_user, 'yukassa_payments', 'INSERT')
+      AND has_table_privilege(current_user, 'yukassa_payments', 'UPDATE')
+      AND to_regclass('yukassa_payments_id_seq') IS NOT NULL
+      AND has_sequence_privilege(current_user, to_regclass('yukassa_payments_id_seq'), 'USAGE')
+      AS ready
+  `);
+  if (readiness.rows[0]?.ready !== true) {
+    throw new Error('yukassa_payments schema readiness failed');
+  }
+}
 
-export const yooKassaPaymentsReady = yooKassaPaymentsTableReady;
+export const yooKassaPaymentsReady = initYooKassaPaymentsReadiness();
 
 // Товары
 interface ShopItem {

@@ -44,9 +44,9 @@ test('post-commit notification и email находятся после atomic del
   assert.ok(body.indexOf('sendPaymentReceipt(', delivery) > delivery);
 });
 
-test('runtime DDL и migration содержат unique payment_id index', () => {
-  assert.match(source(), /CREATE UNIQUE INDEX IF NOT EXISTS yukassa_payments_payment_id_uidx[\s\S]*ON yukassa_payments \(payment_id\)/i);
-  const migration = readFileSync(resolve(__dirname, '../scripts/migrate-yukassa-payment-id-unique.ts'), 'utf8');
+test('canonical migration содержит unique payment_id index, runtime DDL отсутствует', () => {
+  assert.doesNotMatch(source(), /CREATE UNIQUE INDEX IF NOT EXISTS yukassa_payments_payment_id_uidx|CREATE TABLE IF NOT EXISTS yukassa_payments|ALTER TABLE yukassa_payments/i);
+  const migration = readFileSync(resolve(__dirname, '../db/migrations/yukassaPayments.sql'), 'utf8');
   assert.match(migration, /CREATE UNIQUE INDEX IF NOT EXISTS yukassa_payments_payment_id_uidx[\s\S]*ON yukassa_payments \(payment_id\)/i);
 });
 
@@ -54,7 +54,7 @@ test('YooKassa readiness ожидается callback и server startup fail-fast
   const body = source();
   assert.match(body, /export const yooKassaPaymentsReady/);
   assert.match(body, /await yooKassaPaymentsReady/);
-  const readiness = body.slice(body.indexOf('const yooKassaPaymentsTableReady'), body.indexOf('// Товары'));
+  const readiness = body.slice(body.indexOf('async function initYooKassaPaymentsReadiness'), body.indexOf('// Товары'));
   assert.doesNotMatch(readiness, /\.catch\(/);
 
   const index = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
