@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { YooKassa, CurrencyEnum } from 'yookassa-sdk';
 import { db } from '../db/index';
 import { sendToUser } from '../events';
@@ -16,6 +17,8 @@ import { processYooKassaCursePackPayment } from '../game/donateCursePackDelivery
 import { processYooKassaMegaPackPayment } from '../game/donateMegaPackDelivery';
 import { processYooKassaPremiumPayment } from '../game/donatePremiumDelivery';
 import { createPgDonatePremiumRepository } from '../game/donatePremiumDeliveryRepository';
+import { processYooKassaStarterPackPayment } from '../game/donateStarterPackDelivery';
+import { createPgStarterPackRepository } from '../game/donateStarterPackDeliveryRepository';
 
 const router = Router();
 
@@ -271,7 +274,19 @@ router.post('/webhook', async (req: Request, res: Response) => {
       const now = Math.floor(Date.now() / 1000);
 
       try {
-        if (localItem && localItem.type === 'premium') {
+        if (localItem && localItem.type === 'starter_pack') {
+          const result = await processYooKassaStarterPackPayment(createPgStarterPackRepository(), {
+            paymentId,
+            providerUserId: String(metadata.userId || ''),
+            providerItem: String(metadata.item || ''),
+            verifiedAmount: String(verified.amount?.value || ''),
+            verifiedCurrency: String(verified.amount?.currency || ''),
+            processedAt: now,
+          }, () => crypto.randomUUID());
+          if (result.status === 'rejected') return res.json({ ok: true });
+          if (result.status === 'already-processed') return res.json({ ok: true });
+          sendToUser(result.userId, { type: 'paymentStatus', status: 'success', platform: 'yukassa', until: result.premiumUntil });
+        } else if (localItem && localItem.type === 'premium') {
           const result = await processYooKassaPremiumPayment(createPgDonatePremiumRepository(), {
             paymentId,
             providerUserId: String(metadata.userId || ''),

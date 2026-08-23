@@ -1,0 +1,3 @@
+/// <reference types="node" />
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {resolve} from 'node:path';import test from 'node:test';const body=readFileSync(resolve(__dirname,'../routes/yukassa.ts'),'utf8');
+test('Yoo starter bypasses legacy delivery and uses random UUID instances',()=>{const start=body.indexOf("localItem.type === 'starter_pack'");const end=body.indexOf("localItem.type === 'premium'",start);assert.ok(start>=0&&end>start);const branch=body.slice(start,end);assert.match(branch,/processYooKassaStarterPackPayment\(createPgStarterPackRepository\(\)/);assert.match(branch,/crypto\.randomUUID/);assert.doesNotMatch(branch,/deliverStarterPack|processDelivery|db\.run/);assert.match(branch,/until:\s*result\.premiumUntil/);});
