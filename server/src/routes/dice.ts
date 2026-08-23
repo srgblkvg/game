@@ -5,19 +5,6 @@ import { collectGuildTax } from '../db/helpers';
 const router = Router();
 const DAILY_LIMIT = 10;
 
-// Таблица для игр в кости
-db.run(`CREATE TABLE IF NOT EXISTS dice_games (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    entry_fee INTEGER NOT NULL,
-    dice TEXT NOT NULL,
-    rerolls INTEGER DEFAULT 0,
-    combo TEXT,
-    payout INTEGER DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT NOW()
-)`).catch(() => {});
-
 // Посчитать сегодняшние игры
 async function countTodayGames(userId: number): Promise<number> {
     const row = await db.one(
