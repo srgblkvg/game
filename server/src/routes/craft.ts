@@ -962,6 +962,7 @@ router.post('/craft/batch-forge', async (req, res) => {
     if (!stoneId) return res.status(400).json({ error: 'Выберите камень улучшения' });
     try {
         const result = await db.tx(async client => {
+            await client.query('SELECT amount FROM castle_treasury WHERE id = 1 FOR UPDATE');
             const locked = await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
             const user = locked.rows[0];
             if (!user) throw new Error('Игрок не найден');
@@ -1067,11 +1068,11 @@ router.post('/craft/batch-forge', async (req, res) => {
                  craftbroken = craftbroken + $5, faction_craft_count = faction_craft_count + $6,
                  elo = GREATEST(100, elo + $7), pverating = pverating + $7 WHERE id = $8`,
                 [JSON.stringify(inventory), spent, successfulLevels, successfulLevels, brokenCount,
-                    factionProgress, ratingBonus, req.userId]
+                        factionProgress, ratingBonus, req.userId]
             );
+            await changeTreasuryWithClient(client, Math.floor(spent * 0.22), 'craft_batch_forge');
             return { inventory, moneyAfter: Number(user.money) - spent, results, spent, stonesUsed, ratingBonus, announcements };
         });
-        addToTreasury(Math.floor(result.spent * 0.22), 'craft_batch_forge').catch(() => {});
         checkAchievement(req.userId!, 'craft').catch(() => {});
         markDirty(req.userId!, 'quests');
         const guildUser = await db.one('SELECT guildId FROM users WHERE id = ?', [req.userId]) as any;
