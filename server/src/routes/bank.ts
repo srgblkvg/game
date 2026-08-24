@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { requireFullAccess } from '../middleware/auth';
-import { addToTreasury } from '../game/treasury';
 import { sendToUser } from '../events';
+import { depositWithClient, transferWithClient } from '../game/bankOperations';
 
 
 const router = Router();
@@ -37,22 +37,9 @@ router.post('/bank/deposit', async (req, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Укажите сумму' });
 
-    const commission = Math.ceil(amount * 0.02);
-    const depositAmount = amount - commission;
-
     try {
-        const updated = await db.tx(async (client) => {
-            const user = (await client.query('SELECT money FROM users WHERE id = $1', [userId])).rows[0] as any;
-            if (!user) throw new Error('User not found');
-            if (user.money < amount) throw new Error(`Недостаточно серебра. Нужно ${amount}, есть ${user.money}`);
-
-            await client.query('UPDATE users SET money = money - $1, bank = bank + $2 WHERE id = $3', [amount, depositAmount, userId]);
-            await client.query('INSERT INTO bank_operations (userId, type, amount, commission, result) VALUES ($1, $2, $3, $4, $5)', [userId, 'deposit', amount, commission, depositAmount]);
-            addToTreasury(commission, 'bank_deposit').catch(() => {});
-
-            return (await client.query('SELECT money, bank FROM users WHERE id = $1', [userId])).rows[0] as any;
-        });
-        res.json({ success: true, pocket: updated.money, bank: updated.bank, commission, deposited: depositAmount });
+        const updated = await db.tx(client => depositWithClient(client, userId, amount));
+        res.json({ success: true, pocket: updated.money, bank: updated.bank, commission: updated.commission, deposited: updated.deposited });
         sendToUser(userId, { type: 'balance', money: updated.money, bank: updated.bank });
     } catch (e: any) {
         res.status(400).json({ error: e.message });
@@ -107,40 +94,8 @@ router.post('/bank/transfer', async (req, res) => {
     }
 
     try {
-        const { updated, target, commission, receivedAmount } = await db.tx(async (client) => {
-            // Проверяем существование получателя ДО списания
-            const target = (await client.query('SELECT id, username, accountNumber FROM users WHERE accountNumber = $1', [accountNumber])).rows[0] as any;
-            if (!target) throw new Error('Счёт не найден');
-            if (target.id === userId) throw new Error('Нельзя перевести самому себе');
-
-            // Проверяем и списываем с банка отправителя
-            let sender = (await client.query('SELECT bank, accountnumber FROM users WHERE id = $1', [userId])).rows[0] as any;
-            if (!sender) throw new Error('User not found');
-            if (sender.bank < transferAmount) throw new Error(`Недостаточно серебра в банке. Нужно ${transferAmount}, есть ${sender.bank}`);
-
-            // Авто-генерация номера счёта отправителя, если нет
-            if (!sender.accountnumber) {
-                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                let acc = '';
-                for (let i = 0; i < 6; i++) acc += chars[Math.floor(Math.random() * chars.length)];
-                await client.query('UPDATE users SET accountnumber = $1 WHERE id = $2', [acc, userId]);
-                sender = { ...sender, accountnumber: acc };
-            }
-
-            const commission = Math.ceil(transferAmount * 0.02);
-            const receivedAmount = transferAmount - commission;
-
-            await client.query('UPDATE users SET bank = bank - $1 WHERE id = $2', [transferAmount, userId]);
-            await client.query('UPDATE users SET bank = bank + $1 WHERE id = $2', [receivedAmount, target.id]);
-
-            await client.query('INSERT INTO transfers (fromUserId, toUserId, fromAccount, toAccount, toUsername, amount, commission, received) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-                [userId, target.id, sender.accountnumber, target.accountnumber, target.username, transferAmount, commission, receivedAmount]);
-            addToTreasury(commission, 'bank_transfer').catch(() => {});
-
-            const updated = (await client.query('SELECT bank FROM users WHERE id = $1', [userId])).rows[0] as any;
-            return { updated, target, commission, receivedAmount };
-        });
-        res.json({ success: true, message: `Переведено ${receivedAmount} серебра игроку ${target.username} (комиссия ${commission})`, bank: updated.bank });
+        const result = await db.tx(client => transferWithClient(client, userId, accountNumber, transferAmount));
+        res.json({ success: true, message: `Переведено ${result.receivedAmount} серебра игроку ${result.targetUsername} (комиссия ${result.commission})`, bank: result.bank });
     } catch (e: any) {
         res.status(400).json({ error: e.message });
     }
