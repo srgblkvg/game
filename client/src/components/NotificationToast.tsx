@@ -1,14 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
-
-interface Notification {
-    id: number;
-    type: 'quest_complete' | 'level_up' | 'battle_result' | 'guild_event' | 'auction_won' | 'auction_outbid' | 'auction_sold' | 'system';
-    message: string;
-    data?: any;
-    createdAt: number;
-}
+import { getNotificationPath, parseNotificationDetail, type NotificationModel } from './notification/notificationModel';
 
 const iconMap: Record<string, string> = {
     quest_complete: 'game-icons:notebook',
@@ -32,25 +25,25 @@ const colorMap: Record<string, string> = {
     system: '#888888',
 };
 
-interface ToastItem extends Notification {
+interface ToastItem extends NotificationModel {
     id: number;
     fading: boolean;
 }
 
 export default function NotificationToast() {
     const [toasts, setToasts] = useState<ToastItem[]>([]);
-    const shownRef = new Set<number>();
+    const shownRef = useRef(new Set<number>());
 
     // Слушаем уведомления из serverTick
     useEffect(() => {
         const handler = (e: Event) => {
-            const notifications = (e as CustomEvent).detail as Notification[];
-            if (!notifications || notifications.length === 0) return;
+            const notifications = parseNotificationDetail((e as CustomEvent<unknown>).detail);
+            if (notifications.length === 0) return;
             setToasts(prev => {
                 const next = [...prev];
                 for (const n of notifications) {
-                    if (shownRef.has(n.id)) continue;
-                    shownRef.add(n.id);
+                    if (shownRef.current.has(n.id)) continue;
+                    shownRef.current.add(n.id);
                     next.push({ ...n, fading: false });
                 }
                 if (next.length > 10) return next.slice(-10);
@@ -95,12 +88,8 @@ export default function NotificationToast() {
                     }`}
                     onClick={() => {
                         dismiss(t.id);
-                        try {
-                            const d = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
-                            if (d?.path) {
-                                window.location.href = d.path;
-                            }
-                        } catch {}
+                        const path = getNotificationPath(t.data);
+                        if (path) window.location.href = path;
                     }}
                 >
                     <Icon
