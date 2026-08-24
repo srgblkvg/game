@@ -6,6 +6,7 @@ import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty, broadcast } from '../events';
 import { addToTreasury, changeTreasuryWithClient } from '../game/treasury';
+import { executeCraftWithClient } from '../game/craftExecute';
 import { applyReforge, curseMeetsTarget, decideAutoCraftResult, getAdjustedCurseRankWeights, getCraftFactionBonus, getCraftFactionBonusParts, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, shouldGrantCraftExperience, type UpgradeRule } from '../game/craftOperations';
 
 const router = Router();
@@ -96,160 +97,16 @@ router.post('/craft/execute', async (req, res) => {
 
     if (!recipe_id) return res.status(400).json({ error: 'recipe_id required' });
 
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const recipe = await db.one('SELECT * FROM craft_recipes WHERE id = ?', [Number(recipe_id)]) as any;
-    if (!recipe) return res.status(400).json({ error: 'Рецепт не найден' });
-
-    const ingredients = await db.query(`
-    SELECT ci.id, ci.name, ci.rarity_id, ci.type as itemType, cri.quantity,
-           r.display_name as rarity_display, r.color as rarity_color
-    FROM craft_recipe_ingredients cri
-    JOIN craft_items ci ON ci.id = cri.craft_item_id
-    JOIN rarities r ON ci.rarity_id = r.id
-    WHERE cri.recipe_id = ?
-  `, [recipe.id]) as any[];
-
-    let inventory: any[] = JSON.parse(user.inventory || '[]');
-    const ingredientMap = new Map<string, number>();
-    for (const ing of ingredients) {
-        ingredientMap.set(String(ing.id), ing.quantity);
+    const result = await db.tx(client => executeCraftWithClient(client, {
+        userId: userId!,
+        recipeId: Number(recipe_id),
+    }));
+    if (result.success) {
+        checkAchievement(userId!, 'craft').catch(() => {});
+        if (result.guildId) updateGuildQuestProgress(result.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message));
+        markDirty(userId!, 'quests');
     }
-
-    // Проверка ресурсов до списания
-    for (const [itemId, needed] of ingredientMap) {
-        const existing = inventory.find((i: any) => isCraftItem(i) && String(i.id) === String(itemId));
-        if (!existing || existing.count < needed) {
-            return res.status(400).json({ error: `Недостаточно ресурса (требуется ${needed})` });
-        }
-    }
-
-    // Проверка денег
-    if (user.money < recipe.money_cost) {
-        return res.status(400).json({ error: 'Недостаточно денег' });
-    }
-
-    // Проверка заполненности инвентаря для результата-предмета
-    if (recipe.result_type === 'item') {
-        const inventorySlots = user.inventorySlots || 10;
-        const equipmentCount = inventory.filter((item: any) => !isCraftItem(item)).length;
-        if (equipmentCount >= inventorySlots) {
-            return res.status(400).json({ error: 'Инвентарь заполнен' });
-        }
-    }
-
-    // Списание ресурсов
-    let newInventory = inventory.map((item) => {
-        if (isCraftItem(item) && ingredientMap.has(String(item.id))) {
-            const needed = ingredientMap.get(String(item.id))!;
-            if (item.count > needed) {
-                return { ...item, count: item.count - needed };
-            } else {
-                ingredientMap.delete(String(item.id));
-                return null;
-            }
-        }
-        return item;
-    }).filter(Boolean);
-
-    const newMoney = user.money - recipe.money_cost;
-    const craftBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
-    const chance = (recipe.success_chance ?? 100) + craftBonus;
-    const success = Math.random() * 100 < chance;
-
-    if (success) {
-        let craftedItem: any = null;
-        if (recipe.result_type === 'item') {
-            const resultItem = await db.one(`
-        SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
-        FROM items i
-        JOIN rarities r ON i.rarity_id = r.id
-        WHERE i.id = ?
-      `, [recipe.result_id]) as any;
-            if (!resultItem) return res.status(500).json({ error: 'Результирующий предмет не найден' });
-            craftedItem = {
-                id: Date.now() + Math.random(),
-                name: resultItem.name,
-                slot: resultItem.slot,
-                rarity_id: resultItem.rarity_id,
-                rarity_display: resultItem.rarity_display,
-                rarity_color: resultItem.rarity_color,
-                bonuses: JSON.parse(resultItem.bonuses || '{}'),
-                extra: JSON.parse(resultItem.extra || '{}'),
-                image: resultItem.image || null,
-                upgradeLevel: 0,
-            };
-            newInventory.push(craftedItem);
-        } else if (recipe.result_type === 'random_item') {
-            // Случайный предмет указанной редкости (result_id = rarity_id)
-            const rarityId = recipe.result_id;
-            const randomItem = await db.one(`
-                SELECT i.*, r.display_name as rarity_display, r.color as rarity_color
-                FROM items i
-                JOIN rarities r ON i.rarity_id = r.id
-                WHERE i.rarity_id = ?
-                  AND (i.extra IS NULL OR i.extra::text NOT LIKE '%"set"%')
-                ORDER BY RANDOM() LIMIT 1
-            `, [rarityId]) as any;
-            if (!randomItem) return res.status(500).json({ error: 'Нет предметов такой редкости' });
-            craftedItem = {
-                id: Date.now() + Math.random(),
-                name: randomItem.name,
-                slot: randomItem.slot,
-                rarity_id: randomItem.rarity_id,
-                rarity_display: randomItem.rarity_display,
-                rarity_color: randomItem.rarity_color,
-                bonuses: JSON.parse(randomItem.bonuses || '{}'),
-                extra: JSON.parse(randomItem.extra || '{}'),
-                image: randomItem.image || null,
-                upgradeLevel: 0,
-            };
-            newInventory.push(craftedItem);
-        } else if (recipe.result_type === 'craft_item') {
-            const resultCraftItem = await db.one(`
-        SELECT c.*, r.display_name as rarity_display, r.color as rarity_color
-        FROM craft_items c
-        JOIN rarities r ON c.rarity_id = r.id
-        WHERE c.id = ?
-      `, [recipe.result_id]) as any;
-            if (!resultCraftItem) return res.status(500).json({ error: 'Результирующий ресурс не найден' });
-            const existing = newInventory.find((i: any) => isCraftItem(i) && String(i.id) === String(recipe.result_id));
-            if (existing) {
-                existing.count += 1;
-                craftedItem = { ...existing, count: 1 }; // для уведомления: одна штука
-            } else {
-                craftedItem = {
-                    type: 'craft_item',
-                    id: resultCraftItem.id,
-                    name: resultCraftItem.name,
-                    rarity_id: resultCraftItem.rarity_id,
-                    rarity_display: resultCraftItem.rarity_display,
-                    rarity_color: resultCraftItem.rarity_color,
-                    count: 1,
-                    itemType: resultCraftItem.type || 'craft',
-                    image: resultCraftItem.image || null,
-                };
-                newInventory.push(craftedItem);
-            }
-        }
-
-        // Ремесленник: +1 опыт только если итоговый шанс (с бонусом фракции) < 80%
-        const factionInc = shouldGrantCraftExperience(user.faction, chance, true) ? ', faction_craft_count = faction_craft_count + 1' : '';
-        await db.run(`UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftCreated = craftCreated + 1${factionInc} WHERE id = ?`, [JSON.stringify(newInventory), newMoney, userId]);
-        checkAchievement(userId, 'craft').catch(() => {});
-        addToTreasury(Math.floor(recipe.money_cost * 0.22), 'craft_recipe').catch(() => {});
-        const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
-        if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
-        markDirty(userId, 'quests');
-        // Туториал: первый крафт → шаг 3 (Арена)
-        await db.run('UPDATE users SET tutorial_step = 3 WHERE id = ? AND tutorial_step = 2', [userId]);
-        return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, item: craftedItem, message: 'Предмет создан!' });
-    } else {
-        await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
-        addToTreasury(Math.floor(recipe.money_cost * 0.22), 'craft_recipe_fail').catch(() => {});
-        return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача, предмет разрушен' });
-    }
+    return res.status(result.status).json(result.body);
 });
 
 // Одна атомарная попытка создания (авторежим зацикливается на клиенте)
