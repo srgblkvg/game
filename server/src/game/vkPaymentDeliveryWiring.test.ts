@@ -30,12 +30,12 @@ test('VK silver использует atomic ledger service и не вызыва�
   assert.doesNotMatch(silver, /item_price \|\||deliverSilver|db\.run\(/);
 });
 
-test('callback сначала создаёт vk table, затем ledger/backfill до chargeable', () => {
+test('callback создаёт shared read-only readiness до chargeable', () => {
   const body = source();
-  const table = body.indexOf('vkPaymentsTableReady.then');
-  const ledger = body.indexOf('ensureVkPaymentDeliveryReady()');
+  const readiness = body.indexOf('export const vkPaymentsReady = ensureVkPaymentDeliveryReady()');
+  const awaited = body.indexOf('await vkPaymentsReady');
   const chargeable = body.indexOf("if (status === 'chargeable')");
-  assert.ok(table >= 0 && ledger > table && chargeable > ledger);
+  assert.ok(readiness >= 0 && awaited > readiness && chargeable > awaited);
   assert.match(body, /export const vkPaymentsReady/);
   assert.match(body, /await vkPaymentsReady/);
 });
@@ -47,17 +47,15 @@ test('server ждёт VK payment readiness до listen и завершает п�
 });
 
 test('migration создаёт unique ledger и backfill chargeable до route activation', () => {
-  const migration = readFileSync(resolve(__dirname, '../scripts/migrate-vk-payment-deliveries.ts'), 'utf8');
+  const migration = readFileSync(resolve(__dirname, '../db/migrations/vkPayments.sql'), 'utf8');
   assert.match(migration, /UNIQUE\s*\(provider,\s*external_id\)/i);
   assert.match(migration, /INSERT INTO payment_deliveries[\s\S]*SELECT[\s\S]*FROM vk_payments[\s\S]*status = 'chargeable'/i);
   assert.match(migration, /COUNT\(DISTINCT user_id\)[\s\S]*COUNT\(DISTINCT item\)/i);
   assert.match(migration, /character_id IS NULL OR character_id <= 0/i);
-  assert.match(migration, /throw new Error\(['"]conflicting historical VK payment identities/i);
+  assert.match(migration, /RAISE EXCEPTION 'conflicting historical VK payment identities/i);
   assert.match(migration, /ON CONFLICT \(provider, external_id\) DO NOTHING/i);
-  assert.match(migration, /GRANT ALL ON payment_deliveries TO game/i);
-  assert.match(migration, /const client = await pool\.connect\(\)/);
-  assert.match(migration, /await client\.query\(['"]BEGIN['"]\)/);
-  assert.match(migration, /client\.release\(\)/);
+  assert.match(migration, /^BEGIN;/m);
+  assert.match(migration, /COMMIT;/);
 });
 
 test('post-commit VK notification использует delivered characterId', () => {

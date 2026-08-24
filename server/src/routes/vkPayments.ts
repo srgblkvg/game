@@ -19,18 +19,7 @@ import { createPgVkStarterPackRepository } from '../game/vkStarterPackPaymentRep
 
 const router = Router();
 
-// Инициализация таблицы платежей
-const vkPaymentsTableReady = db.run(`CREATE TABLE IF NOT EXISTS vk_payments (
-  id SERIAL PRIMARY KEY,
-  order_id TEXT NOT NULL,
-  user_id INTEGER NOT NULL,
-  character_id INTEGER NOT NULL DEFAULT 0,
-  item TEXT NOT NULL,
-  status TEXT NOT NULL,
-  processed_at INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-)`);
-export const vkPaymentsReady = vkPaymentsTableReady.then(() => ensureVkPaymentDeliveryReady());
+export const vkPaymentsReady = ensureVkPaymentDeliveryReady();
 
 // Секретный ключ приложения VK (нужно задать в .env: VK_APP_SECRET)
 const APP_SECRET = process.env.VK_APP_SECRET || '';

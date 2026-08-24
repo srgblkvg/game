@@ -793,6 +793,31 @@ CREATE TABLE IF NOT EXISTS yukassa_payments (
 CREATE UNIQUE INDEX IF NOT EXISTS yukassa_payments_payment_id_uidx
   ON yukassa_payments (payment_id);
 
+-- ====== VK payments ======
+CREATE TABLE IF NOT EXISTS vk_payments (
+  id SERIAL PRIMARY KEY,
+  order_id TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  character_id INTEGER NOT NULL DEFAULT 0,
+  item TEXT NOT NULL,
+  status TEXT NOT NULL,
+  processed_at INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS payment_deliveries (
+  id BIGSERIAL PRIMARY KEY,
+  provider TEXT NOT NULL,
+  external_id TEXT NOT NULL,
+  provider_user_id BIGINT NOT NULL,
+  character_id INTEGER,
+  item TEXT NOT NULL,
+  status TEXT NOT NULL,
+  processed_at BIGINT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (provider, external_id)
+);
+
 -- ====== exchange ======
 CREATE TABLE IF NOT EXISTS exchange_gold (
   id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
