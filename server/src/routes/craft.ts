@@ -269,6 +269,7 @@ router.post('/craft/auto-attempt', async (req, res) => {
 
     try {
         const result = await db.tx(async client => {
+            await client.query('SELECT amount FROM castle_treasury WHERE id = 1 FOR UPDATE');
             const locked = await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
             const user = locked.rows[0] as any;
             if (!user) throw new Error('Игрок не найден');
@@ -415,12 +416,15 @@ router.post('/craft/auto-attempt', async (req, res) => {
                 await client.query('UPDATE users SET inventory = $1, money = $2, craftBroken = craftBroken + 1 WHERE id = $3',
                     [JSON.stringify(newInventory), moneyAfter, req.userId]);
             }
+            await changeTreasuryWithClient(
+                client,
+                Math.floor(moneyCost * 0.22),
+                success ? 'craft_recipe' : 'craft_recipe_fail'
+            );
             return { success, inventory: newInventory, moneyAfter, effectiveChance, item, rolledItem, salvaged, targetMatched,
                 guildId: user.guildid || user.guildId, moneyCost,
                 message: success ? (salvaged ? 'Предмет не совпал с целью и разобран' : 'Предмет создан!') : 'Неудача, предмет разрушен' };
         });
-
-        addToTreasury(Math.floor(result.moneyCost * 0.22), result.success ? 'craft_recipe' : 'craft_recipe_fail').catch(() => {});
         if (result.success) {
             checkAchievement(req.userId, 'craft').catch(() => {});
             if (result.guildId) updateGuildQuestProgress(result.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message));
