@@ -5,7 +5,7 @@ import { checkAchievement } from './achievements';
 import { requireFullAccess } from '../middleware/auth';
 import { updateGuildQuestProgress } from './guild';
 import { markDirty, broadcast } from '../events';
-import { addToTreasury } from '../game/treasury';
+import { addToTreasury, changeTreasuryWithClient } from '../game/treasury';
 import { applyReforge, curseMeetsTarget, decideAutoCraftResult, getAdjustedCurseRankWeights, getCraftFactionBonus, getCraftFactionBonusParts, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, shouldGrantCraftExperience, type UpgradeRule } from '../game/craftOperations';
 
 const router = Router();
@@ -876,6 +876,7 @@ router.post('/craft/reforge', async (req, res) => {
     }
     try {
         const result = await db.tx(async client => {
+            await client.query('SELECT amount FROM castle_treasury WHERE id = 1 FOR UPDATE');
             const locked = await client.query('SELECT inventory, money, faction, faction_craft_count FROM users WHERE id = $1 FOR UPDATE', [req.userId]);
             const user = locked.rows[0];
             if (!user) throw new Error('Игрок не найден');
@@ -890,9 +891,9 @@ router.post('/craft/reforge', async (req, res) => {
                 'UPDATE users SET inventory = $1, money = money - $2, craftcount = craftcount + 1 WHERE id = $3',
                 [JSON.stringify(inventory), cost, req.userId]
             );
+            await changeTreasuryWithClient(client, Math.floor(cost * 0.22), 'craft_reforge');
             return { inventory, moneyAfter: Number(user.money) - cost, item: inventory[itemIndex], cost };
         });
-        addToTreasury(Math.floor(result.cost * 0.22), 'craft_reforge').catch(() => {});
         checkAchievement(req.userId!, 'craft').catch(() => {});
         markDirty(req.userId!, 'quests');
         const guildUser = await db.one('SELECT guildId FROM users WHERE id = ?', [req.userId]) as any;
