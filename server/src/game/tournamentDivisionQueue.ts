@@ -69,10 +69,9 @@ export function splitParticipantsByDivision(
     if (entries.length === 1) singletons.push(entries[0]!);
     else divisions.push({ division, participants: entries });
   }
-  // Игроки из одиночных технических дивизионов не должны пропадать:
-  // раньше они оставались в `singletons`, а mergeExpiredOfficialQueues
-  // создавал турниры только из `divisions`. Поэтому часть регистраций
-  // завершалась возвратом фонда без участия в турнире.
+  // Сначала пытаемся присоединить одиночные дивизионы к совместимым группам.
+  // Оставшиеся `singletons` возвращаются вызывающему коду для явной отмены
+  // регистрации и уведомления игрока; автоматического переноса нет.
   if (singletons.length > 0) {
     const sorted = singletons.slice().sort((a, b) => a.combatPower - b.combatPower || a.userId - b.userId);
     if (divisions.length > 0) {

@@ -15,7 +15,7 @@ import { initTournamentSchema, isTournamentSchemaReady } from '../game/tournamen
 import { runTournamentGroupStage, type GroupFightMetadata } from '../game/tournamentGroupRunner';
 import { createFixedPlayoffPairs, createRoundRobinMatches, drawTournamentGroups, getGroupQualificationState } from '../game/tournamentGroupStage';
 import { allocateMergedPrizePools, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, mergeAllTournamentQueues, selectReadyQueueWindow } from '../game/tournamentQueue';
-import { broadcast } from '../events';
+import { broadcast, pushNotification } from '../events';
 import { getDrinkBonuses } from '../game/drinks';
 import { checkAchievement } from './achievements';
 
@@ -618,12 +618,18 @@ async function finishTournamentTx(client: any, tournamentId: number) {
 // ---------------------------------------------------------------------------
 
 export async function mergeExpiredOfficialQueues(): Promise<number[]> {
-    const createdIds = await db.tx(mergeExpiredOfficialQueuesTx);
+    const result = await db.tx(mergeExpiredOfficialQueuesTx);
+    for (const userId of result.cancelledUserIds) {
+        pushNotification(userId, {
+            type: 'system',
+            message: 'Противника подобрать не удалось. Турнир по вашему дивизиону не собрался и отменён.',
+        });
+    }
     broadcast('tournamentUpdated', {
-        reason: createdIds.length > 0 ? 'brackets_created' : 'registration_closed',
-        tournamentIds: createdIds,
+        reason: result.createdIds.length > 0 ? 'brackets_created' : 'registration_closed',
+        tournamentIds: result.createdIds,
     });
-    return createdIds;
+    return result.createdIds;
 }
 
 /** Резервирует общий фонд official-регистраций и делит его между открытыми группами. */
@@ -705,10 +711,10 @@ export async function rebalanceOfficialQueuePoolsTx(client: any): Promise<void> 
         }
 }
 
-export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[]> {
+export async function mergeExpiredOfficialQueuesTx(client: any): Promise<{ createdIds: number[]; cancelledUserIds: number[] }> {
     const createdIds: number[] = [];
     const lock = await client.query('SELECT pg_try_advisory_xact_lock($1) as locked', [987654321]);
-        if (!lock.rows[0]?.locked) return createdIds;
+        if (!lock.rows[0]?.locked) return { createdIds, cancelledUserIds: [] };
 
         const now = Math.floor(Date.now() / 1000);
         const allRegistrationRows = (await client.query(
@@ -720,13 +726,13 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
             now,
             OFFICIAL_MERGE_WAIT,
         );
-        if (readyIds.length === 0) return createdIds;
+        if (readyIds.length === 0) return { createdIds, cancelledUserIds: [] };
         const queueRows = (await client.query(
             `SELECT id, division, name, COALESCE(basepool, 0) basepool FROM tournaments
              WHERE id = ANY($1::int[]) AND type = 'official' AND status = 'registration'
              ORDER BY id FOR UPDATE`, [readyIds]
         )).rows;
-        if (queueRows.length === 0) return createdIds;
+        if (queueRows.length === 0) return { createdIds, cancelledUserIds: [] };
 
         const queueIds = queueRows.map((row: any) => Number(row.id));
         const participantRows = (await client.query(
@@ -802,40 +808,16 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
             }
         }
 
-        const waitingUserIds = split.singletons.map(participant => participant.userId);
-        let carriedReserve = 0;
-        if (waitingUserIds.length > 0) {
-            carriedReserve = allocation.refund;
-            const registrationStart = now + OFFICIAL_INTERVAL;
-            const registrationEnd = registrationStart + REGISTRATION_WINDOW;
-            const waitingQueue = await client.query(
-                `INSERT INTO tournaments
-                 (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers, name)
-                 VALUES ('official-cycle', 'registration', $1, $2, $3, $3, $4, 'official', 1000000, 'Общий набор')
-                 RETURNING id`,
-                [registrationStart, registrationEnd, carriedReserve, new Date().toISOString()]
-            );
-            const waitingTournamentId = Number(waitingQueue.rows[0].id);
-            for (const participant of split.singletons) {
-                const sourceQueueId = sourceQueueByUser.get(participant.userId);
-                if (sourceQueueId === undefined) throw new Error(`Source queue not found for waiting user ${participant.userId}`);
-                const snapshotStats = snapshotByQueueAndUser.get(`${sourceQueueId}:${participant.userId}`);
-                if (!snapshotStats) throw new Error(`Snapshot not found for waiting user ${participant.userId}`);
-                await client.query(
-                    'INSERT INTO tournament_participants (tournamentid, userid, snapshotstats) VALUES ($1, $2, $3)',
-                    [waitingTournamentId, participant.userId, snapshotStats]
-                );
-            }
-        }
+        const cancelledUserIds = split.singletons.map(participant => participant.userId);
 
-        const treasuryRefund = allocation.refund - carriedReserve;
+        const treasuryRefund = allocation.refund;
         if (treasuryRefund > 0) {
             await client.query('UPDATE castle_treasury SET amount = amount + $1, updated_at = NOW() WHERE id = 1', [treasuryRefund]);
             await client.query('INSERT INTO treasury_log (amount, source, created_at) VALUES ($1, $2, NOW())', [treasuryRefund, 'tournament_reserve_return']);
         }
         const movedUserIds = [
             ...split.divisions.flatMap(group => group.participants.map(participant => participant.userId)),
-            ...waitingUserIds,
+            ...cancelledUserIds,
         ];
         if (movedUserIds.length > 0) {
             await client.query(
@@ -848,7 +830,7 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<number[
             [new Date().toISOString(), queueIds]
         );
         for (const tournamentId of createdIds) await generateBracketTx(client, tournamentId);
-    return createdIds;
+    return { createdIds, cancelledUserIds };
 }
 
 export async function autoAdvance(tournamentId: number) {

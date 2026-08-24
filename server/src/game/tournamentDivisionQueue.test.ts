@@ -26,7 +26,7 @@ test('дивизион с числом участников больше вос�
   assert.equal(result.divisions[0]!.participants.length, 17);
 });
 
-test('одиночный дивизион с чрезмерным разрывом остаётся ждать следующий набор', () => {
+test('одиночный дивизион с чрезмерным разрывом возвращается как несобранный', () => {
   const result = splitParticipantsByDivision([
     participant(1, 0, 50),
     participant(2, 0, 60),

@@ -91,7 +91,7 @@ test('при двух и более записавшихся участвуют 
   }
 });
 
-test('единственный записавшийся переносится в следующий набор', () => {
+test('единственный записавшийся возвращается как несобранный', () => {
   const result = mergeAllTournamentQueues([queue(1, [1_000_000])], 8);
   assert.equal(result.groups.length, 0);
   assert.deepEqual(result.waitingParticipants.map(player => player.combatPower), [1_000_000]);
