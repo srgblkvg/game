@@ -32,6 +32,7 @@ test('exchange readiness is awaited before websocket and listen', () => {
 });
 
 test('canonical schema preserves exchange singleton/history shape', () => {
+  assert.match(schemaSource, /CREATE TABLE IF NOT EXISTS users[\s\S]*gold INTEGER NOT NULL DEFAULT 0/i);
   assert.match(schemaSource, /CREATE TABLE IF NOT EXISTS exchange_gold[\s\S]*id INTEGER PRIMARY KEY DEFAULT 1 CHECK \(id = 1\)[\s\S]*amount INTEGER NOT NULL DEFAULT 0[\s\S]*updated_at TIMESTAMPTZ DEFAULT NOW\(\)/i);
   assert.match(schemaSource, /CREATE TABLE IF NOT EXISTS exchange_history[\s\S]*id SERIAL PRIMARY KEY[\s\S]*price INTEGER NOT NULL[\s\S]*silver INTEGER NOT NULL[\s\S]*gold INTEGER NOT NULL[\s\S]*created_at TIMESTAMPTZ DEFAULT NOW\(\)/i);
 });
@@ -40,10 +41,20 @@ test('exchange migration is transactional, idempotent and seeds only missing sin
   assert.match(migrationSource, /^BEGIN;/m);
   assert.match(migrationSource, /CREATE TABLE IF NOT EXISTS exchange_gold/i);
   assert.match(migrationSource, /CREATE TABLE IF NOT EXISTS exchange_history/i);
+  assert.match(migrationSource, /ALTER TABLE users ADD COLUMN IF NOT EXISTS gold INTEGER NOT NULL DEFAULT 0/i);
   assert.match(migrationSource, /INSERT INTO exchange_gold \(id, amount\)\s+VALUES \(1, 28000\)\s+ON CONFLICT \(id\) DO NOTHING/i);
   assert.match(migrationSource, /GRANT SELECT, UPDATE ON exchange_gold TO game/i);
   assert.match(migrationSource, /GRANT SELECT, INSERT ON exchange_history TO game/i);
   assert.match(migrationSource, /COMMIT;/i);
+});
+
+test('exchange readiness requires exact users.gold shape and update privilege', () => {
+  assert.match(exchangeSource, /table_name = 'users'[\s\S]*column_name = 'gold'/);
+  assert.match(exchangeSource, /data_type = 'integer'/);
+  assert.match(exchangeSource, /is_nullable = 'NO'/);
+  assert.match(exchangeSource, /column_default = '0'/);
+  assert.match(exchangeSource, /has_column_privilege\(current_user, 'users', 'gold', 'SELECT'\)/);
+  assert.match(exchangeSource, /has_column_privilege\(current_user, 'users', 'gold', 'UPDATE'\)/);
 });
 
 assert.equal(typeof exchangeSource, 'string');

@@ -34,6 +34,14 @@ export async function initExchange() {
                 ["created_at", "timestamp with time zone", "YES", "now()"]
             ]'::jsonb
             AND EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'users'
+                  AND column_name = 'gold'
+                  AND data_type = 'integer'
+                  AND is_nullable = 'NO'
+                  AND column_default = '0'
+            )
+            AND EXISTS (
                 SELECT 1 FROM pg_constraint
                 WHERE conrelid = 'exchange_gold'::regclass
                   AND contype = 'p'
@@ -56,6 +64,8 @@ export async function initExchange() {
             AND has_table_privilege(current_user, 'exchange_gold', 'UPDATE')
             AND has_table_privilege(current_user, 'exchange_history', 'SELECT')
             AND has_table_privilege(current_user, 'exchange_history', 'INSERT')
+            AND has_column_privilege(current_user, 'users', 'gold', 'SELECT')
+            AND has_column_privilege(current_user, 'users', 'gold', 'UPDATE')
             AND has_sequence_privilege(current_user, 'exchange_history_id_seq', 'USAGE')
             AS ready
     `);
