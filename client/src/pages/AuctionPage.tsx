@@ -18,6 +18,7 @@ import { fmtSafeDate } from '../utils/date';
 import { getItemImage } from '../utils/itemUtils';
 import { calculateAuctionListingFee } from '../utils/auctionFees';
 import { showNoMoney } from '../components/NoMoneyModal';
+import { parseAuctionSearch } from '../domain/auction/parseAuctionSearch';
 import PriceChart from '../components/auction/PriceChart';
 
 const PRICE_FLOOR: Record<number, number> = { 0: 5, 1: 20, 2: 100, 3: 400, 4: 1500, 5: 6000, 6: 20000 };
@@ -50,66 +51,6 @@ const SORT_OPTIONS = [
     { key: 'buyout_asc', label: 'Выкуп/шт ↑' },
     { key: 'buyout_desc', label: 'Выкуп/шт ↓' },
 ];
-
-// Парсер поискового запроса: "крит перчатки" → { stats: {minCrit:1}, category: "gloves" }
-// "сила ловкость защита" → три стата одновременно
-const STAT_KEYWORDS: Record<string, string> = {
-    'сила': 'minStr', 'силы': 'minStr',
-    'ловкость': 'minAgi', 'ловкости': 'minAgi',
-    'защита': 'minDef', 'защиты': 'minDef',
-    'крит': 'minCrit', 'крита': 'minCrit',
-    'уклон': 'minDodge', 'уклонения': 'minDodge',
-    'контратака': 'minCounter', 'контратаки': 'minCounter',
-    'блок': 'minBlock', 'блока': 'minBlock',
-    'мастерство': 'minMag', 'мастерства': 'minMag',
-};
-
-// Ключевые слова для типа предмета (слота)
-const SLOT_KEYWORDS: Record<string, string> = {
-    'оружие': 'weapon', 'меч': 'weapon', 'топор': 'weapon', 'копьё': 'weapon', 'копье': 'weapon', 'лук': 'weapon', 'посох': 'weapon',
-    'щит': 'shield',
-    'нагрудник': 'chest', 'броня': 'chest', 'кираса': 'chest', 'доспех': 'chest',
-    'шлем': 'helmet', 'капюшон': 'helmet',
-    'перчатки': 'gloves', 'рукавицы': 'gloves',
-    'сапоги': 'boots', 'ботинки': 'boots',
-    'кольцо': 'ring', 'кольца': 'ring',
-    'амулет': 'amulet',
-    'пояс': 'belt', 'ремень': 'belt',
-    'материал': 'material', 'материалы': 'material', 'ресурс': 'material',
-    'улучшение': 'upgrade', 'камень': 'upgrade', 'камни': 'upgrade',
-};
-
-function parseSearch(query: string): { text: string; stats: Record<string, number>; category: string } {
-    const stats: Record<string, number> = {};
-    let category = 'all';
-    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-    const textParts: string[] = [];
-    
-    const matchPrefix = (token: string, dict: Record<string, string>): string | undefined => {
-        // exact match
-        if (dict[token]) return dict[token];
-        // prefix match
-        for (const [key, val] of Object.entries(dict)) {
-            if (key.startsWith(token)) return val;
-        }
-        return undefined;
-    };
-    
-    for (const token of tokens) {
-        const statField = matchPrefix(token, STAT_KEYWORDS);
-        const slotField = matchPrefix(token, SLOT_KEYWORDS);
-        if (statField) {
-            stats[statField] = 1;
-        } else if (slotField) {
-            category = slotField;
-        } else {
-            textParts.push(token);
-        }
-    }
-    
-    return { text: textParts.join(' '), stats, category };
-}
-
 
 export default function AuctionPage() {
   const { user } = useAuth();
@@ -227,7 +168,7 @@ export default function AuctionPage() {
         const activeGroupKey = groupKey !== undefined ? groupKey : groupFilter;
         try {
             const p = pg || page;
-            const { text, stats, category: parsedCategory } = parseSearch(auctionSearch);
+            const { text, stats, category: parsedCategory } = parseAuctionSearch(auctionSearch);
             const qs = new URLSearchParams();
             qs.set('page', String(p));
             qs.set('limit', String(limit));
