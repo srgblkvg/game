@@ -8,6 +8,7 @@ import { changeUsernameSchema, changePasswordSchema, registerGuestSchema } from 
 import { auditPasswordChange, auditUsernameChange } from '../audit';
 import { revokeToken } from '../tokenBlacklist';
 import { JWT_SECRET } from '../env';
+import { findGuildLeadershipSuccessorWithClient, lockGuildForLeadershipWithClient, transferGuildLeadershipWithClient } from '../game/guildLeadership';
 
 const router = Router();
 
@@ -98,27 +99,17 @@ router.post('/account/delete', async (req, res) => {
     // Передаём лидерство если лидер гильдии
     const leaderGuild = await db.one('SELECT guildId FROM guild_members WHERE userId = ? AND rank = ?', [userId, 'leader']) as any;
     if (leaderGuild) {
-      // Ищем преемника: офицер с max lastLoginAt, если нет — участник с max lastLoginAt
-      let successor = await db.one(`
-        SELECT gm.userId FROM guild_members gm
-        JOIN users u ON gm.userId = u.id
-        WHERE gm.guildId = ? AND gm.rank = 'officer' AND gm.userId != ?
-        ORDER BY u.lastLoginAt DESC NULLS LAST LIMIT 1
-      `, [leaderGuild.guildId, userId]) as any;
-
-      if (!successor) {
-        successor = await db.one(`
-          SELECT gm.userId FROM guild_members gm
-          JOIN users u ON gm.userId = u.id
-          WHERE gm.guildId = ? AND gm.userId != ?
-          ORDER BY u.lastLoginAt DESC NULLS LAST LIMIT 1
-        `, [leaderGuild.guildId, userId]) as any;
+      const successorId = await db.tx(async client => {
+        await lockGuildForLeadershipWithClient(client, leaderGuild.guildId);
+        const nextId = await findGuildLeadershipSuccessorWithClient(client, leaderGuild.guildId, userId);
+        if (nextId === null) return null;
+        await transferGuildLeadershipWithClient(client, { guildId: leaderGuild.guildId, currentLeaderId: userId, newLeaderId: nextId });
+        return nextId;
+      });
+      if (successorId === null) {
+        return res.status(400).json({ error: 'Передайте лидерство другому члену перед удалением аккаунта' });
       }
-
-      if (successor) {
-        await db.run('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?', ['leader', leaderGuild.guildId, successor.userId]);
-        logger.info(`[Account Delete] Leadership of guild ${leaderGuild.guildId} transferred from ${userId} to ${successor.userId}`);
-      }
+      logger.info(`[Account Delete] Leadership of guild ${leaderGuild.guildId} transferred from ${userId} to ${successorId}`);
     }
 
     // Удаляем связанные данные

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../../db/index";
 import { broadcast, refreshCharacter } from "../../events";
 import { isGuildAtWar } from "./guildWar";
+import { transferGuildLeadershipWithClient } from "../../game/guildLeadership";
 
 const router = Router();
 
@@ -275,7 +276,7 @@ router.post('/guild/role', async (req, res) => {
     const userId = req.userId;
     const { targetId, rank } = req.body;
     if (!targetId || !rank) return res.status(400).json({ error: 'Укажите targetId и rank' });
-    if (!['officer', 'member'].includes(rank)) return res.status(400).json({ error: 'Неверный ранг' });
+    if (!['officer', 'member', 'leader'].includes(rank)) return res.status(400).json({ error: 'Неверный ранг' });
 
     const actor = await db.one('SELECT * FROM guild_members WHERE userId = ?', [userId]) as any;
     if (!actor || actor.rank !== 'leader') return res.status(400).json({ error: 'Только лидер может менять роли' });
@@ -284,12 +285,14 @@ router.post('/guild/role', async (req, res) => {
     if (!target) return res.status(400).json({ error: 'Игрок не в гильдии' });
     if (target.rank === 'leader') return res.status(400).json({ error: 'Нельзя изменить роль лидера' });
 
-    await db.run('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?', [rank, actor.guildId, targetId]);
-    // Если повысили до лидера — передаём лидерство
     if (rank === 'leader') {
-        await db.run('UPDATE guilds SET leaderId = ? WHERE id = ?', [targetId, actor.guildId]);
-        // Старого лидера понижаем до офицера
-        await db.run("UPDATE guild_members SET rank = 'officer' WHERE guildId = ? AND userId = ?", [actor.guildId, userId]);
+        await db.tx(client => transferGuildLeadershipWithClient(client, {
+            guildId: actor.guildId,
+            currentLeaderId: userId,
+            newLeaderId: targetId,
+        }));
+    } else {
+        await db.run('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?', [rank, actor.guildId, targetId]);
     }
     res.json({ success: true });
 });

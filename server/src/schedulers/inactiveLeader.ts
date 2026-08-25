@@ -1,6 +1,7 @@
 // Авто-передача лидерства если лидер неактивен >3 дней
 import { db } from '../db/index';
 import logger from '../logger';
+import { findGuildLeadershipSuccessorWithClient, lockGuildForLeadershipWithClient, transferGuildLeadershipWithClient } from '../game/guildLeadership';
 
 export async function checkInactiveLeaders(): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
@@ -15,29 +16,20 @@ export async function checkInactiveLeaders(): Promise<void> {
   `, [cutoff]) as any[];
 
   for (const leader of inactiveLeaders) {
-    // Ищем преемника: офицер с max lastLoginAt, если нет — участник с max lastLoginAt
-    let successor = await db.one(`
-      SELECT gm.userId FROM guild_members gm
-      JOIN users u ON gm.userId = u.id
-      WHERE gm.guildId = ? AND gm.rank = 'officer' AND gm.userId != ?
-      ORDER BY u.lastLoginAt DESC NULLS LAST LIMIT 1
-    `, [leader.guildId, leader.userId]) as any;
+    const successorId = await db.tx(async client => {
+      await lockGuildForLeadershipWithClient(client, leader.guildId);
+      const successorId = await findGuildLeadershipSuccessorWithClient(client, leader.guildId, leader.userId);
+      if (successorId === null) return null;
+      await transferGuildLeadershipWithClient(client, {
+        guildId: leader.guildId,
+        currentLeaderId: leader.userId,
+        newLeaderId: successorId,
+      });
+      return successorId;
+    });
 
-    if (!successor) {
-      successor = await db.one(`
-        SELECT gm.userId FROM guild_members gm
-        JOIN users u ON gm.userId = u.id
-        WHERE gm.guildId = ? AND gm.userId != ?
-        ORDER BY u.lastLoginAt DESC NULLS LAST LIMIT 1
-      `, [leader.guildId, leader.userId]) as any;
-    }
-
-    if (successor) {
-      await db.run('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?',
-        ['leader', leader.guildId, successor.userId]);
-      await db.run('UPDATE guild_members SET rank = ? WHERE guildId = ? AND userId = ?',
-        ['officer', leader.guildId, leader.userId]);
-      logger.info(`[InactiveLeader] Guild ${leader.guildName}: leadership transferred from ${leader.username}(${leader.userId}) to ${successor.userId} (inactive ${Math.floor((now - (leader.lastLoginAt || 0)) / 86400)}d)`);
+    if (successorId !== null) {
+      logger.info(`[InactiveLeader] Guild ${leader.guildName}: leadership transferred from ${leader.username}(${leader.userId}) to ${successorId} (inactive ${Math.floor((now - (leader.lastLoginAt || 0)) / 86400)}d)`);
     }
   }
 }
