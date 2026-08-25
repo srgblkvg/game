@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { transferGuildLeadershipWithClient } from './guildLeadership';
+import { findGuildLeadershipSuccessorWithClient, transferGuildLeadershipWithClient } from './guildLeadership';
 
 function client(calls: any[], ranks: any[] = [{ userid: 10, rank: 'leader' }, { userid: 20, rank: 'member' }]) {
   return {
@@ -54,4 +54,17 @@ test('rejects an already leader successor', async () => {
     transferGuildLeadershipWithClient(client([], [{ userid: 10, rank: 'leader' }, { userid: 20, rank: 'leader' }]), { guildId: 3, currentLeaderId: 10, newLeaderId: 20 }),
     /successor guild membership mismatch/,
   );
+});
+
+test('scheduler successor selection can require recent activity', async () => {
+  const calls: any[] = [];
+  const selectionClient = {
+    async query(sql: string, params: any[]) {
+      calls.push({ sql, params });
+      return { rows: [{ userid: 20 }], rowCount: 1 };
+    },
+  } as any;
+  assert.equal(await findGuildLeadershipSuccessorWithClient(selectionClient, 3, 10, 1234), 20);
+  assert.match(calls[0].sql, /u\.lastloginat >= \$3/);
+  assert.deepEqual(calls[0].params, [3, 10, 1234]);
 });

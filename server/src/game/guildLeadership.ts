@@ -65,15 +65,20 @@ export async function findGuildLeadershipSuccessorWithClient(
   client: PoolClient,
   guildId: number,
   currentLeaderId: number,
+  minimumLastLoginAt?: number,
 ): Promise<number | null> {
+  const activeClause = minimumLastLoginAt === undefined ? '' : ' AND u.lastloginat >= $3';
+  const params = minimumLastLoginAt === undefined
+    ? [guildId, currentLeaderId]
+    : [guildId, currentLeaderId, minimumLastLoginAt];
   const successor = (await client.query(
     `SELECT gm.userid FROM guild_members gm
      JOIN users u ON gm.userid = u.id
-     WHERE gm.guildid = $1 AND gm.userid <> $2
+     WHERE gm.guildid = $1 AND gm.userid <> $2${activeClause}
      ORDER BY CASE WHEN gm.rank = 'officer' THEN 0 ELSE 1 END,
               u.lastloginat DESC NULLS LAST, gm.userid
      LIMIT 1`,
-    [guildId, currentLeaderId],
+    params,
   )).rows[0] as any;
   return successor ? rowId(successor, 'userId', 'userid') : null;
 }

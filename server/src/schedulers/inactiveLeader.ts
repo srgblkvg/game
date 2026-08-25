@@ -8,7 +8,7 @@ export async function checkInactiveLeaders(): Promise<void> {
   const cutoff = now - 3 * 86400; // 3 дня
 
   const inactiveLeaders = await db.query(`
-    SELECT gm.guildId, gm.userId, g.name as guildName, u.username
+    SELECT gm.guildId, gm.userId, g.name as guildName, u.username, u.lastLoginAt
     FROM guild_members gm
     JOIN users u ON gm.userId = u.id
     JOIN guilds g ON gm.guildId = g.id
@@ -18,7 +18,7 @@ export async function checkInactiveLeaders(): Promise<void> {
   for (const leader of inactiveLeaders) {
     const successorId = await db.tx(async client => {
       await lockGuildForLeadershipWithClient(client, leader.guildId);
-      const successorId = await findGuildLeadershipSuccessorWithClient(client, leader.guildId, leader.userId);
+      const successorId = await findGuildLeadershipSuccessorWithClient(client, leader.guildId, leader.userId, cutoff);
       if (successorId === null) return null;
       await transferGuildLeadershipWithClient(client, {
         guildId: leader.guildId,
