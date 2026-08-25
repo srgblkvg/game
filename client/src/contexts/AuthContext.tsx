@@ -1,13 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-
-interface User {
-    id: number;
-    username: string;
-    level: number;
-    role: 'player' | 'admin';
-    gender?: string;
-    isGuest?: boolean;
-}
+import { parseUserFromToken, type TokenUser as User } from '../domain/auth/parseToken';
 
 interface AuthContextType {
     user: User | null;
@@ -29,26 +21,6 @@ function getTokenFromURL(): string | null {
     return jwt;
 }
 
-function parseUserFromToken(token: string): User | null {
-    try {
-        const parts = token.split('.');
-        if (parts.length !== 3) return null;
-        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')));
-        if (!payload.role || !(payload.adminId || payload.userId)) return null;
-        if (payload.exp && payload.exp <= Math.floor(Date.now() / 1000)) return null;
-        return {
-            id: payload.adminId || payload.userId,
-            username: payload.username || '',
-            level: payload.role === 'admin' ? 0 : 1,
-            role: payload.role,
-            gender: payload.gender || 'male',
-            isGuest: payload.isGuest || false,
-        };
-    } catch {
-        return null;
-    }
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     // Синхронно при первом рендере: проверяем JWT из URL, затем из localStorage
