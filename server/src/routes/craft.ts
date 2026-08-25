@@ -7,6 +7,7 @@ import { updateGuildQuestProgress } from './guild';
 import { markDirty, broadcast } from '../events';
 import { addToTreasury, changeTreasuryWithClient } from '../game/treasury';
 import { executeCraftWithClient } from '../game/craftExecute';
+import { executeCraftUpgradeWithClient } from '../game/craftUpgrade';
 import { applyReforge, curseMeetsTarget, decideAutoCraftResult, getAdjustedCurseRankWeights, getCraftFactionBonus, getCraftFactionBonusParts, getReforgeCost, planBatchForge, shouldApplyCurseCandidate, shouldGrantCraftExperience, type UpgradeRule } from '../game/craftOperations';
 
 const router = Router();
@@ -319,182 +320,27 @@ router.post('/craft/upgrade', async (req, res) => {
         return res.status(400).json({ error: 'Нужно ровно два слота: предмет и камень усиления' });
     }
 
-    // Определяем предмет и камень независимо от порядка
     const itemSlot = slots.find((s: any) => s && !isCraftItem(s));
     const stoneSlot = slots.find((s: any) => s && isCraftItem(s) && s.itemType === 'upgrade');
-
     if (!itemSlot || !stoneSlot) {
         return res.status(400).json({ error: 'Положите предмет и камень усиления' });
     }
 
-    // Камень любой редкости может улучшать предмет любой редкости
+    const result = await db.tx(client => executeCraftUpgradeWithClient(client, { userId, slots }));
+    if (result.status >= 400) return res.status(result.status).json(result.body);
 
-    const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    let inventory: any[] = JSON.parse(user.inventory || '[]');
-
-    const itemIndex = inventory.findIndex((i: any) => i.id === itemSlot.id && !isCraftItem(i));
-    if (itemIndex === -1) return res.status(400).json({ error: 'Предмет не найден в инвентаре' });
-
-    const itemToUpgrade = inventory[itemIndex];
-    if (itemToUpgrade.locked) return res.status(400).json({ error: 'Предмет заблокирован. Разблокируйте в инвентаре.' });
-    const currentLevel = itemToUpgrade.upgradeLevel || 0;
-    const targetLevel = currentLevel + 1;
-
-    const stoneIndex = inventory.findIndex((i: any) => isCraftItem(i) && i.id === stoneSlot.id && i.itemType === 'upgrade');
-    if (stoneIndex === -1) return res.status(400).json({ error: 'Камень усиления не найден в инвентаре' });
-
-    const stone = inventory[stoneIndex];
-    if (stone.count < 1) return res.status(400).json({ error: 'Недостаточно камней усиления' });
-
-    const upgradeData = await db.one('SELECT chance, money_cost FROM upgrade_chances WHERE level = ? AND rarity_id = ?', [targetLevel, itemSlot.rarity_id]) as any;
-    if (!upgradeData) {
-        return res.status(400).json({ error: 'Нет данных для этого уровня улучшения. Свяжитесь с администратором.' });
-    }
-
-    const { chance, money_cost } = upgradeData;
-    // Бонус к шансу от редкости камня
-    const STONE_BONUS: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 15, 4: 20, 5: 30, 6: 50 };
-    const stoneBonus = STONE_BONUS[stone.rarity_id] || 0;
-    // Бонус фракции Ремесленник: +10% +1% за каждые 100 очков опыта
-    const factionBonus = getCraftFactionBonus(user.faction, user.faction_craft_count);
-    const finalChance = Math.min(100, chance + stoneBonus + factionBonus);
-    const actualCost = Math.max(1, Math.floor(money_cost / 4));
-
-    if (user.money < actualCost) {
-        return res.status(400).json({ error: `Недостаточно денег. Требуется ${actualCost}` });
-    }
-
-    let newInventory = [...inventory];
-
-    // Списываем камень
-    if (stone.count > 1) {
-        newInventory[stoneIndex] = { ...stone, count: stone.count - 1 };
-    } else {
-        newInventory.splice(stoneIndex, 1);
-    }
-
-    const newMoney = user.money - actualCost;
-
-    const success = Math.random() * 100 < finalChance;
-
-    if (success) {
-        // Находим предмет в новом инвентаре (индекс мог измениться после удаления камня)
-        const itemIdx = newInventory.findIndex((i: any) => i.id === itemSlot.id && !isCraftItem(i));
-        if (itemIdx === -1) {
-            return res.status(500).json({ error: 'Внутренняя ошибка: предмет не найден после списания камня' });
-        }
-        newInventory[itemIdx] = { ...newInventory[itemIdx], upgradeLevel: targetLevel };
-
-        // Рейтинг за заточку (+7 = +5 ELO, +10 = +50 ELO)
-        let ratingBonus = 0;
-        if (targetLevel === 7) ratingBonus = 5;
-        else if (targetLevel === 10) ratingBonus = 50;
-        if (ratingBonus > 0) {
-            const newElo = Math.max(100, (user.elo || 1000) + ratingBonus);
-            // Ремесленник: +1 опыт только если итоговый шанс < 80%
-            const upgradeFactionInc = shouldGrantCraftExperience(user.faction, finalChance, success) ? ', faction_craft_count = faction_craft_count + 1' : '';
-            await db.run(`UPDATE users SET money = ?, inventory = ?, elo = ?, pveRating = pveRating + ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1${upgradeFactionInc} WHERE id = ?`,
-                [newMoney, JSON.stringify(newInventory), newElo, ratingBonus, userId]);
-            checkAchievement(userId, 'craft').catch(() => {});
-            addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade').catch(() => {});
-            const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
-            if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
-            markDirty(userId, 'quests');
-            // Чат-сообщение об улучшении >= +7
-            if (targetLevel >= 7) {
-                const itemName = itemToUpgrade.name || 'Предмет';
-                const msgId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-                const chatMsg = { id: msgId, senderId: 0, senderName: 'Глашатай', targetId: null,
-                    content: `⚒️ ${user.username} улучшил ${itemName} до +${targetLevel}!`,
-                    createdAt: new Date().toISOString() };
-                db.run('INSERT INTO chat_messages (id, senderId, targetId, content) VALUES (?, 0, NULL, ?)',
-                    [msgId, chatMsg.content]).catch(() => {});
-                broadcast('message', { message: chatMsg });
-            }
-            return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, eloAdded: ratingBonus, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` });
-        }
-
-        // Ремесленник: +1 опыт только если итоговый шанс < 80%
-        const upgradeFactionInc2 = shouldGrantCraftExperience(user.faction, finalChance, success) ? ', faction_craft_count = faction_craft_count + 1' : '';
-        await db.run(`UPDATE users SET inventory = ?, money = ?, craftCount = craftCount + 1, craftUpgraded = craftUpgraded + 1${upgradeFactionInc2} WHERE id = ?`, [JSON.stringify(newInventory), newMoney, userId]);
+    if (result.body.success === true) {
         checkAchievement(userId, 'craft').catch(() => {});
-        addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade').catch(() => {});
-        const u = await db.one('SELECT guildId FROM users WHERE id = ?', [userId]);
-        if (u?.guildId) { updateGuildQuestProgress(u.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message)); }
+        if (result.guildId) {
+            updateGuildQuestProgress(result.guildId, 'craft').catch(e => console.error('guildQuest craft:', e.message));
+        }
         markDirty(userId, 'quests');
-        // Чат-сообщение об улучшении >= +7
-        if (targetLevel >= 7) {
-            const itemName = itemToUpgrade.name || 'Предмет';
-            const msgId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-            const chatMsg = { id: msgId, senderId: 0, senderName: 'Глашатай', targetId: null,
-                content: `⚒️ ${user.username} улучшил ${itemName} до +${targetLevel}!`,
-                createdAt: new Date().toISOString() };
-            db.run('INSERT INTO chat_messages (id, senderId, targetId, content) VALUES (?, 0, NULL, ?)',
-                [msgId, chatMsg.content]).catch(() => {});
-            broadcast('message', { message: chatMsg });
-        }
-        return res.json({ success: true, inventory: newInventory, moneyAfter: newMoney, message: `Предмет улучшен до +${targetLevel}` });
-    } else {
-        // Неудача
-        // Предмет ломается при попытке улучшить до +7 или выше
-        if (targetLevel >= 7) {
-            const itemIdx = newInventory.findIndex((i: any) => i.id === itemSlot.id && !isCraftItem(i));
-            if (itemIdx !== -1) {
-                const destroyedItem = newInventory[itemIdx];
-                const rarityId = destroyedItem.rarity_id || 0;
-
-                const craftItem = await db.one(`
-            SELECT c.id, c.name, c.rarity_id, c.type, c.image,
-                   r.display_name as rarity_display, r.color as rarity_color
-            FROM craft_items c
-            JOIN rarities r ON c.rarity_id = r.id
-            WHERE c.rarity_id = ? AND c.type = 'craft'
-          `, [rarityId]) as any;
-
-                if (craftItem) {
-                    const existingCraft = newInventory.find((i: any) => isCraftItem(i) && i.id === craftItem.id);
-                    if (existingCraft) {
-                        existingCraft.count += 1;
-                    } else {
-                        newInventory.push({
-                            type: 'craft_item',
-                            id: craftItem.id,
-                            name: craftItem.name,
-                            rarity_id: craftItem.rarity_id,
-                            rarity_display: craftItem.rarity_display,
-                            rarity_color: craftItem.rarity_color,
-                            count: 1,
-                            itemType: craftItem.type || 'craft',
-                            image: craftItem.image || null,
-                        });
-                    }
-                }
-                newInventory.splice(itemIdx, 1);
-            }
-
-            await db.run('UPDATE users SET inventory = ?, money = ?, craftBroken = craftBroken + 1 WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
-            addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade_fail').catch(() => {});
-            // Чат-сообщение о поломке >= +7
-            const destroyedItemName = itemToUpgrade.name || 'Предмет';
-            const brokenMsgId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-            const brokenChatMsg = { id: brokenMsgId, senderId: 0, senderName: 'Глашатай', targetId: null,
-                content: `💥 ${user.username} сломал ${destroyedItemName} (+${currentLevel}) при улучшении!`,
-                createdAt: new Date().toISOString() };
-                db.run('INSERT INTO chat_messages (id, senderId, targetId, content) VALUES (?, 0, NULL, ?)',
-                    [brokenMsgId, brokenChatMsg.content]).catch(() => {});
-                broadcast('message', { message: brokenChatMsg });
-                return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача! Предмет разрушен.' });
-        } else {
-            // До +7 — просто неудача, предмет остаётся, камень и деньги списаны
-            await db.run('UPDATE users SET inventory = ?, money = ? WHERE id = ?', [JSON.stringify(newInventory), newMoney, userId]);
-            addToTreasury(Math.floor(actualCost * 0.22), 'craft_upgrade_fail').catch(() => {});
-            return res.json({ success: false, inventory: newInventory, moneyAfter: newMoney, message: 'Неудача! Предмет не улучшен.' });
-        }
     }
+    for (const announcement of result.announcements || []) {
+        broadcast('message', { message: announcement });
+    }
+    return res.status(result.status).json(result.body);
 });
-
 
 // Проклятие предмета (Soul Crystal)
 const CURSE_RANKS = [
