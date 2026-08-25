@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { db } from '../db/index';
 import { collectGuildTax } from '../db/helpers';
+import { createPgDiceFinishRepository, finishDiceGame } from '../game/diceFinishRepository';
+import { DiceGameNotActiveError } from '../game/diceFinish';
+
+const diceFinishRepository = createPgDiceFinishRepository();
 
 const router = Router();
 const DAILY_LIMIT = 10;
@@ -152,39 +156,15 @@ router.post('/dice/reroll', async (req, res) => {
 router.post('/dice/finish', async (req, res) => {
     const userId = (req as any).userId;
     const { gameId } = req.body;
-
-    const game = await db.one(
-        "SELECT * FROM dice_games WHERE id = ? AND user_id = ? AND status = 'active'",
-        [gameId, userId]
-    ).catch(() => null) as any;
-
-    if (!game) return res.status(404).json({ error: 'Игра не найдена' });
-
-    const dice: number[] = JSON.parse(game.dice);
-    const combo = getCombo(dice);
-    const payout = PAYOUTS[combo] || { name: '???', mult: 0 };
-    const winAmount = payout.mult * game.entry_fee;
-
-    if (winAmount > 0) {
-        await db.run('UPDATE users SET money = money + ? WHERE id = ?', [winAmount, userId]);
+    try {
+        const result = await finishDiceGame(diceFinishRepository, { userId, gameId: Number(gameId) });
+        res.json(result);
+    } catch (error) {
+        if (error instanceof DiceGameNotActiveError || (error as Error).message === 'Игра не найдена') {
+            return res.status(404).json({ error: 'Игра не найдена' });
+        }
+        throw error;
     }
-
-    await db.run(
-        'UPDATE users SET casino_games_played = casino_games_played + 1, casino_won = casino_won + ?, casino_lost = casino_lost + ? WHERE id = ?',
-        [winAmount, game.entry_fee, userId]
-    );
-    await db.run(
-        "UPDATE dice_games SET status = 'finished', combo = ?, payout = ? WHERE id = ?",
-        [combo, winAmount, gameId]
-    );
-
-    res.json({
-        dice,
-        combo,
-        comboName: payout.name,
-        payout: winAmount,
-        profit: winAmount - game.entry_fee,
-    });
 });
 
 // История игр
