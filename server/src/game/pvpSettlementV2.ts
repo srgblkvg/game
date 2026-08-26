@@ -40,6 +40,8 @@ export type PvpSettlementV2Input = {
 export type PvpSettlementV2Result = {
   users: Record<number, { money: number; exp: number; level: number; statpoints: number; elo: number }>;
   tax: GuildTaxResult;
+  plannedMoneyStolen: number;
+  actualMoneyStolen: number;
 };
 
 type QueryResult = { rowCount: number | null; rows: any[] };
@@ -95,17 +97,21 @@ export async function settlePvpV2WithClient(client: QueryClient, input: PvpSettl
   const winnerSnapshot = byId.get(o.winnerId);
   const loserSnapshot = byId.get(o.loserId);
   if (!winnerSnapshot || !loserSnapshot) throw new Error('PvP locked winner or loser missing');
-  if (input.taxPlan !== null && input.taxPlan.grossIncome > Number(loserSnapshot.money)) throw new Error('PvP income exceeds locked loser balance');
-  const tax = input.taxPlan === null ? { netIncome: 0, guildId: null, tax: 0 } : await collectGuildTaxWithClient(client as PoolClient, winnerSnapshot, input.taxPlan.grossIncome, input.taxPlan.source);
+  const plannedMoneyStolen = input.taxPlan?.grossIncome ?? 0;
+  const actualMoneyStolen = Math.min(plannedMoneyStolen, Math.max(0, Number(loserSnapshot.money)));
+  const tax = actualMoneyStolen === 0
+    ? { netIncome: 0, guildId: null, tax: 0 }
+    : await collectGuildTaxWithClient(client as PoolClient, winnerSnapshot, actualMoneyStolen, input.taxPlan!.source);
   const results: PvpSettlementV2Result['users'] = {};
   for (const p of input.userPlans) {
     const snapshot = byId.get(p.userId);
     if (!snapshot) throw new Error('PvP locked user missing');
     const xp = expFor(snapshot, p.expGain);
     const taxForUser = p.userId === o.winnerId ? tax.tax : 0;
-    const effectiveMoneyDelta = p.userId === o.loserId && p.moneyDelta < 0
-      ? -Math.min(-p.moneyDelta, Number(snapshot.money))
-      : p.moneyDelta;
+    const plannedMoneyDelta = p.userId === o.winnerId ? plannedMoneyStolen : p.userId === o.loserId ? -plannedMoneyStolen : p.moneyDelta;
+    const effectiveMoneyDelta = p.userId === o.loserId && plannedMoneyDelta < 0
+      ? -Math.min(-plannedMoneyDelta, Math.max(0, Number(snapshot.money)))
+      : p.userId === o.winnerId ? actualMoneyStolen : plannedMoneyDelta;
     const effectiveMoneyLost = p.userId === o.loserId ? -Math.min(0, effectiveMoneyDelta) : p.pvpMoneyLostDelta;
     const money = Math.max(0, Number(snapshot.money) + effectiveMoneyDelta - taxForUser);
     const sets = [
@@ -114,7 +120,8 @@ export async function settlePvpV2WithClient(client: QueryClient, input: PvpSettl
       `totalpvpmoneylost = totalpvpmoneylost + $7`, `exp = $8`, `level = $9`, `statpoints = $10`,
       `elo = greatest(100, elo + $11)`,
     ];
-    const params: unknown[] = [effectiveMoneyDelta - taxForUser, p.battlesDelta, p.winsDelta, p.seasonWinsDelta, p.seasonLossesDelta, p.pvpMoneyWonDelta, effectiveMoneyLost, xp.newExp, xp.newLevel, xp.newStatPoints, p.eloDelta];
+    const moneyWon = p.userId === o.winnerId ? actualMoneyStolen : p.pvpMoneyWonDelta;
+    const params: unknown[] = [effectiveMoneyDelta - taxForUser, p.battlesDelta, p.winsDelta, p.seasonWinsDelta, p.seasonLossesDelta, moneyWon, effectiveMoneyLost, xp.newExp, xp.newLevel, xp.newStatPoints, p.eloDelta];
     const absolute: Array<[string, unknown]> = [['currenthp', p.hpAfter], ['lastattacktime', p.lastAttackTime], ['lasthpupdate', p.lastHpUpdate], ['protectionuntil', p.protectionUntil], ['arenaopponentid', p.arenaOpponentId]];
     for (const [column, value] of absolute) if (value !== undefined) { sets.push(`${column} = $${params.length + 1}`); params.push(value); }
     if (p.karmaDelta !== undefined) { sets.push(`karma = greatest(-100, least(100, karma + $${params.length + 1}))`); params.push(p.karmaDelta); }
@@ -125,9 +132,9 @@ export async function settlePvpV2WithClient(client: QueryClient, input: PvpSettl
     results[p.userId] = { money, exp: xp.newExp, level: xp.newLevel, statpoints: xp.newStatPoints, elo: Math.max(100, Number(snapshot.elo) + p.eloDelta) };
   }
   const h = input.history;
-  const historyResult = await client.query('insert into battles (attackerid, defenderid, winnerid, log, steps, attackerhpafter, defenderhpafter, expgained, moneygained, moneystolen) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [h.attackerId, h.defenderId, h.winnerId, JSON.stringify(h.log), JSON.stringify(h.steps), h.attackerHpAfter, h.defenderHpAfter, h.expGained, h.moneyGained, h.moneyStolen]) as QueryResult;
+  const historyResult = await client.query('insert into battles (attackerid, defenderid, winnerid, log, steps, attackerhpafter, defenderhpafter, expgained, moneygained, moneystolen) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [h.attackerId, h.defenderId, h.winnerId, JSON.stringify(h.log), JSON.stringify(h.steps), h.attackerHpAfter, h.defenderHpAfter, h.expGained, actualMoneyStolen, actualMoneyStolen]) as QueryResult;
   if (historyResult.rowCount !== 1) throw new Error('PvP history insert failed');
-  return { users: results, tax };
+  return { users: results, tax, plannedMoneyStolen, actualMoneyStolen };
 }
 
 export async function settlePvpV2(input: PvpSettlementV2Input): Promise<PvpSettlementV2Result> {

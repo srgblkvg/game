@@ -89,10 +89,25 @@ test('locked snapshots control XP level-up and ELO baselines', async () => {
   assert.deepEqual(result.users[10], { money: 115, exp: 5, level: 3, statpoints: 14, elo: 1512 });
 });
 
-test('XP disabled is respected and income above locked loser balance is rejected', async () => {
-  const { client } = clientWithUsers([locked(10, { expenabled: false, exp: 7 }), locked(20, { money: 5 })]);
-  await assert.rejects(() => settlePvpV2(client, plan()), /income exceeds locked loser balance/);
+test('planned income is capped to locked loser balance across settlement and history', async () => {
+  const { client, calls } = clientWithUsers([locked(10, { expenabled: false, exp: 7 }), locked(20, { money: 5 })]);
+  const result = await settlePvpV2(client, plan());
 
+  assert.deepEqual(result.users[10], { money: 105, exp: 7, level: 2, statpoints: 9, elo: 1212 });
+  assert.deepEqual(result.users[20], { money: 0, exp: 5, level: 2, statpoints: 9, elo: 1090 });
+  assert.deepEqual(result.tax, { netIncome: 5, guildId: null, tax: 0 });
+  assert.equal(result.plannedMoneyStolen, 15);
+  assert.equal(result.actualMoneyStolen, 5);
+  const updates = calls.filter(call => call.sql.startsWith('update users'));
+  assert.equal(updates[0]?.params?.[0], 5);
+  assert.equal(updates[0]?.params?.[6], 0);
+  assert.equal(updates[1]?.params?.[0], -5);
+  assert.equal(updates[1]?.params?.[6], 5);
+  const history = calls.find(call => call.sql.startsWith('insert into battles'))!;
+  assert.deepEqual(history.params?.slice(-2), [5, 5]);
+});
+
+test('XP disabled is respected', async () => {
   const enabled = clientWithUsers([locked(10, { expenabled: false, exp: 7 }), locked(20)]);
   const result = await settlePvpV2(enabled.client, plan());
   assert.equal(result.users[10]?.exp, 7);
