@@ -59,24 +59,23 @@ export async function lockPvpUsers(client: PoolClient, ids: [number, number]): P
 
 export async function collectGuildTaxWithClient(
   client: PoolClient,
-  userId: number,
+  recipient: LockedPvpUser,
   income: number,
   source: 'tax_pvp',
 ): Promise<GuildTaxResult> {
   if (income <= 0) return { netIncome: income, guildId: null, tax: 0 };
-  const member = (await client.query(
-    'SELECT gm.guildid, g.taxrate FROM guild_members gm JOIN guilds g ON gm.guildid = g.id WHERE gm.userid = $1 FOR UPDATE OF g',
-    [userId],
-  )).rows[0] as { guildid?: number; taxrate?: number } | undefined;
-  const guildId = member?.guildid === undefined ? null : Number(member.guildid);
-  const taxRate = Number(member?.taxrate || 0);
-  if (guildId === null || taxRate <= 0) return { netIncome: income, guildId, tax: 0 };
+  if (recipient.guildid === null) return { netIncome: income, guildId: null, tax: 0 };
+  const guild = await client.query('SELECT id, taxrate FROM guilds WHERE id = $1 FOR UPDATE', [recipient.guildid]);
+  if (guild.rowCount !== 1) throw new Error('PvP locked guild disappeared before tax settlement');
+  const guildId = Number(guild.rows[0].id);
+  const taxRate = Number(guild.rows[0].taxrate || 0);
+  if (taxRate <= 0) return { netIncome: income, guildId, tax: 0 };
   const tax = Math.max(1, Math.floor(income * taxRate / 100));
   const treasury = await client.query('UPDATE guilds SET treasury = treasury + $1 WHERE id = $2', [tax, guildId]);
   if (treasury.rowCount !== 1) throw new Error('PvP guild treasury update failed');
   const log = await client.query(
     'INSERT INTO guild_treasury_log (guildid, userid, amount, type, createdat) VALUES ($1, $2, $3, $4, $5)',
-    [guildId, userId, tax, source, new Date().toISOString()],
+    [guildId, recipient.id, tax, source, new Date().toISOString()],
   );
   if (log.rowCount !== 1) throw new Error('PvP guild tax log insert failed');
   return { netIncome: income - tax, guildId, tax };

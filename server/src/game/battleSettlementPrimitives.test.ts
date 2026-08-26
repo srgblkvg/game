@@ -23,14 +23,22 @@ test('users lock in ascending order and retain snapshots', async () => {
 
 test('tax checks treasury and log row counts on the same client', async () => {
   const calls: string[] = [];
-  const client = { query: async (sql: string) => { calls.push(sql); if (sql.startsWith('SELECT')) return { rowCount: 1, rows: [{ guildid: 3, taxrate: 10 }] }; return { rowCount: 1, rows: [] }; } } as any;
-  assert.deepEqual(await collectGuildTaxWithClient(client, 7, 15, 'tax_pvp'), { netIncome: 14, guildId: 3, tax: 1 });
+  const client = { query: async (sql: string) => { calls.push(sql); if (sql.startsWith('SELECT')) return { rowCount: 1, rows: [{ id: 3, taxrate: 10 }] }; return { rowCount: 1, rows: [] }; } } as any;
+  assert.deepEqual(await collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp'), { netIncome: 14, guildId: 3, tax: 1 });
   assert.equal(calls.length, 3);
 });
 
 test('tax fails closed when treasury update is missing', async () => {
-  const client = { query: async (sql: string) => sql.startsWith('SELECT') ? { rowCount: 1, rows: [{ guildid: 3, taxrate: 10 }] } : { rowCount: 0, rows: [] } } as any;
-  await assert.rejects(() => collectGuildTaxWithClient(client, 7, 15, 'tax_pvp'), /treasury update failed/);
+  const client = { query: async (sql: string) => sql.startsWith('SELECT') ? { rowCount: 1, rows: [{ id: 3, taxrate: 10 }] } : { rowCount: 0, rows: [] } } as any;
+  await assert.rejects(() => collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp'), /treasury update failed/);
+});
+
+test('tax uses locked guild snapshot without re-reading membership', async () => {
+  const calls: string[] = [];
+  const client = { query: async (sql: string) => { calls.push(sql); return { rowCount: 1, rows: [{ id: 3, taxrate: 0 }] }; } } as any;
+  await collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp');
+  assert.match(calls[0]!, /^SELECT id, taxrate FROM guilds/);
+  assert.ok(calls.every(sql => !sql.includes('guild_members')));
 });
 
 // Settlement route integration remains intentionally out of scope.
