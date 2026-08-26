@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { settlePvpV2, type PvpSettlementV2Input, type UserSettlementDelta } from './pvpSettlementV2';
+import { settlePvpV2WithClient as settlePvpV2, type PvpSettlementV2Input, type UserSettlementDelta } from './pvpSettlementV2';
 
 type QueryCall = { sql: string; params: unknown[] | undefined };
 
@@ -34,6 +34,10 @@ function clientWithUsers(users = [locked(10), locked(20)], options: { userRowCou
     query: async (sql: string, params?: unknown[]) => {
       calls.push({ sql, params });
       if (sql.startsWith('SELECT id, money')) return { rowCount: users.length, rows: users };
+      if (sql.startsWith('SELECT guildid FROM guild_members')) {
+        const winner = users.find(user => user.guildid === options.guildId);
+        return winner?.guildid === null || winner?.guildid === undefined ? { rowCount: 0, rows: [] } : { rowCount: 1, rows: [{ guildid: winner.guildid }] };
+      }
       if (sql.startsWith('SELECT id, taxrate')) {
         return options.guildId === undefined ? { rowCount: 0, rows: [] } : { rowCount: 1, rows: [{ id: options.guildId, taxrate: options.taxRate ?? 0 }] };
       }
@@ -85,14 +89,13 @@ test('locked snapshots control XP level-up and ELO baselines', async () => {
   assert.deepEqual(result.users[10], { money: 115, exp: 5, level: 3, statpoints: 14, elo: 1512 });
 });
 
-test('XP disabled and loser money floor use locked snapshots', async () => {
-  const { client, calls } = clientWithUsers([locked(10, { expenabled: false, exp: 7 }), locked(20, { money: 5 })]);
-  const result = await settlePvpV2(client, plan());
+test('XP disabled is respected and income above locked loser balance is rejected', async () => {
+  const { client } = clientWithUsers([locked(10, { expenabled: false, exp: 7 }), locked(20, { money: 5 })]);
+  await assert.rejects(() => settlePvpV2(client, plan()), /income exceeds locked loser balance/);
+
+  const enabled = clientWithUsers([locked(10, { expenabled: false, exp: 7 }), locked(20)]);
+  const result = await settlePvpV2(enabled.client, plan());
   assert.equal(result.users[10]?.exp, 7);
-  assert.equal(result.users[20]?.money, 0);
-  const loserUpdate = calls.filter(call => call.sql.startsWith('update users'))[1]!;
-  assert.equal(loserUpdate.params?.[0], -5);
-  assert.equal(loserUpdate.params?.[6], 5);
 });
 
 test('invalid winner tax and history are rejected before writes', async () => {

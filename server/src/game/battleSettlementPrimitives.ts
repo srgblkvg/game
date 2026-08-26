@@ -65,6 +65,11 @@ export async function collectGuildTaxWithClient(
 ): Promise<GuildTaxResult> {
   if (income <= 0) return { netIncome: income, guildId: null, tax: 0 };
   if (recipient.guildid === null) return { netIncome: income, guildId: null, tax: 0 };
+  const membership = await client.query('SELECT guildid FROM guild_members WHERE userid = $1 FOR UPDATE', [recipient.id]);
+  if (membership.rowCount === 0) return { netIncome: income, guildId: null, tax: 0 };
+  if (membership.rowCount !== 1 || Number(membership.rows[0].guildid) !== recipient.guildid) {
+    throw new Error('PvP locked guild membership does not match user snapshot');
+  }
   const guild = await client.query('SELECT id, taxrate FROM guilds WHERE id = $1 FOR UPDATE', [recipient.guildid]);
   if (guild.rowCount !== 1) throw new Error('PvP locked guild disappeared before tax settlement');
   const guildId = Number(guild.rows[0].id);

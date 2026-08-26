@@ -1,4 +1,5 @@
 import type { PoolClient } from 'pg';
+import { db } from '../db/index';
 import {
   applyExpFromSnapshot,
   collectGuildTaxWithClient,
@@ -86,13 +87,15 @@ function validate(input: PvpSettlementV2Input): void {
 
 function expFor(user: LockedPvpUser, gain: number): ApplyExpResult { return applyExpFromSnapshot(user, gain); }
 
-export async function settlePvpV2(client: QueryClient, input: PvpSettlementV2Input): Promise<PvpSettlementV2Result> {
+export async function settlePvpV2WithClient(client: QueryClient, input: PvpSettlementV2Input): Promise<PvpSettlementV2Result> {
   validate(input);
   const o = input.outcome;
   const locked = await lockPvpUsers(client as PoolClient, [o.attackerId, o.defenderId]);
   const byId = new Map(locked.map(u => [Number(u.id), u]));
   const winnerSnapshot = byId.get(o.winnerId);
-  if (!winnerSnapshot) throw new Error('PvP locked winner missing');
+  const loserSnapshot = byId.get(o.loserId);
+  if (!winnerSnapshot || !loserSnapshot) throw new Error('PvP locked winner or loser missing');
+  if (input.taxPlan !== null && input.taxPlan.grossIncome > Number(loserSnapshot.money)) throw new Error('PvP income exceeds locked loser balance');
   const tax = input.taxPlan === null ? { netIncome: 0, guildId: null, tax: 0 } : await collectGuildTaxWithClient(client as PoolClient, winnerSnapshot, input.taxPlan.grossIncome, input.taxPlan.source);
   const results: PvpSettlementV2Result['users'] = {};
   for (const p of input.userPlans) {
@@ -125,4 +128,8 @@ export async function settlePvpV2(client: QueryClient, input: PvpSettlementV2Inp
   const historyResult = await client.query('insert into battles (attackerid, defenderid, winnerid, log, steps, attackerhpafter, defenderhpafter, expgained, moneygained, moneystolen) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [h.attackerId, h.defenderId, h.winnerId, JSON.stringify(h.log), JSON.stringify(h.steps), h.attackerHpAfter, h.defenderHpAfter, h.expGained, h.moneyGained, h.moneyStolen]) as QueryResult;
   if (historyResult.rowCount !== 1) throw new Error('PvP history insert failed');
   return { users: results, tax };
+}
+
+export async function settlePvpV2(input: PvpSettlementV2Input): Promise<PvpSettlementV2Result> {
+  return db.tx(client => settlePvpV2WithClient(client, input));
 }

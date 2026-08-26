@@ -23,22 +23,27 @@ test('users lock in ascending order and retain snapshots', async () => {
 
 test('tax checks treasury and log row counts on the same client', async () => {
   const calls: string[] = [];
-  const client = { query: async (sql: string) => { calls.push(sql); if (sql.startsWith('SELECT')) return { rowCount: 1, rows: [{ id: 3, taxrate: 10 }] }; return { rowCount: 1, rows: [] }; } } as any;
+  const client = { query: async (sql: string) => { calls.push(sql); if (sql.includes('guild_members')) return { rowCount: 1, rows: [{ guildid: 3 }] }; if (sql.startsWith('SELECT')) return { rowCount: 1, rows: [{ id: 3, taxrate: 10 }] }; return { rowCount: 1, rows: [] }; } } as any;
   assert.deepEqual(await collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp'), { netIncome: 14, guildId: 3, tax: 1 });
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 4);
 });
 
 test('tax fails closed when treasury update is missing', async () => {
-  const client = { query: async (sql: string) => sql.startsWith('SELECT') ? { rowCount: 1, rows: [{ id: 3, taxrate: 10 }] } : { rowCount: 0, rows: [] } } as any;
+  const client = { query: async (sql: string) => sql.includes('guild_members') ? { rowCount: 1, rows: [{ guildid: 3 }] } : sql.startsWith('SELECT') ? { rowCount: 1, rows: [{ id: 3, taxrate: 10 }] } : { rowCount: 0, rows: [] } } as any;
   await assert.rejects(() => collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp'), /treasury update failed/);
 });
 
-test('tax uses locked guild snapshot without re-reading membership', async () => {
+test('tax locks membership and requires it to match the user snapshot', async () => {
   const calls: string[] = [];
-  const client = { query: async (sql: string) => { calls.push(sql); return { rowCount: 1, rows: [{ id: 3, taxrate: 0 }] }; } } as any;
+  const client = { query: async (sql: string) => { calls.push(sql); if (sql.includes('guild_members')) return { rowCount: 1, rows: [{ guildid: 3 }] }; return { rowCount: 1, rows: [{ id: 3, taxrate: 0 }] }; } } as any;
   await collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp');
-  assert.match(calls[0]!, /^SELECT id, taxrate FROM guilds/);
-  assert.ok(calls.every(sql => !sql.includes('guild_members')));
+  assert.match(calls[0]!, /guild_members.*FOR UPDATE/);
+  assert.match(calls[1]!, /^SELECT id, taxrate FROM guilds/);
+});
+
+test('tax fails closed on mismatched guild membership', async () => {
+  const client = { query: async () => ({ rowCount: 1, rows: [{ guildid: 4 }] }) } as any;
+  await assert.rejects(() => collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp'), /membership does not match/);
 });
 
 // Settlement route integration remains intentionally out of scope.
