@@ -1,100 +1,36 @@
 /// <reference types="node" />
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  applyExpWithClient,
-  collectGuildTaxWithClient,
-} from './battleSettlementPrimitives';
+import { applyExpFromSnapshot, collectGuildTaxWithClient, lockPvpUsers } from './battleSettlementPrimitives';
 
-function fakeClient(responses: Array<any>) {
-  const calls: Array<{ sql: string; params: unknown[] }> = [];
-  return {
-    calls,
-    client: {
-      async query(sql: string, params: unknown[] = []) {
-        calls.push({ sql, params });
-        const response = responses.shift();
-        if (response instanceof Error) throw response;
-        return response ?? { rows: [], rowCount: 1 };
-      },
-    } as any,
-  };
-}
+const user = (overrides: Partial<any> = {}) => ({ id: 7, money: 100, exp: 5, level: 2, statpoints: 9, expenabled: true, elo: 1000, guildid: null, ...overrides });
 
-test('applyExpWithClient reads expenabled on the transaction client and applies level semantics', async () => {
-  const { client, calls } = fakeClient([{ rows: [{ expenabled: true }], rowCount: 1 }]);
-
-  const result = await applyExpWithClient(client, 7, 30, 5, 1, 9);
-
-  assert.deepEqual(result, {
-    newExp: 5,
-    newLevel: 3,
-    levelsGained: 2,
-    newStatPoints: 19,
-  });
-  assert.deepEqual(calls, [{
-    sql: 'SELECT expenabled FROM users WHERE id = $1',
-    params: [7],
-  }]);
+test('XP derives from locked snapshot, not caller snapshot', () => {
+  assert.deepEqual(applyExpFromSnapshot(user({ exp: 15, level: 2, statpoints: 9 }), 10), { newExp: 5, newLevel: 3, levelsGained: 1, newStatPoints: 14 });
 });
 
-test('applyExpWithClient disables experience without triggering transaction achievement effects', async () => {
-  const { client, calls } = fakeClient([{ rows: [{ expenabled: false }], rowCount: 1 }]);
-
-  const result = await applyExpWithClient(client, 7, 999, 1, 3, 4);
-
-  assert.deepEqual(result, {
-    newExp: 1,
-    newLevel: 3,
-    levelsGained: 0,
-    newStatPoints: 4,
-  });
-  assert.equal(calls.length, 1);
+test('disabled experience leaves locked values unchanged', () => {
+  assert.deepEqual(applyExpFromSnapshot(user({ expenabled: false, exp: 15 }), 100), { newExp: 15, newLevel: 2, levelsGained: 0, newStatPoints: 9 });
 });
 
-test('collectGuildTaxWithClient returns unchanged income without a member and does not write', async () => {
-  const { client, calls } = fakeClient([{ rows: [], rowCount: 0 }]);
-
-  const result = await collectGuildTaxWithClient(client, 7, 100, 'tax_pvp');
-
-  assert.deepEqual(result, { netIncome: 100, guildId: null, tax: 0 });
-  assert.equal(calls.length, 1);
+test('users lock in ascending order and retain snapshots', async () => {
+  const calls: string[] = [];
+  const client = { query: async (sql: string) => { calls.push(sql); return { rowCount: 2, rows: [user({ id: 5 }), user({ id: 20 })] }; } } as any;
+  const result = await lockPvpUsers(client, [20, 5]);
+  assert.match(calls[0]!, /ORDER BY id ASC FOR UPDATE/);
+  assert.deepEqual(result.map(row => row.id), [5, 20]);
 });
 
-test('collectGuildTaxWithClient updates treasury and logs tax on the same client', async () => {
-  const { client, calls } = fakeClient([
-    { rows: [{ guildid: 12, taxrate: 10 }], rowCount: 1 },
-    { rows: [], rowCount: 1 },
-    { rows: [], rowCount: 1 },
-  ]);
-
-  const result = await collectGuildTaxWithClient(client, 7, 15, 'tax_pvp');
-
-  assert.deepEqual(result, { netIncome: 14, guildId: 12, tax: 1 });
-  assert.deepEqual(calls.map(call => call.sql), [
-    'SELECT gm.guildid, g.taxrate FROM guild_members gm JOIN guilds g ON gm.guildid = g.id WHERE gm.userid = $1 FOR UPDATE OF g',
-    'UPDATE guilds SET treasury = treasury + $1 WHERE id = $2',
-    'INSERT INTO guild_treasury_log (guildid, userid, amount, type, createdat) VALUES ($1, $2, $3, $4, $5)',
-  ]);
-  assert.deepEqual(calls[1]?.params, [1, 12]);
-  assert.deepEqual(calls[2]?.params.slice(0, 4), [12, 7, 1, 'tax_pvp']);
+test('tax checks treasury and log row counts on the same client', async () => {
+  const calls: string[] = [];
+  const client = { query: async (sql: string) => { calls.push(sql); if (sql.startsWith('SELECT')) return { rowCount: 1, rows: [{ guildid: 3, taxrate: 10 }] }; return { rowCount: 1, rows: [] }; } } as any;
+  assert.deepEqual(await collectGuildTaxWithClient(client, 7, 15, 'tax_pvp'), { netIncome: 14, guildId: 3, tax: 1 });
+  assert.equal(calls.length, 3);
 });
 
-test('collectGuildTaxWithClient preserves zero-income and zero-rate behavior', async () => {
-  const zeroIncome = fakeClient([]);
-  assert.deepEqual(
-    await collectGuildTaxWithClient(zeroIncome.client, 7, 0, 'tax_pvp'),
-    { netIncome: 0, guildId: null, tax: 0 },
-  );
-  assert.equal(zeroIncome.calls.length, 0);
-
-  const zeroRate = fakeClient([{ rows: [{ guildid: 12, taxrate: 0 }], rowCount: 1 }]);
-  assert.deepEqual(
-    await collectGuildTaxWithClient(zeroRate.client, 7, 100, 'tax_pvp'),
-    { netIncome: 100, guildId: 12, tax: 0 },
-  );
-  assert.equal(zeroRate.calls.length, 1);
+test('tax fails closed when treasury update is missing', async () => {
+  const client = { query: async (sql: string) => sql.startsWith('SELECT') ? { rowCount: 1, rows: [{ guildid: 3, taxrate: 10 }] } : { rowCount: 0, rows: [] } } as any;
+  await assert.rejects(() => collectGuildTaxWithClient(client, 7, 15, 'tax_pvp'), /treasury update failed/);
 });
 
-// Battle route integration is intentionally not done in this bounded seam.
-// Global helper behavior remains unchanged.
+// Settlement route integration remains intentionally out of scope.

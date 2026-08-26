@@ -2,7 +2,18 @@ import type { PoolClient } from 'pg';
 
 export const STAT_POINTS_PER_LEVEL = 5;
 
-export interface ApplyExpWithClientResult {
+export interface LockedPvpUser {
+  id: number;
+  money: number;
+  exp: number;
+  level: number;
+  statpoints: number;
+  expenabled: boolean;
+  elo: number;
+  guildid: number | null;
+}
+
+export interface ApplyExpResult {
   newExp: number;
   newLevel: number;
   levelsGained: number;
@@ -15,83 +26,60 @@ export interface GuildTaxResult {
   tax: number;
 }
 
-function expForLevel(level: number): number {
-  return 10 * Math.pow(2, level - 1);
-}
-
-/**
- * Calculates experience settlement using the caller's transaction client.
- * Achievement progress is deliberately left to the post-commit caller.
- */
-export async function applyExpWithClient(
-  client: PoolClient,
-  userId: number,
-  expGain: number,
-  currentExp: number,
-  currentLevel: number,
-  currentStatPoints: number,
-): Promise<ApplyExpWithClientResult> {
-  const setting = (await client.query(
-    'SELECT expenabled FROM users WHERE id = $1',
-    [userId],
-  )).rows[0] as { expenabled?: boolean } | undefined;
-  if (setting?.expenabled === false) expGain = 0;
-
-  let exp = currentExp + expGain;
-  let level = currentLevel;
+export function applyExpFromSnapshot(user: LockedPvpUser, expGain: number): ApplyExpResult {
+  if (user.expenabled === false) expGain = 0;
+  let exp = user.exp + expGain;
+  let level = user.level;
   let levelsGained = 0;
-  while (exp >= expForLevel(level)) {
-    exp -= expForLevel(level);
+  while (exp >= 10 * Math.pow(2, level - 1)) {
+    exp -= 10 * Math.pow(2, level - 1);
     level += 1;
     levelsGained += 1;
   }
-
   return {
     newExp: exp,
     newLevel: level,
     levelsGained,
-    newStatPoints: currentStatPoints + levelsGained * STAT_POINTS_PER_LEVEL,
+    newStatPoints: user.statpoints + levelsGained * STAT_POINTS_PER_LEVEL,
   };
 }
 
-/**
- * Collects guild tax using only the supplied transaction client.
- * Quest progress is deliberately left to the post-commit caller.
- */
+export async function lockPvpUsers(client: PoolClient, ids: [number, number]): Promise<LockedPvpUser[]> {
+  const sorted = [...ids].sort((a, b) => a - b);
+  const result = await client.query(
+    'SELECT id, money, exp, level, statpoints, expenabled, elo, guildid FROM users WHERE id = ANY($1::int[]) ORDER BY id ASC FOR UPDATE',
+    [sorted],
+  );
+  const returnedIds = result.rows.map(row => Number(row.id)).sort((a, b) => a - b);
+  if (result.rowCount !== 2 || returnedIds[0] !== sorted[0] || returnedIds[1] !== sorted[1]) {
+    throw new Error('PvP users disappeared before settlement');
+  }
+  return result.rows as LockedPvpUser[];
+}
+
 export async function collectGuildTaxWithClient(
   client: PoolClient,
   userId: number,
   income: number,
-  source: string,
+  source: 'tax_pvp',
 ): Promise<GuildTaxResult> {
-  if (income <= 0) {
-    return { netIncome: income, guildId: null, tax: 0 };
-  }
-
+  if (income <= 0) return { netIncome: income, guildId: null, tax: 0 };
   const member = (await client.query(
     'SELECT gm.guildid, g.taxrate FROM guild_members gm JOIN guilds g ON gm.guildid = g.id WHERE gm.userid = $1 FOR UPDATE OF g',
     [userId],
   )).rows[0] as { guildid?: number; taxrate?: number } | undefined;
   const guildId = member?.guildid === undefined ? null : Number(member.guildid);
   const taxRate = Number(member?.taxrate || 0);
-  if (guildId === null || !taxRate || taxRate <= 0) {
-    return { netIncome: income, guildId, tax: 0 };
-  }
-
+  if (guildId === null || taxRate <= 0) return { netIncome: income, guildId, tax: 0 };
   const tax = Math.max(1, Math.floor(income * taxRate / 100));
-  if (tax <= 0) return { netIncome: income, guildId, tax: 0 };
-
-  await client.query(
-    'UPDATE guilds SET treasury = treasury + $1 WHERE id = $2',
-    [tax, guildId],
-  );
-  await client.query(
+  const treasury = await client.query('UPDATE guilds SET treasury = treasury + $1 WHERE id = $2', [tax, guildId]);
+  if (treasury.rowCount !== 1) throw new Error('PvP guild treasury update failed');
+  const log = await client.query(
     'INSERT INTO guild_treasury_log (guildid, userid, amount, type, createdat) VALUES ($1, $2, $3, $4, $5)',
     [guildId, userId, tax, source, new Date().toISOString()],
   );
-
+  if (log.rowCount !== 1) throw new Error('PvP guild tax log insert failed');
   return { netIncome: income - tax, guildId, tax };
 }
 
-// Battle route integration is intentionally not done in this bounded seam.
-// Global helper behavior remains unchanged.
+// Post-commit achievements and guild quest effects remain outside this module.
