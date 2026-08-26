@@ -2,11 +2,14 @@ import { Router } from 'express';
 import { db } from '../db/index';
 import { collectGuildTax } from '../db/helpers';
 import { createPgDiceFinishRepository, finishDiceGame } from '../game/diceFinishRepository';
+import { createPgDicePlayRepository } from '../game/dicePlayRepository';
+import { ActiveDiceGameError, DiceDailyLimitError, DiceInsufficientBalanceError, playDice } from '../game/dicePlay';
 import { DiceGameNotActiveError } from '../game/diceFinish';
 import { finishDiceReroll } from '../game/diceRerollRepository';
 import { DiceRerollsExhaustedError, InvalidDiceKeepError } from '../game/diceReroll';
 
 const diceFinishRepository = createPgDiceFinishRepository();
+const dicePlayRepository = createPgDicePlayRepository();
 
 const router = Router();
 const DAILY_LIMIT = 10;
@@ -88,45 +91,16 @@ function getCombo(dice: number[]): string {
 // Начать игру
 router.post('/dice/play', async (req, res) => {
     const userId = (req as any).userId;
-    const bet = [10, 100, 1000].includes(req.body.bet) ? req.body.bet : 10;
-
-    // Дневной лимит
-    const todayCount = await countTodayGames(userId);
-    if (todayCount >= DAILY_LIMIT)
-        return res.status(400).json({ error: `Дневной лимит исчерпан (${todayCount}/${DAILY_LIMIT})` });
-
-    // Проверить активную игру
-    const active = await db.one(
-        "SELECT id, entry_fee, created_at FROM dice_games WHERE user_id = ? AND status = 'active'",
-        [userId]
-    ).catch(() => null) as any;
-
-    if (active) {
-        const age = Date.now() - new Date(active.created_at).getTime();
-        if (age > 5 * 60 * 1000) {
-            await db.run("UPDATE dice_games SET status = 'expired', combo = 'none', payout = 0 WHERE id = ?", [active.id]);
-        } else {
-            return res.status(400).json({ error: 'У вас уже есть активная игра' });
+    try {
+        const result = await playDice(dicePlayRepository, { userId, bet: req.body.bet });
+        await collectGuildTax(userId, result.entryFee, 'tax_dice').catch(() => {});
+        res.json(result);
+    } catch (error) {
+        if (error instanceof ActiveDiceGameError || error instanceof DiceDailyLimitError || error instanceof DiceInsufficientBalanceError) {
+            return res.status(400).json({ error: (error as Error).message });
         }
+        throw error;
     }
-
-    // Баланс
-    const user = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
-    if (user.money < bet) return res.status(400).json({ error: 'Недостаточно серебра' });
-
-    // Снять плату
-    await db.run('UPDATE users SET money = money - ? WHERE id = ?', [bet, userId]);
-    await collectGuildTax(userId, bet, 'tax_dice').catch(() => {});
-
-    // Бросить кости
-    const dice = rollDice();
-    const result = await db.run(
-        "INSERT INTO dice_games (user_id, entry_fee, dice, rerolls, status) VALUES (?, ?, ?, 0, 'active')",
-        [userId, bet, JSON.stringify(dice)]
-    );
-    const gameId = (result as any).lastInsertRowid;
-
-    res.json({ gameId, dice, rerollsUsed: 0, maxRerolls: 2, entryFee: bet });
 });
 
 // Перебросить
