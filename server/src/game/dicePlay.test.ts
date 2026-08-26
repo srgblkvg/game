@@ -48,6 +48,15 @@ test('daily limit and balance are checked transactionally', async () => {
   await assert.rejects(() => playDice(poor.repo, { userId: 7, bet: 10 }), /Недостаточно серебра/);
 });
 
+test('daily limit error keeps legacy precedence over an active game', async () => {
+  const { repo, calls } = repository({ today: 10, active: { id: 9, createdAt: new Date('2026-01-01T00:00:00Z') } });
+  await assert.rejects(
+    () => playDice(repo, { userId: 7, bet: 10, now: new Date('2026-01-01T00:01:00Z') }),
+    /Дневной лимит исчерпан \(10\/10\)/,
+  );
+  assert.deepEqual(calls, ['user:7', 'count']);
+});
+
 test('non-allowed bets normalize to ten while 100 and 1000 remain exact', async () => {
   for (const bet of [100, 1000]) {
     const { repo } = repository({ money: 2000 });
