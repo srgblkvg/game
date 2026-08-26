@@ -41,6 +41,11 @@ test('tax locks membership and requires it to match the user snapshot', async ()
   assert.match(calls[1]!, /^SELECT id, taxrate FROM guilds/);
 });
 
+test('tax fails closed when locked guild membership is missing', async () => {
+  const client = { query: async () => ({ rowCount: 0, rows: [] }) } as any;
+  await assert.rejects(() => collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp'), /membership is missing/);
+});
+
 test('tax fails closed on mismatched guild membership', async () => {
   const client = { query: async () => ({ rowCount: 1, rows: [{ guildid: 4 }] }) } as any;
   await assert.rejects(() => collectGuildTaxWithClient(client, user({ guildid: 3 }), 15, 'tax_pvp'), /membership does not match/);
