@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { fetchMobs, attackMob } from '../api/mobs';
+import { getFloorInfo as summarizeFloorInfo } from '../domain/bestiary/getFloorInfo';
 import { fetchCharacter } from '../api/character';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
@@ -183,58 +184,7 @@ export default function BestiaryPage() {
   }, [showLootDetails]);
 
   const getFloorInfo = (floor: string) => {
-    const fm = mobs.filter((m: any) => m.location === floor).sort((a: any, b: any) => a.level - b.level);
-    const goldMin = fm.reduce((min, m) => Math.min(min, m.gold_min), Infinity);
-    const goldMax = fm.reduce((max, m) => Math.max(max, m.gold_max), 0);
-    const avgXp = fm.length > 0 ? Math.round(fm.reduce((s, m) => s + (m.xp || 0), 0) / fm.length) : 0;
-    // Лут: собираем изображения и макс. шансы по редкостям
-    const lootImageMap = new Map<string, { rarity: number; name: string; image: string; chance: number }>();
-    for (const m of fm) {
-      if (m.lootImages) {
-        for (const li of m.lootImages) {
-          const key = li.rarity === -1 ? `stone:${li.name}` : `material:${li.rarity}`;
-          const current = lootImageMap.get(key);
-          if (!current || Number(li.chance) > Number(current.chance)) lootImageMap.set(key, li);
-        }
-      }
-    }
-    const lootImages = Array.from(lootImageMap.values());
-    // Предметы: собираем таблицу дропа по этажу (макс шанс по каждой редкости)
-    const itemDropMap = new Map<number, number>();
-    for (const m of fm) {
-        if (m.itemDropTable) {
-            for (const it of m.itemDropTable) {
-                const prev = itemDropMap.get(it.rarity);
-                if (!prev || it.chance > prev) {
-                    itemDropMap.set(it.rarity, it.chance);
-                }
-            }
-        }
-    }
-    const itemDropTable = Array.from(itemDropMap.entries()).map(([rarity, chance]) => ({ rarity, chance }));
-    const equipmentDropMap = new Map<number, any>();
-    const artifactMaterialMap = new Map<string, any>();
-    for (const m of fm) {
-      for (const drop of m.equipmentDrops || []) {
-        const current = equipmentDropMap.get(Number(drop.rarity));
-        if (!current || Number(drop.chance) > Number(current.chance)) equipmentDropMap.set(Number(drop.rarity), drop);
-      }
-      const material = m.artifactMaterialDrop;
-      if (material) {
-        const current = artifactMaterialMap.get(material.name);
-        if (!current || Number(material.chance) > Number(current.chance)) artifactMaterialMap.set(material.name, material);
-      }
-    }
-    const equipmentDrops = Array.from(equipmentDropMap.values()).sort((a, b) => a.rarity - b.rarity);
-    const craftMaterials = lootImages.filter(item => item.rarity >= 0);
-    const upgradeStones = lootImages.filter(item => item.rarity === -1);
-    const artifactMaterials = Array.from(artifactMaterialMap.values());
-    const setChance = fm.length > 0
-      ? fm.reduce((sum, mob) => sum + (mob.equipmentDrops || []).reduce((mobSum: number, item: any) => mobSum + Number(item.setChance || 0), 0), 0) / fm.length
-      : 0;
-    return { count: fm.length, minLevel: fm[0]?.level || 0, maxLevel: fm[fm.length - 1]?.level || 0,
-      goldMin, goldMax, avgXp, lootImages, itemDropTable, equipmentDrops, craftMaterials, upgradeStones,
-      artifactMaterials, setChance };
+    return summarizeFloorInfo(mobs, floor);
   };
 
   // --- Animation helpers (same as useBattleLogic) ---
