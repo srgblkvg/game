@@ -3,6 +3,8 @@ import { db } from '../db/index';
 import { collectGuildTax } from '../db/helpers';
 import { createPgDiceFinishRepository, finishDiceGame } from '../game/diceFinishRepository';
 import { DiceGameNotActiveError } from '../game/diceFinish';
+import { finishDiceReroll } from '../game/diceRerollRepository';
+import { DiceRerollsExhaustedError, InvalidDiceKeepError } from '../game/diceReroll';
 
 const diceFinishRepository = createPgDiceFinishRepository();
 
@@ -131,25 +133,21 @@ router.post('/dice/play', async (req, res) => {
 router.post('/dice/reroll', async (req, res) => {
     const userId = (req as any).userId;
     const { gameId, keep } = req.body;
-
-    const game = await db.one(
-        "SELECT * FROM dice_games WHERE id = ? AND user_id = ? AND status = 'active'",
-        [gameId, userId]
-    ).catch(() => null) as any;
-
-    if (!game) return res.status(404).json({ error: 'Игра не найдена' });
-    if (game.rerolls >= 2) return res.status(400).json({ error: 'Все перебросы использованы' });
-
-    const currentDice: number[] = JSON.parse(game.dice);
-    if (!keep || !Array.isArray(keep) || keep.some((i: number) => i < 0 || i >= 5)) {
-        return res.status(400).json({ error: 'Некорректный выбор костей' });
+    try {
+        const result = await db.tx(client => finishDiceReroll(client, userId, Number(gameId), keep));
+        res.json(result);
+    } catch (error) {
+        if (error instanceof DiceGameNotActiveError) {
+            return res.status(404).json({ error: 'Игра не найдена' });
+        }
+        if (error instanceof DiceRerollsExhaustedError) {
+            return res.status(400).json({ error: 'Все перебросы использованы' });
+        }
+        if (error instanceof InvalidDiceKeepError) {
+            return res.status(400).json({ error: 'Некорректный выбор костей' });
+        }
+        throw error;
     }
-
-    const keepSet = new Set(keep);
-    const newDice = currentDice.map((d, i) => keepSet.has(i) ? d : Math.floor(Math.random() * 6) + 1);
-
-    await db.run("UPDATE dice_games SET dice = ?, rerolls = rerolls + 1 WHERE id = ?", [JSON.stringify(newDice), gameId]);
-    res.json({ dice: newDice, rerollsUsed: game.rerolls + 1, maxRerolls: 2 });
 });
 
 // Завершить игру
