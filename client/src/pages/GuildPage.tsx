@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { getHeaders, BASE_URL } from '../api/helpers';
+import { sortGuildMembers } from '../utils/guildMembers';
 import { formatNum } from '../utils/money';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
@@ -435,12 +436,7 @@ export default function GuildPage() {
                     <div className="flex gap-1"><Button size="md" onClick={()=>handleRequest(r.id,true)}>✓</Button><Button size="md" variant="secondary" onClick={()=>handleRequest(r.id,false)}>✗</Button></div></div>))}</div>}
                 {myRank==='leader'&&<div className="mt-2"><Button size="md" variant="secondary" onClick={handleCancelInvites}>Отменить приглашения</Button></div>}</Card>)}
             <Card><h3 className="font-bold text-sm mb-2">Участники ({members.length}/20)</h3><div className="space-y-1">
-                {[...members].sort((a:any,b:any)=>{
-                    const rankOrder = (r:string)=>r==='leader'?0:r==='officer'?1:2;
-                    const ro = rankOrder(a.rank)-rankOrder(b.rank);
-                    if (ro!==0) return ro;
-                    return (b.level||0)-(a.level||0);
-                }).map((m:any)=>(<div key={m.userId} className="py-1 border-b border-[var(--color-border-light)] text-xs">
+                {sortGuildMembers(members).map((m:any)=>(<div key={m.userId} className="py-1 border-b border-[var(--color-border-light)] text-xs">
                     <div className="flex justify-between items-center">
                         <span className="cursor-pointer hover:text-[var(--color-accent-info)]" onClick={()=>navigate(`/profile/${m.userId}`)}>
                             {m.rank==='leader'?'👑':m.rank==='officer'?'🛡️':'⚔️'}

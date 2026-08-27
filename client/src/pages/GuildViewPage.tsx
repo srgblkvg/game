@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import { fmtSafeDate } from '../utils/date';
 import { getLastSeen } from '../utils/time';
 import { getHeaders, BASE_URL } from '../api/helpers';
+import { sortGuildMembers } from '../utils/guildMembers';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -171,12 +172,7 @@ export default function GuildViewPage() {
                     <Card>
                         <h3 className="font-bold text-sm mb-2">Участники ({members.length}/20)</h3>
                         <div className="space-y-1">
-                            {[...members].sort((a: any, b: any) => {
-                                const rankOrder = (r: string) => r === 'leader' ? 0 : r === 'officer' ? 1 : 2;
-                                const ro = rankOrder(a.rank) - rankOrder(b.rank);
-                                if (ro !== 0) return ro;
-                                return (b.level || 0) - (a.level || 0);
-                            }).map((m: any) => (
+                            {sortGuildMembers(members).map((m: any) => (
                                 <div key={m.userId} className="flex justify-between items-center py-1 border-b border-[var(--color-border-light)] text-xs">
                                     <span className="cursor-pointer hover:text-[var(--color-accent-info)]"
                                         onClick={() => navigate(`/profile/${m.userId}`)}>
