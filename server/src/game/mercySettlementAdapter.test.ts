@@ -14,7 +14,7 @@ const input = (overrides: Partial<MercySettlementAdapterInput> = {}): MercySettl
   defenderHpAfter: 0,
   historyLog: ['attacker overwhelms defender'],
   log: ['attacker vs defender', 'defender yields'],
-  steps: [{ type: 'mercy', message: 'defender yields' }],
+  steps: (actual: number) => [{ type: 'mercy', message: `defender yields ${actual}` }],
   plannedMoneyStolen: 25,
   now: 1234,
   karmaDelta: -1,
@@ -50,12 +50,13 @@ test('builds a pure mercy plan with attacker and defender field semantics', () =
     { userId: 10, expGain: 2, eloDelta: 13, hpAfter: 87, karmaDelta: -1, banditReputationDelta: 1 },
     { userId: 20, expGain: 0, eloDelta: -9, hpAfter: 0, karmaDelta: undefined, banditReputationDelta: undefined },
   ]);
-  assert.deepEqual(result.plan.history, {
+  assert.equal(typeof result.plan.history.steps, 'function');
+  assert.deepEqual({ ...result.plan.history, steps: undefined }, {
     attackerId: 10,
     defenderId: 20,
     winnerId: 10,
     log: ['attacker overwhelms defender'],
-    steps: [{ type: 'mercy', message: 'defender yields' }],
+    steps: undefined,
     attackerHpAfter: 87,
     defenderHpAfter: 0,
     expGained: 2,
@@ -75,9 +76,9 @@ test('maps route metadata and defers levels gained to the settlement result', ()
     hpDefenderAfter: 0,
     expGained: 2,
     log: ['attacker vs defender', 'defender yields'],
-    steps: [{ type: 'mercy', message: 'defender yields' }],
   });
   assert.equal(result.responseMetadata.levelsGained(settlementResult(3)), 3);
+  assert.deepEqual(result.responseMetadata.steps(8), [{ type: 'mercy', message: 'defender yields 8' }]);
 });
 
 test('keeps planned steal only in the plan and does not invent an actual amount before lock', () => {

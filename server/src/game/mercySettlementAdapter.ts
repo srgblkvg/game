@@ -12,7 +12,7 @@ export type MercySettlementAdapterInput = {
   defenderHpAfter: number;
   historyLog: unknown;
   log: unknown;
-  steps: unknown;
+  steps: (actualMoneyStolen: number) => unknown;
   plannedMoneyStolen: number;
   now: number;
   protectionSeconds?: number;
@@ -29,8 +29,9 @@ export type MercyResponseMetadata = {
     hpDefenderAfter: number;
     expGained: number;
     log: unknown;
-    steps: unknown;
   };
+  /** Build monetary mercy steps only after the locked transfer is known. */
+  steps: (actualMoneyStolen: number) => unknown;
   /** Settlement is the only layer allowed to determine the level change. */
   levelsGained: (settlement: PvpSettlementV2Result) => number;
 };
@@ -54,7 +55,7 @@ export function buildMercySettlementAdapter(input: MercySettlementAdapterInput):
     defenderHpAfter: input.defenderHpAfter,
     now: input.now,
     attackerLog: input.historyLog,
-    battleSteps: input.steps,
+    battleSteps: (actualMoneyStolen: number) => input.steps(actualMoneyStolen),
     ...(input.protectionSeconds !== undefined ? { protectionSeconds: input.protectionSeconds } : {}),
     persistHp: false,
     ...(input.karmaDelta !== undefined ? { karmaDelta: input.karmaDelta } : {}),
@@ -71,8 +72,8 @@ export function buildMercySettlementAdapter(input: MercySettlementAdapterInput):
         hpDefenderAfter: input.defenderHpAfter,
         expGained: input.expGained,
         log: input.log,
-        steps: input.steps,
       },
+      steps: actualMoneyStolen => input.steps(actualMoneyStolen),
       levelsGained: settlement => settlement.users[input.attackerId]?.levelsGained ?? 0,
     },
   };

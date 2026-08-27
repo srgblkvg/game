@@ -28,7 +28,8 @@ export type UserSettlementDelta = {
 
 export type TaxPlan = { recipientId: number; grossIncome: number; source: 'tax_pvp' } | null;
 export type PvpHistory = {
-  attackerId: number; defenderId: number; winnerId: number; log: unknown; steps: unknown;
+  attackerId: number; defenderId: number; winnerId: number; log: unknown;
+  steps: unknown | ((actualMoneyStolen: number) => unknown);
   attackerHpAfter: number; defenderHpAfter: number; expGained: number;
   moneyGained: number; moneyStolen: number;
 };
@@ -137,7 +138,8 @@ export async function settlePvpV2WithClient(client: QueryClient, input: PvpSettl
     results[p.userId] = { money, exp: xp.newExp, level: xp.newLevel, statpoints: xp.newStatPoints, elo: Math.max(100, Number(snapshot.elo) + p.eloDelta), levelsGained: xp.levelsGained };
   }
   const h = input.history;
-  const historyResult = await client.query('insert into battles (attackerid, defenderid, winnerid, log, steps, attackerhpafter, defenderhpafter, expgained, moneygained, moneystolen) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [h.attackerId, h.defenderId, h.winnerId, JSON.stringify(h.log), JSON.stringify(h.steps), h.attackerHpAfter, h.defenderHpAfter, h.expGained, actualMoneyStolen, actualMoneyStolen]) as QueryResult;
+  const historySteps = typeof h.steps === 'function' ? h.steps(actualMoneyStolen) : h.steps;
+  const historyResult = await client.query('insert into battles (attackerid, defenderid, winnerid, log, steps, attackerhpafter, defenderhpafter, expgained, moneygained, moneystolen) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [h.attackerId, h.defenderId, h.winnerId, JSON.stringify(h.log), JSON.stringify(historySteps), h.attackerHpAfter, h.defenderHpAfter, h.expGained, actualMoneyStolen, actualMoneyStolen]) as QueryResult;
   if (historyResult.rowCount !== 1) throw new Error('PvP history insert failed');
   return { users: results, tax, plannedMoneyStolen, actualMoneyStolen };
 }
