@@ -12,6 +12,7 @@ import { useGlobalChat } from '../contexts/ChatContext';
 import { useToast } from '../contexts/ToastContext';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { normalizeItems } from '../domain/items/normalizeItem';
+import { sortInventoryItems, type InventorySortOrder } from '../utils/inventorySorting';
 
 interface InventoryProps {
     onItemClick?: (item: any) => void;
@@ -24,22 +25,12 @@ interface InventoryProps {
     clickToEquip?: boolean;
 }
 
-type SortOrder = 'none' | 'asc' | 'desc';
-
-const nextSortOrder = (order: SortOrder): SortOrder => {
+const nextSortOrder = (order: InventorySortOrder): InventorySortOrder => {
     if (order === 'none') return 'asc';
     if (order === 'asc') return 'desc';
     return 'none';
 };
 
-const sortItems = (items: any[], order: SortOrder): any[] => {
-    if (order === 'none') return items;
-    return [...items].sort((a, b) => {
-        const rarityA = a.rarity_id ?? 0;
-        const rarityB = b.rarity_id ?? 0;
-        return order === 'asc' ? rarityA - rarityB : rarityB - rarityA;
-    });
-};
 
 const typeLocalization: Record<string, string> = {
     'craft': 'Материалы',
@@ -162,13 +153,13 @@ export default function Inventory({
         } catch { showToast('Ошибка соединения', 'error'); }
     };
 
-    const [sortEquipment, setSortEquipment] = useState<SortOrder>(
-        () => (localStorage.getItem('invSort') as SortOrder) || 'none'
+    const [sortEquipment, setSortEquipment] = useState<InventorySortOrder>(
+        () => (localStorage.getItem('invSort') as InventorySortOrder) || 'none'
     );
     const [collapsed, setCollapsed] = useState(
         () => localStorage.getItem('invCollapsed') === '1'
     );
-    const [sortCraft, setSortCraft] = useState<SortOrder>('none');
+    const [sortCraft, setSortCraft] = useState<InventorySortOrder>('none');
     const [activeType, setActiveType] = useState<string>('all');
 
     // Закрытие тултипа при клике (десктоп) или touchstart (мобила, не на слоте)
@@ -221,7 +212,7 @@ export default function Inventory({
         return Array.from(typeSet).sort();
     }, [craftItems]);
 
-    const sortedEquipment = useMemo(() => sortItems(equipmentItems, sortEquipment), [equipmentItems, sortEquipment]);
+    const sortedEquipment = useMemo(() => sortInventoryItems(equipmentItems, sortEquipment), [equipmentItems, sortEquipment]);
     // Если есть пользовательский порядок — используем его, иначе сортировка по редкости
     const orderedEquipment = useMemo(() => {
         if (inventoryOrder.length === 0) return sortedEquipment;
@@ -262,7 +253,7 @@ export default function Inventory({
 
     const priceForNextSlot = 100 * Math.pow(2, maxSlots - 10);
 
-    const sortSymbol = (order: SortOrder) => {
+    const sortSymbol = (order: InventorySortOrder) => {
         if (order === 'none') return '⇅';
         if (order === 'asc') return '↑';
         return '↓';
@@ -273,7 +264,7 @@ export default function Inventory({
         if (activeType !== 'all') {
             items = items.filter(item => getLocalizedType(item.itemType || item.type || 'craft') === activeType);
         }
-        return sortItems(items, sortCraft);
+        return sortInventoryItems(items, sortCraft);
     }, [craftItems, activeType, sortCraft]);
 
     const handleLongPress = useCallback((item: any, e: React.TouchEvent | React.MouseEvent) => {
