@@ -8,6 +8,7 @@ import { fetchJobHistory } from '../api';
 import { getHeaders, BASE_URL } from '../api/helpers';
 import { formatMoney } from '../utils/money';
 import { formatGameDateTime } from '../utils/time';
+import { buildHistoryEntries, toMs } from '../utils/historyEntries';
 import { renderBattleLog } from '../utils/battleLog';
 import Button from '../components/ui/Button';
 import GuildTag from '../components/GuildTag';
@@ -64,20 +65,15 @@ export default function HistoryPage() {
 
     useEffect(()=>{if(!user){navigate('/login');return}loadData()},[user,loadData,navigate]);
 
-    // Вспомогательная: timestamp → ms (строка/число/секунды)
-    const toMs = (v: any) => typeof v === 'number' ? v * 1000 : v ? new Date(v).getTime() : 0;
-
-    const massacreEntries = massacreBattles.map(m=>({id:`mb-${m.id}`,type:'massacre' as const,ts:toMs(m.gathering_end || m.created_at),data:m}));
-
-    const allEntries = [
-        ...battles.map(b=>({id:`b-${b.id}`,type:'battle',ts:new Date(b.createdAt).getTime(),data:b})),
-        ...pveBattles.map(b=>({id:`p-${b.id}`,type:'pve',ts:new Date(b.createdAt).getTime(),data:b})),
-        ...jobHistory.map(j=>({id:`j-${j.id}`,type:'job',ts:new Date(j.finishedAt).getTime(),data:j})),
-        ...tournamentHistory.map(t=>({id:`t-${t.id}`,type:'tournament',ts:toMs(t.completedAt || t.createdAt),data:t})),
-        ...questHistory.map(q=>({id:`q-${q.id}`,type:'quest',ts:new Date(q.createdAt).getTime(),data:q})),
-        ...privateMessages.map(m=>({id:`m-${m.id}`,type:'message',ts:new Date(m.createdAt).getTime(),data:m})),
-        ...massacreEntries,
-    ].sort((a,b)=>b.ts-a.ts);
+    const allEntries = buildHistoryEntries({
+        battles,
+        pveBattles,
+        jobHistory,
+        tournamentHistory,
+        questHistory,
+        privateMessages,
+        massacreBattles,
+    });
 
     const currentData = (()=>{switch(tab){
         case 'all':return allEntries;case 'battles':return battles;case 'pve':return pveBattles;
