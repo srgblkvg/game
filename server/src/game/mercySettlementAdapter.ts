@@ -12,7 +12,7 @@ export type MercySettlementAdapterInput = {
   defenderHpAfter: number;
   historyLog: unknown;
   log: unknown;
-  steps: (actualMoneyStolen: number) => unknown;
+  steps: (actualMoneyStolen: number) => unknown[];
   plannedMoneyStolen: number;
   now: number;
   protectionSeconds?: number;
@@ -31,7 +31,7 @@ export type MercyResponseMetadata = {
     log: unknown;
   };
   /** Build monetary mercy steps only after the locked transfer is known. */
-  steps: (actualMoneyStolen: number) => unknown;
+  steps: (actualMoneyStolen: number) => unknown[];
   /** Settlement is the only layer allowed to determine the level change. */
   levelsGained: (settlement: PvpSettlementV2Result) => number;
 };
