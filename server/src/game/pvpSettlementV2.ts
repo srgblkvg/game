@@ -39,7 +39,7 @@ export type PvpSettlementV2Input = {
   history: PvpHistory;
 };
 export type PvpSettlementV2Result = {
-  users: Record<number, { money: number; exp: number; level: number; statpoints: number; elo: number }>;
+  users: Record<number, { money: number; exp: number; level: number; statpoints: number; elo: number; levelsGained: number }>;
   tax: GuildTaxResult;
   plannedMoneyStolen: number;
   actualMoneyStolen: number;
@@ -134,7 +134,7 @@ export async function settlePvpV2WithClient(client: QueryClient, input: PvpSettl
     params.push(p.userId);
     const updated = await client.query(`update users set ${sets.join(', ')} where id = $${params.length}`, params) as QueryResult;
     if (updated.rowCount !== 1) throw new Error('PvP user update failed');
-    results[p.userId] = { money, exp: xp.newExp, level: xp.newLevel, statpoints: xp.newStatPoints, elo: Math.max(100, Number(snapshot.elo) + p.eloDelta) };
+    results[p.userId] = { money, exp: xp.newExp, level: xp.newLevel, statpoints: xp.newStatPoints, elo: Math.max(100, Number(snapshot.elo) + p.eloDelta), levelsGained: xp.levelsGained };
   }
   const h = input.history;
   const historyResult = await client.query('insert into battles (attackerid, defenderid, winnerid, log, steps, attackerhpafter, defenderhpafter, expgained, moneygained, moneystolen) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [h.attackerId, h.defenderId, h.winnerId, JSON.stringify(h.log), JSON.stringify(h.steps), h.attackerHpAfter, h.defenderHpAfter, h.expGained, actualMoneyStolen, actualMoneyStolen]) as QueryResult;

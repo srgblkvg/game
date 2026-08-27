@@ -54,8 +54,8 @@ test('regular attacker win settles locked money XP ELO and history', async () =>
   const { client, calls } = clientWithUsers();
   const result = await settlePvpV2(client, plan());
   assert.deepEqual(result.users, {
-    10: { money: 115, exp: 15, level: 2, statpoints: 9, elo: 1212 },
-    20: { money: 25, exp: 5, level: 2, statpoints: 9, elo: 1090 },
+    10: { money: 115, exp: 15, level: 2, statpoints: 9, elo: 1212, levelsGained: 0 },
+    20: { money: 25, exp: 5, level: 2, statpoints: 9, elo: 1090, levelsGained: 0 },
   });
   assert.deepEqual(result.tax, { netIncome: 15, guildId: null, tax: 0 });
   assert.deepEqual(calls.filter(c => c.sql.startsWith('update users')).map(c => c.params?.[c.params.length - 1]), [10, 20]);
@@ -97,15 +97,15 @@ test('mercy attacker win uses the same atomic history path', async () => {
 test('locked snapshots control XP level-up and ELO baselines', async () => {
   const { client } = clientWithUsers([locked(10, { exp: 15, level: 2, statpoints: 9, elo: 1500 }), locked(20)]);
   const result = await settlePvpV2(client, plan());
-  assert.deepEqual(result.users[10], { money: 115, exp: 5, level: 3, statpoints: 14, elo: 1512 });
+  assert.deepEqual(result.users[10], { money: 115, exp: 5, level: 3, statpoints: 14, elo: 1512, levelsGained: 1 });
 });
 
 test('planned income is capped to locked loser balance across settlement and history', async () => {
   const { client, calls } = clientWithUsers([locked(10, { expenabled: false, exp: 7 }), locked(20, { money: 5 })]);
   const result = await settlePvpV2(client, plan());
 
-  assert.deepEqual(result.users[10], { money: 105, exp: 7, level: 2, statpoints: 9, elo: 1212 });
-  assert.deepEqual(result.users[20], { money: 0, exp: 5, level: 2, statpoints: 9, elo: 1090 });
+  assert.deepEqual(result.users[10], { money: 105, exp: 7, level: 2, statpoints: 9, elo: 1212, levelsGained: 0 });
+  assert.deepEqual(result.users[20], { money: 0, exp: 5, level: 2, statpoints: 9, elo: 1090, levelsGained: 0 });
   assert.deepEqual(result.tax, { netIncome: 5, guildId: null, tax: 0 });
   assert.equal(result.plannedMoneyStolen, 15);
   assert.equal(result.actualMoneyStolen, 5);
