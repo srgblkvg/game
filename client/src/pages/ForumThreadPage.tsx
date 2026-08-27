@@ -7,6 +7,7 @@ import { fmtSafeDate } from '../utils/date';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
+import { buildForumPostTree } from '../utils/forumPostTree';
 import { useAuth } from '../contexts/AuthContext';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -289,21 +290,11 @@ export default function ThreadPage() {
         finally { setPollVoting(false); }
     };
 
-    const buildTree = (flatPosts: any[]) => {
-        const map = new Map<number, any>();
-        const roots: any[] = [];
-        for (const p of flatPosts) { p.children = []; map.set(p.id, p); }
-        for (const p of flatPosts) {
-            if (p.parent_id && map.has(p.parent_id)) map.get(p.parent_id).children.push(p);
-            else roots.push(p);
-        }
-        return roots;
-    };
 
     if (error && !thread) return <div className="p-4 text-[var(--color-accent-danger)]">{error}</div>;
     if (!thread) return <div className="p-4">Загрузка...</div>;
 
-    const tree = buildTree(posts);
+    const tree = buildForumPostTree(posts);
 
     return (
         <div className="px-4 py-4 max-w-3xl mx-auto">
