@@ -22,6 +22,7 @@ export type UserSettlementDelta = {
   seasonLossesDelta: 0 | 1; pvpMoneyWonDelta: number; pvpMoneyLostDelta: number;
   expGain: number; eloDelta: number; hpAfter?: number; lastAttackTime?: number;
   lastHpUpdate?: number; protectionUntil?: number; arenaOpponentId?: number | null;
+  lastPvpTime?: number; persistHp?: boolean;
   karmaDelta?: number; banditReputationDelta?: number;
 };
 
@@ -122,7 +123,11 @@ export async function settlePvpV2WithClient(client: QueryClient, input: PvpSettl
     ];
     const moneyWon = p.userId === o.winnerId ? actualMoneyStolen : p.pvpMoneyWonDelta;
     const params: unknown[] = [effectiveMoneyDelta - taxForUser, p.battlesDelta, p.winsDelta, p.seasonWinsDelta, p.seasonLossesDelta, moneyWon, effectiveMoneyLost, xp.newExp, xp.newLevel, xp.newStatPoints, p.eloDelta];
-    const absolute: Array<[string, unknown]> = [['currenthp', p.hpAfter], ['lastattacktime', p.lastAttackTime], ['lasthpupdate', p.lastHpUpdate], ['protectionuntil', p.protectionUntil], ['arenaopponentid', p.arenaOpponentId]];
+    const absolute: Array<[string, unknown]> = [
+      ...(p.persistHp === false ? [] : [['currenthp', p.hpAfter] as [string, unknown]]),
+      ['lastattacktime', p.lastAttackTime], ['lasthpupdate', p.lastHpUpdate],
+      ['lastpvptime', p.lastPvpTime], ['protectionuntil', p.protectionUntil], ['arenaopponentid', p.arenaOpponentId],
+    ];
     for (const [column, value] of absolute) if (value !== undefined) { sets.push(`${column} = $${params.length + 1}`); params.push(value); }
     if (p.karmaDelta !== undefined) { sets.push(`karma = greatest(-100, least(100, karma + $${params.length + 1}))`); params.push(p.karmaDelta); }
     if (p.banditReputationDelta !== undefined) { sets.push(`bandit_reputation = bandit_reputation + $${params.length + 1}`); params.push(p.banditReputationDelta); }

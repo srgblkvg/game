@@ -79,8 +79,19 @@ test('regular defender win taxes the locked defender symmetrically', async () =>
 
 test('mercy attacker win uses the same atomic history path', async () => {
   const { client, calls } = clientWithUsers();
-  await settlePvpV2(client, plan({ outcome: { kind: 'mercy', attackerId: 10, defenderId: 20, winnerId: 10, loserId: 20 } }));
+  const mercy = plan({
+    outcome: { kind: 'mercy', attackerId: 10, defenderId: 20, winnerId: 10, loserId: 20 },
+    userPlans: [
+      { ...plan().userPlans[0], persistHp: false, lastPvpTime: 1000 },
+      { ...plan().userPlans[1], persistHp: false, lastPvpTime: 1000 },
+    ],
+  });
+  await settlePvpV2(client, mercy);
   assert.equal(calls.filter(c => c.sql.startsWith('insert into battles')).length, 1);
+  for (const call of calls.filter(c => c.sql.startsWith('update users'))) {
+    assert.doesNotMatch(call.sql, /currenthp/);
+    assert.match(call.sql, /lastpvptime/);
+  }
 });
 
 test('locked snapshots control XP level-up and ELO baselines', async () => {
