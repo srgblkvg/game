@@ -14,6 +14,9 @@ import { checkAchievement, trackIncome } from './achievements';
 import { battleSchema } from '../validation';
 import { loadBattleAntiStats } from '../game/guildBoss';
 import { parseActiveEquipment } from '../game/activeEquipment';
+import { buildMercySettlementAdapter } from '../game/mercySettlementAdapter';
+import { settlePvpV2 } from '../game/pvpSettlementV2';
+import { runSettlementAndEffects } from '../game/pvpSettlementOrchestrator';
 
 const router = Router();
 
@@ -167,74 +170,69 @@ router.post('/battle', async (req, res) => {
         const newDefenderElo = calcElo(defender.elo || 1000, attacker.elo || 1000, false, defender.level);
         const eloChange = newAttackerElo - (attacker.elo || 1000);
 
-        const attExp = await applyExp(attacker.id, expGained, attacker.exp, attacker.level, attacker.statPoints || 0);
-
-        // Атакующий
-        const attackerMoneyAfterTax = moneyStolen > 0
-            ? await collectGuildTax(attacker.id, moneyStolen, 'tax_pvp')
-            : 0;
-        await db.run(`UPDATE users SET level=?, exp=?, money=money+?, totalBattles=totalBattles+1, wins=wins+1, lastAttackTime=?, lastHpUpdate=?, statPoints=statPoints+?, elo=?, seasonWins=seasonWins+1, lastPvpTime=?, totalPvpMoneyWon=totalPvpMoneyWon+?, arenaOpponentId=NULL WHERE id=?`,
-            [attExp.newLevel, attExp.newExp, attackerMoneyAfterTax, now, now, attExp.levelsGained * 5, Math.max(100, newAttackerElo), now, moneyStolen, attacker.id]);
-        if (attExp.levelsGained > 0) refreshCharacter(attacker.id, 'level');
-
-        // --- Обновление защитника ---
-        const protUntil = now + 3600;
-        const actualStolen = Math.min(moneyStolen, defender.money);
-        await db.run(`UPDATE users SET money=money-?, totalBattles=totalBattles+1, protectionUntil=?, elo=?, seasonLosses=seasonLosses+1, lastPvpTime=?, totalPvpMoneyLost=totalPvpMoneyLost+? WHERE id=?`,
-            [actualStolen, protUntil, Math.max(100, newDefenderElo), now, actualStolen, defender.id]);
-        sendToUser(defender.id, { type: 'protection', protectionUntil: protUntil });
-
-        // Карма Стражника: +1 за бандита, -1 за остальных
-        if (attackerData.faction === 'guard') {
-            const karmaChange = defenderData.faction === 'bandit' ? 1 : -1;
-            await db.run('UPDATE users SET karma = GREATEST(-100, LEAST(100, karma + ?)) WHERE id = ?', [karmaChange, attacker.id]);
-        }
-        // Репутация бандита: +1 за победу в PvP
-        if (attackerData.faction === 'bandit') {
-            await db.run('UPDATE users SET bandit_reputation = bandit_reputation + 1 WHERE id = ?', [attacker.id]);
-        }
-
-        // Запись в историю
-        await db.run(`INSERT INTO battles (attackerId, defenderId, winnerId, log, steps, attackerHpAfter, defenderHpAfter, expGained, moneyGained, moneyStolen)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [attacker.id, defender.id, attacker.id, JSON.stringify([`${attacker.username} подавляет ${defender.username} без боя`]),
-             JSON.stringify([
-                { type: 'info', message: `⚔ ${attacker.username} vs ${defender.username}` },
-                { type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} серебра` }
-             ]),
-             attackerFullStats.hp, 0, expGained, moneyStolen, moneyStolen]);
-
-        const updatedAttacker = await db.one('SELECT money FROM users WHERE id = ?', [userId]) as any;
-
-        // Guild quest progress — track PvP win (mercy)
-        if (attacker.guildId) {
-            updateGuildQuestProgress(attacker.guildId, 'pvp').catch(e => console.error('guildQuest PvP mercy:', e.message));
-        }
-
-        // Достижения и квесты
-        checkAchievement(attacker.id, 'pvp_wins').catch(() => {});
-        if (moneyStolen > 0) trackIncome(attacker.id, moneyStolen).catch(() => {});
-        markDirty(attacker.id, 'quests');
-
-        return res.json({
-            mercy: true,
+        const karmaDelta = attackerData.faction === 'guard'
+            ? (defenderData.faction === 'bandit' ? 1 : -1)
+            : undefined;
+        const banditReputationDelta = attackerData.faction === 'bandit' ? 1 : undefined;
+        const mercy = buildMercySettlementAdapter({
+            attackerId: attacker.id,
+            defenderId: defender.id,
+            expGained,
+            attackerEloDelta: newAttackerElo - (attacker.elo || 1000),
+            defenderEloDelta: newDefenderElo - (defender.elo || 1000),
+            attackerHpAfter: attackerFullStats.hp,
+            defenderHpAfter: 0,
+            historyLog: [`${attacker.username} подавляет ${defender.username} без боя`],
             log: [`${attacker.username} vs ${defender.username}`, `${defender.username} оценил силы и предпочёл не рисковать`],
-            steps: [
+            steps: actual => [
                 { type: 'info', message: `⚔ ${attacker.username} vs ${defender.username}` },
-                { type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${moneyStolen} серебра` },
+                { type: 'mercy', message: `${defender.username} не рискнул сражаться и отдал ${actual} серебра` },
+            ],
+            plannedMoneyStolen: moneyStolen,
+            now,
+            ...(karmaDelta !== undefined ? { karmaDelta } : {}),
+            ...(banditReputationDelta !== undefined ? { banditReputationDelta } : {}),
+        });
+        const settlement = await runSettlementAndEffects(
+            () => settlePvpV2(mercy.plan),
+            async result => {
+                const attackerSettlement = result.users[attacker.id]!;
+                if (attackerSettlement.levelsGained > 0) {
+                    refreshCharacter(attacker.id, 'level');
+                    if (attacker.oauthProvider === 'vk' && attacker.oauthId) {
+                        sendLeaderboardLevel(attacker.id, attackerSettlement.level, String(attacker.oauthId)).catch(() => {});
+                    }
+                }
+                sendToUser(defender.id, { type: 'protection', protectionUntil: now + 3600 });
+                if (result.tax.tax > 0 && result.tax.guildId) {
+                    updateGuildQuestProgress(result.tax.guildId, 'donate', result.tax.tax).catch(() => {});
+                }
+                if (attacker.guildId) {
+                    updateGuildQuestProgress(attacker.guildId, 'pvp').catch(e => console.error('guildQuest PvP mercy:', e.message));
+                }
+                checkAchievement(attacker.id, 'pvp_wins').catch(() => {});
+                if (result.actualMoneyStolen > 0) trackIncome(attacker.id, result.actualMoneyStolen).catch(() => {});
+                markDirty(attacker.id, 'quests');
+            },
+        );
+        const attackerSettlement = settlement.users[attacker.id]!;
+        return res.json({
+            ...mercy.responseMetadata.static,
+            steps: [
+                ...mercy.responseMetadata.steps(settlement.actualMoneyStolen),
                 { type: 'info', message: `Рейтинг: ${attacker.username} +${eloChange}, ${defender.username} ${-eloChange >= 0 ? '+' : ''}${-eloChange}` },
             ],
             winnerId: attacker.id,
             hpAfter: attackerFullStats.hp,
             hpDefenderAfter: 0,
             expGained,
-            moneyGained: moneyStolen,
-            newLevel: attExp.newLevel,
-            newExp: attExp.newExp,
-            levelsGained: attExp.levelsGained,
+            moneyGained: settlement.tax.netIncome,
+            newLevel: attackerSettlement.level,
+            newExp: attackerSettlement.exp,
+            levelsGained: attackerSettlement.levelsGained,
             opponent: { name: defenderData.name, level: defenderData.level, equipment: defenderData.equipment, stats: defenderStats },
-            moneyAfter: updatedAttacker.money,
-            moneyStolen,
+            moneyAfter: attackerSettlement.money,
+            moneyStolen: settlement.actualMoneyStolen,
             eloChange,
         });
     }
