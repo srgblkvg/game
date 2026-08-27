@@ -19,6 +19,7 @@ import { getItemImage } from '../utils/itemUtils';
 import { calculateAuctionListingFee } from '../utils/auctionFees';
 import { showNoMoney } from '../components/NoMoneyModal';
 import { parseAuctionSearch } from '../domain/auction/parseAuctionSearch';
+import { getAuctionPagination } from '../utils/auctionPagination';
 import PriceChart from '../components/auction/PriceChart';
 
 const PRICE_FLOOR: Record<number, number> = { 0: 5, 1: 20, 2: 100, 3: 400, 4: 1500, 5: 6000, 6: 20000 };
@@ -324,10 +325,7 @@ export default function AuctionPage() {
     // Pagination render
     const renderPagination = () => {
         if (totalPages <= 1) return null;
-        const pages: number[] = [];
-        const start = Math.max(1, page - 2);
-        const end = Math.min(totalPages, page + 2);
-        for (let i = start; i <= end; i++) pages.push(i);
+        const { pages, start, end } = getAuctionPagination(page, totalPages);
 
         return (
             <div className="flex items-center justify-center gap-1 mt-4 flex-wrap">
