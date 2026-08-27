@@ -4,6 +4,7 @@ import BackButton from '../components/BackButton';
 import Card from '../components/ui/Card';
 import { getHeaders } from '../api/helpers';
 import { useNavigate } from 'react-router-dom';
+import { getWarTimeRemaining } from '../utils/warCountdown';
 
 interface WarInfo {
     id: number;
@@ -44,9 +45,7 @@ export default function ConflictsPage() {
             ) : (
                 <div className="space-y-3">
                     {wars.map(war => {
-                        const expiresIn = Math.max(0, new Date(war.expiresAt).getTime() - Date.now());
-                        const hoursLeft = Math.floor(expiresIn / (1000 * 60 * 60));
-                        const minsLeft = Math.floor((expiresIn % (1000 * 60 * 60)) / (1000 * 60));
+                        const timeRemaining = getWarTimeRemaining(war.expiresAt, Date.now());
 
                         return (
                             <Card key={war.id} className="p-4">
@@ -73,8 +72,8 @@ export default function ConflictsPage() {
                                     </span>
                                 </div>
                                 <div className="text-[0.65rem] text-[var(--color-text-muted)] text-center">
-                                    {expiresIn > 0
-                                        ? `До конца: ${hoursLeft}ч ${minsLeft}м`
+                                    {!timeRemaining.expired
+                                        ? `До конца: ${timeRemaining.hours}ч ${timeRemaining.minutes}м`
                                         : 'Завершается...'}
                                 </div>
                             </Card>

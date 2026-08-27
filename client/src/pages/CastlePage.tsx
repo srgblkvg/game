@@ -5,6 +5,7 @@ import BackButton from '../components/BackButton';
 import Button from '../components/ui/Button';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
+import { getWarTimeRemaining } from '../utils/warCountdown';
 import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
 import { fmtSafeDate } from '../utils/date';
@@ -158,8 +159,7 @@ export default function CastlePage() {
                     </div>
                     <div className="space-y-2">
                         {activeWars.slice(0, 3).map((war: any) => {
-                            const expiresIn = Math.max(0, new Date(war.expiresAt).getTime() - Date.now());
-                            const hoursLeft = Math.floor(expiresIn / (1000 * 60 * 60));
+                            const timeRemaining = getWarTimeRemaining(war.expiresAt, Date.now());
                             return (
                                 <Card key={war.id} className="p-2 cursor-pointer hover:border-[var(--color-accent-info)] transition-colors"
                                     onClick={() => navigate('/conflicts')}>
@@ -172,7 +172,7 @@ export default function CastlePage() {
                                         </span>
                                     </div>
                                     <div className="text-[0.6rem] text-[var(--color-text-muted)] text-right">
-                                        {expiresIn > 0 ? `${hoursLeft}ч` : '...'}
+                                        {!timeRemaining.expired ? `${timeRemaining.hours}ч` : '...'}
                                     </div>
                                 </Card>
                             );
