@@ -12,6 +12,7 @@ import { safeDate } from '../utils/date';
 import { formatGameTime } from '../utils/time';
 import Button from './ui/Button';
 import PlayerBadge from './PlayerBadge';
+import SilverAmount from './ui/SilverAmount';
 
 const breadcrumbMap: Record<string, string> = {
     arena: 'Арена',
@@ -274,7 +275,7 @@ export default function Header() {
             <div className="flex items-center justify-between gap-2 px-3 py-1 flex-wrap">
                 {user.role === 'player' && character && (
                     <span className="text-[var(--color-text-primary)] text-sm font-bold">
-                        Серебро: {character.money.toLocaleString()}
+                        Серебро: <SilverAmount amount={character.money} />
                     </span>
                 )}
                 {user.role === 'player' && (
