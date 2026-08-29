@@ -14,6 +14,7 @@ import Button from '../components/ui/Button';
 import GuildTag from '../components/GuildTag';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
+import DataState from '../components/ui/DataState';
 
 const LIMIT = 10;
 
@@ -231,24 +232,34 @@ export default function HistoryPage() {
             <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
                 {tabs.map(t=><Button key={t.key} variant={tab===t.key?'danger':'secondary'} size="md" onClick={()=>setTab(t.key)} className="whitespace-nowrap">{t.label}</Button>)}
             </div>
-            {loading?<p className="text-[var(--color-text-muted)]">Загрузка...</p>:
+            <DataState
+                isLoading={loading}
+                isEmpty={false}
+                loading={<p className="text-[var(--color-text-muted)]">Загрузка...</p>}
+            >
             <Card>
-                {paginatedData.length===0?<p className="text-[var(--color-text-muted)]">Нет записей</p>:
-                tab==='all'?paginatedData.map(entry=><div key={entry.id}>{renderEntry(entry)}</div>):
-                tab==='battles'?paginatedData.map((b:any)=><div key={b.id}>{renderBattleRow(b)}</div>):
-                tab==='pve'?paginatedData.map((b:any)=><div key={b.id}>{renderPveRow(b)}</div>):
-                tab==='jobs'?paginatedData.map((j:any)=><div key={j.id}>{renderJobRow(j)}</div>):
-                tab==='tournaments'?paginatedData.map((t:any)=><div key={t.id}>{renderTournamentRow(t)}</div>):
-                tab==='quests'?paginatedData.map((q:any)=><div key={q.id}>{renderQuestRow(q)}</div>):
-                tab==='messages'?paginatedData.map((m:any)=><div key={m.id}>{renderMessageRow(m)}</div>):
-                tab==='massacre'?paginatedData.map((entry:any)=><div key={entry.id}>{renderEntry(entry)}</div>):
-                null}
+                <DataState
+                    isLoading={false}
+                    isEmpty={paginatedData.length === 0}
+                    empty={<p className="text-[var(--color-text-muted)]">Нет записей</p>}
+                >
+                    {tab==='all'?paginatedData.map(entry=><div key={entry.id}>{renderEntry(entry)}</div>):
+                    tab==='battles'?paginatedData.map((b:any)=><div key={b.id}>{renderBattleRow(b)}</div>):
+                    tab==='pve'?paginatedData.map((b:any)=><div key={b.id}>{renderPveRow(b)}</div>):
+                    tab==='jobs'?paginatedData.map((j:any)=><div key={j.id}>{renderJobRow(j)}</div>):
+                    tab==='tournaments'?paginatedData.map((t:any)=><div key={t.id}>{renderTournamentRow(t)}</div>):
+                    tab==='quests'?paginatedData.map((q:any)=><div key={q.id}>{renderQuestRow(q)}</div>):
+                    tab==='messages'?paginatedData.map((m:any)=><div key={m.id}>{renderMessageRow(m)}</div>):
+                    tab==='massacre'?paginatedData.map((entry:any)=><div key={entry.id}>{renderEntry(entry)}</div>):
+                    null}
+                </DataState>
                 {totalPages>1&&<div className="flex justify-center gap-4 mt-4 items-center">
                     <Button size="md" disabled={page<=1} onClick={()=>setPage(page-1)}>← Назад</Button>
                     <span className="text-sm text-[var(--color-text-secondary)]">стр. {page} из {totalPages}</span>
                     <Button size="md" disabled={page>=totalPages} onClick={()=>setPage(page+1)}>Вперёд →</Button>
                 </div>}
-            </Card>}
+            </Card>
+            </DataState>
             {selectedBattle&&<Modal open={!!selectedBattle} onClose={()=>setSelectedBattle(null)}
                 title={`⚔ ${selectedBattle.attackerName||'Вы'} vs ${selectedBattle.defenderName||selectedBattle.mobName||'?'}`}
                 width="min(900px, calc(100vw - 2rem))" borderColor="var(--color-border-default)">
