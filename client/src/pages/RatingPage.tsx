@@ -9,6 +9,7 @@ import GuildTag from '../components/GuildTag';
 import Button from '../components/ui/Button';
 import Top3Podium from '../components/Top3Podium';
 import { RATING_FILTERS } from '../utils/ratingFilters';
+import DataState from '../components/ui/DataState';
 
 const LIMIT = 20;
 const SKIP_TOP = 3;
@@ -191,9 +192,11 @@ export default function RatingPage() {
             </div>
 
             <Card>
-                {players.length === 0 ? (
-                    <p className="text-[var(--color-text-muted)]">Нет игроков</p>
-                ) : (
+                <DataState
+                    isLoading={false}
+                    isEmpty={players.length === 0}
+                    empty={<p className="text-[var(--color-text-muted)]">Нет игроков</p>}
+                >
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="border-b border-[var(--color-border-default)]">
@@ -235,7 +238,7 @@ export default function RatingPage() {
                             })}
                         </tbody>
                     </table>
-                )}
+                </DataState>
 
                 {totalPages > 1 && (
                     <div className="flex justify-center gap-4 mt-4 items-center">
