@@ -7,6 +7,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { Icon } from '@iconify/react';
+import DataState from '../components/ui/DataState';
 
 const FACTIONS: Record<string, { icon: string; color: string; bgColor: string; name: string; desc: string; bonus: string }> = {
     bandit: { icon: 'game-icons:hood', color: 'text-red-300', bgColor: 'border-[#5a2828]', name: 'Бандиты', desc: 'Грабители и налётчики. Сильны в PvP против ремесленников.', bonus: '+10% к основным характеристикам против Ремесленников. Атаки ±4 уровня. +1% дополнительного награбленного серебра за каждые 100 побед в PvP. Кулдаун между атаками в PvP уменьшен в два раза.' },
@@ -74,12 +75,16 @@ export default function FactionPage() {
         if (changeTarget) handleChange(changeTarget);
     };
 
-    if (!data) return <div className="p-4 max-w-3xl mx-auto"><BackButton /><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
-
-    const currentFaction = data.current;
-    const canChoose = data.canChoose;
+    const currentFaction = data?.current;
+    const canChoose = data?.canChoose;
 
     return (
+        <DataState
+            isLoading={!data}
+            isEmpty={false}
+            loading={<div className="p-4 max-w-3xl mx-auto"><BackButton /><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>}
+        >
+          {data ? (
         <div className="p-4 max-w-3xl mx-auto">
             <BackButton />
             <h1 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -274,5 +279,7 @@ export default function FactionPage() {
                 </div>
             </Modal>
         </div>
+          ) : null}
+        </DataState>
     );
 }
