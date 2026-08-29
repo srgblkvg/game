@@ -8,6 +8,7 @@ import Card from '../components/ui/Card';
 import GuildTag from '../components/GuildTag';
 import Button from '../components/ui/Button';
 import Top3Podium from '../components/Top3Podium';
+import { RATING_FILTERS } from '../utils/ratingFilters';
 
 const LIMIT = 20;
 const SKIP_TOP = 3;
@@ -39,20 +40,6 @@ export default function RatingPage() {
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     }, [searchInput]);
 
-    // Звания для фильтра
-    const rankFilters = [
-        { label: 'Все звания', min: 0 },
-        { label: '👑 Смерть (2100+)', min: 2100 },
-        { label: '♦♦♦ Вечность (1900+)', min: 1900 },
-        { label: '♦♦ Бездна (1700+)', min: 1700 },
-        { label: '♦ Погибель (1500+)', min: 1500 },
-        { label: '▪▪▪ Кошмар (1300+)', min: 1300 },
-        { label: '▪▪ Кровь (1100+)', min: 1100 },
-        { label: '▪ Тень (900+)', min: 900 },
-        { label: '••• Шёпот (600+)', min: 600 },
-        { label: '•• Кость (300+)', min: 300 },
-        { label: '• Пепел (0+)', min: 0 },
-    ];
 
     const initialLoadDone = useRef(false);
 
@@ -197,7 +184,7 @@ export default function RatingPage() {
                     onChange={e => { setMinElo(parseInt(e.target.value)); setPage(1); }}
                     className="w-full px-3 py-1.5 rounded bg-[var(--color-bg-input)] border border-[var(--color-border-light)] text-sm"
                 >
-                    {rankFilters.map(r => (
+                    {RATING_FILTERS.map(r => (
                         <option key={r.min} value={r.min}>{r.label}</option>
                     ))}
                 </select>
