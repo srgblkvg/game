@@ -6,6 +6,7 @@ import Card from '../components/ui/Card';
 import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
 import { formatClockCountdown } from '../utils/clockCountdown';
+import DataState from '../components/ui/DataState';
 
 const STAT_CONFIG: Record<string, { label: string; icon: string; multiplier: number }> = {
     s: { label: 'Сила', icon: '💪', multiplier: 1.8 },
@@ -98,17 +99,18 @@ export default function TrainingPage() {
         setLoading(false);
     };
 
-    if (!loaded) {
-        return (
-            <div className="max-w-3xl mx-auto px-4 py-4">
-                <BackButton />
-                <PageHeader title="Лудус" icon={icon} bgImage={bgImage} />
-                <p className="text-sm text-[var(--color-text-muted)] text-center py-4">Загрузка...</p>
-            </div>
-        );
-    }
-
     return (
+        <DataState
+            isLoading={!loaded}
+            isEmpty={false}
+            loading={(
+                <div className="max-w-3xl mx-auto px-4 py-4">
+                    <BackButton />
+                    <PageHeader title="Лудус" icon={icon} bgImage={bgImage} />
+                    <p className="text-sm text-[var(--color-text-muted)] text-center py-4">Загрузка...</p>
+                </div>
+            )}
+        >
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <PageHeader title="Лудус" icon={icon} bgImage={bgImage} />
@@ -166,5 +168,6 @@ export default function TrainingPage() {
                 </div>
             )}
         </div>
+        </DataState>
     );
 }
