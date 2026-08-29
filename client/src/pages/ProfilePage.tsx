@@ -10,6 +10,7 @@ import Card from '../components/ui/Card';
 import { fmtSafeDate } from '../utils/date';
 import { formatMoney } from '../utils/money';
 import { getHeaders } from '../api/helpers';
+import DataState from '../components/ui/DataState';
 
 const StatItem = ({ icon, label, value }: { icon: string; label: string; value: number | string }) => (
     <p className="text-xs flex items-center gap-1.5">
@@ -60,9 +61,6 @@ export default function ProfilePage() {
             .catch(() => {});
     }, [userId]);
 
-    if (loading) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
-    if (!profile) return <div className="p-4 text-[var(--color-text-primary)]">Игрок не найден</div>;
-
     const handleWriteMessage = () => {
         window.dispatchEvent(new CustomEvent('openPrivateChat', {
             detail: { id: Number(userId), name: profile.username, shouldOpenPanel: true },
@@ -70,14 +68,20 @@ export default function ProfilePage() {
     };
 
     const jobTime = (() => {
-        const s = profile.totalJobSeconds || 0;
+        const s = profile?.totalJobSeconds || 0;
         const h = Math.floor(s / 3600);
         const m = Math.floor((s % 3600) / 60);
         return h > 0 ? `${h} ч ${m} мин` : `${m} мин`;
     })();
 
     return (
-        <div className="max-w-3xl mx-auto px-4 py-4">
+        <DataState
+            isLoading={loading}
+            isEmpty={!profile}
+            loading={<div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>}
+            empty={<div className="p-4 text-[var(--color-text-primary)]">Игрок не найден</div>}
+        >
+        {profile ? <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Профиль игрока</h2>
@@ -173,6 +177,7 @@ export default function ProfilePage() {
                     </StatSection>
                 </div>
             </div>
-        </div>
+        </div> : null}
+        </DataState>
     );
 }
