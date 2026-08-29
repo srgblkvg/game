@@ -10,6 +10,7 @@ import { getRarityColor } from '../utils/itemUtils';
 import { showNoMoney } from '../components/NoMoneyModal';
 import ItemStats from '../components/ItemStats';
 import Button from '../components/ui/Button';
+import DataState from '../components/ui/DataState';
 
 export default function ShopPage() {
   const [actionCard, setActionCard] = useState<any>(null);
@@ -95,11 +96,12 @@ export default function ShopPage() {
 
       {message && <p className="mb-3 text-[var(--color-accent-success)] text-sm">{message}</p>}
 
-      {loading ? (
-        <p className="text-[var(--color-text-muted)]">Загрузка...</p>
-      ) : offers.length === 0 ? (
-        <p className="text-[var(--color-text-muted)] text-center py-4">Нет предложений</p>
-      ) : (
+      <DataState
+        isLoading={loading}
+        isEmpty={offers.length === 0}
+        loading={<p className="text-[var(--color-text-muted)]">Загрузка...</p>}
+        empty={<p className="text-[var(--color-text-muted)] text-center py-4">Нет предложений</p>}
+      >
         <div className="grid gap-3 sm:gap-4 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]" data-tutorial="shop-buy-first">
           {offers.map((offer: any) => {
             const price = offer.price;
@@ -159,7 +161,7 @@ export default function ShopPage() {
             );
           })}
         </div>
-      )}
+      </DataState>
     </div>
   );
 }
