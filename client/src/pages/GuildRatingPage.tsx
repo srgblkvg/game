@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import DataState from '../components/ui/DataState';
 
 export default function GuildRatingPage() {
     const { user } = useAuth();
@@ -54,10 +55,12 @@ export default function GuildRatingPage() {
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
             <h1 className="text-xl font-bold mb-4"><Icon icon="game-icons:castle" width="22" height="22" className="inline mr-2" />Рейтинг гильдий</h1>
-            {guilds.length === 0 ? (
-                <p className="text-sm text-[var(--color-text-muted)]">Нет гильдий</p>
-            ) : (
-                guilds.map((g: any, i) => {
+            <DataState
+                isLoading={false}
+                isEmpty={guilds.length === 0}
+                empty={<p className="text-sm text-[var(--color-text-muted)]">Нет гильдий</p>}
+            >
+                {guilds.map((g: any, i) => {
                     const isMyGuild = myGuildId && g.id === myGuildId;
                     const rank = i + 1;
                     const isExpanded = expanded.has(g.id);
@@ -129,8 +132,8 @@ export default function GuildRatingPage() {
                         )}
                     </Card>
                     );
-                })
-            )}
+                })}
+            </DataState>
             {/* Модалка подтверждения войны */}
             {warTarget && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setWarTarget(null)}>
