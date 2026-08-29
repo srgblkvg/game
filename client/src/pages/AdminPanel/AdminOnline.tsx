@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useGlobalChat } from '../../contexts/ChatContext';
 import Card from '../../components/ui/Card';
 import { getHeaders } from '../../api/helpers';
+import DataState from '../../components/ui/DataState';
 
 type ActivityReport = {
     summary?: Record<string, string | number>;
@@ -59,7 +60,11 @@ export default function AdminOnline() {
 
             <Card className="p-3">
                 <h3 className="font-bold mb-2">Активные игроки</h3>
-                {online.length === 0 ? <p className="text-sm text-[var(--color-text-muted)]">Нет активных сессий</p> : (
+                <DataState
+                    isLoading={false}
+                    isEmpty={online.length === 0}
+                    empty={<p className="text-sm text-[var(--color-text-muted)]">Нет активных сессий</p>}
+                >
                     <div className="space-y-1">
                         {online.map((u, index) => (
                             <div key={`${u.user_id}-${index}`} className="flex items-center gap-2 text-sm">
@@ -69,12 +74,16 @@ export default function AdminOnline() {
                             </div>
                         ))}
                     </div>
-                )}
+                </DataState>
             </Card>
 
             <Card className="p-3">
                 <h3 className="font-bold mb-2">Страницы игры</h3>
-                {pages.length === 0 ? <p className="text-sm text-[var(--color-text-muted)]">Данные появятся после первых heartbeat.</p> : (
+                <DataState
+                    isLoading={false}
+                    isEmpty={pages.length === 0}
+                    empty={<p className="text-sm text-[var(--color-text-muted)]">Данные появятся после первых heartbeat.</p>}
+                >
                     <div className="space-y-1">
                         {pages.map(page => (
                             <div key={String(page.path)} className="flex justify-between gap-3 text-sm">
@@ -83,7 +92,7 @@ export default function AdminOnline() {
                             </div>
                         ))}
                     </div>
-                )}
+                </DataState>
             </Card>
         </div>
     );
