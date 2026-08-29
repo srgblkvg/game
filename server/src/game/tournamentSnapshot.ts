@@ -25,6 +25,7 @@ export interface TournamentSnapshot {
   version: 1;
   combatPower: number;
   divisionIndex?: number;
+  divisionBasis?: 'level';
   player: TournamentPlayerSnapshot;
   registeredAt: number;
   place?: number;

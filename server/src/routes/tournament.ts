@@ -3,18 +3,18 @@ import { db, pool } from '../db/index';
 import { runBattle } from '../game/battle';
 import { getBaseStats, enrichEquipment, addMoney, getCollectionBonus, buildPlayerStats, buildCombatPowerStats } from '../db/helpers';
 import { currentStats } from '../game/stats';
-import { createTournamentSnapshot, formatTournamentNormalizationLog, mergeTournamentResult, normalizeTournamentGroup, parseTournamentSnapshot, playerFromTournamentSnapshot } from '../game/tournamentSnapshot';
+import { createTournamentSnapshot, mergeTournamentResult, parseTournamentSnapshot, playerFromTournamentSnapshot } from '../game/tournamentSnapshot';
 import { calculateCombatPower } from '../game/combatPower';
-import { getRegistrationWindowForNewQueue } from '../game/tournamentCycle';
+import { getRegistrationWindowForNewQueue, OFFICIAL_CYCLE_INTERVAL } from '../game/tournamentCycle';
 import { calculateTournamentRewards, getThirdPlacePair } from '../game/tournamentRewards';
 import { presentCompletedTournamentTop3 } from '../game/tournamentPresentation';
 import { isTournamentRegistrationOpen } from '../game/tournamentRegistration';
-import { applyDivisionChampionship, assignTournamentDivision, getTournamentDivision, getTournamentDivisionByIndex, TOURNAMENT_DIVISIONS } from '../game/tournamentDivision';
+import { getEligibleTournamentDivisions, getTournamentDivisionByIndex, getTournamentDivisionByKey, isLevelEligibleForTournamentDivision, TOURNAMENT_DIVISIONS } from '../game/tournamentDivision';
 import { allocateDivisionPrizePools, splitParticipantsByDivision } from '../game/tournamentDivisionQueue';
 import { initTournamentSchema, isTournamentSchemaReady } from '../game/tournamentSchema';
 import { runTournamentGroupStage, type GroupFightMetadata } from '../game/tournamentGroupRunner';
 import { createFixedPlayoffPairs, createRoundRobinMatches, drawTournamentGroups, getGroupQualificationState } from '../game/tournamentGroupStage';
-import { allocateMergedPrizePools, getPowerDivision, getPowerDivisionByNumber, getPowerPrizeWeight, mergeAllTournamentQueues, selectReadyQueueWindow } from '../game/tournamentQueue';
+import { allocateMergedPrizePools, mergeAllTournamentQueues, selectReadyQueueWindow } from '../game/tournamentQueue';
 import { broadcast, pushNotification } from '../events';
 import { getDrinkBonuses } from '../game/drinks';
 import { checkAchievement } from './achievements';
@@ -33,9 +33,9 @@ router.use(async (_req, res, next) => {
 const MAX_PLAYERS = 8;
 const REGISTRATION_WINDOW = 60 * 60; // 1 час
 const OFFICIAL_MERGE_WAIT = 5 * 60; // до 5 минут ждём соседние группы
-const OFFICIAL_INTERVAL = 7 * 60 * 60; // следующий общий набор через 7 часов после завершения
+const OFFICIAL_INTERVAL = OFFICIAL_CYCLE_INTERVAL; // следующий общий набор через 3 часа после завершения
 
-const divisions: Array<{ name: string; label: string; tier: number; minPower: number; maxPower: number; icon: string }> = [];
+const divisions = TOURNAMENT_DIVISIONS.map(division => ({ ...division, name: division.key }));
 const TIERS_TOTAL = 55; // 1+2+3+4+5+6+7+8+9+10
 
 function timestampMs(value: any): number {
@@ -325,10 +325,6 @@ export async function buildTournamentSnapshotForUser(userId: number) {
         guildTalents,
         antiStats,
     } as any, calculateCombatPower(combatPowerStats, undefined, fullUser.level));
-    snapshot.divisionIndex = assignTournamentDivision(
-        fullUser.tournamentDivision ?? fullUser.tournament_division,
-        snapshot.combatPower,
-    );
     return snapshot;
 }
 
@@ -350,12 +346,6 @@ async function loadTournamentPlayerTx(client: any, tournamentId: number, userId:
     return snapshot ? { ...playerFromTournamentSnapshot(snapshot), _tournamentSnapshot: snapshot } : loadPlayerForBattleTx(client, userId);
 }
 
-function tournamentNormalizationStep(first: any, second: any) {
-    const firstSnapshot = first?._tournamentSnapshot;
-    const secondSnapshot = second?._tournamentSnapshot;
-    if (!firstSnapshot || !secondSnapshot || (!firstSnapshot.normalization && !secondSnapshot.normalization)) return null;
-    return { type: 'info', message: formatTournamentNormalizationLog(firstSnapshot, secondSnapshot) };
-}
 
 /**
  * Разрешить все незавершённые матчи текущего раунда.
@@ -387,8 +377,6 @@ export async function resolveCurrentRound(tournamentId: number): Promise<number>
         const result = runBattle(p1, p2);
         // В турнирах серебро не воруем — убираем money-шаги из лога
         const tourSteps = result.steps.filter((s: any) => s.type !== 'money');
-        const normalizationStep = tournamentNormalizationStep(p1, p2);
-        if (normalizationStep) tourSteps.unshift(normalizationStep as any);
         await db.run('UPDATE tournament_matches SET winnerId = ?, log = ? WHERE id = ?', [result.winnerId, JSON.stringify(tourSteps), match.id]);
     }
 
@@ -559,32 +547,6 @@ async function finishTournamentTx(client: any, tournamentId: number) {
         await saveTournamentResultTx(client, tournamentId, reward.userId, reward.place, reward.prize);
     }
     await client.query('UPDATE users SET tournamentwins = tournamentwins + 1 WHERE id = $1', [winnerId]);
-    if (t.type === 'official') {
-        const divisionProgressRow = (await client.query(
-            `SELECT tournament_division, tournament_division_wins
-             FROM users WHERE id = $1 FOR UPDATE`,
-            [winnerId]
-        )).rows[0];
-        const currentDivision = assignTournamentDivision(
-            divisionProgressRow?.tournament_division,
-            parseTournamentSnapshot(
-                (await client.query(
-                    'SELECT snapshotstats FROM tournament_participants WHERE tournamentid = $1 AND userid = $2',
-                    [tournamentId, winnerId]
-                )).rows[0]?.snapshotstats
-            )?.combatPower || 1,
-        );
-        const divisionProgress = applyDivisionChampionship({
-            division: currentDivision,
-            championships: Number(divisionProgressRow?.tournament_division_wins || 0),
-        });
-        await client.query(
-            `UPDATE users
-             SET tournament_division = $1, tournament_division_wins = $2
-             WHERE id = $3`,
-            [divisionProgress.division, divisionProgress.championships, winnerId]
-        );
-    }
     checkAchievement(winnerId, 'tournament').catch(() => {});
 
     await client.query('UPDATE tournaments SET status = $1, completedat = $2 WHERE id = $3',
@@ -653,14 +615,11 @@ export async function reconcileOfficialQueueParticipantsTx(client: any): Promise
     )).rows;
     const seenUsers = new Set<number>();
     for (const row of rows) {
-        if (row.division !== 'official-cycle') {
-            throw new Error(`Legacy official queue ${row.tournamentid} must be migrated before scheduler start`);
-        }
         const userId = Number(row.userid);
         if (seenUsers.has(userId)) throw new Error(`User ${userId} registered in multiple official queues`);
         seenUsers.add(userId);
         const snapshot = parseTournamentSnapshot(row.snapshotstats);
-        if (!snapshot || snapshot.divisionIndex == null) {
+        if (!snapshot) {
             throw new Error(`Invalid tournament snapshot for user ${userId}`);
         }
     }
@@ -671,10 +630,7 @@ export async function rebalanceOfficialQueuePoolsTx(client: any): Promise<void> 
         if (!lock.rows[0]?.locked) return;
         const now = Math.floor(Date.now() / 1000);
         const queues = (await client.query(
-            `SELECT t.id, t.division, COALESCE(t.basepool, 0) basepool,
-                    (SELECT AVG((tp.snapshotstats::jsonb->>'combatPower')::numeric)
-                     FROM tournament_participants tp
-                     WHERE tp.tournamentid = t.id AND tp.snapshotstats LIKE '%"combatPower"%') avgpower
+            `SELECT t.id, t.division, COALESCE(t.basepool, 0) basepool
              FROM tournaments t
              WHERE t.type = 'official' AND t.status = 'registration'
                AND t.registrationstart <= $1 AND t.registrationend > $1
@@ -696,9 +652,8 @@ export async function rebalanceOfficialQueuePoolsTx(client: any): Promise<void> 
         }
 
         const weights = queues.map((queue: any) => {
-            const technicalNumber = Number(String(queue.division || '').match(/-(\d+)$/)?.[1]) || 1;
-            const fallback = getPowerDivisionByNumber(technicalNumber);
-            return getPowerPrizeWeight(Number(queue.avgpower) || Math.round((fallback.minPower + fallback.maxPower) / 2));
+            const division = getTournamentDivisionByKey(String(queue.division || ''));
+            return division?.tier || 1;
         });
         const totalWeight = weights.reduce((sum: number, weight: number) => sum + weight, 0) || 1;
         let allocated = 0;
@@ -764,8 +719,12 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<{ creat
             (byQueue.get(Number(row.id)) || []).map(participant => ({
                 userId: participant.userId,
                 combatPower: participant.combatPower,
-                division: parseTournamentSnapshot(participant.snapshotStats)?.divisionIndex
-                    ?? getTournamentDivision(participant.combatPower).index,
+                division: (() => {
+                    const snapshot = parseTournamentSnapshot(participant.snapshotStats);
+                    if (snapshot?.divisionBasis === 'level' && snapshot.divisionIndex != null) return snapshot.divisionIndex;
+                    const eligible = getEligibleTournamentDivisions(snapshot?.player.level || 1);
+                    return eligible[eligible.length - 1]?.index ?? 0;
+                })(),
             }))
         );
         const split = splitParticipantsByDivision(allParticipants);
@@ -773,10 +732,9 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<{ creat
         const allocation = allocateDivisionPrizePools(
             totalReserve,
             split,
-            participant => getPowerPrizeWeight(participant.combatPower),
+            participant => getTournamentDivisionByIndex(participant.division).tier,
         );
         for (const group of split.divisions) {
-            const powers = group.participants.map(p => p.combatPower);
             const division = getTournamentDivisionByIndex(group.division);
             const prizePool = allocation.divisionPools.find(pool => pool.division === group.division)?.prizePool || 0;
             const created = await client.query(
@@ -796,14 +754,10 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<{ creat
                 if (!snapshot) throw new Error(`Snapshot not found for user ${participant.userId}`);
                 return { participant, snapshot };
             });
-            const needsNormalization = Math.max(...powers) > 0 && (Math.max(...powers) - Math.min(...powers)) / Math.max(...powers) > 0.10;
-            const validSnapshots = groupSources.map(source => source.snapshot).filter((snapshot): snapshot is NonNullable<typeof snapshot> => Boolean(snapshot));
-            const normalizedSnapshots = needsNormalization ? normalizeTournamentGroup(validSnapshots) : validSnapshots;
-            const snapshotByUser = new Map(normalizedSnapshots.map(snapshot => [snapshot.player.id, snapshot]));
             for (const { participant, snapshot } of groupSources) {
                 await client.query(
                     'INSERT INTO tournament_participants (tournamentid, userid, snapshotstats) VALUES ($1, $2, $3)',
-                    [tournamentId, participant.userId, JSON.stringify(snapshotByUser.get(participant.userId) || snapshot)]
+                    [tournamentId, participant.userId, JSON.stringify(snapshot)]
                 );
             }
         }
@@ -904,8 +858,6 @@ async function runGroupFightTx(
     if (!player1 || !player2) throw new Error(`Не удалось загрузить бойцов ${player1Id}/${player2Id}`);
     const result = runBattle(player1, player2);
     const steps = result.steps.filter((step: any) => step.type !== 'money');
-    const normalizationStep = tournamentNormalizationStep(player1, player2);
-    if (normalizationStep) steps.unshift(normalizationStep as any);
     await client.query(
         `INSERT INTO tournament_matches
          (tournamentid, round, player1id, player2id, winnerid, log, stage, group_name, series_index)
@@ -1102,8 +1054,6 @@ export async function advanceAllRoundsTx(client: any, tournamentId: number) {
 
             const result = runBattle(p1, p2);
             const tourSteps = result.steps.filter((s: any) => s.type !== 'money');
-            const normalizationStep = tournamentNormalizationStep(p1, p2);
-            if (normalizationStep) tourSteps.unshift(normalizationStep as any);
             await client.query(
                 'UPDATE tournament_matches SET winnerid = $1, log = $2 WHERE id = $3',
                 [result.winnerId, JSON.stringify(tourSteps), match.id]
@@ -1296,24 +1246,13 @@ router.get('/tournament', async (req, res) => {
     const userId = req.userId;
     const user = await db.one('SELECT * FROM users WHERE id = ?', [userId]) as any;
     if (!user) return res.status(404).json({ error: 'User not found' });
-    let userCombatPower: number | undefined;
-    if (req.query.includePower === '1') {
-        userCombatPower = calculateCombatPower(await buildCombatPowerStats(user), undefined, user.level);
-    }
-    const divisionPower = userCombatPower
-        ?? calculateCombatPower(await buildCombatPowerStats(user), undefined, user.level);
-    const userDivisionIndex = assignTournamentDivision(
-        user.tournamentDivision ?? user.tournament_division,
-        divisionPower,
-    );
-    const userDivisionDefinition = getTournamentDivisionByIndex(userDivisionIndex);
-    const userDivision = {
-        index: userDivisionIndex,
-        key: userDivisionDefinition.key,
-        label: userDivisionDefinition.label,
-        championships: Number(user.tournamentDivisionWins ?? user.tournament_division_wins ?? 0),
-        championshipsRequired: 3,
-    };
+    const eligibleDivisions = getEligibleTournamentDivisions(user.level).map(division => ({
+        key: division.key,
+        label: division.label,
+        icon: division.icon,
+        minLevel: division.minLevel,
+        maxLevel: division.maxLevel,
+    }));
 
     const now = Math.floor(Date.now() / 1000);
     const tab = (req.query.tab as string) || 'active';
@@ -1371,7 +1310,7 @@ router.get('/tournament', async (req, res) => {
             };
         }));
 
-        return res.json({ tournaments: result, total, page, totalPages: Math.ceil(total / limit), userLevel: user.level, userDivision, tab: 'completed' });
+        return res.json({ tournaments: result, total, page, totalPages: Math.ceil(total / limit), userLevel: user.level, eligibleDivisions, tab: 'completed' });
     }
 
     // Создание и продвижение выполняет scheduler, а GET только читает данные.
@@ -1431,30 +1370,15 @@ router.get('/tournament', async (req, res) => {
         const myReg = participants.find((p: any) => p.userId === userId);
         const matches = matchesByTournament.get(Number(t.id)) || [];
 
-        const officialPowers = participants
-            .map((participant: any) => parseTournamentSnapshot(participant.snapshotStats)?.combatPower)
-            .filter((power: any): power is number => Number.isFinite(Number(power)))
-            .map(Number);
-        const normalized = participants.some((participant: any) => Boolean(parseTournamentSnapshot(participant.snapshotStats)?.normalization));
-        const technicalDivisionNumber = Number(String(t.division || '').match(/-(\d+)$/)?.[1])
-            || Number(t.name?.match(/\d+$/)?.[0]) || 1;
-        const powerDivision = officialPowers.length > 0
-            ? getPowerDivision(Math.round(officialPowers.reduce((sum, power) => sum + power, 0) / officialPowers.length))
-            : getPowerDivisionByNumber(technicalDivisionNumber);
         const dynamicDivision = t.type === 'official' && t.division !== 'official-cycle'
             ? TOURNAMENT_DIVISIONS.find(division => division.key === t.division)
             : null;
-        const visibleMinPower = officialPowers.length > 0 ? Math.min(...officialPowers) : powerDivision.minPower;
-        const visibleMaxPower = officialPowers.length > 0 ? Math.max(...officialPowers) : powerDivision.maxPower;
         return {
             ...t,
             name: t.type === 'official' ? (dynamicDivision?.label || 'Общий набор') : t.name,
             divisionLabel: t.type === 'official' ? (dynamicDivision?.label || 'Общий набор') : t.division,
-            minPower: t.type === 'official' ? visibleMinPower : undefined,
-            maxPower: t.type === 'official' ? visibleMaxPower : undefined,
-            normalized,
-            minLevel: t.type === 'official' ? undefined : t.minLevel,
-            maxLevel: t.type === 'official' ? undefined : t.maxLevel,
+            minLevel: t.type === 'official' ? dynamicDivision?.minLevel : t.minLevel,
+            maxLevel: t.type === 'official' ? dynamicDivision?.maxLevel : t.maxLevel,
             participantCount: participants.length,
             maxPlayers: t.maxPlayers || MAX_PLAYERS,
             participants: participants.map((p) => ({
@@ -1472,18 +1396,12 @@ router.get('/tournament', async (req, res) => {
         };
     });
 
-    // Сортировка: своя запись, свой диапазон БМ, затем official по возрастанию БМ.
-    const userDynamicDivision = userDivision.key;
+    // Сортировка: своя запись, доступные по уровню, затем по времени старта.
     result.sort((a: any, b: any) => {
         if (Boolean(a.myRegistration) !== Boolean(b.myRegistration)) return a.myRegistration ? -1 : 1;
         if (a.type === 'official' && b.type !== 'official') return -1;
         if (a.type !== 'official' && b.type === 'official') return 1;
-        if (a.type === 'official' && b.type === 'official') {
-            const aOwnRange = a.division === userDynamicDivision || (a.division === 'official-cycle' && Boolean(a.myRegistration));
-            const bOwnRange = b.division === userDynamicDivision || (b.division === 'official-cycle' && Boolean(b.myRegistration));
-            if (aOwnRange !== bOwnRange) return aOwnRange ? -1 : 1;
-            return (a.minPower || 0) - (b.minPower || 0) || a.registrationEnd - b.registrationEnd;
-        }
+        if (a.type === 'official' && b.type === 'official') return a.registrationEnd - b.registrationEnd;
         const aCanJoin = user.level >= (a.minLevel || 1) && user.level <= (a.maxLevel || 999);
         const bCanJoin = user.level >= (b.minLevel || 1) && user.level <= (b.maxLevel || 999);
         if (aCanJoin && !bCanJoin) return -1;
@@ -1491,7 +1409,7 @@ router.get('/tournament', async (req, res) => {
         return a.registrationEnd - b.registrationEnd;
     });
 
-    // Предстоящие официальные турниры открываются общим набором раз в 8 часов.
+    // Предстоящие официальные турниры открываются общим набором через 3 часа.
     const upcomingOfficial: any[] = [];
     const activeOfficialRows = typeFilter === 'custom' ? await db.query(
         "SELECT division FROM tournaments WHERE status IN ('registration', 'in_progress') AND type = 'official'",
@@ -1518,8 +1436,8 @@ router.get('/tournament', async (req, res) => {
                     division: div.name,
                     label: div.label,
                     icon: div.icon,
-                    minPower: div.minPower,
-                    maxPower: div.maxPower,
+                    minLevel: div.minLevel,
+                    maxLevel: div.maxLevel,
                     registrationOpensAt: Math.floor(registrationOpensAt / 1000),
                 });
             }
@@ -1527,7 +1445,7 @@ router.get('/tournament', async (req, res) => {
     }
 
     const nextOfficialRegistrationAt = await getNextOfficialRegistrationAt();
-    res.json({ tournaments: result, userLevel: user.level, userCombatPower, userDivision, tab: 'active', typeFilter,
+    res.json({ tournaments: result, userLevel: user.level, eligibleDivisions, tab: 'active', typeFilter,
         upcomingOfficial, nextOfficialRegistrationAt
     });
 });
@@ -1545,6 +1463,18 @@ router.post('/tournament/register', async (req, res) => {
 
     let tournament: any;
     if (division) {
+        const eligibleDivisions = getEligibleTournamentDivisions(user.level);
+        const requestedDivision = division === 'official'
+            ? eligibleDivisions[eligibleDivisions.length - 1]
+            : getTournamentDivisionByKey(String(division));
+        if (!requestedDivision) return res.status(400).json({ error: 'Неизвестный дивизион' });
+        if (!isLevelEligibleForTournamentDivision(user.level, requestedDivision.key)) {
+            return res.status(400).json({
+                error: `Ваш уровень не подходит для дивизиона «${requestedDivision.label}» (${requestedDivision.minLevel}–${requestedDivision.maxLevel})`,
+            });
+        }
+        snapshot.divisionIndex = requestedDivision.index;
+        snapshot.divisionBasis = 'level';
         const existingOfficial = await db.one(
             `SELECT tp.id FROM tournament_participants tp
              JOIN tournaments t ON t.id = tp.tournamentId
@@ -1673,20 +1603,10 @@ router.post('/tournament/register', async (req, res) => {
             'INSERT INTO tournament_participants (tournamentid, userid, snapshotstats) VALUES ($1, $2, $3)',
             [tournament.id, userId, JSON.stringify(snapshot)]
         );
-        if (lockedTournament.type === 'official') {
-            await client.query(
-                `UPDATE users
-                 SET tournament_division = COALESCE(tournament_division, $1),
-                     tournamentcount = tournamentcount + 1
-                 WHERE id = $2`,
-                [snapshot.divisionIndex, userId]
-            );
-        } else {
-            await client.query(
-                'UPDATE users SET tournamentcount = tournamentcount + 1 WHERE id = $1',
-                [userId]
-            );
-        }
+        await client.query(
+            'UPDATE users SET tournamentcount = tournamentcount + 1 WHERE id = $1',
+            [userId]
+        );
             return { count: currentCount + 1, maxPlayers };
         });
     } catch (error: any) {
@@ -1713,7 +1633,8 @@ router.post('/tournament/register', async (req, res) => {
         tournamentId: tournament.id,
         division: assignedDivision.key,
         divisionLabel: assignedDivision.label,
-        combatPower: snapshot.combatPower,
+        minLevel: assignedDivision.minLevel,
+        maxLevel: assignedDivision.maxLevel,
     });
 });
 

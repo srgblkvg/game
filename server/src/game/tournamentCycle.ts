@@ -1,5 +1,5 @@
-// Семь часов между завершением цикла и следующим набором.
-export const OFFICIAL_CYCLE_INTERVAL = 7 * 60 * 60;
+// Три часа между завершением цикла и следующим набором.
+export const OFFICIAL_CYCLE_INTERVAL = 3 * 60 * 60;
 // Один час на сбор участников общего официального турнира.
 export const OFFICIAL_REGISTRATION_DURATION = 60 * 60;
 

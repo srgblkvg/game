@@ -35,7 +35,6 @@ const DIVISION_ICONS: Record<string, string> = {
 
 
 function canJoin(t: TournamentInfo, userLevel: number): boolean {
-    if (t.type === 'official') return true;
     return userLevel >= (t.minLevel || 1) && userLevel <= (t.maxLevel || 999);
 }
 

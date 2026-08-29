@@ -9,7 +9,7 @@ import { useGame } from '../contexts/GameContext';
 import { fetchCharacter } from '../api/character';
 import Button from '../components/ui/Button';
 import { formatMoney } from '../utils/money';
-import { formatCombatPower, formatPowerRange } from '../utils/combatPower';
+
 import { inputClass } from '../utils/formStyles';
 import GuildTag from "../components/GuildTag";
 import BracketTree from "../components/BracketTree";
@@ -86,9 +86,9 @@ export default function TournamentPage() {
             if (tab === 'completed') {
                 url = `${BASE_URL}/tournament?tab=completed&page=${completedPage}`;
             } else if (tab === 'all') {
-                url = `${BASE_URL}/tournament?tab=active&includePower=1`;
+                url = `${BASE_URL}/tournament?tab=active`;
             } else {
-                url = `${BASE_URL}/tournament?tab=active&type=${tab}&includePower=1`;
+                url = `${BASE_URL}/tournament?tab=active&type=${tab}`;
             }
             const res = await fetch(url, { headers: getHeaders() });
             setData(await res.json());
@@ -144,7 +144,7 @@ export default function TournamentPage() {
 
     const renderActiveCard = (t: any) => {
         const myReg = t.myRegistration;
-        const joinable = t.type === 'official' || (data.userLevel >= (t.minLevel || 1) && data.userLevel <= (t.maxLevel || 999));
+        const joinable = data.userLevel >= (t.minLevel || 1) && data.userLevel <= (t.maxLevel || 999);
 
         const allMatches = t.matches || [];
         const groupMatches = allMatches.filter((m: any) => m.stage === 'group');
@@ -191,9 +191,7 @@ export default function TournamentPage() {
                     <p>{t.type === 'official' ? 'Гарантированный призовой фонд' : 'Призовой фонд'}: {formatMoney(t.prizePool)}</p>
                     {t.entryFee > 0 && <p>Стоимость входа: {formatMoney(t.entryFee)}</p>}
                     <p>Участников: {t.participantCount}{t.type === 'custom' ? `/${t.maxPlayers || 8}` : ''}</p>
-                    {t.type === 'official' && t.minPower && t.maxPower && <p>Боевая мощь: {formatPowerRange(t.minPower, t.maxPower)}</p>}
-                    {t.normalized && <p className="text-[var(--color-accent-warning)]">⚖ С подтягиванием силы слабых участников</p>}
-                    {t.type === 'custom' && t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}
+                    {t.minLevel && t.maxLevel && <p>Уровни: {t.minLevel}–{t.maxLevel}</p>}
                     {t.participants.slice(0, 5).map((p: any) => (
                         <span key={p.id} className="mr-2">{p.username}{p.snapshotStats?.place === 1 ? ' 🏆' : p.snapshotStats?.place === 2 ? ' 2-е' : p.snapshotStats?.place === 3 ? ' 3-е' : ''} <GuildTag guildName={p.guildName} guildId={p.guildId} /></span>
                     ))}
@@ -307,14 +305,12 @@ export default function TournamentPage() {
                             <h4 className="font-bold text-[var(--color-text-primary)]">⚔️ Как проходит официальный турнир</h4>
                             <p>• При записи сохраняются ваша боевая мощь, экипировка, напиток, коллекция, бонусы гильдии и таланты.</p>
                             <p>• Смена экипировки, талантов или гильдии после записи не изменит вашу силу в этом турнире.</p>
-                            <p>• Регистрация длится 15 минут, после неё система до 5 минут формирует сетки.</p>
-                            <p>• После регистрации игроки разделяются по сохранённым динамическим дивизионам.</p>
-                            <p>• Боевая мощь учитывает прокачку характеристик, экипировку и коллекцию — без напитков и бонусов гильдии.</p>
-                            <p>• Внутри дивизиона слабым участникам временно повышаются их собственные характеристики до разницы 5–10% от лидера.</p>
-                            <p>• Соотношение силы, ловкости, защиты и мастерства каждого игрока сохраняется.</p>
-                            <p>• Реальные характеристики не меняются, подтверждение не требуется, а пояснение сохраняется в журнале боя.</p>
+                            <p>• Регистрация длится 1 час, после неё система до 5 минут формирует сетки.</p>
+                            <p>• Дивизионы определяются только по уровню: 1–5, 3–7, 5–9 и далее с шагом два уровня.</p>
+                            <p>• Если игрок подходит нескольким диапазонам, он сам выбирает дивизион при записи.</p>
+                            <p>• Боевая мощь не влияет на выбор дивизиона и не используется для смешивания участников.</p>
                             <p>• Если в дивизионе записался один игрок, турнир не запускается, а его доля фонда возвращается в казну.</p>
-                            <p>• За три чемпионства игрок переходит на один дивизион выше, а счётчик чемпионств сбрасывается.</p>
+                            <p>• Следующий сбор открывается через 3 часа после завершения текущего цикла.</p>
                         </div>
                         <div>
                             <h4 className="font-bold text-[var(--color-text-primary)]">🏆 Бои и награды</h4>
@@ -340,12 +336,6 @@ export default function TournamentPage() {
                 <Button variant={tab === 'completed' ? 'primary' : 'secondary'} size="md" onClick={() => { setTab('completed'); setCompletedPage(1); }}>Завершённые</Button>
             </div>
 
-            {data.userDivision && (
-                <p className="text-xs text-[var(--color-text-secondary)] mb-3">
-                    Дивизион: <span className="font-bold text-[var(--color-text-primary)]">{data.userDivision.label}</span>
-                    {' · '}Чемпионства: {data.userDivision.championships}/{data.userDivision.championshipsRequired}
-                </p>
-            )}
 
             {message && <p className="text-sm text-[var(--color-accent-success)] mb-3">{message}</p>}
             {error && <p className="text-sm text-[var(--color-accent-danger)] mb-3">{error}</p>}
@@ -428,12 +418,14 @@ export default function TournamentPage() {
                 && !upcomingOfficial.some((u: any) => u.registrationOpensAt > nowSec) && (
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm">Турнир</h3>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                        Ваша боевая мощь: {formatCombatPower(data.userCombatPower)}. Учитываются прокачка, экипировка и коллекция; слабые участники подтягиваются до разницы 5–10%.
-                    </p>
-                    <Button variant="danger" size="md" className="mt-3" onClick={() => handleRegister(undefined, 'official')}>
-                        Записаться
-                    </Button>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">Выберите подходящий дивизион по уровню:</p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                        {(data.eligibleDivisions || []).map((division: any) => (
+                            <Button key={division.key} variant="danger" size="md" onClick={() => handleRegister(undefined, division.key)}>
+                                {division.label} ({division.minLevel}–{division.maxLevel})
+                            </Button>
+                        ))}
+                    </div>
                 </Card>
             )}
             {(tab === 'all' || tab === 'official' || tab === 'custom') && data.tournaments.map(renderActiveCard)}

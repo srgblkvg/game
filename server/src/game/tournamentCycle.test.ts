@@ -9,11 +9,11 @@ import {
   getRegistrationWindowForNewQueue,
 } from './tournamentCycle';
 
-test('после завершения общего набора регистрация закрыта ровно на 7 часов', () => {
+test('после завершения общего набора регистрация закрыта ровно на 3 часа', () => {
   const completedAt = 1_000_000;
   const before = getOfficialCycleState({ now: completedAt + OFFICIAL_CYCLE_INTERVAL - 1, lastCompletedAt: completedAt });
   assert.equal(before.registrationOpen, false);
-  assert.equal(before.registrationOpensAt, completedAt + 7 * 60 * 60);
+  assert.equal(before.registrationOpensAt, completedAt + 3 * 60 * 60);
 
   const atOpening = getOfficialCycleState({ now: completedAt + OFFICIAL_CYCLE_INTERVAL, lastCompletedAt: completedAt });
   assert.equal(atOpening.registrationOpen, true);

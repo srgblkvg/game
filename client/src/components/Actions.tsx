@@ -371,13 +371,15 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                     <button
                                                         onClick={async (e) => {
                                                             e.stopPropagation();
+                                                            if (tournamentInfo.type === 'official') {
+                                                                navigate('/tournament');
+                                                                return;
+                                                            }
                                                             try {
                                                                 const res = await fetch('/api/tournament/register', {
                                                                     method: 'POST',
                                                                     headers: getHeaders(),
-                                                                    body: JSON.stringify(tournamentInfo.type === 'official'
-                                                                        ? { division: 'official' }
-                                                                        : { tournamentId: tournamentInfo.id }),
+                                                                    body: JSON.stringify({ tournamentId: tournamentInfo.id }),
                                                                 });
                                                                 const d = await res.json();
                                                                 if (d.success) {
@@ -398,7 +400,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                                             } catch { setRegisterMsg?.('Ошибка'); }
                                                         }}
                                                         className="text-[var(--color-accent-info)] underline cursor-pointer hover:text-[var(--color-accent-warning)]"
-                                                    >Записаться</button>
+                                                    >{tournamentInfo.type === 'official' ? 'Выбрать дивизион' : 'Записаться'}</button>
                                                 )
                                             ) : null}
                                             <span className="text-[var(--color-text-muted)] ml-1">
@@ -415,25 +417,10 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <button
                                             onClick={async (e) => {
                                                 e.stopPropagation();
-                                                try {
-                                                    const res = await fetch('/api/tournament/register', {
-                                                        method: 'POST', headers: getHeaders(), body: JSON.stringify({ division: 'official' }),
-                                                    });
-                                                    const d = await res.json();
-                                                    if (d.success) {
-                                                        setMyRegistration?.({ tournamentId: d.tournamentId });
-                                                    } else if (d.registrationOpensAt) {
-                                                        const now = Math.floor(Date.now() / 1000);
-                                                        setRegisterMsg?.('');
-                                                        setNextTournamentSec(Math.max(0, Number(d.registrationOpensAt) - now));
-                                                        setNextTournamentLabel('официальный турнир');
-                                                    } else {
-                                                        setRegisterMsg?.(d.error || 'Ошибка');
-                                                    }
-                                                } catch { setRegisterMsg?.('Ошибка'); }
+                                                navigate('/tournament');
                                             }}
                                             className="mt-1 text-xs text-[var(--color-accent-info)] underline cursor-pointer hover:text-[var(--color-accent-warning)]"
-                                        >Записаться в турнир</button>
+                                        >Выбрать дивизион</button>
                                     )}
                                     {registerMsg && <p className="text-xs text-[var(--color-accent-success)] mt-0.5">{registerMsg}</p>}
                                 </div>

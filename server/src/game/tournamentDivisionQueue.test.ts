@@ -5,7 +5,7 @@ import { allocateDivisionPrizePools, splitParticipantsByDivision } from './tourn
 
 const participant = (userId: number, division: number, combatPower: number) => ({ userId, division, combatPower });
 
-test('общая очередь разделяется строго по сохранённому динамическому дивизиону', () => {
+test('общая очередь разделяется строго по выбранному level-дивизиону', () => {
   const result = splitParticipantsByDivision([
     participant(1, 0, 90),
     participant(2, 0, 5000),
@@ -26,7 +26,7 @@ test('дивизион с числом участников больше вос�
   assert.equal(result.divisions[0]!.participants.length, 17);
 });
 
-test('одиночный дивизион с чрезмерным разрывом возвращается как несобранный', () => {
+test('одиночный level-дивизион возвращается как несобранный независимо от БМ', () => {
   const result = splitParticipantsByDivision([
     participant(1, 0, 50),
     participant(2, 0, 60),
@@ -37,16 +37,16 @@ test('одиночный дивизион с чрезмерным разрыво
   assert.deepEqual(result.singletons.map(entry => entry.userId), [3]);
 });
 
-test('совместимые одиночные дивизионы объединяются', () => {
+test('одиночные level-дивизионы не объединяются по близкой БМ', () => {
   const result = splitParticipantsByDivision([
     participant(1, 0, 100),
     participant(2, 1, 114),
   ]);
-  assert.deepEqual(result.divisions.map(group => group.participants.map(entry => entry.userId)), [[1, 2]]);
-  assert.deepEqual(result.singletons, []);
+  assert.deepEqual(result.divisions, []);
+  assert.deepEqual(result.singletons.map(entry => entry.userId), [1, 2]);
 });
 
-test('несколько одиночных дивизионов объединяются, чтобы зарегистрированные игроки не пропадали', () => {
+test('несколько одиночных level-дивизионов остаются раздельными', () => {
   const result = splitParticipantsByDivision([
     participant(1, 0, 50),
     participant(2, 0, 60),
@@ -55,9 +55,8 @@ test('несколько одиночных дивизионов объедин�
     participant(5, 3, 120),
     participant(6, 4, 130),
   ]);
-  const ids = result.divisions.flatMap(group => group.participants.map(entry => entry.userId));
-  assert.deepEqual(ids.sort((a, b) => a - b), [1, 2, 3, 4, 5, 6]);
-  assert.deepEqual(result.singletons, []);
+  assert.deepEqual(result.divisions.flatMap(group => group.participants.map(entry => entry.userId)), [1, 2]);
+  assert.deepEqual(result.singletons.map(entry => entry.userId), [3, 4, 5, 6]);
 });
 
 test('порядок дивизионов и участников детерминирован для воспроизводимого фонда', () => {
