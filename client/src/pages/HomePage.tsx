@@ -10,6 +10,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { getCompatibleSlots } from '../utils/itemUtils';
 import { getRemaining } from '../hooks/useServerTime';
+import DataState from '../components/ui/DataState';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -65,15 +66,20 @@ export default function HomePage() {
   };
 
 
-  if (!character) return <div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>;
-  const pvpCd = character.pvpCdSec ?? 600;
-  const pveCd = character.pveCdSec ?? 300;
-  const attackCooldownSec = getRemaining((character.lastAttackTime || 0) + pvpCd);
+  const pvpCd = character?.pvpCdSec ?? 600;
+  const pveCd = character?.pveCdSec ?? 300;
+  const attackCooldownSec = character ? getRemaining((character.lastAttackTime || 0) + pvpCd) : 0;
   const canAttack = attackCooldownSec <= 0;
-  const pveCooldownSec = getRemaining((character.lastPveAttackTime || 0) + pveCd);
-  const bankCooldownSec = getRemaining((character.lastBankVisit || 0) + 1800);
+  const pveCooldownSec = character ? getRemaining((character.lastPveAttackTime || 0) + pveCd) : 0;
+  const bankCooldownSec = character ? getRemaining((character.lastBankVisit || 0) + 1800) : 0;
 
   return (
+    <DataState
+      isLoading={!character}
+      isEmpty={false}
+      loading={<div className="p-4 text-[var(--color-text-primary)]">Загрузка...</div>}
+    >
+      {character ? (
     <div className="px-4 py-4 sm:pt-8">
       {character.totalBattles === 0 && character.level <= 1 && character.money <= 100 && (!character.inventory || character.inventory.length === 0) && (
         <div className="mb-4 p-3 bg-[rgba(52,152,219,0.1)] border border-[rgba(52,152,219,0.3)] rounded-lg text-sm text-[var(--color-text-secondary)] text-center">
@@ -105,5 +111,7 @@ export default function HomePage() {
         <Button variant="danger" fullWidth onClick={() => setNoOpponentModal(null)}>OK</Button>
       </Modal>
     </div>
+      ) : null}
+    </DataState>
   );
 }
