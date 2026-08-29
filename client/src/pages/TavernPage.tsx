@@ -15,6 +15,7 @@ import Card from '../components/ui/Card';
 import { formatMoney } from '../utils/money';
 import { groupTavernDrinks } from '../utils/tavernDrinks';
 import { getAdHealPresentation } from '../utils/adHealPresentation';
+import DataState from '../components/ui/DataState';
 
 const statNames: Record<string, string> = { s: 'Сила', a: 'Ловкость', d: 'Защита', m: 'Мастерство' };
 
@@ -106,10 +107,17 @@ export default function TavernPage() {
         } finally { setAdLoading(false); }
     };
 
-    if (!tavern) return <div className="p-4">Загрузка...</div>;
-    const missingHp = Math.max(0, (character?.stats?.hp || tavern.maxHp) - tavern.currentHp);
+    const missingHp = tavern
+        ? Math.max(0, (character?.stats?.hp || tavern.maxHp) - tavern.currentHp)
+        : 0;
 
     return (
+        <DataState
+            isLoading={!tavern}
+            isEmpty={false}
+            loading={<div className="p-4">Загрузка...</div>}
+        >
+          {tavern ? (
         <div className="max-w-3xl mx-auto px-4 py-4">
             <BackButton />
           {actionCard && <PageHeader title="Трактир" icon={actionCard.icon} bgImage={actionCard.bg_image} />}
@@ -171,5 +179,7 @@ export default function TavernPage() {
                 </div>
             </>}
         </div>
+          ) : null}
+        </DataState>
     );
 }
