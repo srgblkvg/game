@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import MdToolbar from '../components/ui/MdToolbar';
+import ErrorState from '../components/ui/ErrorState';
 
 // Настройка marked
 marked.setOptions({
@@ -291,7 +292,7 @@ export default function ThreadPage() {
     };
 
 
-    if (error && !thread) return <div className="p-4 text-[var(--color-accent-danger)]">{error}</div>;
+    if (error && !thread) return <ErrorState error={error} />;
     if (!thread) return <div className="p-4">Загрузка...</div>;
 
     const tree = buildForumPostTree(posts);
