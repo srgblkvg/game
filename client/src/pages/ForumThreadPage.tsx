@@ -13,6 +13,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import MdToolbar from '../components/ui/MdToolbar';
 import ErrorState from '../components/ui/ErrorState';
+import DataState from '../components/ui/DataState';
 
 // Настройка marked
 marked.setOptions({
@@ -292,12 +293,17 @@ export default function ThreadPage() {
     };
 
 
-    if (error && !thread) return <ErrorState error={error} />;
-    if (!thread) return <div className="p-4">Загрузка...</div>;
-
-    const tree = buildForumPostTree(posts);
+    const tree = thread ? buildForumPostTree(posts) : [];
 
     return (
+        <DataState
+            isLoading={!thread && !error}
+            error={!thread ? error : null}
+            isEmpty={false}
+            loading={<div className="p-4">Загрузка...</div>}
+            errorState={<ErrorState error={error} />}
+        >
+          {thread ? (
         <div className="px-4 py-4 max-w-3xl mx-auto">
             <style>{FORUM_STYLES}</style>
             <BackButton />
@@ -392,5 +398,7 @@ export default function ThreadPage() {
                 </Card>
             )}
         </div>
+          ) : null}
+        </DataState>
     );
 }
