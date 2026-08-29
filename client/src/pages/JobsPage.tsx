@@ -12,13 +12,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { getHeaders } from '../api/helpers';
 import { useServerTime, getRemaining, formatRemaining } from '../hooks/useServerTime';
-
-const durations = [
-    { label: '10 мин', value: 600, icon: 'game-icons:stopwatch' },
-    { label: '30 мин', value: 1800, icon: 'game-icons:hourglass' },
-    { label: '1 час', value: 3600, icon: 'game-icons:clockwork' },
-    { label: '8 часов', value: 28800, icon: 'game-icons:sundial' },
-];
+import { JOB_DURATIONS } from '../utils/jobDurations';
 
 export default function JobsPage() {
   const [actionCard, setActionCard] = useState<any>(null);
@@ -130,7 +124,7 @@ export default function JobsPage() {
             {error && <p className="text-[var(--color-accent-danger)] mb-4 text-center text-sm">{error}</p>}
 
             <div className="grid grid-cols-2 gap-3">
-                {durations.map(d => (
+                {JOB_DURATIONS.map(d => (
                     <Card key={d.value} className="flex flex-col items-center text-center cursor-pointer hover:border-[var(--color-accent-info)] transition-colors">
                         <Icon icon={d.icon} width="28" height="28" className="text-[var(--color-text-muted)] mb-2" />
                         <p className="font-bold text-sm mb-1">{d.label}</p>
