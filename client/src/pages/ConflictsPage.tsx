@@ -5,6 +5,7 @@ import Card from '../components/ui/Card';
 import { getHeaders } from '../api/helpers';
 import { useNavigate } from 'react-router-dom';
 import { getWarTimeRemaining } from '../utils/warCountdown';
+import DataState from '../components/ui/DataState';
 
 interface WarInfo {
     id: number;
@@ -36,13 +37,14 @@ export default function ConflictsPage() {
                 Текущие войны между гильдиями. Следите за ходом битв!
             </p>
 
-            {!loaded ? (
-                <p className="text-sm text-[var(--color-text-muted)] text-center py-4">Загрузка...</p>
-            ) : wars.length === 0 ? (
-                <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
+            <DataState
+                isLoading={!loaded}
+                isEmpty={wars.length === 0}
+                loading={<p className="text-sm text-[var(--color-text-muted)] text-center py-4">Загрузка...</p>}
+                empty={<p className="text-sm text-[var(--color-text-muted)] text-center py-4">
                     Сейчас нет активных войн. Мирное время!
-                </p>
-            ) : (
+                </p>}
+            >
                 <div className="space-y-3">
                     {wars.map(war => {
                         const timeRemaining = getWarTimeRemaining(war.expiresAt, Date.now());
@@ -80,7 +82,7 @@ export default function ConflictsPage() {
                         );
                     })}
                 </div>
-            )}
+            </DataState>
         </div>
     );
 }
