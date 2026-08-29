@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { getHeaders } from '../api/helpers';
 import { useToast } from '../contexts/ToastContext';
+import { formatClockCountdown } from '../utils/clockCountdown';
 
 const STAT_CONFIG: Record<string, { label: string; icon: string; multiplier: number }> = {
     s: { label: 'Сила', icon: '💪', multiplier: 1.8 },
@@ -12,12 +13,6 @@ const STAT_CONFIG: Record<string, { label: string; icon: string; multiplier: num
     d: { label: 'Защита', icon: '🛡️', multiplier: 1.0 },
     m: { label: 'Мастерство', icon: '🎯', multiplier: 1.5 },
 };
-
-function formatTime(sec: number): string {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 export default function TrainingPage() {
     const { showToast } = useToast();
@@ -139,7 +134,7 @@ export default function TrainingPage() {
                         Тренировки выматывают, нужно отдохнуть
                     </p>
                     <p className="text-2xl font-bold text-[var(--color-text-muted)]">
-                        {formatTime(cooldownSec)}
+                        {formatClockCountdown(cooldownSec)}
                     </p>
                 </Card>
             ) : (

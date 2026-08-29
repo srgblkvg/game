@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { getHeaders } from '../api/helpers';
 import { formatMoney } from '../utils/money';
+import { formatClockCountdown } from '../utils/clockCountdown';
 
 interface MassacreState {
     event: { id: number; status: string; entry_fee: number; participant_count: number; gathering_end?: number } | null;
@@ -135,11 +136,6 @@ export default function MassacrePage() {
 
     if (!user || !character) return null;
 
-    const formatTime = (sec: number) => {
-        const m = Math.floor(sec / 60);
-        const s = sec % 60;
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    };
 
     const isGathering = state?.event?.status === 'gathering' && state.timeLeft > 0;
     const isStarting = state?.event?.status === 'starting' || (state?.event?.status === 'gathering' && state.timeLeft <= 0);
@@ -248,7 +244,7 @@ export default function MassacrePage() {
                         Сбор участников. Вход: {formatMoney(state!.event!.entry_fee)}. Бой начнётся через:
                     </p>
                     <p className="text-3xl font-bold text-[var(--color-accent-danger)] mb-4">
-                        {formatTime(state!.timeLeft)}
+                        {formatClockCountdown(state!.timeLeft)}
                     </p>
                     <p className="text-sm mb-4">
                         Участников: <span className="font-bold text-[var(--color-accent-warning)]">{state!.event!.participant_count}</span>

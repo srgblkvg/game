@@ -7,6 +7,7 @@ import Card from './ui/Card';
 import Modal from './ui/Modal';
 import { getHeaders } from '../api/helpers';
 import { getTournamentCallToAction, type TournamentCallToAction } from '../utils/tournamentUi';
+import { formatClockCountdown } from '../utils/clockCountdown';
 
 interface ActionsProps {
     canAttack: boolean;
@@ -442,11 +443,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
 
                 if (isMassacre) {
                     const bgStyle = card.bg_image ? { backgroundImage: `url(${card.bg_image})` } : {};
-                    const formatTime = (sec: number) => {
-                        const m = Math.floor(sec / 60);
-                        const s = sec % 60;
-                        return `${m}:${s.toString().padStart(2, '0')}`;
-                    };
+
                     return (
                         <div key={i} className="relative group" id={`action-card-${card.title}`}>
                             <div className={`relative bg-[var(--color-bg-secondary)] rounded-xl p-3 border flex flex-col items-center text-center overflow-hidden transition-all ${highlighted ? 'border-[var(--color-accent-info)] ring-2 ring-[var(--color-accent-info)]' : 'border-[var(--color-border-default)]'}`}>
@@ -462,7 +459,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                     <div className="mt-auto">
                                         <Button variant="danger" size="md" fullWidth
                                             onClick={() => { if (card.path) navigate(card.path); }}>
-                                            {massacreTimeLeft > 0 ? formatTime(massacreTimeLeft) : 'В бой'}
+                                            {massacreTimeLeft > 0 ? formatClockCountdown(massacreTimeLeft) : 'В бой'}
                                         </Button>
                                     </div>
                                 </div>
@@ -473,7 +470,6 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
 
                 // Лудус
                 if (card.path === '/training') {
-                    const fmt = (sec: number) => { const m = Math.floor(sec/60); const s = sec%60; return `${m}:${s.toString().padStart(2,'0')}`; };
                     const bgStyle = card.bg_image ? { backgroundImage: `url(${card.bg_image})` } : {};
                     return (
                         <div key={i} className="relative group">
@@ -489,7 +485,7 @@ function CardGrid({ cards, canAttack, attackCooldownSec, pveCooldownSec, bankCoo
                                         <Button variant={trainingCD > 0 ? 'secondary' : 'danger'} size="md" fullWidth
                                             disabled={trainingCD > 0}
                                             onClick={() => { if (card.path) navigate(card.path); }}>
-                                            {trainingCD > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{fmt(trainingCD)}</span> : 'Тренировка'}
+                                            {trainingCD > 0 ? <span className="flex items-center justify-center gap-1"><Icon icon="game-icons:hourglass" width="12" height="12" />{formatClockCountdown(trainingCD)}</span> : 'Тренировка'}
                                         </Button>
                                     </div>
                                 </div>

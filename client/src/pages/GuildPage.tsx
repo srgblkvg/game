@@ -13,6 +13,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { inputClass } from '../utils/formStyles';
 import { getLastSeen } from '../utils/time';
+import { formatClockCountdown } from '../utils/clockCountdown';
 
 const TABS = ['🏚️ Обзор', '🏘️ Постройки', '💰 Казна', '👥 Участники', '👾 Босс', '🌟 Таланты'];
 const PERIODS = ['today','week','month','all'] as const;
@@ -291,11 +292,6 @@ export default function GuildPage() {
         try { await api('/guild/tax-rate',{taxRate:r}); setTaxRate(r); setTaxRateInput(''); msg(`Налог: ${r}%`); } catch (e: any) { setError(e.message); }
     };
 
-    const fmtCd = (sec: number) => {
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
-      return `${m}:${s.toString().padStart(2, '0')}`;
-    };
 
     const fmtWeeklyReset = (sec: number) => {
       const days = Math.floor(sec / 86400);
@@ -511,11 +507,11 @@ export default function GuildPage() {
                 )}
                 {boss.currentHp <= 0 && boss.respawnAt > 0 && (
                     <div className="text-xs text-[var(--color-accent-warning)] mb-2">
-                        Босс повержен. Новый появится через {fmtCd(Math.max(0, boss.respawnAt - Math.floor(Date.now()/1000)))}
+                        Босс повержен. Новый появится через {formatClockCountdown(Math.max(0, boss.respawnAt - Math.floor(Date.now()/1000)))}
                     </div>
                 )}
                 <Button size="md" variant="danger" disabled={bossCd > 0 || bossFighting} onClick={handleBossAttack}>
-                    {bossFighting ? 'Бой...' : bossCd > 0 ? `Атака через ${fmtCd(bossCd)}` : '⚔️ Атаковать'}
+                    {bossFighting ? 'Бой...' : bossCd > 0 ? `Атака через ${formatClockCountdown(bossCd)}` : '⚔️ Атаковать'}
                 </Button>
             </Card>}
 

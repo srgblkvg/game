@@ -10,6 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { fetchBattles, fetchCharacter } from '../api';
 import { safeDate } from '../utils/date';
 import { formatGameTime } from '../utils/time';
+import { formatClockCountdown } from '../utils/clockCountdown';
 import Button from './ui/Button';
 import PlayerBadge from './PlayerBadge';
 import SilverAmount from './ui/SilverAmount';
@@ -215,11 +216,7 @@ export default function Header() {
     const expForLevel = (lvl: number) => 10 * Math.pow(2, lvl - 1);
     const xpPct = character ? Math.min(100, Math.max(0, (character.exp / expForLevel(character.level)) * 100)) : 0;
 
-    const formatTime = (sec: number) => {
-        const m = Math.floor(sec / 60);
-        const s = sec % 60;
-        return `${m}:${String(s).padStart(2, '0')}`;
-    };
+
 
     return (
         <div id="site-header" className="sticky top-0 z-40 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-default)]">
@@ -282,7 +279,7 @@ export default function Header() {
                     protectionSec > 0 ? (
                         <span className="text-[var(--color-accent-info)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1 bg-[rgba(52,152,219,0.15)]">
                             <Icon icon="game-icons:shield" width="18" height="18" />
-                            {formatTime(protectionSec)}
+                            {formatClockCountdown(protectionSec)}
                         </span>
                     ) : (
                         <span className="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded-xl flex items-center gap-1 bg-[rgba(255,255,255,0.05)]">

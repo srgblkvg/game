@@ -15,6 +15,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { renderBattleLog } from '../utils/battleLog';
 import { formatMoney } from '../utils/money';
+import { formatClockCountdown } from '../utils/clockCountdown';
 import CharacterCard from '../components/CharacterCard';
 import ItemTooltip from '../components/ItemTooltip';
 import { useTheme } from '../contexts/ThemeContext';
@@ -434,11 +435,6 @@ export default function BestiaryPage() {
     updateCooldown();
   };
 
-  const formatCooldown = (totalSec: number) => {
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-    return `${min}:${sec.toString().padStart(2, '0')}`;
-  };
 
   if (!user || !character) return null;
 
@@ -460,7 +456,7 @@ export default function BestiaryPage() {
           </p>
           {cooldownRemaining > 0 && (
             <div className="mb-4 text-sm text-[var(--color-accent-warning)] bg-[var(--color-bg-card)] border border-[var(--color-border-light)] rounded p-2 text-center">
-              До следующей атаки: {formatCooldown(cooldownRemaining)}
+              До следующей атаки: {formatClockCountdown(cooldownRemaining)}
             </div>
           )}
           {error && <p className="text-[var(--color-accent-danger)] mb-4">{error}</p>}
