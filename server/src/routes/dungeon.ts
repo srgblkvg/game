@@ -9,6 +9,8 @@ import { advanceEnemyAttack, cancelEnemyWindup, ENEMY_WINDUP_MS } from '../game/
 import { loadBattleAntiStats } from '../game/guildBoss';
 import { payDungeonLoot, restartDungeonRunAfterFailedPayout } from '../game/dungeonPayout';
 import { createPgDungeonPayoutRepository } from '../game/dungeonPayoutRepository';
+import { applyDungeonRegenTick, resolveDungeonContinueVitals } from '../game/dungeonRegen';
+import { calculateHpRegenRate } from '../game/hpRegen';
 
 const router = Router();
 
@@ -22,17 +24,13 @@ const COMBAT_SPEED = 1/3; // замедление боя в 3 раза
 const DAILY_RUNS_MAX = 4;
 const BASE_SKILL_IDS = new Set([7, 2, 3, 1]); // Рывок, Размах, Боевой клич, Удар щитом
 
-function getHpRegenRate(user: any): number {
-    const now = Math.floor(Date.now() / 1000);
-    let rate = 1; // базовый: 1 HP за 5 сек
-    if (user.roomtype && (user.roomuntil || 0) > now) {
-        if (user.roomtype === 'closet') rate = 3;
-        else if (user.roomtype === 'bed') rate = 10;
-        else if (user.roomtype === 'chamber') rate = 50;
-        else if (user.roomtype === 'lux') rate = 250;
-    }
-    if ((user.premiumuntil || 0) > now) rate *= 3;
-    return rate;
+function getHpRegenRate(user: any, hermitRegen: boolean): number {
+    return calculateHpRegenRate({
+        roomType: user.roomType ?? user.roomtype,
+        roomUntil: user.roomUntil ?? user.roomuntil,
+        premiumUntil: user.premiumUntil ?? user.premiumuntil,
+        hermitRegen,
+    });
 }
 
 interface EnemyData {
@@ -91,6 +89,7 @@ interface DungeonRun {
     log: string[];
     lastHpUpdate: number;
     regenRate: number;
+    regenRemainder: number;
     cleared: boolean;
     targetIndex: number;
     accumulatedLoot: { silver: number; items: any[]; pages: any[] };
@@ -461,7 +460,8 @@ router.post('/dungeon/start', async (req, res) => {
         dailyRuns: 0, dailyRunDate: today,
         tickTimer: null, cleared: false,
         lastHpUpdate: Math.floor(Date.now() / 1000),
-        regenRate: getHpRegenRate(user),
+        regenRate: getHpRegenRate(user, stats.hermitRegen === true),
+        regenRemainder: 0,
         targetIndex: 0,
         accumulatedLoot: { silver: 0, items: [], pages: [] },
     };
@@ -821,11 +821,15 @@ router.post('/dungeon/continue', async (req, res) => {
     const now = Date.now() / 1000;
     const existingRun = activeRuns.get(userId);
     const savedRage = existingRun?.rage ?? 0;
+    const continueVitals = resolveDungeonContinueVitals({
+        playerHp: saved.playerhp,
+        playerMaxHp: saved.playermaxhp,
+    }, existingRun);
     if (existingRun?.tickTimer) clearInterval(existingRun.tickTimer); // остановим старый тик
 
     const run: DungeonRun = {
         userId, currentFloor: floor, checkpointFloor: saved.checkpointfloor,
-        playerHp: saved.playerhp, playerMaxHp: saved.playermaxhp,
+        playerHp: continueVitals.playerHp, playerMaxHp: continueVitals.playerMaxHp,
         playerStr: stats.s, playerAgi: stats.a,
         playerDef: stats.d, playerMag: stats.m,
         playerExtra: (stats as any).extra || {}, playerVamp: (stats as any).vampirism || 0,
@@ -839,7 +843,8 @@ router.post('/dungeon/continue', async (req, res) => {
         dailyRuns: 0, dailyRunDate: '',
         tickTimer: null, cleared: false,
         lastHpUpdate: Math.floor(Date.now() / 1000),
-        regenRate: getHpRegenRate(user),
+        regenRate: getHpRegenRate(user, stats.hermitRegen === true),
+        regenRemainder: existingRun?.regenRemainder ?? 0,
         targetIndex: existingRun?.targetIndex ?? 0,
         accumulatedLoot: existingRun?.accumulatedLoot || { silver: 0, items: [], pages: [] },
     };
@@ -990,12 +995,15 @@ function tickCombat(run: DungeonRun) {
     const enemiesAlive = run.enemies.some(e => e.hp > 0);
     if (!enemiesAlive) {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 5 * COMBAT_SPEED); // 5/сек вне боя
-        // Ускоренный реген HP в комнате отдыха (~5% от максимума в сек с бонусами)
-        const regenPerSec = run.playerMaxHp * 0.03 * run.regenRate;
-        const regenThisTick = Math.floor(regenPerSec * (TICK_MS / 1000));
-        if (regenThisTick > 0 && run.playerHp < run.playerMaxHp) {
-            run.playerHp = Math.min(run.playerMaxHp, run.playerHp + regenThisTick);
-        }
+        const regen = applyDungeonRegenTick({
+            playerHp: run.playerHp,
+            playerMaxHp: run.playerMaxHp,
+            regenRate: run.regenRate,
+            tickSeconds: TICK_MS / 1000,
+            remainder: run.regenRemainder,
+        });
+        run.playerHp = regen.playerHp;
+        run.regenRemainder = regen.remainder;
     } else {
         run.rage = Math.max(0, run.rage - (TICK_MS / 1000) * 0.5 * COMBAT_SPEED); // 0.5/сек в бою
     }

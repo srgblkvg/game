@@ -49,7 +49,7 @@ export default function LeftSidebar({ character, onEquip, selectedItemId, highli
         side="left"
         showHealth
         showExp
-        regenRate={((): number => {
+        regenRate={character.hpRegenRate ?? (() => {
           let rate = 1;
           if (effectiveRoom && effectiveRoom.until > serverTime) {
             if (effectiveRoom.type === 'closet') rate = 3;

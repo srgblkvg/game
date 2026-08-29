@@ -11,6 +11,7 @@ import { toCharCardData } from '../utils/character';
 import { groupLoot } from '../utils/dungeonLoot';
 import { readJsonResponse } from '../utils/http';
 import PageHeader from '../components/ui/PageHeader';
+import { getDungeonRegenPresentation } from '../utils/dungeonRegen';
 
 interface EnemyView {
     id: number; name: string; hp: number; maxHp: number; isBoss: boolean;
@@ -409,6 +410,7 @@ export default function DungeonPage() {
 
     const hpPct = playerMaxHp > 0 ? (playerHp / playerMaxHp) * 100 : 0;
     const hpColor = hpPct > 50 ? '#22c55e' : hpPct > 25 ? '#f59e0b' : '#ef4444';
+    const regenPresentation = getDungeonRegenPresentation({ playerHp, playerMaxHp, regenRate });
 
     // Базовая страница статуса — выбор этажа и старт
     const renderStatus = () => (
@@ -824,9 +826,12 @@ export default function DungeonPage() {
                         <div className="flex justify-between text-xs mb-1">
                             <span>HP {playerHp}/{playerMaxHp}</span>
                             <span className="text-[var(--color-text-muted)]">
-                                {playerHp < playerMaxHp ? `⏳ полное через ${Math.ceil((playerMaxHp - playerHp) / (playerMaxHp * 0.03 * regenRate))}с` : '✅ HP полное'}
+                                {playerHp < playerMaxHp ? <>⏳ полное через {regenPresentation.timeToFull}</> : '✅ HP полное'}
                             </span>
                         </div>
+                        <p className="text-[0.65rem] text-[var(--color-accent-success)] mb-1">
+                            Восстановление: +{regenPresentation.hpPerSecond} HP/с
+                        </p>
                         <div className="h-2 bg-[var(--color-bg-input)] rounded-full overflow-hidden mb-1">
                             <div className="h-full rounded-full transition-all" style={{ width: `${hpPct}%`, backgroundColor: hpColor }} />
                         </div>
