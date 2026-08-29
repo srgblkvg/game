@@ -751,14 +751,14 @@ router.post('/craft/batch-forge', async (req, res) => {
             else inventory.splice(stoneIndex, 1);
 
             for (const announcement of announcements) {
-                const msgId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
                 const content = announcement.kind === 'upgrade'
                     ? `⚒️ ${user.username || 'Игрок'} улучшил ${announcement.itemName} до +${announcement.level}!`
                     : `💥 ${user.username || 'Игрок'} сломал ${announcement.itemName} (+${announcement.level}) при улучшении!`;
-                await client.query(
-                    'INSERT INTO chat_messages (id, senderid, targetid, content) VALUES ($1, 0, NULL, $2)',
-                    [msgId, content]
+                const inserted = await client.query(
+                    'INSERT INTO chat_messages (senderid, targetid, content) VALUES (0, NULL, $1) RETURNING id',
+                    [content]
                 );
+                const msgId = Number(inserted.rows[0].id);
                 (announcement as any).message = {
                     id: msgId, senderId: 0, senderName: 'Глашатай', targetId: null,
                     content, createdAt: new Date().toISOString(),

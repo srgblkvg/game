@@ -1,4 +1,5 @@
 import { BASE_URL, getHeaders } from './helpers';
+import { readJsonResponse } from '../utils/http';
 
 export async function fetchRecipes() {
     const res = await fetch(`${BASE_URL}/craft/recipes`, {
@@ -14,11 +15,7 @@ export async function upgradeItem(slots: any[]) {
         headers: getHeaders(),
         body: JSON.stringify({ slots }),
     });
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Ошибка улучшения');
-    }
-    return res.json();
+    return readJsonResponse(res);
 }
 
 export async function fetchUpgradeInfo(level: number, rarity: number) {

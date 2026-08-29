@@ -10,6 +10,7 @@ function fakeClient(rows: Record<string, any>[], calls: any[] = []) {
       if (sql.includes('FROM users')) return { rows: [rows[0]] };
       if (sql.includes('FROM upgrade_chances')) return { rows: [rows[1]] };
       if (sql.includes('FROM craft_items')) return { rows: [rows[2]] };
+      if (sql.includes('INSERT INTO chat_messages')) return { rows: [{ id: 321 }], rowCount: 1 };
       return { rows: [], rowCount: 1 };
     },
   } as any;
@@ -36,9 +37,12 @@ test('successful +7 upgrade uses one client, locks treasury first, writes chat, 
   });
   assert.equal(result.guildId, 19);
   assert.equal(result.announcements?.[0]?.content, '⚒️ Hero улучшил Меч до +7!');
+  assert.equal(result.announcements?.[0]?.id, 321);
   assert.match(calls[0].sql, /castle_treasury[\s\S]*FOR UPDATE/);
   assert.match(calls[1].sql, /FROM users[\s\S]*FOR UPDATE/);
-  assert.ok(calls.some(c => c.sql.includes('INSERT INTO chat_messages')));
+  const chatInsert = calls.find(c => c.sql.includes('INSERT INTO chat_messages'));
+  assert.match(chatInsert.sql, /RETURNING id/);
+  assert.doesNotMatch(chatInsert.sql, /chat_messages\s*\(id/i);
   assert.ok(calls.some(c => c.sql.includes('treasury_log')));
 });
 
@@ -54,6 +58,10 @@ test('failed attempt to +7 destroys item, replaces same-rarity material, and rec
   assert.equal(result.body.success, false);
   assert.deepEqual(result.body.inventory, [{ type: 'craft_item', id: 31, name: 'Осколок', rarity_id: 3, rarity_display: 'Редкий', rarity_color: 'blue', count: 1, itemType: 'craft', image: 'x' }]);
   assert.equal(result.announcements?.[0]?.content, '💥 Hero сломал Меч (+6) при улучшении!');
+  assert.equal(result.announcements?.[0]?.id, 321);
+  const chatInsert = calls.find(c => c.sql.includes('INSERT INTO chat_messages'));
+  assert.match(chatInsert.sql, /RETURNING id/);
+  assert.doesNotMatch(chatInsert.sql, /chat_messages\s*\(id/i);
   assert.ok(calls.some(c => c.sql.includes('craftbroken')));
   assert.ok(calls.some(c => c.params.includes('craft_upgrade_fail')));
 });

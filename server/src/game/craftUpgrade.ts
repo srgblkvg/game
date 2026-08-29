@@ -44,8 +44,6 @@ export async function executeCraftUpgradeWithClient(
   input: CraftUpgradeInput,
 ): Promise<CraftUpgradeResult> {
   const random = input.random || Math.random;
-  const now = input.now || Date.now;
-
   // Serialize treasury commission with all other upgrade reads/writes.
   await client.query('SELECT amount FROM castle_treasury WHERE id = 1 FOR UPDATE');
   const user = (await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [input.userId])).rows[0] as any;
@@ -109,13 +107,16 @@ export async function executeCraftUpgradeWithClient(
         craftupgraded = craftupgraded + 1${factionSql} WHERE id = $3`,
         [JSON.stringify(newInventory), moneyAfter, input.userId]);
     }
-    if (targetLevel >= 7) {
-      const content = `⚒️ ${value(user, 'username', 'username', '')} улучшил ${itemToUpgrade.name || 'Предмет'} до +${targetLevel}!`;
-      announcements.push({ id: now() * 1000 + Math.floor(random() * 1000), senderId: 0, senderName: 'Глашатай', targetId: null, content, createdAt: new Date().toISOString() });
-    }
     const commission = Math.floor(actualCost * 0.22);
     if (commission > 0) await changeTreasuryWithClient(client, commission, 'craft_upgrade');
-    for (const announcement of announcements) await client.query('INSERT INTO chat_messages (id, senderId, targetId, content) VALUES ($1, 0, NULL, $2)', [announcement.id, announcement.content]);
+    if (targetLevel >= 7) {
+      const content = `⚒️ ${value(user, 'username', 'username', '')} улучшил ${itemToUpgrade.name || 'Предмет'} до +${targetLevel}!`;
+      const inserted = await client.query(
+        'INSERT INTO chat_messages (senderId, targetId, content) VALUES (0, NULL, $1) RETURNING id',
+        [content],
+      );
+      announcements.push({ id: Number(inserted.rows[0].id), senderId: 0, senderName: 'Глашатай', targetId: null, content, createdAt: new Date().toISOString() });
+    }
     const body: Record<string, any> = { success: true, inventory: newInventory, moneyAfter, message: `Предмет улучшен до +${targetLevel}${ratingBonus > 0 ? ` (+${ratingBonus} рейтинга)` : ''}` };
     if (ratingBonus > 0) body.eloAdded = ratingBonus;
     return { status: 200, guildId: value(user, 'guildId', 'guildid'), announcements, body };
@@ -136,11 +137,15 @@ export async function executeCraftUpgradeWithClient(
       newInventory.splice(destroyed, 1);
     }
     await client.query('UPDATE users SET inventory = $1, money = $2, craftbroken = craftbroken + 1 WHERE id = $3', [JSON.stringify(newInventory), moneyAfter, input.userId]);
-    const announcement: CraftAnnouncement = { id: now() * 1000 + Math.floor(random() * 1000), senderId: 0, senderName: 'Глашатай', targetId: null, content: `💥 ${value(user, 'username', 'username', '')} сломал ${itemToUpgrade.name || 'Предмет'} (+${currentLevel}) при улучшении!`, createdAt: new Date().toISOString() };
-    announcements.push(announcement);
     const commission = Math.floor(actualCost * 0.22);
     if (commission > 0) await changeTreasuryWithClient(client, commission, 'craft_upgrade_fail');
-    await client.query('INSERT INTO chat_messages (id, senderId, targetId, content) VALUES ($1, 0, NULL, $2)', [announcement.id, announcement.content]);
+    const content = `💥 ${value(user, 'username', 'username', '')} сломал ${itemToUpgrade.name || 'Предмет'} (+${currentLevel}) при улучшении!`;
+    const inserted = await client.query(
+      'INSERT INTO chat_messages (senderId, targetId, content) VALUES (0, NULL, $1) RETURNING id',
+      [content],
+    );
+    const announcement: CraftAnnouncement = { id: Number(inserted.rows[0].id), senderId: 0, senderName: 'Глашатай', targetId: null, content, createdAt: new Date().toISOString() };
+    announcements.push(announcement);
     return { status: 200, guildId: value(user, 'guildId', 'guildid'), announcements, body: { success: false, inventory: newInventory, moneyAfter, message: 'Неудача! Предмет разрушен.' } };
   }
 

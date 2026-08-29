@@ -15,6 +15,8 @@ test('batch forge commits all results and treasury commission together', () => {
   assert.match(route, /SELECT \* FROM users WHERE id = \$1 FOR UPDATE/);
   assert.match(route, /await changeTreasuryWithClient\(client, Math\.floor\(spent \* 0\.22\), 'craft_batch_forge'\)/);
   assert.doesNotMatch(route, /addToTreasury\(Math\.floor\(result\.spent/);
+  assert.match(route, /INSERT INTO chat_messages \(senderid, targetid, content\) VALUES \(0, NULL, \$1\) RETURNING id/);
+  assert.doesNotMatch(route, /Date\.now\(\) \* 1000/);
   assert.ok(route.indexOf('castle_treasury') < route.indexOf('SELECT * FROM users'));
 });
 
