@@ -4,6 +4,7 @@ import { getItemImage } from '../utils/itemUtils';
 import ItemTooltip from '../components/ItemTooltip';
 import { useLongPress } from '../hooks/useLongPress';
 import { useGame } from '../contexts/GameContext';
+import DataState from '../components/ui/DataState';
 
 interface ShopItem {
     id: number;
@@ -222,14 +223,16 @@ export default function CollectionsPage() {
         } catch { setMessage('Ошибка сети'); }
     };
 
-    if (loading) {
-        return <div className="p-4 max-w-3xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>;
-    }
-
     const totalPercent = Math.round(((collectionCount - collectionSetBonus) / totalCollectionItems) * 100);
     const totalBonus = collectionCount;
 
     return (
+        <DataState
+            isLoading={loading}
+            isEmpty={false}
+            loading={<div className="p-4 max-w-3xl mx-auto"><h1 className="text-xl font-bold mb-4">Коллекция</h1><p className="text-sm text-[var(--color-text-muted)]">Загрузка...</p></div>}
+        >
+          {!loading && (
         <div className="p-4 max-w-3xl mx-auto">
             <h1 className="text-xl font-bold mb-2">Коллекция — {totalPercent}%</h1>
 
@@ -315,6 +318,8 @@ export default function CollectionsPage() {
                 </div>
             )}
         </div>
+          )}
+        </DataState>
     );
 }
 
