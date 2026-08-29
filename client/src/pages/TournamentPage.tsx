@@ -198,7 +198,7 @@ export default function TournamentPage() {
                     {t.participantCount > 5 && <span>+ ещё {t.participantCount - 5}</span>}
                 </div>
 
-                {t.status === 'registration' && joinable && !myReg && t.type === 'custom' && (
+                {t.status === 'registration' && joinable && !myReg && (
                     <div className="flex gap-2">
                         <Button variant="danger" size="md" onClick={() => handleRegister(t.id, t.type === 'official' ? t.division : undefined)}>
                             {t.type === 'custom' && t.entryFee > 0 ? `Вступить (${formatMoney(t.entryFee)})` : 'Записаться'}
@@ -414,17 +414,21 @@ export default function TournamentPage() {
 
             {/* Активные / Официальные / Самоорганизованные */}
             {(tab === 'all' || tab === 'official')
-                && !data.tournaments.some((t: any) => t.type === 'official' && t.myRegistration)
-                && !upcomingOfficial.some((u: any) => u.registrationOpensAt > nowSec) && (
+                && !upcomingOfficial.some((u: any) => u.registrationOpensAt > nowSec)
+                && (data.eligibleDivisions || []).some((division: any) =>
+                    !data.tournaments.some((t: any) => t.type === 'official' && t.division === division.key && t.myRegistration)
+                ) && (
                 <Card className="mb-3">
                     <h3 className="font-bold text-sm">Турнир</h3>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">Выберите подходящий дивизион по уровню:</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">Выберите подходящие дивизионы по уровню. Можно участвовать в нескольких одновременно:</p>
                     <div className="flex flex-wrap gap-2 mt-3">
-                        {(data.eligibleDivisions || []).map((division: any) => (
-                            <Button key={division.key} variant="danger" size="md" onClick={() => handleRegister(undefined, division.key)}>
-                                {division.label} ({division.minLevel}–{division.maxLevel})
-                            </Button>
-                        ))}
+                        {(data.eligibleDivisions || [])
+                            .filter((division: any) => !data.tournaments.some((t: any) => t.type === 'official' && t.division === division.key && t.myRegistration))
+                            .map((division: any) => (
+                                <Button key={division.key} variant="danger" size="md" onClick={() => handleRegister(undefined, division.key)}>
+                                    {division.label} ({division.minLevel}–{division.maxLevel})
+                                </Button>
+                            ))}
                     </div>
                 </Card>
             )}

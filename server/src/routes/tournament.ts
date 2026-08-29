@@ -10,6 +10,7 @@ import { calculateTournamentRewards, getThirdPlacePair } from '../game/tournamen
 import { presentCompletedTournamentTop3 } from '../game/tournamentPresentation';
 import { isTournamentRegistrationOpen } from '../game/tournamentRegistration';
 import { getEligibleTournamentDivisions, getTournamentDivisionByIndex, getTournamentDivisionByKey, isLevelEligibleForTournamentDivision, TOURNAMENT_DIVISIONS } from '../game/tournamentDivision';
+import { getRegistrationDivisionIndex } from '../game/tournamentRegistrationDivision';
 import { allocateDivisionPrizePools, splitParticipantsByDivision } from '../game/tournamentDivisionQueue';
 import { initTournamentSchema, isTournamentSchemaReady } from '../game/tournamentSchema';
 import { runTournamentGroupStage, type GroupFightMetadata } from '../game/tournamentGroupRunner';
@@ -613,11 +614,12 @@ export async function reconcileOfficialQueueParticipantsTx(client: any): Promise
          WHERE t.type = 'official' AND t.status = 'registration'
          ORDER BY t.id, tp.id FOR UPDATE OF t, tp`
     )).rows;
-    const seenUsers = new Set<number>();
+    const seenRegistrations = new Set<string>();
     for (const row of rows) {
         const userId = Number(row.userid);
-        if (seenUsers.has(userId)) throw new Error(`User ${userId} registered in multiple official queues`);
-        seenUsers.add(userId);
+        const identity = `${Number(row.tournamentid)}:${userId}`;
+        if (seenRegistrations.has(identity)) throw new Error(`User ${userId} registered twice in official queue`);
+        seenRegistrations.add(identity);
         const snapshot = parseTournamentSnapshot(row.snapshotstats);
         if (!snapshot) {
             throw new Error(`Invalid tournament snapshot for user ${userId}`);
@@ -696,7 +698,7 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<{ creat
         )).rows;
         const byQueue = new Map<number, Array<{ userId: number; combatPower: number; snapshotStats: any }>>();
         const snapshotByQueueAndUser = new Map<string, any>();
-        const sourceQueueByUser = new Map<number, number>();
+        const sourceQueueByUser = new Map<string, number>();
         for (const row of participantRows) {
             const snapshot = parseTournamentSnapshot(row.snapshotstats);
             if (!snapshot) continue;
@@ -707,24 +709,20 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<{ creat
             const snapshotKey = `${queueId}:${Number(row.userid)}`;
             if (snapshotByQueueAndUser.has(snapshotKey)) throw new Error(`Duplicate tournament participant ${snapshotKey}`);
             snapshotByQueueAndUser.set(snapshotKey, row.snapshotstats);
-            const userId = Number(row.userid);
-            const previousQueue = sourceQueueByUser.get(userId);
-            if (previousQueue !== undefined && previousQueue !== queueId) {
-                throw new Error(`User ${userId} exists in multiple official queues`);
+            const divisionIndex = getRegistrationDivisionIndex(snapshot);
+            const sourceKey = `${divisionIndex}:${Number(row.userid)}`;
+            const previousQueueId = sourceQueueByUser.get(sourceKey);
+            if (previousQueueId !== undefined && previousQueueId !== queueId) {
+                throw new Error(`User ${Number(row.userid)} registered twice in division ${divisionIndex}`);
             }
-            sourceQueueByUser.set(userId, queueId);
+            sourceQueueByUser.set(sourceKey, queueId);
         }
 
         const allParticipants = queueRows.flatMap((row: any) =>
             (byQueue.get(Number(row.id)) || []).map(participant => ({
                 userId: participant.userId,
                 combatPower: participant.combatPower,
-                division: (() => {
-                    const snapshot = parseTournamentSnapshot(participant.snapshotStats);
-                    if (snapshot?.divisionBasis === 'level' && snapshot.divisionIndex != null) return snapshot.divisionIndex;
-                    const eligible = getEligibleTournamentDivisions(snapshot?.player.level || 1);
-                    return eligible[eligible.length - 1]?.index ?? 0;
-                })(),
+                division: getRegistrationDivisionIndex(parseTournamentSnapshot(participant.snapshotStats)!),
             }))
         );
         const split = splitParticipantsByDivision(allParticipants);
@@ -746,7 +744,7 @@ export async function mergeExpiredOfficialQueuesTx(client: any): Promise<{ creat
             const tournamentId = Number(created.rows[0].id);
             createdIds.push(tournamentId);
             const groupSources = group.participants.map(participant => {
-                const sourceQueueId = sourceQueueByUser.get(participant.userId);
+                const sourceQueueId = sourceQueueByUser.get(`${participant.division}:${participant.userId}`);
                 if (sourceQueueId === undefined) throw new Error(`Source queue not found for user ${participant.userId}`);
                 const snapshot = parseTournamentSnapshot(
                     snapshotByQueueAndUser.get(`${sourceQueueId}:${participant.userId}`)
@@ -1187,7 +1185,47 @@ export async function getOrCreateTournament(type?: string) {
         []
     ) as any[];
 
-    // Пока жив хотя бы один турнир текущего общего набора, новый набор не открываем.
+    // Мигрируем уже открытый старый общий набор в отдельные level-очереди.
+    const legacyCycle = activeTournaments.find(t => t.division === 'official-cycle' && t.status === 'registration');
+    if (legacyCycle) {
+        await db.tx(async client => {
+            const locked = (await client.query('SELECT * FROM tournaments WHERE id = $1 FOR UPDATE', [legacyCycle.id])).rows[0];
+            if (!locked || locked.status !== 'registration' || locked.division !== 'official-cycle') return;
+            const alreadyMigrated = (await client.query(
+                `SELECT id FROM tournaments WHERE type = 'official' AND status = 'registration' AND division <> 'official-cycle' LIMIT 1`
+            )).rows[0];
+            if (alreadyMigrated) throw new Error('Legacy and level tournament queues coexist');
+            const participants = (await client.query(
+                'SELECT userid, snapshotstats FROM tournament_participants WHERE tournamentid = $1 FOR UPDATE', [legacyCycle.id]
+            )).rows;
+            const reserve = Math.max(0, Math.floor(Number(locked.basepool || locked.prizepool || 0)));
+            let allocated = 0;
+            for (const [index, division] of divisions.entries()) {
+                const divisionReserve = index === divisions.length - 1 ? reserve - allocated : Math.floor(reserve * division.tier / TIERS_TOTAL);
+                allocated += divisionReserve;
+                const created = (await client.query(
+                    `INSERT INTO tournaments (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers, name)
+                     VALUES ($1, 'registration', $2, $3, $4, $4, $5, 'official', 1000000, $6) RETURNING id`,
+                    [division.name, locked.registrationstart, locked.registrationend, divisionReserve, locked.createdat, division.label]
+                )).rows[0];
+                for (const row of participants) {
+                    const snapshot = parseTournamentSnapshot(row.snapshotstats);
+                    if (!snapshot || getRegistrationDivisionIndex(snapshot) !== division.index) continue;
+                    await client.query(
+                        'INSERT INTO tournament_participants (tournamentid, userid, snapshotstats) VALUES ($1, $2, $3)',
+                        [created.id, row.userid, row.snapshotstats]
+                    );
+                }
+            }
+            await client.query('DELETE FROM tournament_participants WHERE tournamentid = $1', [legacyCycle.id]);
+            await client.query("UPDATE tournaments SET status = 'cancelled', completedat = NULL WHERE id = $1", [legacyCycle.id]);
+        });
+        return await db.query(
+            `SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') AND type = 'official' ORDER BY id DESC`, []
+        ) as any[];
+    }
+
+    // Пока жив хотя бы один турнир текущего набора, новый набор не открываем.
     if (activeTournaments.length > 0) return activeTournaments;
 
     // Технические очереди открываются одним общим набором, а не вслед за каждой завершённой.
@@ -1225,12 +1263,19 @@ export async function getOrCreateTournament(type?: string) {
                 [-reserve, 'tournament_cycle_reserve']
             );
         }
-        await client.query(
-            `INSERT INTO tournaments
-             (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers, name)
-             VALUES ('official-cycle', 'registration', $1, $2, $3, $3, $4, 'official', 1000000, 'Общий набор')`,
-            [now, now + REGISTRATION_WINDOW, reserve, new Date().toISOString()]
-        );
+        let allocatedReserve = 0;
+        for (const [index, division] of divisions.entries()) {
+            const divisionReserve = index === divisions.length - 1
+                ? reserve - allocatedReserve
+                : Math.floor(reserve * division.tier / TIERS_TOTAL);
+            allocatedReserve += divisionReserve;
+            await client.query(
+                `INSERT INTO tournaments
+                 (division, status, registrationstart, registrationend, prizepool, basepool, createdat, type, maxplayers, name)
+                 VALUES ($1, 'registration', $2, $3, $4, $4, $5, 'official', 1000000, $6)`,
+                [division.name, now, now + REGISTRATION_WINDOW, divisionReserve, new Date().toISOString(), division.label]
+            );
+        }
     });
 
     const query = "SELECT * FROM tournaments WHERE status IN ('registration', 'in_progress') ORDER BY id DESC";
@@ -1475,22 +1520,13 @@ router.post('/tournament/register', async (req, res) => {
         }
         snapshot.divisionIndex = requestedDivision.index;
         snapshot.divisionBasis = 'level';
-        const existingOfficial = await db.one(
-            `SELECT tp.id FROM tournament_participants tp
-             JOIN tournaments t ON t.id = tp.tournamentId
-             WHERE tp.userId = ? AND t.type = 'official' AND t.status IN ('registration', 'in_progress') LIMIT 1`,
-            [userId]
-        ) as any;
-        if (existingOfficial) return res.status(400).json({ error: 'Вы уже зарегистрированы в официальном турнире' });
-
-        // Все игроки регистрируются в одну очередь общего цикла. Дивизионы
-        // формируются после закрытия окна по индексу, сохранённому в snapshot.
+        // Каждый level-дивизион имеет собственную очередь в общем часовом окне.
         tournament = await db.one(
             `SELECT t.* FROM tournaments t
              WHERE t.division = ? AND t.status = 'registration' AND t.type = 'official'
                AND t.registrationStart <= ? AND t.registrationEnd > ?
              ORDER BY t.id DESC LIMIT 1`,
-            ['official-cycle', Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000)]
+            [requestedDivision.key, Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000)]
         ) as any;
         if (!tournament) {
             const now = Math.floor(Date.now() / 1000);
@@ -1530,10 +1566,10 @@ router.post('/tournament/register', async (req, res) => {
             await getOrCreateTournament();
             tournament = await db.one(
                 `SELECT * FROM tournaments
-                 WHERE division = 'official-cycle' AND type = 'official' AND status = 'registration'
+                 WHERE division = ? AND type = 'official' AND status = 'registration'
                    AND registrationStart <= ? AND registrationEnd > ?
                  ORDER BY id DESC LIMIT 1`,
-                [now, now]
+                [requestedDivision.key, now, now]
             ) as any;
             if (!tournament) return res.status(400).json({ error: 'Регистрация текущего набора завершена' });
         }
